@@ -10,143 +10,166 @@
 
 @group config
 @endpoint GET /config/sync/commerce/{commerceKey}/{accountingKey}/start
-@required {commerceKey: str, accountingKey: str}
-@optional {merchantIdentifier: str}
-@returns(200) {url: str}
-@errors {400, 401, 402, 403, 404, 429, 500, 503}
+@desc Start new sync flow
+@required {commerceKey: str # Commerce platform key, accountingKey: str # Accounting platform key}
+@optional {merchantIdentifier: str # Identifier for your merchant, can be the merchant name or Codat company id.}
+@returns(200) {url: str} # Success
+@errors {400: The request made is not valid., 401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endgroup
 
 @group companies
 @endpoint GET /companies
-@optional {page: int(int32)=1, pageSize: int(int32)=100, query: str, orderBy: str}
-@returns(200)
-@errors {400, 401, 402, 403, 404, 429, 500, 503}
+@desc List companies
+@optional {page: int(int32)=1 # Page number. [Read more](https://docs.codat.io/using-the-api/paging)., pageSize: int(int32)=100 # Number of records to return in a page. [Read more](https://docs.codat.io/using-the-api/paging)., query: str # Codat query string. [Read more](https://docs.codat.io/using-the-api/querying)., orderBy: str # Field to order results by. [Read more](https://docs.codat.io/using-the-api/ordering-results).}
+@returns(200) Success
+@errors {400: Your `query` parameter was not correctly formed, 401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endpoint POST /companies
-@required {name: str}
-@optional {description: str, tags: map}
-@returns(200)
-@errors {400, 401, 402, 403, 429, 500, 503}
+@desc Create company
+@required {name: str # Name of company being connected.}
+@optional {description: str # Additional information about the company. This can be used to store foreign IDs, references, etc., tags: map # A collection of user-defined key-value pairs that store custom metadata against the company.}
+@returns(200) Success
+@errors {400: The request made is not valid., 401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
+@example_request {"name":"string"}
 
 @endpoint GET /companies/{companyId}/connections
-@required {companyId: str(uuid)}
-@optional {page: int(int32)=1, pageSize: int(int32)=100, query: str, orderBy: str}
-@returns(200)
-@errors {400, 401, 402, 403, 404, 429, 500, 503}
+@desc List connections
+@required {companyId: str(uuid) # Unique identifier for a company.}
+@optional {page: int(int32)=1 # Page number. [Read more](https://docs.codat.io/using-the-api/paging)., pageSize: int(int32)=100 # Number of records to return in a page. [Read more](https://docs.codat.io/using-the-api/paging)., query: str # Codat query string. [Read more](https://docs.codat.io/using-the-api/querying)., orderBy: str # Field to order results by. [Read more](https://docs.codat.io/using-the-api/ordering-results).}
+@returns(200) OK
+@errors {400: Your `query` parameter was not correctly formed, 401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endpoint POST /companies/{companyId}/connections
-@required {companyId: str(uuid)}
-@optional {platformKey: str}
-@returns(200) {id: str(uuid), integrationId: str(uuid), integrationKey: str, sourceId: str(uuid), sourceType: str, platformName: str, linkUrl: str(uri), status: str, lastSync: str, created: str, dataConnectionErrors: [map]?, connectionInfo: map?}
-@errors {401, 402, 403, 404, 429, 500, 503}
+@desc Create connection
+@required {companyId: str(uuid) # Unique identifier for a company.}
+@optional {platformKey: str # A unique 4-letter key to represent a platform in each integration. View [accounting](https://docs.codat.io/integrations/accounting/overview#platform-keys), [banking](https://docs.codat.io/integrations/banking/overview#platform-keys), and [commerce](https://docs.codat.io/integrations/commerce/overview#platform-keys) platform keys.}
+@returns(200) {id: str(uuid), integrationId: str(uuid), integrationKey: str, sourceId: str(uuid), sourceType: str, platformName: str, linkUrl: str(uri), status: str, lastSync: str, created: str, dataConnectionErrors: [map]?, connectionInfo: map?} # OK
+@errors {401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endpoint PATCH /companies/{companyId}/connections/{connectionId}
-@required {companyId: str(uuid), connectionId: str(uuid)}
-@optional {status: str(PendingAuth/Linked/Unlinked/Deauthorized)}
-@returns(200) {id: str(uuid), integrationId: str(uuid), integrationKey: str, sourceId: str(uuid), sourceType: str, platformName: str, linkUrl: str(uri), status: str, lastSync: str, created: str, dataConnectionErrors: [map]?, connectionInfo: map?}
-@errors {401, 402, 403, 404, 429, 500, 503}
+@desc Update connection
+@required {companyId: str(uuid) # Unique identifier for a company., connectionId: str(uuid) # Unique identifier for a connection.}
+@optional {status: str(PendingAuth/Linked/Unlinked/Deauthorized) # The current authorization status of the data connection.}
+@returns(200) {id: str(uuid), integrationId: str(uuid), integrationKey: str, sourceId: str(uuid), sourceType: str, platformName: str, linkUrl: str(uri), status: str, lastSync: str, created: str, dataConnectionErrors: [map]?, connectionInfo: map?} # Success
+@errors {401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endpoint PUT /companies/{companyId}/connections/{connectionId}/authorization
-@returns(200) {id: str(uuid), integrationId: str(uuid), integrationKey: str, sourceId: str(uuid), sourceType: str, platformName: str, linkUrl: str(uri), status: str, lastSync: str, created: str, dataConnectionErrors: [map]?, connectionInfo: map?}
-@errors {401, 402, 403, 404, 429, 500, 503}
+@desc Update authorization
+@returns(200) {id: str(uuid), integrationId: str(uuid), integrationKey: str, sourceId: str(uuid), sourceType: str, platformName: str, linkUrl: str(uri), status: str, lastSync: str, created: str, dataConnectionErrors: [map]?, connectionInfo: map?} # OK
+@errors {401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endgroup
 
 @group config
 @endpoint GET /config/companies/{companyId}/sync/commerce
-@required {companyId: str(uuid)}
-@returns(200) {companyId: str(uuid), accountingSoftwareCompanyName: str, enable: bool, configured: bool, schedule: map{selectedFrequency: str, frequencyOptions: [str], startDate: str, syncHour: int, timeZone: str}, configuration: map{countryCode: str, mapSettings: map{outputFormat: str}, sales: map{syncSales: bool, accounts: map?, invoiceStatus: map{selectedInvoiceStatus: str?, invoiceStatusOptions: [str]?}, salesCustomer: map{selectedCustomerId: str?, customerOptions: [map]?}, taxRates: map?, newTaxRates: map{accountingTaxRateOptions: [map]?, commerceTaxRateOptions: [map]?, taxRateMappings: [map]?, selectedDefaultZeroTaxRateId: str?, defaultZeroTaxRateOptions: [map]?}, grouping: map{groupingPeriod: map, groupingLevels: map}}, payments: map{syncPayments: bool, accounts: map?}, newPayments: map{syncPayments: bool, accounts: map?}, fees: map{feesSupplier: map{selectedSupplierId: str?, supplierOptions: [map]?}, syncFees: bool, accounts: map?}}}
-@errors {401, 402, 403, 404, 429, 500, 503}
+@desc Get company configuration
+@required {companyId: str(uuid) # Unique identifier for a company.}
+@returns(200) {companyId: str(uuid), accountingSoftwareCompanyName: str, enable: bool, configured: bool, schedule: map{selectedFrequency: str, frequencyOptions: [str], startDate: str, syncHour: int, timeZone: str}, configuration: map{countryCode: str, mapSettings: map{outputFormat: str}, sales: map{syncSales: bool, accounts: map?, invoiceStatus: map{selectedInvoiceStatus: str?, invoiceStatusOptions: [str]?}, salesCustomer: map{selectedCustomerId: str?, customerOptions: [map]?}, taxRates: map?, newTaxRates: map{accountingTaxRateOptions: [map]?, commerceTaxRateOptions: [map]?, taxRateMappings: [map]?, selectedDefaultZeroTaxRateId: str?, defaultZeroTaxRateOptions: [map]?}, grouping: map{groupingPeriod: map, groupingLevels: map}}, payments: map{syncPayments: bool, accounts: map?}, newPayments: map{syncPayments: bool, accounts: map?}, fees: map{feesSupplier: map{selectedSupplierId: str?, supplierOptions: [map]?}, syncFees: bool, accounts: map?}}} # Success
+@errors {401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endpoint POST /config/companies/{companyId}/sync/commerce
-@required {companyId: str(uuid)}
-@returns(200) {companyId: str(uuid), accountingSoftwareCompanyName: str, enable: bool, configured: bool, schedule: map{selectedFrequency: str, frequencyOptions: [str], startDate: str, syncHour: int, timeZone: str}, configuration: map{countryCode: str, mapSettings: map{outputFormat: str}, sales: map{syncSales: bool, accounts: map?, invoiceStatus: map{selectedInvoiceStatus: str?, invoiceStatusOptions: [str]?}, salesCustomer: map{selectedCustomerId: str?, customerOptions: [map]?}, taxRates: map?, newTaxRates: map{accountingTaxRateOptions: [map]?, commerceTaxRateOptions: [map]?, taxRateMappings: [map]?, selectedDefaultZeroTaxRateId: str?, defaultZeroTaxRateOptions: [map]?}, grouping: map{groupingPeriod: map, groupingLevels: map}}, payments: map{syncPayments: bool, accounts: map?}, newPayments: map{syncPayments: bool, accounts: map?}, fees: map{feesSupplier: map{selectedSupplierId: str?, supplierOptions: [map]?}, syncFees: bool, accounts: map?}}}
-@errors {400, 401, 402, 403, 404, 409, 429, 500, 503}
+@desc Set configuration
+@required {companyId: str(uuid) # Unique identifier for a company.}
+@returns(200) {companyId: str(uuid), accountingSoftwareCompanyName: str, enable: bool, configured: bool, schedule: map{selectedFrequency: str, frequencyOptions: [str], startDate: str, syncHour: int, timeZone: str}, configuration: map{countryCode: str, mapSettings: map{outputFormat: str}, sales: map{syncSales: bool, accounts: map?, invoiceStatus: map{selectedInvoiceStatus: str?, invoiceStatusOptions: [str]?}, salesCustomer: map{selectedCustomerId: str?, customerOptions: [map]?}, taxRates: map?, newTaxRates: map{accountingTaxRateOptions: [map]?, commerceTaxRateOptions: [map]?, taxRateMappings: [map]?, selectedDefaultZeroTaxRateId: str?, defaultZeroTaxRateOptions: [map]?}, grouping: map{groupingPeriod: map, groupingLevels: map}}, payments: map{syncPayments: bool, accounts: map?}, newPayments: map{syncPayments: bool, accounts: map?}, fees: map{feesSupplier: map{selectedSupplierId: str?, supplierOptions: [map]?}, syncFees: bool, accounts: map?}}} # Success
+@errors {400: The request made is not valid., 401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 409: The data type's dataset has not been requested or is still syncing., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endpoint GET /config/integrations
-@optional {page: int(int32)=1, pageSize: int(int32)=100, query: str, orderBy: str}
-@returns(200)
-@errors {400, 401, 402, 403, 429, 500, 503}
+@desc List integrations
+@optional {page: int(int32)=1 # Page number. [Read more](https://docs.codat.io/using-the-api/paging)., pageSize: int(int32)=100 # Number of records to return in a page. [Read more](https://docs.codat.io/using-the-api/paging)., query: str # Codat query string. [Read more](https://docs.codat.io/using-the-api/querying)., orderBy: str # Field to order results by. [Read more](https://docs.codat.io/using-the-api/ordering-results).}
+@returns(200) Success
+@errors {400: Your `query` parameter was not correctly formed, 401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endpoint GET /config/integrations/{platformKey}/branding
-@required {platformKey: str}
-@returns(200) {logo: map{full: map{image: map{src: str(uri), alt: str}}, square: map{image: map{src: str(uri), alt: str}}}, button: map{default: map{image: map{src: str(uri), alt: str}}, hover: map{image: map{src: str(uri), alt: str}}}, sourceId: str(uuid)}
-@errors {401, 402, 403, 404, 429, 500, 503}
+@desc Get branding for an integration
+@required {platformKey: str # A unique 4-letter key to represent a platform in each integration.}
+@returns(200) {logo: map{full: map{image: map{src: str(uri), alt: str}}, square: map{image: map{src: str(uri), alt: str}}}, button: map{default: map{image: map{src: str(uri), alt: str}}, hover: map{image: map{src: str(uri), alt: str}}}, sourceId: str(uuid)} # Success
+@errors {401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endgroup
 
 @group sync
 @endpoint GET /sync/commerce/config/ui/text
-@required {locale: str(en-us/fr-fr)}
-@returns(200)
-@errors {401, 402, 403, 429, 500, 503}
+@desc Get preferences for text fields
+@required {locale: str(en-us/fr-fr) # Localization identifier for English (US) or French.}
+@returns(200) Success
+@errors {401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endpoint PATCH /sync/commerce/config/ui/text
-@required {locale: str(en-us/fr-fr)}
-@returns(200)
-@errors {400, 401, 402, 403, 429, 500, 503}
+@desc Update preferences for text fields
+@required {locale: str(en-us/fr-fr) # Localization identifier for English (US) or French.}
+@returns(200) Success
+@errors {400: The request made is not valid., 401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endgroup
 
 @group clients
 @endpoint GET /clients/{clientId}/config/ui/accounts/platform/{platformKey}
-@returns(200) {visibleAccounts: [str]?}
-@errors {401, 402, 403, 404, 429, 500, 503}
+@desc List visible accounts
+@returns(200) {visibleAccounts: [str]?} # Success
+@errors {401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endgroup
 
 @group sync
 @endpoint POST /sync/commerce/config/ui/accounts/platform/{platformKey}
-@required {platformKey: str}
-@optional {visibleAccounts: [str]}
-@returns(200) {visibleAccounts: [str]?}
-@errors {400, 401, 402, 403, 404, 429, 500, 503}
+@desc Update visible accounts
+@required {platformKey: str # A unique 4-letter key to represent a platform in each integration.}
+@optional {visibleAccounts: [str] # Visible accounts on sync flow.}
+@returns(200) {visibleAccounts: [str]?} # Success
+@errors {400: The request made is not valid., 401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endgroup
 
 @group companies
 @endpoint POST /companies/{companyId}/sync/commerce/latest
-@required {companyId: str(uuid)}
-@optional {syncTo: str}
-@returns(200) {syncDateRangeUtc: map{start: str, finish: str}, companyId: str(guid), commerceSyncId: str(guid), syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataConnections: [map]?, dataPushed: bool}
-@errors {400, 401, 402, 403, 404, 429, 500, 503}
+@desc Initiate new sync
+@required {companyId: str(uuid) # Unique identifier for a company.}
+@optional {syncTo: str # In Codat's data model, dates and times are represented using the <a class="external" href="https://en.wikipedia.org/wiki/ISO_8601" target="_blank">ISO 8601 standard</a>. Date and time fields are formatted as strings; for example:  ``` 2020-10-08T22:40:50Z 2021-01-01T00:00:00 ```    When syncing data that contains `DateTime` fields from Codat, make sure you support the following cases when reading time information:  - Coordinated Universal Time (UTC): `2021-11-15T06:00:00Z` - Unqualified local time: `2021-11-15T01:00:00` - UTC time offsets: `2021-11-15T01:00:00-05:00`  > Time zones >  > Not all dates from Codat will contain information about time zones.   > Where it is not available from the underlying platform, Codat will return these as times local to the business whose data has been synced.}
+@returns(200) {syncDateRangeUtc: map{start: str, finish: str}, companyId: str(guid), commerceSyncId: str(guid), syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataConnections: [map]?, dataPushed: bool} # Success
+@errors {400: The request made is not valid., 401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endgroup
 
 @group meta
 @endpoint POST /meta/companies/{companyId}/sync/commerce/historic
-@required {companyId: str(uuid), dateRange: map{start!: str, finish!: str}}
-@returns(200) {syncDateRangeUtc: map{start: str, finish: str}, companyId: str(guid), commerceSyncId: str(guid), syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataConnections: [map]?, dataPushed: bool}
-@errors {400, 401, 402, 403, 404, 429, 500, 503}
+@desc Initiate sync for specific range
+@required {companyId: str(uuid) # Unique identifier for a company., dateRange: map{start!: str, finish!: str}}
+@returns(200) {syncDateRangeUtc: map{start: str, finish: str}, companyId: str(guid), commerceSyncId: str(guid), syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataConnections: [map]?, dataPushed: bool} # Success
+@errors {400: The request made is not valid., 401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endpoint GET /meta/companies/{companyId}/sync/commerce/status
-@required {companyId: str(uuid)}
-@returns(200) {companyId: str(uuid), commerceSyncId: str(guid), syncId: str(uuid), syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataPushed: bool, dataConnections: [map]?}
-@errors {401, 402, 403, 404, 429, 500, 503}
+@desc Get sync status
+@required {companyId: str(uuid) # Unique identifier for a company.}
+@returns(200) {companyId: str(uuid), commerceSyncId: str(guid), syncId: str(uuid), syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataPushed: bool, dataConnections: [map]?} # Success
+@errors {401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endgroup
 
 @group companies
 @endpoint GET /companies/{companyId}/sync/commerce/syncs/lastSuccessful/status
-@required {companyId: str(uuid)}
-@returns(200) {companyId: str?, syncId: str?, syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataPushed: bool}
-@errors {401, 402, 403, 404, 429, 500, 503}
+@desc Last successful sync
+@required {companyId: str(uuid) # Unique identifier for a company.}
+@returns(200) {companyId: str?, syncId: str?, syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataPushed: bool} # Success
+@errors {401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endpoint GET /companies/{companyId}/sync/commerce/syncs/latest/status
-@required {companyId: str(uuid)}
-@returns(200) {companyId: str?, syncId: str?, syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataPushed: bool}
-@errors {401, 402, 403, 404, 429, 500, 503}
+@desc Latest sync status
+@required {companyId: str(uuid) # Unique identifier for a company.}
+@returns(200) {companyId: str?, syncId: str?, syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataPushed: bool} # Success
+@errors {401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endpoint GET /companies/{companyId}/sync/commerce/syncs/{syncId}/status
-@required {companyId: str(uuid), syncId: str(uuid)}
-@returns(200) {companyId: str?, syncId: str?, syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataPushed: bool}
-@errors {401, 402, 403, 404, 429, 500, 503}
+@desc Get sync status
+@required {companyId: str(uuid) # Unique identifier for a company., syncId: str(uuid) # Unique identifier for a sync.}
+@returns(200) {companyId: str?, syncId: str?, syncStatusCode: int(int32), syncStatus: str?, errorMessage: str?, syncExceptionMessage: str?, syncUtc: str, dataPushed: bool} # Success
+@errors {401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endpoint GET /companies/{companyId}/sync/commerce/syncs/list/status
-@required {companyId: str(uuid)}
-@returns(200)
-@errors {401, 402, 403, 404, 429, 500, 503}
+@desc List sync statuses
+@required {companyId: str(uuid) # Unique identifier for a company.}
+@returns(200) Success
+@errors {401: Your API request was not properly authorized., 402: An account limit has been exceeded. The type of limit is described in the error property:  - You have exceeded the 50-company limit that applies to a Free plan. Delete any companies you no longer need and retry the request. - The requested sync schedule is not allowed. You requested an hourly sync schedule but this functionality is not included in the Free plan. - Your Free account is older than 365 days and has expired. Contact support@codat.io., 403: You are using an outdated API key or a key not associated with that resource., 404: One or more of the resources you referenced could not be found. This might be because your company or data connection id is wrong, or was already deleted., 429: Too many requests were made in a given amount of time. Wait a short period and then try again., 500: There is a problem with our server. Please try again later., 503: The Codat API is temporarily offline for maintenance. Please try again later.}
 
 @endgroup
 

@@ -8,338 +8,403 @@
 
 @group ids
 @endpoint GET /ids/globalIds/{globalId}
-@optional {dereference: bool}
-@returns(200)
-@errors {401, 403, 404, 500}
+@desc Get artifact by global ID
+@optional {dereference: bool # Allows the user to specify if the content should be dereferenced when being returned}
+@returns(200) The content of one version of one artifact.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endgroup
 
 @group admin
 @endpoint GET /admin/artifactTypes
-@returns(200)
-@errors {401, 403, 500}
+@desc List artifact types
+@returns(200) The list of available artifact types.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /admin/rules
-@returns(200)
-@errors {401, 403, 500}
+@desc List global rules
+@returns(200) The list of names of the globally configured rules.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint POST /admin/rules
+@desc Create global rule
 @required {config: str}
 @optional {type: str(VALIDITY/COMPATIBILITY/INTEGRITY)}
-@returns(204)
-@errors {400, 401, 403, 409, 500}
+@returns(204) The global rule was added.
+@errors {400: Common response for all operations that can return a `400` error., 401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 409: Common response used when an input conflicts with existing data., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint DELETE /admin/rules
-@returns(204)
-@errors {401, 403, 500}
+@desc Delete all global rules
+@returns(204) All global rules have been removed successfully.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /admin/rules/{rule}
-@returns(200) {config: str, type: str}
-@errors {401, 403, 404, 500}
+@desc Get global rule configuration
+@returns(200) {config: str, type: str} # The global rule's configuration.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint PUT /admin/rules/{rule}
+@desc Update global rule configuration
 @required {config: str}
 @optional {type: str(VALIDITY/COMPATIBILITY/INTEGRITY)}
-@returns(200) {config: str, type: str}
-@errors {401, 403, 404, 500}
+@returns(200) {config: str, type: str} # The global rule's configuration was successfully updated.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint DELETE /admin/rules/{rule}
-@returns(204)
-@errors {401, 403, 404, 500}
+@desc Delete global rule
+@returns(204) The global rule was successfully deleted.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endgroup
 
 @group system
 @endpoint GET /system/info
-@returns(200) {name: str, description: str, version: str, builtOn: str(date-time)}
-@errors {500}
+@desc Get system information
+@returns(200) {name: str, description: str, version: str, builtOn: str(date-time)} # On success, returns the system information.
+@errors {500: Common response for all operations that can fail with an unexpected server error.}
 
 @endgroup
 
 @group search
 @endpoint GET /search/artifacts
-@optional {name: str, offset: int=0, limit: int=20, order: str, orderby: str, labels: [str], properties: [str], description: str, group: str, globalId: int(int64), contentId: int(int64)}
-@returns(200) {artifacts: [map], count: int}
-@errors {401, 403, 500}
+@desc Search for artifacts
+@optional {name: str # Filter by artifact name., offset: int=0 # The number of artifacts to skip before starting to collect the result set.  Defaults to 0., limit: int=20 # The number of artifacts to return.  Defaults to 20., order: str # Sort order, ascending (`asc`) or descending (`desc`)., orderby: str # The field to sort by.  Can be one of:  * `name` * `createdOn`, labels: [str] # Filter by label.  Include one or more label to only return artifacts containing all of the specified labels., properties: [str] # Filter by one or more name/value property.  Separate each name/value pair using a colon.  For example `properties=foo:bar` will return only artifacts with a custom property named `foo` and value `bar`., description: str # Filter by description., group: str # Filter by artifact group., globalId: int(int64) # Filter by globalId., contentId: int(int64) # Filter by contentId.}
+@returns(200) {artifacts: [map], count: int} # On a successful response, returns a result set of artifacts - one for each artifact in the registry that matches the criteria.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint POST /search/artifacts
-@optional {canonical: bool, artifactType: str, offset: int=0, limit: int=20, order: str(asc/desc), orderby: str(name/createdOn)}
-@returns(200) {artifacts: [map], count: int}
-@errors {401, 403, 500}
+@desc Search for artifacts by content
+@optional {canonical: bool # Parameter that can be set to `true` to indicate that the server should "canonicalize" the content when searching for matching artifacts.  Canonicalization is unique to each artifact type, but typically involves removing any extra whitespace and formatting the content in a consistent manner.  Must be used along with the `artifactType` query parameter., artifactType: str # Indicates the type of artifact represented by the content being used for the search.  This is only needed when using the `canonical` query parameter, so that the server knows how to canonicalize the content prior to searching for matching artifacts., offset: int=0 # The number of artifacts to skip before starting to collect the result set.  Defaults to 0., limit: int=20 # The number of artifacts to return.  Defaults to 20., order: str(asc/desc) # Sort order, ascending (`asc`) or descending (`desc`)., orderby: str(name/createdOn) # The field to sort by.  Can be one of:  * `name` * `createdOn`}
+@returns(200) {artifacts: [map], count: int} # On a successful response, returns a result set of artifacts - one for each artifact in the registry that matches the criteria.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endgroup
 
 @group admin
 @endpoint GET /admin/export
-@optional {forBrowser: bool}
-@returns(200) {downloadId: str, href: str}
-@errors {401, 403, 500}
+@desc Export registry data
+@optional {forBrowser: bool # Indicates if the operation is done for a browser.  If true, the response will be a JSON payload with a property called `href`.  This `href` will be a single-use, naked download link suitable for use by a web browser to download the content.}
+@returns(200) {downloadId: str, href: str} # Response when the export is successful.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint POST /admin/import
-@optional {X-Registry-Preserve-GlobalId: bool, X-Registry-Preserve-ContentId: bool}
-@returns(201)
-@errors {401, 403, 500}
+@desc Import registry data
+@optional {X-Registry-Preserve-GlobalId: bool # If this header is set to false, global ids of imported data will be ignored and replaced by next id in global id sequence. This allows to import any data even thought the global ids would cause a conflict., X-Registry-Preserve-ContentId: bool # If this header is set to false, content ids of imported data will be ignored and replaced by next id in content id sequence. The mapping between content and artifacts will be preserved. This allows to import any data even thought the content ids would cause a conflict.}
+@returns(201) Indicates that the import was successful.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endgroup
 
 @group groups
 @endpoint PUT /groups/{groupId}/artifacts/{artifactId}/state
-@required {state: str(ENABLED/DISABLED/DEPRECATED)}
-@returns(204)
-@errors {400, 401, 403, 404, 500}
+@desc Update artifact state
+@required {state: str(ENABLED/DISABLED/DEPRECATED) # Describes the state of an artifact or artifact version.  The following states are possible:  * ENABLED * DISABLED * DEPRECATED}
+@returns(204) Returned when the operation was successful.
+@errors {400: Common response for all operations that can return a `400` error., 401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /groups/{groupId}/artifacts/{artifactId}/versions/{version}/meta
-@returns(200) {version: str, name: str, description: str, createdBy: str, createdOn: str(date-time), type: str, globalId: int(int64), state: str, id: str, labels: [str], properties: map, groupId: str, contentId: int(int64)}
-@errors {401, 403, 404, 500}
+@desc Get artifact version metadata
+@returns(200) {version: str, name: str, description: str, createdBy: str, createdOn: str(date-time), type: str, globalId: int(int64), state: str, id: str, labels: [str], properties: map, groupId: str, contentId: int(int64)} # The artifact version's metadata.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint PUT /groups/{groupId}/artifacts/{artifactId}/versions/{version}/meta
-@optional {name: str, description: str, labels: [str], properties: map}
-@returns(204)
-@errors {401, 403, 404, 500}
+@desc Update artifact version metadata
+@optional {name: str, description: str, labels: [str], properties: map # User-defined name-value pairs. Name and value must be strings.}
+@returns(204) The artifact version's metadata was successfully updated.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint DELETE /groups/{groupId}/artifacts/{artifactId}/versions/{version}/meta
-@returns(204)
-@errors {401, 403, 404, 500}
+@desc Delete artifact version metadata
+@returns(204) The artifact version's user-editable metadata was successfully deleted.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /groups/{groupId}/artifacts/{artifactId}/versions/{version}
-@optional {dereference: bool}
-@returns(200)
-@errors {401, 403, 404, 500}
+@desc Get artifact version
+@optional {dereference: bool # Allows the user to specify if the content should be dereferenced when being returned}
+@returns(200) The content of one version of one artifact.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint DELETE /groups/{groupId}/artifacts/{artifactId}/versions/{version}
-@returns(204)
-@errors {401, 403, 404, 405, 500}
+@desc Delete artifact version
+@returns(204) The artifact version was successfully deleted.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 405: Common response for all operations that can fail due to method not allowed or disabled., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint PUT /groups/{groupId}/artifacts/{artifactId}/versions/{version}/state
-@required {state: str(ENABLED/DISABLED/DEPRECATED)}
-@returns(204)
-@errors {400, 401, 403, 404, 500}
+@desc Update artifact version state
+@required {state: str(ENABLED/DISABLED/DEPRECATED) # Describes the state of an artifact or artifact version.  The following states are possible:  * ENABLED * DISABLED * DEPRECATED}
+@returns(204) Returned when the update was successful.
+@errors {400: Common response for all operations that can return a `400` error., 401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /groups/{groupId}/artifacts/{artifactId}/rules
-@returns(200)
-@errors {401, 403, 404, 500}
+@desc List artifact rules
+@returns(200) Returns the names of the rules configured for the artifact.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint POST /groups/{groupId}/artifacts/{artifactId}/rules
+@desc Create artifact rule
 @required {config: str}
 @optional {type: str(VALIDITY/COMPATIBILITY/INTEGRITY)}
-@returns(204)
-@errors {400, 401, 403, 404, 500}
+@returns(204) The rule was added.
+@errors {400: Common response for all operations that can return a `400` error., 401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint DELETE /groups/{groupId}/artifacts/{artifactId}/rules
-@returns(204)
-@errors {401, 403, 404, 500}
+@desc Delete artifact rules
+@returns(204) The rules were successfully deleted.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /groups/{groupId}/artifacts/{artifactId}/rules/{rule}
-@returns(200) {config: str, type: str}
-@errors {401, 403, 404, 500}
+@desc Get artifact rule configuration
+@returns(200) {config: str, type: str} # Information about a rule.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint PUT /groups/{groupId}/artifacts/{artifactId}/rules/{rule}
+@desc Update artifact rule configuration
 @required {config: str}
 @optional {type: str(VALIDITY/COMPATIBILITY/INTEGRITY)}
-@returns(200) {config: str, type: str}
-@errors {401, 403, 404, 500}
+@returns(200) {config: str, type: str} # Rule configuration was updated.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint DELETE /groups/{groupId}/artifacts/{artifactId}/rules/{rule}
-@returns(204)
-@errors {401, 403, 404, 500}
+@desc Delete artifact rule
+@returns(204) The rule was successfully deleted.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endgroup
 
 @group admin
 @endpoint GET /admin/roleMappings/{principalId}
-@returns(200) {principalId: str, role: str, principalName: str}
-@errors {401, 403, 404, 500}
+@desc Return a single role mapping
+@returns(200) {principalId: str, role: str, principalName: str} # When successful, returns the details of a role mapping.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint PUT /admin/roleMappings/{principalId}
+@desc Update a role mapping
 @required {role: str(READ_ONLY/DEVELOPER/ADMIN)}
-@returns(204)
-@errors {401, 403, 404, 500}
+@returns(204) Response when the update is successful.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint DELETE /admin/roleMappings/{principalId}
-@returns(204)
-@errors {401, 403, 404, 500}
+@desc Delete a role mapping
+@returns(204) Response returned when the delete was successful.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /admin/roleMappings
-@returns(200)
-@errors {401, 403, 500}
+@desc List all role mappings
+@returns(200) A successful response will return the list of role mappings.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint POST /admin/roleMappings
+@desc Create a new role mapping
 @required {principalId: str, role: str(READ_ONLY/DEVELOPER/ADMIN)}
-@optional {principalName: str}
-@returns(204)
-@errors {401, 403, 500}
+@optional {principalName: str # A friendly name for the principal.}
+@returns(204) Returned when the role mapping was successfully created.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endgroup
 
 @group users
 @endpoint GET /users/me
-@returns(200) {username: str, displayName: str, admin: bool, developer: bool, viewer: bool}
-@errors {401, 403, 500}
+@desc Get current user
+@returns(200) {username: str, displayName: str, admin: bool, developer: bool, viewer: bool} # Response when the endpoint is successfully invoked.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endgroup
 
 @group ids
 @endpoint GET /ids/contentHashes/{contentHash}/references
-@returns(200)
-@errors {401, 403}
+@desc List artifact references by hash
+@returns(200) A list containing all the references for the artifact with the given content hash.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized.}
 
 @endpoint GET /ids/contentIds/{contentId}/references
-@returns(200)
-@errors {401, 403}
+@desc List artifact references by content ID
+@returns(200) A list containing all the references for the artifact with the given content id.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized.}
 
 @endpoint GET /ids/globalIds/{globalId}/references
-@returns(200)
-@errors {401, 403}
+@desc List artifact references by global ID
+@returns(200) A list containing all the references for the artifact with the given global id.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized.}
 
 @endgroup
 
 @group groups
 @endpoint GET /groups/{groupId}/artifacts/{artifactId}/versions/{version}/references
-@returns(200)
-@errors {401, 403, 404, 500}
+@desc Get artifact version references
+@returns(200) List of all the artifact references for this artifact.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endgroup
 
 @group admin
 @endpoint GET /admin/config/properties
-@returns(200)
-@errors {401, 403, 500}
+@desc List all configuration properties
+@returns(200) On a successful response, returns a list of configuration properties.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /admin/config/properties/{propertyName}
-@returns(200) {name: str, value: str, type: str, label: str, description: str}
-@errors {401, 403, 404, 500}
+@desc Get configuration property value
+@returns(200) {name: str, value: str, type: str, label: str, description: str} # The configuration property value.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint PUT /admin/config/properties/{propertyName}
+@desc Update a configuration property
 @required {value: str}
-@returns(204)
-@errors {401, 403, 404, 500}
+@returns(204) The configuration property was updated.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint DELETE /admin/config/properties/{propertyName}
-@returns(204)
-@errors {401, 403, 404, 500}
+@desc Reset a configuration property
+@returns(204) The configuration property was deleted.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endgroup
 
 @group system
 @endpoint GET /system/limits
-@returns(200) {maxTotalSchemasCount: int(int64), maxSchemaSizeBytes: int(int64), maxArtifactsCount: int(int64), maxVersionsPerArtifactCount: int(int64), maxArtifactPropertiesCount: int(int64), maxPropertyKeySizeBytes: int(int64), maxPropertyValueSizeBytes: int(int64), maxArtifactLabelsCount: int(int64), maxLabelSizeBytes: int(int64), maxArtifactNameLengthChars: int(int64), maxArtifactDescriptionLengthChars: int(int64), maxRequestsPerSecondCount: int(int64)}
-@errors {401, 403, 500}
+@desc Get resource limits information
+@returns(200) {maxTotalSchemasCount: int(int64), maxSchemaSizeBytes: int(int64), maxArtifactsCount: int(int64), maxVersionsPerArtifactCount: int(int64), maxArtifactPropertiesCount: int(int64), maxPropertyKeySizeBytes: int(int64), maxPropertyValueSizeBytes: int(int64), maxArtifactLabelsCount: int(int64), maxLabelSizeBytes: int(int64), maxArtifactNameLengthChars: int(int64), maxArtifactDescriptionLengthChars: int(int64), maxRequestsPerSecondCount: int(int64)} # On success, returns resource limits
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endgroup
 
 @group groups
 @endpoint GET /groups/{groupId}/artifacts/{artifactId}
-@optional {dereference: bool}
-@returns(200)
-@errors {401, 403, 404, 500}
+@desc Get latest artifact
+@optional {dereference: bool # Allows the user to specify if the content should be dereferenced when being returned}
+@returns(200) The content of one version of one artifact.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint PUT /groups/{groupId}/artifacts/{artifactId}
-@optional {X-Registry-Version: str, X-Registry-Name: str, X-Registry-Name-Encoded: str, X-Registry-Description: str, X-Registry-Description-Encoded: str}
-@returns(200) {name: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), id: str, version: str, type: str, globalId: int(int64), state: str, labels: [str], properties: map, groupId: str, contentId: int(int64), references: [map]}
-@errors {401, 403, 404, 409, 500}
+@desc Update artifact
+@optional {X-Registry-Version: str # Specifies the version number of this new version of the artifact content.  This would typically be a simple integer or a SemVer value.  If not provided, the server will assign a version number automatically., X-Registry-Name: str # Specifies the artifact name of this new version of the artifact content. Name must be ASCII-only string. If this is not provided, the server will extract the name from the artifact content., X-Registry-Name-Encoded: str # Specifies the artifact name of this new version of the artifact content. Value of this must be Base64 encoded string. If this is not provided, the server will extract the name from the artifact content., X-Registry-Description: str # Specifies the artifact description of this new version of the artifact content. Description must be ASCII-only string. If this is not provided, the server will extract the description from the artifact content., X-Registry-Description-Encoded: str # Specifies the artifact description of this new version of the artifact content. Value of this must be Base64 encoded string. If this is not provided, the server will extract the description from the artifact content.}
+@returns(200) {name: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), id: str, version: str, type: str, globalId: int(int64), state: str, labels: [str], properties: map, groupId: str, contentId: int(int64), references: [map]} # When successful, returns the updated artifact metadata.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 409: Common response used when an input conflicts with existing data., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint DELETE /groups/{groupId}/artifacts/{artifactId}
-@returns(204)
-@errors {401, 403, 404, 500}
+@desc Delete artifact
+@returns(204) Returned when the artifact was successfully deleted.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /groups/{groupId}/artifacts
-@optional {limit: int, offset: int, order: str, orderby: str}
-@returns(200) {artifacts: [map], count: int}
-@errors {401, 403, 500}
+@desc List artifacts in group
+@optional {limit: int # The number of artifacts to return.  Defaults to 20., offset: int # The number of artifacts to skip before starting the result set.  Defaults to 0., order: str # Sort order, ascending (`asc`) or descending (`desc`)., orderby: str # The field to sort by.  Can be one of:  * `name` * `createdOn`}
+@returns(200) {artifacts: [map], count: int} # On a successful response, returns a bounded set of artifacts.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint POST /groups/{groupId}/artifacts
-@optional {X-Registry-ArtifactType: str, X-Registry-ArtifactId: str, X-Registry-Version: str, ifExists: str, canonical: bool, X-Registry-Description: str, X-Registry-Description-Encoded: str, X-Registry-Name: str, X-Registry-Name-Encoded: str, X-Registry-Content-Hash: str, X-Registry-Hash-Algorithm: str(SHA256/MD5)}
-@returns(200) {name: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), id: str, version: str, type: str, globalId: int(int64), state: str, labels: [str], properties: map, groupId: str, contentId: int(int64), references: [map]}
-@errors {400, 401, 403, 409, 500}
+@desc Create artifact
+@optional {X-Registry-ArtifactType: str # Specifies the type of the artifact being added. Possible values include:  * Avro (`AVRO`) * Protobuf (`PROTOBUF`) * JSON Schema (`JSON`) * Kafka Connect (`KCONNECT`) * OpenAPI (`OPENAPI`) * AsyncAPI (`ASYNCAPI`) * GraphQL (`GRAPHQL`) * Web Services Description Language (`WSDL`) * XML Schema (`XSD`), X-Registry-ArtifactId: str # A client-provided, globally unique identifier for the new artifact., X-Registry-Version: str # Specifies the version number of this initial version of the artifact content.  This would typically be a simple integer or a SemVer value.  If not provided, the server will assign a version number automatically (starting with version `1`)., ifExists: str # Set this option to instruct the server on what to do if the artifact already exists., canonical: bool # Used only when the `ifExists` query parameter is set to `RETURN_OR_UPDATE`, this parameter can be set to `true` to indicate that the server should "canonicalize" the content when searching for a matching version.  The canonicalization algorithm is unique to each artifact type, but typically involves removing extra whitespace and formatting the content in a consistent manner., X-Registry-Description: str # Specifies the description of artifact being added. Description must be ASCII-only string. If this is not provided, the server will extract the description from the artifact content., X-Registry-Description-Encoded: str # Specifies the description of artifact being added. Value of this must be Base64 encoded string. If this is not provided, the server will extract the description from the artifact content., X-Registry-Name: str # Specifies the name of artifact being added. Name must be ASCII-only string. If this is not provided, the server will extract the name from the artifact content., X-Registry-Name-Encoded: str # Specifies the name of artifact being added. Value of this must be Base64 encoded string. If this is not provided, the server will extract the name from the artifact content., X-Registry-Content-Hash: str # Specifies the (optional) hash of the artifact to be verified., X-Registry-Hash-Algorithm: str(SHA256/MD5) # The algorithm to use when checking the content validity. (available: SHA256, MD5; default: SHA256)}
+@returns(200) {name: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), id: str, version: str, type: str, globalId: int(int64), state: str, labels: [str], properties: map, groupId: str, contentId: int(int64), references: [map]} # Artifact was successfully created.
+@errors {400: Common response for all operations that can return a `400` error., 401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 409: Common response used when an input conflicts with existing data., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint DELETE /groups/{groupId}/artifacts
-@returns(204)
-@errors {401, 403, 500}
+@desc Delete artifacts in group
+@returns(204) When the delete operation is successful, a simple 204 is returned.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint PUT /groups/{groupId}/artifacts/{artifactId}/test
-@returns(204)
-@errors {401, 403, 404, 409, 500}
+@desc Test update artifact
+@returns(204) When successful, returns "No Content" to indicate that the rules passed, and the content was not updated.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 409: Common response used when an input conflicts with existing data., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /groups/{groupId}/artifacts/{artifactId}/versions
-@optional {offset: int, limit: int}
-@returns(200) {count: int, versions: [map]}
-@errors {401, 403, 404, 500}
+@desc List artifact versions
+@optional {offset: int # The number of versions to skip before starting to collect the result set.  Defaults to 0., limit: int # The number of versions to return.  Defaults to 20.}
+@returns(200) {count: int, versions: [map]} # List of all artifact versions.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint POST /groups/{groupId}/artifacts/{artifactId}/versions
-@optional {X-Registry-Version: str, X-Registry-Name: str, X-Registry-Description: str, X-Registry-Description-Encoded: str, X-Registry-Name-Encoded: str}
-@returns(200) {version: str, name: str, description: str, createdBy: str, createdOn: str(date-time), type: str, globalId: int(int64), state: str, id: str, labels: [str], properties: map, groupId: str, contentId: int(int64)}
-@errors {401, 403, 404, 409, 500}
+@desc Create artifact version
+@optional {X-Registry-Version: str # Specifies the version number of this new version of the artifact content.  This would typically be a simple integer or a SemVer value.  It must be unique within the artifact.  If this is not provided, the server will generate a new, unique version number for this new updated content., X-Registry-Name: str # Specifies the artifact name of this new version of the artifact content. Name must be ASCII-only string. If this is not provided, the server will extract the name from the artifact content., X-Registry-Description: str # Specifies the artifact description of this new version of the artifact content. Description must be ASCII-only string. If this is not provided, the server will extract the description from the artifact content., X-Registry-Description-Encoded: str # Specifies the artifact description of this new version of the artifact content. Value of this must be Base64 encoded string. If this is not provided, the server will extract the description from the artifact content., X-Registry-Name-Encoded: str # Specifies the artifact name of this new version of the artifact content. Value of this must be Base64 encoded string. If this is not provided, the server will extract the name from the artifact content.}
+@returns(200) {version: str, name: str, description: str, createdBy: str, createdOn: str(date-time), type: str, globalId: int(int64), state: str, id: str, labels: [str], properties: map, groupId: str, contentId: int(int64)} # The artifact version was successfully created.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 409: Common response used when an input conflicts with existing data., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /groups/{groupId}/artifacts/{artifactId}/owner
-@returns(200) {owner: str}
-@errors {401, 403, 404, 500}
+@desc Get artifact owner
+@returns(200) {owner: str} # The artifact's owner.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint PUT /groups/{groupId}/artifacts/{artifactId}/owner
+@desc Update artifact owner
 @optional {owner: str}
-@returns(204)
-@errors {401, 403, 404, 500}
+@returns(204) The owner was successfully changed.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /groups/{groupId}
-@returns(200) {id: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), properties: map}
-@errors {401, 403, 404, 500}
+@desc Get a group by the specified ID.
+@returns(200) {id: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), properties: map} # The group's metadata.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint DELETE /groups/{groupId}
-@returns(204)
-@errors {401, 403, 404, 500}
+@desc Delete a group by the specified ID.
+@returns(204) Empty content indicates a successful deletion.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /groups
-@optional {limit: int, offset: int, order: str, orderby: str}
-@returns(200) {groups: [map], count: int}
-@errors {401, 403, 500}
+@desc List groups
+@optional {limit: int # The number of groups to return.  Defaults to 20., offset: int # The number of groups to skip before starting the result set.  Defaults to 0., order: str # Sort order, ascending (`asc`) or descending (`desc`)., orderby: str # The field to sort by.  Can be one of:  * `name` * `createdOn`}
+@returns(200) {groups: [map], count: int} # On a successful response, returns a bounded set of groups.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint POST /groups
+@desc Create a new group
 @required {id: str}
-@optional {description: str, properties: map}
-@returns(200) {id: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), properties: map}
-@errors {400, 401, 403, 409, 500}
+@optional {description: str, properties: map # User-defined name-value pairs. Name and value must be strings.}
+@returns(200) {id: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), properties: map} # The group has been successfully created.
+@errors {400: Common response for all operations that can return a `400` error., 401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 409: Common response used when an input conflicts with existing data., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /groups/{groupId}/artifacts/{artifactId}/meta
-@returns(200) {name: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), id: str, version: str, type: str, globalId: int(int64), state: str, labels: [str], properties: map, groupId: str, contentId: int(int64), references: [map]}
-@errors {401, 403, 404, 500}
+@desc Get artifact metadata
+@returns(200) {name: str, description: str, createdBy: str, createdOn: str(date-time), modifiedBy: str, modifiedOn: str(date-time), id: str, version: str, type: str, globalId: int(int64), state: str, labels: [str], properties: map, groupId: str, contentId: int(int64), references: [map]} # The artifact's metadata.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint PUT /groups/{groupId}/artifacts/{artifactId}/meta
-@optional {name: str, description: str, labels: [str], properties: map}
-@returns(204)
-@errors {401, 403, 404, 500}
+@desc Update artifact metadata
+@optional {name: str, description: str, labels: [str], properties: map # User-defined name-value pairs. Name and value must be strings.}
+@returns(204) The artifact's metadata was updated.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint POST /groups/{groupId}/artifacts/{artifactId}/meta
-@optional {canonical: bool}
-@returns(200) {version: str, name: str, description: str, createdBy: str, createdOn: str(date-time), type: str, globalId: int(int64), state: str, id: str, labels: [str], properties: map, groupId: str, contentId: int(int64)}
-@errors {401, 403, 404, 500}
+@desc Get artifact version metadata by content
+@optional {canonical: bool # Parameter that can be set to `true` to indicate that the server should "canonicalize" the content when searching for a matching version.  Canonicalization is unique to each artifact type, but typically involves removing any extra whitespace and formatting the content in a consistent manner.}
+@returns(200) {version: str, name: str, description: str, createdBy: str, createdOn: str(date-time), type: str, globalId: int(int64), state: str, id: str, labels: [str], properties: map, groupId: str, contentId: int(int64)} # The metadata of the artifact version matching the provided content.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /groups/{groupId}/artifacts/{artifactId}/versions/{version}/comments
-@returns(200)
-@errors {401, 403, 404, 500}
+@desc Get artifact version comments
+@returns(200) List of all the comments for this artifact.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint POST /groups/{groupId}/artifacts/{artifactId}/versions/{version}/comments
+@desc Add new comment
 @required {value: str}
-@returns(200) {value: str, createdOn: str(date-time), createdBy: str, commentId: str}
-@errors {401, 403, 404, 500}
+@returns(200) {value: str, createdOn: str(date-time), createdBy: str, commentId: str} # The comment was successfully created.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint PUT /groups/{groupId}/artifacts/{artifactId}/versions/{version}/comments/{commentId}
+@desc Update a comment
 @required {value: str}
-@returns(204)
-@errors {401, 403, 404, 500}
+@returns(204) The value of the comment was successfully changed.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint DELETE /groups/{groupId}/artifacts/{artifactId}/versions/{version}/comments/{commentId}
-@returns(204)
-@errors {401, 403, 404, 500}
+@desc Delete a single comment
+@returns(204) The comment was successfully deleted.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endgroup
 
 @group ids
 @endpoint GET /ids/contentIds/{contentId}
-@returns(200)
-@errors {401, 403, 404, 500}
+@desc Get artifact content by ID
+@returns(200) The content of one version of one artifact.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endpoint GET /ids/contentHashes/{contentHash}
-@returns(200)
-@errors {401, 403, 404, 500}
+@desc Get artifact content by SHA-256 hash
+@returns(200) The content of one version of one artifact.
+@errors {401: Common response for all operations that can return a `401` error indicating authentication is required., 403: Common response for all operations that can return a `403` error indicating the user is authenticated but not authorized., 404: Common response for all operations that can return a `404` error., 500: Common response for all operations that can fail with an unexpected server error.}
 
 @endgroup
 

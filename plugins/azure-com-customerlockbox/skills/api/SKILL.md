@@ -38,83 +38,17 @@ https://management.azure.com
 | POST | /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests/{requestId}/updateApproval | Update Customer Lockbox request approval status API |
 | GET | /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests | Lists all of the Lockbox requests in the given subscription. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What operations are available for Customer Lockbox?" -> GET /providers/Microsoft.CustomerLockbox/operations
-- "Is Customer Lockbox enabled for my tenant?" -> GET /providers/Microsoft.CustomerLockbox/tenantOptedIn/{tenantId}
-- "Check if tenant abc-123 has opted into Lockbox" -> GET /providers/Microsoft.CustomerLockbox/tenantOptedIn/{tenantId}
-- "Enable Customer Lockbox for my organization" -> POST /providers/Microsoft.CustomerLockbox/enableLockbox
-- "Turn on Lockbox so Microsoft needs approval before accessing data" -> POST /providers/Microsoft.CustomerLockbox/enableLockbox
-- "Disable Customer Lockbox" -> POST /providers/Microsoft.CustomerLockbox/disableLockbox
-- "Turn off Lockbox approval requirements" -> POST /providers/Microsoft.CustomerLockbox/disableLockbox
-- "Get details on a specific Lockbox request" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests/{requestId}
-- "What is the status of Lockbox request req-456?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests/{requestId}
-- "List all Lockbox requests for my subscription" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests
-- "Show pending Lockbox requests that need my approval" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests (with $filter)
-- "Approve a Customer Lockbox request" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests/{requestId}/updateApproval
-- "Deny a Lockbox access request from Microsoft" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests/{requestId}/updateApproval
-- "How do I respond to a Microsoft support access request?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests/{requestId}/updateApproval
-
-## Response Tips
-
-- **Operations** (`/operations`): Returns a list of available API operations with name, display info, and descriptions. Useful for capability discovery only.
-- **Tenant opt-in** (`/tenantOptedIn`): Returns a simple boolean-style status indicating whether Lockbox is active. Check the `isOptedIn` field directly.
-- **Enable/Disable** (`/enableLockbox`, `/disableLockbox`): Returns 200 on success with the updated tenant status. These are idempotent -- enabling an already-enabled tenant is a no-op.
-- **Request details** (`/requests/{requestId}`): Returns the full request object including status (`Pending`, `Approved`, `Denied`, `Expired`), requestor info, creation time, and expiration. Watch for `Expired` status on requests you intended to review.
-- **Request listing** (`/requests`): Supports OData `$filter` for narrowing results. Returns a `value` array; check `nextLink` for pagination when many requests exist.
-- **Update approval** (`/updateApproval`): The `approval` map must include `status` (`Approve` or `Deny`) and a `reason`. Returns the updated request object.
-
-## Anomaly Flags
-
-- **Lockbox disabled at tenant level**: If `tenantOptedIn` returns false, surface this immediately -- no approval workflows are active and Microsoft support can access data without customer consent.
-- **Expired requests**: When listing or fetching requests, flag any with `Expired` status -- these represent missed approval windows where the default action (deny) was applied automatically.
-- **Pending requests nearing expiration**: Surface requests in `Pending` status, especially if creation timestamps suggest they are close to the expiration window (typically 4-12 hours).
-- **Rapid approval/deny patterns**: If multiple requests are being bulk-approved or denied in quick succession, flag for review -- this may indicate automation without human oversight.
-- **API version mismatch**: All endpoints require `api-version`. If calls fail with 400, verify `2018-02-28-preview` is passed -- this is a preview API and version sensitivity is high.
-- **Filter returning empty results**: When listing requests with `$filter` returns zero results but unfiltered returns many, surface the filter mismatch to avoid false "all clear" conclusions.
-
-## Playbook
-
-### 1. First-Time Lockbox Setup
-
-1. Check current status: `GET /providers/Microsoft.CustomerLockbox/tenantOptedIn/{tenantId}` with your tenant ID
-2. If not opted in, enable it: `POST /providers/Microsoft.CustomerLockbox/enableLockbox`
-3. Verify activation: repeat the opt-in check to confirm `isOptedIn` is true
-4. List available operations for reference: `GET /providers/Microsoft.CustomerLockbox/operations`
-
-### 2. Review and Respond to an Access Request
-
-1. List pending requests: `GET /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests` with `$filter` for pending status
-2. Inspect the specific request: `GET /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests/{requestId}`
-3. Review the requestor, justification, resource scope, and expiration time
-4. Approve or deny: `POST /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests/{requestId}/updateApproval` with `approval: { status: "Approve"|"Deny", reason: "..." }`
-5. Confirm the updated status by re-fetching the request
-
-### 3. Audit All Lockbox Activity for a Subscription
-
-1. List all requests (no filter): `GET /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests`
-2. Follow `nextLink` pagination until all results are collected
-3. Group by status (`Approved`, `Denied`, `Expired`, `Pending`) for a summary
-4. Flag any `Expired` requests -- these indicate missed review windows
-5. For each approved request, note the approver and reason for compliance records
-
-### 4. Emergency Lockbox Disable and Re-enable
-
-1. Verify current status: `GET /providers/Microsoft.CustomerLockbox/tenantOptedIn/{tenantId}`
-2. Disable Lockbox: `POST /providers/Microsoft.CustomerLockbox/disableLockbox`
-3. Confirm disabled state with another opt-in check
-4. After the emergency window, re-enable: `POST /providers/Microsoft.CustomerLockbox/enableLockbox`
-5. Review any requests that arrived during the disabled period: list requests and check for gaps
-
-### 5. Multi-Subscription Request Monitoring
-
-1. For each subscription ID in your organization, call `GET /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests`
-2. Aggregate all pending requests across subscriptions
-3. Prioritize by expiration time (closest to expiring first)
-4. Process approvals/denials per request using `updateApproval`
-5. Confirm each response was recorded by re-fetching the request status
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all operations?" -> GET /providers/Microsoft.CustomerLockbox/operations
+- "Get tenantOptedIn details?" -> GET /providers/Microsoft.CustomerLockbox/tenantOptedIn/{tenantId}
+- "Create a enableLockbox?" -> POST /providers/Microsoft.CustomerLockbox/enableLockbox
+- "Create a disableLockbox?" -> POST /providers/Microsoft.CustomerLockbox/disableLockbox
+- "Get request details?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests/{requestId}
+- "Create a updateApproval?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests/{requestId}/updateApproval
+- "List all requests?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.CustomerLockbox/requests
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

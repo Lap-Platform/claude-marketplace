@@ -180,87 +180,87 @@ https://api.hookdeck.com/2024-09-01
 | PUT | /connections/{id}/pause | Pause a connection |
 | PUT | /connections/{id}/unpause | Unpause a connection |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all my webhook connections?" -> GET /connections
-- "How do I retry a failed event?" -> POST /events/{id}/retry
-- "How do I set up a Stripe integration?" -> POST /integrations (with provider: "STRIPE")
-- "How do I create a new webhook connection from a source to a destination?" -> POST /connections
-- "How do I check what issues are currently open?" -> GET /issues (with status filter)
-- "How do I bulk retry all failed events matching a filter?" -> POST /bulk/events/retry
-- "How do I pause a connection without deleting it?" -> PUT /connections/{id}/pause
-- "How do I write and test a transformation before deploying it?" -> PUT /transformations/run
-- "How do I see the raw payload body of a request?" -> GET /requests/{id}/raw_body
-- "How do I set up Slack notifications for delivery failures?" -> POST /issue-triggers (type: "delivery", channels.slack)
-- "How do I disable a source temporarily?" -> PUT /sources/{id}/disable
-- "How do I see all delivery attempts for a specific event?" -> GET /attempts (with event_id filter)
-- "How do I check how many connections I have?" -> GET /connections/count
-- "How do I replay a bookmark to test my endpoint?" -> POST /bookmarks/{id}/trigger
-- "How do I add a custom domain to my team?" -> POST /teams/current/custom_domains
-
-## Response Tips
-
-- **List endpoints** (events, connections, sources, etc.): All return `{pagination, count, models}`. Use `next`/`prev` cursor strings for pagination -- not page numbers. `count` is total matching, `models` is the current page array.
-- **Single-resource GETs**: Return the object directly (not wrapped). Check for `410 Gone` on sources/destinations/connections, which indicates archived resources.
-- **Bulk operations**: Return a progress object with `in_progress`, `progress` (0-1 float), `estimated_count`, `completed_count`, and `failed_count`. Poll the GET endpoint to track completion.
-- **Delete endpoints**: Return only `{id}` on success, not the full object.
-- **Issue triggers/issues**: `disabled_at` and `dismissed_at` are null when active -- presence of a timestamp means disabled/dismissed.
-- **Transformations run**: Returns `console` array (log output) and transformed `request` -- use `log_level` to filter noise.
-- **Connections**: Embed full `source` and `destination` objects inline -- no need for separate lookups.
-
-## Anomaly Flags
-
-- **Bulk retry `failed_count` > 0**: Some events in the batch could not be retried. Surface this immediately and suggest inspecting individual failures.
-- **`disabled_at` populated on sources/destinations/connections**: The resource is disabled and not processing webhooks. Alert the user if they query or create events targeting disabled resources.
-- **`410 Gone` on resource lookup**: The source, destination, or connection has been archived. Suggest unarchiving via the `/unarchive` endpoint rather than recreating.
-- **Issue count growing**: If `GET /issues/count` returns a count higher than a previous check, proactively flag new issues and suggest reviewing `GET /issues` with `status=OPENED`.
-- **`rejection_cause` on requests**: Non-empty rejection cause means inbound webhooks are being dropped. Surface the cause (verification failure, disabled source, etc.).
-- **Bulk operation stalled**: If `in_progress` is true but `progress` has not changed across polls, flag a potential stall and suggest cancellation via `/cancel`.
-- **`is_large_payload` flag**: When true on event/request data, the body was truncated. Advise using the `/raw_body` endpoint for the complete payload.
-- **`422 Unprocessable Entity` errors**: Indicate schema validation failures. Surface the response body, which typically contains field-level error details.
-
-## Playbook
-
-### Set Up a Complete Webhook Pipeline
-
-1. Create a source: `POST /sources` with a name and optional verification config
-2. Create a destination: `POST /destinations` with the target URL and HTTP method
-3. Create a connection linking them: `POST /connections` with `source_id` and `destination_id`, plus any filter/transform rules
-4. Copy the source `url` from the response and configure it in your upstream provider
-5. Verify events are flowing: `GET /events?source_id={source_id}&limit=5`
-
-### Investigate and Retry Failed Deliveries
-
-1. List failed events: `GET /events?status=FAILED&order_by=last_attempt_at&dir=desc`
-2. Pick an event and inspect attempts: `GET /attempts?event_id={event_id}`
-3. Check the response status and error code on each attempt to diagnose the failure
-4. If the destination issue is fixed, retry: `POST /events/{id}/retry`
-5. For many failures, use bulk retry: first plan with `GET /bulk/events/retry/plan?query[status]=FAILED`, then execute with `POST /bulk/events/retry`
-
-### Add a Transformation to Modify Payloads
-
-1. Write transformation code and test it: `PUT /transformations/run` with inline `code` and a sample `request` object
-2. Review the response `request` (transformed output) and `console` logs
-3. Once satisfied, save it: `POST /transformations` with `name` and `code`
-4. Attach it to a connection by updating the connection rules: `PUT /connections/{id}` with `rules` array including the transformation reference
-
-### Set Up Alerting for Delivery Issues
-
-1. Create an issue trigger for delivery failures: `POST /issue-triggers` with `type: "delivery"` and your preferred channel (Slack, email, or OpsGenie)
-2. Verify it was created: `GET /issue-triggers`
-3. Optionally create triggers for other types: `"transformation"` (code errors) and `"backpressure"` (queue buildup)
-4. Monitor issues: `GET /issues?status=OPENED` to see active alerts
-5. Acknowledge or resolve: `PUT /issues/{id}` with `status: "ACKNOWLEDGED"` or `"RESOLVED"`
-
-### Manage Source Lifecycle (Disable, Archive, Restore)
-
-1. To temporarily stop ingestion: `PUT /sources/{id}/disable` -- requests will be rejected
-2. To re-enable: `PUT /sources/{id}/enable`
-3. To archive (soft delete): `PUT /sources/{id}/archive` -- returns 410 on direct access
-4. To restore an archived source: `PUT /sources/{id}/unarchive`
-5. To permanently delete: `DELETE /sources/{id}` -- this cannot be undone
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all issue-triggers?" -> GET /issue-triggers
+- "Create a issue-trigger?" -> POST /issue-triggers
+- "Get issue-trigger details?" -> GET /issue-triggers/{id}
+- "Update a issue-trigger?" -> PUT /issue-triggers/{id}
+- "Delete a issue-trigger?" -> DELETE /issue-triggers/{id}
+- "List all attempts?" -> GET /attempts
+- "Get attempt details?" -> GET /attempts/{id}
+- "List all bookmarks?" -> GET /bookmarks
+- "Create a bookmark?" -> POST /bookmarks
+- "Get bookmark details?" -> GET /bookmarks/{id}
+- "Update a bookmark?" -> PUT /bookmarks/{id}
+- "Delete a bookmark?" -> DELETE /bookmarks/{id}
+- "List all raw_body?" -> GET /bookmarks/{id}/raw_body
+- "Create a trigger?" -> POST /bookmarks/{id}/trigger
+- "List all destinations?" -> GET /destinations
+- "Create a destination?" -> POST /destinations
+- "Get destination details?" -> GET /destinations/{id}
+- "Update a destination?" -> PUT /destinations/{id}
+- "Delete a destination?" -> DELETE /destinations/{id}
+- "Search retry?" -> GET /bulk/events/retry
+- "Create a retry?" -> POST /bulk/events/retry
+- "Search plan?" -> GET /bulk/events/retry/plan
+- "Get retry details?" -> GET /bulk/events/retry/{id}
+- "Create a cancel?" -> POST /bulk/events/retry/{id}/cancel
+- "List all events?" -> GET /events
+- "Get event details?" -> GET /events/{id}
+- "List all raw_body?" -> GET /events/{id}/raw_body
+- "Create a retry?" -> POST /events/{id}/retry
+- "Search retry?" -> GET /bulk/ignored-events/retry
+- "Create a retry?" -> POST /bulk/ignored-events/retry
+- "Search plan?" -> GET /bulk/ignored-events/retry/plan
+- "Get retry details?" -> GET /bulk/ignored-events/retry/{id}
+- "Create a cancel?" -> POST /bulk/ignored-events/retry/{id}/cancel
+- "List all integrations?" -> GET /integrations
+- "Create a integration?" -> POST /integrations
+- "Get integration details?" -> GET /integrations/{id}
+- "Update a integration?" -> PUT /integrations/{id}
+- "Delete a integration?" -> DELETE /integrations/{id}
+- "Update a attach?" -> PUT /integrations/{id}/attach/{source_id}
+- "Update a detach?" -> PUT /integrations/{id}/detach/{source_id}
+- "List all issues?" -> GET /issues
+- "List all count?" -> GET /issues/count
+- "Get issue details?" -> GET /issues/{id}
+- "Update a issue?" -> PUT /issues/{id}
+- "Delete a issue?" -> DELETE /issues/{id}
+- "List all requests?" -> GET /requests
+- "Get request details?" -> GET /requests/{id}
+- "List all raw_body?" -> GET /requests/{id}/raw_body
+- "Create a retry?" -> POST /requests/{id}/retry
+- "List all events?" -> GET /requests/{id}/events
+- "List all ignored_events?" -> GET /requests/{id}/ignored_events
+- "Search retry?" -> GET /bulk/requests/retry
+- "Create a retry?" -> POST /bulk/requests/retry
+- "Search plan?" -> GET /bulk/requests/retry/plan
+- "Get retry details?" -> GET /bulk/requests/retry/{id}
+- "Create a cancel?" -> POST /bulk/requests/retry/{id}/cancel
+- "List all sources?" -> GET /sources
+- "Create a source?" -> POST /sources
+- "Get source details?" -> GET /sources/{id}
+- "Update a source?" -> PUT /sources/{id}
+- "Delete a source?" -> DELETE /sources/{id}
+- "Create a custom_domain?" -> POST /teams/current/custom_domains
+- "List all custom_domains?" -> GET /teams/current/custom_domains
+- "Delete a custom_domain?" -> DELETE /teams/current/custom_domains/{domain_id}
+- "List all transformations?" -> GET /transformations
+- "Create a transformation?" -> POST /transformations
+- "Get transformation details?" -> GET /transformations/{id}
+- "Delete a transformation?" -> DELETE /transformations/{id}
+- "Update a transformation?" -> PUT /transformations/{id}
+- "List all executions?" -> GET /transformations/{id}/executions
+- "Get execution details?" -> GET /transformations/{id}/executions/{execution_id}
+- "List all connections?" -> GET /connections
+- "Create a connection?" -> POST /connections
+- "List all count?" -> GET /connections/count
+- "Get connection details?" -> GET /connections/{id}
+- "Update a connection?" -> PUT /connections/{id}
+- "Delete a connection?" -> DELETE /connections/{id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

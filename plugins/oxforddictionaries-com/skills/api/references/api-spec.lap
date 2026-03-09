@@ -4,186 +4,212 @@
 @base https://od-api-demo.oxforddictionaries.com:443/api/v1
 @version 1.11.0
 @auth ApiKey app_id in header
-@common_fields {app_id: any, app_key: any}
+@common_fields {app_id: any # App ID Authentication Parameter, app_key: any # App Key Authentication Parameter}
 @endpoints 26
 @hint download_for_search
 @toc inflections(1), entries(8), search(2), wordlist(2), stats(3), languages(1), filters(2), lexicalcategories(1), registers(2), domains(2), regions(1), grammaticalFeatures(1)
 
 @group inflections
 @endpoint GET /inflections/{source_lang}/{word_id}/{filters}
-@required {source_lang: any, filters: any, word_id: any}
-@returns(200)
-@errors {500}
+@desc Check a word exists in the dictionary and retrieve its root form
+@required {source_lang: any # IANA language code, filters: any # Separate filtering conditions using a semicolon. Conditions take values grammaticalFeatures and/or lexicalCategory and are case-sensitive. To list multiple values in single condition divide them with comma., word_id: any # The input word}
+@returns(200) Successful response.
+@errors {500: Internal Error. An error occurred while processing the data.}
 
 @endgroup
 
 @group entries
 @endpoint GET /entries/{source_lang}/{word_id}
-@required {source_lang: any, word_id: any}
-@returns(200)
-@errors {404, 500}
+@desc Retrieve dictionary information for a given word
+@required {source_lang: any # IANA language code, word_id: any # An Entry identifier. Case-sensitive.}
+@returns(200) Successful response.
+@errors {404: No entry is found matching supplied id and source_lang or filters are not recognized, 500: Internal Error. An error occurred while processing the data.}
 
 @endpoint GET /entries/{source_lang}/{word_id}/regions={region}
-@required {source_lang: any, word_id: any, region: any}
-@returns(200)
-@errors {404, 500}
+@desc Specify GB or US dictionary for English entry search
+@required {source_lang: any # IANA language code, word_id: any # An Entry identifier. Case-sensitive., region: any # Region filter parameter. gb = Oxford Dictionary of English. us = New Oxford American Dictionary.}
+@returns(200) Successful response.
+@errors {404: no entry is found matching supplied source_lang and id and/or that entry has no senses with translations in the target language., 500: Internal Error. An error occurred while processing the data.}
 
 @endpoint GET /entries/{source_lang}/{word_id}/{filters}
-@required {source_lang: any, word_id: any, filters: any}
-@returns(200)
-@errors {404, 500}
+@desc Apply filters to response
+@required {source_lang: any # IANA language code, word_id: any # An Entry identifier. Case-sensitive., filters: any # Separate filtering conditions using a semicolon. Conditions take values grammaticalFeatures and/or lexicalCategory and are case-sensitive. To list multiple values in single condition divide them with comma.}
+@returns(200) Successful response.
+@errors {404: no entry is found matching supplied source_lang and id and/or that entry has no senses with translations in the target language., 500: Internal Error. An error occurred while processing the data.}
 
 @endpoint GET /entries/{source_lang}/{word_id}/synonyms
-@required {source_lang: any, word_id: any}
-@returns(200)
-@errors {404, 500}
+@desc Retrieve words that are similar
+@required {source_lang: any # IANA language code, word_id: any # An Entry identifier. Case-sensitive.}
+@returns(200) Successful response.
+@errors {404: No entry is found matching supplied id and source_lang or filters are not recognized, 500: Internal Error. An error occurred while processing the data.}
 
 @endpoint GET /entries/{source_lang}/{word_id}/antonyms
-@required {source_lang: any, word_id: any}
-@returns(200)
-@errors {404, 500}
+@desc Retrieve words that mean the opposite
+@required {source_lang: any # IANA language code, word_id: any # An Entry identifier. Case-sensitive.}
+@returns(200) Successful response.
+@errors {404: No entry is found matching supplied id and source_lang or filters are not recognized, 500: Internal Error. An error occurred while processing the data.}
 
 @endpoint GET /entries/{source_lang}/{word_id}/synonyms;antonyms
-@required {source_lang: any, word_id: any}
-@returns(200)
-@errors {404, 500}
+@desc Retrieve synonyms and antonyms for a given word
+@required {source_lang: any # IANA language code, word_id: any # An Entry identifier. Case-sensitive.}
+@returns(200) Successful response.
+@errors {404: No entry is found matching supplied id and source_lang or filters are not recognized, 500: Internal Error. An error occurred while processing the data.}
 
 @endgroup
 
 @group search
 @endpoint GET /search/{source_lang}
-@required {source_lang: any}
-@optional {q: any, prefix: any, regions: any, limit: any, offset: any}
-@returns(200)
-@errors {404, 500}
+@desc Retrieve possible matches to input
+@required {source_lang: any # IANA language code}
+@optional {q: any # Search string, prefix: any # Set prefix to true if you'd like to get results only starting with search string., regions: any # If searching in English, filter words with specific region(s) either 'us' or 'gb'., limit: any # Limit the number of results per response. Default and maximum limit is 5000., offset: any # Offset the start number of the result.}
+@returns(200) Successful response.
+@errors {404: No entry is found matching supplied id and source_lang or filters are not recognized, 500: Internal Error. An error occurred while processing the data.}
 
 @endpoint GET /search/{source_search_language}/translations={target_search_language}
-@required {source_search_language: any, target_search_language: any}
-@optional {q: any, prefix: any, regions: any, limit: any, offset: any}
-@returns(200)
-@errors {404, 500}
+@desc Retrieve possible translation matches to input
+@required {source_search_language: any # IANA language code, target_search_language: any # IANA language code}
+@optional {q: any # Search string., prefix: any # Set prefix to true if you'd like to get results only starting with search string., regions: any # Filter words with specific region(s) E.g., regions=us. For now gb, us are available for en language., limit: any # Limit the number of results per response. Default and maximum limit is 5000., offset: any # Offset the start number of the result.}
+@returns(200) Successful response.
+@errors {404: No entry is found matching supplied id and source_lang or filters are not recognized, 500: Internal Error. An error occurred while processing the data.}
 
 @endgroup
 
 @group entries
 @endpoint GET /entries/{source_translation_language}/{word_id}/translations={target_translation_language}
-@required {source_translation_language: any, word_id: any, target_translation_language: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Retrieve translation for a given word
+@required {source_translation_language: any # IANA language code, word_id: any # The source word, target_translation_language: any # IANA language code}
+@returns(200) Successful response. In case word doesn't have a direct translation a response would be definitions.
+@errors {400: any of target languages is unknown, 404: no entry is found matching supplied source_lang and id and/or that entry has no senses with translations in the target language(s)., 500: Internal Error. An error occurred while processing the data.}
 
 @endgroup
 
 @group wordlist
 @endpoint GET /wordlist/{source_lang}/{filters_basic}
-@required {source_lang: any, filters_basic: any}
-@optional {limit: any, offset: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Retrieve a list of words in a category
+@required {source_lang: any # IANA language code, filters_basic: any # Semicolon separated list of wordlist parameters, presented as value pairs: LexicalCategory, domains, regions, registers. Parameters can take comma separated list of values. E.g., lexicalCategory=noun,adjective;domains=sport. Number of values limited to 5.}
+@optional {limit: any # Limit the number of results per response. Default and maximum limit is 5000., offset: any # Offset the start number of the result}
+@returns(200) Successful response.
+@errors {400: filter has no values; total number of filters > 20., 404: No entries is found matching supplied filters or lang or filters is not recognized., 500: Internal Error. An error occurred while processing the data.}
 
 @endpoint GET /wordlist/{source_lang}/{filters_advanced}
-@required {source_lang: any, filters_advanced: any}
-@optional {exclude: any, exclude_senses: any, exclude_prime_senses: any, word_length: any, prefix: any, exact: any, limit: any, offset: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Retrieve list of words for category with advanced options
+@required {source_lang: any # IANA language code, filters_advanced: any # Semicolon separated list of wordlist parameters, presented as value pairs: LexicalCategory, domains, regions, registers. Parameters can take comma separated list of values. E.g., lexicalCategory=noun,adjective;domains=sport. Number of values limited to 5.}
+@optional {exclude: any # Semicolon separated list of parameters-value pairs (same as filters). Excludes headwords that have any senses in specified exclusion attributes (lexical categories, domains, etc.) from results., exclude_senses: any # Semicolon separated list of parameters-value pairs (same as filters). Excludes only those senses of a particular headword that match specified exclusion attributes (lexical categories, domains, etc.) from results but includes the headword if it has other permitted senses., exclude_prime_senses: any # Semicolon separated list of parameters-value pairs (same as filters). Excludes a headword only if the primary sense matches the specified exclusion attributes (registers, domains only)., word_length: any # Parameter to speficy the minimum (>), exact or maximum (<) length of the words required. E.g., >5 - more than 5 chars; <4 - less than 4 chars; >5<10 - from 5 to 10 chars; 3 - exactly 3 chars., prefix: any # Filter words that start with prefix parameter, exact: any # If exact=true wordlist returns a list of entries that exactly matches the search string. Otherwise wordlist lists entries that start with prefix string., limit: any # Limit the number of results per response. Default and maximum limit is 5000., offset: any # Offset the start number of the result.}
+@returns(200) Successful response.
+@errors {400: disjoint sets of word_length values (eg <3>10); filter has no values; total number of filters > 20; filters and excludes values can not be the same; source_lang and translations can not be same; word_length conflicts with prefix length., 404: No entries is found matching supplied filters or lang or filters is not recognized., 500: Internal Error. An error occurred while processing the data.}
 
 @endgroup
 
 @group entries
 @endpoint GET /entries/{source_language}/{word_id}/sentences
-@required {source_language: any, word_id: any}
-@returns(200)
-@errors {404, 500}
+@desc Retrieve corpus sentences for a given word
+@required {source_language: any # IANA language code, word_id: any # An Entry identifier. Case-sensitive.}
+@returns(200) Successful response.
+@errors {404: No entry is found matching supplied id and source_language, 500: Internal Error. An error occurred while processing the data.}
 
 @endgroup
 
 @group stats
 @endpoint GET /stats/frequency/word/{source_lang}/
-@required {source_lang: any}
-@optional {corpus: any, wordform: any, trueCase: any, lemma: any, lexicalCategory: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Retrieve the frequency of a word derived from a corpus.
+@required {source_lang: any # IANA language code}
+@optional {corpus: any # For corpora other than 'nmc' (New Monitor Corpus) please contact api@oxforddictionaries.com, wordform: any # The written form of the word to look up (preserving case e.g., Books vs books), trueCase: any # The written form of the word to look up with normalised case (Books --> books), lemma: any # The lemma of the word to look up (e.g., Book, booked, books all have the lemma "book"), lexicalCategory: any # The lexical category of the word(s) to look up (e.g., noun or verb)}
+@returns(200) Successful response.
+@errors {400: You need to specify at least one option. Try one of 'wordform, lemma, trueCase, lexicalCategory'., 404: language is not in..., 500: Internal Error. An error occurred while processing the data.}
 
 @endpoint GET /stats/frequency/words/{source_lang}/
-@required {source_lang: any}
-@optional {corpus: any, wordform: any, trueCase: any, lemma: any, lexicalCategory: any, grammaticalFeatures: any, sort: any, collate: any, minFrequency: any, maxFrequency: any, minNormalizedFrequency: any, maxNormalizedFrequency: any, offset: any, limit: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Retrieve a list of frequencies of a word/words derived from a corpus.
+@required {source_lang: any # IANA language code}
+@optional {corpus: any # For corpora other than 'nmc' (New Monitor Corpus) please contact api@oxforddictionaries.com, wordform: any # The written form of the word to look up (preserving case e.g., Book vs book), trueCase: any # The written form of the word to look up with normalised case (Books --> books), lemma: any # The lemma of the word to look up (e.g., Book, booked, books all have the lemma "book"), lexicalCategory: any # The lexical category of the word(s) to look up (e.g., adjective or noun), grammaticalFeatures: any # The grammatical features of the word(s) to look up entered as a list of k:v (e.g., degree_type:comparative), sort: any # sort the resulting list by wordform, trueCase, lemma, lexicalCategory, frequency, normalizedFrequency. Descending order is achieved by prepending the value with the minus sign ('-'). Multiple values can be separated by commas (e.g., sort=lexicalCategory,-frequency), collate: any # collate the results by wordform, trueCase, lemma, lexicalCategory. Multiple values can be separated by commas (e.g., collate=trueCase,lemma,lexicalCategory)., minFrequency: any # Restrict the query to entries with frequency of at least `minFrequency`, maxFrequency: any # Restrict the query to entries with frequency of at most `maxFrequency`, minNormalizedFrequency: any # Restrict the query to entries with frequency of at least `minNormalizedFrequency`, maxNormalizedFrequency: any # Restrict the query to entries with frequency of at most `maxNormalizedFrequency`, offset: any # pagination - results offset, limit: any # pagination - results limit}
+@returns(200) Successful response.
+@errors {400: Invalid option name...; Option ... must have a value.; The option 'minFrequency' has to have an non-negative integer parameter.; The option 'maxFrequency' has to have an non-negative integer parameter.; The option 'limit' has to have an non-negative integer parameter.; The option 'offset' has to have an non-negative integer parameter., 404: language is not in..., 500: Internal Error. An error occurred while processing the data.}
 
 @endpoint GET /stats/frequency/ngrams/{source_lang}/{corpus}/{ngram-size}/
-@required {source_lang: any, corpus: any, ngram-size: any}
-@optional {tokens: any, contains: any, punctuation: any, format: any, minFrequency: any, maxFrequency: any, minDocumentFrequency: any, maxDocumentFrequency: any, collate: any, sort: any, offset: any, limit: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Retrieve the frequency of ngrams (1-4) derived from a corpus
+@required {source_lang: any # IANA language code, corpus: any # For corpora other than 'nmc' (New Monitor Corpus) please contact api@oxforddictionaries.com, ngram-size: any # the size of ngrams requested (1-4)}
+@optional {tokens: any # List of tokens to filter. The tokens are separated by spaces, the list items are separated by comma (e.g., for bigrams (n=2) tokens=this is,this was, this will), contains: any # Find ngrams containing the given token(s). Use comma or space as token separators; the order of tokens is irrelevant., punctuation: any # Flag specifying whether to lookup ngrams that include punctuation or not (possible values are "true" and "false"; default is "false"), format: any # Option specifying whether tokens should be returned as a single string (option "google") or as a list of strings (option "oup"), minFrequency: any # Restrict the query to entries with frequency of at least `minFrequency`, maxFrequency: any # Restrict the query to entries with frequency of at most `maxFrequency`, minDocumentFrequency: any # Restrict the query to entries that appear in at least `minDocumentFrequency` documents, maxDocumentFrequency: any # Restrict the query to entries that appera in at most `maxDocumentFrequency` documents, collate: any # collate the results by wordform, trueCase, lemma, lexicalCategory. Multiple values can be separated by commas (e.g., collate=trueCase,lemma,lexicalCategory)., sort: any # sort the resulting list by wordform, trueCase, lemma, lexicalCategory, frequency, normalizedFrequency. Descending order is achieved by prepending the value with the minus sign ('-'). Multiple values can be separated by commas (e.g., sort=lexicalCategory,-frequency), offset: any # pagination - results offset, limit: any # pagination - results limit}
+@returns(200) Successful response.
+@errors {400: Invalid option name..., 404: language is not in..., 500: Internal Error. An error occurred while processing the data.}
 
 @endgroup
 
 @group languages
 @endpoint GET /languages
-@optional {sourceLanguage: any, targetLanguage: any}
-@returns(200)
-@errors {404, 500}
+@desc Lists available dictionaries
+@optional {sourceLanguage: any # IANA language code. If provided output will be filtered by sourceLanguage., targetLanguage: any # IANA language code. If provided output will be filtered by sourceLanguage.}
+@returns(200) Successful response.
+@errors {404: Unknown sourceLanguage and/or targetLanguage., 500: Internal Error. An error occurred while processing the data.}
 
 @endgroup
 
 @group filters
 @endpoint GET /filters
-@returns(200)
-@errors {500}
+@desc Lists available filters
+@returns(200) Successful response.
+@errors {500: Internal Error. An error occurred while processing the data.}
 
 @endpoint GET /filters/{endpoint}
-@required {endpoint: any}
-@returns(200)
-@errors {404, 500}
+@desc Lists available filters for specific endpoint
+@required {endpoint: any # Name of the endpoint.}
+@returns(200) Successful response.
+@errors {404: Unknown endpoint., 500: Internal Error. An error occurred while processing the data.}
 
 @endgroup
 
 @group lexicalcategories
 @endpoint GET /lexicalcategories/{language}
-@required {language: any}
-@returns(200)
-@errors {404, 500}
+@desc Lists available lexical categories in a dataset
+@required {language: any # IANA language code}
+@returns(200) Successful response.
+@errors {404: Unknown language., 500: Internal Error. An error occurred while processing the data.}
 
 @endgroup
 
 @group registers
 @endpoint GET /registers/{source_language}
-@required {source_language: any}
-@returns(200)
-@errors {404, 500}
+@desc Lists available registers in a  monolingual dataset
+@required {source_language: any # IANA language code}
+@returns(200) Successful response.
+@errors {404: Unknown source_language., 500: Internal Error. An error occurred while processing the data.}
 
 @endpoint GET /registers/{source_register_language}/{target_register_language}
-@required {source_register_language: any, target_register_language: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Lists available registers in a bilingual dataset
+@required {source_register_language: any # IANA language code, target_register_language: any # IANA language code}
+@returns(200) Successful response.
+@errors {400: source_language and target_language are same., 404: Unknown source_language and/or target_language., 500: Internal Error. An error occurred while processing the data.}
 
 @endgroup
 
 @group domains
 @endpoint GET /domains/{source_language}
-@required {source_language: any}
-@returns(200)
-@errors {404}
+@desc Lists available domains in a monolingual dataset
+@required {source_language: any # IANA language code}
+@returns(200) Successful response.
+@errors {404: Unknown source_language.}
 
 @endpoint GET /domains/{source_domains_language}/{target_domains_language}
-@required {source_domains_language: any, target_domains_language: any}
-@returns(200)
-@errors {400, 404}
+@desc Lists available domains in a bilingual dataset
+@required {source_domains_language: any # IANA language code, target_domains_language: any # IANA language code}
+@returns(200) Successful response.
+@errors {400: source_language and target_language are same., 404: Unknown source_language and/or target_language.}
 
 @endgroup
 
 @group regions
 @endpoint GET /regions/{source_language}
-@required {source_language: any}
-@returns(200)
-@errors {404}
+@desc Lists available regions in a monolingual dataset
+@required {source_language: any # IANA language code}
+@returns(200) Successful response.
+@errors {404: Unknown source_language.}
 
 @endgroup
 
 @group grammaticalFeatures
 @endpoint GET /grammaticalFeatures/{source_language}
-@required {source_language: any}
-@returns(200)
-@errors {404}
+@desc Lists available grammatical features in a dataset
+@required {source_language: any # IANA language code. If provided output will be filtered by sourceLanguage.}
+@returns(200) Successful response.
+@errors {404: Unknown source_language.}
 
 @endgroup
 

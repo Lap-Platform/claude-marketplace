@@ -80,89 +80,10 @@ Not specified.
 | POST | / | Updates the specified RuleGroup.  This operation completely replaces the mutable specifications that you already have for the rule group with the ones that you provide to this call.  To modify a rule group, do the following:    Retrieve it by calling GetRuleGroup    Update its settings as needed   Provide the complete rule group specification to this call     A rule group defines a collection of rules to inspect and control web requests that you can use in a WebACL. When you create a rule group, you define an immutable capacity limit. If you update a rule group, you must stay within the capacity. This allows others to reuse the rule group with confidence in its capacity requirements.   Temporary inconsistencies during updates  When you create or change a web ACL or other WAF resources, the changes take a small amount of time to propagate to all areas where the resources are stored. The propagation time can be from a few seconds to a number of minutes.  The following are examples of the temporary inconsistencies that you might notice during change propagation:    After you create a web ACL, if you try to associate it with a resource, you might get an exception indicating that the web ACL is unavailable.    After you add a rule group to a web ACL, the new rule group rules might be in effect in one area where the web ACL is used and not in another.   After you change a rule action setting, you might see the old action in some places and the new action in others.    After you add an IP address to an IP set that is in use in a blocking rule, the new address might be blocked in one area while still allowed in another. |
 | POST | / | Updates the specified WebACL. While updating a web ACL, WAF provides continuous coverage to the resources that you have associated with the web ACL.   This operation completely replaces the mutable specifications that you already have for the web ACL with the ones that you provide to this call.  To modify a web ACL, do the following:    Retrieve it by calling GetWebACL    Update its settings as needed   Provide the complete web ACL specification to this call     A web ACL defines a collection of rules to use to inspect and control web requests. Each rule has a statement that defines what to look for in web requests and an action that WAF applies to requests that match the statement. In the web ACL, you assign a default action to take (allow, block) for any request that does not match any of the rules. The rules in a web ACL can be a combination of the types Rule, RuleGroup, and managed rule group. You can associate a web ACL with one or more Amazon Web Services resources to protect. The resources can be an Amazon CloudFront distribution, an Amazon API Gateway REST API, an Application Load Balancer, an AppSync GraphQL API, an Amazon Cognito user pool, an App Runner service, or an Amazon Web Services Verified Access instance.   Temporary inconsistencies during updates  When you create or change a web ACL or other WAF resources, the changes take a small amount of time to propagate to all areas where the resources are stored. The propagation time can be from a few seconds to a number of minutes.  The following are examples of the temporary inconsistencies that you might notice during change propagation:    After you create a web ACL, if you try to associate it with a resource, you might get an exception indicating that the web ACL is unavailable.    After you add a rule group to a web ACL, the new rule group rules might be in effect in one area where the web ACL is used and not in another.   After you change a rule action setting, you might see the old action in some places and the new action in others.    After you add an IP address to an IP set that is in use in a blocking rule, the new address might be blocked in one area while still allowed in another. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I protect my ALB or CloudFront distribution with a Web ACL?" -> POST / (AssociateWebACL: WebACLArn + ResourceArn)
-- "What is the capacity cost of these WAF rules before I deploy them?" -> POST / (CheckCapacity: Scope + Rules -> Capacity)
-- "How do I create a new Web ACL with default block action?" -> POST / (CreateWebACL: Name, Scope, DefaultAction, VisibilityConfig)
-- "How do I block a list of IP addresses?" -> POST / (CreateIPSet: Name, Scope, IPAddressVersion, Addresses)
-- "Which managed rule groups are available from AWS or third-party vendors?" -> POST / (ListAvailableManagedRuleGroups: Scope -> ManagedRuleGroups)
-- "What rules are inside a specific managed rule group?" -> POST / (DescribeManagedRuleGroup: VendorName, Name, Scope -> Rules, Capacity)
-- "Which resources are currently associated with my Web ACL?" -> POST / (ListResourcesForWebACL: WebACLArn -> ResourceArns)
-- "How do I see which IPs are being rate-limited by a rate-based rule?" -> POST / (GetRateBasedStatementManagedKeys: Scope, WebACLName, WebACLId, RuleName -> ManagedKeysIPV4, ManagedKeysIPV6)
-- "How do I view sampled requests hitting a specific rule?" -> POST / (GetSampledRequests: WebAclArn, RuleMetricName, Scope, TimeWindow, MaxItems -> SampledRequests)
-- "How do I enable logging on my Web ACL?" -> POST / (PutLoggingConfiguration: LoggingConfiguration with ResourceArn + LogDestinationConfigs)
-- "How do I update the IPs in an existing IP set?" -> POST / (UpdateIPSet: Name, Scope, Id, Addresses, LockToken -> NextLockToken)
-- "How do I add rules to an existing Web ACL?" -> POST / (UpdateWebACL: Name, Scope, Id, DefaultAction, VisibilityConfig, LockToken, Rules)
-- "Which Web ACL is attached to a specific resource?" -> POST / (GetWebACLForResource: ResourceArn -> WebACL)
-- "How do I generate an API key for client-side application integration?" -> POST / (CreateAPIKey: Scope, TokenDomains -> APIKey)
-- "How do I remove a Web ACL from a resource without deleting it?" -> POST / (DisassociateWebACL: ResourceArn)
-
-## Response Tips
-
-- **List endpoints** (ListWebACLs, ListIPSets, ListRuleGroups, etc.): Use `NextMarker` for pagination; pass it back with `Limit` to page through results. Null/absent `NextMarker` means last page.
-- **Get endpoints** (GetWebACL, GetIPSet, GetRuleGroup): Always return a `LockToken` alongside the resource -- you must pass this token on subsequent Update/Delete calls for optimistic concurrency.
-- **Create endpoints**: Return a `Summary` object with `Name`, `Id`, `ARN`, and `LockToken` -- store all four for future operations.
-- **Update/Delete endpoints**: Return `NextLockToken` (updates) or nothing (deletes). Always refresh your stored `LockToken` with `NextLockToken` after a successful update.
-- **Sampled requests**: `PopulationSize` may exceed the actual count of `SampledRequests` returned -- it represents total matches, not just the sample.
-- **Managed rule groups**: `DescribeManagedRuleGroup` returns `Capacity` consumed, `AvailableLabels`, and `ConsumedLabels` -- use these to plan label-match rules and capacity budgets.
-- **Error responses**: Watch for `WAFOptimisticLockException` (stale LockToken), `WAFLimitsExceededException` (account limits hit), and `WAFNonexistentItemException` (resource deleted or wrong Scope).
-
-## Anomaly Flags
-
-- **Stale LockToken**: Surface `WAFOptimisticLockException` immediately -- another process modified the resource. Re-fetch the resource to get the current LockToken before retrying.
-- **Capacity limits approaching**: After `CheckCapacity` or `CreateRuleGroup`, flag when the returned `Capacity` nears the Web ACL maximum (5,000 WCUs for CloudFront, 5,000 for regional). Alert at 80%+ utilization.
-- **Account resource limits**: Flag `WAFLimitsExceededException` and surface current resource counts (max 100 Web ACLs, 100 IP sets, 100 regex pattern sets per region/scope).
-- **Firewall Manager conflicts**: When `GetWebACL` returns `ManagedByFirewallManager: true` or non-empty `PreProcessFirewallManagerRuleGroups`/`PostProcessFirewallManagerRuleGroups`, warn the user that external policies are in effect and manual changes may be overridden.
-- **Missing logging**: After retrieving a Web ACL, proactively check `GetLoggingConfiguration`. If it returns `WAFNonexistentItemException`, surface that logging is not configured for this Web ACL.
-- **Deprecated managed rule versions**: When `ListAvailableManagedRuleGroupVersions` shows `CurrentDefaultVersion` differs from the version in use, or `UpdateManagedRuleSetVersionExpiryDate` has been called, flag upcoming version expirations.
-- **Rate-limited IPs accumulating**: When `GetRateBasedStatementManagedKeys` returns large address lists in `ManagedKeysIPV4`/`ManagedKeysIPV6`, surface the count -- it may indicate an active attack or a threshold set too low.
-- **Token domain mismatch**: When `GetDecryptedAPIKey` returns `TokenDomains` that don't match expected application domains, flag possible misconfiguration of client-side integration.
-
-## Playbook
-
-### 1. Create and attach a Web ACL to an ALB
-
-1. Call **CheckCapacity** with your planned `Rules` array and `Scope: "REGIONAL"` to verify the rules fit within WCU limits.
-2. Call **CreateWebACL** with `Name`, `Scope: "REGIONAL"`, `DefaultAction: {Allow: {}}`, your `Rules`, and `VisibilityConfig` (enable CloudWatch metrics and sampled requests).
-3. Store the returned `Summary.ARN`, `Summary.Id`, and `Summary.LockToken`.
-4. Call **AssociateWebACL** with the `WebACLArn` from step 3 and the ALB's `ResourceArn`.
-5. Call **PutLoggingConfiguration** with `ResourceArn` set to the Web ACL ARN and `LogDestinationConfigs` pointing to your S3/CloudWatch/Firehose destination.
-6. Verify by calling **GetWebACL** and **ListResourcesForWebACL** to confirm association and rule configuration.
-
-### 2. Block a set of malicious IPs
-
-1. Call **CreateIPSet** with `Name`, `Scope`, `IPAddressVersion: "IPV4"` (or `"IPV6"`), and the `Addresses` array in CIDR notation.
-2. Store the returned `Summary.Id`, `Summary.ARN`, and `Summary.LockToken`.
-3. Call **GetWebACL** to retrieve the current Web ACL configuration and its `LockToken`.
-4. Call **UpdateWebACL** adding a new rule that references the IP set with `Action: {Block: {}}` and an appropriate `Priority`. Include the Web ACL's `LockToken`.
-5. To add more IPs later, call **GetIPSet** to retrieve the current `Addresses` and `LockToken`, then call **UpdateIPSet** with the merged address list.
-
-### 3. Enable and configure WAF logging with field redaction
-
-1. Call **GetWebACL** to confirm the Web ACL exists and get its `ARN`.
-2. Call **PutLoggingConfiguration** with `ResourceArn` (the Web ACL ARN), `LogDestinationConfigs` (one destination ARN), and optionally `RedactedFields` (e.g., `[{SingleHeader: {Name: "authorization"}}]`) to mask sensitive headers.
-3. To add a logging filter (e.g., log only blocked requests), include `LoggingFilter` with `DefaultBehavior: "DROP"` and a filter matching `ActionCondition: {Action: "BLOCK"}`.
-4. Verify by calling **GetLoggingConfiguration** with the `ResourceArn`.
-5. To remove logging later, call **DeleteLoggingConfiguration** with the `ResourceArn`.
-
-### 4. Investigate traffic patterns with sampled requests
-
-1. Call **GetWebACL** to list all rules and note each rule's `VisibilityConfig.MetricName`.
-2. Call **GetSampledRequests** with the `WebAclArn`, the target `RuleMetricName`, `Scope`, a `TimeWindow` covering your investigation period, and `MaxItems` (up to 500).
-3. Examine the returned `SampledRequests` for source IPs, headers, URIs, and the `Action` taken.
-4. If a rate-based rule is involved, call **GetRateBasedStatementManagedKeys** to see which IPs are currently being throttled.
-5. Compare `PopulationSize` to the sample count -- a large gap indicates heavy traffic volume beyond what the sample represents.
-
-### 5. Adopt and manage AWS Managed Rule Groups
-
-1. Call **ListAvailableManagedRuleGroups** with `Scope` to see all available managed rule groups (AWS and Marketplace).
-2. Call **DescribeManagedRuleGroup** with `VendorName: "AWS"`, the rule group `Name`, and `Scope` to inspect its rules, capacity cost, and available labels.
-3. Call **CheckCapacity** including the managed rule group reference in your `Rules` array to ensure it fits within your Web ACL's WCU budget.
-4. Call **UpdateWebACL** to add a `ManagedRuleGroupStatement` referencing the vendor and name, with any `ExcludedRules` or `RuleActionOverrides` as needed.
-5. Periodically call **ListAvailableManagedRuleGroupVersions** to check for new versions, and review `CurrentDefaultVersion` against what you have pinned. Update your Web ACL rule's `Version` field when ready to adopt a new release.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

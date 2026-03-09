@@ -131,89 +131,79 @@ https://api.iqualify.com/v1
 | POST | /users/{userEmail}/invite-email | Resend invitation email |
 | POST | /users | Add new user |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What courses are available in my organization?" -> GET /courses
-- "Show me details for a specific offering" -> GET /offerings/{offeringId}
-- "How are learners progressing in this offering?" -> GET /offerings/{offeringId}/analytics/learners-progress
-- "What are the quiz scores for an offering?" -> GET /offerings/{offeringId}/analytics/marks/quizzes
-- "Who are the users enrolled in this offering?" -> GET /offerings/{offeringId}/users
-- "Create a new offering starting next Monday" -> POST /offerings
-- "Add a learner to a group in an offering" -> POST /offerings/{offeringId}/groups/{groupId}/learners
-- "Remove a user from an offering" -> DELETE /offerings/{offeringId}/users/{userEmail}
-- "What badges has a user earned?" -> GET /users/{userEmail}/badges
-- "Transfer a learner from one offering to another" -> PATCH /users/{userEmail}/transfer
-- "Get all pulse responses filtered by MCQ type" -> GET /offerings/{offeringId}/analytics/pulses/responses
-- "Map an external course ID to an iQualify offering" -> PUT /course-mappings/{offeringId}/{externalCourseId}
-- "Suspend a user account" -> PUT /users/{userEmail}/suspend
-- "Award a badge to a specific learner" -> POST /offerings/{offeringId}/users/{userEmail}/badges/award
-- "Which learners have pending assignment submissions?" -> GET /offerings/{offeringId}/learners/pending-submission
-
-## Response Tips
-
-- **Offerings**: Full offering objects include deeply nested `settings`, `metadata`, `studyPlan`, and `badge.badgeExpiry` maps -- always drill into these rather than treating them as opaque.
-- **Analytics**: Analytics endpoints (pulses, marks, progress, reactions) return 200 with untyped payloads -- inspect the shape on first call and cache the structure for subsequent parsing.
-- **Users**: User objects embed `profile`, `metadata.tags[]`, and `invite.url` -- the invite URL is only present for users who haven't yet accepted.
-- **Groups/Channels**: POST returns 201 with the created resource; DELETE returns 204 with no body -- check status code, not response body, for deletions.
-- **Assessments**: PATCH on assessments returns a rich object with `themes[]`, `documents[]`, and nullable fields like `dueDate` -- absent dates mean no deadline is set.
-- **Course Mappings**: All mapping endpoints return 200 uniformly for both reads and writes -- distinguish success by the HTTP method you called.
-- **Bulk Users**: POST to offering users can return either 201 (all succeeded) or 207 (multi-status, partial success) -- always check for 207 and iterate individual results.
-- **Summary/Progress**: Endpoints accepting `$top`, `$orderby`, `$filter` use OData-style query parameters -- default page size is 50, paginate by adjusting `$top`.
-
-## Anomaly Flags
-
-- **207 Multi-Status on user enrollment**: Surface immediately when POST /offerings/{offeringId}/users returns 207 -- some users failed to enroll and need individual attention.
-- **Offering date conflicts**: Flag when `earlyCloseOffDate` is set but `hasEarlyCloseOff` is false, or when `end` is before `start` in offering responses.
-- **Stale learner access**: Alert when `lastAccessAt` on a user in an active offering is more than 14 days old -- likely disengaged learner.
-- **Empty analytics responses**: Surface when analytics endpoints return 200 but with empty data arrays -- may indicate the offering has no activity yet or the offeringId is wrong.
-- **Missing invite URL**: Flag when a newly created user response lacks `invite.url` -- the invite email may not have been sent (check `sendInvite` parameter).
-- **Badge award failure**: Surface when POST badge/award returns `awarded: false` -- the learner did not meet badge criteria and no badge was issued.
-- **403 on analytics**: Proactively note that 403 across analytics endpoints likely means the API key lacks insights/manager permissions, not that the offering is missing.
-
-## Playbook
-
-### Onboard a New Learner into an Offering
-
-1. Create the user: POST /users with `firstName`, `lastName`, `email`, and `sendInvite: true`
-2. Note the `invite.url` from the response for manual follow-up if needed
-3. Enroll the user: POST /offerings/{offeringId}/users with the user's email in the body
-4. Check for 201 (success) vs 207 (partial failure) on the enrollment response
-5. Optionally add the learner to a group: POST /offerings/{offeringId}/groups/{groupId}/learners
-
-### Review Learner Performance for an Offering
-
-1. Get the offering details: GET /offerings/{offeringId} to confirm the offering is active
-2. Pull learner progress: GET /offerings/{offeringId}/analytics/learners-progress
-3. Get assignment marks: GET /offerings/{offeringId}/analytics/marks/assignments
-4. Get quiz marks: GET /offerings/{offeringId}/analytics/marks/quizzes
-5. For specific learner submissions: GET /offerings/{offeringId}/analytics/submissions/{userEmail}/assignments/{assessmentId}
-
-### Set Up a New Offering with Channels and Groups
-
-1. Create the offering: POST /offerings with `start`, `name`, `contentId`, and desired settings
-2. Create discussion channels: POST /offerings/{offeringId}/channels with `title` and optional `isBroadcastOnly`
-3. Create learner groups: POST /offerings/{offeringId}/groups with `title`
-4. Enroll users: POST /offerings/{offeringId}/users (batch)
-5. Assign learners to channels: POST /offerings/{offeringId}/channels/{channelId}/learners
-6. Assign learners to groups: POST /offerings/{offeringId}/groups/{groupId}/learners
-
-### Transfer a Learner Between Offerings
-
-1. Look up the user: GET /users/{userEmail} to confirm the account exists
-2. Verify source enrollment: GET /users/{userEmail}/offerings to see current offerings
-3. Check the user's progress: GET /users/{userEmail}/offerings/{offeringId}/progress to document current state
-4. Execute the transfer: PATCH /users/{userEmail}/transfer with `fromOfferingId`, `toOfferingId`, and `sendInvite: true`
-5. Verify new enrollment: GET /users/{userEmail}/offerings to confirm the transfer landed
-
-### Map External LMS Courses to iQualify
-
-1. List existing mappings: GET /course-mappings to see what is already linked
-2. Find the iQualify offering: GET /offerings/info/{textPattern} to search by name
-3. Create the mapping: PUT /course-mappings/{offeringId}/{externalCourseId}
-4. Verify: GET /course-mappings/externalcourse/{externalCourseId} to confirm the link
-5. To remove a stale mapping: DELETE /course-mappings/{offeringId}/{externalCourseId}
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all pulses?" -> GET /offerings/{offeringId}/analytics/pulses
+- "List all responses?" -> GET /offerings/{offeringId}/analytics/pulses/responses
+- "List all responses?" -> GET /offerings/{offeringId}/analytics/pulses/{pulseId}/responses
+- "List all assignments?" -> GET /offerings/{offeringId}/analytics/marks/assignments
+- "List all quizzes?" -> GET /offerings/{offeringId}/analytics/marks/quizzes
+- "List all learners-progress?" -> GET /offerings/{offeringId}/analytics/learners-progress
+- "List all unit-reactions?" -> GET /offerings/{offeringId}/analytics/unit-reactions
+- "List all assignments?" -> GET /offerings/{offeringId}/analytics/submissions/assignments
+- "List all social-notes?" -> GET /offerings/{offeringId}/analytics/social-notes
+- "List all responses?" -> GET /offerings/{offeringId}/analytics/activities/responses
+- "Get open-response details?" -> GET /offerings/{offeringId}/analytics/submissions/open-response/{assessmentId}
+- "Get assignment details?" -> GET /offerings/{offeringId}/analytics/submissions/{userEmail}/assignments/{assessmentId}
+- "List all groups?" -> GET /offerings/{offeringId}/groups
+- "Create a group?" -> POST /offerings/{offeringId}/groups
+- "List all learners?" -> GET /offerings/{offeringId}/groups/{groupId}/learners
+- "Create a learner?" -> POST /offerings/{offeringId}/groups/{groupId}/learners
+- "Delete a learner?" -> DELETE /offerings/{offeringId}/groups/{groupId}/learners/{userEmail}
+- "List all posts?" -> GET /offerings/{offeringId}/analytics/channels/{channelId}/posts
+- "List all comments?" -> GET /offerings/{offeringId}/analytics/channels/{channelId}/comments
+- "List all replies?" -> GET /offerings/{offeringId}/analytics/channels/{channelId}/replies
+- "List all channels?" -> GET /offerings/{offeringId}/channels
+- "Create a channel?" -> POST /offerings/{offeringId}/channels
+- "Partially update a channel?" -> PATCH /offerings/{offeringId}/channels/{channelId}
+- "Create a learner?" -> POST /offerings/{offeringId}/channels/{channelId}/learners
+- "List all learners?" -> GET /offerings/{offeringId}/channels/{channelId}/learners
+- "List all course-mappings?" -> GET /course-mappings
+- "Get externalcourse details?" -> GET /course-mappings/externalcourse/{externalCourseId}
+- "Get course-mapping details?" -> GET /course-mappings/{offeringId}
+- "Update a course-mapping?" -> PUT /course-mappings/{offeringId}/{externalCourseId}
+- "Delete a course-mapping?" -> DELETE /course-mappings/{offeringId}/{externalCourseId}
+- "List all courses?" -> GET /courses
+- "Get course details?" -> GET /courses/{contentId}
+- "List all activations?" -> GET /courses/{contentId}/activations
+- "List all permissions?" -> GET /courses/{contentId}/permissions
+- "List all offerings?" -> GET /offerings
+- "Create a offering?" -> POST /offerings
+- "List all summary?" -> GET /offerings/summary
+- "List all current?" -> GET /offerings/current
+- "List all past?" -> GET /offerings/past
+- "List all future?" -> GET /offerings/future
+- "Get info details?" -> GET /offerings/info/{textPattern}
+- "Get offering details?" -> GET /offerings/{offeringId}
+- "Partially update a offering?" -> PATCH /offerings/{offeringId}
+- "List all badges?" -> GET /offerings/{offeringId}/badges
+- "List all assessments?" -> GET /offerings/{offeringId}/assessments
+- "Partially update a assessment?" -> PATCH /offerings/{offeringId}/assessments/{assessmentId}
+- "Partially update a assessment?" -> PATCH /offerings/{offeringId}/assessments/{assessmentId}/{userEmail}
+- "Delete a document?" -> DELETE /offerings/{offeringId}/assessments/{assessmentId}/documents/{documentId}
+- "List all pending-submission?" -> GET /offerings/{offeringId}/learners/pending-submission
+- "List all openresponse?" -> GET /offerings/{offeringId}/activities/openresponse
+- "List all users?" -> GET /offerings/{offeringId}/users
+- "Create a user?" -> POST /offerings/{offeringId}/users
+- "Delete a user?" -> DELETE /offerings/{offeringId}/users/{userEmail}
+- "List all marks?" -> GET /offerings/{offeringId}/users/{markerEmail}/marks
+- "Create a mark?" -> POST /offerings/{offeringId}/users/{markerEmail}/marks
+- "Create a award?" -> POST /offerings/{offeringId}/users/{userEmail}/badges/award
+- "List all open-response?" -> GET /offerings/{offeringId}/users/{userEmail}/submissions/open-response
+- "Delete a assessment?" -> DELETE /offerings/{offeringId}/users/{userEmail}/assessments/{assessmentId}
+- "List all org?" -> GET /org
+- "Get user details?" -> GET /users/{userEmail}
+- "Partially update a user?" -> PATCH /users/{userEmail}
+- "List all offerings?" -> GET /users/{userEmail}/offerings
+- "Create a offering?" -> POST /users/{userEmail}/offerings
+- "List all progress?" -> GET /users/{userEmail}/offerings/{offeringId}/progress
+- "List all progress?" -> GET /users/all/progress
+- "List all progress?" -> GET /users/{userEmail}/progress
+- "List all badges?" -> GET /users/{userEmail}/badges
+- "Create a invite-email?" -> POST /users/{userEmail}/invite-email
+- "Create a user?" -> POST /users
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

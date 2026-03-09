@@ -8,47 +8,56 @@
 
 @group app_packages
 @endpoint POST /app_packages
-@required {appPkgName: str, appPkgPath: str, appPkgVersion: str, checksum: map{algorithm!: str, hash!: str}}
-@optional {appProvider: str, userDefinedData: map}
-@returns(201)
+@desc Create a resource for on-boarding an application package to a MEO
+@required {appPkgName: str # Name of the application package to be onboarded., appPkgPath: str, appPkgVersion: str # Version of the application package to be onboarded. The appPkgName with appPkgVersion can be used to uniquely identify the application package., checksum: map{algorithm!: str, hash!: str}}
+@optional {appProvider: str # The provider's name of the application package to be onboarded., userDefinedData: map # 'This data type represents a list of key-value pairs. The order of the pairs in the list is not significant. In JSON, a set of key-value pairs is represented as an object. It shall comply with the provisions defined in clause 4 of IETF RFC 8259'}
+@returns(201) Successful response for resource creation
 @errors {400, 401, 403, 404, 406, 429}
 
 @endpoint GET /app_packages
-@optional {filter: str, all_fields: str, fields: str, exclude_fields: str, exclude_default: str}
-@returns(200)
+@desc Queries information relating to on-boarded application packages in the MEO
+@optional {filter: str # Attribute-based filtering parameters according to ETSI GS MEC 009, all_fields: str # Include all complex attributes in the response., fields: str # Complex attributes of AppPkgInfo to be included into the response, exclude_fields: str # Complex attributes of AppPkgInfo to be excluded from the response., exclude_default: str # Indicates to exclude the following complex attributes of AppPkgInfo from the response.}
+@returns(200) Contains a representation of the application package resource
 @errors {400, 401, 403, 404, 406, 429}
 
 @endpoint GET /app_packages/{appPkgId}
-@returns(200) {id: str, appDId: str, appProvider: str, appName: str, appSoftwareVersion: str, appDVersion: str, checksum: map{algorithm: str, hash: str}, softwareImages: any, additionalArtifacts: any, onboardingState: str(enum), operationalState: str, usageState: str(enum), userDefinedData: map, _links: map{self: map{href: str(uri)}, appD: map{href: str(uri)}, appPkgContent: map{href: str(uri)}}}
+@desc Queries the information related to individual application package resources
+@returns(200) {id: str, appDId: str, appProvider: str, appName: str, appSoftwareVersion: str, appDVersion: str, checksum: map{algorithm: str, hash: str}, softwareImages: any, additionalArtifacts: any, onboardingState: str(enum), operationalState: str, usageState: str(enum), userDefinedData: map, _links: map{self: map{href: str(uri)}, appD: map{href: str(uri)}, appPkgContent: map{href: str(uri)}}} # Contains a representation of the application package resource
 @errors {400, 401, 403, 404, 406, 429}
 
 @endpoint DELETE /app_packages/{appPkgId}
+@desc Deletes an individual application package resources
 @returns(204)
 @errors {400, 401, 403, 404, 406, 429}
 
 @endpoint PATCH /app_packages/{appPkgId}
+@desc Updates the operational state of an individual application package resource
 @required {operationState: str(DISABLED/ENABLED)}
-@returns(200) {operationState: str}
+@returns(200) {operationState: str} # Shows that the operation has been completed successfully
 @errors {400, 401, 403, 404, 406, 409, 429}
 
 @endgroup
 
 @group subscriptions
 @endpoint POST /subscriptions
-@required {callbackUri: str(uri), subsctiptionType: str(AppPackageOnBoarding/AppPacakgeOperationChange/AppPackageDeletion)}
+@desc Subscribe to notifications about on-boarding an application package
+@required {callbackUri: str(uri) # The URI of the endpoint for the notification to be sent to., subsctiptionType: str(AppPackageOnBoarding/AppPacakgeOperationChange/AppPackageDeletion) # 'Subscribed notification type'}
 @optional {appPkgFilter: [str]}
-@returns(201) {id: str, subscriptionType: str, callbackUri: str(uri), _links: map{self: map{href: str(uri)}}}
+@returns(201) {id: str, subscriptionType: str, callbackUri: str(uri), _links: map{self: map{href: str(uri)}}} # Successful response for created subscription
 @errors {400, 401, 403, 404, 406, 429}
 
 @endpoint GET /subscriptions
-@returns(200) {_links: map{self: map{href: str(uri)}, subscriptions: [map]}}
+@desc used to retrieve the information of subscriptions to individual application package resource in MEO
+@returns(200) {_links: map{self: map{href: str(uri)}, subscriptions: [map]}} # List of zero or more subscriptions
 @errors {400, 401, 403, 404, 406, 429}
 
 @endpoint GET /subscriptions/{subscriptionId}
-@returns(200) {id: str, subscriptionType: str, callbackUri: str(uri), _links: map{self: map{href: str(uri)}}}
+@desc Used to represent an individual subscription to notifications about application package changes.
+@returns(200) {id: str, subscriptionType: str, callbackUri: str(uri), _links: map{self: map{href: str(uri)}}} # Representation of the resource.
 @errors {400, 401, 403, 404, 406, 429}
 
 @endpoint DELETE /subscriptions/{subscriptionId}
+@desc Deletes the individual subscription to notifications about application package changes in MEO.
 @returns(204)
 @errors {401, 403, 404, 429}
 
@@ -56,7 +65,8 @@
 
 @group user_defined_notification
 @endpoint POST /user_defined_notification
-@required {id: str, notificationType: str(AppPackageOnBoarded/AppPacakgeEnabled/AppPacakgeDisabled/AppPackageDeleted), subscriptionId: str, timeStamp: map{nanoSeconds!: int(Uint32), seconds!: int(Uint32)}, appPkgId: str, appDId: str, operationalState: str(DISABLED/ENABLED), _links: map{subscription!: map{href!: str(uri)}}}
+@desc Registers a notification endpoint to notify application package operations
+@required {id: str # '', notificationType: str(AppPackageOnBoarded/AppPacakgeEnabled/AppPacakgeDisabled/AppPackageDeleted) # Discriminator for the different notification types, subscriptionId: str # Identifier of the subscription related to this notification., timeStamp: map{nanoSeconds!: int(Uint32), seconds!: int(Uint32)}, appPkgId: str # Identifier of the onboarded application package., appDId: str # Identifier of this MEC application descriptor. This attribute shall be globally unique., operationalState: str(DISABLED/ENABLED), _links: map{subscription!: map{href!: str(uri)}} # Links to resources related to this resource.}
 @returns(204)
 @errors {401, 403, 404, 429}
 
@@ -64,40 +74,46 @@
 
 @group app_packages
 @endpoint GET /app_packages/{appPkgId}/appd
-@optional {filter: str, all_fields: str, fields: str, exclude_fields: str, exclude_default: str}
-@returns(200)
+@desc Reads the content of the AppD of on-boarded individual application package resources.
+@optional {filter: str # Attribute-based filtering parameters according to ETSI GS MEC 009, all_fields: str # Include all complex attributes in the response., fields: str # Complex attributes of AppPkgInfo to be included into the response, exclude_fields: str # Complex attributes of AppPkgInfo to be excluded from the response., exclude_default: str # Indicates to exclude the following complex attributes of AppPkgInfo from the response.}
+@returns(200) Content of the AppD is returned.
 @errors {400, 401, 403, 404, 406, 429}
 
 @endgroup
 
 @group onboarded_app_packages
 @endpoint GET /onboarded_app_packages/{appDId}/appd
-@optional {filter: str, all_fields: str, fields: str, exclude_fields: str, exclude_default: str}
-@returns(200)
+@desc Reads the content of the AppD of on-boarded individual application package resources.
+@optional {filter: str # Attribute-based filtering parameters according to ETSI GS MEC 009, all_fields: str # Include all complex attributes in the response., fields: str # Complex attributes of AppPkgInfo to be included into the response, exclude_fields: str # Complex attributes of AppPkgInfo to be excluded from the response., exclude_default: str # Indicates to exclude the following complex attributes of AppPkgInfo from the response.}
+@returns(200) Content of the AppD is returned.
 @errors {400, 401, 403, 404, 406, 429}
 
 @endgroup
 
 @group app_packages
 @endpoint GET /app_packages/{appPkgId}/package_content
-@returns(200)
+@desc Fetch the onboarded application package content identified by appPkgId or appDId.
+@returns(200) The payload body shall contain a copy of the file representing the AppD or a ZIP file that contains the file or multiple files representing the AppD.
 @returns(206)
 @errors {400, 401, 403, 404, 416, 406, 429}
 
 @endpoint PUT /app_packages/{appPkgId}/package_content
-@returns(202)
+@desc Uploads the content of application package.
+@returns(202) The application package has been accepted for uploading, but the processing has not been completed.
 @errors {400, 401, 403, 404, 406, 409, 429}
 
 @endgroup
 
 @group onboarded_app_packages
 @endpoint GET /onboarded_app_packages/{appDId}/package_content
-@returns(200)
+@desc Fetch the onboarded application package content identified by appPkgId or appDId.
+@returns(200) The payload body shall contain a copy of the file representing the AppD or a ZIP file that contains the file or multiple files representing the AppD.
 @returns(206)
 @errors {400, 401, 403, 404, 416, 406, 429}
 
 @endpoint PUT /onboarded_app_packages/{appDId}/package_content
-@returns(202)
+@desc Uploads the content of application package.
+@returns(202) The application package has been accepted for uploading, but the processing has not been completed.
 @errors {400, 401, 403, 404, 406, 409, 429}
 
 @endgroup

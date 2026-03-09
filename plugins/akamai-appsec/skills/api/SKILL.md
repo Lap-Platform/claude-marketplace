@@ -276,100 +276,173 @@ https://{hostname}/appsec/v1
 |--------|------|-------------|
 | GET | /siem-definitions | Get SIEM versions |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I activate a security configuration to production?" -> POST /activations
-- "What is the status of my activation?" -> GET /activations/{activationId}
-- "List all my security configurations" -> GET /configs
-- "What security policies exist in this config version?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies
-- "How do I create a new rate policy to throttle abusive clients?" -> POST /configs/{configId}/versions/{versionNumber}/rate-policies
-- "Which hostnames are protected by my configuration?" -> GET /configs/{configId}/versions/{versionNumber}/selected-hostnames
-- "How do I block traffic from a specific country?" -> PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/ip-geo-firewall
-- "What CVEs is my configuration vulnerable to?" -> GET /cves
-- "How do I check if a specific CVE is covered by my WAF rules?" -> GET /cves/{cveId}/security-coverage
-- "How do I export a full snapshot of my security config?" -> GET /export/configs/{configId}/versions/{versionNumber}
-- "What APIs has Akamai discovered on my traffic?" -> GET /api-discovery
-- "How do I create a new version of my config before making changes?" -> POST /configs/{configId}/versions
-- "What are the tuning recommendations for my security policy?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/recommendations
-- "How do I set up SIEM integration for security events?" -> PUT /configs/{configId}/versions/{versionNumber}/siem
-- "How do I onboard a new hostname with security protections?" -> POST /onboardings
-
-## Response Tips
-
-- **Activations**: POST may return 200 (immediate) or 202 (async with `statusId`) -- poll `GET /activations/status/{statusId}` until 303 redirect to the completed activation resource.
-- **Configs & Versions**: `GET /configs/{configId}/versions` is paginated via `page` and `pageSize` (default 25); always check `totalSize` against returned `versionList` length. The response nests `production` and `staging` status maps inside each version.
-- **Security Policies**: Deeply nested under `/configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/...` -- always confirm you have the correct `configId`, `versionNumber`, and `policyId` triple before mutating.
-- **Rate Policies**: The `evaluation` nested object contains a separate set of thresholds for A/B testing; check `evaluationStatus` to know if an eval is active.
-- **CVEs**: The `impactScore` is a float (CVSS-style); `coverage` is a string status, not a boolean -- parse it as an enum.
-- **Match Targets**: Responses split into `apiTargets` and `websiteTargets` arrays inside a `matchTargets` wrapper object -- do not assume a flat list.
-- **Onboardings**: Multi-step flow returns `currentStep`/`totalSteps` plus a `nextSteps` array with actionable links; follow `onboardingLink` URIs for navigation.
-- **Errors**: 403 consistently means Forbidden (permissions issue with your API client credentials); 400 may include structured validation detail -- surface the error body, not just the status code.
-
-## Anomaly Flags
-
-- **Activation stuck in pending**: If `GET /activations/{activationId}` returns `status` other than `ACTIVATED` or `FAILED` for more than 30 minutes, surface a warning that the activation may be stalled.
-- **Eval mode expiring soon**: When `GET .../security-policies/{policyId}/mode` shows `eval: true` with an `expires` datetime approaching, alert the user to finalize eval decisions before auto-expiry.
-- **Rate policy evaluation active**: If any rate policy has `evaluation.evaluationStatus` set to an active state, flag that changes to thresholds will not take effect until the evaluation is applied or discarded via `PUT .../rate-policies/{ratePolicyId}/evaluation`.
-- **Unmatched hostnames**: If `GET /hostname-coverage` returns entries with `hasMatchTarget: false`, proactively warn that those hostnames have no security policy coverage.
-- **Version drift**: If `latestVersion` from `GET /configs/{configId}` significantly exceeds `productionVersion` or `stagingVersion`, flag that many undeployed changes exist.
-- **CVE subscription gaps**: If `GET /cves` returns CVEs with `impactSeverity` of "HIGH" or "CRITICAL" that are not in `GET /cves/subscribed`, recommend subscribing for update notifications.
-- **403 Forbidden on write operations**: Surface immediately as an API credential permissions issue -- the user likely needs to update their API client authorization grants.
-- **Config with no security policies**: If `GET .../security-policies` returns an empty `policies` array, warn that the config version has no active protection.
-
-## Playbook
-
-### 1. Create and Activate a New Security Configuration
-
-1. List available contracts and groups: `GET /contracts-groups`
-2. Get selectable hostnames for your contract: `GET /contracts/{contractId}/groups/{groupId}/selectable-hostnames`
-3. Create the configuration: `POST /configs` with `name`, `description`, and `hostnames`
-4. Note the returned `configId` -- the first version is created automatically
-5. Add a security policy: `POST /configs/{configId}/versions/1/security-policies` with `policyName` and `policyPrefix`
-6. Configure protections on the policy: `PUT .../security-policies/{policyId}/protections` enabling desired controls
-7. Set selected hostnames for the policy: `PUT .../security-policies/{policyId}/selected-hostnames`
-8. Activate to staging first: `POST /activations` with `network: "STAGING"` and your `configId`/`configVersion`
-9. Poll activation status until complete, then repeat for `network: "PRODUCTION"`
-
-### 2. Tune WAF Rules Using Recommendations
-
-1. Identify your config, version, and policy: `GET /configs` then `GET /configs/{configId}/versions/{versionNumber}/security-policies`
-2. Retrieve recommendations: `GET .../security-policies/{policyId}/recommendations`
-3. Review `ruleRecommendations` and `attackGroupRecommendations` arrays for suggested action changes
-4. For each recommendation you agree with: `POST .../security-policies/{policyId}/recommendations` with `action: "ACCEPT"` and the `selectorId`
-5. For false-positive rules, decline instead: `action: "DECLINE"`
-6. Create a new version and activate to apply changes
-
-### 3. Investigate and Mitigate a CVE
-
-1. Check all known CVEs: `GET /cves` (optionally filter with `modifiedAfter` for recent ones)
-2. Get details on the specific CVE: `GET /cves/{cveId}` -- review `impactSeverity`, `description`, and `mitigation.attackGroups`
-3. Check your coverage: `GET /cves/{cveId}/security-coverage` to see which configs/policies already protect against it
-4. If gaps exist, update the relevant attack group actions: `PUT .../security-policies/{policyId}/attack-groups/{attackGroupId}` with `action: "deny"`
-5. Subscribe for future updates: `POST /cves/subscribe` with the CVE ID
-6. Activate the updated config version to production
-
-### 4. Set Up Rate Limiting
-
-1. Create a new config version: `POST /configs/{configId}/versions` with `createFromVersion` set to the current active version
-2. Create a rate policy: `POST .../rate-policies` specifying `averageThreshold`, `burstThreshold`, `clientIdentifier` (e.g., `"ip"`), and `matchType`
-3. Assign the rate policy action to your security policy: `PUT .../security-policies/{policyId}/rate-policies/{ratePolicyId}` with `ipv4Action` and `ipv6Action` (e.g., `"deny"`)
-4. Optionally set up an evaluation period on the policy: include the `evaluation` object with separate thresholds to test before enforcing
-5. Activate to staging: `POST /activations` with `network: "STAGING"`
-6. Monitor results, then apply or discard the evaluation: `PUT .../rate-policies/{ratePolicyId}/evaluation` with `action: "APPLY"` or `"DISCARD"`
-7. Activate to production when satisfied
-
-### 5. Onboard a New Hostname End-to-End
-
-1. Start onboarding: `POST /onboardings` with `contractId`, `groupId`, and `hostnames`
-2. Configure settings: `PUT /onboardings/{onboardingId}/settings` with certificate, delivery origin, and security policy details
-3. Validate the origin: `POST /onboardings/{onboardingId}/origin-validation/validate` (or skip with `.../skip` for known-good origins)
-4. Validate the certificate: `POST /onboardings/{onboardingId}/certificate-validation/validate` -- check that all DNS records return valid status
-5. Activate to staging: `POST /onboardings/{onboardingId}/activations` with `network: "STAGING"` -- poll `GET .../activations/{activationId}` until `activationStatus` is complete
-6. Validate CNAME pointing: `POST /onboardings/{onboardingId}/cname-to-akamai/validate` to confirm DNS is pointing to Akamai
-7. Activate to production: repeat the activation step with `network: "PRODUCTION"`
-8. Verify coverage: `GET /hostname-coverage` to confirm `hasMatchTarget: true` for your new hostname
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a activation?" -> POST /activations
+- "Get status details?" -> GET /activations/status/{statusId}
+- "Get activation details?" -> GET /activations/{activationId}
+- "Search api-discovery?" -> GET /api-discovery
+- "Search basepath?" -> GET /api-discovery/host/{hostname}/basepath/{basePath}
+- "Update a basepath?" -> PUT /api-discovery/host/{hostname}/basepath/{basePath}
+- "Create a endpoint?" -> POST /api-discovery/host/{hostname}/basepath/{basePath}/endpoints
+- "List all endpoints?" -> GET /api-discovery/host/{hostname}/basepath/{basePath}/endpoints
+- "Create a config?" -> POST /configs
+- "List all configs?" -> GET /configs
+- "Get config details?" -> GET /configs/{configId}
+- "Update a config?" -> PUT /configs/{configId}
+- "Delete a config?" -> DELETE /configs/{configId}
+- "List all activations?" -> GET /configs/{configId}/activations
+- "Create a custom-rule?" -> POST /configs/{configId}/custom-rules
+- "List all custom-rules?" -> GET /configs/{configId}/custom-rules
+- "Get custom-rule details?" -> GET /configs/{configId}/custom-rules/{ruleId}
+- "Update a custom-rule?" -> PUT /configs/{configId}/custom-rules/{ruleId}
+- "Delete a custom-rule?" -> DELETE /configs/{configId}/custom-rules/{ruleId}
+- "List all failover-hostnames?" -> GET /configs/{configId}/failover-hostnames
+- "Get subscription details?" -> GET /configs/{configId}/notification/subscription/{feature}
+- "Create a version?" -> POST /configs/{configId}/versions
+- "List all versions?" -> GET /configs/{configId}/versions
+- "Create a diff?" -> POST /configs/{configId}/versions/diff
+- "Get version details?" -> GET /configs/{configId}/versions/{versionNumber}
+- "Delete a version?" -> DELETE /configs/{configId}/versions/{versionNumber}
+- "List all cookie-settings?" -> GET /configs/{configId}/versions/{versionNumber}/advanced-settings/cookie-settings
+- "List all evasive-path-match?" -> GET /configs/{configId}/versions/{versionNumber}/advanced-settings/evasive-path-match
+- "List all logging?" -> GET /configs/{configId}/versions/{versionNumber}/advanced-settings/logging
+- "List all attack-payload?" -> GET /configs/{configId}/versions/{versionNumber}/advanced-settings/logging/attack-payload
+- "List all pii-learning?" -> GET /configs/{configId}/versions/{versionNumber}/advanced-settings/pii-learning
+- "List all pragma-header?" -> GET /configs/{configId}/versions/{versionNumber}/advanced-settings/pragma-header
+- "List all prefetch?" -> GET /configs/{configId}/versions/{versionNumber}/advanced-settings/prefetch
+- "List all request-body?" -> GET /configs/{configId}/versions/{versionNumber}/advanced-settings/request-body
+- "List all bypass-network-lists?" -> GET /configs/{configId}/versions/{versionNumber}/bypass-network-lists
+- "Create a custom-deny?" -> POST /configs/{configId}/versions/{versionNumber}/custom-deny
+- "Search custom-deny?" -> GET /configs/{configId}/versions/{versionNumber}/custom-deny
+- "Get custom-deny details?" -> GET /configs/{configId}/versions/{versionNumber}/custom-deny/{customDenyId}
+- "Update a custom-deny?" -> PUT /configs/{configId}/versions/{versionNumber}/custom-deny/{customDenyId}
+- "Delete a custom-deny?" -> DELETE /configs/{configId}/versions/{versionNumber}/custom-deny/{customDenyId}
+- "List all match-targets?" -> GET /configs/{configId}/versions/{versionNumber}/hostname-coverage/match-targets
+- "List all overlapping?" -> GET /configs/{configId}/versions/{versionNumber}/hostname-coverage/overlapping
+- "Create a malware-policy?" -> POST /configs/{configId}/versions/{versionNumber}/malware-policies
+- "List all malware-policies?" -> GET /configs/{configId}/versions/{versionNumber}/malware-policies
+- "List all content-types?" -> GET /configs/{configId}/versions/{versionNumber}/malware-policies/content-types
+- "Get malware-policy details?" -> GET /configs/{configId}/versions/{versionNumber}/malware-policies/{malwarePolicyId}
+- "Update a malware-policy?" -> PUT /configs/{configId}/versions/{versionNumber}/malware-policies/{malwarePolicyId}
+- "Delete a malware-policy?" -> DELETE /configs/{configId}/versions/{versionNumber}/malware-policies/{malwarePolicyId}
+- "Create a match-target?" -> POST /configs/{configId}/versions/{versionNumber}/match-targets
+- "List all match-targets?" -> GET /configs/{configId}/versions/{versionNumber}/match-targets
+- "Get match-target details?" -> GET /configs/{configId}/versions/{versionNumber}/match-targets/{targetId}
+- "Update a match-target?" -> PUT /configs/{configId}/versions/{versionNumber}/match-targets/{targetId}
+- "Delete a match-target?" -> DELETE /configs/{configId}/versions/{versionNumber}/match-targets/{targetId}
+- "Create a rate-policy?" -> POST /configs/{configId}/versions/{versionNumber}/rate-policies
+- "List all rate-policies?" -> GET /configs/{configId}/versions/{versionNumber}/rate-policies
+- "Get rate-policy details?" -> GET /configs/{configId}/versions/{versionNumber}/rate-policies/{ratePolicyId}
+- "Update a rate-policy?" -> PUT /configs/{configId}/versions/{versionNumber}/rate-policies/{ratePolicyId}
+- "Delete a rate-policy?" -> DELETE /configs/{configId}/versions/{versionNumber}/rate-policies/{ratePolicyId}
+- "Create a reputation-profile?" -> POST /configs/{configId}/versions/{versionNumber}/reputation-profiles
+- "List all reputation-profiles?" -> GET /configs/{configId}/versions/{versionNumber}/reputation-profiles
+- "Get reputation-profile details?" -> GET /configs/{configId}/versions/{versionNumber}/reputation-profiles/{reputationProfileId}
+- "Update a reputation-profile?" -> PUT /configs/{configId}/versions/{versionNumber}/reputation-profiles/{reputationProfileId}
+- "Delete a reputation-profile?" -> DELETE /configs/{configId}/versions/{versionNumber}/reputation-profiles/{reputationProfileId}
+- "Create a security-policy?" -> POST /configs/{configId}/versions/{versionNumber}/security-policies
+- "List all security-policies?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies
+- "Get security-policy details?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}
+- "Update a security-policy?" -> PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}
+- "Delete a security-policy?" -> DELETE /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}
+- "List all evasive-path-match?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/evasive-path-match
+- "List all logging?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/logging
+- "List all attack-payload?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/logging/attack-payload
+- "List all pragma-header?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/pragma-header
+- "List all request-body?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/advanced-settings/request-body
+- "List all api-endpoints?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/api-endpoints
+- "List all api-request-constraints?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/api-request-constraints
+- "Update a api-request-constraint?" -> PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/api-request-constraints/{apiId}
+- "List all attack-groups?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/attack-groups
+- "Get attack-group details?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/attack-groups/{attackGroupId}
+- "Update a attack-group?" -> PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/attack-groups/{attackGroupId}
+- "List all condition-exception?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/attack-groups/{attackGroupId}/condition-exception
+- "List all bypass-network-lists?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/bypass-network-lists
+- "List all cpc?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/cpc
+- "List all custom-rules?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/custom-rules
+- "Update a custom-rule?" -> PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/custom-rules/{ruleId}
+- "Create a eval?" -> POST /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval
+- "List all eval-groups?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-groups
+- "Get eval-group details?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-groups/{attackGroupId}
+- "Update a eval-group?" -> PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-groups/{attackGroupId}
+- "List all condition-exception?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-groups/{attackGroupId}/condition-exception
+- "List all eval-hostnames?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-hostnames
+- "List all eval-penalty-box?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-penalty-box
+- "List all conditions?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-penalty-box/conditions
+- "List all eval-rules?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-rules
+- "Get eval-rule details?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-rules/{ruleId}
+- "Update a eval-rule?" -> PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-rules/{ruleId}
+- "List all condition-exception?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/eval-rules/{ruleId}/condition-exception
+- "List all ip-geo-firewall?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/ip-geo-firewall
+- "List all malware-policies?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/malware-policies
+- "Update a malware-policy?" -> PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/malware-policies/{malwarePolicyId}
+- "List all mode?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/mode
+- "List all penalty-box?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/penalty-box
+- "List all conditions?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/penalty-box/conditions
+- "List all protections?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/protections
+- "List all rapid-rules?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules
+- "List all action?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/action
+- "List all status?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/status
+- "List all condition-exception?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/{ruleId}/condition-exception
+- "List all lock?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/{ruleId}/lock
+- "List all action?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rapid-rules/{ruleId}/versions/{ruleVersion}/action
+- "List all rate-policies?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rate-policies
+- "Update a rate-policy?" -> PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rate-policies/{ratePolicyId}
+- "Create a recommendation?" -> POST /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/recommendations
+- "List all recommendations?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/recommendations
+- "Get attack-group details?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/recommendations/attack-groups/{attackGroupId}
+- "Get rule details?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/recommendations/rules/{ruleId}
+- "List all reputation-analysis?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/reputation-analysis
+- "List all reputation-profiles?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/reputation-profiles
+- "Get reputation-profile details?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/reputation-profiles/{reputationProfileId}
+- "Update a reputation-profile?" -> PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/reputation-profiles/{reputationProfileId}
+- "List all rules?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules
+- "List all threat-intel?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules/threat-intel
+- "List all upgrade-details?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules/upgrade-details
+- "Get rule details?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules/{ruleId}
+- "Update a rule?" -> PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules/{ruleId}
+- "List all condition-exception?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/rules/{ruleId}/condition-exception
+- "List all selected-hostnames?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/selected-hostnames
+- "List all slow-post?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/slow-post
+- "List all url-protections?" -> GET /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/url-protections
+- "Update a url-protection?" -> PUT /configs/{configId}/versions/{versionNumber}/security-policies/{policyId}/url-protections/{urlProtectionPolicyId}
+- "List all selectable-hostnames?" -> GET /configs/{configId}/versions/{versionNumber}/selectable-hostnames
+- "List all selected-hostnames?" -> GET /configs/{configId}/versions/{versionNumber}/selected-hostnames
+- "List all eval-hostnames?" -> GET /configs/{configId}/versions/{versionNumber}/selected-hostnames/eval-hostnames
+- "List all siem?" -> GET /configs/{configId}/versions/{versionNumber}/siem
+- "Create a url-protection?" -> POST /configs/{configId}/versions/{versionNumber}/url-protections
+- "List all url-protections?" -> GET /configs/{configId}/versions/{versionNumber}/url-protections
+- "Get url-protection details?" -> GET /configs/{configId}/versions/{versionNumber}/url-protections/{urlProtectionPolicyId}
+- "Update a url-protection?" -> PUT /configs/{configId}/versions/{versionNumber}/url-protections/{urlProtectionPolicyId}
+- "Delete a url-protection?" -> DELETE /configs/{configId}/versions/{versionNumber}/url-protections/{urlProtectionPolicyId}
+- "List all version-notes?" -> GET /configs/{configId}/versions/{versionNumber}/version-notes
+- "List all contracts-groups?" -> GET /contracts-groups
+- "List all selectable-hostnames?" -> GET /contracts/{contractId}/groups/{groupId}/selectable-hostnames
+- "List all cves?" -> GET /cves
+- "Create a subscribe?" -> POST /cves/subscribe
+- "List all subscribed?" -> GET /cves/subscribed
+- "Create a unsubscribe?" -> POST /cves/unsubscribe
+- "Get cve details?" -> GET /cves/{cveId}
+- "List all security-coverage?" -> GET /cves/{cveId}/security-coverage
+- "Get version details?" -> GET /export/configs/{configId}/versions/{versionNumber}
+- "List all hostname-coverage?" -> GET /hostname-coverage
+- "Create a onboarding?" -> POST /onboardings
+- "List all onboardings?" -> GET /onboardings
+- "Get onboarding details?" -> GET /onboardings/{onboardingId}
+- "Delete a onboarding?" -> DELETE /onboardings/{onboardingId}
+- "Create a activation?" -> POST /onboardings/{onboardingId}/activations
+- "Get activation details?" -> GET /onboardings/{onboardingId}/activations/{activationId}
+- "List all certificate-validation?" -> GET /onboardings/{onboardingId}/certificate-validation
+- "Create a validate?" -> POST /onboardings/{onboardingId}/certificate-validation/validate
+- "List all cname-to-akamai?" -> GET /onboardings/{onboardingId}/cname-to-akamai
+- "Create a validate?" -> POST /onboardings/{onboardingId}/cname-to-akamai/validate
+- "List all origin-validation?" -> GET /onboardings/{onboardingId}/origin-validation
+- "Create a skip?" -> POST /onboardings/{onboardingId}/origin-validation/skip
+- "Create a validate?" -> POST /onboardings/{onboardingId}/origin-validation/validate
+- "List all settings?" -> GET /onboardings/{onboardingId}/settings
+- "List all siem-definitions?" -> GET /siem-definitions
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

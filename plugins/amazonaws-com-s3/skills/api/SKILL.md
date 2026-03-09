@@ -242,93 +242,11 @@ Not specified.
 |--------|------|-------------|
 | POST | /WriteGetObjectResponse | This operation is not supported by directory buckets.  Passes transformed objects to a GetObject operation when using Object Lambda access points. For information about Object Lambda access points, see Transforming objects with Object Lambda access points in the Amazon S3 User Guide. This operation supports metadata that can be returned by GetObject, in addition to RequestRoute, RequestToken, StatusCode, ErrorCode, and ErrorMessage. The GetObject response metadata is supported so that the WriteGetObjectResponse caller, typically an Lambda function, can provide the same metadata when it internally invokes GetObject. When WriteGetObjectResponse is called by a customer-owned Lambda function, the metadata returned to the end user GetObject call might differ from what Amazon S3 would normally return. You can include any number of metadata headers. When including a metadata header, it should be prefaced with x-amz-meta. For example, x-amz-meta-my-custom-header: MyCustomValue. The primary use case for this is to forward GetObject metadata. Amazon Web Services provides some prebuilt Lambda functions that you can use with S3 Object Lambda to detect and redact personally identifiable information (PII) and decompress S3 objects. These Lambda functions are available in the Amazon Web Services Serverless Application Repository, and can be selected through the Amazon Web Services Management Console when you create your Object Lambda access point. Example 1: PII Access Control - This Lambda function uses Amazon Comprehend, a natural language processing (NLP) service using machine learning to find insights and relationships in text. It automatically detects personally identifiable information (PII) such as names, addresses, dates, credit card numbers, and social security numbers from documents in your Amazon S3 bucket.  Example 2: PII Redaction - This Lambda function uses Amazon Comprehend, a natural language processing (NLP) service using machine learning to find insights and relationships in text. It automatically redacts personally identifiable information (PII) such as names, addresses, dates, credit card numbers, and social security numbers from documents in your Amazon S3 bucket.  Example 3: Decompression - The Lambda function S3ObjectLambdaDecompression, is equipped to decompress objects stored in S3 in one of six compressed file formats including bzip2, gzip, snappy, zlib, zstandard and ZIP.  For information on how to view and use these functions, see Using Amazon Web Services built Lambda functions in the Amazon S3 User Guide. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I upload a file to S3?" -> PUT /{Bucket}/{Key+}
-- "How do I download an object from a bucket?" -> GET /{Bucket}/{Key+}
-- "How do I list all my S3 buckets?" -> GET /
-- "What objects are in this bucket?" -> GET /{Bucket}?list-type=2
-- "How do I delete an object?" -> DELETE /{Bucket}/{Key+}
-- "How do I delete multiple objects at once?" -> POST /{Bucket}?delete
-- "How do I copy an object between buckets?" -> PUT /{Bucket}/{Key+} (with x-amz-copy-source)
-- "How do I create a new bucket?" -> PUT /{Bucket}
-- "How do I check if an object exists without downloading it?" -> HEAD /{Bucket}/{Key+}
-- "How do I set up CORS on a bucket?" -> PUT /{Bucket}?cors
-- "How do I enable versioning on a bucket?" -> PUT /{Bucket}?versioning
-- "How do I upload a large file in parts?" -> POST /{Bucket}/{Key+}?uploads then PUT /{Bucket}/{Key+} (partNumber + uploadId) then POST /{Bucket}/{Key+} (complete)
-- "How do I tag an object?" -> PUT /{Bucket}/{Key+}?tagging
-- "How do I set a bucket policy?" -> PUT /{Bucket}?policy
-- "How do I restore an archived object from Glacier?" -> POST /{Bucket}/{Key+}?restore
-
-## Response Tips
-
-- **Object listings** (GET /{Bucket}, GET /{Bucket}?list-type=2, GET /{Bucket}?versions): Check `IsTruncated` -- if true, pass `NextContinuationToken` (list-type=2) or `NextMarker`/`NextKeyMarker` as the next request's marker to paginate. `MaxKeys` defaults to 1000.
-- **Configuration listings** (analytics, inventory, metrics, intelligent-tiering): Also use `IsTruncated` + `NextContinuationToken` pagination, but these return config objects not bucket contents.
-- **Multipart uploads** (GET /{Bucket}?uploads, GET /{Bucket}/{Key+} with uploadId): Paginated via `NextKeyMarker`/`NextUploadIdMarker` or `NextPartNumberMarker`. Always check `IsTruncated`.
-- **Delete responses**: POST /{Bucket}?delete returns both `Deleted` (successes) and `Errors` arrays -- always inspect `Errors` even on 200 status.
-- **Object metadata**: GET and HEAD on objects return metadata in headers (`x-amz-meta-*` mapped to `Metadata: map<str,str>`), not in the body. `ContentLength` is in response headers.
-- **Versioned objects**: Many responses include `VersionId` and `DeleteMarker` -- when versioning is enabled, deletes create markers rather than removing data.
-- **Server-side encryption**: SSE fields (`ServerSideEncryption`, `SSEKMSKeyId`, `BucketKeyEnabled`) appear across PUT/GET/HEAD/COPY responses. Missing fields mean default encryption or none.
-
-## Anomaly Flags
-
-- **DeleteMarker: true** in GET/HEAD responses -- the object was deleted but versioning preserved it. The agent should warn that the requested object is a delete marker, not live data.
-- **IsTruncated: true with no follow-up pagination** -- if a listing response is truncated and the workflow does not continue paginating, surface that results are incomplete.
-- **Errors array non-empty in batch delete** -- POST /{Bucket}?delete can return 200 with partial failures. Always surface individual errors from the `Errors` array (e.g., AccessDenied on specific keys).
-- **Expiration header present** -- indicates the object has a lifecycle expiration rule. Surface the expiry date so the user knows data will be auto-deleted.
-- **Restore header on GET/HEAD** -- if `Restore` contains `ongoing-request="true"`, the Glacier restore is still in progress. Flag this so the user does not assume the object is downloadable.
-- **StorageClass is GLACIER, DEEP_ARCHIVE, or INTELLIGENT_TIERING** -- object may not be immediately accessible. Proactively suggest a restore operation if the user attempts to download.
-- **MissingMeta > 0** -- metadata was requested but could not be returned. Unusual; flag as potential data integrity issue.
-- **RequestCharged present** -- the requester is being billed (Requester Pays bucket). Always surface this so billing surprises are avoided.
-- **ObjectLockMode or LegalHold active** -- object cannot be deleted or overwritten. Surface retention dates and hold status before any destructive operations.
-- **BucketKeyEnabled: false when SSE-KMS is active** -- S3 Bucket Keys reduce KMS costs. Flag the missed optimization.
-
-## Playbook
-
-### 1. Upload a Large File via Multipart Upload
-
-1. Initiate the upload: `POST /{Bucket}/{Key+}?uploads` with desired headers (Content-Type, storage class, encryption). Capture the `UploadId` from the response.
-2. Split the file into parts (minimum 5 MB each, except the last part).
-3. Upload each part: `PUT /{Bucket}/{Key+}` with `partNumber` (1-indexed) and `uploadId`. Record the `ETag` returned for each part.
-4. Complete the upload: `POST /{Bucket}/{Key+}` with `uploadId` and a `MultipartUpload` body listing all `{PartNumber, ETag}` pairs.
-5. Verify: `HEAD /{Bucket}/{Key+}` to confirm the object exists with expected size and metadata.
-6. If any step fails, abort with `DELETE /{Bucket}/{Key+}` passing the `uploadId` to clean up incomplete parts.
-
-### 2. Enable Versioning and List Object Versions
-
-1. Check current versioning status: `GET /{Bucket}?versioning`. Look at `Status` (null = never enabled, Enabled, Suspended).
-2. Enable versioning: `PUT /{Bucket}?versioning` with `VersioningConfiguration: {Status: "Enabled"}`.
-3. Verify: `GET /{Bucket}?versioning` -- confirm `Status: "Enabled"`.
-4. List all versions: `GET /{Bucket}?versions` with optional `prefix` filter. Paginate using `NextKeyMarker` and `NextVersionIdMarker` while `IsTruncated` is true.
-5. To retrieve a specific version: `GET /{Bucket}/{Key+}` with `versionId` query parameter.
-
-### 3. Set Up a Static Website on S3
-
-1. Create the bucket: `PUT /{Bucket}` with a `CreateBucketConfiguration` specifying the region.
-2. Disable Block Public Access: `PUT /{Bucket}?publicAccessBlock` with all four flags set to false.
-3. Set a bucket policy granting public read: `PUT /{Bucket}?policy` with a JSON policy allowing `s3:GetObject` for principal `*`.
-4. Configure website hosting: `PUT /{Bucket}?website` with `WebsiteConfiguration` containing `IndexDocument: {Suffix: "index.html"}` and optionally `ErrorDocument: {Key: "error.html"}`.
-5. Upload site files: `PUT /{Bucket}/{Key+}` for each file with appropriate `Content-Type`.
-6. Verify: `GET /{Bucket}?website` to confirm the configuration is applied.
-
-### 4. Copy Objects Between Buckets with Server-Side Encryption
-
-1. Verify source object exists: `HEAD /{SourceBucket}/{Key+}` -- note `ContentLength`, `StorageClass`, and encryption headers.
-2. Copy: `PUT /{DestBucket}/{Key+}` with `x-amz-copy-source: /{SourceBucket}/{Key+}`. Set `x-amz-server-side-encryption: aws:kms` and `x-amz-server-side-encryption-aws-kms-key-id` for the destination KMS key.
-3. For large objects (over 5 GB), use multipart copy: initiate with `POST /{DestBucket}/{Key+}?uploads`, then copy parts using `PUT /{DestBucket}/{Key+}` with `x-amz-copy-source` and `x-amz-copy-source-range`, then complete.
-4. Verify: `HEAD /{DestBucket}/{Key+}` -- confirm `ServerSideEncryption`, `SSEKMSKeyId`, and `ContentLength` match expectations.
-5. Optionally delete the source: `DELETE /{SourceBucket}/{Key+}`.
-
-### 5. Bulk Delete with Error Handling
-
-1. List objects to delete: `GET /{Bucket}?list-type=2` with a `prefix` filter. Paginate fully to collect all matching keys.
-2. Batch into groups of up to 1000 keys (S3 limit per request).
-3. For each batch: `POST /{Bucket}?delete` with a `Delete` body containing `Objects: [{Key: "..."}]` entries. Set `Quiet: true` to suppress success entries if only errors matter.
-4. Inspect each response: check the `Errors` array. Common issues include `AccessDenied` (permissions), `ObjectLockConfiguration` (retained objects), or `InternalError` (retry).
-5. Retry any failed keys from the `Errors` array with exponential backoff.
-6. Verify: re-list with the same prefix to confirm all target objects are gone.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a WriteGetObjectResponse?" -> POST /WriteGetObjectResponse
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

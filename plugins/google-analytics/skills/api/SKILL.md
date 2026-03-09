@@ -131,82 +131,98 @@ https://analytics.googleapis.com/analytics/v3
 |--------|------|-------------|
 | POST | /userDeletion/userDeletionRequests:upsert | Insert or update a user deletion requests. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How many page views did my site get last month?" -> GET /data/ga
-- "What is happening on my site right now?" -> GET /data/realtime
-- "Which channels drove the most conversions?" -> GET /data/mcf
-- "What accounts do I have access to?" -> GET /management/accountSummaries
-- "Who has access to my Analytics property?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/entityUserLinks
-- "How do I create a new view (profile) for my property?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles
-- "What filters are applied to my account?" -> GET /management/accounts/{accountId}/filters
-- "How do I link Google Ads to my Analytics property?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/entityAdWordsLinks
-- "What custom dimensions are configured?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/customDimensions
-- "How do I set up a goal for tracking form submissions?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/goals
-- "Can I get an unsampled version of my report?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/unsampledReports
-- "How do I create a remarketing audience?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/remarketingAudiences
-- "What metrics and dimensions are available for reporting?" -> GET /metadata/{reportType}/columns
-- "How do I remove a user from my Analytics account?" -> DELETE /management/accounts/{accountId}/entityUserLinks/{linkId}
-- "How do I provision a brand new Analytics account with property and view?" -> POST /provisioning/createAccountTree
-
-## Response Tips
-
-- **Data endpoints** (`/data/ga`, `/data/mcf`, `/data/realtime`): Check `containsSampledData` -- if true, `sampleSize` and `sampleSpace` indicate coverage. Actual data lives in `rows` (array of string arrays), matched positionally to `columnHeaders`. Use `totalResults` vs `itemsPerPage` to detect truncation. Pagination uses `start-index` + `max-results`, not cursor tokens.
-- **Management list endpoints**: All return `{items, totalResults, itemsPerPage, startIndex}`. Paginate by incrementing `start-index` by `max-results`. Follow `nextLink`/`previousLink` when present. The `items` array contains the actual resources.
-- **Management CRUD endpoints**: Single-resource responses echo back the full object after mutation. Check the `kind` field to confirm resource type. `selfLink` provides the canonical URL for subsequent operations.
-- **Metadata endpoint**: Returns `items` with `attributeNames` describing available column attributes. Use `etag` for conditional requests.
-- **Provisioning endpoints**: Return composite objects with nested `account`, `webproperty`, and `profile` -- extract IDs from each for subsequent API calls.
-
-## Anomaly Flags
-
-- **Sampled data warning**: Surface when `containsSampledData: true` in GA/MCF responses -- the report is an estimate, not exact. Show `sampleSize / sampleSpace` as coverage percentage.
-- **Truncated results**: Alert when `totalResults > itemsPerPage` and no pagination was requested -- the user is missing data rows.
-- **Empty rows in GA**: When `include-empty-rows` is not set, zero-value dimension combinations are silently omitted -- flag if the user expects complete matrices.
-- **Deprecated API version**: Google Analytics v3 (Universal Analytics) is sunset. Proactively note that GA4 and the Data API v1 are the current standard.
-- **Upload errors**: When checking custom data uploads, surface any non-empty `errors` array or `status` other than `COMPLETED`.
-- **Experiment winner found**: If `winnerFound: true` in experiment responses, notify that the test has concluded and action may be needed.
-- **Unsampled report status**: Poll and surface when `status` changes from `PENDING` to `COMPLETED` or shows an error state.
-- **Permission scope mismatch**: When `permissions.effective` differs from `permissions.local`, flag that inherited permissions are in play.
-
-## Playbook
-
-### 1. Pull a weekly traffic report with dimensions
-
-1. GET /management/accountSummaries to find your `accountId`, `webPropertyId`, and `profileId`
-2. GET /metadata/ga/columns to discover available metrics and dimensions
-3. GET /data/ga with `ids=ga:{profileId}`, `start-date=7daysAgo`, `end-date=yesterday`, `metrics=ga:sessions,ga:pageviews`, `dimensions=ga:date`
-4. Check `containsSampledData` in the response -- if true, consider re-requesting with `samplingLevel=HIGHER_PRECISION`
-5. If `totalResults > max-results`, paginate by incrementing `start-index`
-
-### 2. Grant a user read access to a property
-
-1. GET /management/accounts to find the target `accountId`
-2. GET /management/accounts/{accountId}/webproperties to find the target `webPropertyId`
-3. POST /management/accounts/{accountId}/webproperties/{webPropertyId}/entityUserLinks with body: `userRef.email` set to the user's email, `permissions.local` set to `["READ_AND_ANALYZE"]`
-4. Confirm the response contains the new `linkId` and correct `permissions.effective`
-
-### 3. Create a destination goal with funnel steps
-
-1. GET /management/accountSummaries to resolve `accountId`, `webPropertyId`, and `profileId`
-2. POST /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/goals with `type: "URL_DESTINATION"`, `urlDestinationDetails.url: "/thank-you"`, `urlDestinationDetails.matchType: "EXACT"`, and `urlDestinationDetails.steps` array defining funnel pages
-3. Set `active: true` and provide a descriptive `name`
-4. Verify the returned goal `id` and confirm `active` is true
-
-### 4. Set up a custom dimension and use it in a report
-
-1. POST /management/accounts/{accountId}/webproperties/{webPropertyId}/customDimensions with `name`, `scope` (HIT, SESSION, USER, or PRODUCT), and `active: true`
-2. Note the returned `index` (e.g., `1` means `ga:dimension1`)
-3. Implement the tracking code on your site to send values for this dimension
-4. After data collection begins, GET /data/ga with `dimensions=ga:dimension{index}` and your chosen metrics
-
-### 5. Provision a new account with property and view in one call
-
-1. POST /provisioning/createAccountTree with `accountName`, `webpropertyName`, `profileName`, `timezone` (e.g., `America/New_York`), and `websiteUrl`
-2. Extract `account.id`, `webproperty.id`, and `profile.id` from the response
-3. Use these IDs immediately for subsequent management calls (filters, goals, user links)
-4. Optionally POST /management/accounts/{accountId}/filters to apply default filters (e.g., exclude internal IP traffic)
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all ga?" -> GET /data/ga
+- "List all mcf?" -> GET /data/mcf
+- "List all realtime?" -> GET /data/realtime
+- "List all accountSummaries?" -> GET /management/accountSummaries
+- "List all accounts?" -> GET /management/accounts
+- "List all entityUserLinks?" -> GET /management/accounts/{accountId}/entityUserLinks
+- "Create a entityUserLink?" -> POST /management/accounts/{accountId}/entityUserLinks
+- "Delete a entityUserLink?" -> DELETE /management/accounts/{accountId}/entityUserLinks/{linkId}
+- "Update a entityUserLink?" -> PUT /management/accounts/{accountId}/entityUserLinks/{linkId}
+- "List all filters?" -> GET /management/accounts/{accountId}/filters
+- "Create a filter?" -> POST /management/accounts/{accountId}/filters
+- "Delete a filter?" -> DELETE /management/accounts/{accountId}/filters/{filterId}
+- "Get filter details?" -> GET /management/accounts/{accountId}/filters/{filterId}
+- "Partially update a filter?" -> PATCH /management/accounts/{accountId}/filters/{filterId}
+- "Update a filter?" -> PUT /management/accounts/{accountId}/filters/{filterId}
+- "List all webproperties?" -> GET /management/accounts/{accountId}/webproperties
+- "Create a webproperty?" -> POST /management/accounts/{accountId}/webproperties
+- "Get webproperty details?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}
+- "Partially update a webproperty?" -> PATCH /management/accounts/{accountId}/webproperties/{webPropertyId}
+- "Update a webproperty?" -> PUT /management/accounts/{accountId}/webproperties/{webPropertyId}
+- "List all customDataSources?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/customDataSources
+- "Create a deleteUploadData?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/customDataSources/{customDataSourceId}/deleteUploadData
+- "List all uploads?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/customDataSources/{customDataSourceId}/uploads
+- "Create a upload?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/customDataSources/{customDataSourceId}/uploads
+- "Get upload details?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/customDataSources/{customDataSourceId}/uploads/{uploadId}
+- "List all customDimensions?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/customDimensions
+- "Create a customDimension?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/customDimensions
+- "Get customDimension details?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/customDimensions/{customDimensionId}
+- "Partially update a customDimension?" -> PATCH /management/accounts/{accountId}/webproperties/{webPropertyId}/customDimensions/{customDimensionId}
+- "Update a customDimension?" -> PUT /management/accounts/{accountId}/webproperties/{webPropertyId}/customDimensions/{customDimensionId}
+- "List all customMetrics?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/customMetrics
+- "Create a customMetric?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/customMetrics
+- "Get customMetric details?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/customMetrics/{customMetricId}
+- "Partially update a customMetric?" -> PATCH /management/accounts/{accountId}/webproperties/{webPropertyId}/customMetrics/{customMetricId}
+- "Update a customMetric?" -> PUT /management/accounts/{accountId}/webproperties/{webPropertyId}/customMetrics/{customMetricId}
+- "List all entityAdWordsLinks?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/entityAdWordsLinks
+- "Create a entityAdWordsLink?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/entityAdWordsLinks
+- "Delete a entityAdWordsLink?" -> DELETE /management/accounts/{accountId}/webproperties/{webPropertyId}/entityAdWordsLinks/{webPropertyAdWordsLinkId}
+- "Get entityAdWordsLink details?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/entityAdWordsLinks/{webPropertyAdWordsLinkId}
+- "Partially update a entityAdWordsLink?" -> PATCH /management/accounts/{accountId}/webproperties/{webPropertyId}/entityAdWordsLinks/{webPropertyAdWordsLinkId}
+- "Update a entityAdWordsLink?" -> PUT /management/accounts/{accountId}/webproperties/{webPropertyId}/entityAdWordsLinks/{webPropertyAdWordsLinkId}
+- "List all entityUserLinks?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/entityUserLinks
+- "Create a entityUserLink?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/entityUserLinks
+- "Delete a entityUserLink?" -> DELETE /management/accounts/{accountId}/webproperties/{webPropertyId}/entityUserLinks/{linkId}
+- "Update a entityUserLink?" -> PUT /management/accounts/{accountId}/webproperties/{webPropertyId}/entityUserLinks/{linkId}
+- "List all profiles?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles
+- "Create a profile?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles
+- "Delete a profile?" -> DELETE /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}
+- "Get profile details?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}
+- "Partially update a profile?" -> PATCH /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}
+- "Update a profile?" -> PUT /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}
+- "List all entityUserLinks?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/entityUserLinks
+- "Create a entityUserLink?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/entityUserLinks
+- "Delete a entityUserLink?" -> DELETE /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/entityUserLinks/{linkId}
+- "Update a entityUserLink?" -> PUT /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/entityUserLinks/{linkId}
+- "List all experiments?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/experiments
+- "Create a experiment?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/experiments
+- "Delete a experiment?" -> DELETE /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/experiments/{experimentId}
+- "Get experiment details?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/experiments/{experimentId}
+- "Partially update a experiment?" -> PATCH /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/experiments/{experimentId}
+- "Update a experiment?" -> PUT /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/experiments/{experimentId}
+- "List all goals?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/goals
+- "Create a goal?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/goals
+- "Get goal details?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/goals/{goalId}
+- "Partially update a goal?" -> PATCH /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/goals/{goalId}
+- "Update a goal?" -> PUT /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/goals/{goalId}
+- "List all profileFilterLinks?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/profileFilterLinks
+- "Create a profileFilterLink?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/profileFilterLinks
+- "Delete a profileFilterLink?" -> DELETE /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/profileFilterLinks/{linkId}
+- "Get profileFilterLink details?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/profileFilterLinks/{linkId}
+- "Partially update a profileFilterLink?" -> PATCH /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/profileFilterLinks/{linkId}
+- "Update a profileFilterLink?" -> PUT /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/profileFilterLinks/{linkId}
+- "List all unsampledReports?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/unsampledReports
+- "Create a unsampledReport?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/unsampledReports
+- "Delete a unsampledReport?" -> DELETE /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/unsampledReports/{unsampledReportId}
+- "Get unsampledReport details?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/profiles/{profileId}/unsampledReports/{unsampledReportId}
+- "List all remarketingAudiences?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/remarketingAudiences
+- "Create a remarketingAudience?" -> POST /management/accounts/{accountId}/webproperties/{webPropertyId}/remarketingAudiences
+- "Delete a remarketingAudience?" -> DELETE /management/accounts/{accountId}/webproperties/{webPropertyId}/remarketingAudiences/{remarketingAudienceId}
+- "Get remarketingAudience details?" -> GET /management/accounts/{accountId}/webproperties/{webPropertyId}/remarketingAudiences/{remarketingAudienceId}
+- "Partially update a remarketingAudience?" -> PATCH /management/accounts/{accountId}/webproperties/{webPropertyId}/remarketingAudiences/{remarketingAudienceId}
+- "Update a remarketingAudience?" -> PUT /management/accounts/{accountId}/webproperties/{webPropertyId}/remarketingAudiences/{remarketingAudienceId}
+- "Create a clientId:hashClientId?" -> POST /management/clientId:hashClientId
+- "List all segments?" -> GET /management/segments
+- "List all columns?" -> GET /metadata/{reportType}/columns
+- "Create a createAccountTicket?" -> POST /provisioning/createAccountTicket
+- "Create a createAccountTree?" -> POST /provisioning/createAccountTree
+- "Create a userDeletionRequests:upsert?" -> POST /userDeletion/userDeletionRequests:upsert
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

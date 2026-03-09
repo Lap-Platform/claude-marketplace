@@ -306,92 +306,176 @@ https://app.asana.com/api/1.0
 |--------|------|-------------|
 | GET | /workspace_memberships/{workspace_membership_gid} | Get a workspace membership |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What tasks are assigned to me?" -> GET /tasks?assignee=me&workspace={workspace_gid}
-- "Show me the details of a specific task" -> GET /tasks/{task_gid}
-- "Create a new task in a project" -> POST /tasks (with project in data)
-- "What projects exist in my workspace?" -> GET /projects?workspace={workspace_gid}
-- "Add a comment or story to a task" -> POST /tasks/{task_gid}/stories
-- "Who are the members of a team?" -> GET /teams/{team_gid}/users
-- "Search for tasks in a workspace" -> GET /workspaces/{workspace_gid}/tasks/search
-- "What are the subtasks of a task?" -> GET /tasks/{task_gid}/subtasks
-- "Move a task to a different section" -> POST /sections/{section_gid}/addTask
-- "What goals are set for my team?" -> GET /goals?team={team_gid}
-- "List all sections in a project" -> GET /projects/{project_gid}/sections
-- "What portfolios do I own?" -> GET /portfolios?workspace={workspace_gid}&owner=me
-- "Set up a webhook for task changes" -> POST /webhooks (with resource and target)
-- "What workspaces do I have access to?" -> GET /workspaces
-- "Mark a task as complete" -> PUT /tasks/{task_gid} (set completed: true)
-
-## Response Tips
-
-- **All endpoints**: Responses wrap payload in a `data` key; always access `response.data` not the root object.
-- **List endpoints** (tasks, projects, sections, tags): Return `{data: [any]}` arrays; use `limit` and `offset` query params for pagination -- look for `next_page` in the response to determine if more results exist.
-- **Mutation endpoints** (addTask, addProject, addMembers, removeTag): Return `{data: map}` (an empty map) on success, not the modified resource; re-fetch if you need the updated object.
-- **Events**: Returns `{data, sync, has_more}` -- persist the `sync` token for incremental polling and loop while `has_more` is true.
-- **Delete endpoints**: Return `{data: map}` (empty) on 200; a non-error response means the resource is gone.
-- **Status codes**: 402 appears only on goals, goal relationships, and attachments (payment-required feature gating); 424/501/503/504 appear only on attachments and project briefs (upstream dependency failures).
-
-## Anomaly Flags
-
-- **402 Payment Required**: Surface immediately -- the user's Asana plan does not support this feature (goals, advanced attachments). Recommend checking plan tier before retrying.
-- **424 Failed Dependency**: Attachment or project brief operations depend on external storage; flag as a transient upstream issue and suggest retry after a delay.
-- **Batch endpoint misuse**: POST /batch accepts an `actions` array -- flag if a user is making many sequential calls that could be batched (up to Asana's batch limit).
-- **Missing pagination**: If a list response returns exactly `limit` items, warn that results may be truncated and offer to fetch the next page via `offset`.
-- **Stale sync tokens**: GET /events will return a 412 if the `sync` token is too old; surface this and advise the caller to do a full resync.
-- **Empty opt_fields**: Many endpoints support `opt_fields` to reduce payload size; flag when full objects are being fetched repeatedly without field filtering.
-- **503/504 on attachments**: Upstream storage timeouts; flag as transient and recommend exponential backoff.
-
-## Playbook
-
-### 1. Create a Task with Subtasks in a Project
-
-1. GET /workspaces to find the target `workspace_gid`
-2. GET /projects?workspace={workspace_gid} to find the target `project_gid`
-3. GET /projects/{project_gid}/sections to find the target `section_gid`
-4. POST /tasks with `{data: {name, projects: [project_gid], workspace: workspace_gid, ...}}`
-5. Note the returned `task_gid` from `response.data.gid`
-6. POST /tasks/{task_gid}/subtasks with `{data: {name: "Subtask 1"}}` for each subtask
-7. Optionally POST /sections/{section_gid}/addTask with `{data: {task: task_gid}}` to place in a specific section
-
-### 2. Set Up Event-Driven Monitoring via Webhooks
-
-1. GET /workspaces to identify the `workspace_gid`
-2. GET /projects?workspace={workspace_gid} to find the `resource` GID to monitor
-3. POST /webhooks with `{data: {resource: project_gid, target: "https://your-endpoint.com/hook", filters: [{resource_type: "task", action: "changed"}]}}`
-4. Respond to the initial handshake request Asana sends to your target URL with the `X-Hook-Secret` header
-5. GET /webhooks?workspace={workspace_gid} to verify the webhook is active
-6. To stop: DELETE /webhooks/{webhook_gid}
-
-### 3. Track Goal Progress with Metrics
-
-1. GET /goals?workspace={workspace_gid} or GET /goals?team={team_gid} to list goals
-2. GET /goals/{goal_gid} to inspect current metric values and status
-3. POST /goals/{goal_gid}/setMetric to define or update the goal metric (type, target value, unit)
-4. POST /goals/{goal_gid}/setMetricCurrentValue to report progress
-5. GET /goals/{goal_gid}/parentGoals to see how this goal rolls up
-6. POST /goals/{goal_gid}/addSupportingRelationship to link a project or sub-goal as a contributor
-
-### 4. Organize a Portfolio and Add Projects
-
-1. GET /workspaces to get `workspace_gid`
-2. POST /portfolios with `{data: {name: "Q1 Initiatives", workspace: workspace_gid, ...}}`
-3. Note the returned `portfolio_gid`
-4. GET /projects?workspace={workspace_gid} to find projects to include
-5. POST /portfolios/{portfolio_gid}/addItem with `{data: {item: project_gid}}` for each project
-6. POST /portfolios/{portfolio_gid}/addCustomFieldSetting to attach tracking fields
-7. POST /portfolios/{portfolio_gid}/addMembers with `{data: {members: user_gid}}` to share access
-
-### 5. Bulk Operations Using the Batch Endpoint
-
-1. Identify 2+ independent API calls you need to make (e.g., update multiple tasks)
-2. POST /batch with `{data: {actions: [{method: "PUT", relative_path: "/tasks/{gid1}", data: {...}}, {method: "PUT", relative_path: "/tasks/{gid2}", data: {...}}]}}`
-3. Parse the response `data` array -- each entry corresponds to one action in order, with its own `status_code` and `body`
-4. Check each action's `status_code` individually; partial failures are possible
-5. Retry any failed actions individually or in a subsequent batch
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get attachment details?" -> GET /attachments/{attachment_gid}
+- "Delete a attachment?" -> DELETE /attachments/{attachment_gid}
+- "List all attachments?" -> GET /attachments
+- "Create a attachment?" -> POST /attachments
+- "List all audit_log_events?" -> GET /workspaces/{workspace_gid}/audit_log_events
+- "Create a batch?" -> POST /batch
+- "List all custom_field_settings?" -> GET /projects/{project_gid}/custom_field_settings
+- "List all custom_field_settings?" -> GET /portfolios/{portfolio_gid}/custom_field_settings
+- "Create a custom_field?" -> POST /custom_fields
+- "Get custom_field details?" -> GET /custom_fields/{custom_field_gid}
+- "Update a custom_field?" -> PUT /custom_fields/{custom_field_gid}
+- "Delete a custom_field?" -> DELETE /custom_fields/{custom_field_gid}
+- "List all custom_fields?" -> GET /workspaces/{workspace_gid}/custom_fields
+- "Create a enum_option?" -> POST /custom_fields/{custom_field_gid}/enum_options
+- "Create a insert?" -> POST /custom_fields/{custom_field_gid}/enum_options/insert
+- "Update a enum_option?" -> PUT /enum_options/{enum_option_gid}
+- "List all events?" -> GET /events
+- "Get goal_relationship details?" -> GET /goal_relationships/{goal_relationship_gid}
+- "Update a goal_relationship?" -> PUT /goal_relationships/{goal_relationship_gid}
+- "List all goal_relationships?" -> GET /goal_relationships
+- "Create a addSupportingRelationship?" -> POST /goals/{goal_gid}/addSupportingRelationship
+- "Create a removeSupportingRelationship?" -> POST /goals/{goal_gid}/removeSupportingRelationship
+- "Get goal details?" -> GET /goals/{goal_gid}
+- "Update a goal?" -> PUT /goals/{goal_gid}
+- "Delete a goal?" -> DELETE /goals/{goal_gid}
+- "List all goals?" -> GET /goals
+- "Create a goal?" -> POST /goals
+- "Create a setMetric?" -> POST /goals/{goal_gid}/setMetric
+- "Create a setMetricCurrentValue?" -> POST /goals/{goal_gid}/setMetricCurrentValue
+- "Create a addFollower?" -> POST /goals/{goal_gid}/addFollowers
+- "Create a removeFollower?" -> POST /goals/{goal_gid}/removeFollowers
+- "List all parentGoals?" -> GET /goals/{goal_gid}/parentGoals
+- "Get job details?" -> GET /jobs/{job_gid}
+- "Create a organization_export?" -> POST /organization_exports
+- "Get organization_export details?" -> GET /organization_exports/{organization_export_gid}
+- "List all portfolio_memberships?" -> GET /portfolio_memberships
+- "Get portfolio_membership details?" -> GET /portfolio_memberships/{portfolio_membership_gid}
+- "List all portfolio_memberships?" -> GET /portfolios/{portfolio_gid}/portfolio_memberships
+- "List all portfolios?" -> GET /portfolios
+- "Create a portfolio?" -> POST /portfolios
+- "Get portfolio details?" -> GET /portfolios/{portfolio_gid}
+- "Update a portfolio?" -> PUT /portfolios/{portfolio_gid}
+- "Delete a portfolio?" -> DELETE /portfolios/{portfolio_gid}
+- "List all items?" -> GET /portfolios/{portfolio_gid}/items
+- "Create a addItem?" -> POST /portfolios/{portfolio_gid}/addItem
+- "Create a removeItem?" -> POST /portfolios/{portfolio_gid}/removeItem
+- "Create a addCustomFieldSetting?" -> POST /portfolios/{portfolio_gid}/addCustomFieldSetting
+- "Create a removeCustomFieldSetting?" -> POST /portfolios/{portfolio_gid}/removeCustomFieldSetting
+- "Create a addMember?" -> POST /portfolios/{portfolio_gid}/addMembers
+- "Create a removeMember?" -> POST /portfolios/{portfolio_gid}/removeMembers
+- "Get project_brief details?" -> GET /project_briefs/{project_brief_gid}
+- "Update a project_brief?" -> PUT /project_briefs/{project_brief_gid}
+- "Delete a project_brief?" -> DELETE /project_briefs/{project_brief_gid}
+- "Create a project_brief?" -> POST /projects/{project_gid}/project_briefs
+- "Get project_membership details?" -> GET /project_memberships/{project_membership_gid}
+- "List all project_memberships?" -> GET /projects/{project_gid}/project_memberships
+- "Get project_statuse details?" -> GET /project_statuses/{project_status_gid}
+- "Delete a project_statuse?" -> DELETE /project_statuses/{project_status_gid}
+- "List all project_statuses?" -> GET /projects/{project_gid}/project_statuses
+- "Create a project_statuse?" -> POST /projects/{project_gid}/project_statuses
+- "Get project_template details?" -> GET /project_templates/{project_template_gid}
+- "List all project_templates?" -> GET /project_templates
+- "List all project_templates?" -> GET /teams/{team_gid}/project_templates
+- "Create a instantiateProject?" -> POST /project_templates/{project_template_gid}/instantiateProject
+- "List all projects?" -> GET /projects
+- "Create a project?" -> POST /projects
+- "Get project details?" -> GET /projects/{project_gid}
+- "Update a project?" -> PUT /projects/{project_gid}
+- "Delete a project?" -> DELETE /projects/{project_gid}
+- "Create a duplicate?" -> POST /projects/{project_gid}/duplicate
+- "List all projects?" -> GET /tasks/{task_gid}/projects
+- "List all projects?" -> GET /teams/{team_gid}/projects
+- "Create a project?" -> POST /teams/{team_gid}/projects
+- "List all projects?" -> GET /workspaces/{workspace_gid}/projects
+- "Create a project?" -> POST /workspaces/{workspace_gid}/projects
+- "Create a addCustomFieldSetting?" -> POST /projects/{project_gid}/addCustomFieldSetting
+- "Create a removeCustomFieldSetting?" -> POST /projects/{project_gid}/removeCustomFieldSetting
+- "List all task_counts?" -> GET /projects/{project_gid}/task_counts
+- "Create a addMember?" -> POST /projects/{project_gid}/addMembers
+- "Create a removeMember?" -> POST /projects/{project_gid}/removeMembers
+- "Create a addFollower?" -> POST /projects/{project_gid}/addFollowers
+- "Create a removeFollower?" -> POST /projects/{project_gid}/removeFollowers
+- "Create a saveAsTemplate?" -> POST /projects/{project_gid}/saveAsTemplate
+- "Get section details?" -> GET /sections/{section_gid}
+- "Update a section?" -> PUT /sections/{section_gid}
+- "Delete a section?" -> DELETE /sections/{section_gid}
+- "List all sections?" -> GET /projects/{project_gid}/sections
+- "Create a section?" -> POST /projects/{project_gid}/sections
+- "Create a addTask?" -> POST /sections/{section_gid}/addTask
+- "Create a insert?" -> POST /projects/{project_gid}/sections/insert
+- "Get status_update details?" -> GET /status_updates/{status_gid}
+- "Delete a status_update?" -> DELETE /status_updates/{status_gid}
+- "List all status_updates?" -> GET /status_updates
+- "Create a status_update?" -> POST /status_updates
+- "Get story details?" -> GET /stories/{story_gid}
+- "Update a story?" -> PUT /stories/{story_gid}
+- "Delete a story?" -> DELETE /stories/{story_gid}
+- "List all stories?" -> GET /tasks/{task_gid}/stories
+- "Create a story?" -> POST /tasks/{task_gid}/stories
+- "List all tags?" -> GET /tags
+- "Create a tag?" -> POST /tags
+- "Get tag details?" -> GET /tags/{tag_gid}
+- "Update a tag?" -> PUT /tags/{tag_gid}
+- "Delete a tag?" -> DELETE /tags/{tag_gid}
+- "List all tags?" -> GET /tasks/{task_gid}/tags
+- "List all tags?" -> GET /workspaces/{workspace_gid}/tags
+- "Create a tag?" -> POST /workspaces/{workspace_gid}/tags
+- "List all tasks?" -> GET /tasks
+- "Create a task?" -> POST /tasks
+- "Get task details?" -> GET /tasks/{task_gid}
+- "Update a task?" -> PUT /tasks/{task_gid}
+- "Delete a task?" -> DELETE /tasks/{task_gid}
+- "Create a duplicate?" -> POST /tasks/{task_gid}/duplicate
+- "List all tasks?" -> GET /projects/{project_gid}/tasks
+- "List all tasks?" -> GET /sections/{section_gid}/tasks
+- "List all tasks?" -> GET /tags/{tag_gid}/tasks
+- "List all tasks?" -> GET /user_task_lists/{user_task_list_gid}/tasks
+- "List all subtasks?" -> GET /tasks/{task_gid}/subtasks
+- "Create a subtask?" -> POST /tasks/{task_gid}/subtasks
+- "Create a setParent?" -> POST /tasks/{task_gid}/setParent
+- "List all dependencies?" -> GET /tasks/{task_gid}/dependencies
+- "Create a addDependency?" -> POST /tasks/{task_gid}/addDependencies
+- "Create a removeDependency?" -> POST /tasks/{task_gid}/removeDependencies
+- "List all dependents?" -> GET /tasks/{task_gid}/dependents
+- "Create a addDependent?" -> POST /tasks/{task_gid}/addDependents
+- "Create a removeDependent?" -> POST /tasks/{task_gid}/removeDependents
+- "Create a addProject?" -> POST /tasks/{task_gid}/addProject
+- "Create a removeProject?" -> POST /tasks/{task_gid}/removeProject
+- "Create a addTag?" -> POST /tasks/{task_gid}/addTag
+- "Create a removeTag?" -> POST /tasks/{task_gid}/removeTag
+- "Create a addFollower?" -> POST /tasks/{task_gid}/addFollowers
+- "Create a removeFollower?" -> POST /tasks/{task_gid}/removeFollowers
+- "List all search?" -> GET /workspaces/{workspace_gid}/tasks/search
+- "Get team_membership details?" -> GET /team_memberships/{team_membership_gid}
+- "List all team_memberships?" -> GET /team_memberships
+- "List all team_memberships?" -> GET /teams/{team_gid}/team_memberships
+- "List all team_memberships?" -> GET /users/{user_gid}/team_memberships
+- "Create a team?" -> POST /teams
+- "Get team details?" -> GET /teams/{team_gid}
+- "List all teams?" -> GET /workspaces/{workspace_gid}/teams
+- "List all teams?" -> GET /users/{user_gid}/teams
+- "Create a addUser?" -> POST /teams/{team_gid}/addUser
+- "Create a removeUser?" -> POST /teams/{team_gid}/removeUser
+- "Get time_period details?" -> GET /time_periods/{time_period_gid}
+- "List all time_periods?" -> GET /time_periods
+- "List all typeahead?" -> GET /workspaces/{workspace_gid}/typeahead
+- "Get user_task_list details?" -> GET /user_task_lists/{user_task_list_gid}
+- "List all user_task_list?" -> GET /users/{user_gid}/user_task_list
+- "List all users?" -> GET /users
+- "Get user details?" -> GET /users/{user_gid}
+- "List all favorites?" -> GET /users/{user_gid}/favorites
+- "List all users?" -> GET /teams/{team_gid}/users
+- "List all users?" -> GET /workspaces/{workspace_gid}/users
+- "List all webhooks?" -> GET /webhooks
+- "Create a webhook?" -> POST /webhooks
+- "Get webhook details?" -> GET /webhooks/{webhook_gid}
+- "Update a webhook?" -> PUT /webhooks/{webhook_gid}
+- "Delete a webhook?" -> DELETE /webhooks/{webhook_gid}
+- "Get workspace_membership details?" -> GET /workspace_memberships/{workspace_membership_gid}
+- "List all workspace_memberships?" -> GET /users/{user_gid}/workspace_memberships
+- "List all workspace_memberships?" -> GET /workspaces/{workspace_gid}/workspace_memberships
+- "List all workspaces?" -> GET /workspaces
+- "Get workspace details?" -> GET /workspaces/{workspace_gid}
+- "Update a workspace?" -> PUT /workspaces/{workspace_gid}
+- "Create a addUser?" -> POST /workspaces/{workspace_gid}/addUser
+- "Create a removeUser?" -> POST /workspaces/{workspace_gid}/removeUser
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -337,88 +337,225 @@ Not specified.
 | GET | /v2/internal/opal_data/{org_id}/{proj_id}/{env_id}/resource_instances | Get All Resource Instances Data |
 | GET | /v2/internal/opal_data/{org_id}/{proj_id}/{env_id}/relationships | Get All Relationships Data |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Who am I logged in as?" -> GET /v2/members/me
-- "List all members in my organization" -> GET /v2/members
-- "Invite a new member with specific permissions" -> POST /v2/members
-- "What API keys exist for this environment?" -> GET /v2/api-key/{proj_id}/{env_id}
-- "Rotate the secret for an API key" -> POST /v2/api-key/{api_key_id}/rotate-secret
-- "What scope does my current API key have?" -> GET /v2/api-key/scope
-- "Show me all roles defined in this environment" -> GET /v2/schema/{proj_id}/{env_id}/roles
-- "Assign a role to a user in a tenant" -> POST /v2/facts/{proj_id}/{env_id}/users/{user_id}/roles
-- "List all tenants in my environment" -> GET /v2/facts/{proj_id}/{env_id}/tenants
-- "Who has access to a specific tenant?" -> GET /v2/facts/{proj_id}/{env_id}/tenants/{tenant_id}/users
-- "Check the audit log for denied decisions" -> GET /v2/pdps/{proj_id}/{env_id}/audit_logs
-- "Copy an environment's config to another environment" -> POST /v2/projects/{proj_id}/envs/{env_id}/copy
-- "What resources are defined in my schema?" -> GET /v2/schema/{proj_id}/{env_id}/resources
-- "Bulk-create users with role assignments" -> PUT /v2/facts/{proj_id}/{env_id}/bulk/users
-- "Review pending access requests for an Elements config" -> GET /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/access_requests
-
-## Response Tips
-
-- **Paginated lists** (members, keys, tenants, users, roles, resources, audit logs): Look for `data` array with `total_count` and `page_count`; default is `page=1, per_page=30`. Some endpoints use `pagination_count` instead of `page_count` (audit logs, history, activity).
-- **Schema objects** (resources, roles, actions, conditions): Responses nest deeply -- `resource` contains inline `actions`, `roles`, `relations`, and `attributes` maps; roles include `permissions[]`, `extends[]`, and `granted_to`.
-- **Bulk operations**: Return counts (`assignments_created`, `assignments_removed`) not individual records; errors surface as 422 with validation details.
-- **Async tasks** (env copy, policy guard association): Return `{task_id, status, result, error}` -- poll the task result endpoint until `status` is no longer pending.
-- **Delete endpoints**: Return 204 with no body on success; a 200 with the deleted object only when `return_deleted=True` is passed (role assignments).
-- **All errors**: The API uses 422 uniformly for validation errors; 404 only appears on role assignment deletion when the assignment does not exist.
-
-## Anomaly Flags
-
-- **API key `last_used_at` is null or very old**: The key may be stale or orphaned -- recommend rotation or deletion.
-- **`is_onboarding` still true on a member**: User has not completed setup; follow up or reset `onboarding_step`.
-- **Organization `usage_limits` approaching thresholds**: Surface `historical_usage.current_month.mau` and `tenants` counts from GET /v2/orgs/{org_id}/stats relative to plan limits.
-- **Async env copy stuck**: If polling GET .../copy/async/{task_id}/result returns a non-terminal `status` for more than a few minutes, surface the `error` field and warn of possible timeout.
-- **Deprecated endpoint usage**: Flag any calls routed through `/v2/deprecated/...` paths -- these mirror `/v2/history` and `/v2/activity` but may be removed without notice.
-- **PDP audit log `decision: false` spikes**: A sudden increase in denied decisions may indicate misconfigured policies or an authorization incident.
-- **Bulk delete responses with zero removals**: `assignments_removed: 0` or `0` records deleted likely means the identifiers were wrong or already gone.
-- **`v1compat_*` fields present on schema objects**: These indicate legacy migration shims are still active; recommend completing the v2 migration.
-
-## Playbook
-
-### 1. Bootstrap a New Project with RBAC
-
-1. Create the project: POST /v2/projects with `key`, `name`, and optional `initial_environments` (defaults to dev + production).
-2. Define resource types: POST /v2/schema/{proj_id}/{env_id}/resources with `key`, `name`, and `actions` map (e.g., `{"read": {}, "write": {}, "delete": {}}`).
-3. Create roles: POST /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/roles with `key`, `name`, and `permissions` list referencing action keys.
-4. Set up tenants: POST /v2/facts/{proj_id}/{env_id}/tenants with `key` and `name`.
-5. Sync users: PUT /v2/facts/{proj_id}/{env_id}/bulk/users with user objects including `role_assignments` per tenant.
-6. Generate a PDP API key: POST /v2/api-key scoped to the environment for your PDP sidecar.
-
-### 2. Rotate an API Key Without Downtime
-
-1. Identify the key: GET /v2/api-key to list keys; note the `id` and `last_used_at`.
-2. Rotate the secret: POST /v2/api-key/{api_key_id}/rotate-secret -- save the new `secret` from the response immediately (it is only shown once).
-3. Update your PDP or application config with the new secret.
-4. Verify connectivity by checking PDP logs or calling GET /v2/api-key/scope with the new token.
-5. Optionally check GET /v2/api-key/{api_key_id} to confirm `last_used_at` updates with the new secret.
-
-### 3. Clone an Environment for Staging
-
-1. List environments: GET /v2/projects/{proj_id}/envs.
-2. Kick off async copy: POST /v2/projects/{proj_id}/envs/{env_id}/copy/async with `target_env` set to the destination environment key or ID, and `conflict_strategy` set to `fail` or `overwrite`.
-3. Poll for completion: GET /v2/projects/{proj_id}/envs/{env_id}/copy/async/{task_id}/result until `status` is terminal.
-4. Verify the target: GET /v2/projects/{proj_id}/envs/{target_env_id}/stats to confirm resources, roles, and users carried over.
-
-### 4. Investigate a Permission Denial
-
-1. Pull audit logs: GET /v2/pdps/{proj_id}/{env_id}/audit_logs with `decision=false`, `users=[user_key]`, and a `timestamp_from` window.
-2. Inspect a specific log: GET /v2/pdps/{proj_id}/{env_id}/audit_logs/{log_id} -- check `resource_type`, `action`, `tenant`, `reason`, and `context`.
-3. Verify the user's role assignments: GET /v2/facts/{proj_id}/{env_id}/users/{user_id} and examine `roles[]` and `associated_tenants[]`.
-4. Check the role's permissions: GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/roles/{role_id} -- confirm the required action is in `permissions[]`.
-5. If using condition sets, check set rules: GET /v2/facts/{proj_id}/{env_id}/set_rules filtered by the relevant `user_set` and `resource_set`.
-
-### 5. Set Up Permit Elements with Access Requests
-
-1. Create an Elements config: POST /v2/elements/{proj_id}/{env_id}/config with `elements_type`, `settings`, and `roles_to_levels` mapping.
-2. Activate it: POST /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/data/active.
-3. Add users: POST /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/data/users with `key` and optional `role`.
-4. When a user submits an access request: POST /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/access_requests with `access_request_details`.
-5. Review and approve: PUT /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/access_requests/{access_request_id}/approve with optional `reviewer_comment`.
-6. Monitor via audit logs: GET /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/data/audit_logs.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all me?" -> GET /v2/members/me
+- "List all members?" -> GET /v2/members
+- "Create a member?" -> POST /v2/members
+- "Get member details?" -> GET /v2/members/{member_id}
+- "Delete a member?" -> DELETE /v2/members/{member_id}
+- "Partially update a member?" -> PATCH /v2/members/{member_id}
+- "Get api-key details?" -> GET /v2/api-key/{proj_id}/{env_id}
+- "List all scope?" -> GET /v2/api-key/scope
+- "List all api-key?" -> GET /v2/api-key
+- "Create a api-key?" -> POST /v2/api-key
+- "Get api-key details?" -> GET /v2/api-key/{api_key_id}
+- "Delete a api-key?" -> DELETE /v2/api-key/{api_key_id}
+- "Create a rotate-secret?" -> POST /v2/api-key/{api_key_id}/rotate-secret
+- "Search orgs?" -> GET /v2/orgs
+- "Create a org?" -> POST /v2/orgs
+- "Get org details?" -> GET /v2/orgs/{org_id}
+- "Delete a org?" -> DELETE /v2/orgs/{org_id}
+- "Partially update a org?" -> PATCH /v2/orgs/{org_id}
+- "List all org?" -> GET /v2/orgs/active/org
+- "List all stats?" -> GET /v2/orgs/{org_id}/stats
+- "List all invites?" -> GET /v2/orgs/{org_id}/invites
+- "Create a invite?" -> POST /v2/orgs/{org_id}/invites
+- "Delete a invite?" -> DELETE /v2/orgs/{org_id}/invites/{invite_id}
+- "List all projects?" -> GET /v2/projects
+- "Create a project?" -> POST /v2/projects
+- "Get project details?" -> GET /v2/projects/{proj_id}
+- "Delete a project?" -> DELETE /v2/projects/{proj_id}
+- "Partially update a project?" -> PATCH /v2/projects/{proj_id}
+- "List all stats?" -> GET /v2/projects/{proj_id}/envs/{env_id}/stats
+- "List all envs?" -> GET /v2/projects/{proj_id}/envs
+- "Create a env?" -> POST /v2/projects/{proj_id}/envs
+- "Get env details?" -> GET /v2/projects/{proj_id}/envs/{env_id}
+- "Delete a env?" -> DELETE /v2/projects/{proj_id}/envs/{env_id}
+- "Partially update a env?" -> PATCH /v2/projects/{proj_id}/envs/{env_id}
+- "Create a copy?" -> POST /v2/projects/{proj_id}/envs/{env_id}/copy
+- "Create a async?" -> POST /v2/projects/{proj_id}/envs/{env_id}/copy/async
+- "List all result?" -> GET /v2/projects/{proj_id}/envs/{env_id}/copy/async/{task_id}/result
+- "Create a test_jwk?" -> POST /v2/projects/{proj_id}/envs/{env_id}/test_jwks
+- "Search condition_sets?" -> GET /v2/schema/{proj_id}/{env_id}/condition_sets
+- "Create a condition_set?" -> POST /v2/schema/{proj_id}/{env_id}/condition_sets
+- "Get condition_set details?" -> GET /v2/schema/{proj_id}/{env_id}/condition_sets/{condition_set_id}
+- "Delete a condition_set?" -> DELETE /v2/schema/{proj_id}/{env_id}/condition_sets/{condition_set_id}
+- "Partially update a condition_set?" -> PATCH /v2/schema/{proj_id}/{env_id}/condition_sets/{condition_set_id}
+- "List all ancestors?" -> GET /v2/schema/{proj_id}/{env_id}/condition_sets/{condition_set_id}/ancestors
+- "List all descendants?" -> GET /v2/schema/{proj_id}/{env_id}/condition_sets/{condition_set_id}/descendants
+- "Create a implicit_grant?" -> POST /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/roles/{role_id}/implicit_grants
+- "List all action_groups?" -> GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/action_groups
+- "Create a action_group?" -> POST /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/action_groups
+- "Get action_group details?" -> GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/action_groups/{action_group_id}
+- "Delete a action_group?" -> DELETE /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/action_groups/{action_group_id}
+- "Partially update a action_group?" -> PATCH /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/action_groups/{action_group_id}
+- "List all actions?" -> GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/actions
+- "Create a action?" -> POST /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/actions
+- "Get action details?" -> GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/actions/{action_id}
+- "Delete a action?" -> DELETE /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/actions/{action_id}
+- "Partially update a action?" -> PATCH /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/actions/{action_id}
+- "List all attributes?" -> GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/attributes
+- "Create a attribute?" -> POST /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/attributes
+- "Get attribute details?" -> GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/attributes/{attribute_id}
+- "Delete a attribute?" -> DELETE /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/attributes/{attribute_id}
+- "Partially update a attribute?" -> PATCH /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/attributes/{attribute_id}
+- "List all relations?" -> GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/relations
+- "Create a relation?" -> POST /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/relations
+- "Get relation details?" -> GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/relations/{relation_id}
+- "Delete a relation?" -> DELETE /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/relations/{relation_id}
+- "List all roles?" -> GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/roles
+- "Create a role?" -> POST /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/roles
+- "Get role details?" -> GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/roles/{role_id}
+- "Delete a role?" -> DELETE /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/roles/{role_id}
+- "Partially update a role?" -> PATCH /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/roles/{role_id}
+- "Create a permission?" -> POST /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/roles/{role_id}/permissions
+- "List all ancestors?" -> GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/roles/{role_id}/ancestors
+- "List all descendants?" -> GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}/roles/{role_id}/descendants
+- "Search resources?" -> GET /v2/schema/{proj_id}/{env_id}/resources
+- "Create a resource?" -> POST /v2/schema/{proj_id}/{env_id}/resources
+- "Get resource details?" -> GET /v2/schema/{proj_id}/{env_id}/resources/{resource_id}
+- "Update a resource?" -> PUT /v2/schema/{proj_id}/{env_id}/resources/{resource_id}
+- "Delete a resource?" -> DELETE /v2/schema/{proj_id}/{env_id}/resources/{resource_id}
+- "Partially update a resource?" -> PATCH /v2/schema/{proj_id}/{env_id}/resources/{resource_id}
+- "Search roles?" -> GET /v2/schema/{proj_id}/{env_id}/roles
+- "Create a role?" -> POST /v2/schema/{proj_id}/{env_id}/roles
+- "Get role details?" -> GET /v2/schema/{proj_id}/{env_id}/roles/{role_id}
+- "Delete a role?" -> DELETE /v2/schema/{proj_id}/{env_id}/roles/{role_id}
+- "Partially update a role?" -> PATCH /v2/schema/{proj_id}/{env_id}/roles/{role_id}
+- "Create a permission?" -> POST /v2/schema/{proj_id}/{env_id}/roles/{role_id}/permissions
+- "List all ancestors?" -> GET /v2/schema/{proj_id}/{env_id}/roles/{role_id}/ancestors
+- "List all descendants?" -> GET /v2/schema/{proj_id}/{env_id}/roles/{role_id}/descendants
+- "List all attributes?" -> GET /v2/schema/{proj_id}/{env_id}/users/attributes
+- "Create a attribute?" -> POST /v2/schema/{proj_id}/{env_id}/users/attributes
+- "Get attribute details?" -> GET /v2/schema/{proj_id}/{env_id}/users/attributes/{attribute_id}
+- "Delete a attribute?" -> DELETE /v2/schema/{proj_id}/{env_id}/users/attributes/{attribute_id}
+- "Partially update a attribute?" -> PATCH /v2/schema/{proj_id}/{env_id}/users/attributes/{attribute_id}
+- "Search direct?" -> GET /v2/schema/{proj_id}/{env_id}/groups/direct
+- "Get direct details?" -> GET /v2/schema/{proj_id}/{env_id}/groups/direct/{group_instance_key}
+- "List all children?" -> GET /v2/schema/{proj_id}/{env_id}/groups/{group_instance_key}/children
+- "List all parents?" -> GET /v2/schema/{proj_id}/{env_id}/groups/{group_instance_key}/parents
+- "List all users?" -> GET /v2/schema/{proj_id}/{env_id}/groups/{group_instance_key}/users
+- "List all roles?" -> GET /v2/schema/{proj_id}/{env_id}/groups/{group_instance_key}/roles
+- "Create a role?" -> POST /v2/schema/{proj_id}/{env_id}/groups/{group_instance_key}/roles
+- "Get group details?" -> GET /v2/schema/{proj_id}/{env_id}/groups/{group_instance_key}
+- "Delete a group?" -> DELETE /v2/schema/{proj_id}/{env_id}/groups/{group_instance_key}
+- "Search groups?" -> GET /v2/schema/{proj_id}/{env_id}/groups
+- "Create a group?" -> POST /v2/schema/{proj_id}/{env_id}/groups
+- "Update a user?" -> PUT /v2/schema/{proj_id}/{env_id}/groups/{group_instance_key}/users/{user_id}
+- "Delete a user?" -> DELETE /v2/schema/{proj_id}/{env_id}/groups/{group_instance_key}/users/{user_id}
+- "Search users?" -> GET /v2/facts/{proj_id}/{env_id}/users
+- "Create a user?" -> POST /v2/facts/{proj_id}/{env_id}/users
+- "Get user details?" -> GET /v2/facts/{proj_id}/{env_id}/users/{user_id}
+- "Update a user?" -> PUT /v2/facts/{proj_id}/{env_id}/users/{user_id}
+- "Delete a user?" -> DELETE /v2/facts/{proj_id}/{env_id}/users/{user_id}
+- "Partially update a user?" -> PATCH /v2/facts/{proj_id}/{env_id}/users/{user_id}
+- "Create a role?" -> POST /v2/facts/{proj_id}/{env_id}/users/{user_id}/roles
+- "Search users?" -> GET /v2/facts/{proj_id}/{env_id}/tenants/{tenant_id}/users
+- "Create a user?" -> POST /v2/facts/{proj_id}/{env_id}/tenants/{tenant_id}/users
+- "Search tenants?" -> GET /v2/facts/{proj_id}/{env_id}/tenants
+- "Create a tenant?" -> POST /v2/facts/{proj_id}/{env_id}/tenants
+- "Get tenant details?" -> GET /v2/facts/{proj_id}/{env_id}/tenants/{tenant_id}
+- "Delete a tenant?" -> DELETE /v2/facts/{proj_id}/{env_id}/tenants/{tenant_id}
+- "Partially update a tenant?" -> PATCH /v2/facts/{proj_id}/{env_id}/tenants/{tenant_id}
+- "Delete a user?" -> DELETE /v2/facts/{proj_id}/{env_id}/tenants/{tenant_id}/users/{user_id}
+- "List all detailed?" -> GET /v2/facts/{proj_id}/{env_id}/role_assignments/detailed
+- "List all role_assignments?" -> GET /v2/facts/{proj_id}/{env_id}/role_assignments
+- "Create a role_assignment?" -> POST /v2/facts/{proj_id}/{env_id}/role_assignments
+- "Create a bulk?" -> POST /v2/facts/{proj_id}/{env_id}/role_assignments/bulk
+- "List all set_rules?" -> GET /v2/facts/{proj_id}/{env_id}/set_rules
+- "Create a set_rule?" -> POST /v2/facts/{proj_id}/{env_id}/set_rules
+- "Search detailed?" -> GET /v2/facts/{proj_id}/{env_id}/resource_instances/detailed
+- "Search resource_instances?" -> GET /v2/facts/{proj_id}/{env_id}/resource_instances
+- "Create a resource_instance?" -> POST /v2/facts/{proj_id}/{env_id}/resource_instances
+- "Get resource_instance details?" -> GET /v2/facts/{proj_id}/{env_id}/resource_instances/{instance_id}
+- "Delete a resource_instance?" -> DELETE /v2/facts/{proj_id}/{env_id}/resource_instances/{instance_id}
+- "Partially update a resource_instance?" -> PATCH /v2/facts/{proj_id}/{env_id}/resource_instances/{instance_id}
+- "List all proxy_configs?" -> GET /v2/facts/{proj_id}/{env_id}/proxy_configs
+- "Create a proxy_config?" -> POST /v2/facts/{proj_id}/{env_id}/proxy_configs
+- "Get proxy_config details?" -> GET /v2/facts/{proj_id}/{env_id}/proxy_configs/{proxy_config_id}
+- "Delete a proxy_config?" -> DELETE /v2/facts/{proj_id}/{env_id}/proxy_configs/{proxy_config_id}
+- "Partially update a proxy_config?" -> PATCH /v2/facts/{proj_id}/{env_id}/proxy_configs/{proxy_config_id}
+- "Create a user?" -> POST /v2/facts/{proj_id}/{env_id}/bulk/users
+- "Create a tenant?" -> POST /v2/facts/{proj_id}/{env_id}/bulk/tenants
+- "List all email_configurations?" -> GET /v2/facts/{proj_id}/{env_id}/email_configurations
+- "Create a email_configuration?" -> POST /v2/facts/{proj_id}/{env_id}/email_configurations
+- "Create a send_test_email?" -> POST /v2/facts/{proj_id}/{env_id}/email_configurations/send_test_email
+- "List all email_templates?" -> GET /v2/facts/{proj_id}/{env_id}/email_templates/
+- "Get email_template details?" -> GET /v2/facts/{proj_id}/{env_id}/email_templates/{template_type}
+- "Create a send_test_email?" -> POST /v2/facts/{proj_id}/{env_id}/email_templates/{template_type}/send_test_email
+- "List all detailed?" -> GET /v2/facts/{proj_id}/{env_id}/relationship_tuples/detailed
+- "List all relationship_tuples?" -> GET /v2/facts/{proj_id}/{env_id}/relationship_tuples
+- "Create a relationship_tuple?" -> POST /v2/facts/{proj_id}/{env_id}/relationship_tuples
+- "Create a bulk?" -> POST /v2/facts/{proj_id}/{env_id}/relationship_tuples/bulk
+- "Search user_invites?" -> GET /v2/facts/{proj_id}/{env_id}/user_invites
+- "Create a user_invite?" -> POST /v2/facts/{proj_id}/{env_id}/user_invites
+- "Get user_invite details?" -> GET /v2/facts/{proj_id}/{env_id}/user_invites/{user_invite_id}
+- "Delete a user_invite?" -> DELETE /v2/facts/{proj_id}/{env_id}/user_invites/{user_invite_id}
+- "Partially update a user_invite?" -> PATCH /v2/facts/{proj_id}/{env_id}/user_invites/{user_invite_id}
+- "Create a approve?" -> POST /v2/facts/{proj_id}/{env_id}/user_invites/{user_invite_id}/approve
+- "Get tenant details?" -> GET /v2/facts/{proj_id}/{env_id}/access_requests/{elements_config_id}/user/{user_id}/tenant/{tenant_id}
+- "Get tenant details?" -> GET /v2/facts/{proj_id}/{env_id}/access_requests/{elements_config_id}/user/{user_id}/tenant/{tenant_id}/{access_request_id}
+- "List all configs?" -> GET /v2/pdps/{proj_id}/{env_id}/configs
+- "List all values?" -> GET /v2/pdps/{proj_id}/{env_id}/configs/{pdp_id}/values
+- "Create a rotate-api-key?" -> POST /v2/pdps/{proj_id}/{env_id}/configs/{pdp_id}/rotate-api-key
+- "Create a migrate-shard?" -> POST /v2/pdps/{proj_id}/{env_id}/configs/migrate-shards
+- "Search audit_logs?" -> GET /v2/pdps/{proj_id}/{env_id}/audit_logs
+- "Get audit_log details?" -> GET /v2/pdps/{proj_id}/{env_id}/audit_logs/{log_id}
+- "List all repos?" -> GET /v2/projects/{proj_id}/repos
+- "Create a repo?" -> POST /v2/projects/{proj_id}/repos
+- "List all active?" -> GET /v2/projects/{proj_id}/repos/active
+- "Get repo details?" -> GET /v2/projects/{proj_id}/repos/{repo_id}
+- "Delete a repo?" -> DELETE /v2/projects/{proj_id}/repos/{repo_id}
+- "List all config?" -> GET /v2/elements/{proj_id}/{env_id}/config
+- "Create a config?" -> POST /v2/elements/{proj_id}/{env_id}/config
+- "Get config details?" -> GET /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}
+- "Partially update a config?" -> PATCH /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}
+- "List all runtime?" -> GET /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/runtime
+- "Delete a element?" -> DELETE /v2/elements/{proj_id}/{env_id}/{elements_config_id}
+- "Search users?" -> GET /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/data/users
+- "Create a user?" -> POST /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/data/users
+- "Delete a user?" -> DELETE /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/data/users/{user_id}
+- "Search user-invites?" -> GET /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/data/user-invites
+- "Search roles?" -> GET /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/data/roles
+- "Create a role?" -> POST /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/data/users/{user_id}/roles
+- "Create a active?" -> POST /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/data/active
+- "Search audit_logs?" -> GET /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/data/audit_logs
+- "List all access_requests?" -> GET /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/access_requests
+- "Create a access_request?" -> POST /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/access_requests
+- "Get access_request details?" -> GET /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/access_requests/{access_request_id}
+- "List all operation_approval?" -> GET /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/operation_approval
+- "Create a operation_approval?" -> POST /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/operation_approval
+- "Get operation_approval details?" -> GET /v2/elements/{proj_id}/{env_id}/config/{elements_config_id}/operation_approval/{operation_approval_id}
+- "List all history?" -> GET /v2/deprecated/history
+- "Get history details?" -> GET /v2/deprecated/history/{event_id}
+- "List all request?" -> GET /v2/deprecated/history/{event_id}/request
+- "List all response?" -> GET /v2/deprecated/history/{event_id}/response
+- "List all history?" -> GET /v2/history
+- "Get history details?" -> GET /v2/history/{event_id}
+- "List all request?" -> GET /v2/history/{event_id}/request
+- "List all response?" -> GET /v2/history/{event_id}/response
+- "List all activity?" -> GET /v2/activity
+- "List all types?" -> GET /v2/activity/types
+- "List all activity?" -> GET /v2/deprecated/activity
+- "List all types?" -> GET /v2/deprecated/activity/types
+- "List all scopes?" -> GET /v2/policy_guards/scopes
+- "Create a scope?" -> POST /v2/policy_guards/scopes
+- "Get scope details?" -> GET /v2/policy_guards/scopes/{policy_guard_scope_id}
+- "Delete a scope?" -> DELETE /v2/policy_guards/scopes/{policy_guard_scope_id}
+- "Create a associate?" -> POST /v2/policy_guards/scopes/{policy_guard_scope_id}/associate
+- "List all rules?" -> GET /v2/policy_guards/scopes/{policy_guard_scope_id}/rules
+- "Create a rule?" -> POST /v2/policy_guards/scopes/{policy_guard_scope_id}/rules
+- "List all opal_scope?" -> GET /v2/projects/{proj_id}/{env_id}/opal_scope
+- "Create a audit-log-replay?" -> POST /v2/audit-log-replay
+- "List all optimized?" -> GET /v2/internal/opal_data/{org_id}/{proj_id}/{env_id}/optimized
+- "Get opal_data details?" -> GET /v2/internal/opal_data/{org_id}/{proj_id}/{env_id}
+- "List all users?" -> GET /v2/internal/opal_data/{org_id}/{proj_id}/{env_id}/users
+- "List all role_assignments?" -> GET /v2/internal/opal_data/{org_id}/{proj_id}/{env_id}/role_assignments
+- "List all resource_instances?" -> GET /v2/internal/opal_data/{org_id}/{proj_id}/{env_id}/resource_instances
+- "List all relationships?" -> GET /v2/internal/opal_data/{org_id}/{proj_id}/{env_id}/relationships
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

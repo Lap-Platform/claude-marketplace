@@ -388,91 +388,174 @@ https://api.xero.com/api.xro/2.0
 | GET | /Users | Retrieves users |
 | GET | /Users/{UserID} | Retrieves a specific user |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all invoices for a specific contact?" -> GET /Invoices (filter with `ContactIDs` param)
-- "How do I create a new sales invoice?" -> PUT /Invoices (with Type, Contact, LineItems)
-- "How do I record a payment against an invoice?" -> POST /Payments (with Invoice reference and Amount)
-- "What is the balance sheet for my organization?" -> GET /Reports/BalanceSheet
-- "How do I find a contact by name or email?" -> GET /Contacts (use `searchTerm` or `where` param)
-- "How do I apply a credit note to an outstanding invoice?" -> PUT /CreditNotes/{CreditNoteID}/Allocations
-- "How do I download a PDF copy of an invoice?" -> GET /Invoices/{InvoiceID}/pdf
-- "How do I transfer money between two bank accounts?" -> PUT /BankTransfers (with FromBankAccount, ToBankAccount, Amount)
-- "How do I email an invoice directly to the customer?" -> POST /Invoices/{InvoiceID}/Email
-- "What are my overdue receivables by contact?" -> GET /Reports/AgedReceivablesByContact (with contactId)
-- "How do I void or delete a payment?" -> POST /Payments/{PaymentID} (set Status=DELETED)
-- "How do I attach a receipt image to an expense claim?" -> PUT /Receipts/{ReceiptID}/Attachments/{FileName}
-- "How do I set up a recurring monthly invoice?" -> PUT /RepeatingInvoices (with Schedule and LineItems)
-- "How do I get profit and loss for a date range?" -> GET /Reports/ProfitAndLoss (with fromDate, toDate)
-- "How do I create a purchase order for a supplier?" -> PUT /PurchaseOrders (with Contact and LineItems)
-
-## Response Tips
-
-- **Paginated endpoints** (Invoices, Contacts, BankTransactions, CreditNotes, Payments, PurchaseOrders, ManualJournals, Overpayments, Prepayments): Check `pagination.pageCount` and loop with `page` param; default `pageSize` varies so set it explicitly.
-- **List endpoints**: Data is always nested under a plural key matching the resource (e.g., `Invoices`, `Contacts`) -- never at the top level.
-- **400 errors**: Return `ValidationErrors` array with `Message` strings on the affected objects; when using `summarizeErrors=false`, each item in the batch carries its own errors instead of failing the whole request.
-- **Attachment downloads**: GET by AttachmentID or FileName returns raw binary (no JSON wrapper); you must set the `contentType` header param.
-- **Reports**: All report endpoints return `Reports: [any]` -- the structure is dynamic with Rows/Cells; parse by iterating `Rows[].Cells[]` to extract values.
-- **History endpoints**: Return `HistoryRecords` array with `Details`, `Changes`, `User`, `DateUTC` -- consistent across all resource types.
-- **Warnings array**: Present alongside data on many responses; always check `Warnings` for non-fatal issues even on 200 status.
-
-## Anomaly Flags
-
-- **ValidationErrors present on 200**: Xero returns HTTP 200 with embedded `ValidationErrors` on individual records during batch operations -- surface these immediately even though the status code looks successful.
-- **HasValidationErrors / HasErrors flags**: Boolean flags on contacts, invoices, and credit notes that signal problems; check proactively after any write operation.
-- **Warnings array non-empty**: Many endpoints include a `Warnings` field that can contain deprecation notices or data quality issues; flag any non-empty Warnings to the user.
-- **StatusAttributeString**: An undocumented field on many resources that signals backend status changes or issues; flag when non-empty.
-- **RemainingCredit approaching zero**: On CreditNotes, Overpayments, and Prepayments, `RemainingCredit` near 0 means the credit is almost fully allocated -- flag before attempting new allocations.
-- **Idempotency-Key reuse**: All write endpoints accept `Idempotency-Key`; if a retry returns the same response, flag that the original request already succeeded.
-- **CIS fields present**: `CISDeduction` and `CISRate` on invoices/credit notes indicate UK Construction Industry Scheme applies -- flag for tax compliance awareness.
-- **OAuth2 token expiry**: Auth is OAuth2; proactively warn when approaching token refresh boundaries during long batch operations.
-
-## Playbook
-
-### 1. Create and Send an Invoice
-
-1. Look up or create the contact: GET /Contacts?searchTerm={name} or PUT /Contacts
-2. Get the chart of accounts for valid account codes: GET /Accounts
-3. Create the invoice as draft: PUT /Invoices with `Type: "ACCREC"`, Contact (by ContactID), LineItems (Description, Quantity, UnitAmount, AccountCode), and `Status: "DRAFT"`
-4. Review the returned invoice for ValidationErrors
-5. Approve the invoice: POST /Invoices/{InvoiceID} with `Status: "AUTHORISED"`
-6. Email to customer: POST /Invoices/{InvoiceID}/Email
-7. Optionally download PDF: GET /Invoices/{InvoiceID}/pdf
-
-### 2. Record a Payment and Reconcile
-
-1. Identify the invoice: GET /Invoices/{InvoiceID} -- confirm AmountDue > 0
-2. Identify the bank account: GET /Accounts?where=Type=="BANK"
-3. Create the payment: POST /Payments with `Invoice.InvoiceID`, `Account.AccountID`, `Amount`, `Date`, and `Status: "AUTHORISED"`
-4. Verify the payment: GET /Payments/{PaymentID} -- check IsReconciled
-5. Confirm invoice is settled: GET /Invoices/{InvoiceID} -- verify AmountDue is now 0
-
-### 3. Issue a Credit Note and Apply to Invoice
-
-1. Create the credit note: PUT /CreditNotes with `Type: "ACCRECCREDIT"`, Contact, LineItems, and `Status: "AUTHORISED"`
-2. Verify creation: GET /CreditNotes/{CreditNoteID} -- check RemainingCredit
-3. Identify the target invoice: GET /Invoices?where=Status=="AUTHORISED"&&AmountDue>0
-4. Allocate to invoice: PUT /CreditNotes/{CreditNoteID}/Allocations with `Invoice.InvoiceID`, `Amount`, and `Date`
-5. Confirm allocation: GET /CreditNotes/{CreditNoteID} -- verify RemainingCredit decreased; GET /Invoices/{InvoiceID} -- verify AmountDue reduced
-
-### 4. Bulk Supplier Payment via Batch
-
-1. List outstanding bills: GET /Invoices?Statuses=AUTHORISED&where=Type=="ACCPAY"
-2. Identify the payment bank account: GET /Accounts?where=Type=="BANK"
-3. Create batch payment: PUT /BatchPayments with `Account` (bank), `Date`, and `Payments` array -- each entry referencing an Invoice by InvoiceID with Amount
-4. Check response: iterate each Payment in the result for HasValidationErrors
-5. Confirm batch status: GET /BatchPayments/{BatchPaymentID} -- verify Status and TotalAmount
-
-### 5. Month-End Reporting Snapshot
-
-1. Pull the balance sheet: GET /Reports/BalanceSheet?date={end-of-month}
-2. Pull profit and loss: GET /Reports/ProfitAndLoss?fromDate={start}&toDate={end}
-3. Pull trial balance: GET /Reports/TrialBalance?date={end-of-month}
-4. Pull bank summary: GET /Reports/BankSummary?fromDate={start}&toDate={end}
-5. Check aged receivables for top contacts: GET /Reports/AgedReceivablesByContact?contactId={id} (repeat per key contact)
-6. Check aged payables: GET /Reports/AgedPayablesByContact?contactId={id} (repeat per key supplier)
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all Accounts?" -> GET /Accounts
+- "Get Account details?" -> GET /Accounts/{AccountID}
+- "Delete a Account?" -> DELETE /Accounts/{AccountID}
+- "List all Attachments?" -> GET /Accounts/{AccountID}/Attachments
+- "Get Attachment details?" -> GET /Accounts/{AccountID}/Attachments/{AttachmentID}
+- "Get Attachment details?" -> GET /Accounts/{AccountID}/Attachments/{FileName}
+- "Update a Attachment?" -> PUT /Accounts/{AccountID}/Attachments/{FileName}
+- "List all BatchPayments?" -> GET /BatchPayments
+- "Create a BatchPayment?" -> POST /BatchPayments
+- "Get BatchPayment details?" -> GET /BatchPayments/{BatchPaymentID}
+- "List all History?" -> GET /BatchPayments/{BatchPaymentID}/History
+- "List all BankTransactions?" -> GET /BankTransactions
+- "Create a BankTransaction?" -> POST /BankTransactions
+- "Get BankTransaction details?" -> GET /BankTransactions/{BankTransactionID}
+- "List all Attachments?" -> GET /BankTransactions/{BankTransactionID}/Attachments
+- "Get Attachment details?" -> GET /BankTransactions/{BankTransactionID}/Attachments/{AttachmentID}
+- "Get Attachment details?" -> GET /BankTransactions/{BankTransactionID}/Attachments/{FileName}
+- "Update a Attachment?" -> PUT /BankTransactions/{BankTransactionID}/Attachments/{FileName}
+- "List all History?" -> GET /BankTransactions/{BankTransactionID}/History
+- "List all BankTransfers?" -> GET /BankTransfers
+- "Get BankTransfer details?" -> GET /BankTransfers/{BankTransferID}
+- "List all Attachments?" -> GET /BankTransfers/{BankTransferID}/Attachments
+- "Get Attachment details?" -> GET /BankTransfers/{BankTransferID}/Attachments/{AttachmentID}
+- "Get Attachment details?" -> GET /BankTransfers/{BankTransferID}/Attachments/{FileName}
+- "Update a Attachment?" -> PUT /BankTransfers/{BankTransferID}/Attachments/{FileName}
+- "List all History?" -> GET /BankTransfers/{BankTransferID}/History
+- "List all BrandingThemes?" -> GET /BrandingThemes
+- "Get BrandingTheme details?" -> GET /BrandingThemes/{BrandingThemeID}
+- "List all PaymentServices?" -> GET /BrandingThemes/{BrandingThemeID}/PaymentServices
+- "Create a PaymentService?" -> POST /BrandingThemes/{BrandingThemeID}/PaymentServices
+- "List all Budgets?" -> GET /Budgets
+- "Get Budget details?" -> GET /Budgets/{BudgetID}
+- "List all Contacts?" -> GET /Contacts
+- "Create a Contact?" -> POST /Contacts
+- "Get Contact details?" -> GET /Contacts/{ContactNumber}
+- "Get Contact details?" -> GET /Contacts/{ContactID}
+- "List all Attachments?" -> GET /Contacts/{ContactID}/Attachments
+- "Get Attachment details?" -> GET /Contacts/{ContactID}/Attachments/{AttachmentID}
+- "Get Attachment details?" -> GET /Contacts/{ContactID}/Attachments/{FileName}
+- "Update a Attachment?" -> PUT /Contacts/{ContactID}/Attachments/{FileName}
+- "List all CISSettings?" -> GET /Contacts/{ContactID}/CISSettings
+- "List all History?" -> GET /Contacts/{ContactID}/History
+- "List all ContactGroups?" -> GET /ContactGroups
+- "Get ContactGroup details?" -> GET /ContactGroups/{ContactGroupID}
+- "Delete a Contact?" -> DELETE /ContactGroups/{ContactGroupID}/Contacts/{ContactID}
+- "List all CreditNotes?" -> GET /CreditNotes
+- "Create a CreditNote?" -> POST /CreditNotes
+- "Get CreditNote details?" -> GET /CreditNotes/{CreditNoteID}
+- "List all Attachments?" -> GET /CreditNotes/{CreditNoteID}/Attachments
+- "Get Attachment details?" -> GET /CreditNotes/{CreditNoteID}/Attachments/{AttachmentID}
+- "Get Attachment details?" -> GET /CreditNotes/{CreditNoteID}/Attachments/{FileName}
+- "Update a Attachment?" -> PUT /CreditNotes/{CreditNoteID}/Attachments/{FileName}
+- "List all pdf?" -> GET /CreditNotes/{CreditNoteID}/pdf
+- "Delete a Allocation?" -> DELETE /CreditNotes/{CreditNoteID}/Allocations/{AllocationID}
+- "List all History?" -> GET /CreditNotes/{CreditNoteID}/History
+- "List all Currencies?" -> GET /Currencies
+- "List all Employees?" -> GET /Employees
+- "Create a Employee?" -> POST /Employees
+- "Get Employee details?" -> GET /Employees/{EmployeeID}
+- "List all ExpenseClaims?" -> GET /ExpenseClaims
+- "Get ExpenseClaim details?" -> GET /ExpenseClaims/{ExpenseClaimID}
+- "List all History?" -> GET /ExpenseClaims/{ExpenseClaimID}/History
+- "List all Invoices?" -> GET /Invoices
+- "Create a Invoice?" -> POST /Invoices
+- "Get Invoice details?" -> GET /Invoices/{InvoiceID}
+- "List all pdf?" -> GET /Invoices/{InvoiceID}/pdf
+- "List all Attachments?" -> GET /Invoices/{InvoiceID}/Attachments
+- "Get Attachment details?" -> GET /Invoices/{InvoiceID}/Attachments/{AttachmentID}
+- "Get Attachment details?" -> GET /Invoices/{InvoiceID}/Attachments/{FileName}
+- "Update a Attachment?" -> PUT /Invoices/{InvoiceID}/Attachments/{FileName}
+- "List all OnlineInvoice?" -> GET /Invoices/{InvoiceID}/OnlineInvoice
+- "Create a Email?" -> POST /Invoices/{InvoiceID}/Email
+- "List all History?" -> GET /Invoices/{InvoiceID}/History
+- "List all Settings?" -> GET /InvoiceReminders/Settings
+- "List all Items?" -> GET /Items
+- "Create a Item?" -> POST /Items
+- "Get Item details?" -> GET /Items/{ItemID}
+- "Delete a Item?" -> DELETE /Items/{ItemID}
+- "List all History?" -> GET /Items/{ItemID}/History
+- "List all Journals?" -> GET /Journals
+- "Get Journal details?" -> GET /Journals/{JournalID}
+- "Get Journal details?" -> GET /Journals/{JournalNumber}
+- "List all LinkedTransactions?" -> GET /LinkedTransactions
+- "Get LinkedTransaction details?" -> GET /LinkedTransactions/{LinkedTransactionID}
+- "Delete a LinkedTransaction?" -> DELETE /LinkedTransactions/{LinkedTransactionID}
+- "List all ManualJournals?" -> GET /ManualJournals
+- "Create a ManualJournal?" -> POST /ManualJournals
+- "Get ManualJournal details?" -> GET /ManualJournals/{ManualJournalID}
+- "List all Attachments?" -> GET /ManualJournals/{ManualJournalID}/Attachments
+- "Get Attachment details?" -> GET /ManualJournals/{ManualJournalID}/Attachments/{AttachmentID}
+- "Get Attachment details?" -> GET /ManualJournals/{ManualJournalID}/Attachments/{FileName}
+- "Update a Attachment?" -> PUT /ManualJournals/{ManualJournalID}/Attachments/{FileName}
+- "List all History?" -> GET /ManualJournals/{ManualJournalID}/History
+- "List all Organisation?" -> GET /Organisation
+- "List all Actions?" -> GET /Organisation/Actions
+- "List all CISSettings?" -> GET /Organisation/{OrganisationID}/CISSettings
+- "List all Overpayments?" -> GET /Overpayments
+- "Get Overpayment details?" -> GET /Overpayments/{OverpaymentID}
+- "Delete a Allocation?" -> DELETE /Overpayments/{OverpaymentID}/Allocations/{AllocationID}
+- "List all History?" -> GET /Overpayments/{OverpaymentID}/History
+- "List all Payments?" -> GET /Payments
+- "Create a Payment?" -> POST /Payments
+- "Get Payment details?" -> GET /Payments/{PaymentID}
+- "List all History?" -> GET /Payments/{PaymentID}/History
+- "List all PaymentServices?" -> GET /PaymentServices
+- "List all Prepayments?" -> GET /Prepayments
+- "Get Prepayment details?" -> GET /Prepayments/{PrepaymentID}
+- "Delete a Allocation?" -> DELETE /Prepayments/{PrepaymentID}/Allocations/{AllocationID}
+- "List all History?" -> GET /Prepayments/{PrepaymentID}/History
+- "List all PurchaseOrders?" -> GET /PurchaseOrders
+- "Create a PurchaseOrder?" -> POST /PurchaseOrders
+- "List all pdf?" -> GET /PurchaseOrders/{PurchaseOrderID}/pdf
+- "Get PurchaseOrder details?" -> GET /PurchaseOrders/{PurchaseOrderID}
+- "Get PurchaseOrder details?" -> GET /PurchaseOrders/{PurchaseOrderNumber}
+- "List all History?" -> GET /PurchaseOrders/{PurchaseOrderID}/History
+- "List all Attachments?" -> GET /PurchaseOrders/{PurchaseOrderID}/Attachments
+- "Get Attachment details?" -> GET /PurchaseOrders/{PurchaseOrderID}/Attachments/{AttachmentID}
+- "Get Attachment details?" -> GET /PurchaseOrders/{PurchaseOrderID}/Attachments/{FileName}
+- "Update a Attachment?" -> PUT /PurchaseOrders/{PurchaseOrderID}/Attachments/{FileName}
+- "List all Quotes?" -> GET /Quotes
+- "Create a Quote?" -> POST /Quotes
+- "Get Quote details?" -> GET /Quotes/{QuoteID}
+- "List all History?" -> GET /Quotes/{QuoteID}/History
+- "List all pdf?" -> GET /Quotes/{QuoteID}/pdf
+- "List all Attachments?" -> GET /Quotes/{QuoteID}/Attachments
+- "Get Attachment details?" -> GET /Quotes/{QuoteID}/Attachments/{AttachmentID}
+- "Get Attachment details?" -> GET /Quotes/{QuoteID}/Attachments/{FileName}
+- "Update a Attachment?" -> PUT /Quotes/{QuoteID}/Attachments/{FileName}
+- "List all Receipts?" -> GET /Receipts
+- "Get Receipt details?" -> GET /Receipts/{ReceiptID}
+- "List all Attachments?" -> GET /Receipts/{ReceiptID}/Attachments
+- "Get Attachment details?" -> GET /Receipts/{ReceiptID}/Attachments/{AttachmentID}
+- "Get Attachment details?" -> GET /Receipts/{ReceiptID}/Attachments/{FileName}
+- "Update a Attachment?" -> PUT /Receipts/{ReceiptID}/Attachments/{FileName}
+- "List all History?" -> GET /Receipts/{ReceiptID}/History
+- "List all RepeatingInvoices?" -> GET /RepeatingInvoices
+- "Create a RepeatingInvoice?" -> POST /RepeatingInvoices
+- "Get RepeatingInvoice details?" -> GET /RepeatingInvoices/{RepeatingInvoiceID}
+- "List all Attachments?" -> GET /RepeatingInvoices/{RepeatingInvoiceID}/Attachments
+- "Get Attachment details?" -> GET /RepeatingInvoices/{RepeatingInvoiceID}/Attachments/{AttachmentID}
+- "Get Attachment details?" -> GET /RepeatingInvoices/{RepeatingInvoiceID}/Attachments/{FileName}
+- "Update a Attachment?" -> PUT /RepeatingInvoices/{RepeatingInvoiceID}/Attachments/{FileName}
+- "List all History?" -> GET /RepeatingInvoices/{RepeatingInvoiceID}/History
+- "List all TenNinetyNine?" -> GET /Reports/TenNinetyNine
+- "List all AgedPayablesByContact?" -> GET /Reports/AgedPayablesByContact
+- "List all AgedReceivablesByContact?" -> GET /Reports/AgedReceivablesByContact
+- "List all BalanceSheet?" -> GET /Reports/BalanceSheet
+- "List all BankSummary?" -> GET /Reports/BankSummary
+- "Get Report details?" -> GET /Reports/{ReportID}
+- "List all BudgetSummary?" -> GET /Reports/BudgetSummary
+- "List all ExecutiveSummary?" -> GET /Reports/ExecutiveSummary
+- "List all Reports?" -> GET /Reports
+- "List all ProfitAndLoss?" -> GET /Reports/ProfitAndLoss
+- "List all TrialBalance?" -> GET /Reports/TrialBalance
+- "Create a Setup?" -> POST /Setup
+- "List all TaxRates?" -> GET /TaxRates
+- "Create a TaxRate?" -> POST /TaxRates
+- "Get TaxRate details?" -> GET /TaxRates/{TaxType}
+- "List all TrackingCategories?" -> GET /TrackingCategories
+- "Get TrackingCategory details?" -> GET /TrackingCategories/{TrackingCategoryID}
+- "Delete a TrackingCategory?" -> DELETE /TrackingCategories/{TrackingCategoryID}
+- "Delete a Option?" -> DELETE /TrackingCategories/{TrackingCategoryID}/Options/{TrackingOptionID}
+- "List all Users?" -> GET /Users
+- "Get User details?" -> GET /Users/{UserID}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

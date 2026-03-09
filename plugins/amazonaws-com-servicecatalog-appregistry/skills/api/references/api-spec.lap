@@ -9,31 +9,36 @@
 
 @group applications
 @endpoint PUT /applications/{application}/attribute-groups/{attributeGroup}
+@desc Associates an attribute group with an application to augment the application's metadata with the group's attributes. This feature enables applications to be described with user-defined details that are machine-readable, such as third-party integrations.
 @required {application: str, attributeGroup: str}
 @returns(200) {applicationArn: str?, attributeGroupArn: str?}
 
 @endpoint PUT /applications/{application}/resources/{resourceType}/{resource}
+@desc Associates a resource with an application. The resource can be specified by its ARN or name. The application can be specified by ARN, ID, or name.   Minimum permissions   You must have the following permissions to associate a resource using the OPTIONS parameter set to APPLY_APPLICATION_TAG.     tag:GetResources     tag:TagResources     You must also have these additional permissions if you don't use the AWSServiceCatalogAppRegistryFullAccess policy. For more information, see AWSServiceCatalogAppRegistryFullAccess in the AppRegistry Administrator Guide.     resource-groups:AssociateResource     cloudformation:UpdateStack     cloudformation:DescribeStacks      In addition, you must have the tagging permission defined by the Amazon Web Services service that creates the resource. For more information, see TagResources in the Resource Groups Tagging API Reference.
 @required {application: str, resourceType: str, resource: str}
 @optional {options: [str]}
 @returns(200) {applicationArn: str?, resourceArn: str?, options: [str]?}
 
 @endpoint POST /applications
+@desc Creates a new application that is the top-level node in a hierarchy of related cloud resource abstractions.
 @required {name: str, clientToken: str}
 @optional {description: str, tags: map<str,str>}
-@returns(200) {application: Application?{id: str?, arn: str?, name: str?, description: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, tags: map<str,str>?, applicationTag: map<str,str>?}}
+@returns(200) {application: Application?{id: str?, arn: str?, name: str?, description: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, tags: map<str, str>?: any, applicationTag: map<str, str>?: any}}
 
 @endgroup
 
 @group attribute-groups
 @endpoint POST /attribute-groups
+@desc Creates a new attribute group as a container for user-defined attributes. This feature enables users to have full control over their cloud application's metadata in a rich machine-readable format to facilitate integration with automated workflows and third-party tools.
 @required {name: str, attributes: str, clientToken: str}
 @optional {description: str, tags: map<str,str>}
-@returns(200) {attributeGroup: AttributeGroup?{id: str?, arn: str?, name: str?, description: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, tags: map<str,str>?}}
+@returns(200) {attributeGroup: AttributeGroup?{id: str?, arn: str?, name: str?, description: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, tags: map<str, str>?: any}}
 
 @endgroup
 
 @group applications
 @endpoint DELETE /applications/{application}
+@desc Deletes an application that is specified either by its application ID, name, or ARN. All associated attribute groups and resources must be disassociated from it before deleting an application.
 @required {application: str}
 @returns(200) {application: ApplicationSummary?{id: str?, arn: str?, name: str?, description: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?}}
 
@@ -41,6 +46,7 @@
 
 @group attribute-groups
 @endpoint DELETE /attribute-groups/{attributeGroup}
+@desc Deletes an attribute group, specified either by its attribute group ID, name, or ARN.
 @required {attributeGroup: str}
 @returns(200) {attributeGroup: AttributeGroupSummary?{id: str?, arn: str?, name: str?, description: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, createdBy: str?}}
 
@@ -48,18 +54,22 @@
 
 @group applications
 @endpoint DELETE /applications/{application}/attribute-groups/{attributeGroup}
+@desc Disassociates an attribute group from an application to remove the extra attributes contained in the attribute group from the application's metadata. This operation reverts AssociateAttributeGroup.
 @required {application: str, attributeGroup: str}
 @returns(200) {applicationArn: str?, attributeGroupArn: str?}
 
 @endpoint DELETE /applications/{application}/resources/{resourceType}/{resource}
+@desc Disassociates a resource from application. Both the resource and the application can be specified either by ID or name.   Minimum permissions   You must have the following permissions to remove a resource that's been associated with an application using the APPLY_APPLICATION_TAG option for AssociateResource.     tag:GetResources     tag:UntagResources     You must also have the following permissions if you don't use the AWSServiceCatalogAppRegistryFullAccess policy. For more information, see AWSServiceCatalogAppRegistryFullAccess in the AppRegistry Administrator Guide.     resource-groups:DisassociateResource     cloudformation:UpdateStack     cloudformation:DescribeStacks      In addition, you must have the tagging permission defined by the Amazon Web Services service that creates the resource. For more information, see UntagResources in the Resource Groups Tagging API Reference.
 @required {application: str, resourceType: str, resource: str}
 @returns(200) {applicationArn: str?, resourceArn: str?}
 
 @endpoint GET /applications/{application}
+@desc Retrieves metadata information about one of your applications. The application can be specified by its ARN, ID, or name (which is unique within one account in one region at a given point in time). Specify by ARN or ID in automated workflows if you want to make sure that the exact same application is returned or a ResourceNotFoundException is thrown, avoiding the ABA addressing problem.
 @required {application: str}
 @returns(200) {id: str?, arn: str?, name: str?, description: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, associatedResourceCount: int?, tags: map<str,str>?, integrations: Integrations?{resourceGroup: ResourceGroup?{state: str?, arn: str?, errorMessage: str?}, applicationTagResourceGroup: ResourceGroup?{state: str?, arn: str?, errorMessage: str?}}, applicationTag: map<str,str>?}
 
 @endpoint GET /applications/{application}/resources/{resourceType}/{resource}
+@desc Gets the resource associated with the application.
 @required {application: str, resourceType: str, resource: str}
 @optional {nextToken: str, resourceTagStatus: [str], maxResults: int}
 @returns(200) {resource: Resource?{name: str?, arn: str?, associationTime: str(timestamp)?, integrations: ResourceIntegrations?{resourceGroup: ResourceGroup?{state: str?, arn: str?, errorMessage: str?}}}, options: [str]?, applicationTagResult: ApplicationTagResult?{applicationTagStatus: str?, errorMessage: str?, resources: [ResourcesListItem]?, nextToken: str?}}
@@ -68,6 +78,7 @@
 
 @group attribute-groups
 @endpoint GET /attribute-groups/{attributeGroup}
+@desc Retrieves an attribute group by its ARN, ID, or name. The attribute group can be specified by its ARN, ID, or name.
 @required {attributeGroup: str}
 @returns(200) {id: str?, arn: str?, name: str?, description: str?, attributes: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, tags: map<str,str>?, createdBy: str?}
 
@@ -75,21 +86,25 @@
 
 @group configuration
 @endpoint GET /configuration
+@desc Retrieves a TagKey configuration from an account.
 @returns(200) {configuration: AppRegistryConfiguration?{tagQueryConfiguration: TagQueryConfiguration?{tagKey: str?}}}
 
 @endgroup
 
 @group applications
 @endpoint GET /applications
+@desc Retrieves a list of all of your applications. Results are paginated.
 @optional {nextToken: str, maxResults: int}
 @returns(200) {applications: [ApplicationSummary]?, nextToken: str?}
 
 @endpoint GET /applications/{application}/attribute-groups
+@desc Lists all attribute groups that are associated with specified application. Results are paginated.
 @required {application: str}
 @optional {nextToken: str, maxResults: int}
 @returns(200) {attributeGroups: [str]?, nextToken: str?}
 
 @endpoint GET /applications/{application}/resources
+@desc Lists all of the resources that are associated with the specified application. Results are paginated.    If you share an application, and a consumer account associates a tag query to the application, all of the users who can access the application can also view the tag values in all accounts that are associated with it using this API.
 @required {application: str}
 @optional {nextToken: str, maxResults: int}
 @returns(200) {resources: [ResourceInfo]?, nextToken: str?}
@@ -98,6 +113,7 @@
 
 @group attribute-groups
 @endpoint GET /attribute-groups
+@desc Lists all attribute groups which you have access to. Results are paginated.
 @optional {nextToken: str, maxResults: int}
 @returns(200) {attributeGroups: [AttributeGroupSummary]?, nextToken: str?}
 
@@ -105,6 +121,7 @@
 
 @group applications
 @endpoint GET /applications/{application}/attribute-group-details
+@desc Lists the details of all attribute groups associated with a specific application. The results display in pages.
 @required {application: str}
 @optional {nextToken: str, maxResults: int}
 @returns(200) {attributeGroupsDetails: [AttributeGroupDetails]?, nextToken: str?}
@@ -113,6 +130,7 @@
 
 @group tags
 @endpoint GET /tags/{resourceArn}
+@desc Lists all of the tags on the resource.
 @required {resourceArn: str}
 @returns(200) {tags: map<str,str>?}
 
@@ -120,12 +138,14 @@
 
 @group configuration
 @endpoint PUT /configuration
+@desc Associates a TagKey configuration to an account.
 @required {configuration: AppRegistryConfiguration}
 
 @endgroup
 
 @group sync
 @endpoint POST /sync/{resourceType}/{resource}
+@desc Syncs the resource with current AppRegistry records. Specifically, the resource’s AppRegistry system tags sync with its associated application. We remove the resource's AppRegistry system tags if it does not associate with the application. The caller must have permissions to read and update the resource.
 @required {resourceType: str, resource: str}
 @returns(200) {applicationArn: str?, resourceArn: str?, actionTaken: str?}
 
@@ -133,26 +153,30 @@
 
 @group tags
 @endpoint POST /tags/{resourceArn}
+@desc Assigns one or more tags (key-value pairs) to the specified resource. Each tag consists of a key and an optional value. If a tag with the same key is already associated with the resource, this action updates its value. This operation returns an empty response if the call was successful.
 @required {resourceArn: str, tags: map<str,str>}
 
 @endpoint DELETE /tags/{resourceArn}
+@desc Removes tags from a resource. This operation returns an empty response if the call was successful.
 @required {resourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group applications
 @endpoint PATCH /applications/{application}
+@desc Updates an existing application with new attributes.
 @required {application: str}
 @optional {name: str, description: str}
-@returns(200) {application: Application?{id: str?, arn: str?, name: str?, description: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, tags: map<str,str>?, applicationTag: map<str,str>?}}
+@returns(200) {application: Application?{id: str?, arn: str?, name: str?, description: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, tags: map<str, str>?: any, applicationTag: map<str, str>?: any}}
 
 @endgroup
 
 @group attribute-groups
 @endpoint PATCH /attribute-groups/{attributeGroup}
+@desc Updates an existing attribute group with new details.
 @required {attributeGroup: str}
 @optional {name: str, description: str, attributes: str}
-@returns(200) {attributeGroup: AttributeGroup?{id: str?, arn: str?, name: str?, description: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, tags: map<str,str>?}}
+@returns(200) {attributeGroup: AttributeGroup?{id: str?, arn: str?, name: str?, description: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, tags: map<str, str>?: any}}
 
 @endgroup
 

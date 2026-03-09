@@ -1,120 +1,139 @@
 @lap v0.3
 # Machine-readable API spec. Each @endpoint block is one API call.
 @api Query API
-@base https://{regionAndDomain}.com/api/query
+@base https://mixpanel.com/api/query
 @version 1.0.0
-@common_fields {workspace_id: int}
+@common_fields {workspace_id: int # The id of the workspace if applicable.}
 @endpoints 19
 @toc insights(1), funnels(2), retention(2), segmentation(4), stream(1), cohorts(1), engage(1), events(6), jql(1)
 
 @group insights
 @endpoint GET /insights
-@required {bookmark_id: int}
-@returns(200) {computed_at: str, date_range: map{from_date: str, to_date: str}, headers: [str], series: map}
+@desc Query Saved Report
+@required {bookmark_id: int # The ID of your Insights report can be found from the url: `https://mixpanel.com/project/<YOUR_PROJECT_ID>/view/<YOUR_WORKSPACE_ID>/app/boards#id=12345&editor-card-id=%22report-<YOUR_BOOKMARK_ID>%22`}
+@returns(200) {computed_at: str, date_range: map{from_date: str, to_date: str}, headers: [str], series: map} # Success
 
 @endgroup
 
 @group funnels
 @endpoint GET /funnels
-@required {funnel_id: int}
-@optional {length: int, length_unit: str(day/hour/minute/second), interval: int, unit: str(day/week/month), on: str, where: str, limit: int}
-@returns(200) {meta: map{dates: [str]}, data: map}
+@desc Query Saved Report
+@required {funnel_id: int # The funnel that you wish to get data for.}
+@optional {length: int # The number of units (defined by length_unit) each user has to complete the funnel, starting from the time they triggered the first step in the funnel. May not be greater than 90 days. Note that we will query for events past the end of to_date to look for funnel completions. This defaults to the value that was previously saved in the UI for this funnel., length_unit: str(day/hour/minute/second), interval: int # The number of days you want each bucket to contain. The default value is 1., unit: str(day/week/month) # This is an alternate way of specifying interval and can be "day", "week", or "month"., on: str # The property expression to segment the event on. See the [expression to segment](ref:segmentation-expressions) below., where: str # An expression to filter events by. See the [expression to segment](ref:segmentation-expressions) below., limit: int # Return the top property values. Defaults to 255 if not explicitly included. Maximum value 10,000. This parameter does nothing if \"on\" is not specified.}
+@returns(200) {meta: map{dates: [str]}, data: map} # Success
 
 @endpoint GET /funnels/list
-@returns(200)
+@desc List Saved Funnels
+@returns(200) Success.
 
 @endgroup
 
 @group retention
 @endpoint GET /retention
-@optional {retention_type: str(birth/compounded), born_event: str, event: str, born_where: str, where: str, interval: int, interval_count: int, unit: str(day/week/month), unbounded_retention: bool=False, on: str, limit: int}
-@returns(200)
+@desc Query Retention Report
+@optional {retention_type: str(birth/compounded) # Must be either "birth" or "compounded". Defaults to "birth". The “birth” retention type corresponds to first time retention. The “compounded” retention type corresponds to recurring retention. See the [Types of Retention](https://help.mixpanel.com/hc/en-us/articles/360001370146) article for more information., born_event: str # The first event a user must do to be counted in a birth retention cohort. Required when retention_type is "birth"; ignored otherwise., event: str # The event to generate returning counts for. Applies to both birth and compounded retention. If not specified, we look across all events., born_where: str # An expression to filter born_events by. See the [expressions section](ref:segmentation-expressions) above., where: str # An expression to filter born_events by. See the [expressions section](ref:segmentation-expressions) above., interval: int # The number of units (can be specified in either days, weeks, or months) that you want per individual bucketed interval. May not be greater than 90 days if days is the specified unit. The default value is 1., interval_count: int # The number of individual buckets, or intervals, that are returned; defaults to 1. Note that we include a "0th" interval for events that take place less than one interval after the initial event., unit: str(day/week/month) # The interval unit. It can be "day", "week", or "month". Default is "day"., unbounded_retention: bool=false # A counting method for retention queries where retention values accumulate from right to left, i.e. day N is equal to users who retained on day N and any day after. The default value of false does not perform this accumulation. [Learn more about Counting Method](https://help.mixpanel.com/hc/en-us/articles/360045484191)., on: str # The property expression to segment the second event on. See the [expressions section](ref:segmentation-expressions) above., limit: int # Return the top limit segmentation values. This parameter does nothing if "on" is not specified.}
+@returns(200) Success.
 
 @endpoint GET /retention/addiction
-@required {unit: str(day/week/month), addiction_unit: str(hour/day)}
-@optional {event: str, where: str, on: str, limit: int}
-@returns(200) {data: map}
+@desc Query Frequency Report
+@required {unit: str(day/week/month) # The overall time period to return frequency of actions for can be "day", "week", or "month"., addiction_unit: str(hour/day) # The granularity to return frequency of actions at can be "hour" or "day".}
+@optional {event: str # The event to generate returning counts for., where: str # An expression to filter the returning events by. See the [expressions section](ref:segmentation-expressions) above., on: str # The property expression to segment the second event on. See the [expressions section](ref:segmentation-expressions) above., limit: int # Return the top limit segmentation values. This parameter does nothing if "on" is not specified.}
+@returns(200) {data: map} # Success.
 
 @endgroup
 
 @group segmentation
 @endpoint GET /segmentation
-@required {event: str}
-@optional {on: str, unit: str(minute/hour/day/month), interval: int, where: str, limit: int, type: str(general/unique/average), format: str}
-@returns(200) {data: map{series: [str], values: map}, legend_size: int}
+@desc Query Segmentation Report
+@required {event: str # The event that you wish to get data for. Note: this is a single event name, not an array.}
+@optional {on: str # The property expression to segment the event on. See the [expression to segment](ref:segmentation-expressions) below., unit: str(minute/hour/day/month) # This can be "minute", "hour", "day", or "month". This determines the buckets into which the property values that you segment on are placed. The default value is "day"., interval: int # Optional parameter in lieu of 'unit' when 'type' is not 'general'. Determines the number of days your results are bucketed into can be used with or without 'from_date' and 'to_date' parameters., where: str # An expression to filter events by. See the [expression to segment](ref:segmentation-expressions) below., limit: int # Return the top property values. Defaults to 60. Maximum value 10,000. This parameter does nothing if "on" is not specified., type: str(general/unique/average) # This can be "general", "unique", or "average". If this is set to "unique", we return the unique count of events or property values. If set to "general", we return the total, including repeats. If set to "average", we return the average count. The default value is "general"., format: str}
+@returns(200) {data: map{series: [str], values: map}, legend_size: int} # Success.
 
 @endpoint GET /segmentation/numeric
-@required {event: str, on: str}
-@optional {unit: str(hour/day), where: str, type: str(general/unique/average)}
-@returns(200) {data: map{series: [str], values: map}, legend_size: int}
+@desc Numerically Bucket
+@required {event: str # The event that you wish to get data for. Note: this is a single event name, not an array., on: str # The property expression to segment the event on. This expression must be a numeric property. See the [expressions section](ref:segmentation-expressions) below.}
+@optional {unit: str(hour/day) # This can be "hour" or "day". This determines the buckets into which the property values that you segment on are placed. The default value is "day"., where: str # An expression to filter events by. See the [expression to segment](ref:segmentation-expressions) below., type: str(general/unique/average) # This can be "hour" or "day". This determines the buckets into which the property values that you segment on are placed. The default value is "day".}
+@returns(200) {data: map{series: [str], values: map}, legend_size: int} # Success
 
 @endpoint GET /segmentation/sum
-@required {event: str, on: str}
-@optional {unit: str(hour/day), where: str}
-@returns(200) {status: str, computed_at: str, results: map}
+@desc Numerically Sum
+@required {event: str # The event that you wish to get data for. Note: this is a single event name, not an array., on: str # The expression to sum per unit time. The result of the expression should be a numeric value. If the expression is not numeric, a value of 0.0 is assumed. See the [expressions section](ref:segmentation-expressions) below.}
+@optional {unit: str(hour/day) # This can be "hour" or "day". This determines the buckets into which the property values that you segment on are placed. The default value is "day"., where: str # An expression to filter events by. See the [expression to segment](ref:segmentation-expressions) below.}
+@returns(200) {status: str, computed_at: str, results: map} # Success.
 
 @endpoint GET /segmentation/average
-@required {event: str, on: str}
-@optional {unit: str(hour/day), where: str}
-@returns(200) {results: map, status: str}
+@desc Numerically Average
+@required {event: str # The event that you wish to get data for. Note: this is a single event name, not an array., on: str # The expression to sum per unit time. The result of the expression should be a numeric value. If the expression is not numeric, a value of 0.0 is assumed. See the [expressions section](ref:segmentation-expressions) below.}
+@optional {unit: str(hour/day) # This can be "hour" or "day". This determines the buckets into which the property values that you segment on are placed. The default value is "day"., where: str # An expression to filter events by. See the [expression to segment](ref:segmentation-expressions) below.}
+@returns(200) {results: map, status: str} # Success
 
 @endgroup
 
 @group stream
 @endpoint GET /stream/query
-@required {distinct_ids: str}
-@returns(200) {status: str, results: map{events: [map]}}
+@desc Profile Event Activity
+@required {distinct_ids: str # A JSON array as a string representing the `distinct_ids` to return activity feeds for. For example: `["12a34aa567eb8d-9ab1c26f345b67-89123c45-6aeaa7-89f12af345f678"]`}
+@returns(200) {status: str, results: map{events: [map]}} # Success.
 
 @endgroup
 
 @group cohorts
 @endpoint POST /cohorts/list
-@returns(200)
+@desc List Saved Cohorts
+@returns(200) Success.
 
 @endgroup
 
 @group engage
 @endpoint POST /engage
-@returns(200) {page: int, page_size: int, session_id: str, status: str, total: int, results: [map]}
+@desc Query Profiles
+@returns(200) {page: int, page_size: int, session_id: str, status: str, total: int, results: [map]} # Success.
 
 @endgroup
 
 @group events
 @endpoint GET /events
-@required {event: str, type: str(general/unique/average), unit: str(minute/hour/day/week/month)}
-@optional {interval: int, format: str(json/csv)}
-@returns(200) {data: map{series: [str], values: map}, legend_size: int}
+@desc Aggregate Event Counts
+@required {event: str # The event or events that you wish to get data for, encoded as a JSON array. Example format: "["play song", "log in", "add playlist"]"., type: str(general/unique/average) # The analysis type you would like to get data for - such as general, unique, or average events. Valid values: "general", "unique", or "average"., unit: str(minute/hour/day/week/month) # This can be "minute", "hour", "day", "week", or "month". It determines the level of granularity of the data you get back. Note that you cannot get hourly uniques.}
+@optional {interval: int # The number of "units" to return data for - minutes, hours, days, weeks, or months. 1 will return data for the current unit (minute, hour, day, week or month). 2 will return the current and previous units, and so on. Specify either interval or from_date and to_date., format: str(json/csv) # The data return format, such as JSON or CSV. Options: "json" (default), "csv".}
+@returns(200) {data: map{series: [str], values: map}, legend_size: int} # Success.
 
 @endpoint GET /events/top
-@required {type: str(general/unique/average)}
-@optional {limit: int}
-@returns(200) {events: [map], type: str}
+@desc Today's Top Events
+@required {type: str(general/unique/average) # The analysis type you would like to get data for - such as general, unique, or average events. Valid values: "general", "unique", or "average".}
+@optional {limit: int # The maximum number of events to return. Defaults to 100.}
+@returns(200) {events: [map], type: str} # Success.
 
 @endpoint GET /events/names
-@required {type: str(general/unique/average)}
-@optional {limit: int}
-@returns(200)
+@desc Top Events
+@required {type: str(general/unique/average) # The analysis type you would like to get data for - such as general, unique, or average events. Valid values: "general", "unique", or "average".}
+@optional {limit: int # The maximum number of values to return. Defaults to 255.}
+@returns(200) Success.
 
 @endpoint GET /events/properties
-@required {event: str, name: str, type: str(general/unique/average), unit: str(minute/hour/day/week/month)}
-@optional {values: [str], interval: int, format: str(json/csv), limit: int}
-@returns(200) {data: map{series: [str], values: map}, legend_size: int}
+@desc Aggregrated Event Property Values
+@required {event: str # The event that you wish to get data for. Note: this is a single event name, not an array., name: str # The name of the property you would like to get data for., type: str(general/unique/average) # The analysis type you would like to get data for - such as general, unique, or average events. Valid values: "general", "unique", or "average"., unit: str(minute/hour/day/week/month) # This can be "minute", "hour", "day", "week", or "month". It determines the level of granularity of the data you get back. Note that you cannot get hourly uniques.}
+@optional {values: [str] # The specific property values that you would like to get data for, encoded as a JSON array. Example: If you have a property "gender" you may have values "male", "female" and "unknown". If you just want data for female and unknown users, you can include a values property that looks like "["female", "unknown"]"., interval: int # The number of "units" to return data for - minutes, hours, days, weeks, or months. 1 will return data for the current unit (minute, hour, day, week or month). 2 will return the current and previous units, and so on. Specify either interval or from_date and to_date., format: str(json/csv) # The data return format, such as JSON or CSV. Options: "json" (default), "csv"., limit: int # The maximum number of values to return. Defaults to 255.}
+@returns(200) {data: map{series: [str], values: map}, legend_size: int} # Success.
 
 @endpoint GET /events/properties/top
-@required {event: str}
-@optional {limit: int}
-@returns(200)
+@desc Top Event Properties
+@required {event: str # The event that you wish to get data for. Note: this is a single event name, not an array.}
+@optional {limit: int # The maximum number of properties to return. Defaults to 10.}
+@returns(200) Success.
 
 @endpoint GET /events/properties/values
-@required {event: str, name: str}
-@optional {limit: int}
-@returns(200)
+@desc Top Event Property Values
+@required {event: str # The event that you wish to get data for. Note: this is a single event name, not an array., name: str # The name of the property you would like to get data for.}
+@optional {limit: int # The maximum number of values to return. Defaults to 255.}
+@returns(200) Success
 
 @endgroup
 
 @group jql
 @endpoint POST /jql
-@returns(200)
+@desc Custom JQL Query
+@returns(200) Success
 
 @endgroup
 

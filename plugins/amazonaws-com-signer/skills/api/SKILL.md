@@ -62,82 +62,26 @@ Not specified.
 | POST | /tags/{resourceArn} | Adds one or more tags to a signing profile. Tags are labels that you can use to identify and organize your AWS resources. Each tag consists of a key and an optional value. To specify the signing profile, use its Amazon Resource Name (ARN). To specify the tag, use a key-value pair. |
 | DELETE | /tags/{resourceArn} | Removes one or more tags from a signing profile. To remove the tags, specify a list of tag keys. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I sign an S3 object?" -> POST /signing-jobs
-- "Can I sign a payload directly without uploading to S3?" -> POST /signing-jobs/with-payload
-- "What signing jobs have I run?" -> GET /signing-jobs
-- "What is the status of my signing job?" -> GET /signing-jobs/{jobId}
-- "Which signing profiles exist in my account?" -> GET /signing-profiles
-- "What configuration does a specific signing profile use?" -> GET /signing-profiles/{profileName}
-- "How do I create a new signing profile?" -> PUT /signing-profiles/{profileName}
-- "How do I revoke a signing job?" -> PUT /signing-jobs/{jobId}/revoke
-- "How do I revoke a signing profile version?" -> PUT /signing-profiles/{profileName}/revoke
-- "What signing platforms are available for my use case?" -> GET /signing-platforms
-- "What encryption and hash algorithms does a platform support?" -> GET /signing-platforms/{platformId}
-- "How do I grant cross-account access to a signing profile?" -> POST /signing-profiles/{profileName}/permissions
-- "Who has permissions on my signing profile?" -> GET /signing-profiles/{profileName}/permissions
-- "How do I remove a permission from a signing profile?" -> DELETE /signing-profiles/{profileName}/permissions/{statementId}
-- "Has a specific certificate or profile version been revoked?" -> GET /revocations
-
-## Response Tips
-
-- **Signing jobs**: List responses use `jobs` array with `nextToken` for pagination; pass `maxResults` (default varies) and loop on `nextToken`. Individual job responses nest `source.s3`, `signedObject.s3`, and `revocationRecord` -- always check `status` before reading `signedObject`.
-- **Signing profiles**: List responses use `profiles` array with `nextToken`; detail responses nest `revocationRecord`, `signingMaterial`, `overrides.signingConfiguration`, and `signatureValidityPeriod`. A `status` of `Canceled` means the profile was deleted.
-- **Signing platforms**: List responses use `platforms` array with `nextToken`; detail responses nest `signingConfiguration.encryptionAlgorithmOptions` and `hashAlgorithmOptions` with `allowedValues`/`defaultValue` pairs.
-- **Permissions**: Returns a `permissions` array with `nextToken`; track `revisionId` -- it changes on every mutation and must be passed to delete calls.
-- **Tags**: Returned as flat `map<str,str>` -- no pagination needed.
-- **Revocations**: Returns `revokedEntities` as a flat string array; an empty array means nothing is revoked.
-
-## Anomaly Flags
-
-- **Job stuck in `InProgress`**: Surface if a signing job has been in `InProgress` status for more than a few minutes -- may indicate a source object access issue.
-- **Profile status `Canceled`**: Warn if a profile referenced in a workflow has `status: Canceled` -- it cannot be used for new signing jobs.
-- **Revoked profile or job**: Proactively flag when `revocationRecord` is present on a profile or job being inspected.
-- **Signature expiration approaching**: When `signatureExpiresAt` is within 30 days, alert the user to re-sign affected artifacts.
-- **Permission revision mismatch**: If a `DELETE /permissions` call fails, the `revisionId` is likely stale -- re-fetch permissions and retry.
-- **Max size exceeded**: When preparing a signing job, check `maxSizeInMB` from the platform details against the source object size before submitting.
-- **Pagination truncation**: If a list response includes `nextToken` but the caller did not paginate, warn that results are incomplete.
-
-## Playbook
-
-### 1. Sign an S3 Object End-to-End
-
-1. List available platforms with `GET /signing-platforms` filtered by `target` and `category` to find the right `platformId`.
-2. Create a signing profile with `PUT /signing-profiles/{profileName}` specifying the chosen `platformId` and `signingMaterial.certificateArn`.
-3. Start the signing job with `POST /signing-jobs` providing `source.s3` (bucket, key, version), `destination.s3` (output bucket/prefix), `profileName`, and a unique `clientRequestToken`.
-4. Poll `GET /signing-jobs/{jobId}` until `status` is `Succeeded` or `Failed`.
-5. Retrieve the signed artifact from the `signedObject.s3.bucketName` and `key` in the response.
-
-### 2. Grant Cross-Account Signing Access
-
-1. Get the current profile details with `GET /signing-profiles/{profileName}` and note the `profileVersion`.
-2. Add a permission with `POST /signing-profiles/{profileName}/permissions` specifying `action` (e.g., `signer:StartSigningJob`), `principal` (the target account ARN), `statementId` (a unique label), and optionally `profileVersion`.
-3. Verify the permission was applied with `GET /signing-profiles/{profileName}/permissions`.
-4. Share the `profileName` and `profileVersion` with the target account.
-
-### 3. Revoke a Compromised Signing Profile
-
-1. Identify the profile version to revoke via `GET /signing-profiles/{profileName}` -- note the `profileVersion`.
-2. Revoke the profile version with `PUT /signing-profiles/{profileName}/revoke` specifying `profileVersion`, `reason`, and `effectiveTime` (the timestamp from which signatures should be considered invalid).
-3. Confirm revocation by re-fetching the profile with `GET /signing-profiles/{profileName}` and checking that `revocationRecord` is populated.
-4. Optionally, list affected signing jobs with `GET /signing-jobs?isRevoked=true&platformId=...` to assess blast radius.
-
-### 4. Audit Signing Activity
-
-1. List all signing jobs with `GET /signing-jobs`, paginating with `nextToken` and filtering by `status`, `requestedBy`, or time window (`signatureExpiresBefore`/`signatureExpiresAfter`).
-2. For each job of interest, fetch full details with `GET /signing-jobs/{jobId}` to inspect `source`, `signingParameters`, `requestedBy`, and `jobInvoker`.
-3. Check revocation status of specific artifacts by calling `GET /revocations` with the job's `signatureTimestamp`, `platformId`, `profileVersionArn`, `jobArn`, and `certificateHashes`.
-4. Review tags on profiles or jobs with `GET /tags/{resourceArn}` for organizational metadata.
-
-### 5. Clean Up Unused Signing Profiles
-
-1. List all profiles with `GET /signing-profiles?includeCanceled=false` to find active profiles.
-2. For each candidate profile, list recent signing jobs with `GET /signing-jobs?profileName=...` (filter by `requestedBy` or date range) to confirm the profile is unused.
-3. Review and remove any cross-account permissions with `GET /signing-profiles/{profileName}/permissions`, then `DELETE /signing-profiles/{profileName}/permissions/{statementId}` for each, passing the current `revisionId`.
-4. Delete the profile with `DELETE /signing-profiles/{profileName}`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a permission?" -> POST /signing-profiles/{profileName}/permissions
+- "Delete a signing-profile?" -> DELETE /signing-profiles/{profileName}
+- "Get signing-job details?" -> GET /signing-jobs/{jobId}
+- "List all revocations?" -> GET /revocations
+- "Get signing-platform details?" -> GET /signing-platforms/{platformId}
+- "Get signing-profile details?" -> GET /signing-profiles/{profileName}
+- "List all permissions?" -> GET /signing-profiles/{profileName}/permissions
+- "List all signing-jobs?" -> GET /signing-jobs
+- "List all signing-platforms?" -> GET /signing-platforms
+- "List all signing-profiles?" -> GET /signing-profiles
+- "Get tag details?" -> GET /tags/{resourceArn}
+- "Update a signing-profile?" -> PUT /signing-profiles/{profileName}
+- "Delete a permission?" -> DELETE /signing-profiles/{profileName}/permissions/{statementId}
+- "Create a with-payload?" -> POST /signing-jobs/with-payload
+- "Create a signing-job?" -> POST /signing-jobs
+- "Delete a tag?" -> DELETE /tags/{resourceArn}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

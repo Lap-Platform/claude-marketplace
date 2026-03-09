@@ -99,86 +99,70 @@ https://management.azure.com
 | DELETE | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/tags/{tagId} | Detach the tag from the Api. |
 | GET | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operationsByTags | Lists a collection of operations associated with tags. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What APIs are registered in my APIM service?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis
-- "Does a specific API exist in my service?" -> HEAD /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}
-- "How do I import or create a new API?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}
-- "How do I delete an API and all its revisions?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}
-- "What revisions exist for my API?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/revisions
-- "How do I publish a new API release?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/releases/{releaseId}
-- "What operations does my API expose?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations
-- "How do I attach a policy to a specific operation?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations/{operationId}/policies/{policyId}
-- "What products is my API associated with?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/products
-- "How do I upload or update an API schema?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/schemas/{schemaId}
-- "How do I enable diagnostics/logging for an API?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/diagnostics/{diagnosticId}
-- "What issues have been reported against my API?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues
-- "How do I add a comment to an API issue?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues/{issueId}/comments/{commentId}
-- "How do I tag an API or its operations for organization?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/tags/{tagId}
-- "How do I find operations grouped by tag?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operationsByTags
-
-## Response Tips
-
-- **List endpoints** (APIs, operations, revisions, releases, issues): Responses are paged -- follow `nextLink` to retrieve all results. Use `$filter` (OData syntax) to narrow server-side before paginating.
-- **PUT (create/update)**: Returns 201 on create, 200 on update. Schema PUT may return 202 (accepted, async) -- poll the `Location` header for completion.
-- **PATCH (partial update)**: Returns 204 with no body on success. Always send `If-Match` with the current ETag to avoid conflicts.
-- **DELETE**: Returns 200 if resource existed and was removed, 204 if it was already gone. Both are success -- do not treat 204 as an error.
-- **HEAD (existence check)**: Returns 200 with no body. The `ETag` header is the primary useful output -- cache it for subsequent PATCH/DELETE calls.
-- **Error bodies**: All errors follow `{ "error": { "code": "...", "message": "..." } }`. Watch for `ResourceNotFound`, `ValidationError`, and `SubscriptionNotFound`.
-
-## Anomaly Flags
-
-- **202 Accepted on schema PUT**: The operation is running asynchronously. Surface this immediately -- the caller must poll the `Location` or `Azure-AsyncOperation` header until completion before relying on the schema.
-- **ETag mismatch on PATCH/DELETE**: A 412 Precondition Failed means the resource was modified since last read. Alert the user to re-fetch and retry with the current ETag.
-- **deleteRevisions parameter on API DELETE**: If omitted or false, only the current revision is deleted. Flag when a user deletes an API but other revisions still exist.
-- **$filter ignored silently**: If the filter expression is malformed, Azure may return unfiltered results rather than an error. Flag when result count is unexpectedly large after a filtered request.
-- **API version 2019-12-01-preview**: This is a preview API version. Surface a warning that behavior may change or endpoints may be removed without notice. Recommend checking for a GA version.
-- **OAuth2 token expiry**: If a 401 is returned mid-workflow, flag that the bearer token has likely expired and re-authentication is needed before retrying.
-- **Orphaned resources**: When deleting an API, flag that associated policies, schemas, diagnostics, and issues are not automatically cleaned up and may need separate deletion.
-
-## Playbook
-
-### 1. Import a New API and Configure It
-
-1. PUT the API definition to `.../apis/{apiId}` with the import parameters (format, URL or inline content). Expect 201 on success or 202 if async.
-2. GET `.../apis/{apiId}` to confirm the import and retrieve the generated operations and metadata.
-3. PUT a policy on the API at `.../apis/{apiId}/policies/{policyId}` (e.g., rate-limit, CORS, JWT validation).
-4. PUT one or more tags at `.../apis/{apiId}/tags/{tagId}` to organize the API in the developer portal.
-5. GET `.../apis/{apiId}/operations` to verify all expected operations were imported correctly.
-
-### 2. Create a New Revision and Release It
-
-1. PUT `.../apis/{apiId}` with `?api-version=2019-12-01-preview` and set `apiRevision` in the body to create a new revision.
-2. GET `.../apis/{apiId}/revisions` to confirm the new revision appears in the list.
-3. Make changes to the revision (add/update operations, modify policies) using the revision-specific apiId (format: `{apiId};rev={revisionNumber}`).
-4. PUT `.../apis/{apiId}/releases/{releaseId}` with release notes to promote the revision to current.
-5. GET `.../apis/{apiId}/releases` to verify the release was created and is active.
-
-### 3. Diagnose and Troubleshoot an API Issue
-
-1. GET `.../apis/{apiId}/issues` with `expandCommentsAttachments=true` to see all reported issues with full context.
-2. GET `.../apis/{apiId}/issues/{issueId}` for details on a specific issue.
-3. PUT `.../apis/{apiId}/issues/{issueId}/comments/{commentId}` to add investigation notes or a resolution.
-4. PUT `.../apis/{apiId}/issues/{issueId}/attachments/{attachmentId}` to attach logs or screenshots.
-5. PATCH `.../apis/{apiId}/issues/{issueId}` to update the issue state (e.g., mark as resolved).
-
-### 4. Set Up API Diagnostics and Logging
-
-1. GET `.../apis/{apiId}/diagnostics` to check for existing diagnostic configurations.
-2. PUT `.../apis/{apiId}/diagnostics/{diagnosticId}` with logger and sampling settings to enable request/response logging.
-3. GET `.../apis/{apiId}/diagnostics/{diagnosticId}` to verify the configuration was applied.
-4. To adjust later, PATCH `.../apis/{apiId}/diagnostics/{diagnosticId}` with updated sampling rates or verbosity.
-5. To disable, DELETE `.../apis/{apiId}/diagnostics/{diagnosticId}`.
-
-### 5. Manage Operation-Level Policies and Tags
-
-1. GET `.../apis/{apiId}/operations` to list all operations and identify target operation IDs.
-2. GET `.../apis/{apiId}/operations/{operationId}/policies` to see current policies on the target operation.
-3. PUT `.../apis/{apiId}/operations/{operationId}/policies/{policyId}` with XML policy content to apply or override a policy.
-4. PUT `.../apis/{apiId}/operations/{operationId}/tags/{tagId}` to tag the operation for categorization.
-5. GET `.../apis/{apiId}/operationsByTags` with `includeNotTaggedOperations=true` to verify the tagging and find any untagged operations that need attention.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all apis?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis
+- "Get apis details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}
+- "Update a apis?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}
+- "Partially update a apis?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}
+- "Delete a apis?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}
+- "List all revisions?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/revisions
+- "List all releases?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/releases
+- "Get release details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/releases/{releaseId}
+- "Update a release?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/releases/{releaseId}
+- "Partially update a release?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/releases/{releaseId}
+- "Delete a release?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/releases/{releaseId}
+- "List all operations?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations
+- "Get operation details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations/{operationId}
+- "Update a operation?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations/{operationId}
+- "Partially update a operation?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations/{operationId}
+- "Delete a operation?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations/{operationId}
+- "List all policies?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations/{operationId}/policies
+- "Get policy details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations/{operationId}/policies/{policyId}
+- "Update a policy?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations/{operationId}/policies/{policyId}
+- "Delete a policy?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations/{operationId}/policies/{policyId}
+- "List all tags?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations/{operationId}/tags
+- "Get tag details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations/{operationId}/tags/{tagId}
+- "Update a tag?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations/{operationId}/tags/{tagId}
+- "Delete a tag?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operations/{operationId}/tags/{tagId}
+- "List all products?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/products
+- "List all policies?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/policies
+- "Get policy details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/policies/{policyId}
+- "Update a policy?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/policies/{policyId}
+- "Delete a policy?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/policies/{policyId}
+- "List all schemas?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/schemas
+- "Get schema details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/schemas/{schemaId}
+- "Update a schema?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/schemas/{schemaId}
+- "Delete a schema?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/schemas/{schemaId}
+- "List all diagnostics?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/diagnostics
+- "Get diagnostic details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/diagnostics/{diagnosticId}
+- "Update a diagnostic?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/diagnostics/{diagnosticId}
+- "Partially update a diagnostic?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/diagnostics/{diagnosticId}
+- "Delete a diagnostic?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/diagnostics/{diagnosticId}
+- "List all issues?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues
+- "Get issue details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues/{issueId}
+- "Update a issue?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues/{issueId}
+- "Partially update a issue?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues/{issueId}
+- "Delete a issue?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues/{issueId}
+- "List all comments?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues/{issueId}/comments
+- "Get comment details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues/{issueId}/comments/{commentId}
+- "Update a comment?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues/{issueId}/comments/{commentId}
+- "Delete a comment?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues/{issueId}/comments/{commentId}
+- "List all attachments?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues/{issueId}/attachments
+- "Get attachment details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues/{issueId}/attachments/{attachmentId}
+- "Update a attachment?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues/{issueId}/attachments/{attachmentId}
+- "Delete a attachment?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/issues/{issueId}/attachments/{attachmentId}
+- "List all tagDescriptions?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/tagDescriptions
+- "Get tagDescription details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/tagDescriptions/{tagDescriptionId}
+- "Update a tagDescription?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/tagDescriptions/{tagDescriptionId}
+- "Delete a tagDescription?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/tagDescriptions/{tagDescriptionId}
+- "List all tags?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/tags
+- "Get tag details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/tags/{tagId}
+- "Update a tag?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/tags/{tagId}
+- "Delete a tag?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/tags/{tagId}
+- "List all operationsByTags?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ApiManagement/service/{serviceName}/apis/{apiId}/operationsByTags
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

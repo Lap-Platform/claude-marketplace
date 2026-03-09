@@ -354,101 +354,334 @@ https://app.drchrono.com
 | POST | /api/sublabs | Create sub-vendors |
 | GET | /api/sublabs | Retrieve or search sub vendors |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I find all appointments for a specific patient on a given date?" -> GET /api/appointments?patient={id}&date={date}
-- "What medications is this patient currently taking?" -> GET /api/medications?patient={id}
-- "How do I schedule a new appointment?" -> POST /api/appointments (requires office, scheduled_time, doctor, patient, exam_room)
-- "What are the patient's known allergies?" -> GET /api/allergies?patient={id}
-- "How do I record a patient payment?" -> POST /api/patient_payments
-- "Can I check a patient's insurance eligibility before their visit?" -> GET /api/eligibility_checks?patient={id}&appointment={id}
-- "How do I get the day sheet charges for a date range?" -> GET /api/day_sheet_charges?start_date={date}&end_date={date}
-- "What lab orders exist for this patient?" -> GET /api/lab_orders?doctor={id} then filter, or GET /api/lab_orders_summary?patient={id}
-- "How do I update an appointment status to 'Checked In'?" -> PATCH /api/appointments/{id} with status=Checked In (also requires office, scheduled_time, doctor, patient, exam_room)
-- "How do I look up a doctor's work schedule?" -> GET /api/doctor_work_schedule or GET /api/doctor_work_schedule/{id}
-- "What open tasks are assigned to a specific user?" -> GET /api/tasks?assignee_user={id}&status={status_id}
-- "How do I export a patient's CCDA document?" -> GET /api/patients/{id}/ccda (synchronous) or GET /api/patients/{id}/ccda_async (async)
-- "How do I send a message to a patient?" -> POST /api/patient_messages
-- "What clinical notes exist for today's appointments?" -> GET /api/clinical_notes?date={today}&doctor={id}
-- "How do I add a billing line item to an appointment?" -> POST /api/line_items with appointment={id}
-
-## Response Tips
-
-- **List endpoints** (patients, appointments, medications, etc.): Paginated via cursor-based navigation; follow `next`/`previous` URLs. The `data` array holds results. Use `page_size` to control batch size.
-- **Async list endpoints** (_list suffix like patients_list, line_items_list): Two-step pattern -- POST to start the job (returns `uuid` + `status`), then poll GET with that `uuid` until `status` is ready. Results use page-based pagination (`pagination.count`, `pagination.pages`).
-- **Single-resource GETs** (e.g., /api/patients/{id}): Return the full object directly (no wrapper). Patient objects contain deeply nested maps for insurance (primary, secondary, tertiary, workers_comp, auto_accident).
-- **Write operations** (PUT/PATCH): Return 204 with no body on success. PUT replaces the full resource; PATCH updates only provided fields.
-- **Error responses**: All endpoints share the same error code set (400, 401, 403, 404, 405, 500). 409 appears only on appointment writes (scheduling conflicts).
-- **Appointments**: The `status` field uses exact string values (Arrived, Checked In, In Session, Complete, etc.) -- not codes. `ins1_status`/`ins2_status` use verbose billing pipeline strings.
-- **Lab workflow**: Results are nested under orders via `lab_order` foreign key. Documents link to orders via `lab_order` field. Chain: lab_orders -> lab_tests -> lab_results + lab_documents.
-
-## Anomaly Flags
-
-- **409 Conflict on appointment creation/update**: Surface immediately -- indicates a scheduling collision (double-booking). Check `allow_overlapping` and exam room availability.
-- **Abnormal lab results**: When `is_abnormal` is truthy or `abnormal_status` is set on lab_results, flag for clinical review.
-- **Deleted or archived records**: Many resources have `deleted_flag` or `archived` booleans. Surface when these appear unexpectedly in active workflows.
-- **Missing doctor signoff on lab results**: When `doctor_signoff` is false on patient_lab_results, flag as pending review.
-- **Insurance claim rejections**: Watch for `ins1_status`/`ins2_status` containing "Rejected" in any form (Rejected Emdeon, Rejected Payor, Rejected Waystar, etc.).
-- **Stale async jobs**: If polling a `_list` endpoint and `status` does not resolve after multiple attempts, surface the stuck UUID.
-- **Patient with date_of_death set**: Flag when attempting to schedule new appointments or send messages to deceased patients.
-- **Clinical note locked status**: When `clinical_note.locked` is true, no further edits are possible -- surface before attempting updates.
-- **Vaccine inventory low**: Compare `current_quantity` against `original_quantity` on inventory_vaccines; flag when stock is critically low or expired (`expiry` in the past).
-- **OAuth2 token expiry**: All endpoints can return 401 -- surface with a clear re-authentication prompt rather than retrying.
-
-## Playbook
-
-### 1. Schedule and Confirm a New Patient Appointment
-
-1. Look up the patient: GET /api/patients?last_name={name}&date_of_birth={dob}
-2. Get available offices: GET /api/offices?doctor={doctor_id}
-3. Check doctor availability: GET /api/availability?doctor={doctor_id}&date={date}&office={office_id}
-4. Find an appointment profile: GET /api/appointment_profiles?doctor={doctor_id}
-5. Create the appointment: POST /api/appointments with office, scheduled_time, doctor, patient, exam_room, and optionally profile and duration
-6. Set up a reminder profile: GET /api/reminder_profiles?doctor={doctor_id}, then attach via the appointment's reminder_profile field
-7. Verify the appointment was created: GET /api/appointments/{id}
-
-### 2. Complete a Patient Visit (Check-in to Checkout)
-
-1. Update appointment status to "Checked In": PATCH /api/appointments/{id} with status="Checked In"
-2. Record vitals: PATCH /api/appointments/{id} with the vitals map (blood_pressure, pulse, temperature, weight, height, etc.)
-3. Document the clinical note: POST /api/clinical_note_field_values with appointment, clinical_note_field, and value
-4. Add any problems or diagnoses: POST /api/problems with patient and ICD codes
-5. Prescribe medications if needed: POST /api/medications with patient, rxnorm, dosage details
-6. Add billing line items: POST /api/line_items with appointment, CPT code, and service_date
-7. Mark appointment complete: PATCH /api/appointments/{id} with status="Complete"
-
-### 3. Process Lab Orders End to End
-
-1. Create the lab order: POST /api/lab_orders with doctor, patient (via notes/icd10_codes), sublab, and priority
-2. Add lab tests to the order: POST /api/lab_tests with order={lab_order_id}
-3. Monitor for results: GET /api/lab_results?order={lab_order_id} (poll or use since parameter)
-4. Review results and flag abnormals: Check each result's `is_abnormal` and `abnormal_status` fields
-5. Attach lab documents: GET /api/lab_documents?doctor={doctor_id}&since={order_date}
-6. Update order status if needed: PATCH /api/lab_orders/{id}
-7. Get a summary view: GET /api/lab_orders_summary/{id}
-
-### 4. Run an End-of-Day Financial Report
-
-1. Pull day sheet charges: GET /api/day_sheet_charges?start_date={today}&end_date={today}
-2. Pull day sheet credits: GET /api/day_sheet_credits?start_date={today}&end_date={today}
-3. Pull day sheet totals: GET /api/day_sheet_totals?start_date={today}&end_date={today}
-4. Review patient payments: GET /api/day_sheet_patient_payments?start_date={today}&end_date={today}
-5. Cross-reference with line items: GET /api/line_items?service_date={today}&doctor={doctor_id}
-6. Check EOBs for insurance payments: GET /api/eobs?doctor={doctor_id}
-7. Review any payment log discrepancies: GET /api/patient_payment_log?since={today_start}
-
-### 5. Onboard a New Patient with Full Records
-
-1. Create the patient record: POST /api/patients with demographics, insurance maps, and emergency contact
-2. Grant patient portal access: POST /api/patients/{id}/onpatient_access
-3. Record known allergies: POST /api/allergies for each allergy (with rxnorm/snomed codes)
-4. Add existing medications: POST /api/medications for each active medication
-5. Document medical history as problems: POST /api/problems for each known condition
-6. Upload prior records as documents: POST /api/documents with patient reference
-7. Record immunization history: POST /api/patient_vaccine_records for each vaccine with cvx_code
-8. Collect signed consent forms: POST /api/signed_consent_forms with patient, appointment, and consent_form IDs
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all day_sheet_charges?" -> GET /api/day_sheet_charges
+- "Create a claim_billing_note?" -> POST /api/claim_billing_notes
+- "List all claim_billing_notes?" -> GET /api/claim_billing_notes
+- "Create a signed_consent_form?" -> POST /api/signed_consent_forms
+- "List all signed_consent_forms?" -> GET /api/signed_consent_forms
+- "Create a custom_appointment_field?" -> POST /api/custom_appointment_fields
+- "List all custom_appointment_fields?" -> GET /api/custom_appointment_fields
+- "Update a lab_order?" -> PUT /api/lab_orders/{id}
+- "Partially update a lab_order?" -> PATCH /api/lab_orders/{id}
+- "Get lab_order details?" -> GET /api/lab_orders/{id}
+- "Delete a lab_order?" -> DELETE /api/lab_orders/{id}
+- "Create a clinical_notes_list?" -> POST /api/clinical_notes_list
+- "List all clinical_notes_list?" -> GET /api/clinical_notes_list
+- "Get custom_vital details?" -> GET /api/custom_vitals/{id}
+- "Update a sublab?" -> PUT /api/sublabs/{id}
+- "Partially update a sublab?" -> PATCH /api/sublabs/{id}
+- "Get sublab details?" -> GET /api/sublabs/{id}
+- "Delete a sublab?" -> DELETE /api/sublabs/{id}
+- "List all qrda1?" -> GET /api/patients/{id}/qrda1
+- "Create a problem?" -> POST /api/problems
+- "List all problems?" -> GET /api/problems
+- "List all staff?" -> GET /api/staff
+- "Update a patient_message?" -> PUT /api/patient_messages/{id}
+- "Partially update a patient_message?" -> PATCH /api/patient_messages/{id}
+- "Get patient_message details?" -> GET /api/patient_messages/{id}
+- "Create a yellow_notepad?" -> POST /api/yellow_notepad
+- "List all yellow_notepad?" -> GET /api/yellow_notepad
+- "List all eligibility_checks?" -> GET /api/eligibility_checks
+- "Update a doctor_work_schedule?" -> PUT /api/doctor_work_schedule/{id}
+- "Partially update a doctor_work_schedule?" -> PATCH /api/doctor_work_schedule/{id}
+- "Get doctor_work_schedule details?" -> GET /api/doctor_work_schedule/{id}
+- "Create a medication?" -> POST /api/medications
+- "List all medications?" -> GET /api/medications
+- "Create a custom_demographic?" -> POST /api/custom_demographics
+- "List all custom_demographics?" -> GET /api/custom_demographics
+- "Create a appointments_list?" -> POST /api/appointments_list
+- "List all appointments_list?" -> GET /api/appointments_list
+- "Create a appointment_profile?" -> POST /api/appointment_profiles
+- "List all appointment_profiles?" -> GET /api/appointment_profiles
+- "Create a patient_communication?" -> POST /api/patient_communications
+- "List all patient_communications?" -> GET /api/patient_communications
+- "List all patient_authorizations?" -> GET /api/patient_authorizations
+- "Update a appointment_profile?" -> PUT /api/appointment_profiles/{id}
+- "Partially update a appointment_profile?" -> PATCH /api/appointment_profiles/{id}
+- "Get appointment_profile details?" -> GET /api/appointment_profiles/{id}
+- "Delete a appointment_profile?" -> DELETE /api/appointment_profiles/{id}
+- "Create a message?" -> POST /api/messages
+- "List all messages?" -> GET /api/messages
+- "Update a clinical_note_field_value?" -> PUT /api/clinical_note_field_values/{id}
+- "Partially update a clinical_note_field_value?" -> PATCH /api/clinical_note_field_values/{id}
+- "Get clinical_note_field_value details?" -> GET /api/clinical_note_field_values/{id}
+- "Create a task_category?" -> POST /api/task_categories
+- "List all task_categories?" -> GET /api/task_categories
+- "List all fee_schedules_v2?" -> GET /api/fee_schedules_v2
+- "Get custom_insurance_plan_name details?" -> GET /api/custom_insurance_plan_names/{id}
+- "List all care_team_members?" -> GET /api/care_team_members
+- "List all user_groups?" -> GET /api/user_groups
+- "Create a line_items_list?" -> POST /api/line_items_list
+- "List all line_items_list?" -> GET /api/line_items_list
+- "Create a unapply_from_appointment?" -> POST /api/consent_forms/{id}/unapply_from_appointment
+- "Create a apply_to_appointment?" -> POST /api/consent_forms/{id}/apply_to_appointment
+- "Create a consent_form?" -> POST /api/consent_forms
+- "List all consent_forms?" -> GET /api/consent_forms
+- "Update a reminder_profile?" -> PUT /api/reminder_profiles/{id}
+- "Partially update a reminder_profile?" -> PATCH /api/reminder_profiles/{id}
+- "Get reminder_profile details?" -> GET /api/reminder_profiles/{id}
+- "Delete a reminder_profile?" -> DELETE /api/reminder_profiles/{id}
+- "List all day_sheet_patient_payments?" -> GET /api/day_sheet_patient_payments
+- "Create a add_exam_room?" -> POST /api/offices/{id}/add_exam_room
+- "Get eligibility_check details?" -> GET /api/eligibility_checks/{id}
+- "Create a patients_list?" -> POST /api/patients_list
+- "List all patients_list?" -> GET /api/patients_list
+- "Create a patient_intervention?" -> POST /api/patient_interventions
+- "List all patient_interventions?" -> GET /api/patient_interventions
+- "Create a patient_message?" -> POST /api/patient_messages
+- "List all patient_messages?" -> GET /api/patient_messages
+- "Update a patient_physical_exam?" -> PUT /api/patient_physical_exams/{id}
+- "Partially update a patient_physical_exam?" -> PATCH /api/patient_physical_exams/{id}
+- "Get patient_physical_exam details?" -> GET /api/patient_physical_exams/{id}
+- "Create a clinical_note_field_value?" -> POST /api/clinical_note_field_values
+- "List all clinical_note_field_values?" -> GET /api/clinical_note_field_values
+- "Get inventory_vaccine details?" -> GET /api/inventory_vaccines/{id}
+- "Create a patient?" -> POST /api/patients
+- "List all patients?" -> GET /api/patients
+- "Get implantable_device details?" -> GET /api/implantable_devices/{id}
+- "Update a patient_communication?" -> PUT /api/patient_communications/{id}
+- "Partially update a patient_communication?" -> PATCH /api/patient_communications/{id}
+- "Get patient_communication details?" -> GET /api/patient_communications/{id}
+- "List all offices?" -> GET /api/offices
+- "Get prescription_message details?" -> GET /api/prescription_messages/{id}
+- "List all implantable_devices?" -> GET /api/implantable_devices
+- "Create a patient_risk_assessment?" -> POST /api/patient_risk_assessments
+- "List all patient_risk_assessments?" -> GET /api/patient_risk_assessments
+- "Update a task_statuse?" -> PUT /api/task_statuses/{id}
+- "Partially update a task_statuse?" -> PATCH /api/task_statuses/{id}
+- "Get task_statuse details?" -> GET /api/task_statuses/{id}
+- "Create a patients_summary?" -> POST /api/patients_summary
+- "List all patients_summary?" -> GET /api/patients_summary
+- "Update a document?" -> PUT /api/documents/{id}
+- "Partially update a document?" -> PATCH /api/documents/{id}
+- "Get document details?" -> GET /api/documents/{id}
+- "Delete a document?" -> DELETE /api/documents/{id}
+- "List all office_work_schedule?" -> GET /api/office_work_schedule
+- "Create a onpatient_access?" -> POST /api/patients/{id}/onpatient_access
+- "List all onpatient_access?" -> GET /api/patients/{id}/onpatient_access
+- "Create a comm_log?" -> POST /api/comm_logs
+- "List all comm_logs?" -> GET /api/comm_logs
+- "Update a lab_result?" -> PUT /api/lab_results/{id}
+- "Partially update a lab_result?" -> PATCH /api/lab_results/{id}
+- "Get lab_result details?" -> GET /api/lab_results/{id}
+- "Delete a lab_result?" -> DELETE /api/lab_results/{id}
+- "Update a medication?" -> PUT /api/medications/{id}
+- "Partially update a medication?" -> PATCH /api/medications/{id}
+- "Get medication details?" -> GET /api/medications/{id}
+- "List all day_sheet_credits?" -> GET /api/day_sheet_credits
+- "Create a task_template?" -> POST /api/task_templates
+- "List all task_templates?" -> GET /api/task_templates
+- "Create a transactions_list?" -> POST /api/transactions_list
+- "List all transactions_list?" -> GET /api/transactions_list
+- "Update a office_work_schedule?" -> PUT /api/office_work_schedule/{id}
+- "Partially update a office_work_schedule?" -> PATCH /api/office_work_schedule/{id}
+- "Get office_work_schedule details?" -> GET /api/office_work_schedule/{id}
+- "Update a patient_vaccine_record?" -> PUT /api/patient_vaccine_records/{id}
+- "Partially update a patient_vaccine_record?" -> PATCH /api/patient_vaccine_records/{id}
+- "Get patient_vaccine_record details?" -> GET /api/patient_vaccine_records/{id}
+- "Update a patient_flag_type?" -> PUT /api/patient_flag_types/{id}
+- "Partially update a patient_flag_type?" -> PATCH /api/patient_flag_types/{id}
+- "Get patient_flag_type details?" -> GET /api/patient_flag_types/{id}
+- "Get inventory_category details?" -> GET /api/inventory_categories/{id}
+- "Partially update a clinical_note_field_type?" -> PATCH /api/clinical_note_field_types/{id}
+- "Get clinical_note_field_type details?" -> GET /api/clinical_note_field_types/{id}
+- "Update a task?" -> PUT /api/tasks/{id}
+- "Partially update a task?" -> PATCH /api/tasks/{id}
+- "Get task details?" -> GET /api/tasks/{id}
+- "List all doctor_work_schedule?" -> GET /api/doctor_work_schedule
+- "List all doctor_options?" -> GET /api/doctor_options
+- "List all fee_schedules?" -> GET /api/fee_schedules
+- "Update a patient_risk_assessment?" -> PUT /api/patient_risk_assessments/{id}
+- "Partially update a patient_risk_assessment?" -> PATCH /api/patient_risk_assessments/{id}
+- "Get patient_risk_assessment details?" -> GET /api/patient_risk_assessments/{id}
+- "List all inventory_categories?" -> GET /api/inventory_categories
+- "Update a lab_document?" -> PUT /api/lab_documents/{id}
+- "Partially update a lab_document?" -> PATCH /api/lab_documents/{id}
+- "Get lab_document details?" -> GET /api/lab_documents/{id}
+- "Delete a lab_document?" -> DELETE /api/lab_documents/{id}
+- "Update a appointment_template?" -> PUT /api/appointment_templates/{id}
+- "Partially update a appointment_template?" -> PATCH /api/appointment_templates/{id}
+- "Get appointment_template details?" -> GET /api/appointment_templates/{id}
+- "Delete a appointment_template?" -> DELETE /api/appointment_templates/{id}
+- "Update a patient_intervention?" -> PUT /api/patient_interventions/{id}
+- "Partially update a patient_intervention?" -> PATCH /api/patient_interventions/{id}
+- "Get patient_intervention details?" -> GET /api/patient_interventions/{id}
+- "Create a task_statuse?" -> POST /api/task_statuses
+- "List all task_statuses?" -> GET /api/task_statuses
+- "Update a allergy?" -> PUT /api/allergies/{id}
+- "Partially update a allergy?" -> PATCH /api/allergies/{id}
+- "Get allergy details?" -> GET /api/allergies/{id}
+- "List all ccda?" -> GET /api/patients/{id}/ccda
+- "Get patient_payment details?" -> GET /api/patient_payments/{id}
+- "List all lab_orders_summary?" -> GET /api/lab_orders_summary
+- "Create a patient_payment?" -> POST /api/patient_payments
+- "List all patient_payments?" -> GET /api/patient_payments
+- "Create a clinical_note_field_values_list?" -> POST /api/clinical_note_field_values_list
+- "List all clinical_note_field_values_list?" -> GET /api/clinical_note_field_values_list
+- "Get care_plan details?" -> GET /api/care_plans/{id}
+- "List all billing_profiles?" -> GET /api/billing_profiles
+- "Get billing_profile details?" -> GET /api/billing_profiles/{id}
+- "List all availability?" -> GET /api/availability
+- "Update a task_template?" -> PUT /api/task_templates/{id}
+- "Partially update a task_template?" -> PATCH /api/task_templates/{id}
+- "Get task_template details?" -> GET /api/task_templates/{id}
+- "Get fee_schedule details?" -> GET /api/fee_schedules/{id}
+- "Update a appointment?" -> PUT /api/appointments/{id}
+- "Partially update a appointment?" -> PATCH /api/appointments/{id}
+- "Get appointment details?" -> GET /api/appointments/{id}
+- "Delete a appointment?" -> DELETE /api/appointments/{id}
+- "Create a telehealth_appointment?" -> POST /api/telehealth_appointments
+- "List all telehealth_appointments?" -> GET /api/telehealth_appointments
+- "List all care_plans?" -> GET /api/care_plans
+- "Create a patient_physical_exam?" -> POST /api/patient_physical_exams
+- "List all patient_physical_exams?" -> GET /api/patient_physical_exams
+- "List all line_item_deletions?" -> GET /api/line_item_deletions
+- "Get signed_consent_form details?" -> GET /api/signed_consent_forms/{id}
+- "Get clinical_note_template details?" -> GET /api/clinical_note_templates/{id}
+- "List all transactions?" -> GET /api/transactions
+- "Create a lab_result?" -> POST /api/lab_results
+- "List all lab_results?" -> GET /api/lab_results
+- "List all custom_insurance_plan_names?" -> GET /api/custom_insurance_plan_names
+- "Update a problem?" -> PUT /api/problems/{id}
+- "Partially update a problem?" -> PATCH /api/problems/{id}
+- "Get problem details?" -> GET /api/problems/{id}
+- "Create a amendment?" -> POST /api/amendments
+- "List all amendments?" -> GET /api/amendments
+- "Create a lab_order?" -> POST /api/lab_orders
+- "List all lab_orders?" -> GET /api/lab_orders
+- "Get doctor details?" -> GET /api/doctors/{id}
+- "Create a patient_flag_type?" -> POST /api/patient_flag_types
+- "List all patient_flag_types?" -> GET /api/patient_flag_types
+- "List all day_sheet_totals?" -> GET /api/day_sheet_totals
+- "Update a custom_appointment_field?" -> PUT /api/custom_appointment_fields/{id}
+- "Partially update a custom_appointment_field?" -> PATCH /api/custom_appointment_fields/{id}
+- "Get custom_appointment_field details?" -> GET /api/custom_appointment_fields/{id}
+- "Create a eob?" -> POST /api/eobs
+- "List all eobs?" -> GET /api/eobs
+- "Get user details?" -> GET /api/users/{id}
+- "List all insurances?" -> GET /api/insurances
+- "Create a telehealth_appointment_history?" -> POST /api/telehealth_appointment_history
+- "List all telehealth_appointment_history?" -> GET /api/telehealth_appointment_history
+- "Create a task_note?" -> POST /api/task_notes
+- "List all task_notes?" -> GET /api/task_notes
+- "Create a task?" -> POST /api/tasks
+- "List all tasks?" -> GET /api/tasks
+- "Update a patients_summary?" -> PUT /api/patients_summary/{id}
+- "Partially update a patients_summary?" -> PATCH /api/patients_summary/{id}
+- "Get patients_summary details?" -> GET /api/patients_summary/{id}
+- "Delete a patients_summary?" -> DELETE /api/patients_summary/{id}
+- "Create a lab_document?" -> POST /api/lab_documents
+- "List all lab_documents?" -> GET /api/lab_documents
+- "Update a consent_form?" -> PUT /api/consent_forms/{id}
+- "Partially update a consent_form?" -> PATCH /api/consent_forms/{id}
+- "Get consent_form details?" -> GET /api/consent_forms/{id}
+- "Update a lab_test?" -> PUT /api/lab_tests/{id}
+- "Partially update a lab_test?" -> PATCH /api/lab_tests/{id}
+- "Get lab_test details?" -> GET /api/lab_tests/{id}
+- "Delete a lab_test?" -> DELETE /api/lab_tests/{id}
+- "Create a prescription_messages_list?" -> POST /api/prescription_messages_list
+- "List all prescription_messages_list?" -> GET /api/prescription_messages_list
+- "Update a patient?" -> PUT /api/patients/{id}
+- "Partially update a patient?" -> PATCH /api/patients/{id}
+- "Get patient details?" -> GET /api/patients/{id}
+- "Delete a patient?" -> DELETE /api/patients/{id}
+- "List all ccda_async?" -> GET /api/patients/{id}/ccda_async
+- "List all custom_vitals?" -> GET /api/custom_vitals
+- "Create a schedule_block?" -> POST /api/schedule_blocks
+- "List all schedule_blocks?" -> GET /api/schedule_blocks
+- "Get care_team_member details?" -> GET /api/care_team_members/{id}
+- "Get claim_billing_note details?" -> GET /api/claim_billing_notes/{id}
+- "Create a inventory_vaccine?" -> POST /api/inventory_vaccines
+- "List all inventory_vaccines?" -> GET /api/inventory_vaccines
+- "Get transaction details?" -> GET /api/transactions/{id}
+- "List all procedures?" -> GET /api/procedures
+- "Update a patient_lab_result?" -> PUT /api/patient_lab_results/{id}
+- "Partially update a patient_lab_result?" -> PATCH /api/patient_lab_results/{id}
+- "Get patient_lab_result details?" -> GET /api/patient_lab_results/{id}
+- "Delete a patient_lab_result?" -> DELETE /api/patient_lab_results/{id}
+- "Update a amendment?" -> PUT /api/amendments/{id}
+- "Partially update a amendment?" -> PATCH /api/amendments/{id}
+- "Get amendment details?" -> GET /api/amendments/{id}
+- "Delete a amendment?" -> DELETE /api/amendments/{id}
+- "Create a lab_test?" -> POST /api/lab_tests
+- "List all lab_tests?" -> GET /api/lab_tests
+- "Update a appointments_list?" -> PUT /api/appointments_list/{id}
+- "Partially update a appointments_list?" -> PATCH /api/appointments_list/{id}
+- "Get appointments_list details?" -> GET /api/appointments_list/{id}
+- "Delete a appointments_list?" -> DELETE /api/appointments_list/{id}
+- "Create a patient_lab_result?" -> POST /api/patient_lab_results
+- "List all patient_lab_results?" -> GET /api/patient_lab_results
+- "Update a task_category?" -> PUT /api/task_categories/{id}
+- "Partially update a task_category?" -> PATCH /api/task_categories/{id}
+- "Get task_category details?" -> GET /api/task_categories/{id}
+- "Get fee_schedules_v2 details?" -> GET /api/fee_schedules_v2/{id}
+- "Get insurance details?" -> GET /api/insurances/{id}
+- "List all clinical_notes?" -> GET /api/clinical_notes
+- "Create a eligibility_checks_list?" -> POST /api/eligibility_checks_list
+- "List all eligibility_checks_list?" -> GET /api/eligibility_checks_list
+- "Get telehealth_appointment_history details?" -> GET /api/telehealth_appointment_history/{id}
+- "Get clinical_note details?" -> GET /api/clinical_notes/{id}
+- "List all clinical_note_field_types?" -> GET /api/clinical_note_field_types
+- "Create a document?" -> POST /api/documents
+- "List all documents?" -> GET /api/documents
+- "Get staff details?" -> GET /api/staff/{id}
+- "List all users?" -> GET /api/users
+- "Update a schedule_block?" -> PUT /api/schedule_blocks/{id}
+- "Partially update a schedule_block?" -> PATCH /api/schedule_blocks/{id}
+- "Get schedule_block details?" -> GET /api/schedule_blocks/{id}
+- "Delete a schedule_block?" -> DELETE /api/schedule_blocks/{id}
+- "Get lab_orders_summary details?" -> GET /api/lab_orders_summary/{id}
+- "List all audit_log?" -> GET /api/audit_log
+- "Update a task_note?" -> PUT /api/task_notes/{id}
+- "Partially update a task_note?" -> PATCH /api/task_notes/{id}
+- "Get task_note details?" -> GET /api/task_notes/{id}
+- "Update a custom_demographic?" -> PUT /api/custom_demographics/{id}
+- "Partially update a custom_demographic?" -> PATCH /api/custom_demographics/{id}
+- "Get custom_demographic details?" -> GET /api/custom_demographics/{id}
+- "Update a message?" -> PUT /api/messages/{id}
+- "Partially update a message?" -> PATCH /api/messages/{id}
+- "Get message details?" -> GET /api/messages/{id}
+- "Delete a message?" -> DELETE /api/messages/{id}
+- "Get eob details?" -> GET /api/eobs/{id}
+- "Get doctor_option details?" -> GET /api/doctor_options/{id}
+- "Create a allergy?" -> POST /api/allergies
+- "List all allergies?" -> GET /api/allergies
+- "Create a appointment?" -> POST /api/appointments
+- "List all appointments?" -> GET /api/appointments
+- "Get procedure details?" -> GET /api/procedures/{id}
+- "List all clinical_note_templates?" -> GET /api/clinical_note_templates
+- "Update a line_item?" -> PUT /api/line_items/{id}
+- "Partially update a line_item?" -> PATCH /api/line_items/{id}
+- "Get line_item details?" -> GET /api/line_items/{id}
+- "Delete a line_item?" -> DELETE /api/line_items/{id}
+- "List all doctors?" -> GET /api/doctors
+- "Create a reminder_profile?" -> POST /api/reminder_profiles
+- "List all reminder_profiles?" -> GET /api/reminder_profiles
+- "List all patient_payment_log?" -> GET /api/patient_payment_log
+- "Update a office?" -> PUT /api/offices/{id}
+- "Partially update a office?" -> PATCH /api/offices/{id}
+- "Get office details?" -> GET /api/offices/{id}
+- "Get patient_payment_log details?" -> GET /api/patient_payment_log/{id}
+- "Create a appointment_template?" -> POST /api/appointment_templates
+- "List all appointment_templates?" -> GET /api/appointment_templates
+- "Create a patient_vaccine_record?" -> POST /api/patient_vaccine_records
+- "List all patient_vaccine_records?" -> GET /api/patient_vaccine_records
+- "Update a telehealth_appointment?" -> PUT /api/telehealth_appointments/{id}
+- "Partially update a telehealth_appointment?" -> PATCH /api/telehealth_appointments/{id}
+- "Get telehealth_appointment details?" -> GET /api/telehealth_appointments/{id}
+- "Update a comm_log?" -> PUT /api/comm_logs/{id}
+- "Partially update a comm_log?" -> PATCH /api/comm_logs/{id}
+- "Get comm_log details?" -> GET /api/comm_logs/{id}
+- "List all prescription_messages?" -> GET /api/prescription_messages
+- "Get user_group details?" -> GET /api/user_groups/{id}
+- "Create a line_item?" -> POST /api/line_items
+- "List all line_items?" -> GET /api/line_items
+- "Create a sublab?" -> POST /api/sublabs
+- "List all sublabs?" -> GET /api/sublabs
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

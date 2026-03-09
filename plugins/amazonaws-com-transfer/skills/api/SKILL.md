@@ -86,93 +86,10 @@ Not specified.
 | POST | / | Updates the file transfer protocol-enabled server's properties after that server has been created. The UpdateServer call returns the ServerId of the server you updated. |
 | POST | / | Assigns new properties to a user. Parameters you pass modify any or all of the following: the home directory, role, and policy for the UserName and ServerId you specify. The response returns the ServerId and the UserName for the updated user. In the console, you can select Restricted when you create or update a user. This ensures that the user can't access anything outside of their home directory. The programmatic way to configure this behavior is to update the user. Set their HomeDirectoryType to LOGICAL, and specify HomeDirectoryMappings with Entry as root (/) and Target as their home directory. For example, if the user's home directory is /test/admin-user, the following command updates the user so that their configuration in the console shows the Restricted flag as selected.   aws transfer update-user --server-id &lt;server-id&gt; --user-name admin-user --home-directory-type LOGICAL --home-directory-mappings "[{\"Entry\":\"/\", \"Target\":\"/test/admin-user\"}]" |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new SFTP server?" -> POST / (CreateServer)
-- "How do I add a user to my Transfer server?" -> POST / (CreateUser: Role, ServerId, UserName)
-- "What servers do I have running?" -> POST / (ListServers, paginate with MaxResults/NextToken)
-- "What's the current state and config of my server?" -> POST / (DescribeServer: ServerId)
-- "How do I set up an AS2 trading partner agreement?" -> POST / (CreateProfile) then POST / (CreateAgreement: ServerId, LocalProfileId, PartnerProfileId, BaseDirectory, AccessRole)
-- "How do I transfer files using an SFTP connector?" -> POST / (StartFileTransfer: ConnectorId, SendFilePaths or RetrieveFilePaths)
-- "How do I add an SSH public key for a user?" -> POST / (ImportSshPublicKey: ServerId, SshPublicKeyBody, UserName)
-- "How do I import a TLS certificate?" -> POST / (ImportCertificate: Usage, Certificate)
-- "How do I check if my connector can reach the remote server?" -> POST / (TestConnection: ConnectorId)
-- "How do I test my identity provider integration?" -> POST / (TestIdentityProvider: ServerId, UserName)
-- "How do I set up a post-upload processing workflow?" -> POST / (CreateWorkflow: Steps) then POST / (UpdateServer with WorkflowDetails)
-- "How do I list all files in a remote directory via connector?" -> POST / (StartDirectoryListing: ConnectorId, RemoteDirectoryPath, OutputDirectoryPath)
-- "How do I change the security policy on my server?" -> POST / (UpdateServer: ServerId, SecurityPolicyName)
-- "What security policies are available?" -> POST / (ListSecurityPolicies) then POST / (DescribeSecurityPolicy: SecurityPolicyName)
-- "How do I remove a user's SSH key?" -> POST / (DeleteSshPublicKey: ServerId, SshPublicKeyId, UserName)
-
-## Response Tips
-
-- **List endpoints** (ListServers, ListUsers, ListConnectors, etc.): All return `NextToken` -- if present, pass it back with the same parameters to get the next page. Use `MaxResults` (default varies) to control page size.
-- **Describe endpoints**: Return a single nested object (Server, User, Connector, etc.) with the full resource config. Many fields are optional/nullable -- check for `?` suffixed fields before accessing nested properties.
-- **Create/Import endpoints**: Return only the resource identifier (ServerId, UserId, ConnectorId, etc.) -- you must call the corresponding Describe to get full details.
-- **Update endpoints**: Return the resource identifier confirming the update. No diff or previous state is returned.
-- **Delete endpoints**: Return no body on success. Absence of error means the resource was deleted.
-- **TestIdentityProvider**: Returns `StatusCode` (int) plus `Response`/`Message` -- a non-200 StatusCode means the provider rejected the credentials, not that the API call failed.
-- **StartFileTransfer/StartDirectoryListing**: Return a TransferId or ListingId for tracking -- these are async operations; completion must be monitored separately.
-
-## Anomaly Flags
-
-- **Server State changes**: Surface when DescribeServer returns `State` other than `ONLINE` (e.g., `STARTING`, `STOPPING`, `OFFLINE`, `START_FAILED`, `STOP_FAILED`) -- the server may be mid-transition or stuck.
-- **Certificate expiry**: When DescribeCertificate shows `InactiveDate` or `NotAfterDate` approaching current time, warn that the certificate is expiring or already expired.
-- **TestConnection failures**: If `Status` is not a success value or `StatusMessage` contains error text, surface immediately -- connector misconfiguration blocks all file transfers.
-- **TestIdentityProvider non-200**: If `StatusCode` != 200, flag the auth integration as broken with the returned `Message`.
-- **Empty ListExecutions with expected workflow activity**: If a workflow exists but has zero executions, the trigger (OnUpload/OnPartialUpload) may not be wired to a server.
-- **Security policy mismatch**: If DescribeSecurityPolicy shows `Fips: false` for a server that should be FIPS-compliant, or uses weak ciphers/KEX algorithms, flag as a security concern.
-- **Missing LoggingRole**: If DescribeServer returns no `LoggingRole` and no `StructuredLogDestinations`, warn that server activity is not being logged.
-- **Pagination truncation**: If any List call returns `NextToken` and the caller does not paginate, warn that results are incomplete.
-
-## Playbook
-
-### 1. Stand Up a New SFTP Server with a User
-
-1. POST / (CreateServer) with `Protocols: ["SFTP"]`, `EndpointType`, `IdentityProviderType: "SERVICE_MANAGED"`, and desired `SecurityPolicyName`
-2. Note the returned `ServerId`
-3. POST / (DescribeServer: ServerId) -- confirm `State` is `ONLINE` (may need to wait if `STARTING`)
-4. POST / (CreateUser: ServerId, UserName, Role) with `HomeDirectory` or `HomeDirectoryMappings` and optionally `SshPublicKeyBody`
-5. If SSH key was not included in step 4, POST / (ImportSshPublicKey: ServerId, SshPublicKeyBody, UserName)
-6. POST / (TestIdentityProvider: ServerId, UserName) to verify the user can authenticate
-
-### 2. Set Up AS2 Connector for B2B File Exchange
-
-1. POST / (ImportCertificate) for your local signing/encryption certificate -- note `CertificateId`
-2. POST / (ImportCertificate) for your partner's certificate -- note partner `CertificateId`
-3. POST / (CreateProfile: As2Id, ProfileType: "LOCAL") with your `CertificateIds` -- note `ProfileId`
-4. POST / (CreateProfile: As2Id, ProfileType: "PARTNER") with partner's `CertificateIds` -- note partner `ProfileId`
-5. POST / (CreateConnector: Url, AccessRole) with `As2Config` referencing both profile IDs
-6. POST / (TestConnection: ConnectorId) -- verify connectivity before sending files
-7. POST / (StartFileTransfer: ConnectorId, SendFilePaths) to send your first file
-
-### 3. Attach a Post-Upload Workflow to a Server
-
-1. POST / (CreateWorkflow: Steps) defining your processing steps (copy, tag, decrypt, custom lambda, etc.) with optional `OnExceptionSteps` for error handling
-2. Note the returned `WorkflowId`
-3. POST / (UpdateServer: ServerId) with `WorkflowDetails: { OnUpload: [{ WorkflowId, ExecutionRole }] }`
-4. Upload a test file to trigger the workflow
-5. POST / (ListExecutions: WorkflowId) to see the execution appear
-6. POST / (DescribeExecution: ExecutionId, WorkflowId) to check `Status` and inspect `Results.Steps` for per-step outcomes
-
-### 4. Rotate a Server Host Key
-
-1. POST / (ListHostKeys: ServerId) to identify the current host key(s) and their `HostKeyId` values
-2. POST / (ImportHostKey: ServerId, HostKeyBody) with the new key material -- note the new `HostKeyId`
-3. POST / (DescribeHostKey: ServerId, HostKeyId) to verify the fingerprint matches expectations
-4. Distribute the new fingerprint to clients so they update their `known_hosts`
-5. POST / (DeleteHostKey: ServerId, HostKeyId) to remove the old key once all clients have migrated
-6. POST / (DescribeServer: ServerId) and confirm `HostKeyFingerprint` reflects the new key
-
-### 5. Audit and Tag All Resources
-
-1. POST / (ListServers) -- paginate fully using `NextToken`
-2. For each server: POST / (ListTagsForResource: Arn) to check existing tags
-3. POST / (TagResource: Arn, Tags) to apply missing compliance/cost-center tags
-4. Repeat for connectors (ListConnectors), profiles (ListProfiles), workflows (ListWorkflows), and certificates (ListCertificates)
-5. POST / (UntagResource: Arn, TagKeys) to remove any deprecated or incorrect tags
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

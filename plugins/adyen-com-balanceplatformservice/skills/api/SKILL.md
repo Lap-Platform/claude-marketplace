@@ -170,94 +170,84 @@ https://balanceplatform-api-test.adyen.com/bcl/v2
 | PATCH | /scaDevices/{deviceId} | Finish registration process for a SCA device |
 | POST | /scaDevices/{deviceId}/scaAssociations | Create a new SCA association for a device |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new account holder?" -> POST /accountHolders
-- "What are the balance accounts for account holder X?" -> GET /accountHolders/{id}/balanceAccounts
-- "How do I issue a new card or bank account payment instrument?" -> POST /paymentInstruments
-- "How do I suspend or close a payment instrument?" -> PATCH /paymentInstruments/{id}
-- "How do I set up an automatic sweep on a balance account?" -> POST /balanceAccounts/{balanceAccountId}/sweeps
-- "What transaction rules apply to this account holder?" -> GET /accountHolders/{id}/transactionRules
-- "How do I block transactions from specific countries?" -> POST /transactionRules
-- "How do I reveal the full card number and CVC?" -> GET /paymentInstruments/{id}/reveal
-- "How do I change a card's PIN?" -> POST /pins/change
-- "What grant offers are available for an account holder?" -> GET /grantOffers
-- "How do I validate a bank account number before creating a transfer?" -> POST /validateBankAccountIdentification
-- "How do I download a US 1099 tax form for an account holder?" -> GET /accountHolders/{id}/taxForms
-- "How do I register an SCA device for strong customer authentication?" -> POST /scaDevices
-- "How do I calculate available transfer routes for a payout?" -> POST /transferRoutes/calculate
-- "How do I set a daily transfer limit on a balance account?" -> POST /balanceAccounts/{id}/transferLimits
-
-## Response Tips
-
-- **List endpoints** (accountHolders, balanceAccounts, sweeps, cardorders, paymentInstruments): Paginated via `offset`/`limit` params; check `hasNext`/`hasPrevious` booleans to determine if more pages exist -- there is no total count field.
-- **Registered devices**: Uses a different pagination model with `pageNumber`/`pageSize` params and returns `itemsTotal`, `pagesTotal`, and `_links` with `first`/`last`/`next`/`previous` hrefs.
-- **Error responses** (400, 401, 403, 422, 500): All endpoints share the same error code set; 422 typically means validation failure on input fields -- inspect the response body for field-level details.
-- **Async operations**: PATCH /networkTokens/{id} returns 202 (accepted, not completed) -- poll or use webhooks to confirm the status change took effect.
-- **Empty success**: DELETE endpoints and some POST endpoints (authorisedCardUsers, transferLimits/approve) return 204 with no body.
-- **Monetary values**: Amounts use `{currency: str, value: int64}` where `value` is in minor units (cents) -- divide by 100 for display in most currencies.
-- **Card reveal**: The `/paymentInstruments/reveal` POST endpoint returns encrypted data requiring the public key from GET /publicKey, while GET `/paymentInstruments/{id}/reveal` returns plaintext PAN/CVC/expiry.
-
-## Anomaly Flags
-
-- **Account holder status is "suspended" or "closed"**: Surface immediately -- downstream operations (creating balance accounts, issuing cards) will fail.
-- **verificationDeadlines approaching**: If `expiresAt` on any verification deadline is within 7 days, warn the user -- capabilities may be disabled after expiry.
-- **Sweep status is "inactive" with a reason**: Check the `reason` field for values like `notEnoughBalance`, `counterpartyAccountBlocked`, or `error` -- these indicate a sweep that stopped working silently.
-- **Payment instrument statusReason contains fraud indicators**: Values like `stolen`, `suspectedFraud`, or `lost` should be flagged for immediate review.
-- **Payment instrument has `replacedById` set**: The instrument has been replaced -- any references to the old ID should be updated.
-- **Network token status is "suspended" or "closed"**: Digital wallet transactions will fail -- surface to the user if they are debugging payment failures.
-- **Transfer limit with `limitStatus` not "active"**: A pending or rejected limit means the intended spending controls are not in effect.
-- **Grant offer `expiresAt` approaching**: If a grant offer expires soon, alert the user so they can act before losing the financing option.
-- **422 errors on transaction rule creation**: Usually means conflicting rule restrictions -- surface the specific restriction that failed validation.
-- **SCA association status "pendingApproval"**: The device is registered but not yet authorized -- transactions requiring SCA will fail until approved.
-
-## Playbook
-
-### 1. Onboard a new seller/merchant
-
-1. Create the account holder: POST /accountHolders with `legalEntityId` (must exist in Legal Entity API first)
-2. Note the returned `id` and check `verificationDeadlines` for any upcoming KYC requirements
-3. Create a balance account: POST /balanceAccounts with the `accountHolderId` from step 1
-4. Issue a payment instrument (card or bank account): POST /paymentInstruments with the `balanceAccountId` and `type`
-5. Set up a sweep for automatic payouts: POST /balanceAccounts/{balanceAccountId}/sweeps with counterparty and schedule
-6. Optionally create transaction rules: POST /transactionRules to set spending limits or country restrictions
-
-### 2. Issue and configure a card
-
-1. Create a payment instrument group (optional, for batch card orders): POST /paymentInstrumentGroups with `balancePlatform` and `txVariant`
-2. Create the card: POST /paymentInstruments with `type: "card"`, the `balanceAccountId`, `issuingCountryCode`, and `card` details (brand, brandVariant, cardholderName, formFactor)
-3. Set transaction rules for the card: POST /transactionRules with `entityKey: {entityType: "paymentInstrument", entityReference: cardId}`
-4. Register an SCA device if needed: POST /scaDevices, then POST /scaDevices/{deviceId}/scaAssociations to link it
-5. Monitor card orders: GET /cardorders to check manufacturing and delivery status
-6. Reveal card details when needed: GET /paymentInstruments/{id}/reveal for plaintext PAN/CVC, or use POST /paymentInstruments/reveal with an encrypted key for secure client-side reveal
-
-### 3. Set up automated balance sweeps
-
-1. Get the balance account details: GET /balanceAccounts/{id} to confirm it exists and check current balances
-2. Create the sweep: POST /balanceAccounts/{balanceAccountId}/sweeps with `currency`, `counterparty` (target account or transfer instrument), and `schedule` (cron expression or type like "daily")
-3. Set the trigger: Use `triggerAmount` to sweep when balance exceeds a threshold, or `targetAmount` to sweep down to a target, or `sweepAmount` for a fixed amount
-4. Verify the sweep is active: GET /balanceAccounts/{balanceAccountId}/sweeps/{sweepId} and confirm `status: "active"`
-5. To pause: PATCH /balanceAccounts/{balanceAccountId}/sweeps/{sweepId} with `status: "inactive"`
-
-### 4. Create and manage transaction rules
-
-1. Identify the entity to protect: Decide whether the rule applies to an account holder, balance account, payment instrument, or payment instrument group
-2. Create the rule: POST /transactionRules with `entityKey`, `type` (allowList, blockList, maxUsage, or velocity), `interval`, and `ruleRestrictions`
-3. For spending limits: Use `type: "velocity"` with `totalAmount` restriction and an interval (e.g., daily, weekly)
-4. For country blocking: Use `type: "blockList"` with `countries` restriction listing blocked country codes
-5. Verify rules in effect: GET /accountHolders/{id}/transactionRules or GET /balanceAccounts/{id}/transactionRules to see all active rules
-6. To disable without deleting: PATCH /transactionRules/{id} with `status: "inactive"`
-
-### 5. Manage transfer limits with SCA
-
-1. Check existing limits: GET /balanceAccounts/{id}/transferLimits to see all configured limits
-2. Check currently active limits: GET /balanceAccounts/{id}/transferLimits/current for only the in-effect limits
-3. Create a new limit: POST /balanceAccounts/{id}/transferLimits with `amount`, `scope` (perDay or perTransaction), and `transferType` (instant or all)
-4. If SCA is required: Include `scaInformation` and handle the SCA challenge flow; check `scaInformation.status` in the response
-5. Approve pending limits: POST /balanceAccounts/{id}/transferLimits/approve with the `transferLimitIds` array
-6. Remove a limit: DELETE /balanceAccounts/{id}/transferLimits/{transferLimitId}
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a accountHolder?" -> POST /accountHolders
+- "Get accountHolder details?" -> GET /accountHolders/{id}
+- "Partially update a accountHolder?" -> PATCH /accountHolders/{id}
+- "List all balanceAccounts?" -> GET /accountHolders/{id}/balanceAccounts
+- "List all taxForms?" -> GET /accountHolders/{id}/taxForms
+- "List all transactionRules?" -> GET /accountHolders/{id}/transactionRules
+- "Create a balanceAccount?" -> POST /balanceAccounts
+- "List all sweeps?" -> GET /balanceAccounts/{balanceAccountId}/sweeps
+- "Create a sweep?" -> POST /balanceAccounts/{balanceAccountId}/sweeps
+- "Get sweep details?" -> GET /balanceAccounts/{balanceAccountId}/sweeps/{sweepId}
+- "Delete a sweep?" -> DELETE /balanceAccounts/{balanceAccountId}/sweeps/{sweepId}
+- "Partially update a sweep?" -> PATCH /balanceAccounts/{balanceAccountId}/sweeps/{sweepId}
+- "Get balanceAccount details?" -> GET /balanceAccounts/{id}
+- "Partially update a balanceAccount?" -> PATCH /balanceAccounts/{id}
+- "List all paymentInstruments?" -> GET /balanceAccounts/{id}/paymentInstruments
+- "List all transactionRules?" -> GET /balanceAccounts/{id}/transactionRules
+- "Get balancePlatform details?" -> GET /balancePlatforms/{id}
+- "List all accountHolders?" -> GET /balancePlatforms/{id}/accountHolders
+- "List all transactionRules?" -> GET /balancePlatforms/{id}/transactionRules
+- "List all cardorders?" -> GET /cardorders
+- "List all items?" -> GET /cardorders/{id}/items
+- "Get grantAccount details?" -> GET /grantAccounts/{id}
+- "List all grantOffers?" -> GET /grantOffers
+- "Get grantOffer details?" -> GET /grantOffers/{grantOfferId}
+- "Get networkToken details?" -> GET /networkTokens/{networkTokenId}
+- "Partially update a networkToken?" -> PATCH /networkTokens/{networkTokenId}
+- "Create a paymentInstrumentGroup?" -> POST /paymentInstrumentGroups
+- "Get paymentInstrumentGroup details?" -> GET /paymentInstrumentGroups/{id}
+- "List all transactionRules?" -> GET /paymentInstrumentGroups/{id}/transactionRules
+- "Create a paymentInstrument?" -> POST /paymentInstruments
+- "Create a reveal?" -> POST /paymentInstruments/reveal
+- "Get paymentInstrument details?" -> GET /paymentInstruments/{id}
+- "Partially update a paymentInstrument?" -> PATCH /paymentInstruments/{id}
+- "List all networkTokenActivationData?" -> GET /paymentInstruments/{id}/networkTokenActivationData
+- "Create a networkTokenActivationData?" -> POST /paymentInstruments/{id}/networkTokenActivationData
+- "List all networkTokens?" -> GET /paymentInstruments/{id}/networkTokens
+- "List all reveal?" -> GET /paymentInstruments/{id}/reveal
+- "List all transactionRules?" -> GET /paymentInstruments/{id}/transactionRules
+- "Create a change?" -> POST /pins/change
+- "Create a reveal?" -> POST /pins/reveal
+- "List all publicKey?" -> GET /publicKey
+- "List all registeredDevices?" -> GET /registeredDevices
+- "Create a registeredDevice?" -> POST /registeredDevices
+- "Create a association?" -> POST /registeredDevices/{deviceId}/associations
+- "Delete a registeredDevice?" -> DELETE /registeredDevices/{id}
+- "Partially update a registeredDevice?" -> PATCH /registeredDevices/{id}
+- "Create a transactionRule?" -> POST /transactionRules
+- "Get transactionRule details?" -> GET /transactionRules/{transactionRuleId}
+- "Delete a transactionRule?" -> DELETE /transactionRules/{transactionRuleId}
+- "Partially update a transactionRule?" -> PATCH /transactionRules/{transactionRuleId}
+- "Create a calculate?" -> POST /transferRoutes/calculate
+- "Create a validateBankAccountIdentification?" -> POST /validateBankAccountIdentification
+- "List all authorisedCardUsers?" -> GET /paymentInstruments/{paymentInstrumentId}/authorisedCardUsers
+- "Create a authorisedCardUser?" -> POST /paymentInstruments/{paymentInstrumentId}/authorisedCardUsers
+- "List all settings?" -> GET /balancePlatforms/{balancePlatformId}/webhooks/{webhookId}/settings
+- "Create a setting?" -> POST /balancePlatforms/{balancePlatformId}/webhooks/{webhookId}/settings
+- "Get setting details?" -> GET /balancePlatforms/{balancePlatformId}/webhooks/{webhookId}/settings/{settingId}
+- "Delete a setting?" -> DELETE /balancePlatforms/{balancePlatformId}/webhooks/{webhookId}/settings/{settingId}
+- "Partially update a setting?" -> PATCH /balancePlatforms/{balancePlatformId}/webhooks/{webhookId}/settings/{settingId}
+- "List all scaAssociations?" -> GET /scaAssociations
+- "Create a scaDevice?" -> POST /scaDevices
+- "Partially update a scaDevice?" -> PATCH /scaDevices/{deviceId}
+- "Create a scaAssociation?" -> POST /scaDevices/{deviceId}/scaAssociations
+- "List all taxFormSummary?" -> GET /accountHolders/{id}/taxFormSummary
+- "Create a approve?" -> POST /balanceAccounts/{id}/transferLimits/approve
+- "List all transferLimits?" -> GET /balanceAccounts/{id}/transferLimits
+- "Create a transferLimit?" -> POST /balanceAccounts/{id}/transferLimits
+- "List all current?" -> GET /balanceAccounts/{id}/transferLimits/current
+- "Get transferLimit details?" -> GET /balanceAccounts/{id}/transferLimits/{transferLimitId}
+- "Delete a transferLimit?" -> DELETE /balanceAccounts/{id}/transferLimits/{transferLimitId}
+- "List all transferLimits?" -> GET /balancePlatforms/{id}/transferLimits
+- "Create a transferLimit?" -> POST /balancePlatforms/{id}/transferLimits
+- "Get transferLimit details?" -> GET /balancePlatforms/{id}/transferLimits/{transferLimitId}
+- "Delete a transferLimit?" -> DELETE /balancePlatforms/{id}/transferLimits/{transferLimitId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

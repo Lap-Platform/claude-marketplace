@@ -218,88 +218,148 @@ https://api.figshare.com/v2
 |--------|------|-------------|
 | GET | /file/download/{file_id} | Public File Download |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I search for published articles on Figshare?" -> POST /articles/search
-- "What are the details of a specific article?" -> GET /articles/{article_id}
-- "How do I list all my draft articles?" -> GET /account/articles
-- "How do I upload a new article to my account?" -> POST /account/articles
-- "How do I publish an article draft?" -> POST /account/articles/{article_id}/publish
-- "How do I download a file from an article?" -> GET /file/download/{file_id}
-- "What versions exist for this article?" -> GET /articles/{article_id}/versions
-- "How do I add authors to my article?" -> POST /account/articles/{article_id}/authors
-- "How do I create a collection and add articles to it?" -> POST /account/collections then POST /account/collections/{collection_id}/articles
-- "How do I reserve a DOI before publishing?" -> POST /account/articles/{article_id}/reserve_doi
-- "How do I set an embargo on my article?" -> PUT /account/articles/{article_id}/embargo
-- "How do I share a private link to an unpublished article?" -> POST /account/articles/{article_id}/private_links
-- "How do I manage collaborators on a project?" -> POST /account/projects/{project_id}/collaborators
-- "How do I find articles within my institution?" -> GET /account/institution/articles
-- "How do I review and comment on a curation item?" -> GET /account/institution/review/{curation_id} then POST /account/institution/review/{curation_id}/comments
-
-## Response Tips
-
-- **Listings** (articles, collections, projects): Paginated via `page`/`page_size` or `offset`/`limit`; use `X-Cursor` header for cursor-based pagination on large result sets. Empty arrays mean no more results.
-- **Search results**: Same pagination as listings; the response is an array of summary objects -- fetch individual IDs for full metadata.
-- **Mutative writes** (PUT/PATCH): Return 205 Reset Content with no body -- do not attempt to parse a response object. POST creates return 201 with a `location` field.
-- **Deletes**: Return 204 No Content -- success means empty body.
-- **File endpoints**: `POST /account/articles/{article_id}/files` returns 201 with upload token/URL; `POST .../files/{file_id}` (202) signals async processing -- poll the file endpoint until status is complete.
-- **Error bodies**: 400 = malformed request (check required fields), 403 = missing/invalid OAuth token, 404 = resource not found or not owned, 422 = validation failure (check field constraints), 500 = server-side issue (retry with backoff).
-
-## Anomaly Flags
-
-- **429 on export**: `POST /account/articles/export` is the only endpoint returning 429 -- surface rate limit warnings and suggest waiting before retry.
-- **202 on file upload completion**: `POST /account/articles/{article_id}/files/{file_id}` returns 202 (accepted, not done) -- alert the user that file processing is async and they should poll for status.
-- **205 without body**: Many update endpoints return 205 -- flag if the caller tries to read a response body (there is none).
-- **Embargo and confidentiality conflicts**: Setting both embargo and confidentiality on the same article can produce unexpected visibility states -- warn when both are configured.
-- **Missing OAuth on account routes**: All `/account/*` endpoints require OAuth2 -- surface a clear error if a 403 comes back on any account operation suggesting token refresh or re-auth.
-- **Unpublish requires reason**: `POST /account/articles/{article_id}/unpublish` requires a reason body -- flag if the caller omits it.
-- **409 on custom field upload**: `POST /account/institution/custom_fields/{custom_field_id}/items/upload` can return 409 Conflict -- surface duplicate data warnings.
-
-## Playbook
-
-### 1. Create and Publish an Article
-
-1. `POST /account/articles` with title, description, and item type to create a draft (returns 201 with article location)
-2. `POST /account/articles/{article_id}/files` to initiate file upload (returns upload token)
-3. `POST /account/articles/{article_id}/files/{file_id}` to complete the upload (returns 202; poll `GET .../files/{file_id}` until processed)
-4. `POST /account/articles/{article_id}/authors` to add co-authors
-5. `POST /account/articles/{article_id}/categories` to assign categories
-6. `POST /account/articles/{article_id}/reserve_doi` to get a DOI before publishing
-7. `POST /account/articles/{article_id}/publish` to make it public (returns 201)
-
-### 2. Build and Publish a Collection
-
-1. `POST /account/collections` with title and description (returns 201)
-2. `POST /account/collections/{collection_id}/articles` to add existing article IDs
-3. `POST /account/collections/{collection_id}/authors` to credit contributors
-4. `POST /account/collections/{collection_id}/categories` to classify the collection
-5. `POST /account/collections/{collection_id}/reserve_doi` to reserve a DOI
-6. `POST /account/collections/{collection_id}/publish` to make it public
-
-### 3. Search and Download Public Data
-
-1. `POST /articles/search` with keywords, filters (institution, item_type, published_since) to find articles
-2. `GET /articles/{article_id}` on a result to get full metadata including file list
-3. `GET /articles/{article_id}/files` to list all attached files with download URLs
-4. `GET /file/download/{file_id}` to download a specific file
-5. Alternatively, `GET /articles/{article_id}/download` to get the full article bundle
-
-### 4. Manage a Research Project with Collaborators
-
-1. `POST /account/projects` with title and funding info (returns 201)
-2. `POST /account/projects/{project_id}/collaborators` to invite team members by user ID
-3. `POST /account/projects/{project_id}/articles` to create articles within the project
-4. `POST /account/projects/{project_id}/notes` to add internal research notes
-5. `POST /account/projects/{project_id}/publish` when the project is ready for public release
-
-### 5. Institutional Curation Review
-
-1. `GET /account/institution/reviews` with optional `status` filter to list pending items
-2. `GET /account/institution/review/{curation_id}` to inspect a specific submission
-3. `GET /account/institution/review/{curation_id}/comments` to read existing reviewer feedback
-4. `POST /account/institution/review/{curation_id}/comments` to add your review comment or approval decision
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all token?" -> GET /token
+- "Create a token?" -> POST /token
+- "List all articles?" -> GET /articles
+- "Create a search?" -> POST /articles/search
+- "Get article details?" -> GET /articles/{article_id}
+- "List all versions?" -> GET /articles/{article_id}/versions
+- "Get version details?" -> GET /articles/{article_id}/versions/{version_id}
+- "List all files?" -> GET /articles/{article_id}/versions/{version_id}/files
+- "List all download?" -> GET /articles/{article_id}/download
+- "List all download?" -> GET /articles/{article_id}/versions/{version_id}/download
+- "List all embargo?" -> GET /articles/{article_id}/versions/{version_id}/embargo
+- "List all confidentiality?" -> GET /articles/{article_id}/versions/{version_id}/confidentiality
+- "List all files?" -> GET /articles/{article_id}/files
+- "Get file details?" -> GET /articles/{article_id}/files/{file_id}
+- "Create a search?" -> POST /account/articles/search
+- "List all articles?" -> GET /account/articles
+- "Create a article?" -> POST /account/articles
+- "Get article details?" -> GET /account/articles/{article_id}
+- "Update a article?" -> PUT /account/articles/{article_id}
+- "Partially update a article?" -> PATCH /account/articles/{article_id}
+- "Delete a article?" -> DELETE /account/articles/{article_id}
+- "List all embargo?" -> GET /account/articles/{article_id}/embargo
+- "Create a resource?" -> POST /account/articles/{article_id}/resource
+- "Create a publish?" -> POST /account/articles/{article_id}/publish
+- "Create a unpublish?" -> POST /account/articles/{article_id}/unpublish
+- "Create a reserve_doi?" -> POST /account/articles/{article_id}/reserve_doi
+- "Create a reserve_handle?" -> POST /account/articles/{article_id}/reserve_handle
+- "List all download?" -> GET /account/articles/{article_id}/download
+- "Update a version?" -> PUT /account/articles/{article_id}/versions/{version_id}
+- "Partially update a version?" -> PATCH /account/articles/{article_id}/versions/{version_id}
+- "List all authors?" -> GET /account/articles/{article_id}/authors
+- "Create a author?" -> POST /account/articles/{article_id}/authors
+- "Delete a author?" -> DELETE /account/articles/{article_id}/authors/{author_id}
+- "List all categories?" -> GET /account/articles/{article_id}/categories
+- "Create a category?" -> POST /account/articles/{article_id}/categories
+- "Delete a category?" -> DELETE /account/articles/{article_id}/categories/{category_id}
+- "List all confidentiality?" -> GET /account/articles/{article_id}/confidentiality
+- "List all private_links?" -> GET /account/articles/{article_id}/private_links
+- "Create a private_link?" -> POST /account/articles/{article_id}/private_links
+- "Update a private_link?" -> PUT /account/articles/{article_id}/private_links/{link_id}
+- "Delete a private_link?" -> DELETE /account/articles/{article_id}/private_links/{link_id}
+- "List all files?" -> GET /account/articles/{article_id}/files
+- "Create a file?" -> POST /account/articles/{article_id}/files
+- "Get file details?" -> GET /account/articles/{article_id}/files/{file_id}
+- "Delete a file?" -> DELETE /account/articles/{article_id}/files/{file_id}
+- "List all export?" -> GET /account/articles/export
+- "Create a export?" -> POST /account/articles/export
+- "List all collections?" -> GET /collections
+- "Create a search?" -> POST /collections/search
+- "Get collection details?" -> GET /collections/{collection_id}
+- "List all versions?" -> GET /collections/{collection_id}/versions
+- "Get version details?" -> GET /collections/{collection_id}/versions/{version_id}
+- "List all articles?" -> GET /collections/{collection_id}/articles
+- "List all collections?" -> GET /account/collections
+- "Create a collection?" -> POST /account/collections
+- "Get collection details?" -> GET /account/collections/{collection_id}
+- "Update a collection?" -> PUT /account/collections/{collection_id}
+- "Partially update a collection?" -> PATCH /account/collections/{collection_id}
+- "Delete a collection?" -> DELETE /account/collections/{collection_id}
+- "Create a search?" -> POST /account/collections/search
+- "Create a reserve_doi?" -> POST /account/collections/{collection_id}/reserve_doi
+- "Create a reserve_handle?" -> POST /account/collections/{collection_id}/reserve_handle
+- "Create a resource?" -> POST /account/collections/{collection_id}/resource
+- "Create a publish?" -> POST /account/collections/{collection_id}/publish
+- "List all authors?" -> GET /account/collections/{collection_id}/authors
+- "Create a author?" -> POST /account/collections/{collection_id}/authors
+- "Delete a author?" -> DELETE /account/collections/{collection_id}/authors/{author_id}
+- "List all categories?" -> GET /account/collections/{collection_id}/categories
+- "Create a category?" -> POST /account/collections/{collection_id}/categories
+- "Delete a category?" -> DELETE /account/collections/{collection_id}/categories/{category_id}
+- "List all articles?" -> GET /account/collections/{collection_id}/articles
+- "Create a article?" -> POST /account/collections/{collection_id}/articles
+- "Delete a article?" -> DELETE /account/collections/{collection_id}/articles/{article_id}
+- "List all private_links?" -> GET /account/collections/{collection_id}/private_links
+- "Create a private_link?" -> POST /account/collections/{collection_id}/private_links
+- "Get private_link details?" -> GET /account/collections/{collection_id}/private_links/{link_id}
+- "Update a private_link?" -> PUT /account/collections/{collection_id}/private_links/{link_id}
+- "Delete a private_link?" -> DELETE /account/collections/{collection_id}/private_links/{link_id}
+- "List all item_types?" -> GET /item_types
+- "List all projects?" -> GET /projects
+- "Create a search?" -> POST /projects/search
+- "Get project details?" -> GET /projects/{project_id}
+- "List all articles?" -> GET /projects/{project_id}/articles
+- "Create a search?" -> POST /account/projects/search
+- "List all projects?" -> GET /account/projects
+- "Create a project?" -> POST /account/projects
+- "Get project details?" -> GET /account/projects/{project_id}
+- "Update a project?" -> PUT /account/projects/{project_id}
+- "Partially update a project?" -> PATCH /account/projects/{project_id}
+- "Delete a project?" -> DELETE /account/projects/{project_id}
+- "Create a publish?" -> POST /account/projects/{project_id}/publish
+- "List all notes?" -> GET /account/projects/{project_id}/notes
+- "Create a note?" -> POST /account/projects/{project_id}/notes
+- "Get note details?" -> GET /account/projects/{project_id}/notes/{note_id}
+- "Update a note?" -> PUT /account/projects/{project_id}/notes/{note_id}
+- "Delete a note?" -> DELETE /account/projects/{project_id}/notes/{note_id}
+- "Create a leave?" -> POST /account/projects/{project_id}/leave
+- "List all collaborators?" -> GET /account/projects/{project_id}/collaborators
+- "Create a collaborator?" -> POST /account/projects/{project_id}/collaborators
+- "Delete a collaborator?" -> DELETE /account/projects/{project_id}/collaborators/{user_id}
+- "List all articles?" -> GET /account/projects/{project_id}/articles
+- "Create a article?" -> POST /account/projects/{project_id}/articles
+- "Get article details?" -> GET /account/projects/{project_id}/articles/{article_id}
+- "Delete a article?" -> DELETE /account/projects/{project_id}/articles/{article_id}
+- "List all files?" -> GET /account/projects/{project_id}/articles/{article_id}/files
+- "Get file details?" -> GET /account/projects/{project_id}/articles/{article_id}/files/{file_id}
+- "List all filter-by?" -> GET /institutions/{institution_string_id}/articles/filter-by
+- "Create a search?" -> POST /account/authors/search
+- "Get author details?" -> GET /account/authors/{author_id}
+- "Create a search?" -> POST /account/funding/search
+- "List all account?" -> GET /account
+- "List all categories?" -> GET /categories
+- "List all licenses?" -> GET /licenses
+- "List all licenses?" -> GET /account/licenses
+- "List all institution?" -> GET /account/institution
+- "List all embargo_options?" -> GET /account/institution/embargo_options
+- "List all articles?" -> GET /account/institution/articles
+- "List all custom_fields?" -> GET /account/institution/custom_fields
+- "Create a upload?" -> POST /account/institution/custom_fields/{custom_field_id}/items/upload
+- "List all categories?" -> GET /account/categories
+- "List all groups?" -> GET /account/institution/groups
+- "List all embargo_options?" -> GET /account/institution/groups/{group_id}/embargo_options
+- "List all roles?" -> GET /account/institution/roles
+- "List all accounts?" -> GET /account/institution/accounts
+- "Create a account?" -> POST /account/institution/accounts
+- "Get account details?" -> GET /account/institution/accounts/{account_id}
+- "Update a account?" -> PUT /account/institution/accounts/{account_id}
+- "Get role details?" -> GET /account/institution/roles/{account_id}
+- "Delete a role?" -> DELETE /account/institution/roles/{account_id}/{group_id}/{role_id}
+- "Create a search?" -> POST /account/institution/accounts/search
+- "Get user details?" -> GET /account/institution/users/{account_id}
+- "List all reviews?" -> GET /account/institution/reviews
+- "Get review details?" -> GET /account/institution/review/{curation_id}
+- "List all comments?" -> GET /account/institution/review/{curation_id}/comments
+- "Create a comment?" -> POST /account/institution/review/{curation_id}/comments
+- "Create a upload?" -> POST /institution/hrfeed/upload
+- "Get download details?" -> GET /file/download/{file_id}
+- "Create a picture?" -> POST /account/profile/{user_id}/picture
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

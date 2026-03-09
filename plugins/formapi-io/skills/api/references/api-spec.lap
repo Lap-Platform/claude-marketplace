@@ -10,248 +10,288 @@
 
 @group authentication
 @endpoint GET /authentication
-@returns(200)
-@errors {401}
+@desc Test authentication
+@returns(200) authentication succeeded
+@errors {401: authentication failed}
 
 @endgroup
 
 @group combined_submissions
 @endpoint GET /combined_submissions
-@optional {page: any, per_page: any}
-@returns(200)
-@errors {401}
+@desc Get a list of all combined submissions
+@optional {page: any # Default: 1, per_page: any # Default: 50}
+@returns(200) enumerate all combined submissions
+@errors {401: authentication failed}
 
 @endpoint POST /combined_submissions
+@desc Merge submission PDFs, template PDFs, or custom files
 @required {data: map}
-@returns(201)
-@errors {422, 400, 401}
+@returns(201) combined submission created
+@errors {422: invalid request, 400: invalid JSON, 401: authentication failed}
 
 @endpoint GET /combined_submissions/{combined_submission_id}
+@desc Check the status of a combined submission (merged PDFs)
 @required {combined_submission_id: any}
-@returns(200)
-@errors {404, 401}
+@returns(200) processed combined submission found
+@errors {404: combined submission not found, 401: authentication failed}
 
 @endpoint DELETE /combined_submissions/{combined_submission_id}
+@desc Expire a combined submission
 @required {combined_submission_id: any}
-@returns(200)
-@errors {404, 403, 401}
+@returns(200) submission was expired
+@errors {404: combined submission not found, 403: test API token used, 401: authentication failed}
 
 @endgroup
 
 @group custom_files
 @endpoint POST /custom_files
+@desc Create a new custom file from a cached S3 upload
 @required {data: map}
-@returns(201)
-@errors {401}
+@returns(201) returns the custom file
+@errors {401: authentication failed}
 
 @endgroup
 
 @group uploads
 @endpoint GET /uploads/presign
-@returns(200)
-@errors {401}
+@desc Get a presigned S3 URL for direct file upload
+@returns(200) presign URL generated
+@errors {401: authentication failed}
 
 @endgroup
 
 @group folders
 @endpoint GET /folders/
-@optional {parent_folder_id: any}
-@returns(200)
-@errors {401}
+@desc Get a list of all folders
+@optional {parent_folder_id: any # Filter By Folder Id}
+@returns(200) enumerate all folders
+@errors {401: authentication failed}
 
 @endpoint POST /folders/
+@desc Create a folder
 @required {data: map}
-@returns(200)
-@errors {422, 404, 401}
+@returns(200) folder created inside another folder
+@errors {422: name already exist, 404: parent folder doesn't exist, 401: authentication failed}
 
 @endpoint POST /folders/{folder_id}/move
+@desc Move a folder
 @required {folder_id: any, data: map}
-@returns(200)
-@errors {404, 401}
+@returns(200) move to root folder
+@errors {404: parent folder doesn't exist, 401: authentication failed}
 
 @endpoint POST /folders/{folder_id}/rename
+@desc Rename a folder
 @required {folder_id: any, data: map}
-@returns(200)
-@errors {422, 404, 401}
+@returns(200) successful rename
+@errors {422: name already exist, 404: folder doesn't belong to me, 401: authentication failed}
 
 @endpoint DELETE /folders/{folder_id}
+@desc Delete a folder
 @required {folder_id: any}
-@returns(200)
-@errors {404, 422, 401}
+@returns(200) folder is empty
+@errors {404: folder doesn't exist, 422: folder has contents, 401: authentication failed}
 
 @endgroup
 
 @group data_requests
 @endpoint POST /data_requests/{data_request_id}/events
+@desc Create a new event for emailing a signee a request for signature
 @required {data_request_id: any, event: map}
-@returns(201)
-@errors {401, 422}
+@returns(201) event created
+@errors {401: authentication failed, 422: message recipient must not be blank}
 
 @endpoint POST /data_requests/{data_request_id}/tokens
+@desc Create a new data request token for form authentication
 @required {data_request_id: any}
 @optional {type: any}
-@returns(201)
-@errors {401, 422}
+@returns(201) token created
+@errors {401: authentication failed, 422: invalid request}
 
 @endpoint GET /data_requests/{data_request_id}
+@desc Look up a submission data request
 @required {data_request_id: any}
-@returns(200)
-@errors {404, 401}
+@returns(200) completed submission data request found
+@errors {404: submission data request not found, 401: authentication failed}
 
 @endpoint PUT /data_requests/{data_request_id}
+@desc Update a submission data request
 @required {data_request_id: any, data: map}
-@returns(200)
-@errors {422, 404, 401}
+@returns(200) submission data request updated
+@errors {422: invalid request, 404: submission data request not found, 401: authentication failed}
 
 @endgroup
 
 @group submissions
 @endpoint POST /submissions/batches
+@desc Generate multiple PDFs
 @required {data: map}
-@optional {wait: any}
-@returns(201)
-@returns(200)
-@errors {401, 422, 400}
+@optional {wait: any # Wait for submission batch to be processed before returning. Set to false to return immediately. Default: true (on sync.* subdomain)}
+@returns(201) submissions created
+@returns(200) some PDFs with invalid data
+@errors {401: authentication failed, 422: array of arrays, 400: invalid JSON}
 
 @endpoint GET /submissions/batches/{submission_batch_id}
+@desc Check the status of a submission batch job
 @required {submission_batch_id: any}
 @optional {include_submissions: any}
-@returns(200)
-@errors {404, 401}
+@returns(200) processed submission batch found
+@errors {404: submission batch not found, 401: authentication failed}
 
 @endgroup
 
 @group templates
 @endpoint POST /templates/{template_id}/submissions
+@desc Generate a PDF
 @required {template_id: any, submission: map}
-@optional {wait: any}
-@returns(201)
-@errors {422, 401}
+@optional {wait: any # Wait for submission to be processed before returning. Set to false to return immediately. Default: true (on sync.* subdomain)}
+@returns(201) submission created
+@errors {422: invalid request, 401: authentication failed}
 
 @endpoint GET /templates/{template_id}/submissions
+@desc List all submissions for a given template
 @required {template_id: any}
 @optional {cursor: any, limit: any, created_after: any, created_before: any, type: any, include_data: any}
-@returns(200)
-@errors {404}
+@returns(200) listing submissions
+@errors {404: invalid template id}
 
 @endgroup
 
 @group submissions
 @endpoint GET /submissions/{submission_id}
+@desc Check the status of a PDF
 @required {submission_id: any}
 @optional {include_data: any}
-@returns(200)
-@errors {404, 401}
+@returns(200) processed submission found with data
+@errors {404: submission not found, 401: authentication failed}
 
 @endpoint DELETE /submissions/{submission_id}
+@desc Expire a PDF submission
 @required {submission_id: any}
-@returns(200)
-@errors {404, 401, 403}
+@returns(200) submission was expired
+@errors {404: submission not found, 401: authentication failed, 403: test API token used}
 
 @endpoint POST /submissions/{submission_id}/generate_preview
+@desc Generate a preview PDF for partially completed data requests
 @required {submission_id: any}
-@returns(200)
-@errors {404, 422}
+@returns(200) preview was successfully requested
+@errors {404: submission not found, 422: error requesting preview}
 
 @endpoint GET /submissions
+@desc List all submissions
 @optional {cursor: any, limit: any, created_after: any, created_before: any, type: any, include_data: any}
-@returns(200)
-@errors {422, 401}
+@returns(200) listing submissions
+@errors {422: invalid type, 401: authentication failed}
 
 @endgroup
 
 @group templates
 @endpoint GET /templates
-@optional {query: any, parent_folder_id: any, page: any, per_page: any}
-@returns(200)
-@errors {404, 401}
+@desc Get a list of all templates
+@optional {query: any # Search By Name, parent_folder_id: any # Filter By Folder Id, page: any # Default: 1, per_page: any # Default: 50}
+@returns(200) enumerate all templates
+@errors {404: filter templates by invalid folder id, 401: authentication failed}
 
 @endpoint POST /templates
-@required {template[document]: any, template[name]: any}
-@optional {wait: any, template[description]: any, template[parent_folder_id]: any}
-@returns(201)
-@errors {401}
+@desc Create a new PDF template with a form POST file upload
+@required {template[document]: any, template[name]: any: any}
+@optional {wait: any # Wait for template document to be processed before returning. Set to false to return immediately. Default: true (on sync.* subdomain), template[description]: any, template[parent_folder_id]: any}
+@returns(201) returns a pending template
+@errors {401: authentication failed}
 
 @endgroup
 
 @group templates?endpoint_variant=create_html_template
 @endpoint POST /templates?endpoint_variant=create_html_template
+@desc Create a new HTML template
 @required {data: map}
-@returns(201)
-@errors {401}
+@returns(201) returns a created template
+@errors {401: authentication failed}
 
 @endgroup
 
 @group templates?endpoint_variant=create_template_from_cached_upload
 @endpoint POST /templates?endpoint_variant=create_template_from_cached_upload
+@desc Create a new PDF template from a cached S3 file upload
 @required {data: map}
-@returns(201)
-@errors {401}
+@returns(201) returns a pending template
+@errors {401: authentication failed}
 
 @endgroup
 
 @group templates
 @endpoint GET /templates/{template_id}
+@desc Check the status of an uploaded template
 @required {template_id: any}
-@returns(200)
-@errors {404, 401}
+@returns(200) template found
+@errors {404: template not found, 401: authentication failed}
 
 @endpoint PUT /templates/{template_id}
+@desc Update a Template
 @required {template_id: any, data: map}
-@returns(200)
+@returns(200) update template success
 
 @endpoint DELETE /templates/{template_id}
+@desc Delete a template
 @required {template_id: any}
 @optional {version: any}
-@returns(200)
-@errors {404, 401}
+@returns(200) template version deleted successfully
+@errors {404: template not found, 401: authentication failed}
 
 @endpoint POST /templates/{template_id}/publish_version
+@desc Publish a template version
 @required {template_id: any, data: map}
-@returns(200)
-@errors {422, 404, 401}
+@returns(200) version published successfully
+@errors {422: invalid version type, 404: template not found, 401: authentication failed}
 
 @endpoint POST /templates/{template_id}/restore_version
+@desc Restore a template version
 @required {template_id: any, data: map}
-@returns(200)
-@errors {422, 404, 401}
+@returns(200) version restored successfully
+@errors {422: draft version not allowed, 404: template version not found, 401: authentication failed}
 
 @endpoint GET /templates/{template_id}?full=true
+@desc Fetch the full attributes for a PDF template
 @required {template_id: any}
-@returns(200)
-@errors {404, 401}
+@returns(200) template found
+@errors {404: template not found, 401: authentication failed}
 
 @endpoint PUT /templates/{template_id}?endpoint_variant=update_template_pdf_with_form_post
+@desc Update a template's document with a form POST file upload
 @required {template_id: any, template[document]: any}
-@optional {template[name]: any}
-@returns(200)
-@errors {401}
+@optional {template[name]: any: any}
+@returns(200) returns a template with updated document
+@errors {401: authentication failed}
 
 @endpoint PUT /templates/{template_id}?endpoint_variant=update_template_pdf_with_cached_upload
+@desc Update a template's document with a cached S3 file upload
 @required {template_id: any, data: map}
-@returns(200)
-@errors {401}
+@returns(200) returns a template with updated document
+@errors {401: authentication failed}
 
 @endpoint PUT /templates/{template_id}/add_fields
+@desc Add new fields to a Template
 @required {template_id: any, data: map}
-@returns(200)
-@errors {422}
+@returns(200) add fields success
+@errors {422: add fields error}
 
 @endpoint POST /templates/{template_id}/move
+@desc Move Template to folder
 @required {template_id: any, data: map}
-@returns(200)
-@errors {404}
+@returns(200) move template success
+@errors {404: folder not found}
 
 @endpoint POST /templates/{template_id}/copy
+@desc Copy a template
 @required {template_id: any}
 @optional {options: map}
-@returns(200)
-@errors {404}
+@returns(200) copy template success
+@errors {404: folder not found}
 
 @endpoint GET /templates/{template_id}/schema
+@desc Fetch the JSON schema for a template
 @required {template_id: any}
-@returns(200)
-@errors {404, 401}
+@returns(200) template found
+@errors {404: template not found, 401: authentication failed}
 
 @endgroup
 

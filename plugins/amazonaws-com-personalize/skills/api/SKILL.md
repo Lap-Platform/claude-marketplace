@@ -97,86 +97,10 @@ Not specified.
 | POST | / | Updates the recommender to modify the recommender configuration. If you update the recommender to modify the columns used in training, Amazon Personalize automatically starts a full retraining of the models backing your recommender. While the update completes, you can still get recommendations from the recommender. The recommender uses the previous configuration until the update completes. To track the status of this update, use the latestRecommenderUpdate returned in the DescribeRecommender operation. |
 | POST | / | Updates an Amazon Personalize solution to use a different automatic training configuration. When you update a solution, you can change whether the solution uses automatic training, and you can change the training frequency. For more information about updating a solution, see Updating a solution. A solution update can be in one of the following states: CREATE PENDING &gt; CREATE IN_PROGRESS &gt; ACTIVE -or- CREATE FAILED To get the status of a solution update, call the DescribeSolution API operation and find the status in the latestSolutionUpdate. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new recommendation model?" -> POST / (CreateSolution + CreateSolutionVersion)
-- "How do I deploy a solution so it can serve recommendations?" -> POST / (CreateCampaign)
-- "How do I import my interaction data into Personalize?" -> POST / (CreateDatasetImportJob)
-- "How do I get batch recommendations for a large set of users?" -> POST / (CreateBatchInferenceJob)
-- "What is the status of my training job?" -> POST / (DescribeSolutionVersion, check `status` and `failureReason`)
-- "How do I list all my dataset groups?" -> POST / (ListDatasetGroups)
-- "How do I check the accuracy metrics for a trained model?" -> POST / (GetSolutionMetrics)
-- "How do I filter out items I don't want recommended?" -> POST / (CreateFilter with `filterExpression`)
-- "How do I delete user data for GDPR compliance?" -> POST / (CreateDataDeletionJob)
-- "How do I set up real-time event tracking?" -> POST / (CreateEventTracker, returns `trackingId`)
-- "How do I update a live campaign to use a new model version?" -> POST / (UpdateCampaign with new `solutionVersionArn`)
-- "How do I export my dataset to S3?" -> POST / (CreateDatasetExportJob)
-- "Which recipes are available for my use case?" -> POST / (ListRecipes, filter by `domain`)
-- "How do I pause a recommender to save costs?" -> POST / (StopRecommender)
-- "How do I tag resources for cost allocation?" -> POST / (TagResource with `resourceArn` and `tags`)
-
-## Response Tips
-
-- **Create operations**: Return a single ARN string (e.g., `solutionArn`, `campaignArn`). A successful 200 means the resource was *accepted*, not ready -- poll with the matching Describe call until `status` leaves `CREATE PENDING`/`CREATE IN_PROGRESS`.
-- **Describe operations**: Return a deeply nested object with the resource name as the top-level key (e.g., `{campaign: {...}}`). Always check `status` and `failureReason` fields; `failureReason` is only populated when status is `CREATE FAILED`.
-- **List operations**: Paginated via `nextToken`/`maxResults` (default page size varies). Keep calling with the returned `nextToken` until it is absent or null. Results are arrays of summary objects (fewer fields than Describe).
-- **Delete operations**: Return empty 200 on success. Deletion is asynchronous -- the resource may still appear in List/Describe with a `DELETE PENDING` status before fully removed.
-- **Metrics (GetSolutionMetrics)**: Returns `metrics` as a `map<str, float>` -- keys are metric names like `normalized_discounted_cumulative_gain_at_25`, values are floats between 0 and 1.
-
-## Anomaly Flags
-
-- **Job failure**: Surface `failureReason` immediately whenever a Describe call returns `status: "CREATE FAILED"` or `"ACTIVE (with issues)"` -- these are not retried automatically.
-- **Long-running training**: Flag if a SolutionVersion stays in `CREATE IN_PROGRESS` for over 2 hours, as this may indicate data or configuration issues.
-- **Zero metrics**: If `GetSolutionMetrics` returns all metric values at or near 0.0, flag that the training data may be insufficient or the schema mapping is incorrect.
-- **Missing latest version**: If `DescribeSolution` shows `latestSolutionVersion` with a `failureReason`, proactively surface it -- the user may not know their auto-training failed.
-- **Campaign update stuck**: If `latestCampaignUpdate.status` is not `ACTIVE` for an extended period, flag the pending update and its `failureReason` if present.
-- **Deprecated fields**: `performAutoML` and `autoMLConfig` are legacy -- flag usage and suggest using specific `recipeArn` selection instead.
-- **numDeleted is zero**: After a DataDeletionJob completes, if `numDeleted` is 0, flag that no matching records were found in the source data.
-
-## Playbook
-
-### 1. Build and Deploy a Recommendation Model (End to End)
-
-1. Create a dataset group: POST / (CreateDatasetGroup) with `name` and optionally `domain` for pre-built recipes
-2. Create a schema: POST / (CreateSchema) with your Avro-format `schema` string
-3. Create a dataset: POST / (CreateDataset) with `datasetType` of `Interactions`, `Users`, or `Items`
-4. Import data: POST / (CreateDatasetImportJob) pointing to your S3 CSV, then poll with DescribeDatasetImportJob until `status` is `ACTIVE`
-5. Create a solution: POST / (CreateSolution) specifying `recipeArn` (use ListRecipes to find one)
-6. Train a model: POST / (CreateSolutionVersion) with `solutionArn`, then poll with DescribeSolutionVersion until `ACTIVE`
-7. Evaluate: POST / (GetSolutionMetrics) to verify accuracy is acceptable
-8. Deploy: POST / (CreateCampaign) with `solutionVersionArn` and desired `minProvisionedTPS`
-
-### 2. Run Batch Recommendations for Offline Use
-
-1. Ensure you have an ACTIVE SolutionVersion (DescribeSolutionVersion to confirm)
-2. Prepare an input JSON Lines file in S3 with user IDs
-3. Create the batch job: POST / (CreateBatchInferenceJob) with `jobInput` (S3 source), `jobOutput` (S3 destination), `solutionVersionArn`, and `roleArn`
-4. Poll with DescribeBatchInferenceJob until `status` is `ACTIVE`
-5. Retrieve results from the S3 output path
-
-### 3. Set Up Real-Time Event Tracking
-
-1. Create an event tracker: POST / (CreateEventTracker) with `datasetGroupArn` -- save the returned `trackingId`
-2. Use the `trackingId` with the Personalize Events API (`PutEvents`) from your application to stream user interactions in real time
-3. Verify the tracker is active: POST / (DescribeEventTracker) and confirm `status` is `ACTIVE`
-
-### 4. Update a Live Campaign to a Newer Model
-
-1. Train a new version: POST / (CreateSolutionVersion) with the existing `solutionArn`
-2. Poll DescribeSolutionVersion until `ACTIVE`
-3. Check metrics: POST / (GetSolutionMetrics) to confirm the new version is an improvement
-4. Update the campaign: POST / (UpdateCampaign) with `campaignArn` and the new `solutionVersionArn`
-5. Poll DescribeCampaign and check `latestCampaignUpdate.status` until `ACTIVE`
-
-### 5. Delete User Data (GDPR/Privacy Compliance)
-
-1. Prepare a JSON Lines file in S3 listing the user IDs to delete
-2. Create a deletion job: POST / (CreateDataDeletionJob) with `datasetGroupArn`, `dataSource` pointing to the S3 file, and `roleArn`
-3. Poll with DescribeDataDeletionJob until `status` is `ACTIVE`
-4. Verify `numDeleted` matches expectations -- flag if zero (see Anomaly Flags)
-5. Retrain the solution version to ensure deleted data no longer influences recommendations
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

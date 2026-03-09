@@ -221,88 +221,109 @@ Not specified.
 | GET | /v1/totals/inaugural_committees/by_contributor/ | This endpoint provides information about an inaugural committee's Form 13 report of donations accepted. |
 | GET | /v1/totals/{entity_type}/ | This endpoint provides information about a committee's Form 3, Form 3X, or Form 3P financial reports, |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Who is candidate P00009423?" -> GET /v1/candidate/{candidate_id}/
-- "What committees support a specific candidate?" -> GET /v1/candidate/{candidate_id}/committees/
-- "How much money has a candidate raised this cycle?" -> GET /v1/candidate/{candidate_id}/totals/
-- "Search for all Senate candidates in Texas" -> GET /v1/candidates/search/?office=S&state=TX
-- "What are the top donors to a committee by employer?" -> GET /v1/schedules/schedule_a/by_employer/
-- "Show me independent expenditures against a candidate" -> GET /v1/schedules/schedule_e/by_candidate/
-- "When is the next FEC filing deadline?" -> GET /v1/reporting-dates/
-- "What elections are happening in 2026?" -> GET /v1/elections/search/?cycle=2026
-- "Find all electioneering communications by a committee" -> GET /v1/electioneering/?committee_id={id}
-- "How much did a presidential candidate raise by state?" -> GET /v1/presidential/contributions/by_state/
-- "Look up an advisory opinion by number" -> GET /v1/legal/docs/{doc_type}/{no}
-- "Which RAD analyst is assigned to a committee?" -> GET /v1/rad-analyst/?committee_id={id}
-- "Show me a committee's disbursements to a specific recipient" -> GET /v1/schedules/schedule_b/by_recipient/
-- "What upcoming FEC calendar events are there?" -> GET /v1/calendar-dates/?min_start_date={today}
-- "Get the state election office contact info for Ohio" -> GET /v1/state-election-office/?state=OH
-
-## Response Tips
-
-- **Paginated lists** (candidates, committees, schedules): All return `page`, `per_page`, `pages`, and `count` at the top level; iterate with `page` param, default `per_page` is 20, max typically 100.
-- **Schedule A/B/E cursor pagination**: These use `last_index`, `last_contribution_receipt_date`, or `last_disbursement_date` instead of page numbers; pass the last record's values to fetch the next batch.
-- **Candidate/committee lookups**: Single-entity responses nest the record inside a `results` array even for one item; always index `results[0]`.
-- **Financial totals**: Amounts are in raw cents or dollars depending on endpoint; compare `receipts` vs `disbursements` fields, not `total` fields which may aggregate differently.
-- **Legal search**: Returns `total_all`, `total_murs`, `total_adrs`, `total_advisory_opinions` alongside `docs`; use `from_hit` + `hits_returned` for offset pagination rather than `page`.
-- **Error responses**: 400s return `message` with human-readable validation errors; 404s on path-param lookups mean the ID does not exist in FEC data.
-- **History endpoints**: Return one record per cycle; the most recent cycle is not always the current one if the candidate/committee was inactive.
-
-## Anomaly Flags
-
-- **Rate limiting**: OpenFEC enforces hourly rate limits per API key. Surface warnings when response headers indicate approaching the cap (typically 1,000 requests/hour for demo keys, higher for registered keys). Recommend the user apply for a higher-tier key if they hit limits during bulk operations.
-- **Stale coverage dates**: Presidential and committee financial summaries have a `coverage_end_date` that may lag weeks behind the current date. Flag when the latest coverage end date is more than 60 days old, as the data may not reflect recent filings.
-- **Amended filings**: Many endpoints return amended and superseded filings by default. If `is_amended: true` appears in results without `most_recent: true` filtering, warn that the user may be looking at outdated data.
-- **Empty results for valid IDs**: A candidate or committee ID that returns zero results for totals/history likely means the entity has not yet filed for the requested cycle. Surface this rather than silently returning nothing.
-- **Two-year transaction period mismatches**: Schedule A/B queries default to the current two-year period. If the user asks about a past election cycle but omits `two_year_transaction_period`, flag that results will only cover the default period.
-- **Null sort behavior**: Endpoints with `sort_hide_null` and `sort_null_only` can silently filter out records. Flag when these are set, as they reduce result counts in non-obvious ways.
-
-## Playbook
-
-### 1. Research a Candidate's Full Financial Profile
-
-1. Search for the candidate: `GET /v1/candidates/search/?q={name}`
-2. Note the `candidate_id` from results (format: `P00000000`, `H0XX00000`, or `S0XX00000`)
-3. Get candidate details and history: `GET /v1/candidate/{candidate_id}/history/`
-4. Pull financial totals: `GET /v1/candidate/{candidate_id}/totals/?cycle={cycle}`
-5. List their committees: `GET /v1/candidate/{candidate_id}/committees/`
-6. For each committee, pull receipts: `GET /v1/committee/{committee_id}/reports/`
-7. Summarize: compare `receipts`, `disbursements`, and `cash_on_hand_end_period`
-
-### 2. Trace Donations to a Committee
-
-1. Look up the committee: `GET /v1/committees/?q={name}`
-2. Get aggregate receipts by size: `GET /v1/schedules/schedule_a/by_size/?committee_id={id}&cycle={cycle}`
-3. Get top employers: `GET /v1/schedules/schedule_a/by_employer/?committee_id={id}&cycle={cycle}`
-4. Get geographic breakdown: `GET /v1/schedules/schedule_a/by_state/?committee_id={id}&cycle={cycle}`
-5. For individual transaction detail, paginate through: `GET /v1/schedules/schedule_a/?committee_id={id}&two_year_transaction_period={period}` using `last_index` cursor
-
-### 3. Track Independent Expenditures in a Race
-
-1. Identify the election: `GET /v1/elections/search/?state={st}&office={office}&cycle={cycle}`
-2. Get IE totals by candidate: `GET /v1/schedules/schedule_e/totals/by_candidate/?candidate_id={id}&cycle={cycle}`
-3. See which committees are spending: `GET /v1/schedules/schedule_e/by_candidate/?candidate_id={id}&cycle={cycle}`
-4. For real-time e-filed IEs: `GET /v1/schedules/schedule_e/efile/?candidate_id={id}&most_recent=true`
-5. Cross-reference with electioneering communications: `GET /v1/electioneering/by_candidate/?candidate_id={id}&cycle={cycle}`
-
-### 4. Monitor Upcoming Deadlines and Filings
-
-1. Check reporting deadlines: `GET /v1/reporting-dates/?min_due_date={today}&sort=due_date`
-2. Pull FEC calendar events: `GET /v1/calendar-dates/?min_start_date={today}&sort=start_date`
-3. Check election dates: `GET /v1/election-dates/?min_election_date={today}&sort=election_date`
-4. For a specific committee, see recent filings: `GET /v1/committee/{committee_id}/filings/?most_recent=true&sort=-receipt_date`
-5. Check e-filed filings for the latest submissions: `GET /v1/efile/filings/?committee_id={id}&sort=-receipt_date`
-
-### 5. Audit and Compliance Lookup
-
-1. Search audit cases: `GET /v1/audit-case/?candidate_id={id}` or `?committee_id={id}`
-2. Get audit categories for context: `GET /v1/audit-category/`
-3. Get primary categories: `GET /v1/audit-primary-category/`
-4. Search legal documents (MURs, advisory opinions): `GET /v1/legal/search/?q={query}&type=murs`
-5. Retrieve a specific legal document: `GET /v1/legal/docs/{doc_type}/{no}`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Search audit-case?" -> GET /v1/audit-case/
+- "List all audit-category?" -> GET /v1/audit-category/
+- "List all audit-primary-category?" -> GET /v1/audit-primary-category/
+- "List all calendar-dates?" -> GET /v1/calendar-dates/
+- "List all export?" -> GET /v1/calendar-dates/export/
+- "Get candidate details?" -> GET /v1/candidate/{candidate_id}/
+- "List all committees?" -> GET /v1/candidate/{candidate_id}/committees/
+- "List all history?" -> GET /v1/candidate/{candidate_id}/committees/history/
+- "Get history details?" -> GET /v1/candidate/{candidate_id}/committees/history/{cycle}/
+- "List all filings?" -> GET /v1/candidate/{candidate_id}/filings/
+- "List all history?" -> GET /v1/candidate/{candidate_id}/history/
+- "Get history details?" -> GET /v1/candidate/{candidate_id}/history/{cycle}/
+- "List all totals?" -> GET /v1/candidate/{candidate_id}/totals/
+- "Search candidates?" -> GET /v1/candidates/
+- "Search search?" -> GET /v1/candidates/search/
+- "Search totals?" -> GET /v1/candidates/totals/
+- "List all aggregates?" -> GET /v1/candidates/totals/aggregates/
+- "Get committee details?" -> GET /v1/committee/{committee_id}/
+- "List all candidates?" -> GET /v1/committee/{committee_id}/candidates/
+- "List all history?" -> GET /v1/committee/{committee_id}/candidates/history/
+- "Get history details?" -> GET /v1/committee/{committee_id}/candidates/history/{cycle}/
+- "List all filings?" -> GET /v1/committee/{committee_id}/filings/
+- "List all history?" -> GET /v1/committee/{committee_id}/history/
+- "Get history details?" -> GET /v1/committee/{committee_id}/history/{cycle}/
+- "List all reports?" -> GET /v1/committee/{committee_id}/reports/
+- "List all totals?" -> GET /v1/committee/{committee_id}/totals/
+- "Search committees?" -> GET /v1/committees/
+- "List all communication_costs?" -> GET /v1/communication_costs/
+- "List all aggregates?" -> GET /v1/communication_costs/aggregates/
+- "List all by_candidate?" -> GET /v1/communication_costs/by_candidate/
+- "List all by_candidate?" -> GET /v1/communication_costs/totals/by_candidate/
+- "List all filings?" -> GET /v1/efile/filings/
+- "List all form1?" -> GET /v1/efile/form1/
+- "List all form2?" -> GET /v1/efile/form2/
+- "List all house-senate?" -> GET /v1/efile/reports/house-senate/
+- "List all pac-party?" -> GET /v1/efile/reports/pac-party/
+- "List all presidential?" -> GET /v1/efile/reports/presidential/
+- "List all election-dates?" -> GET /v1/election-dates/
+- "List all electioneering?" -> GET /v1/electioneering/
+- "List all aggregates?" -> GET /v1/electioneering/aggregates/
+- "List all by_candidate?" -> GET /v1/electioneering/by_candidate/
+- "List all by_candidate?" -> GET /v1/electioneering/totals/by_candidate/
+- "List all elections?" -> GET /v1/elections/
+- "List all search?" -> GET /v1/elections/search/
+- "List all summary?" -> GET /v1/elections/summary/
+- "List all filings?" -> GET /v1/filings/
+- "Get doc details?" -> GET /v1/legal/docs/{doc_type}/{no}
+- "Search search?" -> GET /v1/legal/search/
+- "Search audit_candidates?" -> GET /v1/names/audit_candidates/
+- "Search audit_committees?" -> GET /v1/names/audit_committees/
+- "Search candidates?" -> GET /v1/names/candidates/
+- "Search committees?" -> GET /v1/names/committees/
+- "List all schedule_a?" -> GET /v1/national_party/schedule_a/
+- "List all schedule_b?" -> GET /v1/national_party/schedule_b/
+- "List all totals?" -> GET /v1/national_party/totals/
+- "List all operations-log?" -> GET /v1/operations-log/
+- "List all by_candidate?" -> GET /v1/presidential/contributions/by_candidate/
+- "List all by_size?" -> GET /v1/presidential/contributions/by_size/
+- "List all by_state?" -> GET /v1/presidential/contributions/by_state/
+- "List all coverage_end_date?" -> GET /v1/presidential/coverage_end_date/
+- "List all financial_summary?" -> GET /v1/presidential/financial_summary/
+- "List all rad-analyst?" -> GET /v1/rad-analyst/
+- "List all reporting-dates?" -> GET /v1/reporting-dates/
+- "Get report details?" -> GET /v1/reports/{entity_type}/
+- "List all schedule_a?" -> GET /v1/schedules/schedule_a/
+- "List all by_employer?" -> GET /v1/schedules/schedule_a/by_employer/
+- "List all by_occupation?" -> GET /v1/schedules/schedule_a/by_occupation/
+- "List all by_size?" -> GET /v1/schedules/schedule_a/by_size/
+- "List all by_candidate?" -> GET /v1/schedules/schedule_a/by_size/by_candidate/
+- "List all by_state?" -> GET /v1/schedules/schedule_a/by_state/
+- "List all by_candidate?" -> GET /v1/schedules/schedule_a/by_state/by_candidate/
+- "List all totals?" -> GET /v1/schedules/schedule_a/by_state/by_candidate/totals/
+- "List all totals?" -> GET /v1/schedules/schedule_a/by_state/totals/
+- "List all by_zip?" -> GET /v1/schedules/schedule_a/by_zip/
+- "List all efile?" -> GET /v1/schedules/schedule_a/efile/
+- "Get schedule_a details?" -> GET /v1/schedules/schedule_a/{sub_id}/
+- "List all schedule_a_form5?" -> GET /v1/schedules/schedule_a_form5/
+- "List all schedule_b?" -> GET /v1/schedules/schedule_b/
+- "List all by_purpose?" -> GET /v1/schedules/schedule_b/by_purpose/
+- "List all by_recipient?" -> GET /v1/schedules/schedule_b/by_recipient/
+- "List all by_recipient_id?" -> GET /v1/schedules/schedule_b/by_recipient_id/
+- "List all efile?" -> GET /v1/schedules/schedule_b/efile/
+- "Get schedule_b details?" -> GET /v1/schedules/schedule_b/{sub_id}/
+- "List all schedule_c?" -> GET /v1/schedules/schedule_c/
+- "Get schedule_c details?" -> GET /v1/schedules/schedule_c/{sub_id}/
+- "List all schedule_d?" -> GET /v1/schedules/schedule_d/
+- "Get schedule_d details?" -> GET /v1/schedules/schedule_d/{sub_id}/
+- "List all schedule_e?" -> GET /v1/schedules/schedule_e/
+- "List all by_candidate?" -> GET /v1/schedules/schedule_e/by_candidate/
+- "List all efile?" -> GET /v1/schedules/schedule_e/efile/
+- "List all by_candidate?" -> GET /v1/schedules/schedule_e/totals/by_candidate/
+- "List all schedule_f?" -> GET /v1/schedules/schedule_f/
+- "Get schedule_f details?" -> GET /v1/schedules/schedule_f/{sub_id}/
+- "List all schedule_h4?" -> GET /v1/schedules/schedule_h4/
+- "List all efile?" -> GET /v1/schedules/schedule_h4/efile/
+- "List all state-election-office?" -> GET /v1/state-election-office/
+- "List all by_entity?" -> GET /v1/totals/by_entity/
+- "List all by_contributor?" -> GET /v1/totals/inaugural_committees/by_contributor/
+- "Get total details?" -> GET /v1/totals/{entity_type}/
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

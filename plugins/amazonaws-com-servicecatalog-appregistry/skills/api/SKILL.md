@@ -67,85 +67,31 @@ Not specified.
 |--------|------|-------------|
 | POST | /sync/{resourceType}/{resource} | Syncs the resource with current AppRegistry records. Specifically, the resource’s AppRegistry system tags sync with its associated application. We remove the resource's AppRegistry system tags if it does not associate with the application. The caller must have permissions to read and update the resource. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I register a new application in the service catalog?" -> POST /applications
-- "What applications exist in my account?" -> GET /applications
-- "How do I get details about a specific application?" -> GET /applications/{application}
-- "How do I rename or update an application's description?" -> PATCH /applications/{application}
-- "How do I delete an application?" -> DELETE /applications/{application}
-- "How do I create an attribute group with custom metadata?" -> POST /attribute-groups
-- "How do I attach an attribute group to an application?" -> PUT /applications/{application}/attribute-groups/{attributeGroup}
-- "What attribute groups are associated with my application?" -> GET /applications/{application}/attribute-groups
-- "How do I add a resource (like a CloudFormation stack) to an application?" -> PUT /applications/{application}/resources/{resourceType}/{resource}
-- "What resources belong to a specific application?" -> GET /applications/{application}/resources
-- "How do I check the tag-based resource sync status for a resource?" -> POST /sync/{resourceType}/{resource}
-- "How do I tag an application or attribute group?" -> POST /tags/{resourceArn}
-- "How do I remove specific tags from a resource?" -> DELETE /tags/{resourceArn}
-- "What is the current App Registry tag query configuration?" -> GET /configuration
-- "How do I get full attribute group details (including attributes JSON) for an application?" -> GET /applications/{application}/attribute-group-details
-
-## Response Tips
-
-- **Applications & Attribute Groups (list endpoints):** Paginated via `nextToken` + `maxResults`. Always check for `nextToken` in response; if present, pass it in the next request to get more results.
-- **Single resource GETs:** Return nullable wrapper objects (`application`, `attributeGroup`, `resource`); always null-check the top-level key before accessing nested fields.
-- **Association endpoints (PUT/DELETE for linking):** Return only ARN pairs (`applicationArn`, `resourceArn` or `attributeGroupArn`), not full objects -- use a follow-up GET if you need details.
-- **Sync endpoint:** Returns `actionTaken` (e.g., `START_SYNC`, `NO_ACTION`) indicating whether a sync was triggered; a 200 with `NO_ACTION` is not an error.
-- **Tags:** `GET /tags/{resourceArn}` returns a flat `map<str,str>`; tag keys and values are always strings.
-- **Timestamps:** All `creationTime` and `lastUpdateTime` fields are ISO 8601 strings, not epoch integers.
-
-## Anomaly Flags
-
-- **Integration errors:** Surface `integrations.resourceGroup.errorMessage` or `integrations.applicationTagResourceGroup.errorMessage` when state is not `ACTIVE` on GET /applications/{application} -- indicates a failed AWS Resource Groups sync.
-- **Resource tag status mismatches:** When GET /applications/{application}/resources/{resourceType}/{resource} returns `applicationTagResult.applicationTagStatus` other than `SUCCESS`, flag the `errorMessage` and affected `resources` list.
-- **associatedResourceCount = 0:** Warn when an application has zero associated resources, as it may be orphaned or misconfigured.
-- **Sync no-ops:** If POST /sync returns `actionTaken: NO_ACTION` repeatedly, surface that the resource may already be in sync or may not be eligible for syncing.
-- **Missing attributes:** When GET /attribute-groups/{attributeGroup} returns `attributes: null`, flag that the group has no metadata payload, which likely means it was created but never populated.
-- **createdBy discrepancies:** Attribute group summaries include `createdBy`; surface when a group was created by a different principal than expected (possible cross-account or service-linked creation).
-
-## Playbook
-
-### 1. Set Up a New Application with Resources and Metadata
-
-1. Create the application: `POST /applications` with `name`, `clientToken`, and optional `description`/`tags`.
-2. Create an attribute group: `POST /attribute-groups` with `name`, `attributes` (JSON string of metadata), and `clientToken`.
-3. Associate the attribute group: `PUT /applications/{application}/attribute-groups/{attributeGroup}`.
-4. Associate resources (e.g., CloudFormation stacks): `PUT /applications/{application}/resources/{resourceType}/{resource}` for each resource.
-5. Verify: `GET /applications/{application}` and confirm `associatedResourceCount` is correct and `integrations` show `ACTIVE` state.
-
-### 2. Audit All Applications and Their Resources
-
-1. List all applications: `GET /applications` (paginate with `nextToken` until exhausted).
-2. For each application, fetch details: `GET /applications/{application}` to check `associatedResourceCount` and integration state.
-3. List resources per application: `GET /applications/{application}/resources` (paginate).
-4. List attribute groups per application: `GET /applications/{application}/attribute-group-details` for full metadata (paginate).
-5. Flag any application with zero resources, non-`ACTIVE` integration states, or attribute groups with null `attributes`.
-
-### 3. Clean Up an Application and Its Associations
-
-1. List associated resources: `GET /applications/{application}/resources` (paginate to get all).
-2. Disassociate each resource: `DELETE /applications/{application}/resources/{resourceType}/{resource}`.
-3. List associated attribute groups: `GET /applications/{application}/attribute-groups` (paginate).
-4. Disassociate each attribute group: `DELETE /applications/{application}/attribute-groups/{attributeGroup}`.
-5. Delete the application: `DELETE /applications/{application}`.
-6. Optionally delete orphaned attribute groups: `DELETE /attribute-groups/{attributeGroup}` for any groups no longer needed.
-
-### 4. Tag Management Across Resources
-
-1. Get current tags: `GET /tags/{resourceArn}` for the target resource.
-2. Add or update tags: `POST /tags/{resourceArn}` with the desired `tags` map (existing keys are overwritten).
-3. Remove specific tags: `DELETE /tags/{resourceArn}` with `tagKeys` array listing keys to remove.
-4. Verify: `GET /tags/{resourceArn}` again to confirm final state.
-
-### 5. Sync a Resource and Verify Status
-
-1. Trigger sync: `POST /sync/{resourceType}/{resource}`.
-2. Check `actionTaken` in the response -- if `START_SYNC`, proceed to monitor; if `NO_ACTION`, the resource is already current.
-3. Retrieve the resource association: `GET /applications/{application}/resources/{resourceType}/{resource}`.
-4. Inspect `resource.integrations.resourceGroup.state` -- wait for `ACTIVE`.
-5. If state shows an error, read `errorMessage` and resolve the underlying issue (e.g., missing IAM permissions, deleted resource group).
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Update a attribute-group?" -> PUT /applications/{application}/attribute-groups/{attributeGroup}
+- "Update a resource?" -> PUT /applications/{application}/resources/{resourceType}/{resource}
+- "Create a application?" -> POST /applications
+- "Create a attribute-group?" -> POST /attribute-groups
+- "Delete a application?" -> DELETE /applications/{application}
+- "Delete a attribute-group?" -> DELETE /attribute-groups/{attributeGroup}
+- "Delete a attribute-group?" -> DELETE /applications/{application}/attribute-groups/{attributeGroup}
+- "Delete a resource?" -> DELETE /applications/{application}/resources/{resourceType}/{resource}
+- "Get application details?" -> GET /applications/{application}
+- "Get resource details?" -> GET /applications/{application}/resources/{resourceType}/{resource}
+- "Get attribute-group details?" -> GET /attribute-groups/{attributeGroup}
+- "List all configuration?" -> GET /configuration
+- "List all applications?" -> GET /applications
+- "List all attribute-groups?" -> GET /applications/{application}/attribute-groups
+- "List all resources?" -> GET /applications/{application}/resources
+- "List all attribute-groups?" -> GET /attribute-groups
+- "List all attribute-group-details?" -> GET /applications/{application}/attribute-group-details
+- "Get tag details?" -> GET /tags/{resourceArn}
+- "Delete a tag?" -> DELETE /tags/{resourceArn}
+- "Partially update a application?" -> PATCH /applications/{application}
+- "Partially update a attribute-group?" -> PATCH /attribute-groups/{attributeGroup}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

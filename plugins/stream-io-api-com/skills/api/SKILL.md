@@ -354,85 +354,157 @@ https://chat.stream-io-api.com
 | POST | /users/restore | Restore users |
 | POST | /users/unblock | Unblock user |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I get my app settings?" -> GET /app
-- "How do I send a message to a channel?" -> POST /channels/{type}/{id}/message
-- "How do I create or join a channel?" -> POST /channels/{type}/{id}
-- "How do I search for messages?" -> GET /search
-- "How do I list all channels matching a filter?" -> POST /channels
-- "How do I ban a user from a channel?" -> POST /moderation/ban
-- "How do I add a reaction to a message?" -> POST /messages/{id}/reaction
-- "How do I create a poll in a channel?" -> POST /polls
-- "How do I upload a file to a channel?" -> POST /channels/{type}/{id}/file
-- "How do I mark a channel as read?" -> POST /channels/{type}/{id}/read
-- "How do I get unread counts for a user?" -> GET /unread
-- "How do I delete a message?" -> DELETE /messages/{id}
-- "How do I query threads the user participates in?" -> POST /threads
-- "How do I create a blocklist for content moderation?" -> POST /blocklists
-- "How do I start a campaign to message a segment of users?" -> POST /campaigns/{id}/start
-
-## Response Tips
-
-- **Channels/Messages**: All responses include a `duration` field (server processing time as string). Messages are deeply nested with `quoted_message`, `poll`, `reminder`, and `shared_location` sub-objects -- traverse carefully. The `cid` field is `{type}:{id}` composite key.
-- **Pagination**: Query endpoints (`POST /channels`, `POST /threads`, `POST /drafts/query`, `POST /campaigns/query`, `POST /polls/query`) use cursor-based pagination via `next`/`prev` tokens with a `limit` parameter, not page numbers. Pass the returned `next` value as `next` in the follow-up request.
-- **Errors**: All endpoints return only `400` (bad request) or `429` (rate limited). There are no 404s -- missing resources come back as 400. Check the error body for details.
-- **Batch/Async**: Operations like `POST /channels/delete`, `PUT /channels/batch`, `POST /users/delete`, and `POST /export/users` return a `task_id`. Poll `GET /tasks/{id}` to check completion status.
-- **Moderation**: Flag and ban responses include full user objects for both the reporter and target. The `moderation` sub-object on messages contains `blocklist_matched`, `image_harms`, and `text_harms` arrays for content analysis.
-
-## Anomaly Flags
-
-- **429 on any endpoint**: Surface immediately -- all 167 endpoints share the same rate limit error. Check `GET /rate_limits` to see current limits by platform (server_side, android, ios, web) and adjust call frequency.
-- **User `banned: true` or `shadow_banned: true`**: Flag when these appear in user objects returned from channel queries -- the user's messages may be silently hidden from others.
-- **Channel `frozen: true` or `disabled: true`**: No new messages can be sent. Surface if a send attempt would target this channel.
-- **Message `moderation.action` present**: Content was flagged by automod. Values like `blocklist_matched` or `platform_circumvented: true` warrant review.
-- **`suspended: true` on app settings**: The entire app is suspended -- all operations will fail. Surface the `suspended_explanation` field.
-- **`revoke_tokens_issued_before` set**: Tokens issued before this timestamp are invalid. Flag if authentication failures occur after a token revocation.
-- **Task `status` not completing**: For async operations (exports, batch deletes), flag if `GET /tasks/{id}` shows an `error` object or stays pending for an extended period.
-- **`deleted_at` present on channels or messages**: Indicates soft-deleted resources. When `show_deleted_message` is not set, these may be omitted or returned without content.
-
-## Playbook
-
-### 1. Set Up a New Chat Channel and Send the First Message
-
-1. Create or query the channel: `POST /channels/{type}/{id}` with `data` containing channel config (name, members, team)
-2. Optionally add more members: include `add_members` array with `user_id` entries in the same POST body
-3. Send the first message: `POST /channels/{type}/{id}/message` with `message.text` set
-4. Verify delivery by checking the returned `message.id` and `created_at` timestamp
-
-### 2. Moderate a Reported User
-
-1. Review flagged content: `GET /moderation/flags/message` to see outstanding message flags
-2. Ban the user: `POST /moderation/ban` with `target_user_id`, optional `reason`, `timeout` (seconds), and `channel_cid` for channel-scoped bans
-3. Optionally delete their messages: set `delete_messages: "soft"` (or `"hard"`) in the ban request
-4. To shadow ban instead (user sees own messages, others don't): set `shadow: true`
-5. To lift the ban later: `DELETE /moderation/ban` with `target_user_id` and `channel_cid`
-
-### 3. Run a Poll in a Channel
-
-1. Create the poll: `POST /polls` with `name`, `options` array (each with `text`), and optional settings like `enforce_unique_vote`, `max_votes_allowed`, or `voting_visibility: "anonymous"`
-2. Attach to a message: `POST /channels/{type}/{id}/message` with `message.poll_id` set to the poll's `id`
-3. Cast votes: `POST /messages/{message_id}/polls/{poll_id}/vote` with `vote.option_id`
-4. Check results: `GET /polls/{poll_id}` -- inspect `vote_counts_by_option` and `vote_count`
-5. Close the poll: `PATCH /polls/{poll_id}` with `set: { is_closed: true }`
-
-### 4. Export User Data for GDPR Compliance
-
-1. Initiate the export: `POST /export/users` with `user_ids` array
-2. Note the returned `task_id`
-3. Poll task status: `GET /tasks/{id}` until `status` indicates completion
-4. On success, the `result` field contains download information
-5. For a single user's full data (messages + reactions): `GET /users/{user_id}/export` returns everything synchronously
-
-### 5. Send a Campaign Message to a User Segment
-
-1. Create a segment (if not existing): query segments with `POST /segments/query` using a `filter`
-2. Retrieve the campaign: `GET /campaigns/{id}` to review `message_template`, `segment_ids`, and `sender`
-3. Start the campaign: `POST /campaigns/{id}/start` with optional `scheduled_for` (ISO 8601 datetime) for delayed delivery
-4. Monitor progress: re-fetch with `GET /campaigns/{id}` and check `stats.progress`, `stats_messages_sent`, `stats_users_sent`
-5. Stop early if needed: `POST /campaigns/{id}/stop`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all app?" -> GET /app
+- "List all blocklists?" -> GET /blocklists
+- "Create a blocklist?" -> POST /blocklists
+- "Delete a blocklist?" -> DELETE /blocklists/{name}
+- "Get blocklist details?" -> GET /blocklists/{name}
+- "Update a blocklist?" -> PUT /blocklists/{name}
+- "Get campaign details?" -> GET /campaigns/{id}
+- "Create a start?" -> POST /campaigns/{id}/start
+- "Create a stop?" -> POST /campaigns/{id}/stop
+- "Create a query?" -> POST /campaigns/query
+- "Create a channel?" -> POST /channels
+- "Delete a channel?" -> DELETE /channels/{type}/{id}
+- "Partially update a channel?" -> PATCH /channels/{type}/{id}
+- "List all draft?" -> GET /channels/{type}/{id}/draft
+- "Create a event?" -> POST /channels/{type}/{id}/event
+- "Create a file?" -> POST /channels/{type}/{id}/file
+- "Create a hide?" -> POST /channels/{type}/{id}/hide
+- "Create a image?" -> POST /channels/{type}/{id}/image
+- "Create a message?" -> POST /channels/{type}/{id}/message
+- "List all messages?" -> GET /channels/{type}/{id}/messages
+- "Create a query?" -> POST /channels/{type}/{id}/query
+- "Create a read?" -> POST /channels/{type}/{id}/read
+- "Create a show?" -> POST /channels/{type}/{id}/show
+- "Create a truncate?" -> POST /channels/{type}/{id}/truncate
+- "Create a unread?" -> POST /channels/{type}/{id}/unread
+- "Create a query?" -> POST /channels/{type}/query
+- "Create a delete?" -> POST /channels/delete
+- "Create a delivered?" -> POST /channels/delivered
+- "Create a read?" -> POST /channels/read
+- "List all channeltypes?" -> GET /channeltypes
+- "Create a channeltype?" -> POST /channeltypes
+- "Delete a channeltype?" -> DELETE /channeltypes/{name}
+- "Get channeltype details?" -> GET /channeltypes/{name}
+- "Update a channeltype?" -> PUT /channeltypes/{name}
+- "Create a check_push?" -> POST /check_push
+- "Create a check_sn?" -> POST /check_sns
+- "Create a check_sq?" -> POST /check_sqs
+- "List all commands?" -> GET /commands
+- "Create a command?" -> POST /commands
+- "Delete a command?" -> DELETE /commands/{name}
+- "Get command details?" -> GET /commands/{name}
+- "Update a command?" -> PUT /commands/{name}
+- "List all devices?" -> GET /devices
+- "Create a device?" -> POST /devices
+- "Create a query?" -> POST /drafts/query
+- "Create a user?" -> POST /export/users
+- "Create a export_channel?" -> POST /export_channels
+- "List all external_storage?" -> GET /external_storage
+- "Create a external_storage?" -> POST /external_storage
+- "Delete a external_storage?" -> DELETE /external_storage/{name}
+- "Update a external_storage?" -> PUT /external_storage/{name}
+- "List all check?" -> GET /external_storage/{name}/check
+- "Create a guest?" -> POST /guest
+- "Create a import_url?" -> POST /import_urls
+- "List all imports?" -> GET /imports
+- "Create a import?" -> POST /imports
+- "Get import details?" -> GET /imports/{id}
+- "List all imports?" -> GET /imports/v2
+- "Create a import?" -> POST /imports/v2
+- "Delete a import?" -> DELETE /imports/v2/{id}
+- "Get import details?" -> GET /imports/v2/{id}
+- "List all members?" -> GET /members
+- "Delete a message?" -> DELETE /messages/{id}
+- "Get message details?" -> GET /messages/{id}
+- "Update a message?" -> PUT /messages/{id}
+- "Create a action?" -> POST /messages/{id}/action
+- "Create a commit?" -> POST /messages/{id}/commit
+- "Create a reaction?" -> POST /messages/{id}/reaction
+- "Delete a reaction?" -> DELETE /messages/{id}/reaction/{type}
+- "List all reactions?" -> GET /messages/{id}/reactions
+- "Create a reaction?" -> POST /messages/{id}/reactions
+- "Create a translate?" -> POST /messages/{id}/translate
+- "Create a undelete?" -> POST /messages/{id}/undelete
+- "Create a vote?" -> POST /messages/{message_id}/polls/{poll_id}/vote
+- "Delete a vote?" -> DELETE /messages/{message_id}/polls/{poll_id}/vote/{vote_id}
+- "Create a reminder?" -> POST /messages/{message_id}/reminders
+- "List all replies?" -> GET /messages/{parent_id}/replies
+- "Create a history?" -> POST /messages/history
+- "Create a ban?" -> POST /moderation/ban
+- "Create a flag?" -> POST /moderation/flag
+- "List all message?" -> GET /moderation/flags/message
+- "Create a mute?" -> POST /moderation/mute
+- "Create a channel?" -> POST /moderation/mute/channel
+- "Create a unmute?" -> POST /moderation/unmute
+- "Create a channel?" -> POST /moderation/unmute/channel
+- "List all og?" -> GET /og
+- "List all permissions?" -> GET /permissions
+- "Get permission details?" -> GET /permissions/{id}
+- "Create a poll?" -> POST /polls
+- "Delete a poll?" -> DELETE /polls/{poll_id}
+- "Get poll details?" -> GET /polls/{poll_id}
+- "Partially update a poll?" -> PATCH /polls/{poll_id}
+- "Create a option?" -> POST /polls/{poll_id}/options
+- "Delete a option?" -> DELETE /polls/{poll_id}/options/{option_id}
+- "Get option details?" -> GET /polls/{poll_id}/options/{option_id}
+- "Create a vote?" -> POST /polls/{poll_id}/votes
+- "Create a query?" -> POST /polls/query
+- "Create a push_preference?" -> POST /push_preferences
+- "List all push_providers?" -> GET /push_providers
+- "Create a push_provider?" -> POST /push_providers
+- "Delete a push_provider?" -> DELETE /push_providers/{type}/{name}
+- "List all push_templates?" -> GET /push_templates
+- "Create a push_template?" -> POST /push_templates
+- "List all query_banned_users?" -> GET /query_banned_users
+- "List all query_future_channel_bans?" -> GET /query_future_channel_bans
+- "List all rate_limits?" -> GET /rate_limits
+- "Create a query?" -> POST /reminders/query
+- "List all roles?" -> GET /roles
+- "Create a role?" -> POST /roles
+- "Delete a role?" -> DELETE /roles/{name}
+- "List all search?" -> GET /search
+- "Delete a segment?" -> DELETE /segments/{id}
+- "Get segment details?" -> GET /segments/{id}
+- "Create a deletetarget?" -> POST /segments/{id}/deletetargets
+- "Get target details?" -> GET /segments/{id}/target/{target_id}
+- "Create a query?" -> POST /segments/{id}/targets/query
+- "Create a query?" -> POST /segments/query
+- "Create a team_usage?" -> POST /stats/team_usage
+- "Get task details?" -> GET /tasks/{id}
+- "Create a thread?" -> POST /threads
+- "Get thread details?" -> GET /threads/{message_id}
+- "Partially update a thread?" -> PATCH /threads/{message_id}
+- "List all unread?" -> GET /unread
+- "Create a unread_batch?" -> POST /unread_batch
+- "Create a file?" -> POST /uploads/file
+- "Create a image?" -> POST /uploads/image
+- "List all usergroups?" -> GET /usergroups
+- "Create a usergroup?" -> POST /usergroups
+- "Delete a usergroup?" -> DELETE /usergroups/{id}
+- "Get usergroup details?" -> GET /usergroups/{id}
+- "Update a usergroup?" -> PUT /usergroups/{id}
+- "Create a member?" -> POST /usergroups/{id}/members
+- "Search search?" -> GET /usergroups/search
+- "List all users?" -> GET /users
+- "Create a user?" -> POST /users
+- "Create a deactivate?" -> POST /users/{user_id}/deactivate
+- "Create a event?" -> POST /users/{user_id}/event
+- "List all export?" -> GET /users/{user_id}/export
+- "Create a reactivate?" -> POST /users/{user_id}/reactivate
+- "List all block?" -> GET /users/block
+- "Create a block?" -> POST /users/block
+- "Create a deactivate?" -> POST /users/deactivate
+- "Create a delete?" -> POST /users/delete
+- "List all live_locations?" -> GET /users/live_locations
+- "Create a reactivate?" -> POST /users/reactivate
+- "Create a restore?" -> POST /users/restore
+- "Create a unblock?" -> POST /users/unblock
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

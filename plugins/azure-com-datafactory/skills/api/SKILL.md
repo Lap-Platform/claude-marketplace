@@ -133,96 +133,112 @@ https://management.azure.com
 | POST | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/adfcdcs/{changeDataCaptureName}/stop | Stops a change data capture. |
 | GET | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/adfcdcs/{changeDataCaptureName}/status | Gets the current status for the change data capture resource. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What operations are available in the Data Factory resource provider?" -> GET /providers/Microsoft.DataFactory/operations
-- "List all data factories in my subscription" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.DataFactory/factories
-- "List data factories in a specific resource group" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories
-- "Create or update a data factory" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}
-- "Delete a data factory" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}
-- "Run a pipeline in my data factory" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/pipelines/{pipelineName}/createRun
-- "Check the status of a pipeline run" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/pipelineruns/{runId}
-- "Cancel a running pipeline" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/pipelineruns/{runId}/cancel
-- "What activity runs happened in a pipeline run?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/pipelineruns/{runId}/queryActivityruns
-- "List all triggers in my factory" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/triggers
-- "Start or stop a trigger" -> POST .../triggers/{triggerName}/start and POST .../triggers/{triggerName}/stop
-- "Get the status of an integration runtime" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/getStatus
-- "Connect my factory to a GitHub repo" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.DataFactory/locations/{locationId}/configureFactoryRepo
-- "Start a data flow debug session" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/createDataFlowDebugSession
-- "Check the status of a change data capture" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/adfcdcs/{changeDataCaptureName}/status
-
-## Response Tips
-
-- **List endpoints** (factories, pipelines, datasets, triggers, linked services, data flows, CDCs): Responses are paginated via `nextLink`; keep fetching until `nextLink` is absent. Items are in a `value` array.
-- **GET single resource**: Returns the full resource object with `id`, `name`, `type`, `properties`, and `etag`. A 304 means the resource has not changed since your `If-None-Match` ETag -- no body is returned.
-- **PUT/PATCH resource**: Returns the updated resource object. Use the returned `etag` for subsequent conditional updates via `If-Match`.
-- **DELETE resource**: 200 means deleted; 204 means the resource did not exist (already deleted). Both are success.
-- **Pipeline createRun**: Returns a `runId` string -- save this to query run status and activity runs afterward.
-- **Query endpoints** (queryPipelineRuns, queryActivityruns, queryTriggerRuns): Accept `filterParameters` with `lastUpdatedAfter`, `lastUpdatedBefore`, and optional `filters`/`orderBy`. Responses include `value` array and optional `continuationToken`.
-- **Async operations** (integration runtime start/stop, trigger subscribe/unsubscribe, debug sessions): 202 means the operation was accepted but is still running. Poll the `Location` or `Azure-AsyncOperation` header URL until completion.
-
-## Anomaly Flags
-
-- **304 Not Modified on GETs**: Surface when a conditional GET returns 304 -- the cached version is still current, no body to parse.
-- **202 Accepted on long-running operations**: Flag that integration runtime start/stop, trigger event subscriptions, debug session creation, and metadata refresh are async. Prompt the user to poll for completion.
-- **204 on DELETE**: Proactively note when a delete returns 204 (resource already gone) vs 200 (actually deleted) so the user knows the prior state.
-- **ETag drift**: If a PUT with `If-Match` fails with 412 Precondition Failed, surface that another process modified the resource -- the user needs to re-read and retry.
-- **Missing nextLink misinterpreted as complete**: Warn if a list response has exactly the page-size number of items but no `nextLink` -- this edge case can mask truncated results.
-- **Feature flags and exposure control**: Responses from getFeatureValue/queryFeaturesValue may return features that are not yet GA. Flag any feature with `"state": "Off"` or unexpected values.
-- **Integration runtime node disappearance**: When listing or getting integration runtime nodes, flag if node count drops compared to a prior call -- may indicate infrastructure issues.
-- **Trigger in failed subscription state**: After calling getEventSubscriptionStatus, flag if the status is not "Enabled" since the trigger will silently miss events.
-
-## Playbook
-
-### 1. Create a Factory and Run Your First Pipeline
-
-1. PUT a new factory: `PUT .../factories/{factoryName}` with the `factory` body (location, identity, optional git config).
-2. Create a linked service for your data source: `PUT .../linkedservices/{linkedServiceName}` with connection properties.
-3. Create source and sink datasets: `PUT .../datasets/{datasetName}` for each, referencing the linked service.
-4. Create a pipeline with a copy activity: `PUT .../pipelines/{pipelineName}` with activities referencing the datasets.
-5. Trigger the pipeline: `POST .../pipelines/{pipelineName}/createRun`. Save the returned `runId`.
-6. Monitor the run: `GET .../pipelineruns/{runId}` until `status` is `Succeeded` or `Failed`.
-7. Inspect activity details: `POST .../pipelineruns/{runId}/queryActivityruns` with a time-range filter.
-
-### 2. Set Up and Manage an Integration Runtime
-
-1. Create the integration runtime: `PUT .../integrationRuntimes/{irName}` with type (`Managed`, `SelfHosted`).
-2. For self-hosted: retrieve auth keys with `POST .../integrationRuntimes/{irName}/listAuthKeys` and install the agent on your machine.
-3. Start the runtime: `POST .../integrationRuntimes/{irName}/start` (returns 202 -- poll until ready).
-4. Check status: `POST .../integrationRuntimes/{irName}/getStatus` to confirm it is `Online`.
-5. Monitor nodes: `GET .../integrationRuntimes/{irName}/nodes/{nodeName}` for health and version info.
-6. Upgrade when available: `POST .../integrationRuntimes/{irName}/upgrade`.
-7. To decommission: `POST .../integrationRuntimes/{irName}/stop`, then `DELETE .../integrationRuntimes/{irName}`.
-
-### 3. Configure Triggers and Monitor Trigger Runs
-
-1. Create a trigger: `PUT .../triggers/{triggerName}` with schedule or event properties.
-2. For event-based triggers, subscribe: `POST .../triggers/{triggerName}/subscribeToEvents` (async -- poll 202).
-3. Verify subscription: `POST .../triggers/{triggerName}/getEventSubscriptionStatus` -- ensure status is `Enabled`.
-4. Start the trigger: `POST .../triggers/{triggerName}/start`.
-5. Query trigger runs: `POST .../queryTriggerRuns` with time-range filters to see execution history.
-6. Rerun a failed trigger run: `POST .../triggers/{triggerName}/triggerRuns/{runId}/rerun`.
-7. To disable: `POST .../triggers/{triggerName}/stop`, then optionally `POST .../triggers/{triggerName}/unsubscribeFromEvents`.
-
-### 4. Debug a Data Flow Interactively
-
-1. Start a debug session: `POST .../createDataFlowDebugSession` with compute and TTL settings (returns 202 -- poll).
-2. List active sessions: `POST .../queryDataFlowDebugSessions` to get the session ID.
-3. Add your data flow to the session: `POST .../addDataFlowToDebugSession` with the data flow definition and linked services.
-4. Execute a debug command: `POST .../executeDataFlowDebugCommand` with the command type (preview, stats, expression) -- poll the 202 response.
-5. Iterate: modify the data flow, re-add, and re-execute commands as needed.
-6. Clean up: `POST .../deleteDataFlowDebugSession` when done to free compute resources.
-
-### 5. Set Up Change Data Capture (CDC)
-
-1. Create a CDC resource: `PUT .../adfcdcs/{changeDataCaptureName}` with source, sink, and mapping configuration.
-2. Verify the configuration: `GET .../adfcdcs/{changeDataCaptureName}` to confirm properties are correct.
-3. Start the CDC: `POST .../adfcdcs/{changeDataCaptureName}/start`.
-4. Monitor status: `GET .../adfcdcs/{changeDataCaptureName}/status` -- check for latency and error counts.
-5. To pause: `POST .../adfcdcs/{changeDataCaptureName}/stop`. To resume, call start again.
-6. To remove: `DELETE .../adfcdcs/{changeDataCaptureName}` (returns 200 if existed, 204 if already gone).
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all operations?" -> GET /providers/Microsoft.DataFactory/operations
+- "List all factories?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.DataFactory/factories
+- "Create a configureFactoryRepo?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.DataFactory/locations/{locationId}/configureFactoryRepo
+- "Create a getFeatureValue?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.DataFactory/locations/{locationId}/getFeatureValue
+- "Create a getFeatureValue?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/getFeatureValue
+- "Create a queryFeaturesValue?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/queryFeaturesValue
+- "List all factories?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories
+- "Update a factory?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}
+- "Partially update a factory?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}
+- "Get factory details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}
+- "Delete a factory?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}
+- "Create a getGitHubAccessToken?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/getGitHubAccessToken
+- "Create a getDataPlaneAccess?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/getDataPlaneAccess
+- "List all integrationRuntimes?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes
+- "Update a integrationRuntime?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}
+- "Get integrationRuntime details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}
+- "Partially update a integrationRuntime?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}
+- "Delete a integrationRuntime?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}
+- "Create a getStatus?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/getStatus
+- "List all outboundNetworkDependenciesEndpoints?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/outboundNetworkDependenciesEndpoints
+- "Create a getConnectionInfo?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/getConnectionInfo
+- "Create a regenerateAuthKey?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/regenerateAuthKey
+- "Create a listAuthKey?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/listAuthKeys
+- "Create a start?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/start
+- "Create a stop?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/stop
+- "Create a syncCredential?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/syncCredentials
+- "Create a monitoringData?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/monitoringData
+- "Create a upgrade?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/upgrade
+- "Create a removeLink?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/removeLinks
+- "Create a linkedIntegrationRuntime?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/linkedIntegrationRuntime
+- "Create a refreshObjectMetadata?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/refreshObjectMetadata
+- "Create a getObjectMetadata?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/getObjectMetadata
+- "Get node details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/nodes/{nodeName}
+- "Delete a node?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/nodes/{nodeName}
+- "Partially update a node?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/nodes/{nodeName}
+- "Create a ipAddress?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/integrationRuntimes/{integrationRuntimeName}/nodes/{nodeName}/ipAddress
+- "List all linkedservices?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/linkedservices
+- "Update a linkedservice?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/linkedservices/{linkedServiceName}
+- "Get linkedservice details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/linkedservices/{linkedServiceName}
+- "Delete a linkedservice?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/linkedservices/{linkedServiceName}
+- "List all datasets?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/datasets
+- "Update a dataset?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/datasets/{datasetName}
+- "Get dataset details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/datasets/{datasetName}
+- "Delete a dataset?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/datasets/{datasetName}
+- "List all pipelines?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/pipelines
+- "Update a pipeline?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/pipelines/{pipelineName}
+- "Get pipeline details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/pipelines/{pipelineName}
+- "Delete a pipeline?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/pipelines/{pipelineName}
+- "Create a createRun?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/pipelines/{pipelineName}/createRun
+- "Create a queryPipelineRun?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/queryPipelineRuns
+- "Get pipelinerun details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/pipelineruns/{runId}
+- "Create a queryActivityrun?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/pipelineruns/{runId}/queryActivityruns
+- "Create a cancel?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/pipelineruns/{runId}/cancel
+- "List all triggers?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/triggers
+- "Create a querytrigger?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/querytriggers
+- "Update a trigger?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/triggers/{triggerName}
+- "Get trigger details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/triggers/{triggerName}
+- "Delete a trigger?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/triggers/{triggerName}
+- "Create a subscribeToEvent?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/triggers/{triggerName}/subscribeToEvents
+- "Create a getEventSubscriptionStatus?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/triggers/{triggerName}/getEventSubscriptionStatus
+- "Create a unsubscribeFromEvent?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/triggers/{triggerName}/unsubscribeFromEvents
+- "Create a start?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/triggers/{triggerName}/start
+- "Create a stop?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/triggers/{triggerName}/stop
+- "Create a rerun?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/triggers/{triggerName}/triggerRuns/{runId}/rerun
+- "Create a cancel?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/triggers/{triggerName}/triggerRuns/{runId}/cancel
+- "Create a queryTriggerRun?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/queryTriggerRuns
+- "Update a dataflow?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/dataflows/{dataFlowName}
+- "Get dataflow details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/dataflows/{dataFlowName}
+- "Delete a dataflow?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/dataflows/{dataFlowName}
+- "List all dataflows?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/dataflows
+- "Create a createDataFlowDebugSession?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/createDataFlowDebugSession
+- "Create a queryDataFlowDebugSession?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/queryDataFlowDebugSessions
+- "Create a addDataFlowToDebugSession?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/addDataFlowToDebugSession
+- "Create a deleteDataFlowDebugSession?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/deleteDataFlowDebugSession
+- "Create a executeDataFlowDebugCommand?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/executeDataFlowDebugCommand
+- "List all managedVirtualNetworks?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/managedVirtualNetworks
+- "Update a managedVirtualNetwork?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/managedVirtualNetworks/{managedVirtualNetworkName}
+- "Get managedVirtualNetwork details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/managedVirtualNetworks/{managedVirtualNetworkName}
+- "List all managedPrivateEndpoints?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/managedVirtualNetworks/{managedVirtualNetworkName}/managedPrivateEndpoints
+- "List all credentials?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/credentials
+- "Update a credential?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/credentials/{credentialName}
+- "Get credential details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/credentials/{credentialName}
+- "Delete a credential?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/credentials/{credentialName}
+- "Update a managedPrivateEndpoint?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/managedVirtualNetworks/{managedVirtualNetworkName}/managedPrivateEndpoints/{managedPrivateEndpointName}
+- "Get managedPrivateEndpoint details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/managedVirtualNetworks/{managedVirtualNetworkName}/managedPrivateEndpoints/{managedPrivateEndpointName}
+- "Delete a managedPrivateEndpoint?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/managedVirtualNetworks/{managedVirtualNetworkName}/managedPrivateEndpoints/{managedPrivateEndpointName}
+- "List all privateEndPointConnections?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/privateEndPointConnections
+- "Update a privateEndpointConnection?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/privateEndpointConnections/{privateEndpointConnectionName}
+- "Get privateEndpointConnection details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/privateEndpointConnections/{privateEndpointConnectionName}
+- "Delete a privateEndpointConnection?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/privateEndpointConnections/{privateEndpointConnectionName}
+- "List all privateLinkResources?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/privateLinkResources
+- "List all globalParameters?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/globalParameters
+- "Get globalParameter details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/globalParameters/{globalParameterName}
+- "Update a globalParameter?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/globalParameters/{globalParameterName}
+- "Delete a globalParameter?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/globalParameters/{globalParameterName}
+- "List all adfcdcs?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/adfcdcs
+- "Update a adfcdc?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/adfcdcs/{changeDataCaptureName}
+- "Get adfcdc details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/adfcdcs/{changeDataCaptureName}
+- "Delete a adfcdc?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/adfcdcs/{changeDataCaptureName}
+- "Create a start?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/adfcdcs/{changeDataCaptureName}/start
+- "Create a stop?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/adfcdcs/{changeDataCaptureName}/stop
+- "List all status?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataFactory/factories/{factoryName}/adfcdcs/{changeDataCaptureName}/status
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -45,87 +45,10 @@ Not specified.
 | POST | / | Updates settings for a server.   This operation is synchronous. |
 | POST | / | Updates engine-specific attributes on a specified server. The server enters the MODIFYING state when this operation is in progress. Only one update can occur at a time. You can use this command to reset a Chef server's public key (CHEF_PIVOTAL_KEY) or a Puppet server's admin password (PUPPET_ADMIN_PASSWORD).   This operation is asynchronous.   This operation can only be called for servers in HEALTHY or UNHEALTHY states. Otherwise, an InvalidStateException is raised. A ResourceNotFoundException is thrown when the server does not exist. A ValidationException is raised when parameters of the request are not valid. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new Chef or Puppet server?" -> POST / (CreateServer)
-- "How do I back up my OpsWorks CM server?" -> POST / (CreateBackup)
-- "How do I restore a server from a backup?" -> POST / (RestoreServer)
-- "How do I list all my servers?" -> POST / (DescribeServers)
-- "How do I get details for a specific server?" -> POST / (DescribeServers with ServerName)
-- "How do I delete a server I no longer need?" -> POST / (DeleteServer)
-- "How do I register a node with my server?" -> POST / (AssociateNode)
-- "How do I remove a node from my server?" -> POST / (DisassociateNode)
-- "Is my node association finished yet?" -> POST / (DescribeNodeAssociationStatus)
-- "How do I list all backups for a server?" -> POST / (DescribeBackups with ServerName)
-- "How do I check what happened on my server recently?" -> POST / (DescribeEvents)
-- "How do I change my server's maintenance window?" -> POST / (UpdateServer)
-- "How do I export a server engine attribute like a starter kit?" -> POST / (ExportServerEngineAttribute)
-- "How do I check my account limits and usage?" -> POST / (DescribeAccountAttributes)
-- "How do I tag or untag my OpsWorks CM resources?" -> POST / (TagResource / UntagResource)
-
-## Response Tips
-
-- **Server objects**: Deeply nested -- always check `Server.Status` (`CREATING`, `RUNNING`, `FAILED`, `TERMINATED`) and `Server.MaintenanceStatus` before acting on other fields.
-- **Backup objects**: `Backup.Status` drives availability (`IN_PROGRESS`, `OK`, `FAILED`); `S3DataUrl` and `S3LogUrl` are only populated once status is `OK`.
-- **Paginated endpoints** (DescribeBackups, DescribeEvents, DescribeServers, ListTagsForResource): Loop while `NextToken` is present in the response; pass it back as `NextToken` in the next request with the same `MaxResults`.
-- **Node association**: Returns a `NodeAssociationStatusToken` -- this is an async operation; poll `DescribeNodeAssociationStatus` until the status is `SUCCESS` or `FAILED`.
-- **Void responses** (DeleteBackup, DeleteServer, TagResource, UntagResource): Success is indicated by a 200 with an empty or minimal body -- absence of error is the confirmation.
-
-## Anomaly Flags
-
-- **Server status `UNDER_MAINTENANCE` or `MODIFYING`**: Surface immediately -- mutating operations will fail until the server returns to `RUNNING`.
-- **`MaintenanceStatus` set to `FAILED`**: Indicates a maintenance run failed; the server may be in a degraded state requiring manual intervention.
-- **`StatusReason` populated on a Server object**: Always surface this -- it contains error details that explain non-healthy states.
-- **Backup status `FAILED` or `DELETING`**: Alert the user; a failed backup cannot be used for restore, and a deleting backup will soon be unavailable.
-- **Account attribute limits approaching**: After calling DescribeAccountAttributes, compare `Used` against `Maximum` for servers and backups; warn when usage exceeds 80%.
-- **Node association stuck**: If polling DescribeNodeAssociationStatus returns `IN_PROGRESS` for more than 15 minutes, flag as potentially stuck.
-- **Deprecated engine versions**: If `EngineVersion` on a server is older than the latest available, surface a recommendation to update.
-
-## Playbook
-
-### Provision a New Server and Register a Node
-
-1. Call **DescribeAccountAttributes** to verify you have capacity for a new server.
-2. Call **CreateServer** with Engine (`Chef` or `Puppet`), ServerName, InstanceProfileArn, InstanceType, and ServiceRoleArn. Optionally set backup and maintenance windows.
-3. Poll **DescribeServers** with the ServerName until `Server.Status` is `RUNNING`.
-4. Call **ExportServerEngineAttribute** with `ExportAttributeName: "Userdata"` to get the node bootstrap script.
-5. Run the bootstrap script on your target node.
-6. Call **AssociateNode** with ServerName, NodeName, and EngineAttributes from the bootstrap.
-7. Poll **DescribeNodeAssociationStatus** with the returned token until status is `SUCCESS`.
-
-### Backup and Restore a Server
-
-1. Call **CreateBackup** with the ServerName (optionally add a Description).
-2. Poll **DescribeBackups** with the returned BackupId until `Backup.Status` is `OK`.
-3. When ready to restore, call **RestoreServer** with the BackupId and the target ServerName.
-4. Poll **DescribeServers** until the server status returns to `RUNNING`.
-5. Verify server health by calling **DescribeEvents** and checking for errors.
-
-### Update Server Maintenance Settings
-
-1. Call **DescribeServers** with ServerName to get current configuration.
-2. Call **UpdateServer** with the desired changes (e.g., `PreferredMaintenanceWindow: "Tue:08:00"`, `BackupRetentionCount: 5`).
-3. Confirm the returned Server object reflects the new settings.
-4. Optionally call **StartMaintenance** to trigger an immediate maintenance run rather than waiting for the window.
-
-### Tag Resources for Cost Tracking
-
-1. Call **DescribeServers** to get the `ServerArn` for your target server.
-2. Call **TagResource** with the ResourceArn and your Tags (e.g., `[{Key: "Environment", Value: "Production"}]`).
-3. Verify tags by calling **ListTagsForResource** with the same ResourceArn.
-4. To remove tags later, call **UntagResource** with the ResourceArn and the TagKeys to remove.
-
-### Decommission a Server
-
-1. Call **DescribeServers** with ServerName to confirm the server exists and check its status.
-2. Call **CreateBackup** as a final safety backup before deletion.
-3. Poll **DescribeBackups** until the backup status is `OK`.
-4. Call **DisassociateNode** for each node registered to the server.
-5. Poll **DescribeNodeAssociationStatus** for each disassociation until complete.
-6. Call **DeleteServer** with the ServerName.
-7. Optionally call **DeleteBackup** to clean up old backups you no longer need.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

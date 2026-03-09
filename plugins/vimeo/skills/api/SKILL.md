@@ -411,88 +411,314 @@ https://api.vimeo.com
 | POST | /videos/{video_id}/versions | Add a version to a video |
 | GET | /videos/{video_id}/videos | Get all the related videos of a video |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I search for videos on Vimeo?" -> GET /videos
-- "What categories are available?" -> GET /categories
-- "How do I get my profile information?" -> GET /me
-- "How do I upload a video?" -> POST /me/videos
-- "How do I add a video to an album?" -> PUT /me/albums/{album_id}/videos/{video_id}
-- "How do I like a video?" -> PUT /me/likes/{video_id}
-- "How do I create a new channel?" -> POST /channels
-- "How do I add a video to my watch later list?" -> PUT /me/watchlater/{video_id}
-- "How do I get comments on a video?" -> GET /videos/{video_id}/comments
-- "How do I create an On Demand page for selling my film?" -> POST /me/ondemand/pages
-- "How do I manage who can see my private video?" -> PUT /videos/{video_id}/privacy/users
-- "How do I find users on Vimeo?" -> GET /users
-- "How do I set a custom thumbnail on my album?" -> POST /me/albums/{album_id}/videos/{video_id}/set_album_thumbnail
-- "How do I restrict my video to specific domains?" -> PUT /videos/{video_id}/privacy/domains/{domain}
-- "How do I verify my OAuth token is valid?" -> GET /oauth/verify
-
-## Response Tips
-
-- **Paginated lists** (videos, channels, users, albums, categories): All accept `page` and `per_page` params; responses include `total`, `page`, and `per_page` in a paging object -- always check `total` to know if more pages exist.
-- **Video objects**: Deeply nested under `metadata.connections` (related counts/URIs) and `metadata.interactions` (buy/rent/like/watchlater states) -- drill into `interactions` for actionable state like `like.added` or `watchlater.added`.
-- **On Demand pages**: Contain nested `buy`, `rent`, and `subscription` pricing maps keyed by currency code (USD, EUR, etc.) -- treat missing keys as "not available in that currency."
-- **204 responses**: Indicate success with no body (likes, follows, watch later, channel membership, video removal) -- do not attempt to parse a response body.
-- **Error responses**: Return a JSON object with `error` (human message), `link` (docs URL), and `developer_message` (debug detail) -- surface `developer_message` for troubleshooting.
-
-## Anomaly Flags
-
-- **429 status on POST /me/following**: Rate limit hit when bulk-following users -- back off and retry with smaller batches.
-- **304 Not Modified**: Returned by video/channel listing endpoints when content has not changed -- surface this so callers know to use cached data rather than re-processing.
-- **500 on upload/thumbnail operations**: Server errors on `POST /me/videos`, `DELETE /users/{user_id}/uploads/{upload_id}`, and `set_album_thumbnail` indicate transient failures -- flag for retry rather than treating as permanent.
-- **503 on search/user listing**: Vimeo search infrastructure may be temporarily unavailable -- alert the user and suggest retrying after a short delay.
-- **403 on write operations**: Likely a plan/permission limitation (e.g., custom logos, On Demand pages, group creation require Vimeo Pro/Business) -- surface the plan requirement rather than just "forbidden."
-- **Deprecated OAuth1 flow**: `POST /oauth/authorize/vimeo_oauth1` exists but OAuth1 is legacy -- flag if an agent attempts to use it and recommend OAuth2 instead.
-- **On Demand pricing without `accepted_currencies`**: If a user creates an On Demand page with pricing but omits `accepted_currencies`, unexpected currency behavior may occur -- proactively warn.
-
-## Playbook
-
-### 1. Upload a Video and Organize It
-
-1. `POST /me/videos` -- initiate the upload; note the `upload.upload_link` and `upload.approach` (tus or pull) from the response.
-2. Upload the file binary to the `upload_link` using the indicated approach (outside the API).
-3. `PATCH /videos/{video_id}` -- set the title, description, and privacy settings.
-4. `PUT /videos/{video_id}/tags` -- add relevant tags for discoverability.
-5. `PUT /me/albums/{album_id}/videos/{video_id}` -- add the video to an album.
-6. `PUT /me/projects/{project_id}/videos/{video_id}` -- add the video to a project folder.
-
-### 2. Create and Populate a Channel
-
-1. `POST /channels` -- create the channel with name, description, and privacy settings.
-2. `PUT /channels/{channel_id}/videos/{video_id}` -- add videos one at a time, or use `PUT /channels/{channel_id}/videos` with `video_uri` for batch.
-3. `PUT /channels/{channel_id}/moderators/{user_id}` -- assign moderators.
-4. `PUT /channels/{channel_id}/categories/{category}` -- associate with relevant categories.
-5. `GET /channels/{channel_id}/videos` -- verify the channel content is correct.
-
-### 3. Set Up an On Demand Film for Sale
-
-1. `POST /me/ondemand/pages` -- create the page with `type: "film"`, `content_rating`, `name`, `description`, and pricing under `buy`/`rent`.
-2. `PUT /ondemand/pages/{ondemand_id}/videos/{video_id}` -- attach the film video (set `type` to `main`).
-3. `PUT /ondemand/pages/{ondemand_id}/videos/{trailer_id}` -- attach a trailer (set `type` to `trailer`).
-4. `PUT /ondemand/pages/{ondemand_id}/genres/{genre_id}` -- assign genres.
-5. `PUT /ondemand/pages/{ondemand_id}/regions/{country}` -- configure regional availability.
-6. `POST /ondemand/pages/{ondemand_id}/promotions` -- create discount promo codes.
-7. `PATCH /ondemand/pages/{ondemand_id}` -- publish when ready.
-
-### 4. Manage Video Privacy and Embedding
-
-1. `PATCH /videos/{video_id}` -- set `privacy.view` to `disable`, `unlisted`, `password`, or `users`.
-2. `PUT /videos/{video_id}/privacy/users/{user_id}` -- grant access to specific users (when `privacy.view` is `users`).
-3. `PUT /videos/{video_id}/privacy/domains/{domain}` -- whitelist embedding domains.
-4. `GET /videos/{video_id}/privacy/domains` -- verify the domain whitelist.
-5. `GET /videos/{video_id}/privacy/users` -- verify the user access list.
-
-### 5. Curate and Manage an Album (Showcase)
-
-1. `POST /me/albums` -- create the album with name, description, layout, and theme.
-2. `PUT /me/albums/{album_id}/videos` -- batch-add videos by passing comma-separated `videos` URIs.
-3. `POST /me/albums/{album_id}/videos/{video_id}/set_album_thumbnail` -- set the album thumbnail from a specific video frame using `time_code`.
-4. `GET /me/albums/{album_id}/videos?sort=manual` -- verify video order.
-5. `PATCH /me/albums/{album_id}` -- update privacy, password, or branding settings.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all categories?" -> GET /categories
+- "Get category details?" -> GET /categories/{category}
+- "Search channels?" -> GET /categories/{category}/channels
+- "Search groups?" -> GET /categories/{category}/groups
+- "Search videos?" -> GET /categories/{category}/videos
+- "Get video details?" -> GET /categories/{category}/videos/{video_id}
+- "Search channels?" -> GET /channels
+- "Create a channel?" -> POST /channels
+- "Delete a channel?" -> DELETE /channels/{channel_id}
+- "Get channel details?" -> GET /channels/{channel_id}
+- "Partially update a channel?" -> PATCH /channels/{channel_id}
+- "List all categories?" -> GET /channels/{channel_id}/categories
+- "Delete a category?" -> DELETE /channels/{channel_id}/categories/{category}
+- "Update a category?" -> PUT /channels/{channel_id}/categories/{category}
+- "Search moderators?" -> GET /channels/{channel_id}/moderators
+- "Get moderator details?" -> GET /channels/{channel_id}/moderators/{user_id}
+- "Delete a moderator?" -> DELETE /channels/{channel_id}/moderators/{user_id}
+- "Update a moderator?" -> PUT /channels/{channel_id}/moderators/{user_id}
+- "List all users?" -> GET /channels/{channel_id}/privacy/users
+- "Delete a user?" -> DELETE /channels/{channel_id}/privacy/users/{user_id}
+- "Update a user?" -> PUT /channels/{channel_id}/privacy/users/{user_id}
+- "List all tags?" -> GET /channels/{channel_id}/tags
+- "Delete a tag?" -> DELETE /channels/{channel_id}/tags/{word}
+- "Get tag details?" -> GET /channels/{channel_id}/tags/{word}
+- "Update a tag?" -> PUT /channels/{channel_id}/tags/{word}
+- "Search users?" -> GET /channels/{channel_id}/users
+- "Search videos?" -> GET /channels/{channel_id}/videos
+- "Delete a video?" -> DELETE /channels/{channel_id}/videos/{video_id}
+- "Get video details?" -> GET /channels/{channel_id}/videos/{video_id}
+- "Update a video?" -> PUT /channels/{channel_id}/videos/{video_id}
+- "List all comments?" -> GET /channels/{channel_id}/videos/{video_id}/comments
+- "Create a comment?" -> POST /channels/{channel_id}/videos/{video_id}/comments
+- "Search credits?" -> GET /channels/{channel_id}/videos/{video_id}/credits
+- "Create a credit?" -> POST /channels/{channel_id}/videos/{video_id}/credits
+- "List all likes?" -> GET /channels/{channel_id}/videos/{video_id}/likes
+- "List all pictures?" -> GET /channels/{channel_id}/videos/{video_id}/pictures
+- "Create a picture?" -> POST /channels/{channel_id}/videos/{video_id}/pictures
+- "List all users?" -> GET /channels/{channel_id}/videos/{video_id}/privacy/users
+- "List all texttracks?" -> GET /channels/{channel_id}/videos/{video_id}/texttracks
+- "Create a texttrack?" -> POST /channels/{channel_id}/videos/{video_id}/texttracks
+- "List all contentratings?" -> GET /contentratings
+- "List all creativecommons?" -> GET /creativecommons
+- "Search groups?" -> GET /groups
+- "Create a group?" -> POST /groups
+- "Delete a group?" -> DELETE /groups/{group_id}
+- "Get group details?" -> GET /groups/{group_id}
+- "Search users?" -> GET /groups/{group_id}/users
+- "Search videos?" -> GET /groups/{group_id}/videos
+- "Delete a video?" -> DELETE /groups/{group_id}/videos/{video_id}
+- "Get video details?" -> GET /groups/{group_id}/videos/{video_id}
+- "Update a video?" -> PUT /groups/{group_id}/videos/{video_id}
+- "List all languages?" -> GET /languages
+- "List all me?" -> GET /me
+- "Search albums?" -> GET /me/albums
+- "Create a album?" -> POST /me/albums
+- "Delete a album?" -> DELETE /me/albums/{album_id}
+- "Get album details?" -> GET /me/albums/{album_id}
+- "Partially update a album?" -> PATCH /me/albums/{album_id}
+- "Search videos?" -> GET /me/albums/{album_id}/videos
+- "Delete a video?" -> DELETE /me/albums/{album_id}/videos/{video_id}
+- "Get video details?" -> GET /me/albums/{album_id}/videos/{video_id}
+- "Update a video?" -> PUT /me/albums/{album_id}/videos/{video_id}
+- "Create a set_album_thumbnail?" -> POST /me/albums/{album_id}/videos/{video_id}/set_album_thumbnail
+- "Search appearances?" -> GET /me/appearances
+- "List all categories?" -> GET /me/categories
+- "Delete a category?" -> DELETE /me/categories/{category}
+- "Get category details?" -> GET /me/categories/{category}
+- "Update a category?" -> PUT /me/categories/{category}
+- "Search channels?" -> GET /me/channels
+- "Delete a channel?" -> DELETE /me/channels/{channel_id}
+- "Get channel details?" -> GET /me/channels/{channel_id}
+- "Update a channel?" -> PUT /me/channels/{channel_id}
+- "List all customlogos?" -> GET /me/customlogos
+- "Create a customlogo?" -> POST /me/customlogos
+- "Get customlogo details?" -> GET /me/customlogos/{logo_id}
+- "List all feed?" -> GET /me/feed
+- "Search followers?" -> GET /me/followers
+- "Search following?" -> GET /me/following
+- "Create a following?" -> POST /me/following
+- "Delete a following?" -> DELETE /me/following/{follow_user_id}
+- "Get following details?" -> GET /me/following/{follow_user_id}
+- "Update a following?" -> PUT /me/following/{follow_user_id}
+- "Search groups?" -> GET /me/groups
+- "Delete a group?" -> DELETE /me/groups/{group_id}
+- "Update a group?" -> PUT /me/groups/{group_id}
+- "Get group details?" -> GET /me/groups/{group_id}
+- "Search likes?" -> GET /me/likes
+- "Delete a like?" -> DELETE /me/likes/{video_id}
+- "Get like details?" -> GET /me/likes/{video_id}
+- "Update a like?" -> PUT /me/likes/{video_id}
+- "List all pages?" -> GET /me/ondemand/pages
+- "Create a page?" -> POST /me/ondemand/pages
+- "List all purchases?" -> GET /me/ondemand/purchases
+- "Get purchase details?" -> GET /me/ondemand/purchases/{ondemand_id}
+- "List all pictures?" -> GET /me/pictures
+- "Create a picture?" -> POST /me/pictures
+- "Delete a picture?" -> DELETE /me/pictures/{portraitset_id}
+- "Get picture details?" -> GET /me/pictures/{portraitset_id}
+- "Partially update a picture?" -> PATCH /me/pictures/{portraitset_id}
+- "Search portfolios?" -> GET /me/portfolios
+- "Get portfolio details?" -> GET /me/portfolios/{portfolio_id}
+- "List all videos?" -> GET /me/portfolios/{portfolio_id}/videos
+- "Delete a video?" -> DELETE /me/portfolios/{portfolio_id}/videos/{video_id}
+- "Get video details?" -> GET /me/portfolios/{portfolio_id}/videos/{video_id}
+- "Update a video?" -> PUT /me/portfolios/{portfolio_id}/videos/{video_id}
+- "List all presets?" -> GET /me/presets
+- "Get preset details?" -> GET /me/presets/{preset_id}
+- "Partially update a preset?" -> PATCH /me/presets/{preset_id}
+- "List all videos?" -> GET /me/presets/{preset_id}/videos
+- "List all projects?" -> GET /me/projects
+- "Create a project?" -> POST /me/projects
+- "Delete a project?" -> DELETE /me/projects/{project_id}
+- "Get project details?" -> GET /me/projects/{project_id}
+- "Partially update a project?" -> PATCH /me/projects/{project_id}
+- "List all videos?" -> GET /me/projects/{project_id}/videos
+- "Delete a video?" -> DELETE /me/projects/{project_id}/videos/{video_id}
+- "Update a video?" -> PUT /me/projects/{project_id}/videos/{video_id}
+- "Search videos?" -> GET /me/videos
+- "Create a video?" -> POST /me/videos
+- "Get video details?" -> GET /me/videos/{video_id}
+- "List all videos?" -> GET /me/watched/videos
+- "Delete a video?" -> DELETE /me/watched/videos/{video_id}
+- "Search watchlater?" -> GET /me/watchlater
+- "Delete a watchlater?" -> DELETE /me/watchlater/{video_id}
+- "Get watchlater details?" -> GET /me/watchlater/{video_id}
+- "Update a watchlater?" -> PUT /me/watchlater/{video_id}
+- "Create a access_token?" -> POST /oauth/access_token
+- "Create a client?" -> POST /oauth/authorize/client
+- "Create a vimeo_oauth1?" -> POST /oauth/authorize/vimeo_oauth1
+- "List all verify?" -> GET /oauth/verify
+- "List all genres?" -> GET /ondemand/genres
+- "Get genre details?" -> GET /ondemand/genres/{genre_id}
+- "Search pages?" -> GET /ondemand/genres/{genre_id}/pages
+- "Get page details?" -> GET /ondemand/genres/{genre_id}/pages/{ondemand_id}
+- "Delete a page?" -> DELETE /ondemand/pages/{ondemand_id}
+- "Get page details?" -> GET /ondemand/pages/{ondemand_id}
+- "Partially update a page?" -> PATCH /ondemand/pages/{ondemand_id}
+- "List all backgrounds?" -> GET /ondemand/pages/{ondemand_id}/backgrounds
+- "Create a background?" -> POST /ondemand/pages/{ondemand_id}/backgrounds
+- "Delete a background?" -> DELETE /ondemand/pages/{ondemand_id}/backgrounds/{background_id}
+- "Get background details?" -> GET /ondemand/pages/{ondemand_id}/backgrounds/{background_id}
+- "Partially update a background?" -> PATCH /ondemand/pages/{ondemand_id}/backgrounds/{background_id}
+- "List all genres?" -> GET /ondemand/pages/{ondemand_id}/genres
+- "Delete a genre?" -> DELETE /ondemand/pages/{ondemand_id}/genres/{genre_id}
+- "Get genre details?" -> GET /ondemand/pages/{ondemand_id}/genres/{genre_id}
+- "Update a genre?" -> PUT /ondemand/pages/{ondemand_id}/genres/{genre_id}
+- "List all likes?" -> GET /ondemand/pages/{ondemand_id}/likes
+- "List all pictures?" -> GET /ondemand/pages/{ondemand_id}/pictures
+- "Create a picture?" -> POST /ondemand/pages/{ondemand_id}/pictures
+- "Get picture details?" -> GET /ondemand/pages/{ondemand_id}/pictures/{poster_id}
+- "Partially update a picture?" -> PATCH /ondemand/pages/{ondemand_id}/pictures/{poster_id}
+- "List all promotions?" -> GET /ondemand/pages/{ondemand_id}/promotions
+- "Create a promotion?" -> POST /ondemand/pages/{ondemand_id}/promotions
+- "Delete a promotion?" -> DELETE /ondemand/pages/{ondemand_id}/promotions/{promotion_id}
+- "Get promotion details?" -> GET /ondemand/pages/{ondemand_id}/promotions/{promotion_id}
+- "List all codes?" -> GET /ondemand/pages/{ondemand_id}/promotions/{promotion_id}/codes
+- "List all regions?" -> GET /ondemand/pages/{ondemand_id}/regions
+- "Delete a region?" -> DELETE /ondemand/pages/{ondemand_id}/regions/{country}
+- "Get region details?" -> GET /ondemand/pages/{ondemand_id}/regions/{country}
+- "Update a region?" -> PUT /ondemand/pages/{ondemand_id}/regions/{country}
+- "List all seasons?" -> GET /ondemand/pages/{ondemand_id}/seasons
+- "Get season details?" -> GET /ondemand/pages/{ondemand_id}/seasons/{season_id}
+- "List all videos?" -> GET /ondemand/pages/{ondemand_id}/seasons/{season_id}/videos
+- "List all videos?" -> GET /ondemand/pages/{ondemand_id}/videos
+- "Delete a video?" -> DELETE /ondemand/pages/{ondemand_id}/videos/{video_id}
+- "Get video details?" -> GET /ondemand/pages/{ondemand_id}/videos/{video_id}
+- "Update a video?" -> PUT /ondemand/pages/{ondemand_id}/videos/{video_id}
+- "List all regions?" -> GET /ondemand/regions
+- "Get region details?" -> GET /ondemand/regions/{country}
+- "Get tag details?" -> GET /tags/{word}
+- "List all videos?" -> GET /tags/{word}/videos
+- "List all tutorial?" -> GET /tutorial
+- "Search users?" -> GET /users
+- "Get user details?" -> GET /users/{user_id}
+- "Partially update a user?" -> PATCH /users/{user_id}
+- "Search albums?" -> GET /users/{user_id}/albums
+- "Create a album?" -> POST /users/{user_id}/albums
+- "Delete a album?" -> DELETE /users/{user_id}/albums/{album_id}
+- "Get album details?" -> GET /users/{user_id}/albums/{album_id}
+- "Partially update a album?" -> PATCH /users/{user_id}/albums/{album_id}
+- "List all custom_thumbnails?" -> GET /users/{user_id}/albums/{album_id}/custom_thumbnails
+- "Create a custom_thumbnail?" -> POST /users/{user_id}/albums/{album_id}/custom_thumbnails
+- "Delete a custom_thumbnail?" -> DELETE /users/{user_id}/albums/{album_id}/custom_thumbnails/{thumbnail_id}
+- "Get custom_thumbnail details?" -> GET /users/{user_id}/albums/{album_id}/custom_thumbnails/{thumbnail_id}
+- "Partially update a custom_thumbnail?" -> PATCH /users/{user_id}/albums/{album_id}/custom_thumbnails/{thumbnail_id}
+- "List all logos?" -> GET /users/{user_id}/albums/{album_id}/logos
+- "Create a logo?" -> POST /users/{user_id}/albums/{album_id}/logos
+- "Delete a logo?" -> DELETE /users/{user_id}/albums/{album_id}/logos/{logo_id}
+- "Get logo details?" -> GET /users/{user_id}/albums/{album_id}/logos/{logo_id}
+- "Partially update a logo?" -> PATCH /users/{user_id}/albums/{album_id}/logos/{logo_id}
+- "Search videos?" -> GET /users/{user_id}/albums/{album_id}/videos
+- "Delete a video?" -> DELETE /users/{user_id}/albums/{album_id}/videos/{video_id}
+- "Get video details?" -> GET /users/{user_id}/albums/{album_id}/videos/{video_id}
+- "Update a video?" -> PUT /users/{user_id}/albums/{album_id}/videos/{video_id}
+- "Create a set_album_thumbnail?" -> POST /users/{user_id}/albums/{album_id}/videos/{video_id}/set_album_thumbnail
+- "Search appearances?" -> GET /users/{user_id}/appearances
+- "List all categories?" -> GET /users/{user_id}/categories
+- "Delete a category?" -> DELETE /users/{user_id}/categories/{category}
+- "Get category details?" -> GET /users/{user_id}/categories/{category}
+- "Update a category?" -> PUT /users/{user_id}/categories/{category}
+- "Search channels?" -> GET /users/{user_id}/channels
+- "Delete a channel?" -> DELETE /users/{user_id}/channels/{channel_id}
+- "Get channel details?" -> GET /users/{user_id}/channels/{channel_id}
+- "Update a channel?" -> PUT /users/{user_id}/channels/{channel_id}
+- "List all customlogos?" -> GET /users/{user_id}/customlogos
+- "Create a customlogo?" -> POST /users/{user_id}/customlogos
+- "Get customlogo details?" -> GET /users/{user_id}/customlogos/{logo_id}
+- "List all feed?" -> GET /users/{user_id}/feed
+- "Search followers?" -> GET /users/{user_id}/followers
+- "Search following?" -> GET /users/{user_id}/following
+- "Create a following?" -> POST /users/{user_id}/following
+- "Delete a following?" -> DELETE /users/{user_id}/following/{follow_user_id}
+- "Get following details?" -> GET /users/{user_id}/following/{follow_user_id}
+- "Update a following?" -> PUT /users/{user_id}/following/{follow_user_id}
+- "Search groups?" -> GET /users/{user_id}/groups
+- "Delete a group?" -> DELETE /users/{user_id}/groups/{group_id}
+- "Update a group?" -> PUT /users/{user_id}/groups/{group_id}
+- "Get group details?" -> GET /users/{user_id}/groups/{group_id}
+- "Search likes?" -> GET /users/{user_id}/likes
+- "Delete a like?" -> DELETE /users/{user_id}/likes/{video_id}
+- "Get like details?" -> GET /users/{user_id}/likes/{video_id}
+- "Update a like?" -> PUT /users/{user_id}/likes/{video_id}
+- "List all pages?" -> GET /users/{user_id}/ondemand/pages
+- "Create a page?" -> POST /users/{user_id}/ondemand/pages
+- "List all purchases?" -> GET /users/{user_id}/ondemand/purchases
+- "List all pictures?" -> GET /users/{user_id}/pictures
+- "Create a picture?" -> POST /users/{user_id}/pictures
+- "Delete a picture?" -> DELETE /users/{user_id}/pictures/{portraitset_id}
+- "Get picture details?" -> GET /users/{user_id}/pictures/{portraitset_id}
+- "Partially update a picture?" -> PATCH /users/{user_id}/pictures/{portraitset_id}
+- "Search portfolios?" -> GET /users/{user_id}/portfolios
+- "Get portfolio details?" -> GET /users/{user_id}/portfolios/{portfolio_id}
+- "List all videos?" -> GET /users/{user_id}/portfolios/{portfolio_id}/videos
+- "Delete a video?" -> DELETE /users/{user_id}/portfolios/{portfolio_id}/videos/{video_id}
+- "Get video details?" -> GET /users/{user_id}/portfolios/{portfolio_id}/videos/{video_id}
+- "Update a video?" -> PUT /users/{user_id}/portfolios/{portfolio_id}/videos/{video_id}
+- "List all presets?" -> GET /users/{user_id}/presets
+- "Get preset details?" -> GET /users/{user_id}/presets/{preset_id}
+- "Partially update a preset?" -> PATCH /users/{user_id}/presets/{preset_id}
+- "List all videos?" -> GET /users/{user_id}/presets/{preset_id}/videos
+- "List all projects?" -> GET /users/{user_id}/projects
+- "Create a project?" -> POST /users/{user_id}/projects
+- "Delete a project?" -> DELETE /users/{user_id}/projects/{project_id}
+- "Get project details?" -> GET /users/{user_id}/projects/{project_id}
+- "Partially update a project?" -> PATCH /users/{user_id}/projects/{project_id}
+- "List all videos?" -> GET /users/{user_id}/projects/{project_id}/videos
+- "Delete a video?" -> DELETE /users/{user_id}/projects/{project_id}/videos/{video_id}
+- "Update a video?" -> PUT /users/{user_id}/projects/{project_id}/videos/{video_id}
+- "Delete a upload?" -> DELETE /users/{user_id}/uploads/{upload_id}
+- "Get upload details?" -> GET /users/{user_id}/uploads/{upload_id}
+- "Search videos?" -> GET /users/{user_id}/videos
+- "Create a video?" -> POST /users/{user_id}/videos
+- "Get video details?" -> GET /users/{user_id}/videos/{video_id}
+- "Search watchlater?" -> GET /users/{user_id}/watchlater
+- "Delete a watchlater?" -> DELETE /users/{user_id}/watchlater/{video_id}
+- "Get watchlater details?" -> GET /users/{user_id}/watchlater/{video_id}
+- "Update a watchlater?" -> PUT /users/{user_id}/watchlater/{video_id}
+- "Search videos?" -> GET /videos
+- "Delete a video?" -> DELETE /videos/{video_id}
+- "Get video details?" -> GET /videos/{video_id}
+- "Partially update a video?" -> PATCH /videos/{video_id}
+- "List all available_albums?" -> GET /videos/{video_id}/available_albums
+- "List all available_channels?" -> GET /videos/{video_id}/available_channels
+- "List all categories?" -> GET /videos/{video_id}/categories
+- "List all comments?" -> GET /videos/{video_id}/comments
+- "Create a comment?" -> POST /videos/{video_id}/comments
+- "Delete a comment?" -> DELETE /videos/{video_id}/comments/{comment_id}
+- "Get comment details?" -> GET /videos/{video_id}/comments/{comment_id}
+- "Partially update a comment?" -> PATCH /videos/{video_id}/comments/{comment_id}
+- "List all replies?" -> GET /videos/{video_id}/comments/{comment_id}/replies
+- "Create a reply?" -> POST /videos/{video_id}/comments/{comment_id}/replies
+- "Search credits?" -> GET /videos/{video_id}/credits
+- "Create a credit?" -> POST /videos/{video_id}/credits
+- "Delete a credit?" -> DELETE /videos/{video_id}/credits/{credit_id}
+- "Get credit details?" -> GET /videos/{video_id}/credits/{credit_id}
+- "Partially update a credit?" -> PATCH /videos/{video_id}/credits/{credit_id}
+- "List all likes?" -> GET /videos/{video_id}/likes
+- "List all pictures?" -> GET /videos/{video_id}/pictures
+- "Create a picture?" -> POST /videos/{video_id}/pictures
+- "Delete a picture?" -> DELETE /videos/{video_id}/pictures/{picture_id}
+- "Get picture details?" -> GET /videos/{video_id}/pictures/{picture_id}
+- "Partially update a picture?" -> PATCH /videos/{video_id}/pictures/{picture_id}
+- "Delete a preset?" -> DELETE /videos/{video_id}/presets/{preset_id}
+- "Get preset details?" -> GET /videos/{video_id}/presets/{preset_id}
+- "Update a preset?" -> PUT /videos/{video_id}/presets/{preset_id}
+- "List all domains?" -> GET /videos/{video_id}/privacy/domains
+- "Delete a domain?" -> DELETE /videos/{video_id}/privacy/domains/{domain}
+- "Update a domain?" -> PUT /videos/{video_id}/privacy/domains/{domain}
+- "List all users?" -> GET /videos/{video_id}/privacy/users
+- "Delete a user?" -> DELETE /videos/{video_id}/privacy/users/{user_id}
+- "Update a user?" -> PUT /videos/{video_id}/privacy/users/{user_id}
+- "List all tags?" -> GET /videos/{video_id}/tags
+- "Delete a tag?" -> DELETE /videos/{video_id}/tags/{word}
+- "Get tag details?" -> GET /videos/{video_id}/tags/{word}
+- "Update a tag?" -> PUT /videos/{video_id}/tags/{word}
+- "List all texttracks?" -> GET /videos/{video_id}/texttracks
+- "Create a texttrack?" -> POST /videos/{video_id}/texttracks
+- "Delete a texttrack?" -> DELETE /videos/{video_id}/texttracks/{texttrack_id}
+- "Get texttrack details?" -> GET /videos/{video_id}/texttracks/{texttrack_id}
+- "Partially update a texttrack?" -> PATCH /videos/{video_id}/texttracks/{texttrack_id}
+- "Create a timelinethumbnail?" -> POST /videos/{video_id}/timelinethumbnails
+- "Get timelinethumbnail details?" -> GET /videos/{video_id}/timelinethumbnails/{thumbnail_id}
+- "Create a version?" -> POST /videos/{video_id}/versions
+- "List all videos?" -> GET /videos/{video_id}/videos
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

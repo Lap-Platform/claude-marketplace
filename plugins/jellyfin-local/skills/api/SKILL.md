@@ -615,94 +615,363 @@ http://localhost
 | GET | /Years | Get years. |
 | GET | /Years/{year} | Gets a year. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I authenticate a user by username and password?" -> POST /Users/AuthenticateByName
-- "What movies or shows have I not finished watching?" -> GET /Users/{userId}/Items/Resume
-- "How do I search for media across my entire library?" -> GET /Search/Hints
-- "What are the next episodes I should watch?" -> GET /Shows/NextUp
-- "How do I stream an audio file in a specific format?" -> GET /Audio/{itemId}/stream.{container}
-- "How do I create a new playlist and add items to it?" -> POST /Playlists then POST /Playlists/{playlistId}/Items
-- "How do I mark a movie as watched or favorite?" -> POST /Users/{userId}/PlayedItems/{itemId} or POST /Users/{userId}/FavoriteItems/{itemId}
-- "What is currently playing on all active sessions?" -> GET /Sessions
-- "How do I trigger a library rescan?" -> GET /Library/Refresh
-- "How do I get the TV guide and upcoming programs?" -> GET /LiveTv/Programs or GET /LiveTv/Programs/Recommended
-- "How do I schedule a recording for a live TV program?" -> POST /LiveTv/Timers
-- "How do I send a remote control command to a client?" -> POST /Sessions/{sessionId}/Command/{command}
-- "What plugins are installed and how do I manage them?" -> GET /Plugins then DELETE /Plugins/{pluginId}
-- "How do I get server health and version information?" -> GET /System/Info/Public (no auth) or GET /System/Info (auth required)
-- "How do I set up a SyncPlay group for watching together?" -> POST /SyncPlay/New then POST /SyncPlay/Join
-
-## Response Tips
-
-- **Item lists** (Items, Search, Artists, etc.): Always check `TotalRecordCount` vs `Items.length` -- paginate with `startIndex` + `limit` when `TotalRecordCount` exceeds the returned count.
-- **Single item responses** (artist detail, user detail, etc.): The `UserData` nested object contains playback state (`Played`, `PlayCount`, `IsFavorite`, `PlaybackPositionTicks`) -- this is null unless `enableUserData=true` or a `userId` is provided.
-- **Auth responses** (`AuthenticateByName`, `Authenticate`): Extract `AccessToken` from the response and include it in subsequent requests via the `X-Emby-Authorization` header.
-- **204 No Content**: All mutation endpoints (POST/DELETE for playlists, favorites, playback reporting, library refresh) return empty bodies on success -- treat any non-204 as an error.
-- **Streaming endpoints** (Audio/Video stream): Return raw binary data, not JSON -- handle as a media stream, and use HEAD requests to probe codec/container support before streaming.
-- **Error codes**: 401 means missing/invalid API key, 403 means the authenticated user lacks permission for that action, 404 means the resource UUID does not exist.
-- **Image endpoints**: Return raw image bytes, not JSON -- use the `tag` parameter for cache-busting and `format`, `maxWidth`, `maxHeight` for resizing.
-
-## Anomaly Flags
-
-- **401 on previously working requests**: The API key or access token may have been revoked or expired -- re-authenticate.
-- **403 on admin-only endpoints** (System/Configuration, Users/New, Library/Refresh): The current user is not an administrator -- check `Policy.IsAdministrator` on the user object.
-- **`HasPendingRestart: true`** in `/System/Info`: Server needs a restart (likely after plugin install/update) -- surface this proactively and offer `POST /System/Restart`.
-- **`ErrorCode` in PlaybackInfo response**: Non-empty `ErrorCode` (e.g., `NotAllowed`, `NoCompatibleStream`) means the item cannot be played with the given device profile -- surface the error before attempting to stream.
-- **`TranscodingInfo` in session data**: If `IsVideoDirect: false` or `IsAudioDirect: false`, the server is actively transcoding -- monitor `CompletionPercentage` and `Bitrate` for performance.
-- **`IsShuttingDown: true`** in `/System/Info`: The server is in the process of shutting down -- warn the user and avoid further mutations.
-- **`StartupWizardCompleted: false`** in `/System/Info/Public`: Server is freshly installed and not yet configured -- redirect to the startup flow (`/Startup/*` endpoints).
-- **503 on DLNA endpoints**: The DLNA service is unavailable -- the server may not have DLNA enabled in its configuration.
-- **Typo endpoint** `/LiveTv/Tuners/Discvover`: This is an actual duplicate of `/LiveTv/Tuners/Discover` with a typo -- always prefer the correctly spelled version.
-
-## Playbook
-
-### 1. Authenticate and Browse a User's Library
-
-1. Call `POST /Users/AuthenticateByName` with `Username` and `Pw` in the request body.
-2. Extract `AccessToken` and `User.Id` from the response.
-3. Set the `X-Emby-Authorization` header with the token for all subsequent requests.
-4. Call `GET /Users/{userId}/Views` to get the user's media libraries (Movies, TV Shows, Music, etc.).
-5. For each view, call `GET /Users/{userId}/Items` with `parentId` set to the view's `Id` and `recursive=true` to list contents.
-6. Use `startIndex` and `limit` to paginate through large libraries.
-
-### 2. Resume Watching and Track Playback
-
-1. Call `GET /Users/{userId}/Items/Resume` to get items with partial progress.
-2. Pick an item and call `POST /Items/{itemId}/PlaybackInfo` with `userId` to get available media sources and a `PlaySessionId`.
-3. Report playback start: `POST /Users/{userId}/PlayingItems/{itemId}` with the `mediaSourceId` and `playSessionId`.
-4. Periodically report progress: `POST /Users/{userId}/PlayingItems/{itemId}/Progress` with `positionTicks`.
-5. When done: `DELETE /Users/{userId}/PlayingItems/{itemId}` with final `positionTicks`.
-6. To mark fully watched: `POST /Users/{userId}/PlayedItems/{itemId}`.
-
-### 3. Set Up a DVR Recording from Live TV
-
-1. Call `GET /LiveTv/Channels` to list available channels (filter with `isFavorite`, `isMovie`, `isSeries`, etc.).
-2. Call `GET /LiveTv/Programs` with `channelIds` and a date range (`minStartDate`/`maxStartDate`) to find upcoming shows.
-3. To record a single airing: call `GET /LiveTv/Timers/Defaults?programId={programId}` to get pre-filled timer defaults.
-4. Adjust padding (`PrePaddingSeconds`, `PostPaddingSeconds`) and call `POST /LiveTv/Timers` with the timer info.
-5. For an entire series: call `POST /LiveTv/SeriesTimers` with `RecordNewOnly=true` and `SkipEpisodesInLibrary=true`.
-6. Verify with `GET /LiveTv/Timers` or `GET /LiveTv/SeriesTimers` to confirm scheduling.
-
-### 4. Create and Manage a Playlist
-
-1. Call `POST /Playlists` with `name`, `userId`, and optionally `ids` (array of item UUIDs) to seed it.
-2. Extract the playlist `Id` from the response.
-3. Add more items: `POST /Playlists/{playlistId}/Items` with `ids` and `userId`.
-4. Reorder: `POST /Playlists/{playlistId}/Items/{itemId}/Move/{newIndex}`.
-5. Remove items: `DELETE /Playlists/{playlistId}/Items` with `entryIds`.
-6. List contents: `GET /Playlists/{playlistId}/Items` with `userId` -- paginate with `startIndex`/`limit`.
-
-### 5. Remote-Control a Client Session
-
-1. Call `GET /Sessions` to list active sessions -- find the target by `DeviceName`, `UserName`, or `Client`.
-2. Start playback on that session: `POST /Sessions/{sessionId}/Playing` with `playCommand=PlayNow` and `itemIds`.
-3. Pause/unpause: `POST /Sessions/{sessionId}/Playing/{command}` where `command` is `Pause`, `Unpause`, or `Stop`.
-4. Seek: same endpoint with `command=Seek` and `seekPositionTicks`.
-5. Send a message: `POST /Sessions/{sessionId}/Message` with `text` and optional `header`/`timeoutMs`.
-6. Send general commands (volume, navigation): `POST /Sessions/{sessionId}/Command/{command}` (e.g., `VolumeUp`, `Mute`, `GoHome`).
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all Entries?" -> GET /System/ActivityLog/Entries
+- "List all Keys?" -> GET /Auth/Keys
+- "Create a Key?" -> POST /Auth/Keys
+- "Delete a Key?" -> DELETE /Auth/Keys/{key}
+- "List all Artists?" -> GET /Artists
+- "Get Artist details?" -> GET /Artists/{name}
+- "List all AlbumArtists?" -> GET /Artists/AlbumArtists
+- "List all stream?" -> GET /Audio/{itemId}/stream
+- "Get stream.{container} details?" -> GET /Audio/{itemId}/stream.{container}
+- "List all Configuration?" -> GET /Branding/Configuration
+- "List all Css?" -> GET /Branding/Css
+- "List all Css.css?" -> GET /Branding/Css.css
+- "List all Channels?" -> GET /Channels
+- "List all Features?" -> GET /Channels/{channelId}/Features
+- "List all Items?" -> GET /Channels/{channelId}/Items
+- "List all Features?" -> GET /Channels/Features
+- "List all Latest?" -> GET /Channels/Items/Latest
+- "Create a Collection?" -> POST /Collections
+- "Create a Item?" -> POST /Collections/{collectionId}/Items
+- "List all Configuration?" -> GET /System/Configuration
+- "Create a Configuration?" -> POST /System/Configuration
+- "Get Configuration details?" -> GET /System/Configuration/{key}
+- "List all Default?" -> GET /System/Configuration/MetadataOptions/Default
+- "Create a Path?" -> POST /System/MediaEncoder/Path
+- "List all ConfigurationPage?" -> GET /web/ConfigurationPage
+- "List all ConfigurationPages?" -> GET /web/ConfigurationPages
+- "List all Devices?" -> GET /Devices
+- "List all Info?" -> GET /Devices/Info
+- "List all Options?" -> GET /Devices/Options
+- "Create a Option?" -> POST /Devices/Options
+- "Get DisplayPreference details?" -> GET /DisplayPreferences/{displayPreferencesId}
+- "List all ProfileInfos?" -> GET /Dlna/ProfileInfos
+- "Create a Profile?" -> POST /Dlna/Profiles
+- "Get Profile details?" -> GET /Dlna/Profiles/{profileId}
+- "Delete a Profile?" -> DELETE /Dlna/Profiles/{profileId}
+- "List all Default?" -> GET /Dlna/Profiles/Default
+- "List all ConnectionManager?" -> GET /Dlna/{serverId}/ConnectionManager
+- "List all ConnectionManager?" -> GET /Dlna/{serverId}/ConnectionManager/ConnectionManager
+- "List all ConnectionManager.xml?" -> GET /Dlna/{serverId}/ConnectionManager/ConnectionManager.xml
+- "Create a Control?" -> POST /Dlna/{serverId}/ConnectionManager/Control
+- "List all ContentDirectory?" -> GET /Dlna/{serverId}/ContentDirectory
+- "List all ContentDirectory?" -> GET /Dlna/{serverId}/ContentDirectory/ContentDirectory
+- "List all ContentDirectory.xml?" -> GET /Dlna/{serverId}/ContentDirectory/ContentDirectory.xml
+- "Create a Control?" -> POST /Dlna/{serverId}/ContentDirectory/Control
+- "List all description?" -> GET /Dlna/{serverId}/description
+- "List all description.xml?" -> GET /Dlna/{serverId}/description.xml
+- "Get icon details?" -> GET /Dlna/{serverId}/icons/{fileName}
+- "List all MediaReceiverRegistrar?" -> GET /Dlna/{serverId}/MediaReceiverRegistrar
+- "Create a Control?" -> POST /Dlna/{serverId}/MediaReceiverRegistrar/Control
+- "List all MediaReceiverRegistrar?" -> GET /Dlna/{serverId}/MediaReceiverRegistrar/MediaReceiverRegistrar
+- "List all MediaReceiverRegistrar.xml?" -> GET /Dlna/{serverId}/MediaReceiverRegistrar/MediaReceiverRegistrar.xml
+- "Get icon details?" -> GET /Dlna/icons/{fileName}
+- "Get hls1 details?" -> GET /Audio/{itemId}/hls1/{playlistId}/{segmentId}.{container}
+- "List all main.m3u8?" -> GET /Audio/{itemId}/main.m3u8
+- "List all master.m3u8?" -> GET /Audio/{itemId}/master.m3u8
+- "Get hls1 details?" -> GET /Videos/{itemId}/hls1/{playlistId}/{segmentId}.{container}
+- "List all main.m3u8?" -> GET /Videos/{itemId}/main.m3u8
+- "List all master.m3u8?" -> GET /Videos/{itemId}/master.m3u8
+- "List all DefaultDirectoryBrowser?" -> GET /Environment/DefaultDirectoryBrowser
+- "List all DirectoryContents?" -> GET /Environment/DirectoryContents
+- "List all Drives?" -> GET /Environment/Drives
+- "List all NetworkShares?" -> GET /Environment/NetworkShares
+- "List all ParentPath?" -> GET /Environment/ParentPath
+- "Create a ValidatePath?" -> POST /Environment/ValidatePath
+- "List all Filters?" -> GET /Items/Filters
+- "List all Filters2?" -> GET /Items/Filters2
+- "List all Genres?" -> GET /Genres
+- "Get Genre details?" -> GET /Genres/{genreName}
+- "List all stream.aac?" -> GET /Audio/{itemId}/hls/{segmentId}/stream.aac
+- "List all stream.mp3?" -> GET /Audio/{itemId}/hls/{segmentId}/stream.mp3
+- "Get hl details?" -> GET /Videos/{itemId}/hls/{playlistId}/{segmentId}.{segmentContainer}
+- "List all stream.m3u8?" -> GET /Videos/{itemId}/hls/{playlistId}/stream.m3u8
+- "Get Image details?" -> GET /Artists/{name}/Images/{imageType}/{imageIndex}
+- "Get Image details?" -> GET /Genres/{name}/Images/{imageType}
+- "Get Image details?" -> GET /Genres/{name}/Images/{imageType}/{imageIndex}
+- "List all Images?" -> GET /Items/{itemId}/Images
+- "Delete a Image?" -> DELETE /Items/{itemId}/Images/{imageType}
+- "Get Image details?" -> GET /Items/{itemId}/Images/{imageType}
+- "Delete a Image?" -> DELETE /Items/{itemId}/Images/{imageType}/{imageIndex}
+- "Get Image details?" -> GET /Items/{itemId}/Images/{imageType}/{imageIndex}
+- "Get Image details?" -> GET /Items/{itemId}/Images/{imageType}/{imageIndex}/{tag}/{format}/{maxWidth}/{maxHeight}/{percentPlayed}/{unplayedCount}
+- "Create a Index?" -> POST /Items/{itemId}/Images/{imageType}/{imageIndex}/Index
+- "Get Image details?" -> GET /MusicGenres/{name}/Images/{imageType}
+- "Get Image details?" -> GET /MusicGenres/{name}/Images/{imageType}/{imageIndex}
+- "Get Image details?" -> GET /Persons/{name}/Images/{imageType}
+- "Get Image details?" -> GET /Persons/{name}/Images/{imageType}/{imageIndex}
+- "Get Image details?" -> GET /Studios/{name}/Images/{imageType}
+- "Get Image details?" -> GET /Studios/{name}/Images/{imageType}/{imageIndex}
+- "Delete a Image?" -> DELETE /Users/{userId}/Images/{imageType}
+- "Get Image details?" -> GET /Users/{userId}/Images/{imageType}
+- "Get Image details?" -> GET /Users/{userId}/Images/{imageType}/{imageIndex}
+- "Delete a Image?" -> DELETE /Users/{userId}/Images/{imageType}/{index}
+- "List all General?" -> GET /Images/General
+- "Get General details?" -> GET /Images/General/{name}/{type}
+- "List all MediaInfo?" -> GET /Images/MediaInfo
+- "Get MediaInfo details?" -> GET /Images/MediaInfo/{theme}/{name}
+- "List all Ratings?" -> GET /Images/Ratings
+- "Get Rating details?" -> GET /Images/Ratings/{theme}/{name}
+- "List all InstantMix?" -> GET /Albums/{id}/InstantMix
+- "List all InstantMix?" -> GET /Artists/{id}/InstantMix
+- "List all InstantMix?" -> GET /Items/{id}/InstantMix
+- "List all InstantMix?" -> GET /MusicGenres/{id}/InstantMix
+- "List all InstantMix?" -> GET /MusicGenres/{name}/InstantMix
+- "List all InstantMix?" -> GET /Playlists/{id}/InstantMix
+- "List all InstantMix?" -> GET /Songs/{id}/InstantMix
+- "List all ExternalIdInfos?" -> GET /Items/{itemId}/ExternalIdInfos
+- "Create a Book?" -> POST /Items/RemoteSearch/Book
+- "Create a BoxSet?" -> POST /Items/RemoteSearch/BoxSet
+- "List all Image?" -> GET /Items/RemoteSearch/Image
+- "Create a Movie?" -> POST /Items/RemoteSearch/Movie
+- "Create a MusicAlbum?" -> POST /Items/RemoteSearch/MusicAlbum
+- "Create a MusicArtist?" -> POST /Items/RemoteSearch/MusicArtist
+- "Create a MusicVideo?" -> POST /Items/RemoteSearch/MusicVideo
+- "Create a Person?" -> POST /Items/RemoteSearch/Person
+- "Create a Sery?" -> POST /Items/RemoteSearch/Series
+- "Create a Trailer?" -> POST /Items/RemoteSearch/Trailer
+- "Create a Refresh?" -> POST /Items/{itemId}/Refresh
+- "List all Items?" -> GET /Items
+- "List all Items?" -> GET /Users/{userId}/Items
+- "List all Resume?" -> GET /Users/{userId}/Items/Resume
+- "Delete a Item?" -> DELETE /Items/{itemId}
+- "Create a ContentType?" -> POST /Items/{itemId}/ContentType
+- "List all MetadataEditor?" -> GET /Items/{itemId}/MetadataEditor
+- "List all Similar?" -> GET /Albums/{itemId}/Similar
+- "List all Similar?" -> GET /Artists/{itemId}/Similar
+- "List all Ancestors?" -> GET /Items/{itemId}/Ancestors
+- "List all CriticReviews?" -> GET /Items/{itemId}/CriticReviews
+- "List all Download?" -> GET /Items/{itemId}/Download
+- "List all File?" -> GET /Items/{itemId}/File
+- "List all Similar?" -> GET /Items/{itemId}/Similar
+- "List all ThemeMedia?" -> GET /Items/{itemId}/ThemeMedia
+- "List all ThemeSongs?" -> GET /Items/{itemId}/ThemeSongs
+- "List all ThemeVideos?" -> GET /Items/{itemId}/ThemeVideos
+- "List all Counts?" -> GET /Items/Counts
+- "List all AvailableOptions?" -> GET /Libraries/AvailableOptions
+- "Create a Updated?" -> POST /Library/Media/Updated
+- "List all MediaFolders?" -> GET /Library/MediaFolders
+- "Create a Added?" -> POST /Library/Movies/Added
+- "Create a Updated?" -> POST /Library/Movies/Updated
+- "List all PhysicalPaths?" -> GET /Library/PhysicalPaths
+- "List all Refresh?" -> GET /Library/Refresh
+- "Create a Added?" -> POST /Library/Series/Added
+- "Create a Updated?" -> POST /Library/Series/Updated
+- "List all Similar?" -> GET /Movies/{itemId}/Similar
+- "List all Similar?" -> GET /Shows/{itemId}/Similar
+- "List all Similar?" -> GET /Trailers/{itemId}/Similar
+- "List all VirtualFolders?" -> GET /Library/VirtualFolders
+- "Create a VirtualFolder?" -> POST /Library/VirtualFolders
+- "Create a LibraryOption?" -> POST /Library/VirtualFolders/LibraryOptions
+- "Create a Name?" -> POST /Library/VirtualFolders/Name
+- "Create a Path?" -> POST /Library/VirtualFolders/Paths
+- "Create a Update?" -> POST /Library/VirtualFolders/Paths/Update
+- "List all ChannelMappingOptions?" -> GET /LiveTv/ChannelMappingOptions
+- "Create a ChannelMapping?" -> POST /LiveTv/ChannelMappings
+- "List all Channels?" -> GET /LiveTv/Channels
+- "Get Channel details?" -> GET /LiveTv/Channels/{channelId}
+- "List all GuideInfo?" -> GET /LiveTv/GuideInfo
+- "List all Info?" -> GET /LiveTv/Info
+- "Create a ListingProvider?" -> POST /LiveTv/ListingProviders
+- "List all Default?" -> GET /LiveTv/ListingProviders/Default
+- "List all Lineups?" -> GET /LiveTv/ListingProviders/Lineups
+- "List all Countries?" -> GET /LiveTv/ListingProviders/SchedulesDirect/Countries
+- "List all stream?" -> GET /LiveTv/LiveRecordings/{recordingId}/stream
+- "Get stream.{container} details?" -> GET /LiveTv/LiveStreamFiles/{streamId}/stream.{container}
+- "List all Programs?" -> GET /LiveTv/Programs
+- "Create a Program?" -> POST /LiveTv/Programs
+- "Get Program details?" -> GET /LiveTv/Programs/{programId}
+- "List all Recommended?" -> GET /LiveTv/Programs/Recommended
+- "List all Recordings?" -> GET /LiveTv/Recordings
+- "Get Recording details?" -> GET /LiveTv/Recordings/{recordingId}
+- "Delete a Recording?" -> DELETE /LiveTv/Recordings/{recordingId}
+- "List all Folders?" -> GET /LiveTv/Recordings/Folders
+- "List all Groups?" -> GET /LiveTv/Recordings/Groups
+- "Get Group details?" -> GET /LiveTv/Recordings/Groups/{groupId}
+- "List all Series?" -> GET /LiveTv/Recordings/Series
+- "List all SeriesTimers?" -> GET /LiveTv/SeriesTimers
+- "Create a SeriesTimer?" -> POST /LiveTv/SeriesTimers
+- "Get SeriesTimer details?" -> GET /LiveTv/SeriesTimers/{timerId}
+- "Delete a SeriesTimer?" -> DELETE /LiveTv/SeriesTimers/{timerId}
+- "List all Timers?" -> GET /LiveTv/Timers
+- "Create a Timer?" -> POST /LiveTv/Timers
+- "Get Timer details?" -> GET /LiveTv/Timers/{timerId}
+- "Delete a Timer?" -> DELETE /LiveTv/Timers/{timerId}
+- "List all Defaults?" -> GET /LiveTv/Timers/Defaults
+- "Create a TunerHost?" -> POST /LiveTv/TunerHosts
+- "List all Types?" -> GET /LiveTv/TunerHosts/Types
+- "Create a Reset?" -> POST /LiveTv/Tuners/{tunerId}/Reset
+- "List all Discover?" -> GET /LiveTv/Tuners/Discover
+- "List all Discvover?" -> GET /LiveTv/Tuners/Discvover
+- "List all Countries?" -> GET /Localization/Countries
+- "List all Cultures?" -> GET /Localization/Cultures
+- "List all Options?" -> GET /Localization/Options
+- "List all ParentalRatings?" -> GET /Localization/ParentalRatings
+- "List all PlaybackInfo?" -> GET /Items/{itemId}/PlaybackInfo
+- "Create a PlaybackInfo?" -> POST /Items/{itemId}/PlaybackInfo
+- "Create a Close?" -> POST /LiveStreams/Close
+- "Create a Open?" -> POST /LiveStreams/Open
+- "List all BitrateTest?" -> GET /Playback/BitrateTest
+- "List all Recommendations?" -> GET /Movies/Recommendations
+- "List all MusicGenres?" -> GET /MusicGenres
+- "Get MusicGenre details?" -> GET /MusicGenres/{genreName}
+- "Get Notification details?" -> GET /Notifications/{userId}
+- "Create a Read?" -> POST /Notifications/{userId}/Read
+- "List all Summary?" -> GET /Notifications/{userId}/Summary
+- "Create a Unread?" -> POST /Notifications/{userId}/Unread
+- "Create a Admin?" -> POST /Notifications/Admin
+- "List all Services?" -> GET /Notifications/Services
+- "List all Types?" -> GET /Notifications/Types
+- "List all Packages?" -> GET /Packages
+- "Get Package details?" -> GET /Packages/{name}
+- "Delete a Installing?" -> DELETE /Packages/Installing/{packageId}
+- "List all Repositories?" -> GET /Repositories
+- "Create a Repository?" -> POST /Repositories
+- "List all Persons?" -> GET /Persons
+- "Get Person details?" -> GET /Persons/{name}
+- "Create a Playlist?" -> POST /Playlists
+- "Create a Item?" -> POST /Playlists/{playlistId}/Items
+- "List all Items?" -> GET /Playlists/{playlistId}/Items
+- "Create a Playing?" -> POST /Sessions/Playing
+- "Create a Ping?" -> POST /Sessions/Playing/Ping
+- "Create a Progress?" -> POST /Sessions/Playing/Progress
+- "Create a Stopped?" -> POST /Sessions/Playing/Stopped
+- "Delete a PlayedItem?" -> DELETE /Users/{userId}/PlayedItems/{itemId}
+- "Delete a PlayingItem?" -> DELETE /Users/{userId}/PlayingItems/{itemId}
+- "Create a Progress?" -> POST /Users/{userId}/PlayingItems/{itemId}/Progress
+- "List all Plugins?" -> GET /Plugins
+- "Delete a Plugin?" -> DELETE /Plugins/{pluginId}
+- "Delete a Plugin?" -> DELETE /Plugins/{pluginId}/{version}
+- "Create a Disable?" -> POST /Plugins/{pluginId}/{version}/Disable
+- "Create a Enable?" -> POST /Plugins/{pluginId}/{version}/Enable
+- "List all Image?" -> GET /Plugins/{pluginId}/{version}/Image
+- "List all Configuration?" -> GET /Plugins/{pluginId}/Configuration
+- "Create a Configuration?" -> POST /Plugins/{pluginId}/Configuration
+- "Create a Manifest?" -> POST /Plugins/{pluginId}/Manifest
+- "Create a SecurityInfo?" -> POST /Plugins/SecurityInfo
+- "Create a Activate?" -> POST /QuickConnect/Activate
+- "Create a Authorize?" -> POST /QuickConnect/Authorize
+- "Create a Available?" -> POST /QuickConnect/Available
+- "List all Connect?" -> GET /QuickConnect/Connect
+- "Create a Deauthorize?" -> POST /QuickConnect/Deauthorize
+- "List all Initiate?" -> GET /QuickConnect/Initiate
+- "List all Status?" -> GET /QuickConnect/Status
+- "List all Remote?" -> GET /Images/Remote
+- "List all RemoteImages?" -> GET /Items/{itemId}/RemoteImages
+- "Create a Download?" -> POST /Items/{itemId}/RemoteImages/Download
+- "List all Providers?" -> GET /Items/{itemId}/RemoteImages/Providers
+- "List all ScheduledTasks?" -> GET /ScheduledTasks
+- "Get ScheduledTask details?" -> GET /ScheduledTasks/{taskId}
+- "Create a Trigger?" -> POST /ScheduledTasks/{taskId}/Triggers
+- "Delete a Running?" -> DELETE /ScheduledTasks/Running/{taskId}
+- "List all Hints?" -> GET /Search/Hints
+- "List all PasswordResetProviders?" -> GET /Auth/PasswordResetProviders
+- "List all Providers?" -> GET /Auth/Providers
+- "List all Sessions?" -> GET /Sessions
+- "Create a Command?" -> POST /Sessions/{sessionId}/Command
+- "Create a Message?" -> POST /Sessions/{sessionId}/Message
+- "Create a Playing?" -> POST /Sessions/{sessionId}/Playing
+- "Delete a User?" -> DELETE /Sessions/{sessionId}/User/{userId}
+- "Create a Viewing?" -> POST /Sessions/{sessionId}/Viewing
+- "Create a Capability?" -> POST /Sessions/Capabilities
+- "Create a Full?" -> POST /Sessions/Capabilities/Full
+- "Create a Logout?" -> POST /Sessions/Logout
+- "Create a Viewing?" -> POST /Sessions/Viewing
+- "Create a Complete?" -> POST /Startup/Complete
+- "List all Configuration?" -> GET /Startup/Configuration
+- "Create a Configuration?" -> POST /Startup/Configuration
+- "List all FirstUser?" -> GET /Startup/FirstUser
+- "Create a RemoteAccess?" -> POST /Startup/RemoteAccess
+- "List all User?" -> GET /Startup/User
+- "Create a User?" -> POST /Startup/User
+- "List all Studios?" -> GET /Studios
+- "Get Studio details?" -> GET /Studios/{name}
+- "List all Fonts?" -> GET /FallbackFont/Fonts
+- "Get Font details?" -> GET /FallbackFont/Fonts/{name}
+- "Get Subtitle details?" -> GET /Items/{itemId}/RemoteSearch/Subtitles/{language}
+- "Get Subtitle details?" -> GET /Providers/Subtitles/Subtitles/{id}
+- "Get Stream.{format} details?" -> GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/{startPositionTicks}/Stream.{format}
+- "Get Stream.{format} details?" -> GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/Stream.{format}
+- "List all subtitles.m3u8?" -> GET /Videos/{itemId}/{mediaSourceId}/Subtitles/{index}/subtitles.m3u8
+- "Create a Subtitle?" -> POST /Videos/{itemId}/Subtitles
+- "Delete a Subtitle?" -> DELETE /Videos/{itemId}/Subtitles/{index}
+- "List all Suggestions?" -> GET /Users/{userId}/Suggestions
+- "Create a Buffering?" -> POST /SyncPlay/Buffering
+- "Create a Join?" -> POST /SyncPlay/Join
+- "Create a Leave?" -> POST /SyncPlay/Leave
+- "List all List?" -> GET /SyncPlay/List
+- "Create a MovePlaylistItem?" -> POST /SyncPlay/MovePlaylistItem
+- "Create a New?" -> POST /SyncPlay/New
+- "Create a NextItem?" -> POST /SyncPlay/NextItem
+- "Create a Pause?" -> POST /SyncPlay/Pause
+- "Create a Ping?" -> POST /SyncPlay/Ping
+- "Create a PreviousItem?" -> POST /SyncPlay/PreviousItem
+- "Create a Queue?" -> POST /SyncPlay/Queue
+- "Create a Ready?" -> POST /SyncPlay/Ready
+- "Create a RemoveFromPlaylist?" -> POST /SyncPlay/RemoveFromPlaylist
+- "Create a Seek?" -> POST /SyncPlay/Seek
+- "Create a SetIgnoreWait?" -> POST /SyncPlay/SetIgnoreWait
+- "Create a SetNewQueue?" -> POST /SyncPlay/SetNewQueue
+- "Create a SetPlaylistItem?" -> POST /SyncPlay/SetPlaylistItem
+- "Create a SetRepeatMode?" -> POST /SyncPlay/SetRepeatMode
+- "Create a SetShuffleMode?" -> POST /SyncPlay/SetShuffleMode
+- "Create a Stop?" -> POST /SyncPlay/Stop
+- "Create a Unpause?" -> POST /SyncPlay/Unpause
+- "List all Endpoint?" -> GET /System/Endpoint
+- "List all Info?" -> GET /System/Info
+- "List all Public?" -> GET /System/Info/Public
+- "List all Logs?" -> GET /System/Logs
+- "List all Log?" -> GET /System/Logs/Log
+- "List all Ping?" -> GET /System/Ping
+- "Create a Ping?" -> POST /System/Ping
+- "Create a Restart?" -> POST /System/Restart
+- "Create a Shutdown?" -> POST /System/Shutdown
+- "List all WakeOnLanInfo?" -> GET /System/WakeOnLanInfo
+- "List all GetUtcTime?" -> GET /GetUtcTime
+- "List all Trailers?" -> GET /Trailers
+- "List all Episodes?" -> GET /Shows/{seriesId}/Episodes
+- "List all Seasons?" -> GET /Shows/{seriesId}/Seasons
+- "List all NextUp?" -> GET /Shows/NextUp
+- "List all Upcoming?" -> GET /Shows/Upcoming
+- "List all universal?" -> GET /Audio/{itemId}/universal
+- "List all Users?" -> GET /Users
+- "Get User details?" -> GET /Users/{userId}
+- "Delete a User?" -> DELETE /Users/{userId}
+- "Create a Authenticate?" -> POST /Users/{userId}/Authenticate
+- "Create a Configuration?" -> POST /Users/{userId}/Configuration
+- "Create a EasyPassword?" -> POST /Users/{userId}/EasyPassword
+- "Create a Password?" -> POST /Users/{userId}/Password
+- "Create a Policy?" -> POST /Users/{userId}/Policy
+- "Create a AuthenticateByName?" -> POST /Users/AuthenticateByName
+- "Create a AuthenticateWithQuickConnect?" -> POST /Users/AuthenticateWithQuickConnect
+- "Create a ForgotPassword?" -> POST /Users/ForgotPassword
+- "Create a Pin?" -> POST /Users/ForgotPassword/Pin
+- "List all Me?" -> GET /Users/Me
+- "Create a New?" -> POST /Users/New
+- "List all Public?" -> GET /Users/Public
+- "Delete a FavoriteItem?" -> DELETE /Users/{userId}/FavoriteItems/{itemId}
+- "Get Item details?" -> GET /Users/{userId}/Items/{itemId}
+- "List all Intros?" -> GET /Users/{userId}/Items/{itemId}/Intros
+- "List all LocalTrailers?" -> GET /Users/{userId}/Items/{itemId}/LocalTrailers
+- "Create a Rating?" -> POST /Users/{userId}/Items/{itemId}/Rating
+- "List all SpecialFeatures?" -> GET /Users/{userId}/Items/{itemId}/SpecialFeatures
+- "List all Latest?" -> GET /Users/{userId}/Items/Latest
+- "List all Root?" -> GET /Users/{userId}/Items/Root
+- "List all GroupingOptions?" -> GET /Users/{userId}/GroupingOptions
+- "List all Views?" -> GET /Users/{userId}/Views
+- "Get Attachment details?" -> GET /Videos/{videoId}/{mediaSourceId}/Attachments/{index}
+- "List all live.m3u8?" -> GET /Videos/{itemId}/live.m3u8
+- "Get Video details?" -> GET /Videos/{itemId}/{stream}.{container}
+- "List all AdditionalParts?" -> GET /Videos/{itemId}/AdditionalParts
+- "List all stream?" -> GET /Videos/{itemId}/stream
+- "Create a MergeVersion?" -> POST /Videos/MergeVersions
+- "List all Years?" -> GET /Years
+- "Get Year details?" -> GET /Years/{year}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

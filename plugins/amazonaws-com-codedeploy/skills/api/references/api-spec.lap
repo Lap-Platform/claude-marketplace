@@ -8,189 +8,236 @@
 @toc root(47)
 
 @endpoint POST /
+@desc Adds tags to on-premises instances.
 @required {tags: [Tag], instanceNames: [str]}
 
 @endpoint POST /
+@desc Gets information about one or more application revisions. The maximum number of application revisions that can be returned is 25.
 @required {applicationName: str, revisions: [RevisionLocation]}
 @returns(200) {applicationName: str?, errorMessage: str?, revisions: [RevisionInfo]?}
 
 @endpoint POST /
+@desc Gets information about one or more applications. The maximum number of applications that can be returned is 100.
 @required {applicationNames: [str]}
 @returns(200) {applicationsInfo: [ApplicationInfo]?}
 
 @endpoint POST /
+@desc Gets information about one or more deployment groups.
 @required {applicationName: str, deploymentGroupNames: [str]}
 @returns(200) {deploymentGroupsInfo: [DeploymentGroupInfo]?, errorMessage: str?}
 
 @endpoint POST /
+@desc This method works, but is deprecated. Use BatchGetDeploymentTargets instead.    Returns an array of one or more instances associated with a deployment. This method works with EC2/On-premises and Lambda compute platforms. The newer BatchGetDeploymentTargets works with all compute platforms. The maximum number of instances that can be returned is 25.
 @required {deploymentId: str, instanceIds: [str]}
 @returns(200) {instancesSummary: [InstanceSummary]?, errorMessage: str?}
 
 @endpoint POST /
+@desc Returns an array of one or more targets associated with a deployment. This method works with all compute types and should be used instead of the deprecated BatchGetDeploymentInstances. The maximum number of targets that can be returned is 25.  The type of targets returned depends on the deployment's compute platform or deployment method:     EC2/On-premises: Information about Amazon EC2 instance targets.     Lambda: Information about Lambda functions targets.     Amazon ECS: Information about Amazon ECS service targets.     CloudFormation: Information about targets of blue/green deployments initiated by a CloudFormation stack update.
 @required {deploymentId: str, targetIds: [str]}
 @returns(200) {deploymentTargets: [DeploymentTarget]?}
 
 @endpoint POST /
+@desc Gets information about one or more deployments. The maximum number of deployments that can be returned is 25.
 @required {deploymentIds: [str]}
 @returns(200) {deploymentsInfo: [DeploymentInfo]?}
 
 @endpoint POST /
+@desc Gets information about one or more on-premises instances. The maximum number of on-premises instances that can be returned is 25.
 @required {instanceNames: [str]}
 @returns(200) {instanceInfos: [InstanceInfo]?}
 
 @endpoint POST /
+@desc For a blue/green deployment, starts the process of rerouting traffic from instances in the original environment to instances in the replacement environment without waiting for a specified wait time to elapse. (Traffic rerouting, which is achieved by registering instances in the replacement environment with the load balancer, can start as soon as all instances have a status of Ready.)
 @optional {deploymentId: str, deploymentWaitType: str}
 
 @endpoint POST /
+@desc Creates an application.
 @required {applicationName: str}
 @optional {computePlatform: str, tags: [Tag]}
 @returns(200) {applicationId: str?}
 
 @endpoint POST /
+@desc Deploys an application revision through the specified deployment group.
 @required {applicationName: str}
 @optional {deploymentGroupName: str, revision: RevisionLocation, deploymentConfigName: str, description: str, ignoreApplicationStopFailures: bool, targetInstances: TargetInstances, autoRollbackConfiguration: AutoRollbackConfiguration, updateOutdatedInstancesOnly: bool, fileExistsBehavior: str, overrideAlarmConfiguration: AlarmConfiguration}
 @returns(200) {deploymentId: str?}
 
 @endpoint POST /
+@desc Creates a deployment configuration.
 @required {deploymentConfigName: str}
 @optional {minimumHealthyHosts: MinimumHealthyHosts, trafficRoutingConfig: TrafficRoutingConfig, computePlatform: str, zonalConfig: ZonalConfig}
 @returns(200) {deploymentConfigId: str?}
 
 @endpoint POST /
+@desc Creates a deployment group to which application revisions are deployed.
 @required {applicationName: str, deploymentGroupName: str, serviceRoleArn: str}
 @optional {deploymentConfigName: str, ec2TagFilters: [EC2TagFilter], onPremisesInstanceTagFilters: [TagFilter], autoScalingGroups: [str], triggerConfigurations: [TriggerConfig], alarmConfiguration: AlarmConfiguration, autoRollbackConfiguration: AutoRollbackConfiguration, outdatedInstancesStrategy: str, deploymentStyle: DeploymentStyle, blueGreenDeploymentConfiguration: BlueGreenDeploymentConfiguration, loadBalancerInfo: LoadBalancerInfo, ec2TagSet: EC2TagSet, ecsServices: [ECSService], onPremisesTagSet: OnPremisesTagSet, tags: [Tag], terminationHookEnabled: bool}
 @returns(200) {deploymentGroupId: str?}
 
 @endpoint POST /
+@desc Deletes an application.
 @required {applicationName: str}
 
 @endpoint POST /
+@desc Deletes a deployment configuration.  A deployment configuration cannot be deleted if it is currently in use. Predefined configurations cannot be deleted.
 @required {deploymentConfigName: str}
 
 @endpoint POST /
+@desc Deletes a deployment group.
 @required {applicationName: str, deploymentGroupName: str}
 @returns(200) {hooksNotCleanedUp: [AutoScalingGroup]?}
 
 @endpoint POST /
+@desc Deletes a GitHub account connection.
 @optional {tokenName: str}
 @returns(200) {tokenName: str?}
 
 @endpoint POST /
+@desc Deletes resources linked to an external ID. This action only applies if you have configured blue/green deployments through CloudFormation.   It is not necessary to call this action directly. CloudFormation calls it on your behalf when it needs to delete stack resources. This action is offered publicly in case you need to delete resources to comply with General Data Protection Regulation (GDPR) requirements.
 @optional {externalId: str}
 
 @endpoint POST /
+@desc Deregisters an on-premises instance.
 @required {instanceName: str}
 
 @endpoint POST /
+@desc Gets information about an application.
 @required {applicationName: str}
 @returns(200) {application: ApplicationInfo?{applicationId: str?, applicationName: str?, createTime: str(timestamp)?, linkedToGitHub: bool?, gitHubAccountName: str?, computePlatform: str?}}
 
 @endpoint POST /
+@desc Gets information about an application revision.
 @required {applicationName: str, revision: RevisionLocation}
 @returns(200) {applicationName: str?, revision: RevisionLocation?{revisionType: str?, s3Location: S3Location?{bucket: str?, key: str?, bundleType: str?, version: str?, eTag: str?}, gitHubLocation: GitHubLocation?{repository: str?, commitId: str?}, string: RawString?{content: str?, sha256: str?}, appSpecContent: AppSpecContent?{content: str?, sha256: str?}}, revisionInfo: GenericRevisionInfo?{description: str?, deploymentGroups: [str]?, firstUsedTime: str(timestamp)?, lastUsedTime: str(timestamp)?, registerTime: str(timestamp)?}}
 
 @endpoint POST /
+@desc Gets information about a deployment.   The content property of the appSpecContent object in the returned revision is always null. Use GetApplicationRevision and the sha256 property of the returned appSpecContent object to get the content of the deployment’s AppSpec file.
 @required {deploymentId: str}
 @returns(200) {deploymentInfo: DeploymentInfo?{applicationName: str?, deploymentGroupName: str?, deploymentConfigName: str?, deploymentId: str?, previousRevision: RevisionLocation?{revisionType: str?, s3Location: S3Location?{bucket: str?, key: str?, bundleType: str?, version: str?, eTag: str?}, gitHubLocation: GitHubLocation?{repository: str?, commitId: str?}, string: RawString?{content: str?, sha256: str?}, appSpecContent: AppSpecContent?{content: str?, sha256: str?}}, revision: RevisionLocation?{revisionType: str?, s3Location: S3Location?{bucket: str?, key: str?, bundleType: str?, version: str?, eTag: str?}, gitHubLocation: GitHubLocation?{repository: str?, commitId: str?}, string: RawString?{content: str?, sha256: str?}, appSpecContent: AppSpecContent?{content: str?, sha256: str?}}, status: str?, errorInformation: ErrorInformation?{code: str?, message: str?}, createTime: str(timestamp)?, startTime: str(timestamp)?, completeTime: str(timestamp)?, deploymentOverview: DeploymentOverview?{Pending: int(i64)?, InProgress: int(i64)?, Succeeded: int(i64)?, Failed: int(i64)?, Skipped: int(i64)?, Ready: int(i64)?}, description: str?, creator: str?, ignoreApplicationStopFailures: bool?, autoRollbackConfiguration: AutoRollbackConfiguration?{enabled: bool?, events: [str]?}, updateOutdatedInstancesOnly: bool?, rollbackInfo: RollbackInfo?{rollbackDeploymentId: str?, rollbackTriggeringDeploymentId: str?, rollbackMessage: str?}, deploymentStyle: DeploymentStyle?{deploymentType: str?, deploymentOption: str?}, targetInstances: TargetInstances?{tagFilters: [EC2TagFilter]?, autoScalingGroups: [str]?, ec2TagSet: EC2TagSet?{ec2TagSetList: [[EC2TagFilter]]?}}, instanceTerminationWaitTimeStarted: bool?, blueGreenDeploymentConfiguration: BlueGreenDeploymentConfiguration?{terminateBlueInstancesOnDeploymentSuccess: BlueInstanceTerminationOption?{action: str?, terminationWaitTimeInMinutes: int?}, deploymentReadyOption: DeploymentReadyOption?{actionOnTimeout: str?, waitTimeInMinutes: int?}, greenFleetProvisioningOption: GreenFleetProvisioningOption?{action: str?}}, loadBalancerInfo: LoadBalancerInfo?{elbInfoList: [ELBInfo]?, targetGroupInfoList: [TargetGroupInfo]?, targetGroupPairInfoList: [TargetGroupPairInfo]?}, additionalDeploymentStatusInfo: str?, fileExistsBehavior: str?, deploymentStatusMessages: [str]?, computePlatform: str?, externalId: str?, relatedDeployments: RelatedDeployments?{autoUpdateOutdatedInstancesRootDeploymentId: str?, autoUpdateOutdatedInstancesDeploymentIds: [str]?}, overrideAlarmConfiguration: AlarmConfiguration?{enabled: bool?, ignorePollAlarmFailure: bool?, alarms: [Alarm]?}}}
 
 @endpoint POST /
+@desc Gets information about a deployment configuration.
 @required {deploymentConfigName: str}
 @returns(200) {deploymentConfigInfo: DeploymentConfigInfo?{deploymentConfigId: str?, deploymentConfigName: str?, minimumHealthyHosts: MinimumHealthyHosts?{type: str?, value: int?}, createTime: str(timestamp)?, computePlatform: str?, trafficRoutingConfig: TrafficRoutingConfig?{type: str?, timeBasedCanary: TimeBasedCanary?{canaryPercentage: int?, canaryInterval: int?}, timeBasedLinear: TimeBasedLinear?{linearPercentage: int?, linearInterval: int?}}, zonalConfig: ZonalConfig?{firstZoneMonitorDurationInSeconds: int(i64)?, monitorDurationInSeconds: int(i64)?, minimumHealthyHostsPerZone: MinimumHealthyHostsPerZone?{type: str?, value: int?}}}}
 
 @endpoint POST /
+@desc Gets information about a deployment group.
 @required {applicationName: str, deploymentGroupName: str}
 @returns(200) {deploymentGroupInfo: DeploymentGroupInfo?{applicationName: str?, deploymentGroupId: str?, deploymentGroupName: str?, deploymentConfigName: str?, ec2TagFilters: [EC2TagFilter]?, onPremisesInstanceTagFilters: [TagFilter]?, autoScalingGroups: [AutoScalingGroup]?, serviceRoleArn: str?, targetRevision: RevisionLocation?{revisionType: str?, s3Location: S3Location?{bucket: str?, key: str?, bundleType: str?, version: str?, eTag: str?}, gitHubLocation: GitHubLocation?{repository: str?, commitId: str?}, string: RawString?{content: str?, sha256: str?}, appSpecContent: AppSpecContent?{content: str?, sha256: str?}}, triggerConfigurations: [TriggerConfig]?, alarmConfiguration: AlarmConfiguration?{enabled: bool?, ignorePollAlarmFailure: bool?, alarms: [Alarm]?}, autoRollbackConfiguration: AutoRollbackConfiguration?{enabled: bool?, events: [str]?}, deploymentStyle: DeploymentStyle?{deploymentType: str?, deploymentOption: str?}, outdatedInstancesStrategy: str?, blueGreenDeploymentConfiguration: BlueGreenDeploymentConfiguration?{terminateBlueInstancesOnDeploymentSuccess: BlueInstanceTerminationOption?{action: str?, terminationWaitTimeInMinutes: int?}, deploymentReadyOption: DeploymentReadyOption?{actionOnTimeout: str?, waitTimeInMinutes: int?}, greenFleetProvisioningOption: GreenFleetProvisioningOption?{action: str?}}, loadBalancerInfo: LoadBalancerInfo?{elbInfoList: [ELBInfo]?, targetGroupInfoList: [TargetGroupInfo]?, targetGroupPairInfoList: [TargetGroupPairInfo]?}, lastSuccessfulDeployment: LastDeploymentInfo?{deploymentId: str?, status: str?, endTime: str(timestamp)?, createTime: str(timestamp)?}, lastAttemptedDeployment: LastDeploymentInfo?{deploymentId: str?, status: str?, endTime: str(timestamp)?, createTime: str(timestamp)?}, ec2TagSet: EC2TagSet?{ec2TagSetList: [[EC2TagFilter]]?}, onPremisesTagSet: OnPremisesTagSet?{onPremisesTagSetList: [[TagFilter]]?}, computePlatform: str?, ecsServices: [ECSService]?, terminationHookEnabled: bool?}}
 
 @endpoint POST /
+@desc Gets information about an instance as part of a deployment.
 @required {deploymentId: str, instanceId: str}
 @returns(200) {instanceSummary: InstanceSummary?{deploymentId: str?, instanceId: str?, status: str?, lastUpdatedAt: str(timestamp)?, lifecycleEvents: [LifecycleEvent]?, instanceType: str?}}
 
 @endpoint POST /
+@desc Returns information about a deployment target.
 @required {deploymentId: str, targetId: str}
 @returns(200) {deploymentTarget: DeploymentTarget?{deploymentTargetType: str?, instanceTarget: InstanceTarget?{deploymentId: str?, targetId: str?, targetArn: str?, status: str?, lastUpdatedAt: str(timestamp)?, lifecycleEvents: [LifecycleEvent]?, instanceLabel: str?}, lambdaTarget: LambdaTarget?{deploymentId: str?, targetId: str?, targetArn: str?, status: str?, lastUpdatedAt: str(timestamp)?, lifecycleEvents: [LifecycleEvent]?, lambdaFunctionInfo: LambdaFunctionInfo?{functionName: str?, functionAlias: str?, currentVersion: str?, targetVersion: str?, targetVersionWeight: num(f64)?}}, ecsTarget: ECSTarget?{deploymentId: str?, targetId: str?, targetArn: str?, lastUpdatedAt: str(timestamp)?, lifecycleEvents: [LifecycleEvent]?, status: str?, taskSetsInfo: [ECSTaskSet]?}, cloudFormationTarget: CloudFormationTarget?{deploymentId: str?, targetId: str?, lastUpdatedAt: str(timestamp)?, lifecycleEvents: [LifecycleEvent]?, status: str?, resourceType: str?, targetVersionWeight: num(f64)?}}}
 
 @endpoint POST /
+@desc Gets information about an on-premises instance.
 @required {instanceName: str}
 @returns(200) {instanceInfo: InstanceInfo?{instanceName: str?, iamSessionArn: str?, iamUserArn: str?, instanceArn: str?, registerTime: str(timestamp)?, deregisterTime: str(timestamp)?, tags: [Tag]?}}
 
 @endpoint POST /
+@desc Lists information about revisions for an application.
 @required {applicationName: str}
 @optional {sortBy: str, sortOrder: str, s3Bucket: str, s3KeyPrefix: str, deployed: str, nextToken: str}
 @returns(200) {revisions: [RevisionLocation]?, nextToken: str?}
 
 @endpoint POST /
+@desc Lists the applications registered with the user or Amazon Web Services account.
 @optional {nextToken: str}
 @returns(200) {applications: [str]?, nextToken: str?}
 
 @endpoint POST /
+@desc Lists the deployment configurations with the user or Amazon Web Services account.
 @optional {nextToken: str}
 @returns(200) {deploymentConfigsList: [str]?, nextToken: str?}
 
 @endpoint POST /
+@desc Lists the deployment groups for an application registered with the Amazon Web Services user or Amazon Web Services account.
 @required {applicationName: str}
 @optional {nextToken: str}
 @returns(200) {applicationName: str?, deploymentGroups: [str]?, nextToken: str?}
 
 @endpoint POST /
+@desc The newer BatchGetDeploymentTargets should be used instead because it works with all compute types. ListDeploymentInstances throws an exception if it is used with a compute platform other than EC2/On-premises or Lambda.    Lists the instance for a deployment associated with the user or Amazon Web Services account.
 @required {deploymentId: str}
 @optional {nextToken: str, instanceStatusFilter: [str], instanceTypeFilter: [str]}
 @returns(200) {instancesList: [str]?, nextToken: str?}
 
 @endpoint POST /
+@desc Returns an array of target IDs that are associated a deployment.
 @required {deploymentId: str}
 @optional {nextToken: str, targetFilters: map<str,[str]>}
 @returns(200) {targetIds: [str]?, nextToken: str?}
 
 @endpoint POST /
+@desc Lists the deployments in a deployment group for an application registered with the user or Amazon Web Services account.
 @optional {applicationName: str, deploymentGroupName: str, externalId: str, includeOnlyStatuses: [str], createTimeRange: TimeRange, nextToken: str}
 @returns(200) {deployments: [str]?, nextToken: str?}
 
 @endpoint POST /
+@desc Lists the names of stored connections to GitHub accounts.
 @optional {nextToken: str}
 @returns(200) {tokenNameList: [str]?, nextToken: str?}
 
 @endpoint POST /
+@desc Gets a list of names for one or more on-premises instances. Unless otherwise specified, both registered and deregistered on-premises instance names are listed. To list only registered or deregistered on-premises instance names, use the registration status parameter.
 @optional {registrationStatus: str, tagFilters: [TagFilter], nextToken: str}
 @returns(200) {instanceNames: [str]?, nextToken: str?}
 
 @endpoint POST /
+@desc Returns a list of tags for the resource identified by a specified Amazon Resource Name (ARN). Tags are used to organize and categorize your CodeDeploy resources.
 @required {ResourceArn: str}
 @optional {NextToken: str}
 @returns(200) {Tags: [Tag]?, NextToken: str?}
 
 @endpoint POST /
+@desc Sets the result of a Lambda validation function. The function validates lifecycle hooks during a deployment that uses the Lambda or Amazon ECS compute platform. For Lambda deployments, the available lifecycle hooks are BeforeAllowTraffic and AfterAllowTraffic. For Amazon ECS deployments, the available lifecycle hooks are BeforeInstall, AfterInstall, AfterAllowTestTraffic, BeforeAllowTraffic, and AfterAllowTraffic. Lambda validation functions return Succeeded or Failed. For more information, see AppSpec 'hooks' Section for an Lambda Deployment  and AppSpec 'hooks' Section for an Amazon ECS Deployment.
 @optional {deploymentId: str, lifecycleEventHookExecutionId: str, status: str}
 @returns(200) {lifecycleEventHookExecutionId: str?}
 
 @endpoint POST /
+@desc Registers with CodeDeploy a revision for the specified application.
 @required {applicationName: str, revision: RevisionLocation}
 @optional {description: str}
 
 @endpoint POST /
+@desc Registers an on-premises instance.  Only one IAM ARN (an IAM session ARN or IAM user ARN) is supported in the request. You cannot use both.
 @required {instanceName: str}
 @optional {iamSessionArn: str, iamUserArn: str}
 
 @endpoint POST /
+@desc Removes one or more tags from one or more on-premises instances.
 @required {tags: [Tag], instanceNames: [str]}
 
 @endpoint POST /
+@desc In a blue/green deployment, overrides any specified wait time and starts terminating instances immediately after the traffic routing is complete.
 @optional {deploymentId: str}
 
 @endpoint POST /
+@desc Attempts to stop an ongoing deployment.
 @required {deploymentId: str}
 @optional {autoRollbackEnabled: bool}
 @returns(200) {status: str?, statusMessage: str?}
 
 @endpoint POST /
+@desc Associates the list of tags in the input Tags parameter with the resource identified by the ResourceArn input parameter.
 @required {ResourceArn: str, Tags: [Tag]}
 
 @endpoint POST /
+@desc Disassociates a resource from a list of tags. The resource is identified by the ResourceArn input parameter. The tags are identified by the list of keys in the TagKeys input parameter.
 @required {ResourceArn: str, TagKeys: [str]}
 
 @endpoint POST /
+@desc Changes the name of an application.
 @optional {applicationName: str, newApplicationName: str}
 
 @endpoint POST /
+@desc Changes information about a deployment group.
 @required {applicationName: str, currentDeploymentGroupName: str}
 @optional {newDeploymentGroupName: str, deploymentConfigName: str, ec2TagFilters: [EC2TagFilter], onPremisesInstanceTagFilters: [TagFilter], autoScalingGroups: [str], serviceRoleArn: str, triggerConfigurations: [TriggerConfig], alarmConfiguration: AlarmConfiguration, autoRollbackConfiguration: AutoRollbackConfiguration, outdatedInstancesStrategy: str, deploymentStyle: DeploymentStyle, blueGreenDeploymentConfiguration: BlueGreenDeploymentConfiguration, loadBalancerInfo: LoadBalancerInfo, ec2TagSet: EC2TagSet, ecsServices: [ECSService], onPremisesTagSet: OnPremisesTagSet, terminationHookEnabled: bool}
 @returns(200) {hooksNotCleanedUp: [AutoScalingGroup]?}

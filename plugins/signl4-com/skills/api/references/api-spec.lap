@@ -10,614 +10,721 @@
 
 @group alerts
 @endpoint POST /alerts
+@desc Trigger Alert
 @required {text: str, title: str}
-@optional {attachments: [map{encoding: int(int32), content: str, id: str, name: str, contentType: str}], category: str, externalId: str, flags: int(int32), parameters: [map{name: str, order: int(int32), type: int(int32), value: str}], severity: int(int32)(0/1/2)}
-@returns(201) {attachments: [map]?, category: str?, eventSourceId: str?, eventSourceType: int(int32), history: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, parameters: [map]?, severity: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
-@errors {400, 404, 500}
+@optional {attachments: [map{encoding: int(int32), content: str, id: str, name: str, contentType: str}], category: str, externalId: str, flags: int(int32), parameters: [map{name: str, order: int(int32), type: int(int32), value: str}], severity: int(int32)(0/1/2) # <p/><ul><li>0 = Low</li><li>1 = Major</li><li>2 = Critical</li></ul>}
+@returns(201) {attachments: [map]?, category: str?, eventSourceId: str?, eventSourceType: int(int32), history: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, parameters: [map]?, severity: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?} # Created
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database., 500: Internal general error occurred.}
 
 @endpoint GET /alerts/{alertId}
-@required {alertId: str}
-@returns(200) {attachments: [map]?, category: str?, eventSourceId: str?, eventSourceType: int(int32), history: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, parameters: [map]?, severity: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
-@errors {400, 404, 500}
+@desc Get Alert
+@required {alertId: str # Id of the requested Alert.}
+@returns(200) {attachments: [map]?, category: str?, eventSourceId: str?, eventSourceType: int(int32), history: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, parameters: [map]?, severity: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?} # OK
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database., 500: Internal general error occurred.}
 
 @endpoint POST /alerts/{alertId}/acknowledge
-@required {alertId: str, uid: str}
+@desc Acknowledge an alert
+@required {alertId: str # Id to acknowledge an alert., uid: str}
 @optional {descr: str}
-@returns(200) {attachments: [map]?, category: str?, eventSourceId: str?, eventSourceType: int(int32), history: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, parameters: [map]?, severity: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
-@errors {400, 404, 409, 500}
+@returns(200) {attachments: [map]?, category: str?, eventSourceId: str?, eventSourceType: int(int32), history: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, parameters: [map]?, severity: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?} # OK
+@errors {400: Required information could not be found in the request/claims., 404: No alert with id was found., 409: Alert can't be acknowledged because it is against the defined alert lifecycle., 500: Internal general error occurred.}
 
 @endpoint POST /alerts/{alertId}/annotate
-@required {alertId: str}
+@desc Annotate Alert
+@required {alertId: str # Id of the alert to annotate.}
 @optional {type: int(int32), text: str, timestamp: str(date-time), userId: str, id: str, teamId: str}
-@returns(200) {type: int(int32), text: str?, timestamp: str(date-time), userId: str?, id: str?, teamId: str?}
-@errors {400, 404, 500}
+@returns(200) {type: int(int32), text: str?, timestamp: str(date-time), userId: str?, id: str?, teamId: str?} # OK
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database., 500: Internal general error occurred.}
 
 @endpoint GET /alerts/{alertId}/annotations
-@required {alertId: str}
-@returns(200)
-@returns(204)
-@errors {400, 404, 500}
+@desc Get annotations of an alert
+@required {alertId: str # Id of the requested Alert.}
+@returns(200) OK
+@returns(204) No annotations were found for the alert.
+@errors {400: Required information could not be found in the request/claims., 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /alerts/{alertId}/attachments
-@required {alertId: str}
-@returns(200)
-@errors {400, 404, 500}
+@desc Get attachments of an alert
+@required {alertId: str # Id of the requested Alert.}
+@returns(200) OK
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database., 500: Internal general error occurred.}
 
 @endpoint GET /alerts/{alertId}/attachments/{attachmentId}
-@required {alertId: str, attachmentId: str}
-@optional {width: int(int32), height: int(int32), scale: bool=True}
-@returns(200)
-@returns(204)
-@errors {400, 404, 500, 403}
+@desc Gets a specified attachment of a specified alert.
+@required {alertId: str # Id of the alert that contains the wanted attachment., attachmentId: str # Id of the attachment, that you want to retrieve.}
+@optional {width: int(int32) # Optional parameter defining the wanted width of the picture that is retrieved., height: int(int32) # Optional parameter defining the wanted height of the picture that is retrieved., scale: bool=True # Optional parameter defining whether it's wanted to scale the retrieved image. Default is set to true.}
+@returns(200) Returns the attachment image with additional meta information.
+@returns(204) The image of the attachment was not uploaded yet.
+@errors {400: A passed parameter was either empty or invalid., 404: The attachment image was not found., 500: Internal general error occurred., 403: Authorization failed.}
 
 @endpoint POST /alerts/{alertId}/close
-@required {alertId: str, uid: str}
+@desc Close an alert
+@required {alertId: str # Id to acknowledge an alert., uid: str}
 @optional {descr: str}
-@returns(200) {attachments: [map]?, category: str?, eventSourceId: str?, eventSourceType: int(int32), history: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, parameters: [map]?, severity: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
-@errors {400, 404, 409, 500}
+@returns(200) {attachments: [map]?, category: str?, eventSourceId: str?, eventSourceType: int(int32), history: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, parameters: [map]?, severity: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?} # OK
+@errors {400: Required information could not be found in the request/claims., 404: No alert with id was found., 409: Alert can't be closed because it is against the defined alert lifecycle., 500: Internal general error occurred.}
 
 @endpoint GET /alerts/{alertId}/notifications
-@required {alertId: str}
-@returns(200)
-@errors {400, 404, 500}
+@desc Get alert notifications
+@required {alertId: str # Id of the requested Alert.}
+@returns(200) OK
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database., 500: Internal general error occurred.}
 
 @endpoint GET /alerts/{alertId}/overview
-@required {alertId: str}
-@returns(200) {alertDeliveryStatus: map{alertDeliveryStatusCode: int(int32), userDeliveryStatusInfos: [map]?}, detailedHistory: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, requiredAcknowledgements: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
-@errors {400, 404, 500}
+@desc Get an overview alert.
+@required {alertId: str # Id of the requested Alert.}
+@returns(200) {alertDeliveryStatus: map{alertDeliveryStatusCode: int(int32), userDeliveryStatusInfos: [map]?}, detailedHistory: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, requiredAcknowledgements: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?} # Returns alert with all information attached.
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database., 500: Internal Server Error}
 
 @endpoint POST /alerts/{alertId}/undoAcknowledge
+@desc Undo the acknowledgement of an alert.
 @required {alertId: str, uid: str}
 @optional {descr: str}
-@returns(200) {alertDeliveryStatus: map{alertDeliveryStatusCode: int(int32), userDeliveryStatusInfos: [map]?}, detailedHistory: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, requiredAcknowledgements: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
-@errors {400, 403, 500}
+@returns(200) {alertDeliveryStatus: map{alertDeliveryStatusCode: int(int32), userDeliveryStatusInfos: [map]?}, detailedHistory: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, requiredAcknowledgements: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?} # Returns updated alert.
+@errors {400: Required information could not be found in the request/claims., 403: User is not allowed to undo the acknowledgement., 500: Internal general error occurred.}
 
 @endpoint POST /alerts/{alertId}/undoClose
+@desc Undo the closure of an alert.
 @required {alertId: str, uid: str}
 @optional {descr: str}
-@returns(200) {alertDeliveryStatus: map{alertDeliveryStatusCode: int(int32), userDeliveryStatusInfos: [map]?}, detailedHistory: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, requiredAcknowledgements: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?}
-@errors {400, 403, 500}
+@returns(200) {alertDeliveryStatus: map{alertDeliveryStatusCode: int(int32), userDeliveryStatusInfos: [map]?}, detailedHistory: map{alertHistoryEntries: [map]?, acknowledgedgements: [str]?, closed: str(date-time)?, closedBy: str?, acknowledged: str(date-time)?, created: str(date-time), createdBy: str?}, requiredAcknowledgements: int(int32), categoryId: str?, externalId: str?, eventId: str?, flags: int(int32), id: str?, lastModified: str(date-time), status: int(int32), subscriptionId: str?, teamId: str?, text: str?, title: str?, annotations: [map]?} # OK
+@errors {400: Required information could not be found in the request/claims., 403: User is not allowed to undo the close., 500: Internal general error occurred.}
 
 @endpoint POST /alerts/acknowledgeAll
-@optional {userId: str, maxDate: str(date-time), minDate: str(date-time), categoryIds: [str], scope: int(int32)(0/1/2), teamIds: [str]}
-@returns(204)
-@errors {400, 404, 500}
+@desc Confirms all visible alerts
+@optional {userId: str # User ID of the user to be used to acknowledge the alarms., maxDate: str(date-time), minDate: str(date-time), categoryIds: [str], scope: int(int32)(0/1/2) # <p/><ul><li>0 = Default</li><li>1 = AllTeams</li><li>2 = SpecificTeams</li></ul>, teamIds: [str]}
+@returns(204) No Content
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database., 500: Internal general error occurred.}
 
 @endpoint POST /alerts/acknowledgeMultiple
+@desc Acknowlegde multiple alerts
 @required {uid: str, alertIds: [str]}
 @optional {descr: str}
-@returns(204)
-@errors {400, 404, 500}
+@returns(204) No Content
+@errors {400: Required information could not be found in the request/claims., 404: Not Found, 500: Internal general error occurred.}
 
 @endpoint POST /alerts/closeAll
-@optional {userId: str, maxDate: str(date-time), minDate: str(date-time), categoryIds: [str], scope: int(int32)(0/1/2), teamIds: [str]}
-@returns(204)
-@errors {400, 404, 500}
+@desc Close all acknowledged alerts.
+@optional {userId: str # User ID of the user to be used to close the alarms., maxDate: str(date-time), minDate: str(date-time), categoryIds: [str], scope: int(int32)(0/1/2) # <p/><ul><li>0 = Default</li><li>1 = AllTeams</li><li>2 = SpecificTeams</li></ul>, teamIds: [str]}
+@returns(204) No Content
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database., 500: Internal general error occurred.}
 
 @endpoint POST /alerts/closeMultiple
+@desc Close multiple alerts
 @required {uid: str, alertIds: [str]}
 @optional {descr: str}
-@returns(204)
-@errors {400, 404, 500}
+@returns(204) No Content
+@errors {400: Required information could not be found in the request/claims., 404: Not Found, 500: Internal general error occurred.}
 
 @endpoint POST /alerts/paged
-@optional {maxResults: int(int32), userId: str, teamid: str, alertIds: [str], afterId: str, categoryIds: [str], continuationToken: map{nextPartitionKey: str, nextRowKey: str, nextTableName: str}, maxCreated: str(date-time), minCreated: str(date-time), modSince: str(date-time), showPersonalHiddenCategories: bool, userCreatedAlertsFilterMode: int(int32)(0/1/2), alertStatusCodes: int(int32)(0/1/2/4/8/16/32), textToSearch: str}
-@returns(200) {continuationToken: map{nextPartitionKey: str?, nextRowKey: str?, nextTableName: str?}, hasMore: bool, results: [map]?}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Gets alerts paged
+@optional {maxResults: int(int32) # Defines the limit of retrieved alert details per request. 1 to 100 are allowed per request. Number of alerts could be less if filtered but at least 1., userId: str # User ID of the user you want to get alerts for., teamid: str, alertIds: [str], afterId: str, categoryIds: [str], continuationToken: map{nextPartitionKey: str, nextRowKey: str, nextTableName: str}, maxCreated: str(date-time), minCreated: str(date-time), modSince: str(date-time), showPersonalHiddenCategories: bool, userCreatedAlertsFilterMode: int(int32)(0/1/2) # <p/><ul><li>0 = ExcludeUserCreatedAlerts</li><li>1 = IncludeUserCreatedAlerts</li><li>2 = OnlyUserCreatedAlerts</li></ul>, alertStatusCodes: int(int32)(0/1/2/4/8/16/32) # <p/><ul><li>0 = None</li><li>1 = Open</li><li>2 = Acknowledged</li><li>4 = Closed</li><li>8 = NoReply</li><li>16 = Failed</li><li>32 = Error</li></ul>, textToSearch: str}
+@returns(200) {continuationToken: map{nextPartitionKey: str?, nextRowKey: str?, nextTableName: str?}, hasMore: bool, results: [map]?} # Returns a paged result with found alerts and continuation token if more alerts are in the
+@returns(204) There were no alerts found for the specified filter.
+@errors {400: Required parameters could not be found in the request/claims., 403: Authorization failed, 404: Not Found, 500: Internal general error occurred.}
 
 @endpoint GET /alerts/report
-@optional {userId: str}
-@returns(200) {last24Hours: map{acknowledged: int(int64), end: str(date-time)?, lastModified: str(date-time)?, start: str(date-time)?, unhandled: int(int64), closed: int(int64)}, subscriptionId: str, teamCurrentDuty: map{acknowledged: int(int64), end: str(date-time)?, lastModified: str(date-time)?, start: str(date-time)?, unhandled: int(int64), closed: int(int64)}, teamId: str, teamLastDuty: map{acknowledged: int(int64), end: str(date-time)?, lastModified: str(date-time)?, start: str(date-time)?, unhandled: int(int64), closed: int(int64)}, userId: str?, userLastDutyChange: map{acknowledged: int(int64), end: str(date-time)?, lastModified: str(date-time)?, start: str(date-time)?, unhandled: int(int64), closed: int(int64)}}
-@errors {400, 404, 500}
+@desc Get Alert Report
+@optional {userId: str # User ID of the user for whom you want a report.}
+@returns(200) {last24Hours: map{acknowledged: int(int64), end: str(date-time)?, lastModified: str(date-time)?, start: str(date-time)?, unhandled: int(int64), closed: int(int64)}, subscriptionId: str, teamCurrentDuty: map{acknowledged: int(int64), end: str(date-time)?, lastModified: str(date-time)?, start: str(date-time)?, unhandled: int(int64), closed: int(int64)}, teamId: str, teamLastDuty: map{acknowledged: int(int64), end: str(date-time)?, lastModified: str(date-time)?, start: str(date-time)?, unhandled: int(int64), closed: int(int64)}, userId: str?, userLastDutyChange: map{acknowledged: int(int64), end: str(date-time)?, lastModified: str(date-time)?, start: str(date-time)?, unhandled: int(int64), closed: int(int64)}} # OK
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database., 500: Internal general error occurred.}
 
 @endpoint POST /alerts/undoAcknowledgeMultiple
+@desc Queue undo of multiple acknowledgments.
 @required {uid: str, alertIds: [str]}
 @optional {descr: str}
-@returns(204)
-@errors {400, 403, 500}
+@returns(204) No Content
+@errors {400: Required information could not be found in the request/claims., 403: Forbidden, 500: Internal general error occurred.}
 
 @endpoint POST /alerts/undoCloseMultiple
+@desc Withdraw closure of multiple alerts
 @required {uid: str, alertIds: [str]}
 @optional {descr: str}
-@returns(204)
-@errors {400, 404, 500}
+@returns(204) No Content
+@errors {400: Required information could not be found in the request/claims., 404: Not Found, 500: Internal general error occurred.}
 
 @endgroup
 
 @group categories
 @endpoint GET /categories/{teamId}
-@required {teamId: str}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Get all categories
+@required {teamId: str # ID of the team the categories belong to}
+@returns(200) Returns the category infos
+@errors {400: If the input is not valid, 403: If you have no permission to access this resource, 404: If the resource was not found, 500: If any server side errors occur}
 
 @endpoint POST /categories/{teamId}
-@required {teamId: str, name: str, color: str, imageName: str, keywords: [str], keywordMatching: int(int32)(0/1)}
-@optional {id: str, teamId: str, isDefault: bool, options: int(int32)(0/1/2/4/8), keywordsExcluded: [str], augmentations: [map{enabled: bool, name: str, type!: int(int32), value: str, id: str, parameters: [map{id: str, name: str, operation: map, defaultValue: str, eventSourceId: str}]}], enrichments: [map{id: str, name: str, type!: int(int32), value: str}], order: int(int32)}
-@returns(201) {id: str?, teamId: str?, isDefault: bool, options: int(int32), name: str, color: str, imageName: str, keywords: [str], keywordsExcluded: [str]?, keywordMatching: int(int32), augmentations: [map]?, enrichments: [map]?, order: int(int32)}
-@errors {400, 403, 404, 500}
+@desc Create a new category
+@required {teamId: str # ID of the team the category belongs to, name: str, color: str, imageName: str, keywords: [str], keywordMatching: int(int32)(0/1) # <p/><ul><li>0 = Any</li><li>1 = All</li></ul>}
+@optional {id: str, teamId: str, isDefault: bool, options: int(int32)(0/1/2/4/8) # <p/><ul><li>0 = None</li><li>1 = Hidden</li><li>2 = DenyDelete</li><li>4 = HideOptOut</li><li>8 = HideKeywords</li></ul>, keywordsExcluded: [str], augmentations: [map{enabled: bool, name: str, type!: int(int32), value: str, id: str, parameters: [map{id: str, name: str, operation: map, defaultValue: str, eventSourceId: str}]}], enrichments: [map{id: str, name: str, type!: int(int32), value: str}], order: int(int32)}
+@returns(201) {id: str?, teamId: str?, isDefault: bool, options: int(int32), name: str, color: str, imageName: str, keywords: [str], keywordsExcluded: [str]?, keywordMatching: int(int32), augmentations: [map]?, enrichments: [map]?, order: int(int32)} # Returns the newly created category
+@errors {400: If the input is not valid, 403: If you have no permission to access this resource, 404: If the resource was not found, 500: If any server side errors occur}
 
 @endpoint GET /categories/{teamId}/{categoryId}
-@required {teamId: str, categoryId: str}
-@returns(200) {id: str?, teamId: str?, isDefault: bool, options: int(int32), name: str, color: str, imageName: str, keywords: [str], keywordsExcluded: [str]?, keywordMatching: int(int32), augmentations: [map]?, enrichments: [map]?, order: int(int32)}
-@errors {400, 403, 404, 500}
+@desc Get a specific category
+@required {teamId: str # ID of the team the category belongs to, categoryId: str # ID of the category to get}
+@returns(200) {id: str?, teamId: str?, isDefault: bool, options: int(int32), name: str, color: str, imageName: str, keywords: [str], keywordsExcluded: [str]?, keywordMatching: int(int32), augmentations: [map]?, enrichments: [map]?, order: int(int32)} # Returns the category details
+@errors {400: If the input is not valid, 403: If you have no permission to access this resource, 404: If the resource was not found, 500: If any server side errors occur}
 
 @endpoint PUT /categories/{teamId}/{categoryId}
-@required {teamId: str, categoryId: str, name: str, color: str, imageName: str, keywords: [str], keywordMatching: int(int32)(0/1)}
-@optional {id: str, teamId: str, isDefault: bool, options: int(int32)(0/1/2/4/8), keywordsExcluded: [str], augmentations: [map{enabled: bool, name: str, type!: int(int32), value: str, id: str, parameters: [map{id: str, name: str, operation: map, defaultValue: str, eventSourceId: str}]}], enrichments: [map{id: str, name: str, type!: int(int32), value: str}], order: int(int32)}
-@returns(200) {id: str?, teamId: str?, isDefault: bool, options: int(int32), name: str, color: str, imageName: str, keywords: [str], keywordsExcluded: [str]?, keywordMatching: int(int32), augmentations: [map]?, enrichments: [map]?, order: int(int32)}
-@errors {400, 403, 404, 500}
+@desc Update an existing category
+@required {teamId: str # ID of the team the category belongs to, categoryId: str, name: str, color: str, imageName: str, keywords: [str], keywordMatching: int(int32)(0/1) # <p/><ul><li>0 = Any</li><li>1 = All</li></ul>}
+@optional {id: str, teamId: str, isDefault: bool, options: int(int32)(0/1/2/4/8) # <p/><ul><li>0 = None</li><li>1 = Hidden</li><li>2 = DenyDelete</li><li>4 = HideOptOut</li><li>8 = HideKeywords</li></ul>, keywordsExcluded: [str], augmentations: [map{enabled: bool, name: str, type!: int(int32), value: str, id: str, parameters: [map{id: str, name: str, operation: map, defaultValue: str, eventSourceId: str}]}], enrichments: [map{id: str, name: str, type!: int(int32), value: str}], order: int(int32)}
+@returns(200) {id: str?, teamId: str?, isDefault: bool, options: int(int32), name: str, color: str, imageName: str, keywords: [str], keywordsExcluded: [str]?, keywordMatching: int(int32), augmentations: [map]?, enrichments: [map]?, order: int(int32)} # Returns the updated category
+@errors {400: If the input is not valid, 403: If you have no permission to access this resource, 404: If the resource was not found, 500: If any server side errors occur}
 
 @endpoint DELETE /categories/{teamId}/{categoryId}
-@required {teamId: str, categoryId: str}
-@returns(204)
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Delete an existing category
+@required {teamId: str # ID of the team the category belongs to, categoryId: str # ID of the category to delete}
+@returns(204) No Content
+@returns(200) If the delete operation was successful
+@errors {400: If the input is not valid, 403: If you have no permission to access this resource, 404: If the resource was not found, 500: If any server side errors occur}
 
 @endpoint GET /categories/{teamId}/{categoryId}/metrics
-@required {teamId: str, categoryId: str}
-@returns(200) {categoryId: str?, last24h: int(int64), lastAlert: str(date-time)?, subscriberCount: int(int32)}
-@errors {400, 403, 404, 500}
+@desc Get metrics for a specific category
+@required {teamId: str # ID of the team the category belongs to, categoryId: str # ID of the category to get}
+@returns(200) {categoryId: str?, last24h: int(int64), lastAlert: str(date-time)?, subscriberCount: int(int32)} # Returns the category metrics
+@errors {400: If the input is not valid, 403: If you have no permission to access this resource, 404: If the resource was not found, 500: If any server side errors occur}
 
 @endpoint GET /categories/{teamId}/{categoryId}/subscriptions
-@required {teamId: str, categoryId: str}
-@returns(200)
-@errors {400, 403, 500, 404}
+@desc Get category subscriptions
+@required {teamId: str # ID of the team the category belongs to, categoryId: str # Category to get subscriptions for}
+@returns(200) Returns the category subscriptions
+@errors {400: If the input is not valid, 403: If you have no permission to access this resource, 500: If any server side errors occur, 404: If the resource was not found}
 
 @endpoint POST /categories/{teamId}/{categoryId}/subscriptions
-@required {teamId: str, categoryId: str}
-@returns(200)
-@errors {400, 403, 500, 404}
+@desc Set category subscriptions
+@required {teamId: str # ID of the team the category belongs to, categoryId: str # Category to be updated}
+@returns(200) Returns the updated category subscriptions
+@errors {400: If the input is not valid, 403: If you have no permission to access this resource, 500: If any server side errors occur, 404: If the resource was not found}
 
 @endpoint GET /categories/{teamId}/metrics
-@required {teamId: str}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Get metrics for all categories
+@required {teamId: str # ID of the team the categories belongs to}
+@returns(200) Returns a list of category metrics
+@errors {400: If the input is not valid, 403: If you have no permission to access this resource, 404: If the resource was not found, 500: If any server side errors occur}
 
 @endpoint GET /categories/images
-@returns(200)
-@returns(204)
-@errors {403, 404, 500}
+@desc Gets the names of all alert category images.
+@returns(200) Return names of all category images
+@returns(204) Request was canceled.
+@errors {403: If you have no permission to access this resource, 404: No category images found., 500: If any server side errors occur}
 
 @endgroup
 
 @group events
 @endpoint GET /events/{eventId}/overview
-@required {eventId: str}
-@returns(200) {teamId: str?, alertId: str?, categoryId: str?, acknowledgedAlerts: [str]?, closedAlerts: [str]?, creationTime: str(date-time), createdByUserId: str?, eventSourceType: int(int32), eventSourceGroupId: str?, eventSourceId: str?, eventSourceTeamId: str?, eventStatus: int(int32), id: str?, lastModified: str(date-time), severity: int(int32), text: str?, title: str?}
-@errors {400, 404, 500}
+@desc Get overview event
+@required {eventId: str # Id of event to get.}
+@returns(200) {teamId: str?, alertId: str?, categoryId: str?, acknowledgedAlerts: [str]?, closedAlerts: [str]?, creationTime: str(date-time), createdByUserId: str?, eventSourceType: int(int32), eventSourceGroupId: str?, eventSourceId: str?, eventSourceTeamId: str?, eventStatus: int(int32), id: str?, lastModified: str(date-time), severity: int(int32), text: str?, title: str?} # Returns overview event with specific id.
+@errors {400: Required parameters could not be found in the request/claims., 404: Event with specified id could not be found., 500: Internal general error occurred.}
 
 @endpoint GET /events/{eventId}/parameters
-@required {eventId: str}
-@returns(200)
-@errors {400, 404, 500}
+@desc Get event parameters
+@required {eventId: str # Event Id of the requested Alert.}
+@returns(200) OK
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database., 500: Internal general error occurred.}
 
 @endpoint POST /events/{webhookIdOrTeamId}
-@required {webhookIdOrTeamId: str}
+@desc Create new event
+@required {webhookIdOrTeamId: str # Use team id to send an event straight to the team or an inbound webhook identifier (https://connect.signl4.com/webhook/{Identifier}) to use distribution rules}
 @optional {ExtIdParam: str, ExtStatusParam: str, NewStatus: str, ResolvedStatus: str, AckStatus: str}
-@returns(201) {teamId: str?, alertId: str?, categoryId: str?, acknowledgedAlerts: [str]?, closedAlerts: [str]?, creationTime: str(date-time), createdByUserId: str?, eventSourceType: int(int32), eventSourceGroupId: str?, eventSourceId: str?, eventSourceTeamId: str?, eventStatus: int(int32), id: str?, lastModified: str(date-time), severity: int(int32), text: str?, title: str?}
-@errors {400, 403, 404, 500}
+@returns(201) {teamId: str?, alertId: str?, categoryId: str?, acknowledgedAlerts: [str]?, closedAlerts: [str]?, creationTime: str(date-time), createdByUserId: str?, eventSourceType: int(int32), eventSourceGroupId: str?, eventSourceId: str?, eventSourceTeamId: str?, eventStatus: int(int32), id: str?, lastModified: str(date-time), severity: int(int32), text: str?, title: str?} # Created
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /events/paged
-@optional {maxResults: int(int32), teamid: str, continuationToken: map{nextPartitionKey: str, nextRowKey: str, nextTableName: str}, eventStatusCode: int(int32)(0/1/2/3/4/5/6/7/8/9/21/22/23/30/1000), maxCreationDate: str(date-time), minCreationDate: str(date-time), modifiedSince: str(date-time), textToSearch: str, eventSourceId: str, eventCreatorFilter: map{userId!: str, userCreatedFilterMode: int(int32)}}
-@returns(200) {continuationToken: map{nextPartitionKey: str?, nextRowKey: str?, nextTableName: str?}, hasMore: bool, results: [map]?}
-@returns(204)
-@errors {400, 404, 500}
+@desc Get overview event paged.
+@optional {maxResults: int(int32) # Defines the limit of retrieved alert details per request. 1 to 100 are allowed per request. Number of alerts could be less if filtered but at least 1., teamid: str, continuationToken: map{nextPartitionKey: str, nextRowKey: str, nextTableName: str}, eventStatusCode: int(int32)(0/1/2/3/4/5/6/7/8/9/21/22/23/30/1000) # <p/><ul><li>0 = None</li><li>1 = Processing</li><li>2 = Signled</li><li>3 = Filtered</li><li>4 = Resolved</li><li>5 = Discarded</li><li>6 = Acknowledged</li><li>7 = Suppressed</li><li>8 = NoRuleApplied</li><li>9 = MultipleTargetStatus</li><li>21 = WaitingForAutoClose</li><li>22 = NotEnoughOccurrences</li><li>23 = DuplicateSuppressed</li><li>30 = NoTarget</li><li>1000 = Error</li></ul>, maxCreationDate: str(date-time), minCreationDate: str(date-time), modifiedSince: str(date-time), textToSearch: str, eventSourceId: str, eventCreatorFilter: map{userId!: str, userCreatedFilterMode: int(int32)}}
+@returns(200) {continuationToken: map{nextPartitionKey: str?, nextRowKey: str?, nextTableName: str?}, hasMore: bool, results: [map]?} # Returns paged result with found events and continuation token, if database holds more events.
+@returns(204) No event could be found (with passed filter)
+@errors {400: Required parameters could not be found in the request/claims., 404: Not Found, 500: Internal general error occurred.}
 
 @endgroup
 
 @group prepaid
 @endpoint PUT /prepaid/{subscriptionId}/prepaidSettings
-@required {subscriptionId: str}
+@desc Update a subscription's current prepaid settings.
+@required {subscriptionId: str # ID of the subscription}
 @optional {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)}
-@returns(200) {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)}
-@errors {400, 403, 404, 500}
+@returns(200) {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /prepaid/balance
-@returns(200) {balance: int(int32), latestTopUp: str(date-time)?, pendingTransactions: bool}
-@errors {400, 404, 500}
+@desc Get your subscription's current prepaid balance.
+@returns(200) {balance: int(int32), latestTopUp: str(date-time)?, pendingTransactions: bool} # OK
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /prepaid/settings
-@returns(200) {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)}
-@errors {400, 404, 500}
+@desc Get your subscription's current prepaid settings.
+@returns(200) {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)} # OK
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /prepaid/settings
+@desc Update your subscription's current prepaid settings.
 @optional {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)}
-@returns(200) {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)}
-@errors {400, 404, 500}
+@returns(200) {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)} # OK
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /prepaid/transactions
-@returns(200)
-@errors {400, 404, 500}
+@desc Get your subscription's prepaid transactions.
+@returns(200) OK
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group scripts
 @endpoint GET /scripts/instances
+@desc Returns all script instances of the SIGNL4 team
 @optional {teamId: [str], modifiedSince: str(date-time)}
-@returns(200)
-@errors {400}
+@returns(200) OK
+@errors {400: Required information could not be found in the request/claims.}
 
 @endpoint POST /scripts/instances
+@desc Creates a new script instance in the in the SIGNL4 team.
 @optional {instanceId: str, scriptId: str, scriptName: str, customScriptName: str, customScriptDescription: str, teamId: str, sharedTeams: [str], enabled: bool, config: any}
-@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
-@returns(201) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
-@errors {400, 404, 500}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}} # Existing script instance was updated as specified in body.
+@returns(201) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}} # New script instance was updated as specified in body.
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database., 500: An internal error has occurred during instance creation.}
 
 @endpoint GET /scripts/instances/{instanceId}
-@required {instanceId: str}
-@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
-@errors {400, 404}
+@desc Returns all information about a given script instance which includes its runtime status.
+@required {instanceId: str # Instance Id of script instance to be returned.}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}} # OK
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database or in memory.}
 
 @endpoint PUT /scripts/instances/{instanceId}
-@required {instanceId: str}
+@desc Updates a given script instance, typically used for updating the configuration of a script.
+@required {instanceId: str # InstanceId of the script to be updated.}
 @optional {customScriptName: str, customScriptDescription: str, teamId: str, enabled: bool, config: any}
-@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
-@errors {400, 404, 500}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}} # OK
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database., 500: An internal error has occurred during instance creation.}
 
 @endpoint DELETE /scripts/instances/{instanceId}
-@required {instanceId: str}
-@returns(200)
-@errors {400, 404}
+@desc Deletes a script instance.
+@required {instanceId: str # Instance Id of script instance to be returned.}
+@returns(200) OK
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database or in memory.}
 
 @endpoint PUT /scripts/instances/{instanceId}/data
-@required {instanceId: str}
+@desc Updates custom data of a given script instance which includes its display name.
+@required {instanceId: str # InstanceId of the script to be updated.}
 @optional {instanceId: str, scriptName: str, customScriptName: str, customScriptDescription: str}
-@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
-@errors {400, 404, 500}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}} # OK
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database., 500: An internal error has occurred during instance creation.}
 
 @endpoint POST /scripts/instances/{instanceId}/disable
-@required {instanceId: str}
-@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
-@errors {400, 404, 500}
+@desc Disables a given script instance.
+@required {instanceId: str # Id of the instance to be disabled.}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}} # OK
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /scripts/instances/{instanceId}/enable
-@required {instanceId: str}
-@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
-@errors {400, 404, 500}
+@desc Enables a script instance.
+@required {instanceId: str # Id of the instance to be enabled.}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}} # OK
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /scripts/inventory
-@returns(200)
-@errors {400, 500}
+@desc Returns all available inventory scripts which can be added to a SIGNL4 subscription.
+@returns(200) OK
+@errors {400: Required information could not be found in the request/claims., 500: An internal error occurred while loading all inventory scripts.}
 
 @endpoint GET /scripts/inventory/parsed
+@desc Returns all inventory scripts.
 @optional {language: str}
-@returns(200)
-@errors {400, 500}
+@returns(200) OK
+@errors {400: Bad Request, 500: Internal Server Error}
 
 @endpoint GET /scripts/inventory/parsed/{scriptId}
-@required {scriptId: str}
+@desc Returns an inventory script by its id.
+@required {scriptId: str # The Id of the script to be returned.}
 @optional {language: str}
-@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}}
-@errors {400, 404}
+@returns(200) {config: any?, webhookUrl: str?, eventSourceId: str?, instanceId: str?, scriptId: str?, scriptName: str?, customScriptName: str?, customScriptDescription: str?, subscriptionId: str?, teamId: str?, eventPattern: any?, lastModified: str(date-time)?, enabled: bool, runtimeInformation: map{runtimeStatus: int(int32), runtimeStatusMessage: str?}} # OK
+@errors {400: Required information could not be found in the request/claims., 404: Required entities could not be found in the database or in memory.}
 
 @endgroup
 
 @group subscriptions
 @endpoint GET /subscriptions
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Get infos of all available/managed subscriptions.
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /subscriptions/{subscriptionId}
-@required {subscriptionId: str}
-@returns(200) {branchId: str?, country: str?, createdAt: str(date-time), currency: str?, externalAccountId: str?, id: str?, name: str?, nextBilling: str(date-time)?, ownerId: str?, planCode: str?, planState: int(int32), referralEnabled: bool, isBetaMember: bool, elmEnabled: bool, status: int(int32)}
-@errors {400, 403, 404, 500}
+@desc Get infos of a specific subscription.
+@required {subscriptionId: str # ID of the subscription that's to be retrieved.}
+@returns(200) {branchId: str?, country: str?, createdAt: str(date-time), currency: str?, externalAccountId: str?, id: str?, name: str?, nextBilling: str(date-time)?, ownerId: str?, planCode: str?, planState: int(int32), referralEnabled: bool, isBetaMember: bool, elmEnabled: bool, status: int(int32)} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /subscriptions/{subscriptionId}/channelPrices
-@required {subscriptionId: str}
-@returns(200) {sms: int(int32), voicePerMinute: int(int32)}
-@errors {400, 404, 500}
+@desc Returns the subscription's channel price information.
+@required {subscriptionId: str # ID of the subscription that needs to be retrieved.}
+@returns(200) {sms: int(int32), voicePerMinute: int(int32)} # OK
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /subscriptions/{subscriptionId}/features
-@required {subscriptionId: str}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Returns the features of a specified subscription.
+@required {subscriptionId: str # ID of the subscription from which the features need to be retrieved.}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /subscriptions/{subscriptionId}/inboundVoiceNumberLicenses
-@required {subscriptionId: str}
-@returns(200) {currentUsers: int(int32), licensedUsers: int(int32), planCode: str?, isTrial: bool, isFree: bool}
-@errors {400, 403, 404, 500}
+@desc Gets a subscription's voice number licenses.
+@required {subscriptionId: str # ID of the subscription}
+@returns(200) {currentUsers: int(int32), licensedUsers: int(int32), planCode: str?, isTrial: bool, isFree: bool} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /subscriptions/{subscriptionId}/prepaidBalance
+@desc Get a subscription's current prepaid balance.
 @required {subscriptionId: str}
-@returns(200) {balance: int(int32), latestTopUp: str(date-time)?, pendingTransactions: bool}
-@errors {400, 403, 404, 500}
+@returns(200) {balance: int(int32), latestTopUp: str(date-time)?, pendingTransactions: bool} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /subscriptions/{subscriptionId}/prepaidSettings
+@desc Get a subscription's current prepaid settings.
 @required {subscriptionId: str}
-@returns(200) {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)}
-@errors {400, 403, 404, 500}
+@returns(200) {topUpAmount: int(int32), topUpEnabled: bool, topUpLimit: int(int32)} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /subscriptions/{subscriptionId}/prepaidTransactions
-@required {subscriptionId: str}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Get a subscription's prepaid transactions.
+@required {subscriptionId: str # ID of the subscription to get transactions for}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /subscriptions/{subscriptionId}/profile
-@required {subscriptionId: str}
+@desc Updates a subscriptions profile.
+@required {subscriptionId: str # ID of the subscription to be updated}
 @optional {name: str}
-@returns(200) {branchId: str?, country: str?, createdAt: str(date-time), currency: str?, externalAccountId: str?, id: str?, name: str?, nextBilling: str(date-time)?, ownerId: str?, planCode: str?, planState: int(int32), referralEnabled: bool, isBetaMember: bool, elmEnabled: bool, status: int(int32)}
-@errors {400, 403, 404, 500}
+@returns(200) {branchId: str?, country: str?, createdAt: str(date-time), currency: str?, externalAccountId: str?, id: str?, name: str?, nextBilling: str(date-time)?, ownerId: str?, planCode: str?, planState: int(int32), referralEnabled: bool, isBetaMember: bool, elmEnabled: bool, status: int(int32)} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /subscriptions/{subscriptionId}/settings
-@required {subscriptionId: str}
-@returns(200) {currentUsers: int(int32), licensedUsers: int(int32), planCode: str?, isTrial: bool, isFree: bool}
-@errors {400, 403, 404, 500}
+@desc Gets a subscription's global settings.
+@required {subscriptionId: str # ID of the subscription}
+@returns(200) {currentUsers: int(int32), licensedUsers: int(int32), planCode: str?, isTrial: bool, isFree: bool} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /subscriptions/{subscriptionId}/settings
-@required {subscriptionId: str}
-@optional {socialFeed: int(int32)(0/1/2), customRetention: map{days: int(int32), enabled: bool}, allowedIdProviders: int(int32)(0/1/2/4/8/14/15), sms: map{rcsEnabled: bool}, disableInvites: bool}
-@returns(200) {socialFeed: int(int32), customRetention: map{days: int(int32)?, enabled: bool}, allowedIdProviders: int(int32), sms: map{rcsEnabled: bool}, disableInvites: bool?}
-@errors {400, 403, 404, 500}
+@desc Updates a subscriptions global settings.
+@required {subscriptionId: str # ID of the subscription to be updated}
+@optional {socialFeed: int(int32)(0/1/2) # <p/><ul><li>0 = Disabled</li><li>1 = Twitter</li><li>2 = Reddit</li></ul>, customRetention: map{days: int(int32), enabled: bool}, allowedIdProviders: int(int32)(0/1/2/4/8/14/15) # <p/><ul><li>0 = None</li><li>1 = Custom</li><li>2 = EntraID</li><li>4 = Google</li><li>8 = Apple</li><li>14 = ExternalOnly</li><li>15 = All</li></ul>, sms: map{rcsEnabled: bool}, disableInvites: bool}
+@returns(200) {socialFeed: int(int32), customRetention: map{days: int(int32)?, enabled: bool}, allowedIdProviders: int(int32), sms: map{rcsEnabled: bool}, disableInvites: bool?} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /subscriptions/{subscriptionId}/teams
+@desc Get infos for all teams of the subscription.
 @required {subscriptionId: str}
-@returns(200)
-@errors {400, 404, 500}
+@returns(200) OK
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /subscriptions/{subscriptionId}/userLicenses
-@required {subscriptionId: str}
-@returns(200) {currentUsers: int(int32), licensedUsers: int(int32), planCode: str?, isTrial: bool, isFree: bool}
-@errors {400, 403, 404, 500}
+@desc Gets a subscription's user licenses.
+@required {subscriptionId: str # ID of the subscription}
+@returns(200) {currentUsers: int(int32), licensedUsers: int(int32), planCode: str?, isTrial: bool, isFree: bool} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group teams
 @endpoint GET /teams
-@returns(200)
-@errors {400, 404, 500}
+@desc Get infos of all teams.
+@returns(200) OK
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /teams
+@desc Adds another team to the subscription of the user
 @optional {language: str, name: str, description: str, timezone: str, createWebhookEndpoint: bool, createEmailEndpoint: bool}
-@returns(200) {id: str?, memberIds: [str]?, name: str?, externalName: str?, description: str?, subscriptionId: str?, timezone: str?, imageLastModified: str(date-time)?, imageWebLastModified: str(date-time)?, options: int(int32)}
-@errors {400, 403, 500}
+@returns(200) {id: str?, memberIds: [str]?, name: str?, externalName: str?, description: str?, subscriptionId: str?, timezone: str?, imageLastModified: str(date-time)?, imageWebLastModified: str(date-time)?, options: int(int32)} # OK
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /teams/{teamId}
-@required {teamId: str}
-@returns(200) {id: str?, memberIds: [str]?, name: str?, externalName: str?, description: str?, subscriptionId: str?, timezone: str?, imageLastModified: str(date-time)?, imageWebLastModified: str(date-time)?, options: int(int32)}
-@errors {400, 403, 404, 500}
+@desc Gets infos of a specific team.
+@required {teamId: str # ID of the team that should be retrieved.}
+@returns(200) {id: str?, memberIds: [str]?, name: str?, externalName: str?, description: str?, subscriptionId: str?, timezone: str?, imageLastModified: str(date-time)?, imageWebLastModified: str(date-time)?, options: int(int32)} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /teams/{teamId}
-@required {teamId: str}
-@returns(200) {id: str?, memberIds: [str]?, name: str?, externalName: str?, description: str?, subscriptionId: str?, timezone: str?, imageLastModified: str(date-time)?, imageWebLastModified: str(date-time)?, options: int(int32)}
-@errors {400, 403, 404, 500}
+@desc Deletes a team from the subscription.
+@required {teamId: str # ID of the team which should be deleted}
+@returns(200) {id: str?, memberIds: [str]?, name: str?, externalName: str?, description: str?, subscriptionId: str?, timezone: str?, imageLastModified: str(date-time)?, imageWebLastModified: str(date-time)?, options: int(int32)} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /teams/{teamId}/alertReports
-@required {teamId: str}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Get information about downloadable alert reports
+@required {teamId: str # ID of team you want to download reports from.}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /teams/{teamId}/alertReports/{fileName}
-@required {teamId: str, fileName: str}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Returns Alert Report
+@required {teamId: str # ID of team you want to get the duty report file infos for., fileName: str # File name of file you want to download.}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /teams/{teamId}/alertSettings
-@required {teamId: str}
-@returns(200) {escEnabled: bool, escMode: int(int32), escRefId: str?, filterMode: int(int32), filterAction: int(int32), responseMode: int(int32), responseTime: int(int32), tierResponseTime: int(int32), persNotMode: int(int32), persNotInterval: int(int32), optOut: int(int32), overrideNotificationProfiles: bool, notificationProfileOverrides: [map]?, signalingMode: int(int32)}
-@errors {400, 403, 404, 500}
+@desc Gets alert settings of a specific team.
+@required {teamId: str # ID of the team the settings should be retrieved for.}
+@returns(200) {escEnabled: bool, escMode: int(int32), escRefId: str?, filterMode: int(int32), filterAction: int(int32), responseMode: int(int32), responseTime: int(int32), tierResponseTime: int(int32), persNotMode: int(int32), persNotInterval: int(int32), optOut: int(int32), overrideNotificationProfiles: bool, notificationProfileOverrides: [map]?, signalingMode: int(int32)} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /teams/{teamId}/alertSettings
-@required {teamId: str}
-@optional {escEnabled: bool, escMode: int(int32)(0/1), escRefId: str, filterMode: int(int32)(0/1), filterAction: int(int32)(0/1/2), responseMode: int(int32)(2/4), responseTime: int(int32), tierResponseTime: int(int32), persNotMode: int(int32)(0/1), persNotInterval: int(int32), optOut: int(int32)(0/1/2), overrideNotificationProfiles: bool, notificationProfileOverrides: [map{channel: int(int32), delay: int(int32), enabled: bool}], signalingMode: int(int32)(0/1)}
-@returns(200) {escEnabled: bool, escMode: int(int32), escRefId: str?, filterMode: int(int32), filterAction: int(int32), responseMode: int(int32), responseTime: int(int32), tierResponseTime: int(int32), persNotMode: int(int32), persNotInterval: int(int32), optOut: int(int32), overrideNotificationProfiles: bool, notificationProfileOverrides: [map]?, signalingMode: int(int32)}
-@errors {400, 403, 404, 500}
+@desc Sets alert settings of a specific team.
+@required {teamId: str # ID of the team the settings should be set for.}
+@optional {escEnabled: bool, escMode: int(int32)(0/1) # <p/><ul><li>0 = Manager</li><li>1 = Team</li></ul>, escRefId: str, filterMode: int(int32)(0/1) # <p/><ul><li>0 = Off</li><li>1 = WhiteListAllCategories</li></ul>, filterAction: int(int32)(0/1/2) # <p/><ul><li>0 = Suppress</li><li>1 = Hide</li><li>2 = Mute</li></ul>, responseMode: int(int32)(2/4) # <p/><ul><li>2 = SingleAcknowledge</li><li>4 = MultiAcknowledge</li></ul>, responseTime: int(int32), tierResponseTime: int(int32), persNotMode: int(int32)(0/1) # <p/><ul><li>0 = Off</li><li>1 = Summary</li></ul>, persNotInterval: int(int32), optOut: int(int32)(0/1/2) # <p/><ul><li>0 = None</li><li>1 = Disabled</li><li>2 = Personal</li></ul>, overrideNotificationProfiles: bool, notificationProfileOverrides: [map{channel: int(int32), delay: int(int32), enabled: bool}], signalingMode: int(int32)(0/1) # <p/><ul><li>0 = Suppressed</li><li>1 = Full</li></ul>}
+@returns(200) {escEnabled: bool, escMode: int(int32), escRefId: str?, filterMode: int(int32), filterAction: int(int32), responseMode: int(int32), responseTime: int(int32), tierResponseTime: int(int32), persNotMode: int(int32), persNotInterval: int(int32), optOut: int(int32), overrideNotificationProfiles: bool, notificationProfileOverrides: [map]?, signalingMode: int(int32)} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /teams/{teamId}/dutyReports
-@required {teamId: str}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Get Information about downloadable reports
+@required {teamId: str # ID of team you want to get the duty report file infos for.}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /teams/{teamId}/dutyReports/{fileName}
-@required {teamId: str, fileName: str}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Download duty report with a specific fileName
+@required {teamId: str # ID of team you want to download the duty report for., fileName: str # Filename of the csv to download.}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /teams/{teamId}/dutysummary
-@required {teamId: str}
+@desc Get duty assistant info for a team
+@required {teamId: str # ID of the team the duty belongs to.}
 @optional {lastTwoDuties: bool}
-@returns(200) {dutyAssistEnabled: bool, dutySummaries: [map]?, teamId: str?}
-@errors {400, 500}
+@returns(200) {dutyAssistEnabled: bool, dutySummaries: [map]?, teamId: str?} # OK
+@errors {400: Bad Request, 500: Internal Server Error}
 
 @endpoint GET /teams/{teamId}/eventSources
-@required {teamId: str}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Gets event sources of a specific team.
+@required {teamId: str # ID of the team the sources should be retrieved for.}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /teams/{teamId}/memberships
-@required {teamId: str}
-@returns(200)
-@returns(204)
-@errors {403, 404, 500, 400}
+@desc Get all invites of a team.
+@required {teamId: str # Team ID of team you want to request.}
+@returns(200) User invitations are returned.
+@returns(204) Request was canceled.
+@errors {403: You're not allowed to request the access all required entities., 404: Required entities could not be found in the database., 500: Internal Server Error, 400: Required parameters or authentication info could not be found in the request/claims.}
 
 @endpoint POST /teams/{teamId}/memberships
-@required {teamId: str, invites: [map{email: str, roleId: str}]}
+@desc Invite users to a team
+@required {teamId: str # Id of team the user should be invited to., invites: [map{email: str, roleId: str}]}
 @optional {inviterId: str}
-@returns(200)
-@returns(204)
-@errors {400, 403, 500, 404}
+@returns(200) User invitation results are returned.
+@returns(204) Request was canceled.
+@errors {400: Required parameters or authentication info could not be found in the request/claims., 403: You're not allowed to request the access all required entities., 500: Internal Server Error, 404: Required entities could not be found in the database.}
 
 @endpoint PUT /teams/{teamId}/memberships/{userId}
-@required {teamId: str, userId: str}
-@optional {requesterUserId: str, setUserOnDuty: bool=True, teamId: str, roleId: str, isValid: bool}
-@returns(200) {colorIndex: int(int32), contactAddresses: [any]?, dutyInfos: map{lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}, isDeactivated: bool, isEnabled: bool, subscriptionId: str?, userImageLastModified: str(date-time)?, timeZone: str?, lastSeen: str(date-time)?, isRemoteActionPinSet: bool, externalAuthProvider: str?, webLanguage: int(int32), options: int(int32), id: str?, name: str?, isInvite: bool, mail: str?, roleId: str?}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Update user's team membership.
+@required {teamId: str # Team the user you want to update belongs to at the moment., userId: str # User ID of user you want to update.}
+@optional {requesterUserId: str # User ID of user which you want to change role with. This must be provided when using an api key. This user must have role administrator (for setting administrator role) or team administrator (for setting rights., setUserOnDuty: bool=True # Sets new duty status for user if user is moved to a different team. User is on duty be default., teamId: str, roleId: str, isValid: bool}
+@returns(200) {colorIndex: int(int32), contactAddresses: [any]?, dutyInfos: map{lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}, isDeactivated: bool, isEnabled: bool, subscriptionId: str?, userImageLastModified: str(date-time)?, timeZone: str?, lastSeen: str(date-time)?, isRemoteActionPinSet: bool, externalAuthProvider: str?, webLanguage: int(int32), options: int(int32), id: str?, name: str?, isInvite: bool, mail: str?, roleId: str?} # User was successfully updated.
+@returns(204) Request was canceled.
+@errors {400: Required parameters or authentication info could not be found in the request/claims., 403: You're not allowed to request the access all required entities., 404: Required entities could not be found in the database., 500: Internal Server Error}
 
 @endpoint DELETE /teams/{teamId}/memberships/{userId}
-@required {teamId: str, userId: str}
-@optional {requesterUserId: str}
-@returns(204)
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Removes a user or invitation from a team
+@required {teamId: str # ID of the team the user should be deleted from, userId: str # ID of the user that should be deleted}
+@optional {requesterUserId: str # User ID of user which will remove the other user.}
+@returns(204) Request was canceled.
+@returns(200) Success message
+@errors {400: Required parameters or authentication info could not be found in the request/claims., 403: You're not allowed to request the access all required entities., 404: Required entities could not be found in the database., 500: Internal Server Error}
 
 @endpoint POST /teams/{teamId}/memberships/resendInviteMail
-@required {teamId: str, userMail: str}
+@desc Sends invite email again if an invite exists
+@required {teamId: str # Team ID of team with invited user., userMail: str}
 @optional {inviterId: str}
-@returns(200)
-@errors {403, 404, 500}
+@returns(200) OK
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /teams/{teamId}/profile
-@required {teamId: str}
+@desc Updates team profile of a team
+@required {teamId: str # Team ID of team which should be updated.}
 @optional {name: str, description: str}
-@returns(200) {id: str?, memberIds: [str]?, name: str?, externalName: str?, description: str?, subscriptionId: str?, timezone: str?, imageLastModified: str(date-time)?, imageWebLastModified: str(date-time)?, options: int(int32)}
-@errors {400, 401, 403, 500}
+@returns(200) {id: str?, memberIds: [str]?, name: str?, externalName: str?, description: str?, subscriptionId: str?, timezone: str?, imageLastModified: str(date-time)?, imageWebLastModified: str(date-time)?, options: int(int32)} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /teams/{teamId}/schedules
-@required {teamId: str}
+@desc Returns information about all duties that belong to the team.
+@required {teamId: str # Id of the team the schedules user belongs to}
 @optional {UserId: str, MinDate: str(date-time), Limit: int(int32), MergeOverlap: bool}
-@returns(200)
-@errors {400, 403, 404, 500}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /teams/{teamId}/schedules
-@required {teamId: str}
+@desc Create/Update given duty schedule.
+@required {teamId: str # Id of the team the duty is to be assigned to.}
 @optional {end: str(date-time), id: str, options: int(int32), start: str(date-time), userId: str}
-@returns(200) {end: str(date-time), id: str?, options: int(int32), start: str(date-time), userId: str?}
-@errors {400, 403, 404, 409, 500}
+@returns(200) {end: str(date-time), id: str?, options: int(int32), start: str(date-time), userId: str?} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 409: Conflict, 500: Internal Server Error}
 
 @endpoint DELETE /teams/{teamId}/schedules/{dutyId}
-@required {teamId: str, dutyId: str}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Delete a specific duty.
+@required {teamId: str # ID of the team the duty belongs to., dutyId: str # ID of the duty to be deleted.}
+@returns(204) No Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /teams/{teamId}/schedules/{scheduleId}
-@required {teamId: str, scheduleId: str}
-@returns(200) {end: str(date-time), id: str?, options: int(int32), start: str(date-time), userId: str?}
-@errors {400, 403, 404, 500}
+@desc Returns information of the duty schedule with the specified Id.
+@required {teamId: str # Id of the team the duty belongs to, scheduleId: str # Id of the requested duty schedule.}
+@returns(200) {end: str(date-time), id: str?, options: int(int32), start: str(date-time), userId: str?} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /teams/{teamId}/schedules/deleteRange
-@required {teamId: str}
+@desc Delete duty schedules in range
+@required {teamId: str # Team ID you want to delete}
 @optional {from: str(date-time), to: str(date-time)}
-@returns(200)
-@errors {400, 403, 404, 409, 500}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 409: Conflict, 500: Internal Server Error}
 
 @endpoint POST /teams/{teamId}/schedules/multiple
-@required {teamId: str}
-@optional {overrideExisting: bool}
-@returns(200)
-@errors {400, 403, 404, 409, 500}
+@desc Save multiple schedules. It is possible to override existing schedules if you wish
+@required {teamId: str # Team ID to set}
+@optional {overrideExisting: bool # Override or cut existing schedules if set to true.}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 409: Conflict, 500: Internal Server Error}
 
 @endpoint GET /teams/{teamId}/setupProgress
-@required {teamId: str}
-@returns(200) {teamId: str?, timestamp: str(date-time), completedSteps: [str]?}
-@errors {400, 403, 404, 500}
+@desc Gets setup progress of a specific team.
+@required {teamId: str # ID of the team the progress should be retrieved for.}
+@returns(200) {teamId: str?, timestamp: str(date-time), completedSteps: [str]?} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group users
 @endpoint GET /users
-@returns(200)
-@errors {400, 404, 403}
+@desc Get all Users
+@returns(200) User could be successfully identified.
+@errors {400: Required authentifaction info could not be found in the request/claims., 404: Required entities could not be found in the database., 403: You're not allowed to request the users with their information.}
 
 @endpoint GET /users/{userId}
-@required {userId: str}
-@returns(200) {colorIndex: int(int32), contactAddresses: [any]?, dutyInfos: map{lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}, isDeactivated: bool, isEnabled: bool, subscriptionId: str?, userImageLastModified: str(date-time)?, timeZone: str?, lastSeen: str(date-time)?, isRemoteActionPinSet: bool, externalAuthProvider: str?, webLanguage: int(int32), options: int(int32), id: str?, name: str?, isInvite: bool, mail: str?, roleId: str?}
-@errors {400, 404, 403}
+@desc Get User by Id
+@required {userId: str # Identifier of the user to get. Use 'Me' to get information about the currently logged in user. This is not possible with an api key. Can also be an email address of a user in the team or the unique id of an according user object.”}
+@returns(200) {colorIndex: int(int32), contactAddresses: [any]?, dutyInfos: map{lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}, isDeactivated: bool, isEnabled: bool, subscriptionId: str?, userImageLastModified: str(date-time)?, timeZone: str?, lastSeen: str(date-time)?, isRemoteActionPinSet: bool, externalAuthProvider: str?, webLanguage: int(int32), options: int(int32), id: str?, name: str?, isInvite: bool, mail: str?, roleId: str?} # User could be successfully identified.
+@errors {400: Required authentication info could not be found in the request/claims., 404: Required entities could not be found in the database., 403: You're not allowed to request that user's information.}
 
 @endpoint DELETE /users/{userId}
-@required {userId: str}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Deletes user account.
+@required {userId: str # ID of the user to be deleted.}
+@returns(204) No Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /users/{userId}/changePassword
-@required {userId: str}
+@desc Updates the password of a user
+@required {userId: str # User ID of user whose password should be changed.}
 @optional {currentPassword: str, newPassword: str}
-@returns(200)
-@errors {400, 401, 403, 500}
+@returns(200) OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint POST /users/{userId}/checkPermissions
-@required {userId: str}
+@desc Checks if a user has the provided permission.
+@required {userId: str # ID of the user to check permissions for.}
 @optional {teamId: str, items: [str]}
-@returns(200) {items: [map]?}
-@errors {400, 403, 404}
+@returns(200) {items: [map]?} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found}
 
 @endpoint GET /users/{userId}/dutyStatus
-@required {userId: str}
-@returns(200) {lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}
-@errors {400, 404, 403}
+@desc Get duty status by user Id
+@required {userId: str # Identifier of the user to get. Use 'Me' to get information about the currently logged in user. This is not possible with an api key. Can also be an email address of a user in the team or the unique id of an according user object.”}
+@returns(200) {lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?} # Duty successfully loaded.
+@errors {400: Required authentifaction info could not be found in the request/claims., 404: Required entities could not be found in the database., 403: You're not allowed to request that duty information.}
 
 @endpoint GET /users/{userId}/image
 @required {userId: str}
 @optional {height: int(int32), width: int(int32)}
-@returns(200) {content: str(byte)?, contentDispostion: str?, contentEncoding: str?, contentType: str?, lastModified: str(date-time)?, name: str?}
-@errors {400, 403, 404}
+@returns(200) {content: str(byte)?, contentDispostion: str?, contentEncoding: str?, contentType: str?, lastModified: str(date-time)?, name: str?} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found}
 
 @endpoint POST /users/{userId}/image
-@required {userId: str}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Uploaded a profile image for a specified user.
+@required {userId: str # Id of the user.}
+@returns(204) The image was successfully uploaded.
+@errors {400: Either a passed parameter was either empty/null or the request's multipart does not contain a file., 403: User is not allowed to upload an image for the specified user., 404: Either the user was not found or they aren't activated yet., 500: Internal general error occured.}
 
 @endpoint POST /users/{userId}/location
-@required {userId: str}
+@desc Set location of an user
+@required {userId: str # ID of user.}
 @optional {latitude: num(double), longitude: num(double), timestamp: str(date-time)}
-@returns(200) {latitude: num(double), longitude: num(double), timestamp: str(date-time)?}
-@errors {400, 401, 403, 500}
+@returns(200) {latitude: num(double), longitude: num(double), timestamp: str(date-time)?} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint PUT /users/{userId}/profile
-@required {userId: str}
-@optional {name: str, timeZone: str, language: int(int32)(0/1/2)}
-@returns(200) {colorIndex: int(int32), contactAddresses: [any]?, dutyInfos: map{lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}, isDeactivated: bool, isEnabled: bool, subscriptionId: str?, userImageLastModified: str(date-time)?, timeZone: str?, lastSeen: str(date-time)?, isRemoteActionPinSet: bool, externalAuthProvider: str?, webLanguage: int(int32), options: int(int32), id: str?, name: str?, isInvite: bool, mail: str?, roleId: str?}
-@errors {400, 401, 403, 500}
+@desc Updates user profile of an user
+@required {userId: str # ID of user to update.}
+@optional {name: str, timeZone: str, language: int(int32)(0/1/2) # <p/><ul><li>0 = BrowserBased</li><li>1 = EN</li><li>2 = DE</li></ul>}
+@returns(200) {colorIndex: int(int32), contactAddresses: [any]?, dutyInfos: map{lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}, isDeactivated: bool, isEnabled: bool, subscriptionId: str?, userImageLastModified: str(date-time)?, timeZone: str?, lastSeen: str(date-time)?, isRemoteActionPinSet: bool, externalAuthProvider: str?, webLanguage: int(int32), options: int(int32), id: str?, name: str?, isInvite: bool, mail: str?, roleId: str?} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint POST /users/{userId}/punchIn
-@required {userId: str}
-@returns(200) {lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}
-@errors {400, 403, 404}
+@desc Punch User in
+@required {userId: str # Identifier of the user to punch in. Use 'Me' to get information about the currently logged in user. This is not possible with an api key. Can also be an email address of a user in the team or the unique id of an according user object.”}
+@returns(200) {lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?} # OK
+@errors {400: Required information could not be found in the request/claims., 403: The user tried to change the punch in a different user., 404: Required entities could not be found in the database.}
 
 @endpoint POST /users/{userId}/punchInAsManager
-@required {userId: str}
-@returns(200) {lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}
-@errors {400, 403, 404}
+@desc Punch User in as Manager
+@required {userId: str # Identifier of the user to punch in. Use 'Me' to get information about the currently logged in user. This is not possible with an api key. Can also be an email address of a user in the team or the unique id of an according user object.”}
+@returns(200) {lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?} # OK
+@errors {400: Required information could not be found in the request/claims., 403: The user tried to change the punch in a different user., 404: Required entities could not be found in the database.}
 
 @endpoint POST /users/{userId}/punchOut
 @required {userId: str}
-@returns(200) {lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?}
-@errors {400, 403, 404, 409}
+@returns(200) {lastChange: str(date-time)?, onDuty: bool, onManagerDuty: bool, overdue: bool, teamId: str?, userId: str?} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 409: Conflict}
 
 @endpoint GET /users/{userId}/setupProgress
-@required {userId: str}
-@returns(200) {userId: str?, timestamp: str(date-time), completedSteps: [str]?}
-@errors {400, 403, 404, 500}
+@desc Gets setup progress of a specific user.
+@required {userId: str # ID of the user the progress should be retrieved for.}
+@returns(200) {userId: str?, timestamp: str(date-time), completedSteps: [str]?} # OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group webhooks
 @endpoint GET /webhooks
+@desc Get Webhooks
 @optional {teamId: str}
-@returns(200)
-@errors {404, 500}
+@returns(200) Request was successful and response body contains information about all outbound webhooks in the subscription.
+@errors {404: The subscription does not have any outbound webhooks., 500: Internal has occured. The response body may contain more information.}
 
 @endpoint POST /webhooks
+@desc Create Webhook
 @required {extUrl: str, name: str}
 @optional {teamId: str, description: str, enabled: bool}
-@returns(201)
-@errors {400, 500}
+@returns(201) Action was successful and response contains the id of the newly created webhook.
+@errors {400: Either the webhook object or a necessary property was invalid or empty., 500: Internal has occured. The response body may contain more information.}
 
 @endpoint GET /webhooks/{webhookId}
-@required {webhookId: str}
-@returns(200) {id: str?, subId: str?, teamId: str?, extUrl: str, name: str, description: str?, enabled: bool}
-@errors {400, 404, 500}
+@desc Get Webhook by Id
+@required {webhookId: str # Id of the outbound webhook to be retrieved.}
+@returns(200) {id: str?, subId: str?, teamId: str?, extUrl: str, name: str, description: str?, enabled: bool} # Request was successful and response body contains information about the requested webhook.
+@errors {400: The passed webhook id was either empty or null., 404: The webhook was not found., 500: Internal has occured. The response body may contain more information.}
 
 @endpoint PUT /webhooks/{webhookId}
-@required {webhookId: str, extUrl: str, name: str}
+@desc Update Webhook by Id
+@required {webhookId: str # Id of the outbound webhook to be updated., extUrl: str, name: str}
 @optional {teamId: str, description: str, enabled: bool}
-@returns(200) {id: str?, subId: str?, teamId: str?, extUrl: str, name: str, description: str?, enabled: bool}
-@errors {400, 404, 500}
+@returns(200) {id: str?, subId: str?, teamId: str?, extUrl: str, name: str, description: str?, enabled: bool} # Update was successful and response body contains the updated webhook details.
+@errors {400: A passed parameter was either empty or null., 404: Webhook with specified id was not found., 500: Internal has occured. The response body may contain more information.}
 
 @endpoint DELETE /webhooks/{webhookId}
-@required {webhookId: str}
-@returns(200)
-@errors {400, 404, 500}
+@desc Delete Webhook by Id
+@required {webhookId: str # Id of the outbound webhook that will be deleted.}
+@returns(200) Webhook was successfully deleted.
+@errors {400: The passed webhook id was invalid or empty., 404: Webhook with specified id was not found., 500: Internal has occured. The response body may contain more information.}
 
 @endpoint POST /webhooks/{webhookId}/disable
-@required {webhookId: str}
-@returns(200) {id: str?, subId: str?, teamId: str?, extUrl: str, name: str, description: str?, enabled: bool}
-@errors {400, 404, 500}
+@desc Ability to enable a webHook.
+@required {webhookId: str # Webhook ID for webhook which should be disabled.}
+@returns(200) {id: str?, subId: str?, teamId: str?, extUrl: str, name: str, description: str?, enabled: bool} # Disable was successful and response body contains the webhook details.
+@errors {400: A passed parameter was either empty or null., 404: Webhook with specified id was not found., 500: Internal has occured. The response body may contain more information.}
 
 @endpoint POST /webhooks/{webhookId}/enable
-@required {webhookId: str}
-@returns(200) {id: str?, subId: str?, teamId: str?, extUrl: str, name: str, description: str?, enabled: bool}
-@errors {400, 404, 500}
+@desc Ability to disable a webHook.
+@required {webhookId: str # Webhook ID for webhook which should be enabled.}
+@returns(200) {id: str?, subId: str?, teamId: str?, extUrl: str, name: str, description: str?, enabled: bool} # OK
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 

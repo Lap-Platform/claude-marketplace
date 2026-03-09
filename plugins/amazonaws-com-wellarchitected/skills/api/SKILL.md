@@ -155,91 +155,71 @@ Not specified.
 |--------|------|-------------|
 | POST | /workloadsSummaries | Paginated list of workloads. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new workload?" -> POST /workloads
-- "How do I list all my workloads?" -> POST /workloadsSummaries
-- "How do I get the details of a specific workload?" -> GET /workloads/{WorkloadId}
-- "How do I share a workload with another account?" -> POST /workloads/{WorkloadId}/shares
-- "How do I review a workload against the Well-Architected Framework?" -> GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/answers
-- "What improvements should I make to my workload?" -> GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/improvements
-- "How do I record a milestone for a workload?" -> POST /workloads/{WorkloadId}/milestones
-- "How do I import a custom lens?" -> PUT /importLens
-- "How do I list available lenses?" -> GET /lenses
-- "How do I export a lens definition?" -> GET /lenses/{LensAlias}/export
-- "How do I accept or reject a share invitation?" -> PATCH /shareInvitations/{ShareInvitationId}
-- "How do I see what has been shared with me?" -> GET /shareInvitations
-- "How do I create a review template for reuse across workloads?" -> POST /reviewTemplates
-- "How do I check the consolidated risk report across all workloads?" -> GET /consolidatedReport
-- "How do I update an answer for a specific pillar question?" -> PATCH /workloads/{WorkloadId}/lensReviews/{LensAlias}/answers/{QuestionId}
-
-## Response Tips
-
-- **Workloads & milestones:** Top-level `Workload` object nests deeply -- `RiskCounts`, `PrioritizedRiskCounts`, `DiscoveryConfig`, and `JiraConfiguration` are all nested maps/objects. Always drill into `Workload` before accessing fields.
-- **List endpoints (summaries, answers, shares):** All paginated via `NextToken`/`MaxResults`. A missing `NextToken` in the response means you have reached the last page. Default page sizes vary -- pass `MaxResults` explicitly for predictable iteration.
-- **Lens reviews & answers:** `AnswerSummaries` and `ImprovementSummaries` are arrays; filter client-side by `PillarId` or use the optional `PillarId` query param to narrow server-side. `Risk` field values: `UNANSWERED`, `HIGH`, `MEDIUM`, `LOW`, `NOT_APPLICABLE`, `NONE`.
-- **Share operations:** All share-creation endpoints return a `ShareId`. The recipient must call `PATCH /shareInvitations/{ShareInvitationId}` with `ShareInvitationAction: "ACCEPT"` or `"REJECT"` before access takes effect.
-- **Tags:** `GET /tags/{WorkloadArn}` returns a flat `map<str,str>`. The `WorkloadArn` param (not `WorkloadId`) is required -- obtain it from the workload detail response.
-- **Consolidated report:** Returns either structured `Metrics` array or a `Base64String` depending on `Format` (`PDF` vs `JSON`). Decode Base64 for PDF output.
-- **Errors:** AWS standard error shapes apply. Watch for `ValidationException` (bad input), `ResourceNotFoundException` (wrong ID), `ConflictException` (duplicate `ClientRequestToken`), and `ThrottlingException`.
-
-## Anomaly Flags
-
-- **High-risk counts increasing:** Surface when `RiskCounts` shows `HIGH` risk items growing between milestones or review iterations -- indicates architectural regression.
-- **Unanswered questions:** Flag workloads where `AnswerSummaries` contain a high proportion of `UNANSWERED` risk status -- the review is incomplete and risk posture is unknown.
-- **Lens version drift:** When `GET /lenses/{LensAlias}/versionDifference` shows `LatestLensVersion` differs from the version applied to a workload, proactively suggest `PUT /workloads/{WorkloadId}/lensReviews/{LensAlias}/upgrade`.
-- **Pending share invitations:** Alert when `GET /shareInvitations` returns invitations that have been pending for an extended period -- these block collaboration.
-- **Throttling responses:** If any call returns `ThrottlingException`, surface this immediately and suggest backing off or reducing `MaxResults` on paginated calls.
-- **Stale milestones:** When `MilestoneSummaries` shows the last milestone `RecordedAt` timestamp is significantly old relative to recent workload updates, suggest recording a new milestone to capture the current state.
-- **Jira integration status:** Flag when `JiraConfiguration.IssueManagementStatus` or `IntegrationStatus` indicates a non-active state (disconnected, errored) -- issues won't sync until resolved.
-- **Deprecated lens status:** When `LensStatus` is `DEPRECATED` on a lens associated with a workload, flag it and recommend migration to the replacement lens.
-
-## Playbook
-
-### 1. Create and Review a New Workload
-
-1. `POST /workloads` with `WorkloadName`, `Description`, `Environment` (e.g., `PRODUCTION`), `Lenses` (e.g., `["wellarchitected"]`), and a unique `ClientRequestToken`.
-2. Note the returned `WorkloadId`.
-3. `GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/answers` to retrieve all pillar questions (paginate with `NextToken`).
-4. For each question, `PATCH /workloads/{WorkloadId}/lensReviews/{LensAlias}/answers/{QuestionId}` with `SelectedChoices` and optional `Notes`.
-5. Once all questions are answered, `POST /workloads/{WorkloadId}/milestones` to snapshot the current state.
-6. `GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/improvements` to see prioritized improvement recommendations.
-
-### 2. Import a Custom Lens and Apply It
-
-1. Prepare the lens JSON definition per the AWS custom lens specification.
-2. `PUT /importLens` with the JSON string in `JSONString` and a unique `ClientRequestToken`. Optionally set `LensAlias` for a human-readable identifier.
-3. Confirm `Status` is `COMPLETE` in the response. Note the `LensArn`.
-4. `POST /lenses/{LensAlias}/versions` to publish a version of the lens (set `IsMajorVersion: true` for the first release).
-5. `PATCH /workloads/{WorkloadId}/associateLenses` with the new `LensAlias` to attach it to an existing workload.
-6. Begin the review: `GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/answers`.
-
-### 3. Share a Workload and Manage Invitations
-
-1. `POST /workloads/{WorkloadId}/shares` with the target AWS account ID in `SharedWith`, `PermissionType` (`READONLY` or `CONTRIBUTOR`), and `ClientRequestToken`.
-2. Note the returned `ShareId`.
-3. The recipient lists pending invitations with `GET /shareInvitations` (optionally filtering by `WorkloadNamePrefix`).
-4. The recipient accepts via `PATCH /shareInvitations/{ShareInvitationId}` with `ShareInvitationAction: "ACCEPT"`.
-5. To change permissions later: `PATCH /workloads/{WorkloadId}/shares/{ShareId}` with the new `PermissionType`.
-6. To revoke: `DELETE /workloads/{WorkloadId}/shares/{ShareId}`.
-
-### 4. Track Progress with Milestones and Reports
-
-1. After completing a round of reviews, `POST /workloads/{WorkloadId}/milestones` with a descriptive `MilestoneName` (e.g., `"Q1-2026 Review"`).
-2. `POST /workloads/{WorkloadId}/milestonesSummaries` to list all milestones and compare `RiskCounts` over time.
-3. `GET /workloads/{WorkloadId}/milestones/{MilestoneNumber}` to retrieve the full workload snapshot at that point.
-4. `GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/report` to generate a downloadable review report (decode `Base64String` for the PDF).
-5. `GET /consolidatedReport?Format=JSON` to see risk metrics aggregated across all workloads.
-
-### 5. Upgrade a Lens Version on Existing Workloads
-
-1. `GET /lenses/{LensAlias}/versionDifference` to compare `BaseLensVersion` (current) against `TargetLensVersion` (latest). Review `PillarDifferences` for new or changed questions.
-2. `POST /workloads/{WorkloadId}/milestones` to snapshot the current state before upgrading.
-3. `PUT /workloads/{WorkloadId}/lensReviews/{LensAlias}/upgrade` with a `MilestoneName` to apply the new lens version.
-4. `GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/answers` to review any new questions introduced by the upgrade.
-5. Answer new questions and record a post-upgrade milestone.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a share?" -> POST /lenses/{LensAlias}/shares
+- "Create a version?" -> POST /lenses/{LensAlias}/versions
+- "Create a milestone?" -> POST /workloads/{WorkloadId}/milestones
+- "Create a profile?" -> POST /profiles
+- "Create a share?" -> POST /profiles/{ProfileArn}/shares
+- "Create a reviewTemplate?" -> POST /reviewTemplates
+- "Create a workload?" -> POST /workloads
+- "Create a share?" -> POST /workloads/{WorkloadId}/shares
+- "Delete a lens?" -> DELETE /lenses/{LensAlias}
+- "Delete a share?" -> DELETE /lenses/{LensAlias}/shares/{ShareId}
+- "Delete a profile?" -> DELETE /profiles/{ProfileArn}
+- "Delete a share?" -> DELETE /profiles/{ProfileArn}/shares/{ShareId}
+- "Delete a reviewTemplate?" -> DELETE /reviewTemplates/{TemplateArn}
+- "Delete a share?" -> DELETE /templates/shares/{TemplateArn}/{ShareId}
+- "Delete a workload?" -> DELETE /workloads/{WorkloadId}
+- "Delete a share?" -> DELETE /workloads/{WorkloadId}/shares/{ShareId}
+- "List all export?" -> GET /lenses/{LensAlias}/export
+- "Get answer details?" -> GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/answers/{QuestionId}
+- "List all consolidatedReport?" -> GET /consolidatedReport
+- "List all global-settings?" -> GET /global-settings
+- "Get lens details?" -> GET /lenses/{LensAlias}
+- "Get lensReview details?" -> GET /workloads/{WorkloadId}/lensReviews/{LensAlias}
+- "List all report?" -> GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/report
+- "List all versionDifference?" -> GET /lenses/{LensAlias}/versionDifference
+- "Get milestone details?" -> GET /workloads/{WorkloadId}/milestones/{MilestoneNumber}
+- "Get profile details?" -> GET /profiles/{ProfileArn}
+- "List all profileTemplate?" -> GET /profileTemplate
+- "Get reviewTemplate details?" -> GET /reviewTemplates/{TemplateArn}
+- "Get answer details?" -> GET /reviewTemplates/{TemplateArn}/lensReviews/{LensAlias}/answers/{QuestionId}
+- "Get lensReview details?" -> GET /reviewTemplates/{TemplateArn}/lensReviews/{LensAlias}
+- "Get workload details?" -> GET /workloads/{WorkloadId}
+- "List all answers?" -> GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/answers
+- "Create a check?" -> POST /workloads/{WorkloadId}/checks
+- "Create a checkSummary?" -> POST /workloads/{WorkloadId}/checkSummaries
+- "List all improvements?" -> GET /workloads/{WorkloadId}/lensReviews/{LensAlias}/improvements
+- "List all lensReviews?" -> GET /workloads/{WorkloadId}/lensReviews
+- "List all shares?" -> GET /lenses/{LensAlias}/shares
+- "List all lenses?" -> GET /lenses
+- "Create a milestonesSummary?" -> POST /workloads/{WorkloadId}/milestonesSummaries
+- "Create a notification?" -> POST /notifications
+- "List all profileNotifications?" -> GET /profileNotifications/
+- "List all shares?" -> GET /profiles/{ProfileArn}/shares
+- "List all profileSummaries?" -> GET /profileSummaries
+- "List all answers?" -> GET /reviewTemplates/{TemplateArn}/lensReviews/{LensAlias}/answers
+- "List all reviewTemplates?" -> GET /reviewTemplates
+- "List all shareInvitations?" -> GET /shareInvitations
+- "Get tag details?" -> GET /tags/{WorkloadArn}
+- "Get share details?" -> GET /templates/shares/{TemplateArn}
+- "List all shares?" -> GET /workloads/{WorkloadId}/shares
+- "Create a workloadsSummary?" -> POST /workloadsSummaries
+- "Delete a tag?" -> DELETE /tags/{WorkloadArn}
+- "Partially update a answer?" -> PATCH /workloads/{WorkloadId}/lensReviews/{LensAlias}/answers/{QuestionId}
+- "Create a updateIntegration?" -> POST /workloads/{WorkloadId}/updateIntegration
+- "Partially update a lensReview?" -> PATCH /workloads/{WorkloadId}/lensReviews/{LensAlias}
+- "Partially update a profile?" -> PATCH /profiles/{ProfileArn}
+- "Partially update a reviewTemplate?" -> PATCH /reviewTemplates/{TemplateArn}
+- "Partially update a answer?" -> PATCH /reviewTemplates/{TemplateArn}/lensReviews/{LensAlias}/answers/{QuestionId}
+- "Partially update a lensReview?" -> PATCH /reviewTemplates/{TemplateArn}/lensReviews/{LensAlias}
+- "Partially update a shareInvitation?" -> PATCH /shareInvitations/{ShareInvitationId}
+- "Partially update a workload?" -> PATCH /workloads/{WorkloadId}
+- "Partially update a share?" -> PATCH /workloads/{WorkloadId}/shares/{ShareId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

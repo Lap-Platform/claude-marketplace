@@ -53,85 +53,32 @@ https://analyticsadmin.googleapis.com/
 | POST | /v1beta/{parent}/measurementProtocolSecrets | Creates a measurement protocol secret. |
 | POST | /v1beta/{property}:acknowledgeUserDataCollection | Acknowledges the terms of user data collection for the specified property. This acknowledgement must be completed (either in the Google Analytics UI or through this API) before MeasurementProtocolSecret resources may be created. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What Analytics accounts do I have access to?" -> GET /v1beta/accountSummaries
-- "List all my Google Analytics accounts including deleted ones" -> GET /v1beta/accounts
-- "How do I create a new Analytics account?" -> POST /v1beta/accounts:provisionAccountTicket
-- "Show me all properties for a specific account" -> GET /v1beta/properties
-- "Create a new GA4 property for my e-commerce site" -> POST /v1beta/properties
-- "Who made changes to my Analytics property last week?" -> POST /v1beta/{account}:searchChangeHistoryEvents
-- "Run a data access audit report for my property" -> POST /v1beta/{entity}:runAccessReport
-- "Delete a data stream from my property" -> DELETE /v1beta/{name}
-- "Get the measurement protocol secret for my data stream" -> GET /v1beta/{name}
-- "Update the Google Ads link settings on my property" -> PATCH /v1beta/{name}
-- "Archive a custom dimension I no longer need" -> POST /v1beta/{name}:archive
-- "What conversion events are configured on my property?" -> GET /v1beta/{parent}/conversionEvents
-- "Add a custom metric to track revenue per user" -> POST /v1beta/{parent}/customMetrics
-- "List all data streams (web, iOS, Android) on my property" -> GET /v1beta/{parent}/dataStreams
-- "Link my Firebase project to my Analytics property" -> POST /v1beta/{parent}/firebaseLinks
-
-## Response Tips
-
-- **List endpoints** (accounts, properties, streams, links): All return paginated arrays with `nextPageToken` -- keep fetching until `nextPageToken` is absent or empty.
-- **Create/Update endpoints**: Return the full resource object on success; compare with your request to confirm all fields were applied.
-- **Delete/Archive endpoints**: Return empty `{}` on 200 -- absence of error IS the success signal.
-- **Change history**: Results are nested maps containing `changeHistoryEvent` objects with `actorEmail`, `changeTime`, and `changedResources` arrays -- drill into `changedResources` for before/after snapshots.
-- **Access reports**: Response contains separate `dimensionHeaders`, `metricHeaders`, and `rows` arrays -- zip headers with row cell values to reconstruct tabular data. The `quota` object is only present when `returnEntityQuota` is true.
-- **Resource names**: All resources use hierarchical name strings (e.g., `accounts/123/properties/456/dataStreams/789`) -- parse segments to extract IDs.
-
-## Anomaly Flags
-
-- **Quota exhaustion**: When `runAccessReport` returns `quota` fields, surface a warning if any `remaining` value drops below 10% of its typical allocation.
-- **Deleted resources**: Properties and accounts can appear with `deleteTime`/`expireTime` set -- flag these as pending permanent deletion and note the expiry window.
-- **showDeleted surprises**: GET accounts/properties return only active resources by default; if results seem incomplete, suggest adding `showDeleted: true`.
-- **Empty change history**: If `searchChangeHistoryEvents` returns no results for a broad time range, flag that the actor email or resource type filters may be too restrictive.
-- **Missing measurement protocol secrets**: If `secretValue` comes back empty on a GET, the caller may lack sufficient permissions -- surface this as a permission issue rather than a missing secret.
-- **Service level mismatch**: When creating properties, flag if `serviceLevel` returns `GOOGLE_ANALYTICS_STANDARD` when the user expected GA360 features.
-- **Data stream type confusion**: If a user creates a `WEB_DATA_STREAM` but provides `androidAppStreamData`, the API may silently ignore mismatched fields -- warn when stream type and provided data don't align.
-
-## Playbook
-
-### 1. Set Up a New GA4 Property with Web Tracking
-
-1. List accounts via `GET /v1beta/accountSummaries` to find the target account name.
-2. Create the property via `POST /v1beta/properties` with `account`, `displayName`, `timeZone`, and `currencyCode`.
-3. Note the returned `name` (e.g., `properties/123456`).
-4. Create a web data stream via `POST /v1beta/{parent}/dataStreams` with `type: WEB_DATA_STREAM` and `webStreamData.defaultUri`.
-5. Retrieve the measurement protocol secret via `POST /v1beta/{parent}/measurementProtocolSecrets` with a `displayName` for the secret.
-6. Acknowledge user data collection via `POST /v1beta/{property}:acknowledgeUserDataCollection`.
-
-### 2. Audit Property Access and Changes
-
-1. Run an access report via `POST /v1beta/{entity}:runAccessReport` with `dimensions: [{dimensionName: "userEmail"}]` and a `dateRanges` covering the audit window.
-2. Review the `rows` array to identify which users accessed data.
-3. Search change history via `POST /v1beta/{account}:searchChangeHistoryEvents` with `earliestChangeTime` and `latestChangeTime` matching the same window.
-4. Cross-reference `actorEmail` from change events with the access report to build a complete audit trail.
-
-### 3. Connect Google Ads and Firebase to a Property
-
-1. Fetch the property via `GET /v1beta/{name}` to confirm it exists and note its resource name.
-2. Link Google Ads via `POST /v1beta/{parent}/googleAdsLinks` with the `customerId` from your Ads account.
-3. Verify the link by listing via `GET /v1beta/{parent}/googleAdsLinks` and checking `adsPersonalizationEnabled`.
-4. Link Firebase via `POST /v1beta/{parent}/firebaseLinks` with the `project` resource name.
-5. Confirm via `GET /v1beta/{parent}/firebaseLinks` that the link is active.
-
-### 4. Manage Custom Dimensions and Metrics
-
-1. List existing custom dimensions via `GET /v1beta/{parent}/customDimensions` to avoid duplicates.
-2. Create a new custom dimension via `POST /v1beta/{parent}/customDimensions` with `parameterName`, `displayName`, and `scope` (EVENT, USER, or ITEM).
-3. List existing custom metrics via `GET /v1beta/{parent}/customMetrics`.
-4. Create a new custom metric via `POST /v1beta/{parent}/customMetrics` with `parameterName`, `measurementUnit`, and `scope`.
-5. To retire a dimension or metric, archive it via `POST /v1beta/{name}:archive`.
-
-### 5. Configure Conversion Events
-
-1. List current conversion events via `GET /v1beta/{parent}/conversionEvents` to see what's already tracked.
-2. Mark a new event as a conversion via `POST /v1beta/{parent}/conversionEvents` with the `eventName` matching your GA4 event.
-3. Verify the event appears in the list with `custom: true` and `deletable: true`.
-4. To remove a conversion event, delete it via `DELETE /v1beta/{name}` using its resource name from the list response.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all accountSummaries?" -> GET /v1beta/accountSummaries
+- "List all accounts?" -> GET /v1beta/accounts
+- "Create a accounts:provisionAccountTicket?" -> POST /v1beta/accounts:provisionAccountTicket
+- "List all properties?" -> GET /v1beta/properties
+- "Create a property?" -> POST /v1beta/properties
+- "Delete a v1beta?" -> DELETE /v1beta/{name}
+- "Get v1beta details?" -> GET /v1beta/{name}
+- "Partially update a v1beta?" -> PATCH /v1beta/{name}
+- "List all conversionEvents?" -> GET /v1beta/{parent}/conversionEvents
+- "Create a conversionEvent?" -> POST /v1beta/{parent}/conversionEvents
+- "List all customDimensions?" -> GET /v1beta/{parent}/customDimensions
+- "Create a customDimension?" -> POST /v1beta/{parent}/customDimensions
+- "List all customMetrics?" -> GET /v1beta/{parent}/customMetrics
+- "Create a customMetric?" -> POST /v1beta/{parent}/customMetrics
+- "List all dataStreams?" -> GET /v1beta/{parent}/dataStreams
+- "Create a dataStream?" -> POST /v1beta/{parent}/dataStreams
+- "List all firebaseLinks?" -> GET /v1beta/{parent}/firebaseLinks
+- "Create a firebaseLink?" -> POST /v1beta/{parent}/firebaseLinks
+- "List all googleAdsLinks?" -> GET /v1beta/{parent}/googleAdsLinks
+- "Create a googleAdsLink?" -> POST /v1beta/{parent}/googleAdsLinks
+- "List all measurementProtocolSecrets?" -> GET /v1beta/{parent}/measurementProtocolSecrets
+- "Create a measurementProtocolSecret?" -> POST /v1beta/{parent}/measurementProtocolSecrets
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

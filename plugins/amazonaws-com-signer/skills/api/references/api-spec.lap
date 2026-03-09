@@ -8,17 +8,20 @@
 
 @group signing-profiles
 @endpoint POST /signing-profiles/{profileName}/permissions
+@desc Adds cross-account permissions to a signing profile.
 @required {profileName: str, action: str, principal: str, statementId: str}
 @optional {profileVersion: str, revisionId: str}
 @returns(200) {revisionId: str?}
 
 @endpoint DELETE /signing-profiles/{profileName}
+@desc Changes the state of an ACTIVE signing profile to CANCELED. A canceled profile is still viewable with the ListSigningProfiles operation, but it cannot perform new signing jobs, and is deleted two years after cancelation.
 @required {profileName: str}
 
 @endgroup
 
 @group signing-jobs
 @endpoint GET /signing-jobs/{jobId}
+@desc Returns information about a specific code signing job. You specify the job by using the jobId value that is returned by the StartSigningJob operation.
 @required {jobId: str}
 @returns(200) {jobId: str?, source: Source?{s3: S3Source?{bucketName: str, key: str, version: str}}, signingMaterial: SigningMaterial?{certificateArn: str}, platformId: str?, platformDisplayName: str?, profileName: str?, profileVersion: str?, overrides: SigningPlatformOverrides?{signingConfiguration: SigningConfigurationOverrides?{encryptionAlgorithm: str?, hashAlgorithm: str?}, signingImageFormat: str?}, signingParameters: map<str,str>?, createdAt: str(timestamp)?, completedAt: str(timestamp)?, signatureExpiresAt: str(timestamp)?, requestedBy: str?, status: str?, statusReason: str?, revocationRecord: SigningJobRevocationRecord?{reason: str?, revokedAt: str(timestamp)?, revokedBy: str?}, signedObject: SignedObject?{s3: S3SignedObject?{bucketName: str?, key: str?}}, jobOwner: str?, jobInvoker: str?}
 
@@ -26,6 +29,7 @@
 
 @group revocations
 @endpoint GET /revocations
+@desc Retrieves the revocation status of one or more of the signing profile, signing job, and signing certificate.
 @required {signatureTimestamp: str(timestamp), platformId: str, profileVersionArn: str, jobArn: str, certificateHashes: [str]}
 @returns(200) {revokedEntities: [str]?}
 
@@ -33,6 +37,7 @@
 
 @group signing-platforms
 @endpoint GET /signing-platforms/{platformId}
+@desc Returns information on a specific signing platform.
 @required {platformId: str}
 @returns(200) {platformId: str?, displayName: str?, partner: str?, target: str?, category: str?, signingConfiguration: SigningConfiguration?{encryptionAlgorithmOptions: EncryptionAlgorithmOptions{allowedValues: [str], defaultValue: str}, hashAlgorithmOptions: HashAlgorithmOptions{allowedValues: [str], defaultValue: str}}, signingImageFormat: SigningImageFormat?{supportedFormats: [str], defaultFormat: str}, maxSizeInMB: int?, revocationSupported: bool?}
 
@@ -40,11 +45,13 @@
 
 @group signing-profiles
 @endpoint GET /signing-profiles/{profileName}
+@desc Returns information on a specific signing profile.
 @required {profileName: str}
 @optional {profileOwner: str}
 @returns(200) {profileName: str?, profileVersion: str?, profileVersionArn: str?, revocationRecord: SigningProfileRevocationRecord?{revocationEffectiveFrom: str(timestamp)?, revokedAt: str(timestamp)?, revokedBy: str?}, signingMaterial: SigningMaterial?{certificateArn: str}, platformId: str?, platformDisplayName: str?, signatureValidityPeriod: SignatureValidityPeriod?{value: int?, type: str?}, overrides: SigningPlatformOverrides?{signingConfiguration: SigningConfigurationOverrides?{encryptionAlgorithm: str?, hashAlgorithm: str?}, signingImageFormat: str?}, signingParameters: map<str,str>?, status: str?, statusReason: str?, arn: str?, tags: map<str,str>?}
 
 @endpoint GET /signing-profiles/{profileName}/permissions
+@desc Lists the cross-account permissions associated with a signing profile.
 @required {profileName: str}
 @optional {nextToken: str}
 @returns(200) {revisionId: str?, policySizeBytes: int?, permissions: [Permission]?, nextToken: str?}
@@ -53,6 +60,7 @@
 
 @group signing-jobs
 @endpoint GET /signing-jobs
+@desc Lists all your signing jobs. You can use the maxResults parameter to limit the number of signing jobs that are returned in the response. If additional jobs remain to be listed, AWS Signer returns a nextToken value. Use this value in subsequent calls to ListSigningJobs to fetch the remaining values. You can continue calling ListSigningJobs with your maxResults parameter and with new values that Signer returns in the nextToken parameter until all of your signing jobs have been returned.
 @optional {status: str, platformId: str, requestedBy: str, maxResults: int, nextToken: str, isRevoked: bool, signatureExpiresBefore: str(timestamp), signatureExpiresAfter: str(timestamp), jobInvoker: str}
 @returns(200) {jobs: [SigningJob]?, nextToken: str?}
 
@@ -60,6 +68,7 @@
 
 @group signing-platforms
 @endpoint GET /signing-platforms
+@desc Lists all signing platforms available in AWS Signer that match the request parameters. If additional jobs remain to be listed, Signer returns a nextToken value. Use this value in subsequent calls to ListSigningJobs to fetch the remaining values. You can continue calling ListSigningJobs with your maxResults parameter and with new values that Signer returns in the nextToken parameter until all of your signing jobs have been returned.
 @optional {category: str, partner: str, target: str, maxResults: int, nextToken: str}
 @returns(200) {platforms: [SigningPlatform]?, nextToken: str?}
 
@@ -67,6 +76,7 @@
 
 @group signing-profiles
 @endpoint GET /signing-profiles
+@desc Lists all available signing profiles in your AWS account. Returns only profiles with an ACTIVE status unless the includeCanceled request field is set to true. If additional jobs remain to be listed, AWS Signer returns a nextToken value. Use this value in subsequent calls to ListSigningJobs to fetch the remaining values. You can continue calling ListSigningJobs with your maxResults parameter and with new values that Signer returns in the nextToken parameter until all of your signing jobs have been returned.
 @optional {includeCanceled: bool, maxResults: int, nextToken: str, platformId: str, statuses: [str]}
 @returns(200) {profiles: [SigningProfile]?, nextToken: str?}
 
@@ -74,6 +84,7 @@
 
 @group tags
 @endpoint GET /tags/{resourceArn}
+@desc Returns a list of the tags associated with a signing profile resource.
 @required {resourceArn: str}
 @returns(200) {tags: map<str,str>?}
 
@@ -81,11 +92,13 @@
 
 @group signing-profiles
 @endpoint PUT /signing-profiles/{profileName}
+@desc Creates a signing profile. A signing profile is a code-signing template that can be used to carry out a pre-defined signing job.
 @required {profileName: str, platformId: str}
 @optional {signingMaterial: SigningMaterial, signatureValidityPeriod: SignatureValidityPeriod, overrides: SigningPlatformOverrides, signingParameters: map<str,str>, tags: map<str,str>}
 @returns(200) {arn: str?, profileVersion: str?, profileVersionArn: str?}
 
 @endpoint DELETE /signing-profiles/{profileName}/permissions/{statementId}
+@desc Removes cross-account permissions from a signing profile.
 @required {profileName: str, revisionId: str, statementId: str}
 @returns(200) {revisionId: str?}
 
@@ -93,6 +106,7 @@
 
 @group signing-jobs
 @endpoint PUT /signing-jobs/{jobId}/revoke
+@desc Changes the state of a signing job to REVOKED. This indicates that the signature is no longer valid.
 @required {jobId: str, reason: str}
 @optional {jobOwner: str}
 
@@ -100,17 +114,20 @@
 
 @group signing-profiles
 @endpoint PUT /signing-profiles/{profileName}/revoke
+@desc Changes the state of a signing profile to REVOKED. This indicates that signatures generated using the signing profile after an effective start date are no longer valid.
 @required {profileName: str, profileVersion: str, reason: str, effectiveTime: str(timestamp)}
 
 @endgroup
 
 @group signing-jobs
 @endpoint POST /signing-jobs/with-payload
+@desc Signs a binary payload and returns a signature envelope.
 @required {profileName: str, payload: bytes, payloadFormat: str}
 @optional {profileOwner: str}
 @returns(200) {jobId: str?, jobOwner: str?, metadata: map<str,str>?, signature: bytes?}
 
 @endpoint POST /signing-jobs
+@desc Initiates a signing job to be performed on the code provided. Signing jobs are viewable by the ListSigningJobs operation for two years after they are performed. Note the following requirements:     You must create an Amazon S3 source bucket. For more information, see Creating a Bucket in the Amazon S3 Getting Started Guide.    Your S3 source bucket must be version enabled.   You must create an S3 destination bucket. AWS Signer uses your S3 destination bucket to write your signed code.   You specify the name of the source and destination buckets when calling the StartSigningJob operation.   You must ensure the S3 buckets are from the same Region as the signing profile. Cross-Region signing isn't supported.   You must also specify a request token that identifies your request to Signer.   You can call the DescribeSigningJob and the ListSigningJobs actions after you call StartSigningJob. For a Java example that shows how to use this action, see StartSigningJob.
 @required {source: Source, destination: Destination, profileName: str, clientRequestToken: str}
 @optional {profileOwner: str}
 @returns(200) {jobId: str?, jobOwner: str?}
@@ -119,9 +136,11 @@
 
 @group tags
 @endpoint POST /tags/{resourceArn}
+@desc Adds one or more tags to a signing profile. Tags are labels that you can use to identify and organize your AWS resources. Each tag consists of a key and an optional value. To specify the signing profile, use its Amazon Resource Name (ARN). To specify the tag, use a key-value pair.
 @required {resourceArn: str, tags: map<str,str>}
 
 @endpoint DELETE /tags/{resourceArn}
+@desc Removes one or more tags from a signing profile. To remove the tags, specify a list of tag keys.
 @required {resourceArn: str, tagKeys: [str]}
 
 @endgroup

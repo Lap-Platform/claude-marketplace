@@ -10,616 +10,717 @@
 
 @group {tenant}
 @endpoint POST /{tenant}/orders/{orderId}/queries/attempteddelivery
-@required {tenant: str, orderId: str, Authorization: str}
-@optional {ReasonCode: str(problem_with_address/no_answer)}
-@returns(200)
-@errors {400, 401, 404, 500}
+@desc Delivery Attempt Failed
+@required {tenant: str # Request tenant e.g. uk., orderId: str # Id for the order., Authorization: str # Containing a partner issued API key e.g. `JE-API-KEY ABCDE123456789`}
+@optional {ReasonCode: str(problem_with_address/no_answer) # The reason the attempted delivery event was created}
+@returns(200) OK
+@errors {400: Bad Request - returned if providing invalid data such as an unacceptable reason code, 401: Unauthorized - consumer has not provided the necessary credentials, 404: Resource not found, 500: Internal server error}
 
 @endpoint POST /{tenant}/orders/{orderId}/queries/attempteddelivery/resolution/redeliverorder
-@required {tenant: str, orderId: str, Authorization: str}
-@optional {Status: str(driver_at_address/repreparing), NewDueDate: str(date-time)}
-@returns(200)
-@errors {400, 401, 404, 500}
+@desc Request Redelivery of the Order
+@required {tenant: str # Request tenant e.g. uk., orderId: str # Id for the order., Authorization: str # Containing a partner issued API key e.g. `JE-API-KEY ABCDE123456789`}
+@optional {Status: str(driver_at_address/repreparing) # The current status of the order, NewDueDate: str(date-time) # Updated due date for delivery of the order}
+@returns(200) OK
+@errors {400: Bad Request - returned if providing invalid data such as an unacceptable reason code, 401: Unauthorized - consumer has not provided the necessary credentials, 404: Resource not found, 500: Internal server error}
 
 @endgroup
 
 @group attempted-delivery-query-resolved
 @endpoint PUT /attempted-delivery-query-resolved
-@optional {OrderId: str, Tenant: str(uk/dk/es/ie/it/no/au/nz), Resolution: map{Type: str, Cancellation: map{Reason: str}, Redelivery: map{Status: str, NewDueDate: str(date-time), CustomerTimeZone: str}}}
-@returns(200)
+@desc Attempted delivery query resolved
+@optional {OrderId: str # The ID of the order for which an attempted delivery query has been resolved, Tenant: str(uk/dk/es/ie/it/no/au/nz) # The tenant of the restaurant the order was placed at, Resolution: map{Type: str, Cancellation: map{Reason: str}, Redelivery: map{Status: str, NewDueDate: str(date-time), CustomerTimeZone: str}} # Details of the resolution to the query}
+@returns(200) Respond with a 200 status code to indicate that you have received the notification.
 
 @endgroup
 
 @group delivery-failed
 @endpoint PUT /delivery-failed
-@optional {OrderId: str, RestaurantId: num, Reason: str, Tenant: str}
-@returns(200)
+@desc Delivery Attempt Failed
+@optional {OrderId: str # The id of the order, RestaurantId: num # The id of the restaurant, Reason: str # The reason for creating the attempted delivery, Tenant: str # The tenant associated with the order}
+@returns(200) Respond with a 200 status code to indicate that you have received the notification.
 
 @endgroup
 
 @group checkout
 @endpoint GET /checkout/{tenant}/{checkoutId}
-@required {tenant: str, checkoutId: str, User-Agent: str}
-@returns(200) {restaurant: map{id: str, availabilityId: str}, serviceType: str, customer: map{firstName: str?, lastName: str?, phoneNumber: str?}, fulfilment: map{time: map?{asap: bool, scheduled: map?{from: str, to: str}}, location: map?{address: map?{lines: [str], locality: str?, administrativeArea: str?, postalCode: str?}, geolocation: map?{latitude: num(decimal), longitude: num(decimal)}}}, isFulfillable: bool, issues: [map]}
-@errors {400, 401, 403, 404, 409, 429, 500, 503}
+@desc Get Checkout
+@required {tenant: str # A two-character country code.   The following countries are supported:   - United Kingdom (UK)   - Australia (AU)   - New Zealand (NZ), checkoutId: str # A unique identifier for a checkout. This is currently a Basket Id., User-Agent: str # Allows the server to identify the application making the request.}
+@returns(200) {restaurant: map{id: str, availabilityId: str}, serviceType: str, customer: map{firstName: str?, lastName: str?, phoneNumber: str?}, fulfilment: map{time: map?{asap: bool, scheduled: map?{from: str, to: str}}, location: map?{address: map?{lines: [str], locality: str?, administrativeArea: str?, postalCode: str?}, geolocation: map?{latitude: num(decimal), longitude: num(decimal)}}}, isFulfillable: bool, issues: [map]} # OK : Request has succeeded.
+@errors {400: BAD REQUEST : Cannot process the request due to error by client., 401: UNAUTHORIZED : Missing authentication credentials to access target resource., 403: FORBIDDEN : Not authorised to access target resource., 404: NOT FOUND : Target resource could not be found., 409: CONFLICT : Request not completed as it conflicts with target resource., 429: TOO MANY REQUESTS : Request not completed as server has received too many requests in a given amount of time., 500: INTERNAL SERVER ERROR : Error on server preventing request from being fulfilled., 503: SERVICE UNAVAILABLE : Server currently unable to fulfil the request. The request can be retried.}
 
 @endpoint PATCH /checkout/{tenant}/{checkoutId}
-@required {tenant: str, checkoutId: str, User-Agent: str}
-@returns(200) {isFulfillable: bool, issues: [map]}
-@errors {400, 401, 403, 404, 409, 429, 500, 503}
+@desc Update Checkout
+@required {tenant: str # A two-character country code.   The following countries are supported:   - United Kingdom (UK)   - Australia (AU)   - New Zealand (NZ), checkoutId: str # A unique identifier for a checkout. This is currently a Basket Id., User-Agent: str # Allows the server to identify the application making the request.}
+@returns(200) {isFulfillable: bool, issues: [map]} # OK : Request has succeeded.
+@errors {400: BAD REQUEST : Cannot process the request due to error by client., 401: UNAUTHORIZED : Missing authentication credentials to access target resource., 403: FORBIDDEN : Not authorised to access target resource., 404: NOT FOUND : Target resource could not be found., 409: CONFLICT : Request not completed as it conflicts with target resource., 429: TOO MANY REQUESTS : Request not completed as server has received too many requests in a given amount of time., 500: INTERNAL SERVER ERROR : Error on server preventing request from being fulfilled., 503: SERVICE UNAVAILABLE : Server currently unable to fulfil the request. The request can be retried.}
 
 @endpoint GET /checkout/{tenant}/{checkoutId}/fulfilment/availabletimes
-@required {tenant: str, checkoutId: str, User-Agent: str}
-@returns(200) {times: [map], asapAvailable: bool}
-@errors {400, 404, 409, 429, 500, 503}
+@desc Get Available Fulfilment Times
+@required {tenant: str # A two-character country code.   The following countries are supported:   - United Kingdom (UK)   - Australia (AU)   - New Zealand (NZ), checkoutId: str # A unique identifier for a checkout. This is currently a Basket Id., User-Agent: str # Allows the server to identify the application making the request.}
+@returns(200) {times: [map], asapAvailable: bool} # OK : Request has succeeded.
+@errors {400: BAD REQUEST : Cannot process the request due to error by client., 404: NOT FOUND : Target resource could not be found., 409: CONFLICT : Request not completed as it conflicts with target resource., 429: TOO MANY REQUESTS : Request not completed as server has received too many requests in a given amount of time., 500: INTERNAL SERVER ERROR : Error on server preventing request from being fulfilled., 503: SERVICE UNAVAILABLE : Server currently unable to fulfil the request. The request can be retried.}
 
 @endgroup
 
 @group orders
 @endpoint POST /orders/{tenant}/{orderId}/consumerqueries/lateorder/restaurantresponse
-@required {tenant: str, orderId: str, Authorization: str}
-@optional {lateOrderStatus: str(Preparing/OnItsWay/Delivered), additionalDeliveryTimeToAddMinutes: int}
-@returns(202)
-@errors {400, 401, 404, 409, 500}
+@desc Response to Late Order Update Request
+@required {tenant: str # Request tenant., orderId: str # Id for the order., Authorization: str # Containing a partner issued API key e.g. `JE-API-KEY ABCDE123456789`}
+@optional {lateOrderStatus: str(Preparing/OnItsWay/Delivered) # The updated later order query status, additionalDeliveryTimeToAddMinutes: int # The amount of time to add to the current delivery estimate in minutes}
+@returns(202) Accepted
+@errors {400: Bad Request. Returned if the request is invalid i.e. missing a required parameters, 401: Unauthorized. Consumer is not authorized to modify the resource, 404: Not Found. Order query or Order not found, 409: Conflict. Query not in state to accept response, 500: Internal Server Error}
+@example_request {"lateOrderStatus":"OnItsWay","additionalDeliveryTimeToAddMinutes":5}
 
 @endpoint POST /orders/{tenant}/{orderId}/consumerqueries/lateordercompensation/restaurantresponse
-@required {tenant: str, orderId: str, Authorization: str}
-@optional {orderId: str, isAccepted: bool, acceptedAmount: int, rejectedReasonCode: str(BadTraffic/BadWeather/BusierThanExpected/CompensatedWithItem/NoReason)}
-@returns(202)
-@errors {400, 401, 404, 409, 500}
+@desc Update late order compensation request with Restaurant response
+@required {tenant: str # Request tenant., orderId: str # Id for the order., Authorization: str # Containing a partner issued API key e.g. `JE-API-KEY ABCDE123456789`}
+@optional {orderId: str # The ID of the late order compensation request that this response relates to., isAccepted: bool # Flag to indicate whether a compensation request has been accepted or rejected., acceptedAmount: int # The monetary amount of compensation granted, in cents/pence. Required when `isAccepted = true`., rejectedReasonCode: str(BadTraffic/BadWeather/BusierThanExpected/CompensatedWithItem/NoReason) # - `BadTraffic` : The driver was stuck in heavy traffic, sorry. - `BadWeather` : The bad weather was delaying our deliveries, sorry. - `BusierThanExpected` : Our restaurant was busier than we expected. - `CompensatedWithItem` : We gave you something from the menu free of charge to make up for it. - `NoReason` : We're really sorry your order was late. We hope you enjoyed your food.}
+@returns(202) Accepted
+@errors {400: Bad Request. Returned if the request is invalid - e.g. contains missing or invalid parameters., 401: Unauthorized. Consumer is not authorized to modify the resource, 404: Not Found. Order query or Order not found, 409: Conflict. Query not in state to accept response, 500: Internal Server Error}
 
 @endgroup
 
 @group late-order-compensation-query
 @endpoint POST /late-order-compensation-query
-@optional {restaurantId: str, orderId: str, tenant: str, compensationOptions: [map{amount: num(decimal), isRecommended: bool}]}
-@returns(200)
+@desc late order compensation query, restaurant response required
+@optional {restaurantId: str # Just Eat restaurant identifier, orderId: str # Just Eat order identifier, tenant: str # Tenant (Country) of order restaurant., compensationOptions: [map{amount: num(decimal), isRecommended: bool}]}
+@returns(200) Respond with a 200 status code to indicate that you have received the notification
 
 @endgroup
 
 @group late-order-query
 @endpoint POST /late-order-query
-@optional {restaurantId: str, orderId: str, tenant: str}
-@returns(200)
+@desc late order query, restaurant response required
+@optional {restaurantId: str # Just Eat restaurant identifier, orderId: str # Just Eat order identifier, tenant: str # Tenant (Country) of order restaurant.}
+@returns(200) Respond with a 200 status code to indicate that you have received the notification.
 
 @endgroup
 
 @group consumers
 @endpoint POST /consumers/{tenant}
-@required {tenant: str, emailAddress: str(email), firstName: str, lastName: str}
-@optional {password: str, registrationSource: str(Native/Guest)=Native, marketingPreferences: [map{channelName: str, isSubscribed: bool, dateUpdated: str(date-time)}]}
-@returns(201) {type: str, token: str}
-@errors {400, 403, 404, 409, 500}
+@desc Create consumer
+@required {tenant: str # The identifier for the tenant. The only supported tenants are `uk`, `au` and `nz`, emailAddress: str(email) # The consumer's email address, firstName: str # The consumer's first name, lastName: str # The consumer's last name}
+@optional {password: str # The consumer's password, registrationSource: str(Native/Guest)=Native # The registration source of the consumer. Australia and New Zealand only support Guest, marketingPreferences: [map{channelName: str, isSubscribed: bool, dateUpdated: str(date-time)}]}
+@returns(201) {type: str, token: str} # Consumer created.
+@errors {400: Bad request., 403: Forbidden., 404: The specified tenant does not exist., 409: The specified email already exists., 500: Internal Server Error}
 
 @endpoint GET /consumers/{tenant}
-@required {tenant: str, emailAddress: str, accountType: str=registered, count: str}
-@returns(200)
-@errors {400, 404, 500, 501}
+@desc Get consumers details
+@required {tenant: str # The identifier for the tenant., emailAddress: str # Email address of the consumer., accountType: str=registered # The account type of the consumer - currently only 'registered' accounts are supported., count: str # Returns the number of consumers that matches the `emailAddress` and `accountType`. The query value should be empty, e.g. `/consumers/uk/?emailAddress=someone@email.com&accountType=registered&count`.}
+@returns(200) Success
+@errors {400: Bad request., 404: The specified tenant does not exist., 500: Internal Server Error, 501: The operation has not been implemented}
 
 @endpoint GET /consumers/{tenant}/me/communication-preferences
-@required {tenant: str}
-@returns(200) {marketing: map{isDefault: bool, subscribedChannels: [str]}}
-@errors {401, 403, 404, 500}
+@desc Get communication preferences
+@required {tenant: str # Request tenant.}
+@returns(200) {marketing: map{isDefault: bool, subscribedChannels: [str]}} # Success
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /consumers/{tenant}/me/communication-preferences/{type}
-@required {tenant: str, type: str}
-@returns(200) {isDefault: bool, subscribedChannels: [str]}
-@errors {401, 403, 404, 500}
+@desc Get channel subscriptions for a given consumer's communication preference type
+@required {tenant: str # Request tenant., type: str # The type of communication preferences.}
+@returns(200) {isDefault: bool, subscribedChannels: [str]} # Success
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /consumers/{tenant}/me/communication-preferences/{type}
-@required {tenant: str, type: str}
-@optional {subscribedChannels: [str]}
-@returns(204)
-@errors {401, 404, 500}
+@desc Set only the channel subscriptions for a given consumer's communication preference type
+@required {tenant: str # Request tenant., type: str # The type of communication preferences.}
+@optional {subscribedChannels: [str] # The list of channels that the consumer should only be subscribed to.}
+@returns(204) Success
+@errors {401: Unauthorized, 404: Not Found, 500: Internal Server Error}
+@example_request {"subscribedChannels":["email","sms"]}
 
 @endpoint POST /consumers/{tenant}/me/communication-preferences/{type}/subscribedChannels/{channel}
-@required {tenant: str, type: str, channel: str}
-@returns(204)
-@errors {401, 403, 404, 500}
+@desc Subscribe to a specific communication preference channel
+@required {tenant: str # Request tenant., type: str # The type of communication preferences., channel: str # The channel.}
+@returns(204) Success
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /consumers/{tenant}/me/communication-preferences/{type}/subscribedChannels/{channel}
-@required {tenant: str, type: str, channel: str}
-@returns(204)
-@errors {401, 404, 500}
+@desc Remove subscription of a specific communication preference channel
+@required {tenant: str # Request tenant., type: str # The type of communication preference., channel: str # The channel.}
+@returns(204) Success
+@errors {401: Unauthorized, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group delivery-fees
 @endpoint GET /delivery-fees/{tenant}
-@required {tenant: str, restaurantIds: [str], deliveryTime: str(date-time)}
-@optional {zone: str, latlong: [num(double)]}
-@returns(200) {restaurants: [map]}
-@errors {400, 404}
+@desc Get restaurant delivery fees
+@required {tenant: str # Tenant containing the restaurants., restaurantIds: [str] # Restaurant IDs which fees are requested for. e.g. `?restaurantIds=1,2,3,4`, deliveryTime: str(date-time) # Delivery date/time when fees are required (ISO8601 format).}
+@optional {zone: str # Postcode or other location name identifying the location to which delivery is required. For use when precise location is not available. This will be removed in future in favour of location., latlong: [num(double)] # Point to which delivery is required (latitude, longitude). Supply this where possible as support for zone-only based lookups will be removed in future.}
+@returns(200) {restaurants: [map]} # Success
+@errors {400: Bad request, 404: Not found}
 
 @endgroup
 
 @group delivery
 @endpoint GET /delivery/pools
-@returns(200) {delivery-pool-id: map{name: str, restaurants: [num(int32)]}}
-@errors {500}
+@desc Get your delivery pools
+@returns(200) {delivery-pool-id: map{name: str, restaurants: [num(int32)]}} # OK
+@errors {500: Internal Server Error}
 
 @endpoint POST /delivery/pools
-@required {name: str}
-@optional {restaurants: [num(int32)]}
-@returns(201)
-@errors {400, 500}
+@desc Create a new delivery pool
+@required {name: str # The name of the pool, used by operations teams, in reports, etc.}
+@optional {restaurants: [num(int32)] # A list of Just Eat restaurant ids served by the delivery pool.}
+@returns(201) Pool has been created.
+@errors {400: There was something invalid in your request - check response body for details, 500: Internal Server Error}
 
 @endpoint GET /delivery/pools/{deliveryPoolId}
-@returns(200) {name: str, restaurants: [num(int32)]}
-@errors {404, 500}
+@desc Get an individual delivery pool
+@returns(200) {name: str, restaurants: [num(int32)]} # OK
+@errors {404: The pool could not be found, 500: Internal Server Error}
 
 @endpoint DELETE /delivery/pools/{deliveryPoolId}
-@returns(200)
-@errors {404, 500}
+@desc Delete a delivery pool
+@returns(200) Pool deleted
+@errors {404: The pool could not be found, 500: Internal Server Error}
 
 @endpoint PATCH /delivery/pools/{deliveryPoolId}
-@optional {name: str, restaurants: [num(int32)]}
-@returns(202) {name: str, restaurants: [num(int32)]}
-@errors {400, 404, 409, 500}
+@desc Modify a delivery pool
+@optional {name: str # The name of the pool, used by operations teams, in reports, etc., restaurants: [num(int32)] # A list of Just Eat restaurant ids served by the delivery pool.}
+@returns(202) {name: str, restaurants: [num(int32)]} # Pool has been updated
+@errors {400: There was something invalid in your request - check response body for details, 404: The pool could not be found, 409: A restaurant in your request already belongs to another pool, 500: Internal Server Error}
 
 @endpoint PUT /delivery/pools/{deliveryPoolId}
-@required {name: str}
-@optional {restaurants: [num(int32)]}
-@returns(202) {name: str, restaurants: [num(int32)]}
-@errors {400, 404, 409, 500}
+@desc Replace an existing delivery pool
+@required {name: str # The name of the pool, used by operations teams, in reports, etc.}
+@optional {restaurants: [num(int32)] # A list of Just Eat restaurant ids served by the delivery pool.}
+@returns(202) {name: str, restaurants: [num(int32)]} # Pool has been replaced
+@errors {400: There was something invalid in your request - check response body for details, 404: The pool could not be found, 409: A restaurant in your request already belongs to another pool, 500: Internal Server Error}
 
 @endpoint GET /delivery/pools/{deliveryPoolId}/availability/relative
-@returns(200) {bestGuess: str}
-@errors {404}
+@desc Get availability for pickup
+@returns(200) {bestGuess: str} # OK
+@errors {404: The pool could not be found}
 
 @endpoint PUT /delivery/pools/{deliveryPoolId}/availability/relative
-@optional {bestGuess: str}
-@returns(202)
-@errors {404}
+@desc Set availability for pickup
+@optional {bestGuess: str # Your best estimation (hh:mm:ss)}
+@returns(202) Update will take effect shortly
+@errors {404: The pool could not be found}
 
 @endpoint PUT /delivery/pools/{deliveryPoolId}/hours
+@desc Set the delivery pools daily start and end times
 @required {monday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}, tuesday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}, wednesday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}, thursday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}, friday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}, saturday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}, sunday: map{closed: bool, poolTimes!: [map{startTime!: str, endTime!: str}]}}
-@returns(200)
-@errors {404}
+@returns(200) Pool hours have been updated
+@errors {404: The pool could not be found}
 
 @endpoint PUT /delivery/pools/{deliveryPoolId}/restaurants
-@returns(200) {restaurants: [num(int32)]}
-@errors {400, 404, 409}
+@desc Add restaurants to an existing delivery pool
+@returns(200) {restaurants: [num(int32)]} # OK
+@errors {400: There was something invalid in your request - check response body for details, 404: The pool could not be found, 409: The restaurants could not be added to the pool. Typically this is because they are already assigned to another pool}
 
 @endpoint DELETE /delivery/pools/{deliveryPoolId}/restaurants
-@optional {restaurants: [num(int32)]}
-@returns(200)
-@errors {400, 404}
+@desc Remove restaurants from a delivery pool
+@optional {restaurants: [num(int32)] # A list of Just Eat restaurant ids served by the delivery pool.}
+@returns(200) Pool has been updated
+@errors {400: There was something invalid in your request - check response body for details, 404: The pool could not be found}
 
 @endgroup
 
 @group orders
 @endpoint PUT /orders/{orderId}/accept
+@desc Accept order
 @required {orderId: str}
 @optional {TimeAcceptedFor: str(date-time)}
-@returns(200)
-@errors {404, 409}
+@returns(200) OK
+@errors {404: Order could not be found, 409: Conflict. This order has either already been accepted, rejected or ignored by restaurant or cancelled by ops}
 
 @endpoint PUT /orders/{orderId}/cancel
+@desc Cancel order
 @required {orderId: str}
-@optional {Message: str}
-@returns(200)
-@errors {404, 409}
+@optional {Message: str # Reason why this order is being cancelled.}
+@returns(200) OK
+@errors {404: Order could not be found, 409: Conflict. This order has already been cancelled}
 
 @endpoint POST /orders/{orderId}/complete
-@required {orderId: str}
-@returns(204)
-@errors {404, 409, 500}
+@desc Complete order
+@required {orderId: str # The ID of the order to mark as complete}
+@returns(204) No content - status updated successfully
+@errors {404: Not found - order could not be found, 409: Conflict - this order has already been marked as cancelled or complete, 500: Internal Server Error}
 
 @endpoint PUT /orders/{orderId}/duedate
+@desc Update order ETA
 @required {orderId: str}
-@optional {DueDate: str(date-time)}
-@returns(200)
-@errors {400, 404}
+@optional {DueDate: str(date-time) # The updated ETA for the order}
+@returns(200) OK
+@errors {400: The due date is missing, or out of range (either in the past, or > 7 days in the future)., 404: The order could not be found.}
 
 @endpoint PUT /orders/{orderId}/ignore
+@desc Ignore order
 @required {orderId: str}
-@returns(200)
-@errors {404, 409}
+@returns(200) OK
+@errors {404: Order could not be found, 409: Conflict. This order has either already been accepted, rejected or ignored by restaurant or cancelled by ops}
 
 @endpoint POST /orders/{orderId}/readyforcollection
-@required {orderId: str}
-@returns(204)
-@errors {400, 404, 409, 500}
+@desc Mark order as ready for collection
+@required {orderId: str # The ID of the order to mark as ready for collection}
+@returns(204) No content - status updated successfully
+@errors {400: Bad request - order cannot be marked as ready for collection because it is not a collection order, 404: Not found - order could not be found, 409: Conflict - this order is not in the accepted state, 500: Internal Server Error}
 
 @endpoint PUT /orders/{orderId}/reject
+@desc Reject order
 @required {orderId: str}
-@optional {Message: str}
-@returns(200)
-@errors {404, 409}
+@optional {Message: str # Reason why this order is being rejected.}
+@returns(200) OK
+@errors {404: Order could not be found, 409: Conflict. This order has either already been accepted, rejected or ignored by restaurant or cancelled by ops}
 
 @endgroup
 
 @group acceptance-requested
 @endpoint POST /acceptance-requested
-@optional {OrderId: str, FriendlyOrderReference: str, Currency: str, TotalPrice: num(money), Fulfilment: map{Method: str, PhoneNumber: str, PhoneMaskingCode: str, CustomerDueDate: str(date-time), CustomerDueAsap: bool, PreparationTime: str(timespan), Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}}, Payment: map{Lines: [map{Type: str, Value: num(money), Paid: bool}]}, Customer: map{Id: num, Name: str, PreviousRestaurantOrderCount: num, PreviousTotalOrderCount: num}, Restrictions: [map{Type: str}], Items: [map{Reference: str, Name: str, Quantity: num, UnitPrice: num(money), TotalPrice: num(money), Items: [map{Reference: str, Name: str, Quantity: num, UnitPrice: num(money), TotalPrice: num(money), Items: [map]}]}], PriceBreakdown: map{Discount: num(money), Tips: num(money), Taxes: num(money), Items: num(money), Fees: map{Delivery: num(money), ServiceCharge: num(money), Other: num(money)}}, PlacedDate: str(date-time), CustomerNotes: map, Restaurant: map{Id: str, Reference: str, Name: str, Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}, TimeZone: str, PhoneNumber: str}, IsTest: bool}
-@returns(200)
+@desc Acceptance requested
+@optional {OrderId: str, FriendlyOrderReference: str, Currency: str, TotalPrice: num(money), Fulfilment: map{Method: str, PhoneNumber: str, PhoneMaskingCode: str, CustomerDueDate: str(date-time), CustomerDueAsap: bool, PreparationTime: str(timespan), Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}}, Payment: map{Lines: [map{Type: str, Value: num(money), Paid: bool}]}, Customer: map{Id: num, Name: str, PreviousRestaurantOrderCount: num, PreviousTotalOrderCount: num}, Restrictions: [map{Type: str}] # This is a list of types of restricted items contained in the order., Items: [map{Reference: str, Name: str, Quantity: num, UnitPrice: num(money), TotalPrice: num(money), Items: [map{Reference: str, Name: str, Quantity: num, UnitPrice: num(money), TotalPrice: num(money), Items: [map]}]}], PriceBreakdown: map{Discount: num(money), Tips: num(money), Taxes: num(money), Items: num(money), Fees: map{Delivery: num(money), ServiceCharge: num(money), Other: num(money)}}, PlacedDate: str(date-time), CustomerNotes: map, Restaurant: map{Id: str, Reference: str, Name: str, Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}, TimeZone: str, PhoneNumber: str}, IsTest: bool}
+@returns(200) Respond with a 200 status code to indicate that you have received the notification.
 
 @endgroup
 
 @group order-accepted
 @endpoint POST /order-accepted
+@desc Order accepted
 @optional {OrderId: str, AcceptedFor: str(date-time), Event: str}
-@returns(200)
+@returns(200) Respond with a 200 status code to indicate that you have received the notification.
 
 @endgroup
 
 @group order-cancelled
 @endpoint POST /order-cancelled
-@optional {OrderId: str, Event: str, Reason: str(cust_cancelled_changed_mind/cust_cancelled_delivery_too_long/cust_cancelled_made_mistake/cust_cancelled_other/delivery_partner_cancelled/rest_cancelled_customer_absent/rest_cancelled_customer_requested/rest_cancelled_declined/rest_cancelled_drivers_unavailable/rest_cancelled_fake_order/rest_cancelled_other/rest_cancelled_out_of_stock/rest_cancelled_too_busy/system_cancelled_other/system_cancelled_test_order)}
-@returns(200)
+@desc Order cancelled
+@optional {OrderId: str, Event: str, Reason: str(cust_cancelled_changed_mind/cust_cancelled_delivery_too_long/cust_cancelled_made_mistake/cust_cancelled_other/delivery_partner_cancelled/rest_cancelled_customer_absent/rest_cancelled_customer_requested/rest_cancelled_declined/rest_cancelled_drivers_unavailable/rest_cancelled_fake_order/rest_cancelled_other/rest_cancelled_out_of_stock/rest_cancelled_too_busy/system_cancelled_other/system_cancelled_test_order) # The reason the order was cancelled.}
+@returns(200) Respond with a 200 status code to indicate that you have received the notification.
 
 @endgroup
 
 @group order-rejected
 @endpoint POST /order-rejected
+@desc Order rejected
 @optional {RejectedAt: str(date-time), RejectedBy: str, RejectedReason: str, Event: str}
-@returns(200)
+@returns(200) Respond with a 200 status code to indicate that you have received the notification.
 
 @endgroup
 
 @group redelivery-requested
 @endpoint PUT /redelivery-requested
+@desc Customer Requested Redelivery
 @optional {OrderId: str, Tenant: str, Update: str, Notes: str}
-@returns(200)
+@returns(200) Respond with a 200 status code to indicate that you have received the notification.
 
 @endgroup
 
 @group delivery
 @endpoint GET /delivery/estimate
-@required {restaurantReference: str}
-@optional {toLat: str, toLon: str, toPostcode: str}
-@returns(200) {RestaurantReference: str, DurationInMinutes: str}
+@desc Get delivery estimate
+@required {restaurantReference: str # The reference of the restaurant to estimate the delivery time from.}
+@optional {toLat: str # The latitude of the position to estimate the delivery time to., toLon: str # The longitude of the position to estimate the delivery time to., toPostcode: str # The postcode to estimate the delivery time to.}
+@returns(200) {RestaurantReference: str, DurationInMinutes: str} # OK
 
 @endgroup
 
 @group orders
 @endpoint PUT /orders/{orderId}/deliverystate/atdeliveryaddress
-@required {orderId: str}
-@optional {Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, TimeStampWithUtcOffset: str(date-time)}
-@returns(200)
+@desc Update order with driver at delivery address details
+@required {orderId: str # Just Eat order identifier}
+@optional {Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)} # GeoLocation object containing latitude and longitude values., TimeStampWithUtcOffset: str(date-time) # This should represent the delivery detailed updated timestamp.}
+@returns(200) OK
 
 @endpoint PUT /orders/{orderId}/deliverystate/atrestaurant
-@required {orderId: str}
-@optional {EtaAtDeliveryAddress: str(date-time), Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, TimeStampWithUtcOffset: str(date-time)}
-@returns(200)
+@desc Update order with driver at restaurant details
+@required {orderId: str # Just Eat order identifier}
+@optional {EtaAtDeliveryAddress: str(date-time) # This should represent the delivery partner's best guess at when the driver will arrive at the delivery address., Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)} # GeoLocation object containing latitude and longitude values., TimeStampWithUtcOffset: str(date-time) # This should represent the Eta calculated timestamp.}
+@returns(200) OK
 
 @endpoint PUT /orders/{orderId}/deliverystate/atrestauranteta
-@required {orderId: str}
-@optional {estimatedAt: str(date-time), bestGuess: str(date-time)}
-@returns(200)
+@desc Update the driver's estimated time to arrive at the Restaurant
+@required {orderId: str # Just Eat order identifier}
+@optional {estimatedAt: str(date-time) # This is the time at which you are doing the estimation, bestGuess: str(date-time) # This should represent the delivery partner's best guess at when the driver will arrive at the restaurant.}
+@returns(200) OK
 
 @endpoint PUT /orders/{orderId}/deliverystate/delivered
-@required {orderId: str}
-@optional {Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, TimeStampWithUtcOffset: str(date-time)}
-@returns(200)
+@desc Update order with delivered details
+@required {orderId: str # Just Eat order identifier}
+@optional {Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)} # GeoLocation object containing latitude and longitude values., TimeStampWithUtcOffset: str(date-time) # This should represent the delivery detailed updated timestamp.}
+@returns(200) OK
 
 @endpoint PUT /orders/{orderId}/deliverystate/driverassigned
-@required {orderId: str}
-@optional {DriverName: str, DriverContactNumber: str, VehicleDetails: map{Vehicle: str, VehicleRegistration: str}, EtaAtRestaurant: str(date-time), EtaAtDeliveryAddress: str(date-time), Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, TimeStampWithUtcOffset: str(date-time)}
-@returns(200)
+@desc Update order with driver assigned details
+@required {orderId: str # Just Eat order identifier}
+@optional {DriverName: str # This should represent the driver's name., DriverContactNumber: str # This should represent the driver's contact number., VehicleDetails: map{Vehicle: str, VehicleRegistration: str}, EtaAtRestaurant: str(date-time) # This should represent the delivery partner's best guess at when the driver will arrive at the restaurant. In other words, it should not just contain the pick-up time initially requested by Just Eat., EtaAtDeliveryAddress: str(date-time) # This should represent the delivery partner's best guess at when the driver will arrive at the delivery address., Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)} # GeoLocation object containing latitude and longitude values., TimeStampWithUtcOffset: str(date-time) # This should represent the driver assigned timestamp.}
+@returns(200) OK
 
 @endpoint PUT /orders/{orderId}/deliverystate/driverlocation
-@required {orderId: str}
-@optional {EtaAtDeliveryAddress: str(date-time), EtaAtRestaurant: str(date-time), Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, TimeStampWithUtcOffset: str(date-time)}
-@returns(200)
+@desc Update the driver's current location
+@required {orderId: str # Just Eat order identifier}
+@optional {EtaAtDeliveryAddress: str(date-time) # This should represent the delivery partner's best guess at when the driver will arrive at the delivery address., EtaAtRestaurant: str(date-time) # This should represent the delivery partner's best guess at when the driver will arrive at the restaurant., Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)} # GeoLocation object containing latitude and longitude values., TimeStampWithUtcOffset: str(date-time) # This should represent the location updated timestamp.}
+@returns(200) OK
 
 @endpoint PUT /orders/{orderId}/deliverystate/driverunassigned
-@required {orderId: str}
-@optional {Comment: str, DriverContactNumber: str, DriverName: str, EtaAtDeliveryAddress: str(date-time), EtaAtRestaurant: str(date-time), Location:: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, Reason: str, TimeStampWithUtcOffset: str(date-time), UnassignedBy: str}
-@returns(200)
-@errors {400}
+@desc Update order with driver unassigned details
+@required {orderId: str # Just Eat order identifier}
+@optional {Comment: str # This should represent the comment on the unassignment., DriverContactNumber: str # This should represent the driver's contact number., DriverName: str # This should represent the driver's name., EtaAtDeliveryAddress: str(date-time) # This should represent the delivery partner's best guess at when the driver will arrive at the delivery address., EtaAtRestaurant: str(date-time) # This should represent the delivery partner's best guess at when the driver will arrive at the restaurant. In other words, it should not just contain the pick-up time initially requested by Just Eat., Location:: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)} # GeoLocation object containing latitude and longitude values., Reason: str # This should represent the delivery partner's reason for unassigning themselves from the order., TimeStampWithUtcOffset: str(date-time) # This should represent the driver unassigned timestamp., UnassignedBy: str # This should represent the actor who triggered unassignment.}
+@returns(200) OK
+@errors {400: Bad Request.}
 
 @endpoint PUT /orders/{orderId}/deliverystate/onitsway
+@desc Update order with driver on its way details
 @required {orderId: str}
-@optional {EstimatedArrivalTime: str(date-time), Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)}, TimeStampWithUtcOffset: str(date-time)}
-@returns(200)
+@optional {EstimatedArrivalTime: str(date-time) # This should represent the delivery partner's best guess at when the driver will arrive at the customer's address. In other words, it should not just contain the delivery time initially requested by Just Eat., Location: map{Latitude!: num(double), Longitude!: num(double), Speed: num(double), Heading: num(double), Accuracy: num(double)} # GeoLocation object containing latitude and longitude values., TimeStampWithUtcOffset: str(date-time) # This should represent the driver on its ways timestamp.}
+@returns(200) OK
 
 @endpoint PUT /orders/deliverystate/driverlocation
-@returns(200)
+@desc Update current driver locations (bulk upload)
+@returns(200) OK
 
 @endgroup
 
 @group driver-assigned-to-delivery
 @endpoint PUT /driver-assigned-to-delivery
+@desc Driver Assigned to Delivery
 @optional {TimeStamp: str(date-time), EstimatedPickupTime: str(date-time), EstimatedDeliveryTime: str(date-time), DriverName: str, DriverContactNumber: str, Event: str(DriverAssigned/DriverAtRestaurant/OnItsWay/AtDeliveryAddress/Delivered), OrderId: str}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group driver-at-delivery-address
 @endpoint PUT /driver-at-delivery-address
+@desc Driver at delivery address
 @optional {TimeStamp: str(date-time), EstimatedPickupTime: str(date-time), EstimatedDeliveryTime: str(date-time), DriverName: str, DriverContactNumber: str, Event: str(DriverAssigned/DriverAtRestaurant/OnItsWay/AtDeliveryAddress/Delivered), OrderId: str}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group driver-at-restaurant
 @endpoint PUT /driver-at-restaurant
+@desc Driver at restaurant
 @optional {TimeStamp: str(date-time), EstimatedPickupTime: str(date-time), EstimatedDeliveryTime: str(date-time), DriverName: str, DriverContactNumber: str, Event: str(DriverAssigned/DriverAtRestaurant/OnItsWay/AtDeliveryAddress/Delivered), OrderId: str}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group driver-has-delivered-order
 @endpoint PUT /driver-has-delivered-order
+@desc Driver has delivered order
 @optional {TimeStamp: str(date-time), EstimatedPickupTime: str(date-time), EstimatedDeliveryTime: str(date-time), DriverName: str, DriverContactNumber: str, Event: str(DriverAssigned/DriverAtRestaurant/OnItsWay/AtDeliveryAddress/Delivered), OrderId: str}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group driver-location
 @endpoint PUT /driver-location
+@desc Driver Location
 @optional {TimeStamp: str(date-time), OrderId: str, Location: map{Latitude!: num(double), Longitude!: num(double)}}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group driver-on-their-way-to-delivery-address
 @endpoint PUT /driver-on-their-way-to-delivery-address
+@desc Driver on their way to delivery address
 @optional {TimeStamp: str(date-time), EstimatedPickupTime: str(date-time), EstimatedDeliveryTime: str(date-time), DriverName: str, DriverContactNumber: str, Event: str(DriverAssigned/DriverAtRestaurant/OnItsWay/AtDeliveryAddress/Delivered), OrderId: str}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group order-is-ready-for-pickup
 @endpoint PUT /order-is-ready-for-pickup
+@desc Order ready for pickup
 @optional {Event: str, Timestamp: str(date-time)}
-@returns(200)
+@returns(200) Upon successful receipt of the event, delivery partners should return a 200 HTTP status code indicating acknowledgement of transmission.
 
 @endgroup
 
 @group order-requires-delivery-acceptance
 @endpoint PUT /order-requires-delivery-acceptance
-@returns(201)
+@desc Order requires delivery acceptance
+@returns(201) In the event of successful handling of the request, a 201 status code should be returned, indicating acknowledgement of transmission success.
 
 @endgroup
 
 @group orders
 @endpoint POST /orders
+@desc Create order
 @required {OrderReference: str, TotalPrice: num(double), Restaurant: any, Customer: map{Name!: str, Email: str, PhoneNumber!: str, DisplayPhoneNumber: str, Address!: map{Lines!: [str], City!: str, PostalCode!: str, GeoLocation: map}}, Fulfilment: map{Method!: str, DueDate!: str(date-time), DueAsap: bool}, Payment: map{PaidDate: str(date-time), Tips: [map{Value: num(money), Type: str}], Fees: [map{Value: num(money), Type: str}], Taxes: [map{Value!: num(money), Type!: str, Percentage!: num(double)}], Lines!: [map{Type!: str, Value: num(money), Paid: bool, LastCardDigits: str, ServiceFee: num(double)}]}, Items: [map{TotalPrice!: num(money), Reference!: str, Name!: str, Quantity!: int, UnitPrice: int(money), Items: [map{Reference: str, Name: str, Quantity: int, UnitPrice: int(money), Items: [map]}]}]}
-@optional {x-je-api-version: num=1, FriendlyOrderReference: str, CustomerNotes: map{NoteForRestaurant: str, NoteForDelivery: str}, IsTest: bool}
-@returns(201) {OrderId: str}
-@errors {400, 409}
+@optional {x-je-api-version: num=1 # The api version to use. Version 2.0 is the only available version., FriendlyOrderReference: str, CustomerNotes: map{NoteForRestaurant: str, NoteForDelivery: str}, IsTest: bool}
+@returns(201) {OrderId: str} # Created
+@errors {400: Bad Request - Request is for deprecated API version or has failed validation in some way - see response body for details, 409: Conflict - you've already told us about an order with this `OrderReference`}
 
 @endgroup
 
 @group order-ready-for-preparation-async
 @endpoint POST /order-ready-for-preparation-async
+@desc Order ready for preparation (async)
 @optional {OrderId: str, Currency: str, TotalPrice: num(money), Fulfilment: map{Method: str, CustomerDueDate: str(date-time), CustomerDueAsap: bool, PrepareFor: str(date-time), PreparationTime: str(timespan), Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}, PhoneNumber: str}, Payment: map{Lines: [map{Type: str, Value: num(money), Paid: bool}]}, Customer: map{Id: str, Name: str}, Items: [map{Reference: str, Name: str, Quantity: int, UnitPrice: int(money), Items: [map{Reference: str, Name: str, Quantity: int, UnitPrice: int(money), Items: [map]}]}], PriceBreakdown: map{Discount: num(money), Tips: num(money), Taxes: num(money), Items: num(money), Fees: map{Delivery: num(money), ServiceCharge: num(money), Other: num(money)}}, CustomerNotes: map, PlacedDate: str(date-time), Restaurant: map{Id: str, Reference: str, Name: str, Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}, PhoneNumber: str}, IsTest: bool}
-@returns(202)
-@errors {400}
+@returns(202) Upon successful receipt of this event, a `202` status code should be returned, indicating the request has been accepted. You should then later respond with the result of processing this request, via the [callback URL](#section/Async-Webhooks) endpoint.
+@errors {400: Should the initial validation of the order fail, return a `400` status code. NOTE: In this instance we do not also expect a failure callback via the async callback URL.}
 
 @endgroup
 
 @group order-ready-for-preparation-sync
 @endpoint POST /order-ready-for-preparation-sync
+@desc Order ready for preparation (sync)
 @optional {OrderId: str, Currency: str, TotalPrice: num(money), Fulfilment: map{Method: str, CustomerDueDate: str(date-time), CustomerDueAsap: bool, PrepareFor: str(date-time), PreparationTime: str(timespan), Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}, PhoneNumber: str}, Payment: map{Lines: [map{Type: str, Value: num(money), Paid: bool}]}, Customer: map{Id: str, Name: str}, Items: [map{Reference: str, Name: str, Quantity: int, UnitPrice: int(money), Items: [map{Reference: str, Name: str, Quantity: int, UnitPrice: int(money), Items: [map]}]}], PriceBreakdown: map{Discount: num(money), Tips: num(money), Taxes: num(money), Items: num(money), Fees: map{Delivery: num(money), ServiceCharge: num(money), Other: num(money)}}, CustomerNotes: map, PlacedDate: str(date-time), Restaurant: map{Id: str, Reference: str, Name: str, Address: map{Lines: [str], City: str, PostalCode: str, Geolocation: map}, PhoneNumber: str}, IsTest: bool}
-@returns(200)
+@returns(200) Respond with a 200 status code to indicate that you have received the notification.
 
 @endgroup
 
 @group send-to-pos-failed
 @endpoint POST /send-to-pos-failed
+@desc Send to POS failed
 @optional {OrderId: str}
-@returns(200)
+@returns(200) Respond with a 200 status code to indicate that you have received the notification.
 
 @endgroup
 
 @group restaurants
 @endpoint GET /restaurants/{tenant}/{restaurantId}/customerclaims
-@required {tenant: str, restaurantId: str}
-@optional {fromDate: str(date-time), toDate: str(date-time), limit: int(int32)=20, offset: int(int32), Accept: str}
-@returns(200) {claims: [map]}
-@errors {400, 401, 403, 500}
+@desc Get claims
+@required {tenant: str # Two letter code indicating the tenant, restaurantId: str # Just Eat restaurant identifier}
+@optional {fromDate: str(date-time) # Start date limiter, toDate: str(date-time) # End date limiter, limit: int(int32)=20 # Pagination limit, offset: int(int32) # Pagination offset, Accept: str # Indicates what type of response client understands and is also used for content type negotiation (if version is specified), otherwise tells the server to return the latest version}
+@returns(200) {claims: [map]} # Request succeeded
+@errors {400: Bad Request. Returned if the request is invalid e.g. has incorrect date limiter format, 401: Unauthorized. The client did not provide an authentication token or the token was invalid, 403: Forbidden. The client is not allowed to perform this action, 500: Internal Server Error}
 
 @endpoint GET /restaurants/{tenant}/{restaurantId}/customerclaims/{id}
-@required {tenant: str, restaurantId: str, id: str}
-@optional {Accept: str}
-@returns(200) {id: str, orderId: str, friendlyOrderReference: str, issueType: str, submittedDate: str(date-time), expirationDate: str(date-time), currency: str, totalClaimed: num, state: str, resolution: map?{decision: str, totalClaimedAccepted: num, resolvedDate: str(date-time), resolvedChannel: str}, restaurantResponse: map?{decision: str, items: [map]?, justification: map?{reason: str, comments: str?}}, affectedItems: [map]?}
-@errors {401, 403, 404, 500}
+@desc Get order claim
+@required {tenant: str # Two letter code indicating the tenant, restaurantId: str # Just Eat restaurant identifier, id: str # Claim identifier}
+@optional {Accept: str # Indicates what type of response client understands and is also used for content type negotiation (if version is specified), otherwise tells the server to return the latest version}
+@returns(200) {id: str, orderId: str, friendlyOrderReference: str, issueType: str, submittedDate: str(date-time), expirationDate: str(date-time), currency: str, totalClaimed: num, state: str, resolution: map?{decision: str, totalClaimedAccepted: num, resolvedDate: str(date-time), resolvedChannel: str}, restaurantResponse: map?{decision: str, items: [map]?, justification: map?{reason: str, comments: str?}}, affectedItems: [map]?} # Request succeeded
+@errors {401: Unauthorized. The client did not provide an authentication token or the token was invalid, 403: Forbidden. The client is not allowed to perform this action, 404: Not Found. Claim could not be found, 500: Internal Server Error}
 
 @endpoint POST /restaurants/{tenant}/{restaurantId}/customerclaims/{id}/restaurantresponse
-@required {tenant: str, restaurantId: str, id: str, Content-Type: str}
-@optional {decision: str(Accepted/Rejected/PartiallyAccepted), items: [map{id: str, decision: str}], justification: map{reason: str, comments: str}}
-@returns(201)
-@errors {400, 401, 403, 404, 409, 422, 500}
+@desc Submit a restaurant response for the claim
+@required {tenant: str # Two letter code indicating the tenant, restaurantId: str # Just Eat restaurant identifier, id: str # Claim identifier, Content-Type: str # Indicates the representation of the request body the client is sending (including version)}
+@optional {decision: str(Accepted/Rejected/PartiallyAccepted) # Decision on the claim, items: [map{id: str, decision: str}] # Decisions on the items of a claim, justification: map{reason: str, comments: str} # The reason of the claim rejection and optional comments from the restaurant}
+@returns(201) Request succeeded. Your response to the claim has been submitted
+@errors {400: Bad Request. Returned if the request is invalid e.g. decision value is incorrect, 401: Unauthorized. The client did not provide an authentication token or the token was invalid, 403: Forbidden. The client is not allowed to perform this action, 404: Not Found. Claim could not be found, 409: Conflict. The claim you are attempting to resolve is has been resolved, 422: Unprocessable. The claim you are attempting to update does not contain the items from the request, 500: Internal Server Error}
 
 @endpoint PUT /restaurants/{tenant}/{restaurantId}/customerclaims/{id}/restaurantresponse/justification
-@required {tenant: str, restaurantId: str, id: str, Content-Type: str}
-@optional {reason: str(AlreadyRefunded/ItemReplaced/PartialRefundRequired/WasNotMissing/WillRedeliver/OrderWasHot/OrderWasOnTime/OrderWasPacked/FoodWasIntact/AddExtraItem/Other), comments: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 500}
+@desc Add reason and comments to the response
+@required {tenant: str # Two letter code indicating the tenant, restaurantId: str # Just Eat restaurant identifier, id: str # Claim identifier, Content-Type: str # Indicates the representation of the request body the client is sending (including version)}
+@optional {reason: str(AlreadyRefunded/ItemReplaced/PartialRefundRequired/WasNotMissing/WillRedeliver/OrderWasHot/OrderWasOnTime/OrderWasPacked/FoodWasIntact/AddExtraItem/Other) # One of the predefined reasons, comments: str # Comment from the restaurant owner in case they rejected at least one of the items and want to type their own rejection reason}
+@returns(204) Request succeeded. Justification was successfully submitted
+@errors {400: Bad Request. Returned if the request is invalid e.g. reason doesn't match any of the predefined values, 401: Unauthorized. The client did not provide an authentication token or the token was invalid, 403: Forbidden. The client is not allowed to perform this action, 404: Not Found. Claim could not be found, 409: Conflict. The claim you are attempting to update is older than the current claim. Fetch the last copy of the entity and try the request again., 500: Internal Server Error}
 
 @endgroup
 
 @group {tenant}
 @endpoint DELETE /v1/{tenant}/restaurants/{id}/event/offline
-@required {tenant: str, id: str, X-JE-Requester: str, X-JE-User-Role: str}
-@returns(200)
-@returns(202)
-@errors {400, 500}
+@desc Delete Offline Event
+@required {tenant: str # The identifier for the tenant, id: str # The identifier for the restaurant, X-JE-Requester: str # Name of the user or system creating the event. Used for auditing purposes, X-JE-User-Role: str # The role the user or system creating the event has assumed.}
+@returns(200) No Events to Delete
+@returns(202) Request Succeeded
+@errors {400: Bad Request, 500: Server Error}
 
 @endpoint POST /v1/{tenant}/restaurants/event/offline
-@required {tenant: str, X-JE-Requester: str, X-JE-User-Role: str, restaurantIds: str, name: str, reason: str, startDate: str(date-time), allowRestaurantOverride: bool}
-@optional {endDate: str(date-time), duration: str, legacyTempOfflineType: str(Unset/None/TempOffline/ClosedToday/ClosedDueToEvent/FailedJctConnection/NoTrOverride/IgnoredOrders)=ClosedDueToEvent, category: str}
-@returns(201) {restaurantEventId: str, restaurantIds: str}
-@errors {400, 500}
+@desc Create Offline Event
+@required {tenant: str # The identifier for the tenant, X-JE-Requester: str # Name of the user or system creating the event. Used for auditing purposes, X-JE-User-Role: str, restaurantIds: str # A comma separated list of the IDs of the restaurants to include in the offline event. No limit to the number accepted by the endpoint, but unexpected behaviour mat occur at more than 500 IDs., name: str # Name of the offline event to be created., reason: str # The reason for creating the offline event., startDate: str(date-time) # ISO 8601 format of the start datetime of the offline event., allowRestaurantOverride: bool # Whether a restaurant should be allowed to delete this event, regardless of who raised it.}
+@optional {endDate: str(date-time) # ISO 8601 format of the end datetime of the offline event., duration: str # Either a timespan in the HH:mm format or `untilTomorrow` (this will be the next day at 4:30 am +/- 10 minutes local time). Note if both duration and `endDate` are specified duration takes precedence., legacyTempOfflineType: str(Unset/None/TempOffline/ClosedToday/ClosedDueToEvent/FailedJctConnection/NoTrOverride/IgnoredOrders)=ClosedDueToEvent # - `Unset` : Legacy value meaning online. - `None` : Legacy value meaning online. - `TempOffline` : The restaurant will go temporarily offline, typically for an undetermined amount of time (no end date). - `ClosedToday` : The restaurant will closed for the day and the event will end the next morning. - `ClosedDueToEvent` : The restaurant will go offline for an event (e.g. a holiday), these events will typically have an end time. - `FailedJctConnection` : The restaurant will go offline due to the POS device losing connection. - `NoTrOverride` : The restaurant will go offline for another reason that the restaurant cannot override. - `IgnoredOrders` : The restaurant will go offline due to ignoring orders., category: str # A free text category used to group multiple events. This field is not intended to be used by clients.}
+@returns(201) {restaurantEventId: str, restaurantIds: str} # Created
+@errors {400: Bad Request, 500: Server Error}
 
 @endgroup
 
 @group restaurant-offline-status
 @endpoint PUT /restaurant-offline-status
-@optional {Tenant: str(enum)(au/dk/es/ie/it/no/uk/nz), RestaurantId: str, IsOffline: bool, AllowRestaurantOverride: bool}
-@returns(200)
+@desc Restaurant Offline Status
+@optional {Tenant: str(enum)(au/dk/es/ie/it/no/uk/nz) # The two letter country code for the market in which the restaurant operates., RestaurantId: str # The unique identifier of the restaurant that has their offline status changed., IsOffline: bool # Represents the current offline status of the restaurant., AllowRestaurantOverride: bool # Whether a restaurant should be allowed to reverse this offline status change through calls to the Restaurant Events endpoints.}
+@returns(200) OK
 
 @endgroup
 
 @group restaurant-online-status
 @endpoint PUT /restaurant-online-status
-@optional {Tenant: str(enum)(au/dk/es/ie/it/no/uk/nz), RestaurantId: str, IsOffline: bool, AllowRestaurantOverride: bool}
-@returns(200)
+@desc Restaurant Online Status
+@optional {Tenant: str(enum)(au/dk/es/ie/it/no/uk/nz) # The two letter country code for the market in which the restaurant operates., RestaurantId: str # The unique identifier of the restaurant that has their offline status changed., IsOffline: bool # Represents the current offline status of the restaurant., AllowRestaurantOverride: bool # Whether a restaurant should be allowed to reverse this offline status change through calls to the Restaurant Events endpoints.}
+@returns(200) OK
 
 @endgroup
 
 @group orders
 @endpoint POST /orders/{tenant}/{orderId}/restaurantqueries/compensation
-@required {tenant: str, orderId: str, Authorization: str}
-@optional {ReasonCode: str(NotSet/BeingPrepared/OnItsWay/Delivered/Unknown), Comments: str}
-@returns(201)
-@errors {400, 401, 403, 404, 409, 500}
+@desc Create Compensation requests
+@required {tenant: str # Request tenant., orderId: str # Id for the order., Authorization: str # Containing a partner issued API key e.g. `JE-API-KEY ABCDE123456789`}
+@optional {ReasonCode: str(NotSet/BeingPrepared/OnItsWay/Delivered/Unknown) # The reason why compensation is due, Comments: str # Any other comments to add to the request}
+@returns(201) Created
+@errors {400: Bad Request - returned if providing invalid data such as an unacceptable reason code, 401: Unauthorized - consumer has not provided the necessary credentials, 403: Forbidden - credentials provided by consumer do not allow access to this resource, 404: Resource not found, 409: Conflict - returned if tried to claim compensation for an order that is not eligible, 500: Internal Server Error}
 
 @endgroup
 
 @group order-eligible-for-restaurant-compensation
 @endpoint POST /order-eligible-for-restaurant-compensation
-@optional {IsEligible: bool, OrderId: str}
-@returns(200)
+@desc Order Eligible For Restaurant Compensation
+@optional {IsEligible: bool # Flag that informs if the cancelled order is eligible for compensation, OrderId: str # Id for the order}
+@returns(200) Respond with a 200 status code to indicate that you have received the notification.
 
 @endgroup
 
 @group restaurants
 @endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue
-@required {tenant: str, restaurantId: str}
-@returns(200) {restaurantId: str, name: str, description: str, currency: str}
-@errors {404, 500}
+@desc Get product catalogue
+@required {tenant: str # Request tenant., restaurantId: str # The restaurant Id.}
+@returns(200) {restaurantId: str, name: str, description: str, currency: str} # Request succeeded.
+@errors {404: No product catalogue found for given tenant and restaurantId., 500: Internal Server Error}
 
 @endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/availabilities
-@required {tenant: str, restaurantId: str, limit: int(int32)}
-@optional {after: str}
-@returns(200)
-@errors {400, 404, 500}
+@desc Get all availabilities
+@required {tenant: str # Request tenant., restaurantId: str # The restaurant Id., limit: int(int32) # The maximum number of availabilities to fetch.}
+@optional {after: str # Value representing a cursor - position to use when retrieving the next page of data. If provided, the value of this parameter must be URL encoded.}
+@returns(200) Request succeeded.
+@errors {400: Bad request., 404: No availabilities found for given tenant and restaurantId., 500: Internal Server Error}
 
 @endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/categories
-@required {tenant: str, restaurantId: str, limit: int(int32)}
-@optional {after: str}
-@returns(200)
-@errors {400, 404, 500}
+@desc Get all categories
+@required {tenant: str # Request tenant., restaurantId: str # The restaurant Id., limit: int(int32) # The maximum number of categories to fetch.}
+@optional {after: str # Value representing a cursor - position to use when retrieving the next page of data. If provided, the value of this parameter must be URL encoded.}
+@returns(200) Request succeeded.
+@errors {400: Bad request., 404: No availabilities found for given tenant and restaurantId., 500: Internal Server Error}
 
 @endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/categories/{categoryId}/items
-@required {tenant: str, restaurantId: str, categoryId: str, limit: int(int32)}
-@optional {after: str}
-@returns(200)
-@errors {400, 404, 500}
+@desc Get all category item IDs
+@required {tenant: str # Request tenant., restaurantId: str # The restaurant ID., categoryId: str # The category ID., limit: int(int32) # The maximum number of item IDs to fetch.}
+@optional {after: str # Value representing a cursor - position to use when retrieving the next page of data. If provided, the value of this parameter must be URL encoded.}
+@returns(200) Request succeeded.
+@errors {400: Bad request., 404: No availabilities found for given tenant and restaurantId., 500: Internal Server Error}
 
 @endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/items
-@required {tenant: str, restaurantId: str, limit: int(int32)}
-@optional {after: str}
-@returns(200)
-@errors {400, 404, 500}
+@desc Get all menu items
+@required {tenant: str # Request tenant., restaurantId: str # The restaurant Id., limit: int(int32) # The maximum number of menu items to fetch.}
+@optional {after: str # Value representing a cursor - position to use when retrieving the next page of data. If provided, the value of this parameter must be URL encoded.}
+@returns(200) Request succeeded.
+@errors {400: Bad request., 404: No menu items found for given tenant and restaurantId., 500: Internal Server Error}
 
 @endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/items/{itemId}/dealgroups
-@required {tenant: str, restaurantId: str, itemId: str, limit: int(int32)}
-@optional {after: str}
-@returns(200)
-@errors {400, 404, 500}
+@desc Get all menu item deal groups
+@required {tenant: str # Request tenant, restaurantId: str # The restaurant ID, itemId: str # The menu item ID, limit: int(int32) # The maximum number of menu items to fetch.}
+@optional {after: str # Value representing a cursor - position to use when retrieving the next page of data. If provided, the value of this parameter must be URL encoded.}
+@returns(200) Request succeeded.
+@errors {400: Bad request., 404: No deal groups found for given `tenant`, `restaurantId` and `itemId`., 500: Internal Server Error}
 
 @endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/items/{itemId}/dealgroups/{dealGroupId}/dealitemvariations
-@required {tenant: str, restaurantId: str, itemId: str, dealGroupId: str, limit: int(int32)}
-@optional {after: str}
-@returns(200)
-@errors {400, 404, 500}
+@desc Get all deal item variations for a deal group
+@required {tenant: str # Request tenant, restaurantId: str # The restaurant ID, itemId: str # The menu item ID, dealGroupId: str # The menu item ID, limit: int(int32) # The maximum number of menu items to fetch.}
+@optional {after: str # Value representing a cursor - position to use when retrieving the next page of data. If provided, the value of this parameter must be URL encoded.}
+@returns(200) Request succeeded.
+@errors {400: Bad request., 404: No deal item variations found for given `tenant`, `restaurantId`, `itemId` and `dealGroupId`., 500: Internal Server Error}
 
 @endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/items/{itemId}/modifiergroups
-@required {tenant: str, restaurantId: str, itemId: str, limit: int(int32)}
-@optional {after: str}
-@returns(200)
-@errors {400, 404, 500}
+@desc Get all menu item modifier groups
+@required {tenant: str # Request tenant, restaurantId: str # The restaurant ID, itemId: str # The menu item ID, limit: int(int32) # The maximum number of menu items to fetch.}
+@optional {after: str # Value representing a cursor - position to use when retrieving the next page of data. If provided, the value of this parameter must be URL encoded.}
+@returns(200) Request succeeded.
+@errors {400: Bad request., 404: No modifier groups found for given `tenant`, `restaurantId` and `itemId`., 500: Internal Server Error}
 
 @endpoint GET /restaurants/{tenant}/{restaurantId}/catalogue/items/{itemId}/variations
-@required {tenant: str, restaurantId: str, itemId: str, limit: int(int32)}
-@optional {after: str}
-@returns(200)
-@errors {400, 404, 500}
+@desc Get all menu item variations
+@required {tenant: str # Request tenant, restaurantId: str # The restaurant ID, itemId: str # The menu item ID, limit: int(int32) # The maximum number of menu items to fetch.}
+@optional {after: str # Value representing a cursor - position to use when retrieving the next page of data. If provided, the value of this parameter must be URL encoded.}
+@returns(200) Request succeeded.
+@errors {400: Bad request., 404: No variations found for given `tenant`, `restaurantId` and `itemId`., 500: Internal Server Error}
 
 @endpoint GET /restaurants/{tenant}/{restaurantId}/fees
-@required {tenant: str, restaurantId: str}
-@optional {User-Agent: str}
-@returns(200) {bagFee: map{description: str, serviceTypes: map{default: map{amount: num(integer)}, collection: map{amount: num(integer)}, delivery: map{amount: num(integer)}}}}
-@errors {400, 401, 403, 404, 500}
+@desc Get Restaurant Fees
+@required {tenant: str # A two-character country code for which country the restaurant resides in., restaurantId: str # A unique identifier for a restaurant}
+@optional {User-Agent: str # Request header string that allows the server to identify the application making the request.}
+@returns(200) {bagFee: map{description: str, serviceTypes: map{default: map{amount: num(integer)}, collection: map{amount: num(integer)}, delivery: map{amount: num(integer)}}}} # Success
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /restaurants/{tenant}/{restaurantId}/fees
-@required {tenant: str, restaurantId: str}
-@optional {User-Agent: str, bagFee: map{description: str, serviceTypes: map{default: map, collection: map, delivery: map}}}
-@returns(200) {bagFee: map{description: str, serviceTypes: map{default: map{amount: num(integer)}, collection: map{amount: num(integer)}, delivery: map{amount: num(integer)}}}}
-@errors {400, 401, 403, 404, 500}
+@desc Create or Update Restaurant Fees
+@required {tenant: str # A two-character country code for which country the restaurant resides in., restaurantId: str # A unique identifier for a restaurant}
+@optional {User-Agent: str # Request header string that allows the server to identify the application making the request., bagFee: map{description: str, serviceTypes: map{default: map, collection: map, delivery: map}} # The object which encapsulates a Fee}
+@returns(200) {bagFee: map{description: str, serviceTypes: map{default: map{amount: num(integer)}, collection: map{amount: num(integer)}, delivery: map{amount: num(integer)}}}} # Success
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
+@example_request {"bagFee":{"description":"A charge for bags in delivery","serviceTypes":{"default":{"amount":0},"collection":{"amount":5},"delivery":{"amount":10}}}}
 
 @endpoint PUT /restaurants/{tenant}/{restaurantId}/menu
-@required {tenant: str, restaurantId: str, Authorization: str}
-@optional {Content-Type: str}
-@returns(202) {correlationId: str}
-@errors {400, 401, 403, 500}
+@desc Create or update a menu
+@required {tenant: str # The tenant of the restaurant in which to put a menu, restaurantId: str # The restaurant identifier to associated with the menu, Authorization: str # Containing a partner issued API key e.g. `JE-API-KEY ABCDE123456789`}
+@optional {Content-Type: str # Used to denote the version of the menu payload within the body, will default to latest if not supplied e.g. application/=1.0}
+@returns(202) {correlationId: str} # Accepted
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 500: Server Error}
 
 @endpoint GET /restaurants/{tenant}/{restaurantId}/menu
-@required {tenant: str, restaurantId: str, Authorization: str}
-@errors {301, 400, 401, 403, 500}
+@desc Get the latest version of the restaurant's full menu
+@required {tenant: str # The tenant of the restaurant in which to put a menu, restaurantId: str # The restaurant identifier to associated with the menu, Authorization: str # Containing a partner issued API key e.g. Bearer ABCDE123456789}
+@errors {301: Temporary Redirect. The redirect will contain the signed URL that the client needs to access the resource, 400: Bad Request. We were unable to process the request due to data you sent us, 401: Unauthorized, 403: Forbidden, 500: Server Error}
 
 @endpoint GET /restaurants/{tenant}/{restaurantId}/ordertimes
-@required {tenant: str, restaurantId: str, Authorization: str}
-@returns(200)
-@errors {401, 403, 500}
+@desc Get the restaurant's delivery and collection lead times
+@required {tenant: str # A valid country code, e.g. "uk"., restaurantId: str # The restaurant Id., Authorization: str # OAuth2 token issued for logged in restaurant}
+@returns(200) Success
+@errors {401: Unauthorized. The client did not provide an authentication token or the token was invalid, 403: Forbidden - the restaurant still uses deprecated approach of Lunch and Night menus, 500: Internal Server Error}
 
 @endpoint PUT /restaurants/{tenant}/{restaurantId}/ordertimes/{dayOfWeek}/{serviceType}
-@required {tenant: str, restaurantId: str, dayOfWeek: str(Sunday/Monday/Tuesday/Wednesday/Thursday/Friday/Saturday), serviceType: str(Delivery/Collection), Authorization: str}
-@optional {lowerBoundMinutes: int(int32), upperBoundMinutes: int(int32)}
-@returns(204)
-@errors {400, 401, 403, 500}
+@desc Update the restaurant's delivery and collection lead times
+@required {tenant: str # A valid country code, e.g. "uk"., restaurantId: str # The restaurant Id., dayOfWeek: str(Sunday/Monday/Tuesday/Wednesday/Thursday/Friday/Saturday) # Day of week for order time, serviceType: str(Delivery/Collection) # Service type of the order time, Authorization: str # OAuth2 token issued for logged in restaurant OR API token for third party, in the format `Bearer {api_key}`}
+@optional {lowerBoundMinutes: int(int32) # Order time lower bound value, in minutes., upperBoundMinutes: int(int32) # Order time upper bound value, in minutes.}
+@returns(204) Success
+@errors {400: Bad Request, 401: Unauthorized. The client did not provide an authentication token or the token was invalid, 403: Forbidden. The client is not allowed to perform this action, 500: Internal Server Error}
 
 @endpoint GET /restaurants/{tenant}/{restaurantId}/servicetimes
-@required {tenant: str, restaurantId: str}
-@returns(200) {serviceTimes: map}
-@errors {403, 404, 500}
+@desc Get service times
+@required {tenant: str # Two letter code of restaurant's tenant, restaurantId: str # The restaurant identifier}
+@returns(200) {serviceTimes: map} # The restaurant's service times
+@errors {403: Forbidden, 404: Not found, 500: Internal Server Error}
 
 @endpoint PUT /restaurants/{tenant}/{restaurantId}/servicetimes
-@required {tenant: str, restaurantId: str}
-@optional {serviceTimes: map}
-@returns(200) {serviceTimes: map}
-@errors {400, 403, 500}
+@desc Create or update service times
+@required {tenant: str # Two letter code of restaurant's tenant, restaurantId: str # The restaurant identifier}
+@optional {serviceTimes: map # The desired times at which a restaurant is in service}
+@returns(200) {serviceTimes: map} # The new service times
+@errors {400: Bad request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /restaurants/bylatlong
-@required {Authorization: str, latitude: num, longitude: num}
-@optional {Accept-Tenant: str, cuisine: str, restaurantName: str, brandName: str}
-@returns(200)
-@errors {400, 401, 500}
+@desc Get restaurants by location
+@required {Authorization: str # OAuth2 token issued for logged in consumer or API key issued to partner, latitude: num # Filter search results to only include restaurants that deliver to the specified location, longitude: num # Filter search results to only include restaurants that deliver to the specified location}
+@optional {Accept-Tenant: str # A valid country code, e.g. "uk". Filter search results to only include restaurants for the specified country. Required when using OAuth for authentication., cuisine: str # Filter search results to only include restaurants that offer the specified cuisine, restaurantName: str # Filter search results to only include restaurants that have a name that matches the specified value, brandName: str # Filter search results to only include restaurants of the specified brand}
+@returns(200) OK
+@errors {400: Bad Request, 401: Unauthorized, 500: Server Error}
 
 @endpoint GET /restaurants/bypostcode/{postcode}
-@required {postcode: str}
-@optional {Authorization: str, Accept-Tenant: str, cuisine: str, restaurantName: str, brandName: str}
-@returns(200)
-@errors {400, 401, 500}
+@desc Get restaurants by postcode
+@required {postcode: str # Filter search results to only include restaurants that deliver to the specified postcode}
+@optional {Authorization: str # OAuth2 token issued for logged in consumer or API key issued to partner, Accept-Tenant: str # A valid country code, e.g. "uk". Filter search results to only include restaurants for the specified country. Required when using OAuth for authentication., cuisine: str # Filter search results to only include restaurants that offer the specified cuisine, restaurantName: str # Filter search results to only include restaurants that have a name that matches the specified value, brandName: str # Filter search results to only include restaurants of the specified brand}
+@returns(200) OK
+@errors {400: Bad Request, 401: Unauthorized, 500: Server Error}
 
 @endpoint PUT /restaurants/driver/eta
-@returns(202) {ignoredRestaurantIds: [str]}
-@errors {400}
+@desc Set ETA for pickup
+@returns(202) {ignoredRestaurantIds: [str]} # Update will take effect shortly
+@errors {400: There was something invalid in your request - check response body for details}
 
 @endgroup
 
 @group menu-ingestion-complete
 @endpoint POST /menu-ingestion-complete
-@optional {tenant: str(enum)(au/dk/es/ie/it/no/uk/nz), restaurantId: str, timestamp: str(date-time), result: str(enum)(success/fail), correlationId: str, fault: map{id: str, errors: [map{code: str, description: str}]}}
-@returns(200)
+@desc Menu ingestion complete
+@optional {tenant: str(enum)(au/dk/es/ie/it/no/uk/nz) # Country code for the market the restaurant is in, restaurantId: str # The Just Eat restaurant ID, timestamp: str(date-time) # The ISO-8601 datetime at which the menu ingestion completed, result: str(enum)(success/fail) # The result of the menu ingestion process, correlationId: str # The ID of the execution which has been completed, fault: map{id: str, errors: [map{code: str, description: str}]} # Details of the fault which caused the menu ingestion to fail. This is only present if menu ingestion did not complete successfully}
+@returns(200) OK
 
 @endgroup
 
 @group order-time-updated
 @endpoint POST /order-time-updated
-@optional {restaurantId: str, serviceType: str(enum)(Delivery/Collection), dayOfWeek: str(enum)(Sunday/Monday/Tuesday/Wednesday/Thursday/Friday/Saturday), lowerBoundMinutes: int(int32), upperBoundMinutes: int(int32)}
-@returns(200)
+@desc Order time updated
+@optional {restaurantId: str # The Just Eat restaurant ID, serviceType: str(enum)(Delivery/Collection) # Service type of the order time., dayOfWeek: str(enum)(Sunday/Monday/Tuesday/Wednesday/Thursday/Friday/Saturday) # The day of the week that has been updated., lowerBoundMinutes: int(int32) # Order time lower bound value, in minutes., upperBoundMinutes: int(int32) # Order time upper bound value, in minutes.}
+@returns(200) OK
 
 @endgroup
 
 @group search
 @endpoint GET /search/autocomplete/{tenant}
-@required {tenant: str, searchTerm: str, latlong: [num(decimal)]}
-@optional {limit: num(integer)}
-@returns(200) {terms: [map]}
-@errors {400, 401, 500, 503}
+@desc Get auto-completed search terms
+@required {tenant: str # A valid country code, e.g. "uk"., searchTerm: str # User's search term - at least one character required, latlong: [num(decimal)] # The latitude and longitude coordinates of the location in which to search. Specify the coordinates as latitude,longitude.}
+@optional {limit: num(integer) # Limit the number of auto-completed terms returned by the API. Defaults to 7. Valid values 1 - 10}
+@returns(200) {terms: [map]} # Success
+@errors {400: Bad Request, 401: Unauthorized, 500: Internal Server Error, 503: Service Unavailable}
 
 @endpoint GET /search/restaurants/{tenant}
-@required {tenant: str, searchTerm: str, latlong: [num(decimal)]}
-@optional {limit: num(integer)}
-@returns(200) {restaurants: [map]}
-@errors {400, 401, 422, 500, 503}
+@desc Search restaurants
+@required {tenant: str # A valid country code, e.g. "uk"., searchTerm: str # User's search term., latlong: [num(decimal)] # The latitude and longitude coordinates of the location in which to search. Specify the coordinates as latitude,longitude.}
+@optional {limit: num(integer) # Limit the number of restaurants returned by the API. Valid values are numbers between 1 and 500. If not provided, the limit defaults to 300.}
+@returns(200) {restaurants: [map]} # Success
+@errors {400: Bad Request, 401: Unauthorized, 422: Unprocessable Entity - search term rejected, 500: Internal Server Error, 503: Service Unavailable}
 
 @endgroup
 

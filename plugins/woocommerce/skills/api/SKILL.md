@@ -189,87 +189,131 @@ https://example-woocommerce-shop.com/wp-json/wc/v3
 | GET | /system_status/tools/{id} | This API lets you retrieve and view a specific system status tool by ID. |
 | PUT | /system_status/tools/{id} | This API helps you to run a system status tool. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new customer account?" -> POST /customers
-- "Show me all orders from the last month" -> GET /orders (with `after` and `before` params)
-- "What products are currently on sale?" -> GET /products (with `on_sale=true`)
-- "How do I issue a refund for an order?" -> POST /orders/{orderId}/refunds
-- "What are my top selling products?" -> GET /reports/top_sellers
-- "How do I apply a coupon code to restrict by email?" -> POST /coupons (with `email_restrictions`)
-- "How do I update a product's stock quantity?" -> PUT /products/{productId} (set `manage_stock` and `stock_quantity`)
-- "How do I add a note to a customer's order?" -> POST /orders/{orderId}/notes
-- "How do I set up shipping zones and methods?" -> POST /shipping/zones then POST /shipping/zones/{id}/methods
-- "What payment gateways are enabled?" -> GET /payment_gateways
-- "How do I bulk update product prices?" -> POST /products/batch (with `update` array)
-- "How do I add variations to a variable product?" -> POST /products/{productId}/variations
-- "How do I check my store's system health?" -> GET /system_status
-- "How do I create a product category with an image?" -> POST /products/categories (with `image` object)
-- "How do I find a customer by email address?" -> GET /customers (with `email` param)
-
-## Response Tips
-
-- **List endpoints** (GET /products, /orders, /customers): Paginated via `page` and `per_page` (max 100). Check `X-WP-Total` and `X-WP-TotalPages` response headers to know total count and whether more pages exist.
-- **Single resource endpoints** (GET /products/{id}, /orders/{id}): Return the full object directly (not wrapped in an array). A 404 means the ID does not exist or the resource was trashed.
-- **Batch endpoints** (POST /*/batch): Return `{create: [], update: [], delete: []}` -- each array contains full objects or error objects per item. Partial failures are possible; check each entry individually.
-- **Order financials**: Monetary fields (`total`, `discount_total`, `shipping_total`, `tax`) are returned as strings, not numbers. Always parse to float for calculations.
-- **Nested objects**: `billing`/`shipping` are inline maps on customers and orders. `line_items`, `tax_lines`, `shipping_lines`, `fee_lines`, `coupon_lines` are arrays nested inside order objects.
-- **Delete endpoints**: Require `force=true` for permanent deletion. Without it, products and orders are trashed (soft delete) rather than removed.
-
-## Anomaly Flags
-
-- **401 on any endpoint**: Auth credentials are invalid or missing. Surface immediately -- all subsequent calls will also fail. Verify Basic auth header format (`consumer_key:consumer_secret` base64-encoded).
-- **Coupon nearing usage limit**: When `usage_count` is close to `usage_limit`, flag that the coupon will stop working soon.
-- **Coupon expiration**: When `date_expires` is within 7 days or has passed, warn the user the coupon is expiring or already expired.
-- **Stock status**: Products with `stock_status: "outofstock"` or `stock_quantity <= 0` when `manage_stock` is true should be surfaced during order creation workflows.
-- **Order with refunds**: If an order has a non-empty `refunds` array, flag it as partially or fully refunded before further operations.
-- **Disabled payment gateways**: If GET /payment_gateways returns all gateways with `enabled: false`, flag that no payment method is active.
-- **System status warnings**: Flag database issues, outdated PHP/WP versions, or security concerns found in GET /system_status `environment` and `security` maps.
-- **Batch partial failures**: When a batch response contains error objects mixed with success objects, surface the failures explicitly rather than reporting overall success.
-
-## Playbook
-
-### 1. Create a product with variations
-
-1. POST /products with `type: "variable"`, `name`, `regular_price`, and `attributes` (e.g., `[{name: "Size", options: ["S","M","L"], variation: true, visible: true}]`)
-2. Note the returned `id` (the parent product ID)
-3. POST /products/{productId}/variations for each combination, setting `regular_price` and `attributes` (e.g., `[{name: "Size", option: "S"}]`)
-4. Verify with GET /products/{productId}/variations to confirm all variations exist
-5. Optionally use POST /products/{productId}/variations/batch to create multiple variations in one call
-
-### 2. Process an order and issue a partial refund
-
-1. GET /orders/{orderId} to review the order details, `line_items`, and `total`
-2. PUT /orders/{orderId} with `status: "processing"` to mark it as being handled
-3. When ready to refund a specific line item, POST /orders/{orderId}/refunds with `amount` (partial total) and `line_items` array specifying the `id`, `quantity`, and `total` to refund
-4. Set `api_refund: true` if the payment gateway should process the refund automatically
-5. GET /orders/{orderId}/refunds to confirm the refund was recorded
-
-### 3. Set up shipping zones with methods
-
-1. POST /shipping/zones with `name` (e.g., "Domestic") and `order`
-2. Note the returned zone `id`
-3. PUT /shipping/zones/{id}/locations with an array of location objects (`code`, `type: "country"` or `"state"` or `"postcode"`)
-4. POST /shipping/zones/{id}/methods with `method_id` (e.g., `"flat_rate"`, `"free_shipping"`, `"local_pickup"`) and configure via `settings`
-5. GET /shipping/zones/{id}/methods to verify the methods are enabled
-
-### 4. Bulk import customers with batch operations
-
-1. Prepare customer data arrays (max 100 per batch call)
-2. POST /customers/batch with `create` array containing customer objects (each with `email`, `first_name`, `last_name`, `billing`, `shipping`)
-3. Inspect the response `create` array -- each entry is either a full customer object (success) or an error object with `code` and `message`
-4. For any failures (e.g., duplicate email), fix the data and retry with a second batch call
-5. GET /customers with `orderby: "registered_date"` and `order: "desc"` to verify the imports
-
-### 5. Create a time-limited sale with coupon
-
-1. POST /products/batch with `update` array to set `sale_price` and `date_on_sale_from`/`date_on_sale_to` on target products
-2. POST /coupons with `code`, `discount_type: "percent"`, `amount`, `date_expires`, and optionally `product_ids` to restrict to sale items
-3. Set `usage_limit` and `usage_limit_per_user` to control redemption caps
-4. GET /products with `on_sale: true` to verify sale prices are active
-5. After the sale ends, POST /products/batch with `update` to clear `sale_price` fields, and DELETE /coupons/{couponId} to remove the coupon
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a customer?" -> POST /customers
+- "Search customers?" -> GET /customers
+- "Get customer details?" -> GET /customers/{customerId}
+- "Update a customer?" -> PUT /customers/{customerId}
+- "Delete a customer?" -> DELETE /customers/{customerId}
+- "Create a batch?" -> POST /customers/batch
+- "Create a product?" -> POST /products
+- "Search products?" -> GET /products
+- "Get product details?" -> GET /products/{productId}
+- "Update a product?" -> PUT /products/{productId}
+- "Delete a product?" -> DELETE /products/{productId}
+- "Create a duplicate?" -> POST /products/{productId}/duplicate
+- "Create a batch?" -> POST /products/batch
+- "Create a variation?" -> POST /products/{productId}/variations
+- "Search variations?" -> GET /products/{productId}/variations
+- "Get variation details?" -> GET /products/{productId}/variations/{variationId}
+- "Update a variation?" -> PUT /products/{productId}/variations/{variationId}
+- "Delete a variation?" -> DELETE /products/{productId}/variations/{variationId}
+- "Create a batch?" -> POST /products/{productId}/variations/batch
+- "List all attributes?" -> GET /products/attributes
+- "Create a attribute?" -> POST /products/attributes
+- "Get attribute details?" -> GET /products/attributes/{attributeId}
+- "Update a attribute?" -> PUT /products/attributes/{attributeId}
+- "Delete a attribute?" -> DELETE /products/attributes/{attributeId}
+- "Create a batch?" -> POST /products/attributes/batch
+- "Search terms?" -> GET /products/attributes/{attributeId}/terms
+- "Create a term?" -> POST /products/attributes/{attributeId}/terms
+- "Get term details?" -> GET /products/attributes/{attributeId}/terms/{termId}
+- "Update a term?" -> PUT /products/attributes/{attributeId}/terms/{termId}
+- "Delete a term?" -> DELETE /products/attributes/{attributeId}/terms/{termId}
+- "Create a batch?" -> POST /products/attributes/{attributeId}/terms/batch
+- "Create a category?" -> POST /products/categories
+- "Search categories?" -> GET /products/categories
+- "Get category details?" -> GET /products/categories/{categoryId}
+- "Update a category?" -> PUT /products/categories/{categoryId}
+- "Delete a category?" -> DELETE /products/categories/{categoryId}
+- "Create a batch?" -> POST /products/categories/batch
+- "Search shipping-classes?" -> GET /products/shipping-classes
+- "Create a shipping-class?" -> POST /products/shipping-classes
+- "Get shipping-class details?" -> GET /products/shipping-classes/{classId}
+- "Update a shipping-class?" -> PUT /products/shipping-classes/{classId}
+- "Delete a shipping-class?" -> DELETE /products/shipping-classes/{classId}
+- "Create a batch?" -> POST /products/shipping-classes/batch
+- "Create a tag?" -> POST /products/tags
+- "Search tags?" -> GET /products/tags
+- "Get tag details?" -> GET /products/tags/{tagId}
+- "Update a tag?" -> PUT /products/tags/{tagId}
+- "Delete a tag?" -> DELETE /products/tags/{tagId}
+- "Create a batch?" -> POST /products/tags/batch
+- "Create a order?" -> POST /orders
+- "Search orders?" -> GET /orders
+- "Get order details?" -> GET /orders/{orderId}
+- "Update a order?" -> PUT /orders/{orderId}
+- "Delete a order?" -> DELETE /orders/{orderId}
+- "Create a batch?" -> POST /orders/batch
+- "List all notes?" -> GET /orders/{orderId}/notes
+- "Create a note?" -> POST /orders/{orderId}/notes
+- "Get note details?" -> GET /orders/{orderId}/notes/{noteId}
+- "Delete a note?" -> DELETE /orders/{orderId}/notes/{noteId}
+- "Search reviews?" -> GET /products/reviews
+- "Create a review?" -> POST /products/reviews
+- "Get review details?" -> GET /products/reviews/{reviewId}
+- "Update a review?" -> PUT /products/reviews/{reviewId}
+- "Delete a review?" -> DELETE /products/reviews/{reviewId}
+- "Create a batch?" -> POST /products/reviews/batch
+- "List all reports?" -> GET /reports
+- "List all top_sellers?" -> GET /reports/top_sellers
+- "List all totals?" -> GET /reports/coupons/totals
+- "List all totals?" -> GET /reports/customers/totals
+- "List all totals?" -> GET /reports/orders/totals
+- "List all totals?" -> GET /reports/products/totals
+- "List all totals?" -> GET /reports/reviews/totals
+- "List all sales?" -> GET /reports/sales
+- "List all refunds?" -> GET /orders/{orderId}/refunds
+- "Create a refund?" -> POST /orders/{orderId}/refunds
+- "Get refund details?" -> GET /orders/{orderId}/refunds/{refundId}
+- "Delete a refund?" -> DELETE /orders/{orderId}/refunds/{refundId}
+- "Search coupons?" -> GET /coupons
+- "Create a coupon?" -> POST /coupons
+- "Get coupon details?" -> GET /coupons/{couponId}
+- "Update a coupon?" -> PUT /coupons/{couponId}
+- "Delete a coupon?" -> DELETE /coupons/{couponId}
+- "Create a batch?" -> POST /coupons/batch
+- "List all settings?" -> GET /settings
+- "Get setting details?" -> GET /settings/{groupId}
+- "Get setting details?" -> GET /settings/{groupId}/{id}
+- "Update a setting?" -> PUT /settings/{groupId}/{id}
+- "List all zones?" -> GET /shipping/zones
+- "Create a zone?" -> POST /shipping/zones
+- "Get zone details?" -> GET /shipping/zones/{id}
+- "Update a zone?" -> PUT /shipping/zones/{id}
+- "Delete a zone?" -> DELETE /shipping/zones/{id}
+- "List all locations?" -> GET /shipping/zones/{id}/locations
+- "List all methods?" -> GET /shipping/zones/{id}/methods
+- "Create a method?" -> POST /shipping/zones/{id}/methods
+- "Get method details?" -> GET /shipping/zones/{id}/methods/{instanceId}
+- "Update a method?" -> PUT /shipping/zones/{id}/methods/{instanceId}
+- "Delete a method?" -> DELETE /shipping/zones/{id}/methods/{instanceId}
+- "List all payment_gateways?" -> GET /payment_gateways
+- "Get payment_gateway details?" -> GET /payment_gateways/{id}
+- "Update a payment_gateway?" -> PUT /payment_gateways/{id}
+- "Search taxes?" -> GET /taxes
+- "Create a taxe?" -> POST /taxes
+- "Get taxe details?" -> GET /taxes/{id}
+- "Update a taxe?" -> PUT /taxes/{id}
+- "Delete a taxe?" -> DELETE /taxes/{id}
+- "Create a batch?" -> POST /taxes/batch
+- "List all classes?" -> GET /taxes/classes
+- "Create a class?" -> POST /taxes/classes
+- "Get class details?" -> GET /taxes/classes/{slug}
+- "Delete a class?" -> DELETE /taxes/classes/{slug}
+- "Search webhooks?" -> GET /webhooks
+- "Create a webhook?" -> POST /webhooks
+- "Get webhook details?" -> GET /webhooks/{id}
+- "Update a webhook?" -> PUT /webhooks/{id}
+- "Delete a webhook?" -> DELETE /webhooks/{id}
+- "Create a batch?" -> POST /webhooks/batch
+- "List all system_status?" -> GET /system_status
+- "List all tools?" -> GET /system_status/tools
+- "Get tool details?" -> GET /system_status/tools/{id}
+- "Update a tool?" -> PUT /system_status/tools/{id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

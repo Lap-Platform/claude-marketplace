@@ -8,161 +8,204 @@
 @toc customers(34)
 
 @endpoint GET /customers
-@optional {page: int, limit: num, id:in: [int], company:in: [str], customer_group_id:in: [str], date_created: str(date-time), date_created:max: str, date_created:min: str(date-time), date_modified: str(date-time), date_modified:min: str, date_modified:max: str(date-time), email:in: [str], name:in: [str], name:like: [str], phone:in: str, registration_ip_address:in: [int], include: [str], sort: str(date_created:asc/date_created:desc/last_name:asc/last_name:desc/date_modified:asc/date_modified:desc), after: str, before: str}
-@returns(200) {data: [map], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}}
-@errors {422}
+@desc Get All Customers
+@optional {page: int # Page number (`page` will be ignored if you provide `before` or `after` in the request). For example `page=1`., limit: num # Items count per page. `limit=50`, id:in: [int] # Filter items by ID. `id:in=4,5,6`, company:in: [str] # Filter items by company. `company:in=bigcommerce,commongood`, customer_group_id:in: [str] # Filter items by customer_group_id. `customer_group_id:in=5,6`, date_created: str(date-time) # Filter items by date created, for example, `2024-05-14T09:34:00` or `2024-05-14`., date_created:max: str # Filter items by maximum date created, for example, `2024-05-14T09:34:00` or `2024-05-14`. Returns customers created before this date., date_created:min: str(date-time) # Filter items by date created for example, `2024-05-14T09:34:00` or `2024-05-14`. Returns customers created after this date., date_modified: str(date-time) # Filter items by date modified, for example, `2024-05-14T09:34:00` or `2024-05-14`., date_modified:min: str # Filter items by minimum date modified, for example, `2024-05-14T09:34:00` or `2024-05-14`. Returns customers modified after this date., date_modified:max: str(date-time) # Filter items by maximum date modified, for example, `2024-05-14T09:34:00` or `2024-05-14`. Returns customers modified before this date., email:in: [str] # Filter items by email. `email:in=janedoe@example.com`, name:in: [str] # Filter items by first_name and last_name. `name=james moriarty`, name:like: [str] # Filter items by substring in first_name and last_name. `name:like=moriarty,sherlock` Concatenates the first_name and last_name fields., phone:in: str # Filter items by phone number. `phone:in=555-55-5555`, registration_ip_address:in: [int] # Filter items by registration_ip_address. If the customer was created using the API, then registration address is blank. `registration_ip_address:in=12.345.6.789`, include: [str] # Indicates whether to include customer sub-resources:  * `addresses` - customer addresses  * `storecredit` - store credit  * `attributes` - customer attributes and address attributes  * `formfields` - customer and address form fields  * `shopper_profile_id` - the ID of the shopper profile associated with the customer (Beta)  * `segment_ids`- segments the customer belongs to (Beta)   `include=addresses,storecredit,attributes,formfields,shopper_profile_id,segment_ids`, sort: str(date_created:asc/date_created:desc/last_name:asc/last_name:desc/date_modified:asc/date_modified:desc) # Sort items by date_created, date_modified, or last_name:* `date_created:asc` - date created, ascending* `date_created:desc` - date created, descending* `last_name:asc` - last name, ascending* `last_name:desc` - last name, descending * `date_modified:asc` - date modified, ascending* `date_modified:desc`- date modified, descending  Example: `sort=last_name:asc`, after: str # The cursor reference of the last entry for the previous page. Use the `end_cursor` value from the last response to get the next page (`end_cursor` is only returned on the first page or when the request contains query parameter `before` or `after`). For example `after=eyJpZCI6MjA0fQ`., before: str # The cursor reference of the first entry for the next page. Use the `start_cursor` value from the last response to get the previous page (`start_cursor` is only returned on the first page or when the request contains query parameter `before` or `after`). For example `before=eyJpZCI6MjA1fQ`.}
+@returns(200) {data: [map], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}} # Get Customer Collection Response
+@errors {422: The optional filter parameter was not valid. This is the result of missing required fields, or of invalid data. See the response for more details.}
 
 @endpoint POST /customers
-@returns(200) {data: [map], meta: map}
-@errors {413, 422}
+@desc Create Customers
+@returns(200) {data: [map], meta: map} # Customer Collection Response
+@errors {413: The request payload is too large. The maximum number of items allowed in the array is 10., 422: The *Customer* was not valid. This is the result of missing required fields or trying to edit a read only field. See the response for more details.}
+@example_request [{"email":"jane.smith@example.com","first_name":"Jane","last_name":"Smith","company":"Acme Corp","phone":"555-123-4567","notes":"Preferred customer","tax_exempt_category":"Non-profit","customer_group_id":0,"addresses":[{"address1":"Addr 1","address2":"","address_type":"residential","city":"San Francisco","company":"History","country_code":"US","first_name":"Ronald","last_name":"Swimmer","phone":"707070707","postal_code":"33333","state_or_province":"California","form_fields":[{"name":"shirt_size","value":"Large"}]}],"authentication":{"force_password_reset":true,"new_password":"SecurePassword123!"},"accepts_product_review_abandoned_cart_emails":true,"trigger_account_created_notification":true,"store_credit_amounts":[{"amount":43.15}],"origin_channel_id":1,"channel_ids":[1],"form_fields":[{"name":"shirt_size","value":"Large"}]}]
 
 @endpoint PUT /customers
-@returns(200) {data: [map], meta: map}
-@errors {413, 422}
+@desc Update Customers
+@returns(200) {data: [map], meta: map} # Customer Collection Response
+@errors {413: The request payload is too large. The maximum number of items allowed in the array is 10., 422: The `Customer` was not valid. This is the result of missing required fields, or of invalid data. See the response for more details.}
+@example_request [{"email":"jane.smith@example.com","first_name":"Jane","last_name":"Smith","company":"Acme Corp","phone":"555-123-4567","registration_ip_address":"192.168.1.1","notes":"Preferred customer","tax_exempt_category":"Non-profit","customer_group_id":0,"id":1,"authentication":{"force_password_reset":true,"new_password":"SecurePassword123!"},"accepts_product_review_abandoned_cart_emails":true,"store_credit_amounts":[{"amount":43.15}],"origin_channel_id":1,"channel_ids":[1],"form_fields":[{"name":"shirt_size","value":"Large"}]}]
 
 @endpoint DELETE /customers
-@required {id:in: [int]}
+@desc Delete Customers
+@required {id:in: [int] # Filter items by ID. `id:in=4,5,6`}
 @returns(204)
-@errors {422}
+@errors {422: The `id:in` was not valid. This is the result of missing required fields, or of invalid data. See the response for more details.}
 
 @endpoint GET /customers/addresses
-@optional {Accept: str=application/json, Content-Type: str=application/json, page: int, limit: num, company:in: [str], name:in: [str], customer_id:in: [int], include: [str], id:in: [int]}
+@desc Get All Customer Addresses
+@optional {Accept: str=application/json, Content-Type: str=application/json, page: int # Page number. `page=1`, limit: num # Items count per page. `limit=50`, company:in: [str] # Filter items by company. `company:in=bigcommerce,commongood`, name:in: [str] # Filter items by first_name and last_name. `name:in=James+Moriarty`, customer_id:in: [int] # Filter by the ID of the customer. Also accepts comma-separated IDs to filter for multiple customers. `customer_id:in=23,24,55`, include: [str] # Indicates whether to include customer address sub-resources: * `formfields` - address form fields `include=formfields`, id:in: [int] # Filter items by ID. `id:in=4,5,6`}
 @returns(200) {data: [map], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}}}
 
 @endpoint POST /customers/addresses
+@desc Create a Customer Address
 @optional {Accept: str=application/json, Content-Type: str=application/json}
 @returns(200) {data: [map], meta: map}
-@errors {422}
+@errors {422: The `Address` was not valid. This is the result of missing required fields, or of invalid data. See the response for more details.}
+@example_request [{"first_name":"John","last_name":"Doe","address1":"111 E West Street","address2":"654","city":"Akron","state_or_province":"Ohio","postal_code":"44325","country_code":"US","phone":"1234567890","address_type":"residential","customer_id":11,"form_fields":[{"name":"shirt_size","value":"Large"}]}]
 
 @endpoint PUT /customers/addresses
+@desc Update a Customer Address
 @optional {Accept: str=application/json, Content-Type: str=application/json}
 @returns(200) {data: [map], meta: map}
-@errors {422}
+@errors {422: The `Address` was not valid. This is the result of missing required fields, or of invalid data. See the response for more details.}
+@example_request [{"id":11,"first_name":"John","last_name":"Doe","address1":"111 E West Street","address2":"654","city":"Akron","state_or_province":"Ohio","postal_code":"44325","country_code":"US","phone":"1234567890","address_type":"residential","form_fields":[{"name":"shirt_size","value":"Large"}]}]
 
 @endpoint DELETE /customers/addresses
-@required {id:in: [int]}
+@desc Delete a Customer Address
+@required {id:in: [int] # Filter items by ID. `id:in=4,5,6`}
 @optional {Accept: str=application/json, Content-Type: str=application/json}
 @returns(204)
 
 @endpoint POST /customers/validate-credentials
-@required {email: str, password: str}
-@optional {channel_id: int}
-@returns(200) {customer_id: int?, is_valid: bool}
-@errors {422, 429}
+@desc Validate a customer credentials
+@required {email: str # Customer email address., password: str # Customer password.}
+@optional {channel_id: int # ChannelId to check the customer credentials against - If this field is empty we will use channel 1.}
+@returns(200) {customer_id: int?, is_valid: bool} # Returns if the customer credentials provided are valid or not.
+@errors {422: This is the result of missing required fields. See the response for more details., 429: Allowed number of requests exceeded.}
+@example_request {"email":"foo@bar.com","password":"password","channel_id":1}
 
 @endpoint GET /customers/settings
-@returns(200) {data: map{privacy_settings: map{ask_shopper_for_tracking_consent: bool, policy_url: str}, customer_group_settings: map{guest_customer_group_id: int, default_customer_group_id: int}}, meta: map}
+@desc Get Customer Settings
+@returns(200) {data: map{privacy_settings: map{ask_shopper_for_tracking_consent: bool, policy_url: str}, customer_group_settings: map{guest_customer_group_id: int, default_customer_group_id: int}}, meta: map} # Returns customer settings values for global level.
 
 @endpoint PUT /customers/settings
-@optional {privacy_settings: map{ask_shopper_for_tracking_consent: bool, policy_url: str}, customer_group_settings: map{guest_customer_group_id: int, default_customer_group_id: int}}
-@returns(200) {data: map{privacy_settings: map{ask_shopper_for_tracking_consent: bool, policy_url: str}, customer_group_settings: map{guest_customer_group_id: int, default_customer_group_id: int}}, meta: map}
+@desc Update Customer Settings
+@optional {privacy_settings: map{ask_shopper_for_tracking_consent: bool, policy_url: str} # Controls the privacy settings., customer_group_settings: map{guest_customer_group_id: int, default_customer_group_id: int} # The settings for a collection of customers.}
+@returns(200) {data: map{privacy_settings: map{ask_shopper_for_tracking_consent: bool, policy_url: str}, customer_group_settings: map{guest_customer_group_id: int, default_customer_group_id: int}}, meta: map} # Customer settings are returned on a global level.
+@example_request {"privacy_settings":{"ask_shopper_for_tracking_consent":true,"policy_url":"https://bigcommmerce.com/policy"},"customer_group_settings":{"guest_customer_group_id":0,"default_customer_group_id":0}}
 
 @endpoint GET /customers/settings/channels/{channel_id}
+@desc Get Customer Settings per Channel
 @required {channel_id: int}
-@returns(200) {data: map{privacy_settings: map{ask_shopper_for_tracking_consent: bool, policy_url: str}, customer_group_settings: map{guest_customer_group_id: int, default_customer_group_id: int}, allow_global_logins: bool}, meta: map}
+@returns(200) {data: map{privacy_settings: map{ask_shopper_for_tracking_consent: bool, policy_url: str}, customer_group_settings: map{guest_customer_group_id: int, default_customer_group_id: int}, allow_global_logins: bool}, meta: map} # Customer settings for this channel are returned.
 
 @endpoint PUT /customers/settings/channels/{channel_id}
+@desc Update Customer Settings per Channel
 @required {channel_id: int}
-@optional {privacy_settings: map{ask_shopper_for_tracking_consent: bool, policy_url: str}, customer_group_settings: map{guest_customer_group_id: int, default_customer_group_id: int}, allow_global_logins: bool}
-@returns(200) {data: map{privacy_settings: map{ask_shopper_for_tracking_consent: bool, policy_url: str}, customer_group_settings: map{guest_customer_group_id: int, default_customer_group_id: int}}, meta: map}
+@optional {privacy_settings: map{ask_shopper_for_tracking_consent: bool, policy_url: str} # Controls the privacy settings., customer_group_settings: map{guest_customer_group_id: int, default_customer_group_id: int} # The settings for a collection of customers., allow_global_logins: bool # * Determines if a channel allows global customer to login * Determines if customers created on this channel will get global access/login}
+@returns(200) {data: map{privacy_settings: map{ask_shopper_for_tracking_consent: bool, policy_url: str}, customer_group_settings: map{guest_customer_group_id: int, default_customer_group_id: int}}, meta: map} # Customer settings are returned.
+@example_request {"privacy_settings":{"ask_shopper_for_tracking_consent":true,"policy_url":"https://bigcommmerce.com/policy"},"customer_group_settings":{"guest_customer_group_id":0,"default_customer_group_id":0},"allow_global_logins":true}
 
 @endpoint GET /customers/attributes
-@optional {page: int, limit: num, name: str, name:like: str, type: str, date_created: str(date-time), date_created:max: str(date-time), date_created:min: str(date-time), date_modified: str(date-time), date_modified:max: str(date-time), date_modified:min: str(date-time), Accept: str=application/json, Content-Type: str=application/json}
+@desc Get All Customer Attributes
+@optional {page: int # Page number. `page=1`, limit: num # Items count per page. `limit=50`, name: str # Filter items by customer attribute name. `name=Date+Joined`, name:like: str # Filter items by substring in customer attribute name. `name:like=join`, type: str # The type of the customer attribute., date_created: str(date-time) # Filter items by `date_created`, for example, `2024-05-14T09:34:00`, `2024-05-14T09:34:00` or `2024-05-14`., date_created:max: str(date-time) # Filter items by maximum `date_created`, for example, `2024-05-14T09:34:00`, `2024-05-14T09:34:00` or `2024-05-14`. ISO 8601 full-date is required, ISO 8601 full-time is not required. UNIX timestamp also accepted. Returns metafields created before this date., date_created:min: str(date-time) # Filter items by minimum `date_created`, for example, `2024-05-14T09:34:00`, `2024-05-14T09:34:00` or `2024-05-14`. ISO 8601 full-date is required, ISO 8601 full-time is not required. UNIX timestamp also accepted. Returns metafields created after this date., date_modified: str(date-time) # Filter items by `date_modified`, for example, `2024-05-14T09:34:00` or `2024-05-14`., date_modified:max: str(date-time) # Filter items by maximum `date_modified`, for example, `2024-05-14T09:34:00` or `2024-05-14`. ISO 8601 full-date is required, ISO 8601 full-time is not required. UNIX timestamp also accepted. Returns metafields modified before this date., date_modified:min: str(date-time) # Filter items by minimum `date_modified`, for example, `2024-05-14T09:34:00` or `2024-05-14`. ISO 8601 full-date is required, ISO 8601 full-time is not required. UNIX timestamp also accepted. Returns metafields modified after this date., Accept: str=application/json, Content-Type: str=application/json}
 @returns(200) {data: [map], meta: map}
 
 @endpoint POST /customers/attributes
+@desc Create a Customer Attribute
 @optional {Accept: str=application/json, Content-Type: str=application/json}
 @returns(200) {data: [map], meta: map}
-@errors {422}
+@errors {422: The `Attribute` was not valid. This is the result of missing required fields, or of invalid data. See the response for more details.}
 
 @endpoint PUT /customers/attributes
+@desc Update a Customer Attribute
 @optional {Accept: str=application/json, Content-Type: str=application/json}
 @returns(200) {data: [map], meta: map}
-@errors {422}
+@errors {422: The `Attribute` was not valid. This is the result of missing required fields, or of invalid data. See the response for more details.}
 
 @endpoint DELETE /customers/attributes
-@required {id:in: [int(int32)]}
+@desc Delete Customer Attributes
+@required {id:in: [int(int32)] # Filter items by ID.}
 @optional {Accept: str=application/json, Content-Type: str=application/json}
 @returns(204)
 
 @endpoint GET /customers/attribute-values
-@optional {Accept: str=application/json, Content-Type: str=application/json, page: int, limit: num, customer_id:in: [int], attribute_id:in: [int], name: str, date_created: str(date-time), date_created:max: str, date_created:min: str(date-time), date_modified: str(date-time), date_modified:max: str(date-time), date_modified:min: str}
+@desc Get All Customer Attribute Values
+@optional {Accept: str=application/json, Content-Type: str=application/json, page: int # Page number. `page=1`, limit: num # Items count per page. `limit=50`, customer_id:in: [int] # Filter items by the customer ID. `customer_id:in=23,24,55`, attribute_id:in: [int] # Filter items by the attribute ID. `attribute_id:in=1,2`, name: str # Filter items by the attribute name. `name=age`, date_created: str(date-time) # Filter items by `date_created`, for example, `2024-05-14T09:34:00`, `2024-05-14T09:34:00` or `2024-05-14`., date_created:max: str # Filter items by maximum `date_created`, for example, `2024-05-14T09:34:00`, `2024-05-14T09:34:00` or `2024-05-14`. ISO 8601 full-date is required, ISO 8601 full-time is not required. UNIX timestamp also accepted. Returns metafields created before this date., date_created:min: str(date-time) # Filter items by minimum `date_created`, for example, `2024-05-14T09:34:00`, `2024-05-14T09:34:00` or `2024-05-14`. ISO 8601 full-date is required, ISO 8601 full-time is not required. UNIX timestamp also accepted. Returns metafields created after this date, date_modified: str(date-time) # Filter items by `date_modified`, for example, `2024-05-14T09:34:00` or `2024-05-14`., date_modified:max: str(date-time) # Filter items by maximum `date_modified`, for example, `2024-05-14T09:34:00` or `2024-05-14`. ISO 8601 full-date is required, ISO 8601 full-time is not required. UNIX timestamp also accepted. Returns metafields modified before this date., date_modified:min: str # Filter items by minimum `date_modified`, for example, `2024-05-14T09:34:00` or `2024-05-14`. ISO 8601 full-date is required, ISO 8601 full-time is not required. UNIX timestamp also accepted. Returns metafields modified after this date.}
 @returns(200) {data: [map], meta: map{pagination: map{total: int(int32), count: int(int32), per_page: int(int32), current_page: int(int32), total_pages: int(int32), links: map{previous: str, current: str, next: str}}}}
 
 @endpoint PUT /customers/attribute-values
+@desc Upsert Customer Attribute Values
 @optional {Accept: str=application/json, Content-Type: str=application/json}
 @returns(200) {data: [map], meta: map{pagination: map{total: int(int32), count: int(int32), per_page: int(int32), current_page: int(int32), total_pages: int(int32), links: map{previous: str, current: str, next: str}}}}
-@errors {422}
+@errors {422: The `CustomerAttributeValue` was not valid. This is the result of missing required fields, or of invalid data. See the response for more details.}
+@example_request [{"attribute_id":1,"value":"No","customer_id":2}]
 
 @endpoint DELETE /customers/attribute-values
-@required {id:in: [int(int32)]}
+@desc Delete Customer Attribute Values
+@required {id:in: [int(int32)] # Filter items by ID. `id:in=4,5,6`}
 @optional {Accept: str=application/json, Content-Type: str=application/json}
 @returns(204)
 
 @endpoint GET /customers/form-field-values
-@optional {Accept: str=application/json, Content-Type: str=application/json, page: int, limit: num, customer_id: int, address_id: int, field_name: str, field_type: str(checkboxes/date/multiline/numbers/password/radiobuttons/text/picklist), after: str, before: str}
+@desc Get Customer Form Field Values
+@optional {Accept: str=application/json, Content-Type: str=application/json, page: int # Page number (`page` will be ignored if you provide `before` or `after` in the request). For example `page=1`., limit: num # Items count per page. `limit=50`, customer_id: int # Filter by the customer ID., address_id: int # Filter by the ID of the customer address., field_name: str # Filter by the field name., field_type: str(checkboxes/date/multiline/numbers/password/radiobuttons/text/picklist) # Filter by the field type.  * `checkboxes` - checkboxes field  * `date` - date field  * `multiline` - multiline text field  * `numbers` - numbers only field  * `password` - password field  * `radiobuttons` - radio buttons field  * `text` - text field  * `picklist` - pick list field, after: str # The cursor reference of the last entry for the previous page. Use the `end_cursor` value from the last response to get the next page (`end_cursor` is only returned on the first page or when the request contains query parameter `before` or `after`). For example `after=eyJzZXNzaW9uSWQiOjM4LCJmaWVsZElkIjo0MH0`., before: str # The cursor reference of the first entry for the next page. Use the `start_cursor` value from the last response to get the previous page (`start_cursor` is only returned on the first page or when the request contains query parameter `before` or `after`). For example `before=eyJzZXNzaW9uSWQiOjgsImZpZWxkSWQiOjMxfQ`.}
 @returns(200) {data: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}}
-@errors {422}
+@errors {422: The form field value was not valid. This is the result of missing required fields, or of invalid data. See the response for more details.}
 
 @endpoint PUT /customers/form-field-values
+@desc Upsert Customer Form Field Values (Deprecated)
 @returns(200) {data: [any], meta: map}
-@errors {422}
+@errors {422: The form field value was not valid. This is the result of missing required fields, or of invalid data. See the response for more details.}
+@example_request [{"customer_id":12,"name":"Sales Rep","value":"Miss Moneypenny"},{"customer_id":12,"name":"How did you hear about us?","value":"Other"},{"customer_id":12,"name":"What is your favorite pizza topping?","value":"Mushrooms"}]
 
 @endpoint GET /customers/{customerId}/consent
+@desc Get Customer Consent
 @returns(200) {allow: [str], deny: [str], updated_at: str(date-time)}
-@errors {401, 403, 422}
+@errors {401: Unauthorized - the v3 Auth client ID or token in the request are not a valid combination for this store., 403: Missing scope - the v3 Auth token is valid but does not have proper permissions to access this endpoint., 422: Invalid JSON request body - missing or invalid data.}
 
 @endpoint PUT /customers/{customerId}/consent
+@desc Update Customer Consent
 @optional {Content-Type: str=application/json, allow: [str], deny: [str]}
 @returns(200) {allow: [str], deny: [str], updated_at: str(date-time)}
-@errors {401, 403, 422}
+@errors {401: Unauthorized - the v3 Auth client ID or token in the request are not a valid combination for this store., 403: Missing scope - the v3 Auth token is valid but does not have proper permissions to access this endpoint., 422: Invalid JSON request body - missing or invalid data.}
 
 @endpoint GET /customers/{customerId}/stored-instruments
-@required {customerId: int}
-@returns(200)
-@errors {401, 403}
+@desc Get Stored Instruments
+@required {customerId: int # The ID of the customer.}
+@returns(200) OK
+@errors {401: Unauthorized, 403: Missing scope - the v3 Auth token is valid but does not have proper permissions to access this endpoint.}
 
 @endpoint GET /customers/{customerId}/metafields
-@required {customerId: int}
-@optional {page: int, limit: int, key: str, key:in: [str], namespace: str, namespace:in: [str], direction: str(asc/desc), include_fields: [str], date_created:min: str, date_created:max: str, date_modified:min: str, date_modified:max: str, before: str, after: str}
-@returns(200) {data: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}}}
+@desc Get Customer Metafields
+@required {customerId: int # The ID of the customer.}
+@optional {page: int # Specifies the page number in a limited (paginated) list of products., limit: int # Controls the number of items per page in a limited (paginated) list of products., key: str # Filter based on a metafieldʼs key., key:in: [str] # Filter based on comma-separated metafieldʼs keys. Could be used with vanilla 'key' query parameter., namespace: str # Filter based on a metafieldʼs namespaces., namespace:in: [str] # Filter based on comma-separated metafieldʼs namespaces. Could be used with vanilla `namespace` query parameter., direction: str(asc/desc) # Sort direction. Acceptable values are: `asc`, `desc`., include_fields: [str] # Fields to include, in a comma-separated list. The ID and the specified fields will be returned., date_created:min: str # Filter items by minimum date created. For example, `date_created:min=2019-09-04T00:00:00` or `date_created:min=2019-09-04`. Returns metafields created after this date., date_created:max: str # Filter items by maximum date created. For example, `date_created:max=`2024-05-14T09:34:00` or `date_created:max=2019-09-04`. Returns metafields created before this date., date_modified:min: str # Filter items by minimum date modified. For example, `date_modified:min=`2024-05-14T09:34:00` or `date_modified:min=2019-09-04`. Returns metafields modified after this date., date_modified:max: str # Filter items by maximum date modified. For example, `date_modified:max=2019-09-04T00:00:00` or `date_modified:max=2019-09-04`. Returns metafields modified before this date., before: str # A cursor indicating where to start retrieving the previous page of results. Use this parameter to paginate backward. Not required for the initial request. For subsequent requests, use the end_cursor value returned in meta.cursor_pagination from the previous response. Works with limit, direction, and other supported query parameters. When specified, offset-based pagination (page) is ignored. Cannot be used in combination with the after parameter., after: str # A cursor indicating where to start retrieving the next page of results. Use this parameter to paginate forward. Not required for the initial request. For subsequent requests, use the start_cursor value returned in meta.cursor_pagination from the previous response. Works with limit, direction, and other supported query parameters. When specified, offset-based pagination (page) is ignored. Cannot be used in combination with the before parameter.}
+@returns(200) {data: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}}} # Response payload for the BigCommerce API.
 
 @endpoint POST /customers/{customerId}/metafields
-@required {customerId: int, permission_set: str(app_only/read/write/read_and_sf_access/write_and_sf_access), namespace: str, key: str, value: str}
-@optional {description: str}
-@returns(200) {data: [map], errors: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}}
-@errors {400, 409, 422}
+@desc Create Customer Metafields
+@required {customerId: int # The ID of the customer., permission_set: str(app_only/read/write/read_and_sf_access/write_and_sf_access) # Determines the visibility and writeability of the field by other API consumers.  | Value | Description | | :--- | :--- | | `app_only` | Private to the app that owns the field. | | `read` | Visible to other API consumers. | | `write` | Open for reading and writing by other API consumers. | | `read_and_sf_access` | Visible to other API consumers, including on the storefront. | | `write_and_sf_access` | Open for reading and writing by other API consumers, including on the storefront. |, namespace: str # Namespace for the metafield, for organizational purposes., key: str # The name of the field, for example: `location_id`, `color`., value: str # The value of the field, for example: `1`, `blue`.}
+@optional {description: str # Description for the metafields.}
+@returns(200) {data: [map], errors: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}} # Response payload for the BigCommerce API.
+@errors {400: Bad Request. Input is invalid., 409: The `Metafield` conflicts with another `Metafield`. This can result from duplicate unique key combinations of the appʼs client id, namespace, key, resource_type, and resource_id., 422: The `Metafield` was not valid. This is the result of missing required fields, or of invalid data. See the response for more details.}
 
 @endpoint GET /customers/{customerId}/metafields/{metafieldId}
-@required {customerId: int, metafieldId: int}
+@desc Get a Customer Metafield
+@required {customerId: int # The ID that belongs to the customer., metafieldId: int # The ID that is generated for a metafield when created.}
 @returns(200) {data: any, meta: map}
-@errors {404}
+@errors {404: Not found (A metafield was not found with this query).}
 
 @endpoint PUT /customers/{customerId}/metafields/{metafieldId}
-@required {metafieldId: int, customerId: int}
-@optional {metafieldId: int}
-@returns(200) {data: [map], errors: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}}
-@errors {400, 404}
+@desc Update a Metafield
+@required {metafieldId: int # The ID of the metafield belonging to the customer. The metafieldId is a generated response when sending a POST query to the Create a Customer Metafields endpoint., customerId: int # The ID of the customer.}
+@optional {metafieldId: int # The ID that is generated for a metafield when created.}
+@returns(200) {data: [map], errors: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}} # Response payload for the BigCommerce API.
+@errors {400: Bad Request. Input is invalid., 404: Not found (A metafield was not found with this query).}
 
 @endpoint DELETE /customers/{customerId}/metafields/{metafieldId}
-@required {customerId: int, metafieldId: int}
-@returns(204)
-@errors {404}
+@desc Delete a Customer Metafield
+@required {customerId: int # The ID of the customer., metafieldId: int # The ID of the metafield belonging to the customer. The metafieldId is a generated response when sending a POST query to the Create a Customer Metafields endpoint.}
+@returns(204) Response object for customer metafields deletion with success.
+@errors {404: Not found (A metafield was not found with this query).}
 
 @endpoint GET /customers/metafields
-@optional {page: int, limit: int, key: str, key:in: [str], namespace: str, namespace:in: [str], direction: str(asc/desc), include_fields: [str], date_modified:min: str, date_modified:max: str, date_created:min: str, date_created:max: str, before: str, after: str}
-@returns(200) {data: [map], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}}
+@desc Get All Customer Metafields
+@optional {page: int # Specifies the page number in a limited (paginated) list of products., limit: int # Controls the number of items per page in a limited (paginated) list of products., key: str # Filter based on a metafieldʼs key., key:in: [str] # Filter based on comma-separated metafieldʼs keys. Could be used with vanilla 'key' query parameter., namespace: str # Filter based on a metafieldʼs namespaces., namespace:in: [str] # Filter based on comma-separated metafieldʼs namespaces. Could be used with vanilla `namespace` query parameter., direction: str(asc/desc) # Sort direction. Acceptable values are: `asc`, `desc`., include_fields: [str] # Fields to include, in a comma-separated list. The ID and the specified fields will be returned., date_modified:min: str # Filter items by minimum date modified. For example, `date_modified:min=`2024-05-14T09:34:00` or `date_modified:min=2019-09-04`. Returns metafields modified after this date., date_modified:max: str # Filter items by maximum date modified. For example, `date_modified:max=2019-09-04T00:00:00` or `date_modified:max=2019-09-04`. Returns metafields modified before this date., date_created:min: str # Filter items by minimum date created. For example, `date_created:min=2019-09-04T00:00:00` or `date_created:min=2019-09-04`. Returns metafields created after this date., date_created:max: str # Filter items by maximum date created. For example, `date_created:max=`2024-05-14T09:34:00` or `date_created:max=2019-09-04`. Returns metafields created before this date., before: str # A cursor indicating where to start retrieving the previous page of results. Use this parameter to paginate backward. Not required for the initial request. For subsequent requests, use the end_cursor value returned in meta.cursor_pagination from the previous response. Works with limit, direction, and other supported query parameters. When specified, offset-based pagination (page) is ignored. Cannot be used in combination with the after parameter., after: str # A cursor indicating where to start retrieving the next page of results. Use this parameter to paginate forward. Not required for the initial request. For subsequent requests, use the start_cursor value returned in meta.cursor_pagination from the previous response. Works with limit, direction, and other supported query parameters. When specified, offset-based pagination (page) is ignored. Cannot be used in combination with the before parameter.}
+@returns(200) {data: [map], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}} # List of `Metafield` objects.
 
 @endpoint POST /customers/metafields
-@returns(200) {data: [map], errors: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}}
-@errors {400, 422}
+@desc Create Multiple Metafields
+@returns(200) {data: [map], errors: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}} # Response payload for the BigCommerce API.
+@errors {400: Bad Request. Input is invalid., 422: Response object for metafields creation with partial success.}
 
 @endpoint PUT /customers/metafields
-@returns(200) {data: [map], errors: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}}
-@errors {400, 422}
+@desc Update Multiple Metafields
+@returns(200) {data: [map], errors: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}} # Response payload for the BigCommerce API.
+@errors {400: Bad Request. Input is invalid., 422: Response object for metafields creation with partial success.}
 
 @endpoint DELETE /customers/metafields
-@returns(200) {data: [int], errors: [any], meta: map{total: int, success: int, failed: int}}
-@errors {400, 422}
+@desc Delete Multiple Metafields
+@returns(200) {data: [int], errors: [any], meta: map{total: int, success: int, failed: int}} # Response object for metafields deletion with success.
+@errors {400: Bad Request. Input is invalid., 422: Response object for metafields deletion with partial success.}
 
 @end

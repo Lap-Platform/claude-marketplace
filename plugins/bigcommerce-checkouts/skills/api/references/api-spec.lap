@@ -8,98 +8,120 @@
 @toc checkouts(19)
 
 @endpoint GET /checkouts/{checkoutId}
-@optional {include: [str]}
+@desc Get a Checkout
+@optional {include: [str] # * `cart.line_items.physical_items.options` - physical options * `cart.line_items.digital_items.options` - digital options * `consignments.available_shipping_options` - shipping options * `promotions.banners` - promotion options}
 @returns(200) {data: map{id: str(uuid), cart: map{id: str(uuid), customer_id: int, email: str, currency: map{code: str}, tax_included: bool, base_amount: num(double), channel_id: num, discount_amount: num(double), cart_amount_inc_tax: num(double), cart_amount_ex_tax: num(double), coupons: [map], discounts: [map], line_items: map{physical_items: [map], digital_items: [map], gift_certificates: [map], custom_items: [map]}, created_time: str, updated_time: str}, billing_address: any, consignments: [map], taxes: [map], coupons: [map], fees: [map], order_id: str?, shipping_cost_total_inc_tax: num(double), shipping_cost_total_ex_tax: num(double), handling_cost_total_inc_tax: num(double), handling_cost_total_ex_tax: num(double), tax_total: num(double), subtotal_inc_tax: num(double), subtotal_ex_tax: num(double), grand_total: num(double), created_time: str, updated_time: str, customer_message: str, promotions: [map], version: int}, meta: map}
-@errors {404}
+@errors {404: Error code that is displayed when a given checkout ID is not found.}
 
 @endpoint PUT /checkouts/{checkoutId}
-@required {Content-Type: str=application/json, customer_message: str}
-@optional {version: int}
+@desc Update Customer Messages
+@required {Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body., customer_message: str}
+@optional {version: int # The cart version that you expect to apply the updates. If the provided version doesn't match the current cart version, you will receive a conflict error. This field is optional; if not provided, optimistic concurrency control will not apply.}
 @returns(200) {data: map{id: str(uuid), cart: map{id: str(uuid), customer_id: int, email: str, currency: map{code: str}, tax_included: bool, base_amount: num(double), channel_id: num, discount_amount: num(double), cart_amount_inc_tax: num(double), cart_amount_ex_tax: num(double), coupons: [map], discounts: [map], line_items: map{physical_items: [map], digital_items: [map], gift_certificates: [map], custom_items: [map]}, created_time: str, updated_time: str}, billing_address: any, consignments: [map], taxes: [map], coupons: [map], fees: [map], order_id: str?, shipping_cost_total_inc_tax: num(double), shipping_cost_total_ex_tax: num(double), handling_cost_total_inc_tax: num(double), handling_cost_total_ex_tax: num(double), tax_total: num(double), subtotal_inc_tax: num(double), subtotal_ex_tax: num(double), grand_total: num(double), created_time: str, updated_time: str, customer_message: str, promotions: [map], version: int}, meta: map}
-@errors {409}
+@errors {409: Cart conflict}
 
 @endpoint POST /checkouts/{checkoutId}/discounts
-@required {checkoutId: str, Accept: str=application/json, Content-Type: str=application/json}
+@desc Add Discount to Checkout
+@required {checkoutId: str # ID of the checkout; the same as the cart ID., Accept: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the response body., Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
 @optional {cart: map{discounts: [map{discounted_amount!: num}], line_items: [map{id: str, discounted_amount: num}], version: int}}
 @returns(200) {data: map{id: str(uuid), cart: map{id: str(uuid), customer_id: int, email: str, currency: map{code: str}, tax_included: bool, base_amount: num(double), channel_id: num, discount_amount: num(double), cart_amount_inc_tax: num(double), cart_amount_ex_tax: num(double), coupons: [map], discounts: [map], line_items: map{physical_items: [map], digital_items: [map], gift_certificates: [map], custom_items: [map]}, created_time: str, updated_time: str}, billing_address: any, consignments: [map], taxes: [map], coupons: [map], fees: [map], order_id: str?, shipping_cost_total_inc_tax: num(double), shipping_cost_total_ex_tax: num(double), handling_cost_total_inc_tax: num(double), handling_cost_total_ex_tax: num(double), tax_total: num(double), subtotal_inc_tax: num(double), subtotal_ex_tax: num(double), grand_total: num(double), created_time: str, updated_time: str, customer_message: str, promotions: [map], version: int}, meta: map}
-@errors {409}
+@errors {409: Cart conflict}
+@example_request {"cart":{"discounts":[{"discounted_amount":10}]},"version":1}
 
 @endpoint POST /checkouts/{checkoutId}/billing-address
-@required {checkoutId: str, Accept: str=application/json, Content-Type: str=application/json, email: str, country_code: str}
-@optional {first_name: str, last_name: str, company: str, address1: str, address2: str, city: str, state_or_province: str, state_or_province_code: str, postal_code: str, phone: str, custom_fields: [map{field_id: str, field_value: str}], version: int}
+@desc Add Checkout Billing Address
+@required {checkoutId: str # ID of the checkout; the same as the cart ID., Accept: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the response body., Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body., email: str, country_code: str}
+@optional {first_name: str, last_name: str, company: str, address1: str, address2: str, city: str, state_or_province: str # Represents state or province., state_or_province_code: str, postal_code: str, phone: str, custom_fields: [map{field_id: str, field_value: str}] # You can retrieve custom fields from the [Get Form Fields](/docs/rest-storefront/forms#get-form-fields) endpoint., version: int # The cart version that you expect to apply the updates. If the provided version doesn't match the current cart version, you will receive a conflict error. This field is optional; if not provided, optimistic concurrency control will not apply.}
 @returns(200) {data: map{id: str(uuid), cart: map{id: str(uuid), customer_id: int, email: str, currency: map{code: str}, tax_included: bool, base_amount: num(double), channel_id: num, discount_amount: num(double), cart_amount_inc_tax: num(double), cart_amount_ex_tax: num(double), coupons: [map], discounts: [map], line_items: map{physical_items: [map], digital_items: [map], gift_certificates: [map], custom_items: [map]}, created_time: str, updated_time: str}, billing_address: any, consignments: [map], taxes: [map], coupons: [map], fees: [map], order_id: str?, shipping_cost_total_inc_tax: num(double), shipping_cost_total_ex_tax: num(double), handling_cost_total_inc_tax: num(double), handling_cost_total_ex_tax: num(double), tax_total: num(double), subtotal_inc_tax: num(double), subtotal_ex_tax: num(double), grand_total: num(double), created_time: str, updated_time: str, customer_message: str, promotions: [map], version: int}, meta: map}
-@errors {409}
+@errors {409: Cart conflict}
 
 @endpoint PUT /checkouts/{checkoutId}/billing-address/{addressId}
-@required {checkoutId: str, Accept: str=application/json, Content-Type: str=application/json, addressId: int, email: str, country_code: str}
-@optional {first_name: str, last_name: str, company: str, address1: str, address2: str, city: str, state_or_province: str, state_or_province_code: str, postal_code: str, phone: str, custom_fields: [map{field_id: str, field_value: str}], version: int}
+@desc Update Checkout Billing Address
+@required {checkoutId: str # ID of the checkout; the same as the cart ID., Accept: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the response body., Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body., addressId: int, email: str, country_code: str}
+@optional {first_name: str, last_name: str, company: str, address1: str, address2: str, city: str, state_or_province: str # Represents state or province., state_or_province_code: str, postal_code: str, phone: str, custom_fields: [map{field_id: str, field_value: str}] # You can retrieve custom fields from the [Get Form Fields](/docs/rest-storefront/forms#get-form-fields) endpoint., version: int # The cart version that you expect to apply the updates. If the provided version doesn't match the current cart version, you will receive a conflict error. This field is optional; if not provided, optimistic concurrency control will not apply.}
 @returns(200) {data: map{id: str(uuid), cart: map{id: str(uuid), customer_id: int, email: str, currency: map{code: str}, tax_included: bool, base_amount: num(double), channel_id: num, discount_amount: num(double), cart_amount_inc_tax: num(double), cart_amount_ex_tax: num(double), coupons: [map], discounts: [map], line_items: map{physical_items: [map], digital_items: [map], gift_certificates: [map], custom_items: [map]}, created_time: str, updated_time: str}, billing_address: any, consignments: [map], taxes: [map], coupons: [map], fees: [map], order_id: str?, shipping_cost_total_inc_tax: num(double), shipping_cost_total_ex_tax: num(double), handling_cost_total_inc_tax: num(double), handling_cost_total_ex_tax: num(double), tax_total: num(double), subtotal_inc_tax: num(double), subtotal_ex_tax: num(double), grand_total: num(double), created_time: str, updated_time: str, customer_message: str, promotions: [map], version: int}, meta: map}
-@errors {409}
+@errors {409: Cart conflict}
 
 @endpoint POST /checkouts/{checkoutId}/consignments
-@required {checkoutId: str, Accept: str=application/json, Content-Type: str=application/json}
-@optional {include: str}
+@desc Add Consignment to Checkout
+@required {checkoutId: str # ID of the checkout; the same as the cart ID., Accept: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the response body., Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
+@optional {include: str # Include the shipping options available to this checkout.}
 @returns(200) {data: map{id: str(uuid), cart: map{id: str(uuid), customer_id: int, email: str, currency: map{code: str}, tax_included: bool, base_amount: num(double), channel_id: num, discount_amount: num(double), cart_amount_inc_tax: num(double), cart_amount_ex_tax: num(double), coupons: [map], discounts: [map], line_items: map{physical_items: [map], digital_items: [map], gift_certificates: [map], custom_items: [map]}, created_time: str, updated_time: str}, billing_address: any, consignments: [map], taxes: [map], coupons: [map], fees: [map], order_id: str?, shipping_cost_total_inc_tax: num(double), shipping_cost_total_ex_tax: num(double), handling_cost_total_inc_tax: num(double), handling_cost_total_ex_tax: num(double), tax_total: num(double), subtotal_inc_tax: num(double), subtotal_ex_tax: num(double), grand_total: num(double), created_time: str, updated_time: str, customer_message: str, promotions: [map], version: int}, meta: map}
-@errors {409}
+@errors {409: Cart conflict}
+@example_request [{"address":{"first_name":"Jane","last_name":"Doe","email":"Jane.Doe@email.com","company":"BigCommerce","address1":"100 Main Street","address2":"Suite 200","city":"Austin","state_or_province":"Texas","state_or_province_code":"TX","country_code":"US","postal_code":"78701","phone":"555-555-5555","custom_fields":[{"field_id":"custom_field_1","field_value":"Custom value"}]},"line_items":[{"item_id":"118f8774-387c-485e-a095-6ef76d5f1bbd","quantity":1}],"version":1}]
 
 @endpoint PUT /checkouts/{checkoutId}/consignments/{consignmentId}
-@required {Content-Type: str=application/json}
-@optional {include: str, address: map{first_name: str, last_name: str, email!: str, company: str, address1: str, address2: str, city: str, state_or_province: str, state_or_province_code: str, country_code!: str, postal_code: str, phone: str, custom_fields: [map{field_id: str, field_value: str}]}, line_items: [map{item_id!: str, quantity!: int(int32)}], shipping_option_id: str, pickup_option: map{pickup_method_id: int}, custom_shipping: map{price: num, description: str}, version: int}
+@desc Update Checkout Consignment
+@required {Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
+@optional {include: str # Include the shipping options available to this checkout., address: map{first_name: str, last_name: str, email!: str, company: str, address1: str, address2: str, city: str, state_or_province: str, state_or_province_code: str, country_code!: str, postal_code: str, phone: str, custom_fields: [map{field_id: str, field_value: str}]}, line_items: [map{item_id!: str, quantity!: int(int32)}], shipping_option_id: str, pickup_option: map{pickup_method_id: int}, custom_shipping: map{price: num, description: str}, version: int # The cart version that you expect to apply the updates. If the provided version doesn't match the current cart version, you will receive a conflict error. This field is optional; if not provided, optimistic concurrency control will not apply.}
 @returns(200) {data: map{id: str(uuid), cart: map{id: str(uuid), customer_id: int, email: str, currency: map{code: str}, tax_included: bool, base_amount: num(double), channel_id: num, discount_amount: num(double), cart_amount_inc_tax: num(double), cart_amount_ex_tax: num(double), coupons: [map], discounts: [map], line_items: map{physical_items: [map], digital_items: [map], gift_certificates: [map], custom_items: [map]}, created_time: str, updated_time: str}, billing_address: any, consignments: [map], taxes: [map], coupons: [map], fees: [map], order_id: str?, shipping_cost_total_inc_tax: num(double), shipping_cost_total_ex_tax: num(double), handling_cost_total_inc_tax: num(double), handling_cost_total_ex_tax: num(double), tax_total: num(double), subtotal_inc_tax: num(double), subtotal_ex_tax: num(double), grand_total: num(double), created_time: str, updated_time: str, customer_message: str, promotions: [map], version: int}, meta: map}
-@errors {409}
+@errors {409: Cart conflict}
 
 @endpoint DELETE /checkouts/{checkoutId}/consignments/{consignmentId}
-@optional {version: int}
+@desc Delete Checkout Consignment
+@optional {version: int # The cart version that you expect to apply the updates. If the provided version doesn't match the current cart version, you will receive a conflict error. This field is optional; if not provided, optimistic concurrency control will not apply.}
 @returns(200) {data: map{id: str(uuid), cart: map{id: str(uuid), customer_id: int, email: str, currency: map{code: str}, tax_included: bool, base_amount: num(double), channel_id: num, discount_amount: num(double), cart_amount_inc_tax: num(double), cart_amount_ex_tax: num(double), coupons: [map], discounts: [map], line_items: map{physical_items: [map], digital_items: [map], gift_certificates: [map], custom_items: [map]}, created_time: str, updated_time: str}, billing_address: any, consignments: [map], taxes: [map], coupons: [map], fees: [map], order_id: str?, shipping_cost_total_inc_tax: num(double), shipping_cost_total_ex_tax: num(double), handling_cost_total_inc_tax: num(double), handling_cost_total_ex_tax: num(double), tax_total: num(double), subtotal_inc_tax: num(double), subtotal_ex_tax: num(double), grand_total: num(double), created_time: str, updated_time: str, customer_message: str, promotions: [map], version: int}, meta: map}
 
 @endpoint POST /checkouts/{checkoutId}/coupons
-@required {checkoutId: str, Accept: str=application/json, Content-Type: str=application/json}
-@optional {coupon_code: str, version: int}
+@desc Add Coupon to Checkout
+@required {checkoutId: str # ID of the checkout; the same as the cart ID., Accept: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the response body., Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
+@optional {coupon_code: str # Coupon codes have a 50-character limit., version: int # The cart version that you expect to apply the updates. If the provided version doesn't match the current cart version, you will receive a conflict error. This field is optional; if not provided, optimistic concurrency control will not apply.}
 @returns(200) {data: map{id: str(uuid), cart: map{id: str(uuid), customer_id: int, email: str, currency: map{code: str}, tax_included: bool, base_amount: num(double), channel_id: num, discount_amount: num(double), cart_amount_inc_tax: num(double), cart_amount_ex_tax: num(double), coupons: [map], discounts: [map], line_items: map{physical_items: [map], digital_items: [map], gift_certificates: [map], custom_items: [map]}, created_time: str, updated_time: str}, billing_address: any, consignments: [map], taxes: [map], coupons: [map], fees: [map], order_id: str?, shipping_cost_total_inc_tax: num(double), shipping_cost_total_ex_tax: num(double), handling_cost_total_inc_tax: num(double), handling_cost_total_ex_tax: num(double), tax_total: num(double), subtotal_inc_tax: num(double), subtotal_ex_tax: num(double), grand_total: num(double), created_time: str, updated_time: str, customer_message: str, promotions: [map], version: int}, meta: map}
-@errors {409}
+@errors {409: Cart conflict}
 
 @endpoint DELETE /checkouts/{checkoutId}/coupons/{couponCode}
-@required {checkoutId: str, Accept: str=application/json, couponCode: str}
-@optional {version: int}
+@desc Delete Checkout Coupon
+@required {checkoutId: str # ID of the checkout; the same as the cart ID., Accept: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the response body., couponCode: str # The actual coupon code value, not the coupon ID.}
+@optional {version: int # The cart version that you expect to apply the updates. If the provided version doesn't match the current cart version, you will receive a conflict error. This field is optional; if not provided, optimistic concurrency control will not apply.}
 @returns(200) {data: map{id: str(uuid), cart: map{id: str(uuid), customer_id: int, email: str, currency: map{code: str}, tax_included: bool, base_amount: num(double), channel_id: num, discount_amount: num(double), cart_amount_inc_tax: num(double), cart_amount_ex_tax: num(double), coupons: [map], discounts: [map], line_items: map{physical_items: [map], digital_items: [map], gift_certificates: [map], custom_items: [map]}, created_time: str, updated_time: str}, billing_address: any, consignments: [map], taxes: [map], coupons: [map], fees: [map], order_id: str?, shipping_cost_total_inc_tax: num(double), shipping_cost_total_ex_tax: num(double), handling_cost_total_inc_tax: num(double), handling_cost_total_ex_tax: num(double), tax_total: num(double), subtotal_inc_tax: num(double), subtotal_ex_tax: num(double), grand_total: num(double), created_time: str, updated_time: str, customer_message: str, promotions: [map], version: int}, meta: map}
-@errors {409}
+@errors {409: Cart conflict}
 
 @endpoint POST /checkouts/{checkoutId}/fees
-@required {checkoutId: str, Accept: str=application/json, Content-Type: str=application/json, fees: [map{type!: str, name!: str, display_name!: str, cost!: num, source!: str, tax_class_id: int}]}
+@desc Add order level fees to a checkout
+@required {checkoutId: str # ID of the checkout; the same as the cart ID., Accept: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the response body., Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body., fees: [map{type!: str, name!: str, display_name!: str, cost!: num, source!: str, tax_class_id: int}] # The fees to be added to a checkout.}
 @returns(200) {data: map{id: str(uuid), cart: map{id: str(uuid), customer_id: int, email: str, currency: map{code: str}, tax_included: bool, base_amount: num(double), channel_id: num, discount_amount: num(double), cart_amount_inc_tax: num(double), cart_amount_ex_tax: num(double), coupons: [map], discounts: [map], line_items: map{physical_items: [map], digital_items: [map], gift_certificates: [map], custom_items: [map]}, created_time: str, updated_time: str}, billing_address: any, consignments: [map], taxes: [map], coupons: [map], fees: [map], order_id: str?, shipping_cost_total_inc_tax: num(double), shipping_cost_total_ex_tax: num(double), handling_cost_total_inc_tax: num(double), handling_cost_total_ex_tax: num(double), tax_total: num(double), subtotal_inc_tax: num(double), subtotal_ex_tax: num(double), grand_total: num(double), created_time: str, updated_time: str, customer_message: str, promotions: [map], version: int}, meta: map}
 
 @endpoint PUT /checkouts/{checkoutId}/fees
-@required {checkoutId: str, Accept: str=application/json, fees: [any]}
+@desc Update order level fees in a checkout
+@required {checkoutId: str # ID of the checkout; the same as the cart ID., Accept: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the response body., fees: [any] # The fees to be updated in a checkout.}
 @returns(200) {data: map{id: str(uuid), cart: map{id: str(uuid), customer_id: int, email: str, currency: map{code: str}, tax_included: bool, base_amount: num(double), channel_id: num, discount_amount: num(double), cart_amount_inc_tax: num(double), cart_amount_ex_tax: num(double), coupons: [map], discounts: [map], line_items: map{physical_items: [map], digital_items: [map], gift_certificates: [map], custom_items: [map]}, created_time: str, updated_time: str}, billing_address: any, consignments: [map], taxes: [map], coupons: [map], fees: [map], order_id: str?, shipping_cost_total_inc_tax: num(double), shipping_cost_total_ex_tax: num(double), handling_cost_total_inc_tax: num(double), handling_cost_total_ex_tax: num(double), tax_total: num(double), subtotal_inc_tax: num(double), subtotal_ex_tax: num(double), grand_total: num(double), created_time: str, updated_time: str, customer_message: str, promotions: [map], version: int}, meta: map}
 
 @endpoint DELETE /checkouts/{checkoutId}/fees
-@required {checkoutId: str, Accept: str=application/json, ids: [str]}
+@desc Delete order level fees from a checkout.
+@required {checkoutId: str # ID of the checkout; the same as the cart ID., Accept: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the response body., ids: [str] # The IDs of the fees to be deleted from a checkout.}
 @returns(200) {data: map{id: str(uuid), cart: map{id: str(uuid), customer_id: int, email: str, currency: map{code: str}, tax_included: bool, base_amount: num(double), channel_id: num, discount_amount: num(double), cart_amount_inc_tax: num(double), cart_amount_ex_tax: num(double), coupons: [map], discounts: [map], line_items: map{physical_items: [map], digital_items: [map], gift_certificates: [map], custom_items: [map]}, created_time: str, updated_time: str}, billing_address: any, consignments: [map], taxes: [map], coupons: [map], fees: [map], order_id: str?, shipping_cost_total_inc_tax: num(double), shipping_cost_total_ex_tax: num(double), handling_cost_total_inc_tax: num(double), handling_cost_total_ex_tax: num(double), tax_total: num(double), subtotal_inc_tax: num(double), subtotal_ex_tax: num(double), grand_total: num(double), created_time: str, updated_time: str, customer_message: str, promotions: [map], version: int}, meta: map}
 
 @endpoint POST /checkouts/{checkoutId}/orders
-@required {checkoutId: str, Accept: str=application/json, Content-Type: str=application/json}
+@desc Create an Order
+@required {checkoutId: str # ID of the checkout; the same as the cart ID., Accept: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the response body., Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
 @returns(200) {data: map{id: int}, meta: map}
 
 @endpoint GET /checkouts/settings
+@desc Get Checkout Settings
 @returns(200) {data: map{custom_checkout_script_url: str, order_confirmation_use_custom_checkout_script: bool, custom_order_confirmation_script_url: str, custom_checkout_supports_uco_settings: bool, custom_checkout_sri_hash: str, custom_order_confirmation_sri_hash: str}, meta: map}
 
 @endpoint PUT /checkouts/settings
-@required {Content-Type: str=application/json}
-@optional {custom_checkout_script_url: str, order_confirmation_use_custom_checkout_script: bool, custom_order_confirmation_script_url: str, custom_checkout_supports_uco_settings: bool, custom_checkout_sri_hash: str, custom_order_confirmation_sri_hash: str}
+@desc Update Checkout Settings
+@required {Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
+@optional {custom_checkout_script_url: str # Custom checkout script URL to replace our default checkout. To reset a store to optimized one-page checkout, pass an empty string for `custom_checkout_script_url` and `custom_order_confirmation_script_url`., order_confirmation_use_custom_checkout_script: bool # When order_confirmation_use_custom_checkout_script=true, the default custom_order_confirmation_script_url defaults to an empty string., custom_order_confirmation_script_url: str # Custom order confirmation script URL to replace the default order confirmation. To reset a store to optimized one-page checkout, pass an empty string for `custom_checkout_script_url` and `custom_order_confirmation_script_url`., custom_checkout_supports_uco_settings: bool # Boolean value that specifies whether this checkout supports Optimized One-Page Checkout settings., custom_checkout_sri_hash: str # The Subresource Integrity (SRI) hash for the custom checkout script URL., custom_order_confirmation_sri_hash: str # The Subresource Integrity (SRI) hash for the custom order confirmation script URL.}
 @returns(200) {data: map{custom_checkout_script_url: str, order_confirmation_use_custom_checkout_script: bool, custom_order_confirmation_script_url: str, custom_checkout_supports_uco_settings: bool, custom_checkout_sri_hash: str, custom_order_confirmation_sri_hash: str}, meta: map}
 
 @endpoint GET /checkouts/settings/channels/{channelId}
-@returns(200) {data: any, meta: map}
-@errors {422}
+@desc Get Channel-Specific Checkout Settings
+@returns(200) {data: any, meta: map} # Channel checkout settings retrieved successfully
+@errors {422: Invalid channelId or invalid request}
 
 @endpoint PUT /checkouts/settings/channels/{channelId}
-@returns(200) {data: any, meta: map}
-@errors {422}
+@desc Update Channel-Specific Checkout Settings
+@returns(200) {data: any, meta: map} # Channel checkout settings updated successfully
+@errors {422: Invalid channelId or invalid request}
 
 @endpoint POST /checkouts/{checkoutId}/token
-@required {Content-Type: str=application/json}
-@optional {maxUses: num, ttl: num}
-@returns(200) {checkoutToken: str, meta: map}
-@errors {401, 422}
+@desc Create Checkout Token
+@required {Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
+@optional {maxUses: num, ttl: num # Time-to-live (TTL) is the number of seconds the token is set to exist before being discarded.}
+@returns(200) {checkoutToken: str, meta: map} # OK
+@errors {401: Unauthorized - the v3 Auth client ID or token in the request are not a valid combination for this store., 422: Invalid JSON request body - missing or invalid data.}
+@example_request {"maxUses":1,"ttl":2}
 
 @end

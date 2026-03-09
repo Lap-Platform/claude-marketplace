@@ -210,96 +210,100 @@ https://api.together.xyz/v1
 | POST | /rl/training-sessions/{session_id}/operations/sample | Sample |
 | POST | /rl/training-sessions/{session_id}/stop | Stop training session |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What models are available on Together?" -> GET /models
-- "Generate a chat response with GPT or Llama" -> POST /chat/completions
-- "Create an image from a text prompt" -> POST /images/generations
-- "How do I fine-tune a model on my dataset?" -> POST /fine-tunes
-- "What's the status of my fine-tuning job?" -> GET /fine-tunes/{id}
-- "How much will fine-tuning cost me?" -> POST /fine-tunes/estimate-price
-- "Generate embeddings for my text" -> POST /embeddings
-- "List all my deployed services" -> GET /deployments
-- "How do I generate a video from a prompt?" -> POST /videos
-- "What hardware options exist for a given model?" -> GET /hardware
-- "Run a batch inference job on a file" -> POST /batches
-- "Check the queue depth for a model" -> GET /queue/metrics
-- "Convert text to speech" -> POST /audio/speech
-- "Rerank search results by relevance" -> POST /rerank
-- "Execute Python code in a sandbox" -> POST /tci/execute
-
-## Response Tips
-
-- **Chat/Completions**: `usage` may be null; always check `choices[].message` or `choices[].text` for output. Token counts live in `usage.prompt_tokens` and `usage.completion_tokens`.
-- **Deployments**: `status` is an enum-like `any` field; compare against known states (e.g., "running", "pending"). `replica_events` is a map keyed by event type.
-- **Fine-tunes**: `progress.seconds_remaining` is only meaningful when `progress.estimate_available` is true. `batch_size` can be the string `"max"` or an integer.
-- **Files**: `Processed` (capital P) is a boolean indicating server-side processing is complete; poll before using the file in fine-tuning.
-- **Batches**: `progress` is a float64 from 0.0 to 1.0; `output_file_id` and `error_file_id` are only populated after completion.
-- **Images/Videos**: Async by default for video (poll GET /videos/{id}); images return inline. Video `outputs.video_url` is a temporary signed URL.
-- **Queue**: `status` field on queue items indicates progression (queued -> running -> done/failed); `warnings` array may contain non-fatal issues.
-- **RL Training**: Operation endpoints return `status` (pending/completed/failed); poll the GET variant with `operation_id` until status resolves.
-- **Errors**: 429 means rate limited (back off), 503 means model is loading (retry after delay), 504 means generation timed out (reduce `max_tokens` or simplify prompt).
-
-## Anomaly Flags
-
-- **429 Too Many Requests**: Surface immediately with retry-after guidance. Appears on inference, embedding, rerank, audio, and batch endpoints.
-- **503 Service Unavailable**: Model is cold-starting or overloaded. Flag to user with suggestion to retry in 30-60 seconds or check queue metrics.
-- **504 Gateway Timeout**: Generation exceeded time limit. Recommend reducing `max_tokens`, prompt length, or switching to a smaller model.
-- **Fine-tune `progress.estimate_available: false`**: Training time cannot be estimated yet. Surface so the user knows not to rely on `seconds_remaining`.
-- **Batch job `error` field populated**: Even on 200 responses, the `error` string may be non-empty indicating partial failure. Always check.
-- **Deployment `ready_replicas < desired_replicas`**: Deployment is degraded. Surface the replica gap and status field.
-- **Queue `messages_waiting` spike**: If waiting messages significantly exceed running, the model is backlogged. Alert the user to expect latency.
-- **File `Processed: false`**: File uploaded but not yet ready for use. Warn before attempting to reference it in fine-tuning or batch jobs.
-- **Video `status: "failed"`**: Check `error.code` and `error.message` in the response. Common causes: invalid dimensions, unsupported model.
-- **Evaluation `status` stuck**: If an evaluation workflow stays in a non-terminal status for an extended period, flag for user investigation.
-
-## Playbook
-
-### 1. Fine-tune a Model End-to-End
-
-1. Upload your JSONL training file via `POST /files/upload`
-2. Confirm the file is processed by polling `GET /files/{id}` until `Processed: true`
-3. Estimate cost with `POST /fine-tunes/estimate-price` using the `training_file` id
-4. If `allowed_to_proceed` is true, start fine-tuning with `POST /fine-tunes` specifying `training_file`, `model`, `n_epochs`, and optional `suffix`
-5. Monitor progress via `GET /fine-tunes/{id}` checking `status` and `progress.seconds_remaining`
-6. Review training events with `GET /fine-tunes/{id}/events` and checkpoints with `GET /fine-tunes/{id}/checkpoints`
-7. Once complete, the fine-tuned model appears in `GET /models` and can be used in `POST /chat/completions`
-
-### 2. Deploy a Custom Model as a Dedicated Endpoint
-
-1. Check available hardware with `GET /hardware` filtered by your model
-2. Create an endpoint via `POST /endpoints` with `model`, `hardware`, and `autoscaling` (min/max replicas)
-3. Poll `GET /endpoints/{endpointId}` until `state` is "STARTED" and replicas are ready
-4. Send inference requests to `POST /chat/completions` using the model name from your endpoint
-5. When done, stop with `PATCH /endpoints/{endpointId}` setting `state: "STOPPED"`, or delete with `DELETE /endpoints/{endpointId}`
-
-### 3. Run Batch Inference on a Large Dataset
-
-1. Prepare a JSONL file with one request per line and upload via `POST /files/upload`
-2. Confirm processing with `GET /files/{id}` (wait for `Processed: true`)
-3. Submit the batch with `POST /batches` specifying `endpoint` (e.g., `/v1/chat/completions`), `input_file_id`, and optionally `model_id`
-4. Monitor progress via `GET /batches/{id}` watching `progress` (0.0 to 1.0) and `status`
-5. On completion, download results using `GET /files/{output_file_id}/content` and errors via `GET /files/{error_file_id}/content`
-
-### 4. Generate and Iterate on Video Content
-
-1. List available voices or reference assets if needed via `GET /voices`
-2. Submit a video generation request with `POST /videos` specifying `model`, `prompt`, dimensions (`width`, `height`), and `seconds`
-3. Poll `GET /videos/{id}` until `status` changes from "processing" to "completed" or "failed"
-4. On success, retrieve the video from `outputs.video_url` (temporary signed URL, download promptly)
-5. To iterate, adjust `prompt`, `negative_prompt`, `seed`, or `guidance_scale` and resubmit
-
-### 5. RL Training Loop (GRPO/Custom Rewards)
-
-1. Create a training session with `POST /rl/training-sessions` specifying `base_model` and optional `lora_config`
-2. Sample completions from the model via `POST /rl/training-sessions/{session_id}/operations/sample` with your prompt
-3. Poll `GET /rl/training-sessions/{session_id}/operations/sample/{operation_id}` until completed, then score the sequences externally
-4. Submit scored samples for training via `POST /rl/training-sessions/{session_id}/operations/forward-backward` with loss configuration
-5. Apply the gradient update with `POST /rl/training-sessions/{session_id}/operations/optim-step`
-6. Repeat steps 2-5 for each training iteration, monitoring loss in the forward-backward response
-7. When satisfied, stop the session with `POST /rl/training-sessions/{session_id}/stop` and use the checkpoint
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all deployments?" -> GET /deployments
+- "Create a deployment?" -> POST /deployments
+- "Delete a deployment?" -> DELETE /deployments/{id}
+- "Get deployment details?" -> GET /deployments/{id}
+- "Partially update a deployment?" -> PATCH /deployments/{id}
+- "List all logs?" -> GET /deployments/{id}/logs
+- "List all secrets?" -> GET /deployments/secrets
+- "Create a secret?" -> POST /deployments/secrets
+- "Delete a secret?" -> DELETE /deployments/secrets/{id}
+- "Get secret details?" -> GET /deployments/secrets/{id}
+- "Partially update a secret?" -> PATCH /deployments/secrets/{id}
+- "Get storage details?" -> GET /deployments/storage/{filename}
+- "List all volumes?" -> GET /deployments/storage/volumes
+- "Create a volume?" -> POST /deployments/storage/volumes
+- "Delete a volume?" -> DELETE /deployments/storage/volumes/{id}
+- "Get volume details?" -> GET /deployments/storage/volumes/{id}
+- "Partially update a volume?" -> PATCH /deployments/storage/volumes/{id}
+- "List all voices?" -> GET /voices
+- "Get video details?" -> GET /videos/{id}
+- "Create a video?" -> POST /videos
+- "Create a completion?" -> POST /chat/completions
+- "Create a completion?" -> POST /completions
+- "Create a embedding?" -> POST /embeddings
+- "List all models?" -> GET /models
+- "Create a model?" -> POST /models
+- "Get job details?" -> GET /jobs/{jobId}
+- "List all jobs?" -> GET /jobs
+- "Create a generation?" -> POST /images/generations
+- "List all files?" -> GET /files
+- "Get file details?" -> GET /files/{id}
+- "Delete a file?" -> DELETE /files/{id}
+- "List all content?" -> GET /files/{id}/content
+- "Create a upload?" -> POST /files/upload
+- "Create a fine-tune?" -> POST /fine-tunes
+- "List all fine-tunes?" -> GET /fine-tunes
+- "Create a estimate-price?" -> POST /fine-tunes/estimate-price
+- "Get fine-tune details?" -> GET /fine-tunes/{id}
+- "Delete a fine-tune?" -> DELETE /fine-tunes/{id}
+- "List all events?" -> GET /fine-tunes/{id}/events
+- "List all checkpoints?" -> GET /fine-tunes/{id}/checkpoints
+- "List all download?" -> GET /finetune/download
+- "Create a cancel?" -> POST /fine-tunes/{id}/cancel
+- "Create a rerank?" -> POST /rerank
+- "Create a speech?" -> POST /audio/speech
+- "List all websocket?" -> GET /audio/speech/websocket
+- "Create a transcription?" -> POST /audio/transcriptions
+- "Create a translation?" -> POST /audio/translations
+- "List all clusters?" -> GET /compute/clusters
+- "Create a cluster?" -> POST /compute/clusters
+- "Get cluster details?" -> GET /compute/clusters/{cluster_id}
+- "Update a cluster?" -> PUT /compute/clusters/{cluster_id}
+- "Delete a cluster?" -> DELETE /compute/clusters/{cluster_id}
+- "List all regions?" -> GET /compute/regions
+- "List all volumes?" -> GET /compute/clusters/storage/volumes
+- "Create a volume?" -> POST /compute/clusters/storage/volumes
+- "Get volume details?" -> GET /compute/clusters/storage/volumes/{volume_id}
+- "Delete a volume?" -> DELETE /compute/clusters/storage/volumes/{volume_id}
+- "List all availability-zones?" -> GET /clusters/availability-zones
+- "List all endpoints?" -> GET /endpoints
+- "Create a endpoint?" -> POST /endpoints
+- "Get endpoint details?" -> GET /endpoints/{endpointId}
+- "Partially update a endpoint?" -> PATCH /endpoints/{endpointId}
+- "Delete a endpoint?" -> DELETE /endpoints/{endpointId}
+- "List all hardware?" -> GET /hardware
+- "Create a execute?" -> POST /tci/execute
+- "List all sessions?" -> GET /tci/sessions
+- "List all batches?" -> GET /batches
+- "Create a batche?" -> POST /batches
+- "Get batche details?" -> GET /batches/{id}
+- "Create a cancel?" -> POST /batches/{id}/cancel
+- "Create a evaluation?" -> POST /evaluation
+- "List all evaluation?" -> GET /evaluation
+- "List all model-list?" -> GET /evaluation/model-list
+- "Get evaluation details?" -> GET /evaluation/{id}
+- "List all status?" -> GET /evaluation/{id}/status
+- "List all realtime?" -> GET /realtime
+- "Create a cancel?" -> POST /queue/cancel
+- "List all metrics?" -> GET /queue/metrics
+- "List all status?" -> GET /queue/status
+- "Create a submit?" -> POST /queue/submit
+- "List all training-sessions?" -> GET /rl/training-sessions
+- "Create a training-session?" -> POST /rl/training-sessions
+- "Get training-session details?" -> GET /rl/training-sessions/{session_id}
+- "Get forward-backward details?" -> GET /rl/training-sessions/{session_id}/operations/forward-backward/{operation_id}
+- "Get optim-step details?" -> GET /rl/training-sessions/{session_id}/operations/optim-step/{operation_id}
+- "Get sample details?" -> GET /rl/training-sessions/{session_id}/operations/sample/{operation_id}
+- "Create a forward-backward?" -> POST /rl/training-sessions/{session_id}/operations/forward-backward
+- "Create a optim-step?" -> POST /rl/training-sessions/{session_id}/operations/optim-step
+- "Create a sample?" -> POST /rl/training-sessions/{session_id}/operations/sample
+- "Create a stop?" -> POST /rl/training-sessions/{session_id}/stop
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -8,282 +8,350 @@
 @toc root(68)
 
 @endpoint POST /
+@desc Returns the details of a single named query or a list of up to 50 queries, which you provide as an array of query ID strings. Requires you to have access to the workgroup in which the queries were saved. Use ListNamedQueriesInput to get the list of named query IDs in the specified workgroup. If information could not be retrieved for a submitted query ID, information about the query ID submitted is listed under UnprocessedNamedQueryId. Named queries differ from executed queries. Use BatchGetQueryExecutionInput to get details about each unique query execution, and ListQueryExecutionsInput to get a list of query execution IDs.
 @required {NamedQueryIds: [str]}
 @returns(200) {NamedQueries: [NamedQuery]?, UnprocessedNamedQueryIds: [UnprocessedNamedQueryId]?}
 
 @endpoint POST /
+@desc Returns the details of a single prepared statement or a list of up to 256 prepared statements for the array of prepared statement names that you provide. Requires you to have access to the workgroup to which the prepared statements belong. If a prepared statement cannot be retrieved for the name specified, the statement is listed in UnprocessedPreparedStatementNames.
 @required {PreparedStatementNames: [str], WorkGroup: str}
 @returns(200) {PreparedStatements: [PreparedStatement]?, UnprocessedPreparedStatementNames: [UnprocessedPreparedStatementName]?}
 
 @endpoint POST /
+@desc Returns the details of a single query execution or a list of up to 50 query executions, which you provide as an array of query execution ID strings. Requires you to have access to the workgroup in which the queries ran. To get a list of query execution IDs, use ListQueryExecutionsInput$WorkGroup. Query executions differ from named (saved) queries. Use BatchGetNamedQueryInput to get details about named queries.
 @required {QueryExecutionIds: [str]}
 @returns(200) {QueryExecutions: [QueryExecution]?, UnprocessedQueryExecutionIds: [UnprocessedQueryExecutionId]?}
 
 @endpoint POST /
+@desc Cancels the capacity reservation with the specified name. Cancelled reservations remain in your account and will be deleted 45 days after cancellation. During the 45 days, you cannot re-purpose or reuse a reservation that has been cancelled, but you can refer to its tags and view it for historical reference.
 @required {Name: str}
 
 @endpoint POST /
+@desc Creates a capacity reservation with the specified name and number of requested data processing units.
 @required {TargetDpus: int, Name: str}
 @optional {Tags: [Tag]}
 
 @endpoint POST /
+@desc Creates (registers) a data catalog with the specified name and properties. Catalogs created are visible to all users of the same Amazon Web Services account.
 @required {Name: str, Type: str}
 @optional {Description: str, Parameters: map<str,str>, Tags: [Tag]}
 
 @endpoint POST /
+@desc Creates a named query in the specified workgroup. Requires that you have access to the workgroup.
 @required {Name: str, Database: str, QueryString: str}
 @optional {Description: str, ClientRequestToken: str, WorkGroup: str}
 @returns(200) {NamedQueryId: str?}
 
 @endpoint POST /
+@desc Creates an empty ipynb file in the specified Apache Spark enabled workgroup. Throws an error if a file in the workgroup with the same name already exists.
 @required {WorkGroup: str, Name: str}
 @optional {ClientRequestToken: str}
 @returns(200) {NotebookId: str?}
 
 @endpoint POST /
+@desc Creates a prepared statement for use with SQL queries in Athena.
 @required {StatementName: str, WorkGroup: str, QueryStatement: str}
 @optional {Description: str}
 
 @endpoint POST /
+@desc Gets an authentication token and the URL at which the notebook can be accessed. During programmatic access, CreatePresignedNotebookUrl must be called every 10 minutes to refresh the authentication token. For information about granting programmatic access, see Grant programmatic access.
 @required {SessionId: str}
 @returns(200) {NotebookUrl: str, AuthToken: str, AuthTokenExpirationTime: int(i64)}
 
 @endpoint POST /
+@desc Creates a workgroup with the specified name. A workgroup can be an Apache Spark enabled workgroup or an Athena SQL workgroup.
 @required {Name: str}
 @optional {Configuration: WorkGroupConfiguration, Description: str, Tags: [Tag]}
 
 @endpoint POST /
+@desc Deletes a cancelled capacity reservation. A reservation must be cancelled before it can be deleted. A deleted reservation is immediately removed from your account and can no longer be referenced, including by its ARN. A deleted reservation cannot be called by GetCapacityReservation, and deleted reservations do not appear in the output of ListCapacityReservations.
 @required {Name: str}
 
 @endpoint POST /
+@desc Deletes a data catalog.
 @required {Name: str}
 
 @endpoint POST /
+@desc Deletes the named query if you have access to the workgroup in which the query was saved.
 @required {NamedQueryId: str}
 
 @endpoint POST /
+@desc Deletes the specified notebook.
 @required {NotebookId: str}
 
 @endpoint POST /
+@desc Deletes the prepared statement with the specified name from the specified workgroup.
 @required {StatementName: str, WorkGroup: str}
 
 @endpoint POST /
+@desc Deletes the workgroup with the specified name. The primary workgroup cannot be deleted.
 @required {WorkGroup: str}
 @optional {RecursiveDeleteOption: bool}
 
 @endpoint POST /
+@desc Exports the specified notebook and its metadata.
 @required {NotebookId: str}
 @returns(200) {NotebookMetadata: NotebookMetadata?{NotebookId: str?, Name: str?, WorkGroup: str?, CreationTime: str(timestamp)?, Type: str?, LastModifiedTime: str(timestamp)?}, Payload: str?}
 
 @endpoint POST /
+@desc Describes a previously submitted calculation execution.
 @required {CalculationExecutionId: str}
 @returns(200) {CalculationExecutionId: str?, SessionId: str?, Description: str?, WorkingDirectory: str?, Status: CalculationStatus?{SubmissionDateTime: str(timestamp)?, CompletionDateTime: str(timestamp)?, State: str?, StateChangeReason: str?}, Statistics: CalculationStatistics?{DpuExecutionInMillis: int(i64)?, Progress: str?}, Result: CalculationResult?{StdOutS3Uri: str?, StdErrorS3Uri: str?, ResultS3Uri: str?, ResultType: str?}}
 
 @endpoint POST /
+@desc Retrieves the unencrypted code that was executed for the calculation.
 @required {CalculationExecutionId: str}
 @returns(200) {CodeBlock: str?}
 
 @endpoint POST /
+@desc Gets the status of a current calculation.
 @required {CalculationExecutionId: str}
 @returns(200) {Status: CalculationStatus?{SubmissionDateTime: str(timestamp)?, CompletionDateTime: str(timestamp)?, State: str?, StateChangeReason: str?}, Statistics: CalculationStatistics?{DpuExecutionInMillis: int(i64)?, Progress: str?}}
 
 @endpoint POST /
+@desc Gets the capacity assignment configuration for a capacity reservation, if one exists.
 @required {CapacityReservationName: str}
 @returns(200) {CapacityAssignmentConfiguration: CapacityAssignmentConfiguration{CapacityReservationName: str?, CapacityAssignments: [CapacityAssignment]?}}
 
 @endpoint POST /
+@desc Returns information about the capacity reservation with the specified name.
 @required {Name: str}
 @returns(200) {CapacityReservation: CapacityReservation{Name: str, Status: str, TargetDpus: int, AllocatedDpus: int, LastAllocation: CapacityAllocation?{Status: str, StatusMessage: str?, RequestTime: str(timestamp), RequestCompletionTime: str(timestamp)?}, LastSuccessfulAllocationTime: str(timestamp)?, CreationTime: str(timestamp)}}
 
 @endpoint POST /
+@desc Returns the specified data catalog.
 @required {Name: str}
 @optional {WorkGroup: str}
-@returns(200) {DataCatalog: DataCatalog?{Name: str, Description: str?, Type: str, Parameters: map<str,str>?}}
+@returns(200) {DataCatalog: DataCatalog?{Name: str, Description: str?, Type: str, Parameters: map<str, str>?: any}}
 
 @endpoint POST /
+@desc Returns a database object for the specified database and data catalog.
 @required {CatalogName: str, DatabaseName: str}
 @optional {WorkGroup: str}
-@returns(200) {Database: Database?{Name: str, Description: str?, Parameters: map<str,str>?}}
+@returns(200) {Database: Database?{Name: str, Description: str?, Parameters: map<str, str>?: any}}
 
 @endpoint POST /
+@desc Returns information about a single query. Requires that you have access to the workgroup in which the query was saved.
 @required {NamedQueryId: str}
 @returns(200) {NamedQuery: NamedQuery?{Name: str, Description: str?, Database: str, QueryString: str, NamedQueryId: str?, WorkGroup: str?}}
 
 @endpoint POST /
+@desc Retrieves notebook metadata for the specified notebook ID.
 @required {NotebookId: str}
 @returns(200) {NotebookMetadata: NotebookMetadata?{NotebookId: str?, Name: str?, WorkGroup: str?, CreationTime: str(timestamp)?, Type: str?, LastModifiedTime: str(timestamp)?}}
 
 @endpoint POST /
+@desc Retrieves the prepared statement with the specified name from the specified workgroup.
 @required {StatementName: str, WorkGroup: str}
 @returns(200) {PreparedStatement: PreparedStatement?{StatementName: str?, QueryStatement: str?, WorkGroupName: str?, Description: str?, LastModifiedTime: str(timestamp)?}}
 
 @endpoint POST /
+@desc Returns information about a single execution of a query if you have access to the workgroup in which the query ran. Each time a query executes, information about the query execution is saved with a unique ID.
 @required {QueryExecutionId: str}
 @returns(200) {QueryExecution: QueryExecution?{QueryExecutionId: str?, Query: str?, StatementType: str?, ResultConfiguration: ResultConfiguration?{OutputLocation: str?, EncryptionConfiguration: EncryptionConfiguration?{EncryptionOption: str, KmsKey: str?}, ExpectedBucketOwner: str?, AclConfiguration: AclConfiguration?{S3AclOption: str}}, ResultReuseConfiguration: ResultReuseConfiguration?{ResultReuseByAgeConfiguration: ResultReuseByAgeConfiguration?{Enabled: bool, MaxAgeInMinutes: int?}}, QueryExecutionContext: QueryExecutionContext?{Database: str?, Catalog: str?}, Status: QueryExecutionStatus?{State: str?, StateChangeReason: str?, SubmissionDateTime: str(timestamp)?, CompletionDateTime: str(timestamp)?, AthenaError: AthenaError?{ErrorCategory: int?, ErrorType: int?, Retryable: bool?, ErrorMessage: str?}}, Statistics: QueryExecutionStatistics?{EngineExecutionTimeInMillis: int(i64)?, DataScannedInBytes: int(i64)?, DataManifestLocation: str?, TotalExecutionTimeInMillis: int(i64)?, QueryQueueTimeInMillis: int(i64)?, ServicePreProcessingTimeInMillis: int(i64)?, QueryPlanningTimeInMillis: int(i64)?, ServiceProcessingTimeInMillis: int(i64)?, ResultReuseInformation: ResultReuseInformation?{ReusedPreviousResult: bool}}, WorkGroup: str?, EngineVersion: EngineVersion?{SelectedEngineVersion: str?, EffectiveEngineVersion: str?}, ExecutionParameters: [str]?, SubstatementType: str?, QueryResultsS3AccessGrantsConfiguration: QueryResultsS3AccessGrantsConfiguration?{EnableS3AccessGrants: bool, CreateUserLevelPrefix: bool?, AuthenticationType: str}}}
 
 @endpoint POST /
+@desc Streams the results of a single query execution specified by QueryExecutionId from the Athena query results location in Amazon S3. For more information, see Working with query results, recent queries, and output files in the Amazon Athena User Guide. This request does not execute the query but returns results. Use StartQueryExecution to run a query. To stream query results successfully, the IAM principal with permission to call GetQueryResults also must have permissions to the Amazon S3 GetObject action for the Athena query results location.  IAM principals with permission to the Amazon S3 GetObject action for the query results location are able to retrieve query results from Amazon S3 even if permission to the GetQueryResults action is denied. To restrict user or role access, ensure that Amazon S3 permissions to the Athena query location are denied.
 @required {QueryExecutionId: str}
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {UpdateCount: int(i64)?, ResultSet: ResultSet?{Rows: [Row]?, ResultSetMetadata: ResultSetMetadata?{ColumnInfo: [ColumnInfo]?}}, NextToken: str?}
 
 @endpoint POST /
+@desc Returns query execution runtime statistics related to a single execution of a query if you have access to the workgroup in which the query ran. Statistics from the Timeline section of the response object are available as soon as QueryExecutionStatus$State is in a SUCCEEDED or FAILED state. The remaining non-timeline statistics in the response (like stage-level input and output row count and data size) are updated asynchronously and may not be available immediately after a query completes. The non-timeline statistics are also not included when a query has row-level filters defined in Lake Formation.
 @required {QueryExecutionId: str}
 @returns(200) {QueryRuntimeStatistics: QueryRuntimeStatistics?{Timeline: QueryRuntimeStatisticsTimeline?{QueryQueueTimeInMillis: int(i64)?, ServicePreProcessingTimeInMillis: int(i64)?, QueryPlanningTimeInMillis: int(i64)?, EngineExecutionTimeInMillis: int(i64)?, ServiceProcessingTimeInMillis: int(i64)?, TotalExecutionTimeInMillis: int(i64)?}, Rows: QueryRuntimeStatisticsRows?{InputRows: int(i64)?, InputBytes: int(i64)?, OutputBytes: int(i64)?, OutputRows: int(i64)?}, OutputStage: QueryStage?{StageId: int(i64)?, State: str?, OutputBytes: int(i64)?, OutputRows: int(i64)?, InputBytes: int(i64)?, InputRows: int(i64)?, ExecutionTime: int(i64)?, QueryStagePlan: QueryStagePlanNode?{Name: str?, Identifier: str?, Children: [QueryStagePlanNode]?, RemoteSources: [str]?}, SubStages: [QueryStage]?}}}
 
 @endpoint POST /
+@desc Gets the full details of a previously created session, including the session status and configuration.
 @required {SessionId: str}
-@returns(200) {SessionId: str?, Description: str?, WorkGroup: str?, EngineVersion: str?, EngineConfiguration: EngineConfiguration?{CoordinatorDpuSize: int?, MaxConcurrentDpus: int, DefaultExecutorDpuSize: int?, AdditionalConfigs: map<str,str>?, SparkProperties: map<str,str>?}, NotebookVersion: str?, SessionConfiguration: SessionConfiguration?{ExecutionRole: str?, WorkingDirectory: str?, IdleTimeoutSeconds: int(i64)?, EncryptionConfiguration: EncryptionConfiguration?{EncryptionOption: str, KmsKey: str?}}, Status: SessionStatus?{StartDateTime: str(timestamp)?, LastModifiedDateTime: str(timestamp)?, EndDateTime: str(timestamp)?, IdleSinceDateTime: str(timestamp)?, State: str?, StateChangeReason: str?}, Statistics: SessionStatistics?{DpuExecutionInMillis: int(i64)?}}
+@returns(200) {SessionId: str?, Description: str?, WorkGroup: str?, EngineVersion: str?, EngineConfiguration: EngineConfiguration?{CoordinatorDpuSize: int?, MaxConcurrentDpus: int, DefaultExecutorDpuSize: int?, AdditionalConfigs: map<str, str>?: any, SparkProperties: map<str, str>?: any}, NotebookVersion: str?, SessionConfiguration: SessionConfiguration?{ExecutionRole: str?, WorkingDirectory: str?, IdleTimeoutSeconds: int(i64)?, EncryptionConfiguration: EncryptionConfiguration?{EncryptionOption: str, KmsKey: str?}}, Status: SessionStatus?{StartDateTime: str(timestamp)?, LastModifiedDateTime: str(timestamp)?, EndDateTime: str(timestamp)?, IdleSinceDateTime: str(timestamp)?, State: str?, StateChangeReason: str?}, Statistics: SessionStatistics?{DpuExecutionInMillis: int(i64)?}}
 
 @endpoint POST /
+@desc Gets the current status of a session.
 @required {SessionId: str}
 @returns(200) {SessionId: str?, Status: SessionStatus?{StartDateTime: str(timestamp)?, LastModifiedDateTime: str(timestamp)?, EndDateTime: str(timestamp)?, IdleSinceDateTime: str(timestamp)?, State: str?, StateChangeReason: str?}}
 
 @endpoint POST /
+@desc Returns table metadata for the specified catalog, database, and table.
 @required {CatalogName: str, DatabaseName: str, TableName: str}
 @optional {WorkGroup: str}
-@returns(200) {TableMetadata: TableMetadata?{Name: str, CreateTime: str(timestamp)?, LastAccessTime: str(timestamp)?, TableType: str?, Columns: [Column]?, PartitionKeys: [Column]?, Parameters: map<str,str>?}}
+@returns(200) {TableMetadata: TableMetadata?{Name: str, CreateTime: str(timestamp)?, LastAccessTime: str(timestamp)?, TableType: str?, Columns: [Column]?, PartitionKeys: [Column]?, Parameters: map<str, str>?: any}}
 
 @endpoint POST /
+@desc Returns information about the workgroup with the specified name.
 @required {WorkGroup: str}
 @returns(200) {WorkGroup: WorkGroup?{Name: str, State: str?, Configuration: WorkGroupConfiguration?{ResultConfiguration: ResultConfiguration?{OutputLocation: str?, EncryptionConfiguration: EncryptionConfiguration?, ExpectedBucketOwner: str?, AclConfiguration: AclConfiguration?}, EnforceWorkGroupConfiguration: bool?, PublishCloudWatchMetricsEnabled: bool?, BytesScannedCutoffPerQuery: int(i64)?, RequesterPaysEnabled: bool?, EngineVersion: EngineVersion?{SelectedEngineVersion: str?, EffectiveEngineVersion: str?}, AdditionalConfiguration: str?, ExecutionRole: str?, CustomerContentEncryptionConfiguration: CustomerContentEncryptionConfiguration?{KmsKey: str}, EnableMinimumEncryptionConfiguration: bool?, IdentityCenterConfiguration: IdentityCenterConfiguration?{EnableIdentityCenter: bool?, IdentityCenterInstanceArn: str?}, QueryResultsS3AccessGrantsConfiguration: QueryResultsS3AccessGrantsConfiguration?{EnableS3AccessGrants: bool, CreateUserLevelPrefix: bool?, AuthenticationType: str}}, Description: str?, CreationTime: str(timestamp)?, IdentityCenterApplicationArn: str?}}
 
 @endpoint POST /
+@desc Imports a single ipynb file to a Spark enabled workgroup. To import the notebook, the request must specify a value for either Payload or NoteBookS3LocationUri. If neither is specified or both are specified, an InvalidRequestException occurs. The maximum file size that can be imported is 10 megabytes. If an ipynb file with the same name already exists in the workgroup, throws an error.
 @required {WorkGroup: str, Name: str, Type: str}
 @optional {Payload: str, NotebookS3LocationUri: str, ClientRequestToken: str}
 @returns(200) {NotebookId: str?}
 
 @endpoint POST /
+@desc Returns the supported DPU sizes for the supported application runtimes (for example, Athena notebook version 1).
 @optional {MaxResults: int, NextToken: str}
 @returns(200) {ApplicationDPUSizes: [ApplicationDPUSizes]?, NextToken: str?}
 
 @endpoint POST /
+@desc Lists the calculations that have been submitted to a session in descending order. Newer calculations are listed first; older calculations are listed later.
 @required {SessionId: str}
 @optional {StateFilter: str, MaxResults: int, NextToken: str}
 @returns(200) {NextToken: str?, Calculations: [CalculationSummary]?}
 
 @endpoint POST /
+@desc Lists the capacity reservations for the current account.
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {NextToken: str?, CapacityReservations: [CapacityReservation]}
 
 @endpoint POST /
+@desc Lists the data catalogs in the current Amazon Web Services account.  In the Athena console, data catalogs are listed as "data sources" on the Data sources page under the Data source name column.
 @optional {NextToken: str, MaxResults: int, WorkGroup: str}
 @returns(200) {DataCatalogsSummary: [DataCatalogSummary]?, NextToken: str?}
 
 @endpoint POST /
+@desc Lists the databases in the specified data catalog.
 @required {CatalogName: str}
 @optional {NextToken: str, MaxResults: int, WorkGroup: str}
 @returns(200) {DatabaseList: [Database]?, NextToken: str?}
 
 @endpoint POST /
+@desc Returns a list of engine versions that are available to choose from, including the Auto option.
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {EngineVersions: [EngineVersion]?, NextToken: str?}
 
 @endpoint POST /
+@desc Lists, in descending order, the executors that joined a session. Newer executors are listed first; older executors are listed later. The result can be optionally filtered by state.
 @required {SessionId: str}
 @optional {ExecutorStateFilter: str, MaxResults: int, NextToken: str}
 @returns(200) {SessionId: str, NextToken: str?, ExecutorsSummary: [ExecutorsSummary]?}
 
 @endpoint POST /
+@desc Provides a list of available query IDs only for queries saved in the specified workgroup. Requires that you have access to the specified workgroup. If a workgroup is not specified, lists the saved queries for the primary workgroup.
 @optional {NextToken: str, MaxResults: int, WorkGroup: str}
 @returns(200) {NamedQueryIds: [str]?, NextToken: str?}
 
 @endpoint POST /
+@desc Displays the notebook files for the specified workgroup in paginated format.
 @required {WorkGroup: str}
 @optional {Filters: FilterDefinition, NextToken: str, MaxResults: int}
 @returns(200) {NextToken: str?, NotebookMetadataList: [NotebookMetadata]?}
 
 @endpoint POST /
+@desc Lists, in descending order, the sessions that have been created in a notebook that are in an active state like CREATING, CREATED, IDLE or BUSY. Newer sessions are listed first; older sessions are listed later.
 @required {NotebookId: str}
 @optional {MaxResults: int, NextToken: str}
 @returns(200) {NotebookSessionsList: [NotebookSessionSummary], NextToken: str?}
 
 @endpoint POST /
+@desc Lists the prepared statements in the specified workgroup.
 @required {WorkGroup: str}
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {PreparedStatements: [PreparedStatementSummary]?, NextToken: str?}
 
 @endpoint POST /
+@desc Provides a list of available query execution IDs for the queries in the specified workgroup. Athena keeps a query history for 45 days. If a workgroup is not specified, returns a list of query execution IDs for the primary workgroup. Requires you to have access to the workgroup in which the queries ran.
 @optional {NextToken: str, MaxResults: int, WorkGroup: str}
 @returns(200) {QueryExecutionIds: [str]?, NextToken: str?}
 
 @endpoint POST /
+@desc Lists the sessions in a workgroup that are in an active state like CREATING, CREATED, IDLE, or BUSY. Newer sessions are listed first; older sessions are listed later.
 @required {WorkGroup: str}
 @optional {StateFilter: str, MaxResults: int, NextToken: str}
 @returns(200) {NextToken: str?, Sessions: [SessionSummary]?}
 
 @endpoint POST /
+@desc Lists the metadata for the tables in the specified data catalog database.
 @required {CatalogName: str, DatabaseName: str}
 @optional {Expression: str, NextToken: str, MaxResults: int, WorkGroup: str}
 @returns(200) {TableMetadataList: [TableMetadata]?, NextToken: str?}
 
 @endpoint POST /
+@desc Lists the tags associated with an Athena resource.
 @required {ResourceARN: str}
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {Tags: [Tag]?, NextToken: str?}
 
 @endpoint POST /
+@desc Lists available workgroups for the account.
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {WorkGroups: [WorkGroupSummary]?, NextToken: str?}
 
 @endpoint POST /
+@desc Puts a new capacity assignment configuration for a specified capacity reservation. If a capacity assignment configuration already exists for the capacity reservation, replaces the existing capacity assignment configuration.
 @required {CapacityReservationName: str, CapacityAssignments: [CapacityAssignment]}
 
 @endpoint POST /
+@desc Submits calculations for execution within a session. You can supply the code to run as an inline code block within the request.  The request syntax requires the StartCalculationExecutionRequest$CodeBlock parameter or the CalculationConfiguration$CodeBlock parameter, but not both. Because CalculationConfiguration$CodeBlock is deprecated, use the StartCalculationExecutionRequest$CodeBlock parameter instead.
 @required {SessionId: str}
 @optional {Description: str, CalculationConfiguration: CalculationConfiguration, CodeBlock: str, ClientRequestToken: str}
 @returns(200) {CalculationExecutionId: str?, State: str?}
 
 @endpoint POST /
+@desc Runs the SQL query statements contained in the Query. Requires you to have access to the workgroup in which the query ran. Running queries against an external catalog requires GetDataCatalog permission to the catalog. For code samples using the Amazon Web Services SDK for Java, see Examples and Code Samples in the Amazon Athena User Guide.
 @required {QueryString: str}
 @optional {ClientRequestToken: str, QueryExecutionContext: QueryExecutionContext, ResultConfiguration: ResultConfiguration, WorkGroup: str, ExecutionParameters: [str], ResultReuseConfiguration: ResultReuseConfiguration}
 @returns(200) {QueryExecutionId: str?}
 
 @endpoint POST /
+@desc Creates a session for running calculations within a workgroup. The session is ready when it reaches an IDLE state.
 @required {WorkGroup: str, EngineConfiguration: EngineConfiguration}
 @optional {Description: str, NotebookVersion: str, SessionIdleTimeoutInMinutes: int, ClientRequestToken: str}
 @returns(200) {SessionId: str?, State: str?}
 
 @endpoint POST /
+@desc Requests the cancellation of a calculation. A StopCalculationExecution call on a calculation that is already in a terminal state (for example, STOPPED, FAILED, or COMPLETED) succeeds but has no effect.  Cancelling a calculation is done on a best effort basis. If a calculation cannot be cancelled, you can be charged for its completion. If you are concerned about being charged for a calculation that cannot be cancelled, consider terminating the session in which the calculation is running.
 @required {CalculationExecutionId: str}
 @returns(200) {State: str?}
 
 @endpoint POST /
+@desc Stops a query execution. Requires you to have access to the workgroup in which the query ran.
 @required {QueryExecutionId: str}
 
 @endpoint POST /
+@desc Adds one or more tags to an Athena resource. A tag is a label that you assign to a resource. Each tag consists of a key and an optional value, both of which you define. For example, you can use tags to categorize Athena workgroups, data catalogs, or capacity reservations by purpose, owner, or environment. Use a consistent set of tag keys to make it easier to search and filter the resources in your account. For best practices, see Tagging Best Practices. Tag keys can be from 1 to 128 UTF-8 Unicode characters, and tag values can be from 0 to 256 UTF-8 Unicode characters. Tags can use letters and numbers representable in UTF-8, and the following characters: + - = . _ : / @. Tag keys and values are case-sensitive. Tag keys must be unique per resource. If you specify more than one tag, separate them by commas.
 @required {ResourceARN: str, Tags: [Tag]}
 
 @endpoint POST /
+@desc Terminates an active session. A TerminateSession call on a session that is already inactive (for example, in a FAILED, TERMINATED or TERMINATING state) succeeds but has no effect. Calculations running in the session when TerminateSession is called are forcefully stopped, but may display as FAILED instead of STOPPED.
 @required {SessionId: str}
 @returns(200) {State: str?}
 
 @endpoint POST /
+@desc Removes one or more tags from an Athena resource.
 @required {ResourceARN: str, TagKeys: [str]}
 
 @endpoint POST /
+@desc Updates the number of requested data processing units for the capacity reservation with the specified name.
 @required {TargetDpus: int, Name: str}
 
 @endpoint POST /
+@desc Updates the data catalog that has the specified name.
 @required {Name: str, Type: str}
 @optional {Description: str, Parameters: map<str,str>}
 
 @endpoint POST /
+@desc Updates a NamedQuery object. The database or workgroup cannot be updated.
 @required {NamedQueryId: str, Name: str, QueryString: str}
 @optional {Description: str}
 
 @endpoint POST /
+@desc Updates the contents of a Spark notebook.
 @required {NotebookId: str, Payload: str, Type: str}
 @optional {SessionId: str, ClientRequestToken: str}
 
 @endpoint POST /
+@desc Updates the metadata for a notebook.
 @required {NotebookId: str, Name: str}
 @optional {ClientRequestToken: str}
 
 @endpoint POST /
+@desc Updates a prepared statement.
 @required {StatementName: str, WorkGroup: str, QueryStatement: str}
 @optional {Description: str}
 
 @endpoint POST /
+@desc Updates the workgroup with the specified name. The workgroup's name cannot be changed. Only ConfigurationUpdates can be specified.
 @required {WorkGroup: str}
 @optional {Description: str, ConfigurationUpdates: WorkGroupConfigurationUpdates, State: str}
 

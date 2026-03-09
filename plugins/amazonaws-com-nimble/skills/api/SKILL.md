@@ -76,91 +76,57 @@ Not specified.
 | PATCH | /2020-08-01/studios/{studioId} | Update a Studio resource. Currently, this operation only supports updating the displayName of your studio. |
 | PATCH | /2020-08-01/studios/{studioId}/studio-components/{studioComponentId} | Updates a studio component resource. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new studio?" -> POST /2020-08-01/studios
-- "What studios do I have?" -> GET /2020-08-01/studios
-- "How do I set up a launch profile for streaming workstations?" -> POST /2020-08-01/studios/{studioId}/launch-profiles
-- "How do I start a streaming session?" -> POST /2020-08-01/studios/{studioId}/streaming-sessions
-- "How do I get a stream URL to connect to my session?" -> POST /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId}/streams
-- "How do I stop a running streaming session?" -> POST /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId}/stop
-- "How do I resume a stopped session from a backup?" -> POST /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId}/start
-- "What streaming images are available in my studio?" -> GET /2020-08-01/studios/{studioId}/streaming-images
-- "How do I add members to a launch profile?" -> POST /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/membership
-- "How do I accept EULAs for my studio?" -> POST /2020-08-01/studios/{studioId}/eula-acceptances
-- "What studio components (render farms, license servers, shared storage) are configured?" -> GET /2020-08-01/studios/{studioId}/studio-components
-- "How do I get the initialization config needed to launch a workstation?" -> GET /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/init
-- "How do I tag or untag a Nimble Studio resource?" -> POST /2020-08-01/tags/{resourceArn} and DELETE /2020-08-01/tags/{resourceArn}
-- "How do I update my studio's SSO configuration?" -> PUT /2020-08-01/studios/{studioId}/sso-configuration
-- "How do I check for session backups I can restore from?" -> GET /2020-08-01/studios/{studioId}/streaming-session-backups
-
-## Response Tips
-
-- **Studios**: Top-level object is `studio` (singular on GET/create) or `studios` (array on list). Check `state` (CREATE_IN_PROGRESS, READY, DELETE_IN_PROGRESS, etc.) and `statusCode` for operational health.
-- **Launch Profiles**: Response nests `streamConfiguration` deeply -- instance types, session storage, volume config, and backup settings are all inside it. Always check `validationResults` for configuration errors.
-- **Streaming Sessions**: The `state` field drives lifecycle (CREATE_IN_PROGRESS, READY, START_IN_PROGRESS, STOPPED, DELETE_IN_PROGRESS). `stopAt` and `terminateAt` are future timestamps indicating auto-shutdown deadlines.
-- **Streaming Images**: `state` indicates readiness (READY, CREATE_IN_PROGRESS, UPDATE_IN_PROGRESS, DELETE_IN_PROGRESS). `encryptionConfiguration` is nested under the image object.
-- **Studio Components**: `configuration` is a polymorphic union -- only one of `activeDirectoryConfiguration`, `computeFarmConfiguration`, `licenseServiceConfiguration`, or `sharedFileSystemConfiguration` will be populated, matching the `type` field.
-- **Paginated Lists**: All list endpoints use `nextToken` for cursor-based pagination. Some also accept `maxResults`. Loop until `nextToken` is null/absent.
-- **Membership**: Returns `member` (singular) or `members` (array) with `persona` indicating the access level and `identityStoreId` linking to IAM Identity Center.
-
-## Anomaly Flags
-
-- **State stuck in progress**: If any resource's `state` ends with `_IN_PROGRESS` for an extended period, surface this -- the operation may be hung or failing silently. Cross-reference `statusCode` and `statusMessage` for error details.
-- **Session approaching auto-termination**: When `terminateAt` or `stopAt` is within 15 minutes of current time, warn the user their session will be interrupted.
-- **Validation failures on launch profiles**: If `validationResults` contains entries with non-success status codes after create or update, the profile may not be usable -- surface these immediately.
-- **EULA not accepted**: If session creation fails, check whether required EULAs have been accepted via GET /eula-acceptances. Missing acceptances block streaming.
-- **Deleted resources returning data**: DELETE endpoints return the deleted resource's final state. If `state` is not `DELETE_IN_PROGRESS` or `DELETED`, flag as unexpected.
-- **Empty streaming image list**: If GET /streaming-images returns an empty array, the studio cannot launch sessions -- proactively suggest registering an image.
-- **Idempotency token reuse**: `X-Amz-Client-Token` is used for idempotency. If a retry returns a different resource than expected, surface a possible token collision.
-- **Volume retention mode on stop**: When stopping a session, if `volumeRetentionMode` is not explicitly set, the default behavior may destroy persistent storage -- flag if the session has `sessionPersistenceMode` enabled but no retention mode specified.
-
-## Playbook
-
-### 1. Set Up a New Studio End-to-End
-
-1. Create the studio: POST /2020-08-01/studios with `adminRoleArn`, `displayName`, `studioName`, and `userRoleArn`
-2. Poll GET /2020-08-01/studios/{studioId} until `state` is `READY`
-3. Configure SSO: PUT /2020-08-01/studios/{studioId}/sso-configuration
-4. Accept required EULAs: GET /2020-08-01/eulas to list them, then POST /2020-08-01/studios/{studioId}/eula-acceptances with the EULA IDs
-5. Register a streaming image: POST /2020-08-01/studios/{studioId}/streaming-images with an `ec2ImageId`
-6. Create studio components (render farm, license server, shared storage) as needed: POST /2020-08-01/studios/{studioId}/studio-components
-7. Create a launch profile: POST /2020-08-01/studios/{studioId}/launch-profiles referencing your streaming image, subnets, and studio components
-8. Add studio members: POST /2020-08-01/studios/{studioId}/membership
-
-### 2. Launch and Connect to a Streaming Session
-
-1. List available launch profiles: GET /2020-08-01/studios/{studioId}/launch-profiles (filter by `states=READY`)
-2. Get initialization details: GET /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/init with platform and protocol version
-3. Create a streaming session: POST /2020-08-01/studios/{studioId}/streaming-sessions with the `launchProfileId`
-4. Poll GET /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId} until `state` is `READY`
-5. Create a stream connection: POST /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId}/streams
-6. Use the returned `url` to connect via the Nimble Studio client before `expiresAt`
-
-### 3. Stop, Resume, and Clean Up a Session
-
-1. Stop the session (preserving volume): POST /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId}/stop with `volumeRetentionMode: "RETAIN"`
-2. Poll until `state` is `STOPPED`
-3. To resume: POST /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId}/start (optionally specify `backupId` to restore from a backup)
-4. To check available backups: GET /2020-08-01/studios/{studioId}/streaming-session-backups
-5. To permanently delete: DELETE /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId}
-
-### 4. Manage Launch Profile Access
-
-1. List current members: GET /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/membership
-2. Add members in bulk: POST /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/membership with `identityStoreId` and `members` array (each with `principalId` and `persona`)
-3. Update a member's persona: PATCH /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/membership/{principalId} with new `persona`
-4. Remove a member: DELETE /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/membership/{principalId}
-
-### 5. Update Studio Infrastructure Components
-
-1. List existing components: GET /2020-08-01/studios/{studioId}/studio-components (optionally filter by `types` or `states`)
-2. Inspect a specific component: GET /2020-08-01/studios/{studioId}/studio-components/{studioComponentId} -- check `configuration` for current settings
-3. Update the component: PATCH /2020-08-01/studios/{studioId}/studio-components/{studioComponentId} with changed fields (e.g., new `endpoint` in compute farm config, updated `scriptParameters`)
-4. Poll until `state` returns to `READY` -- component updates may cycle through `UPDATE_IN_PROGRESS`
-5. Verify dependent launch profiles still validate: GET /2020-08-01/studios/{studioId}/launch-profiles and check `validationResults` on each profile that references the updated component
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a eula-acceptance?" -> POST /2020-08-01/studios/{studioId}/eula-acceptances
+- "Create a launch-profile?" -> POST /2020-08-01/studios/{studioId}/launch-profiles
+- "Create a streaming-image?" -> POST /2020-08-01/studios/{studioId}/streaming-images
+- "Create a streaming-session?" -> POST /2020-08-01/studios/{studioId}/streaming-sessions
+- "Create a stream?" -> POST /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId}/streams
+- "Create a studio?" -> POST /2020-08-01/studios
+- "Create a studio-component?" -> POST /2020-08-01/studios/{studioId}/studio-components
+- "Delete a launch-profile?" -> DELETE /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}
+- "Delete a membership?" -> DELETE /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/membership/{principalId}
+- "Delete a streaming-image?" -> DELETE /2020-08-01/studios/{studioId}/streaming-images/{streamingImageId}
+- "Delete a streaming-session?" -> DELETE /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId}
+- "Delete a studio?" -> DELETE /2020-08-01/studios/{studioId}
+- "Delete a studio-component?" -> DELETE /2020-08-01/studios/{studioId}/studio-components/{studioComponentId}
+- "Delete a membership?" -> DELETE /2020-08-01/studios/{studioId}/membership/{principalId}
+- "Get eula details?" -> GET /2020-08-01/eulas/{eulaId}
+- "Get launch-profile details?" -> GET /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}
+- "List all details?" -> GET /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/details
+- "List all init?" -> GET /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/init
+- "Get membership details?" -> GET /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/membership/{principalId}
+- "Get streaming-image details?" -> GET /2020-08-01/studios/{studioId}/streaming-images/{streamingImageId}
+- "Get streaming-session details?" -> GET /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId}
+- "Get streaming-session-backup details?" -> GET /2020-08-01/studios/{studioId}/streaming-session-backups/{backupId}
+- "Get stream details?" -> GET /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId}/streams/{streamId}
+- "Get studio details?" -> GET /2020-08-01/studios/{studioId}
+- "Get studio-component details?" -> GET /2020-08-01/studios/{studioId}/studio-components/{studioComponentId}
+- "Get membership details?" -> GET /2020-08-01/studios/{studioId}/membership/{principalId}
+- "List all eula-acceptances?" -> GET /2020-08-01/studios/{studioId}/eula-acceptances
+- "List all eulas?" -> GET /2020-08-01/eulas
+- "List all membership?" -> GET /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/membership
+- "List all launch-profiles?" -> GET /2020-08-01/studios/{studioId}/launch-profiles
+- "List all streaming-images?" -> GET /2020-08-01/studios/{studioId}/streaming-images
+- "List all streaming-session-backups?" -> GET /2020-08-01/studios/{studioId}/streaming-session-backups
+- "List all streaming-sessions?" -> GET /2020-08-01/studios/{studioId}/streaming-sessions
+- "List all studio-components?" -> GET /2020-08-01/studios/{studioId}/studio-components
+- "List all membership?" -> GET /2020-08-01/studios/{studioId}/membership
+- "List all studios?" -> GET /2020-08-01/studios
+- "Get tag details?" -> GET /2020-08-01/tags/{resourceArn}
+- "Create a membership?" -> POST /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/membership
+- "Create a membership?" -> POST /2020-08-01/studios/{studioId}/membership
+- "Create a start?" -> POST /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId}/start
+- "Create a stop?" -> POST /2020-08-01/studios/{studioId}/streaming-sessions/{sessionId}/stop
+- "Delete a tag?" -> DELETE /2020-08-01/tags/{resourceArn}
+- "Partially update a launch-profile?" -> PATCH /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}
+- "Partially update a membership?" -> PATCH /2020-08-01/studios/{studioId}/launch-profiles/{launchProfileId}/membership/{principalId}
+- "Partially update a streaming-image?" -> PATCH /2020-08-01/studios/{studioId}/streaming-images/{streamingImageId}
+- "Partially update a studio?" -> PATCH /2020-08-01/studios/{studioId}
+- "Partially update a studio-component?" -> PATCH /2020-08-01/studios/{studioId}/studio-components/{studioComponentId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

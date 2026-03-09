@@ -9,129 +9,155 @@
 
 @group v2
 @endpoint GET /v2/
-@returns(200)
+@desc Tells whether this Docker Registry instance supports Docker Registry HTTP API v2
+@returns(200) Successful response. API v2 supported
 
 @endgroup
 
 @group {name}
 @endpoint GET /v2/{name}/manifests/{reference}
-@required {name: any, reference: any}
-@optional {accept: any}
-@returns(200)
+@desc Get the manifest identified by `name` and `reference` where `reference` can be a tag or digest.
+@required {name: any # Name of the image (including the namespace), reference: any # A tag or a digest, pointing to a specific image}
+@optional {accept: any # Accept header string delimited by comma. For example, application/vnd.docker.distribution.manifest.v2+json}
+@returns(200) Returns the requested manifest file in a larger combined group
 
 @endpoint PUT /v2/{name}/manifests/{reference}
-@required {name: any, reference: any, payload: any}
-@returns(201)
+@desc Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest.
+@required {name: any # Name of the image (including the namespace), reference: any # A tag or a digest, pointing to a specific image, payload: any # Manifest body, can take v1 or v2 values depending on accept header}
+@returns(201) The manifest is updated
 
 @endpoint DELETE /v2/{name}/manifests/{reference}
-@required {name: any, reference: any}
-@returns(202)
+@desc Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`.
+@required {name: any # Name of the image (including the namespace), reference: any # A tag or a digest, pointing to a specific image}
+@returns(202) The manifest has been deleted
 
 @endpoint GET /v2/{name}/blobs/{digest}
-@required {name: any, digest: any}
-@returns(200)
-@errors {307}
+@desc Retrieve the blob from the registry identified by digest.
+@required {name: any # Name of the image (including the namespace), digest: any # Digest of a BLOB}
+@returns(200) The blob identified by digest is available. The blob content will be present in the body of the response.
+@errors {307: The blob identified by digest is available at the provided location.}
 
 @endpoint HEAD /v2/{name}/blobs/{digest}
-@required {name: any, digest: any}
-@returns(200)
-@errors {307}
+@desc Same as GET, except only the headers are returned.
+@required {name: any # Name of the image (including the namespace), digest: any # Digest of a BLOB}
+@returns(200) The blob identified by digest is available. The blob content will be present in the body of the response.
+@errors {307: The blob identified by digest is available at the provided location.}
 
 @endpoint DELETE /v2/{name}/blobs/{digest}
-@required {name: any, digest: any}
-@returns(202)
+@desc Removes an already uploaded blob.
+@required {name: any # Name of the image (including the namespace), digest: any # Digest of a BLOB}
+@returns(202) The blob identified by digest is available. The blob content will be present in the body of the response.
 
 @endpoint POST /v2/{name}/blobs/uploads/
-@required {name: any, from: any, mount: any}
-@returns(201)
+@desc Mount a blob identified by the `mount` parameter from another repository.
+@required {name: any # Name of the image (including the namespace), from: any # Name of the source repository., mount: any # Digest of blob to mount from the source repository.}
+@returns(201) The blob has been created in the registry and is available at the provided location.
 
 @endgroup
 
 @group {nextBlobUuidLink}
 @endpoint GET /{nextBlobUuidLink}
-@required {nextBlobUuidLink: any}
-@returns(204)
+@desc Retrieve status of upload identified by uuid. The primary purpose of this endpoint is to resolve the current status of a resumable upload.
+@required {nextBlobUuidLink: any # Link acquired from upload start or previous chunk. Note, do not include initial / (must do substring(1) )}
+@returns(204) The upload is known and in progress. The last received offset is available in the Range header.
 
 @endpoint PATCH /{nextBlobUuidLink}
-@required {value: map, nextBlobUuidLink: any}
-@returns(202)
+@desc Upload a stream of data without completing the upload.
+@required {value: map # Raw data of blob, nextBlobUuidLink: any # Link acquired from upload start or previous chunk. Note, do not include initial / (must do substring(1) )}
+@returns(202) The stream of data has been accepted and the current progress is available in the range header. The updated upload location is available in the Location header.
 
 @endpoint PUT /{nextBlobUuidLink}
-@required {digest: any, nextBlobUuidLink: any}
-@optional {value: map}
-@returns(201)
+@desc Complete the upload, providing all the data in the body, if necessary. A request without a body will just complete the upload with previously uploaded content.
+@required {digest: any # Digest of a BLOB, nextBlobUuidLink: any # Link acquired from upload start or previous chunk. Note, do not include initial / (must do substring(1) )}
+@optional {value: map # Optional raw data of blob}
+@returns(201) The upload has been completed and accepted by the registry.
 
 @endpoint DELETE /{nextBlobUuidLink}
-@required {nextBlobUuidLink: any}
-@returns(204)
+@desc Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout.
+@required {nextBlobUuidLink: any # Link acquired from upload start or previous chunk. Note, do not include initial / (must do substring(1) )}
+@returns(204) The upload has been successfully deleted.
 
 @endgroup
 
 @group acr
 @endpoint GET /acr/v1/_catalog
-@optional {last: any, n: any}
-@returns(200)
+@desc List repositories
+@optional {last: any # Query parameter for the last item in previous query. Result set will include values lexically after last., n: any # query parameter for max number of items}
+@returns(200) Returns a list of repositories
 
 @endpoint GET /acr/v1/{name}
-@required {name: any}
-@returns(200)
+@desc Get repository attributes
+@required {name: any # Name of the image (including the namespace)}
+@returns(200) Returns a list of attributes
 
 @endpoint DELETE /acr/v1/{name}
-@required {name: any}
-@returns(202)
+@desc Delete the repository identified by `name`
+@required {name: any # Name of the image (including the namespace)}
+@returns(202) The repository is deleted
 
 @endpoint PATCH /acr/v1/{name}
-@required {name: any}
-@optional {value: any}
-@returns(200)
+@desc Update the attribute identified by `name` where `reference` is the name of the repository.
+@required {name: any # Name of the image (including the namespace)}
+@optional {value: any # Repository attribute value}
+@returns(200) The attributes are updated
 
 @endpoint GET /acr/v1/{name}/_tags
-@required {name: any}
-@optional {last: any, n: any, orderby: any, digest: any}
-@returns(200)
+@desc List tags of a repository
+@required {name: any # Name of the image (including the namespace)}
+@optional {last: any # Query parameter for the last item in previous query. Result set will include values lexically after last., n: any # query parameter for max number of items, orderby: any # orderby query parameter, digest: any # filter by digest}
+@returns(200) Tag details of a repository
 
 @endpoint GET /acr/v1/{name}/_tags/{reference}
-@required {name: any, reference: any}
-@returns(200)
+@desc Get tag attributes by tag
+@required {name: any # Name of the image (including the namespace), reference: any # Tag name}
+@returns(200) Tag attributes
 
 @endpoint PATCH /acr/v1/{name}/_tags/{reference}
-@required {name: any, reference: any}
-@optional {value: any}
-@returns(200)
+@desc Update tag attributes
+@required {name: any # Name of the image (including the namespace), reference: any # Tag name}
+@optional {value: any # Tag attribute value}
+@returns(200) The attributes are updated
 
 @endpoint DELETE /acr/v1/{name}/_tags/{reference}
-@required {name: any, reference: any}
-@returns(202)
+@desc Delete tag
+@required {name: any # Name of the image (including the namespace), reference: any # Tag name}
+@returns(202) The tag is deleted
 
 @endpoint GET /acr/v1/{name}/_manifests
-@required {name: any}
-@optional {last: any, n: any, orderby: any}
-@returns(200)
+@desc List manifests of a repository
+@required {name: any # Name of the image (including the namespace)}
+@optional {last: any # Query parameter for the last item in previous query. Result set will include values lexically after last., n: any # query parameter for max number of items, orderby: any # orderby query parameter}
+@returns(200) Returns a list of manifests
 
 @endpoint GET /acr/v1/{name}/_manifests/{reference}
-@required {name: any, reference: any}
-@returns(200)
+@desc Get manifest attributes
+@required {name: any # Name of the image (including the namespace), reference: any # A tag or a digest, pointing to a specific image}
+@returns(200) List of attributes
 
 @endpoint PATCH /acr/v1/{name}/_manifests/{reference}
-@required {name: any, reference: any}
-@optional {value: any}
-@returns(200)
+@desc Update attributes of a manifest
+@required {name: any # Name of the image (including the namespace), reference: any # A tag or a digest, pointing to a specific image}
+@optional {value: any # Manifest attribute value}
+@returns(200) The attributes are updated
 
 @endgroup
 
 @group oauth2
 @endpoint POST /oauth2/exchange
-@required {grant_type: any, service: any}
-@optional {tenant: any, refresh_token: any, access_token: any}
-@returns(200)
+@desc Exchange AAD tokens for an ACR refresh Token
+@required {grant_type: any # Can take a value of access_token_refresh_token, or access_token, or refresh_token, service: any # Indicates the name of your Azure container registry.}
+@optional {tenant: any # AAD tenant associated to the AAD credentials., refresh_token: any # AAD refresh token, mandatory when grant_type is access_token_refresh_token or refresh_token, access_token: any # AAD access token, mandatory when grant_type is access_token_refresh_token or access_token.}
+@returns(200) Refresh token acquired
 
 @endpoint POST /oauth2/token
-@required {grant_type: any, service: any, scope: any, refresh_token: any}
-@returns(200)
+@desc Exchange ACR Refresh token for an ACR Access Token
+@required {grant_type: any # Grant type is expected to be refresh_token, service: any # Indicates the name of your Azure container registry., scope: any # Which is expected to be a valid scope, and can be specified more than once for multiple scope requests. You obtained this from the Www-Authenticate response header from the challenge., refresh_token: any # Must be a valid ACR refresh token}
+@returns(200) Access token acquired
 
 @endpoint GET /oauth2/token
-@required {service: any, scope: any}
-@returns(200)
+@desc Exchange Username, Password and Scope an ACR Access Token
+@required {service: any # Indicates the name of your Azure container registry., scope: any # Expected to be a valid scope, and can be specified more than once for multiple scope requests. You can obtain this from the Www-Authenticate response header from the challenge.}
+@returns(200) Access token acquired
 
 @endgroup
 

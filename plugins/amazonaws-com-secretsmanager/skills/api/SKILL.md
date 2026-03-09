@@ -49,87 +49,10 @@ Not specified.
 | POST | / | Modifies the staging labels attached to a version of a secret. Secrets Manager uses staging labels to track a version as it progresses through the secret rotation process. Each staging label can be attached to only one version at a time. To add a staging label to a version when it is already attached to another version, Secrets Manager first removes it from the other version first and then attaches it to this one. For more information about versions and staging labels, see Concepts: Version.  The staging labels that you specify in the VersionStage parameter are added to the existing list of staging labels for the version.  You can move the AWSCURRENT staging label to this version by including it in this call.  Whenever you move AWSCURRENT, Secrets Manager automatically moves the label AWSPREVIOUS to the version that AWSCURRENT was removed from.  If this action results in the last label being removed from a version, then the version is considered to be 'deprecated' and can be deleted by Secrets Manager. Secrets Manager generates a CloudTrail log entry when you call this action. Do not include sensitive information in request parameters because it might be logged. For more information, see Logging Secrets Manager events with CloudTrail.  Required permissions:  secretsmanager:UpdateSecretVersionStage. For more information, see  IAM policy actions for Secrets Manager and Authentication and access control in Secrets Manager. |
 | POST | / | Validates that a resource policy does not grant a wide range of principals access to your secret. A resource-based policy is optional for secrets. The API performs three checks when validating the policy:   Sends a call to Zelkova, an automated reasoning engine, to ensure your resource policy does not allow broad access to your secret, for example policies that use a wildcard for the principal.   Checks for correct syntax in a policy.   Verifies the policy does not lock out a caller.   Secrets Manager generates a CloudTrail log entry when you call this action. Do not include sensitive information in request parameters because it might be logged. For more information, see Logging Secrets Manager events with CloudTrail.  Required permissions:  secretsmanager:ValidateResourcePolicy and secretsmanager:PutResourcePolicy. For more information, see  IAM policy actions for Secrets Manager and Authentication and access control in Secrets Manager. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I retrieve the value of a secret?" -> POST / (GetSecretValue: SecretId, optional VersionId/VersionStage)
-- "How do I create a new secret with a string value?" -> POST / (CreateSecret: Name + SecretString)
-- "How do I list all secrets in my account?" -> POST / (ListSecrets: optional Filters, MaxResults, NextToken)
-- "How do I update an existing secret's value?" -> POST / (PutSecretValue: SecretId + SecretString or SecretBinary)
-- "How do I delete a secret?" -> POST / (DeleteSecret: SecretId, optional RecoveryWindowInDays or ForceDeleteWithoutRecovery)
-- "How do I restore a deleted secret before the recovery window expires?" -> POST / (RestoreSecret: SecretId)
-- "How do I get metadata about a secret without retrieving its value?" -> POST / (DescribeSecret: SecretId)
-- "How do I fetch multiple secret values in one call?" -> POST / (BatchGetSecretValue: SecretIdList or Filters)
-- "How do I rotate a secret immediately?" -> POST / (RotateSecret: SecretId + RotateImmediately: true)
-- "How do I generate a random password for a new secret?" -> POST / (GetRandomPassword: optional PasswordLength, exclusions)
-- "How do I replicate a secret to another region?" -> POST / (ReplicateSecretToRegions: SecretId + AddReplicaRegions)
-- "How do I attach a resource policy to a secret?" -> POST / (PutResourcePolicy: SecretId + ResourcePolicy JSON)
-- "How do I see all versions of a secret?" -> POST / (ListSecretVersionIds: SecretId)
-- "How do I move a version stage label (e.g., AWSCURRENT) between versions?" -> POST / (UpdateSecretVersionStage: SecretId + VersionStage + MoveToVersionId)
-- "How do I validate a resource policy before applying it?" -> POST / (ValidateResourcePolicy: ResourcePolicy, optional SecretId)
-
-## Response Tips
-
-- **Secret values** (GetSecretValue, BatchGetSecretValue): Check both `SecretString` and `SecretBinary` -- only one is populated depending on how the secret was stored. BatchGetSecretValue returns partial successes; always check the `Errors` array alongside `SecretValues`.
-- **List operations** (ListSecrets, ListSecretVersionIds): Paginated via `NextToken`. If present in the response, repeat the call with it to get more results. `MaxResults` caps each page (default varies, max 100).
-- **Delete operations** (DeleteSecret): Returns a `DeletionDate` timestamp representing when the secret will be permanently removed. The secret is recoverable until that date unless `ForceDeleteWithoutRecovery` was true.
-- **Describe operations** (DescribeSecret): Returns deeply nested objects -- `RotationRules` is an object with sub-fields, `VersionIdsToStages` is a map of version IDs to stage label arrays, `ReplicationStatus` is an array of per-region statuses.
-- **Mutation operations** (CreateSecret, UpdateSecret, PutSecretValue, RotateSecret): All return `VersionId` identifying the new secret version. Use this to confirm the write succeeded.
-- **Tag/Untag operations** (TagResource, UntagResource): Return no body on success (HTTP 200 with empty response). Absence of error means success.
-- **Replication operations**: `ReplicationStatus` entries contain per-region status. Check each region's status individually -- partial failures are possible.
-
-## Anomaly Flags
-
-- **Rotation overdue**: If `DescribeSecret` shows `RotationEnabled: true` but `LastRotatedDate` is older than the configured `RotationRules.AutomaticallyAfterDays`, surface a warning that rotation may be stuck.
-- **Secret scheduled for deletion**: If `DescribeSecret` returns a `DeletedDate`, alert the user that this secret is pending deletion and will become unrecoverable.
-- **Batch partial failures**: When `BatchGetSecretValue` returns a non-empty `Errors` array, surface each failed secret ID and error code -- do not silently ignore partial results.
-- **Replication drift**: If `ReplicationStatus` contains entries with failed or in-progress statuses across regions, flag that the secret is not fully replicated.
-- **Missing rotation Lambda**: If `RotationEnabled` is true but `RotationLambdaARN` is empty or absent, warn that rotation is enabled without a configured Lambda function.
-- **Resource policy validation failures**: When `ValidateResourcePolicy` returns `PolicyValidationPassed: false`, surface each entry in `ValidationErrors` with its specific message.
-- **Deprecated versions**: When listing versions with `IncludeDeprecated: true`, flag any versions that have lost all stage labels -- they are effectively orphaned.
-- **KMS key concerns**: If `DescribeSecret` returns a `KmsKeyId` referencing a custom key, note that the key must remain accessible or the secret becomes unreadable.
-
-## Playbook
-
-### Create a Secret and Verify It
-
-1. Call **GetRandomPassword** with desired constraints (e.g., `PasswordLength: 32`, `RequireEachIncludedType: true`) to generate a strong value.
-2. Call **CreateSecret** with `Name`, `SecretString` (the generated password), and optional `Description` and `Tags`.
-3. Confirm creation by checking the returned `ARN` and `VersionId`.
-4. Call **GetSecretValue** with the new `SecretId` to verify the stored value matches what was sent.
-
-### Rotate a Secret with a Custom Lambda
-
-1. Call **DescribeSecret** to check current rotation configuration (`RotationEnabled`, `RotationLambdaARN`, `RotationRules`).
-2. Call **RotateSecret** with `SecretId`, `RotationLambdaARN` (if setting up for the first time), `RotationRules` (e.g., `AutomaticallyAfterDays: 30`), and `RotateImmediately: true`.
-3. Wait briefly, then call **DescribeSecret** again to confirm `LastRotatedDate` has updated.
-4. Call **GetSecretValue** with `VersionStage: AWSCURRENT` to verify the new secret value is active.
-5. If the old version is needed, call **GetSecretValue** with `VersionStage: AWSPREVIOUS`.
-
-### Set Up Cross-Region Replication
-
-1. Call **DescribeSecret** to review current `PrimaryRegion` and any existing `ReplicationStatus`.
-2. Call **ReplicateSecretToRegions** with `SecretId` and `AddReplicaRegions` (each specifying `Region` and optional `KmsKeyId`).
-3. Check the returned `ReplicationStatus` array -- each region should show its sync status.
-4. Periodically call **DescribeSecret** to monitor until all replicas reach a healthy status.
-5. To remove a replica later, call **RemoveRegionsFromReplication** with the region list to remove.
-
-### Safely Delete and Optionally Recover a Secret
-
-1. Call **DeleteSecret** with `SecretId` and `RecoveryWindowInDays` (7-30, default 30) to schedule deletion.
-2. Note the returned `DeletionDate` -- the secret is soft-deleted and recoverable until then.
-3. If recovery is needed before the window expires, call **RestoreSecret** with the same `SecretId`.
-4. Confirm restoration by calling **DescribeSecret** and verifying `DeletedDate` is no longer present.
-5. To permanently delete immediately (irreversible), use `ForceDeleteWithoutRecovery: true` instead of a recovery window.
-
-### Audit and Manage Secret Access Policies
-
-1. Call **GetResourcePolicy** with `SecretId` to retrieve the current JSON policy (if any).
-2. Draft or modify the policy document. Call **ValidateResourcePolicy** with the new `ResourcePolicy` JSON and the `SecretId` to check for errors before applying.
-3. Review `PolicyValidationPassed` and any `ValidationErrors`. Fix issues and re-validate if needed.
-4. Call **PutResourcePolicy** with the validated `ResourcePolicy` and optionally `BlockPublicPolicy: true` to prevent overly permissive access.
-5. To remove the policy entirely, call **DeleteResourcePolicy** with the `SecretId`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

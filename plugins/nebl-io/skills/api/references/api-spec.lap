@@ -10,223 +10,273 @@
 
 @group ntp1
 @endpoint GET /ntp1/tokenid/{tokensymbol}
-@required {tokensymbol: str}
-@returns(200) {tokenId: str, tokenName: str}
+@desc Returns the tokenId representing a token
+@required {tokensymbol: str # Token symbol}
+@returns(200) {tokenId: str, tokenName: str} # Object containing the token symbol and ID, if token symbol does not exist on network, empty object is returned.
 
 @endpoint POST /ntp1/broadcast
-@required {txHex: str}
-@returns(200) {txid: str}
+@desc Broadcasts a signed raw transaction to the network
+@required {txHex: str # Signed raw tx hex to broadcast}
+@returns(200) {txid: str} # An object containing the TXID if the broadcast was successful
 
 @endpoint GET /ntp1/addressinfo/{address}
-@required {address: str}
-@returns(200) {address: str, utxos: [map]}
+@desc Information On a Neblio Address
+@required {address: str # Neblio Address to get information on.}
+@returns(200) {address: str, utxos: [map]} # An object with an array of UTXOs for this address
 
 @endpoint GET /ntp1/transactioninfo/{txid}
-@required {txid: str}
-@returns(200) {hex: str, txid: str, version: num, locktime: num, vin: [map], vout: [map], blocktime: num, blockheight: num, totalsent: num, fee: num, blockhash: str, time: num, confirmations: num}
+@desc Information On an NTP1 Transaction
+@required {txid: str # Neblio txid to get information on.}
+@returns(200) {hex: str, txid: str, version: num, locktime: num, vin: [map], vout: [map], blocktime: num, blockheight: num, totalsent: num, fee: num, blockhash: str, time: num, confirmations: num} # An object represending this transaction
 
 @endpoint GET /ntp1/tokenmetadata/{tokenid}
-@required {tokenid: str}
-@optional {verbosity: num}
-@returns(200) {tokenId: str, someUtxo: str, divisibility: num, lockStatus: bool, aggregationPolicy: str, initialIssuanceAmount: num, totalSupply: num, numOfHolders: num, numOfTransfers: num, numOfIssuance: num, numOfBurns: num, firstBlock: num, issuanceTxid: str, issueAddress: str, metadataOfIssuance: map{data: map{tokenName: str, issuer: str, description: str, userData: map{meta: [map]}}}, metadataOfUtxo: map{userData: map{meta: [map]}}}
+@desc Get Metadata of Token
+@required {tokenid: str # TokenId to request metadata for}
+@optional {verbosity: num # 0 (Default) is fastest, 1 contains token stats, 2 contains token holding addresses}
+@returns(200) {tokenId: str, someUtxo: str, divisibility: num, lockStatus: bool, aggregationPolicy: str, initialIssuanceAmount: num, totalSupply: num, numOfHolders: num, numOfTransfers: num, numOfIssuance: num, numOfBurns: num, firstBlock: num, issuanceTxid: str, issueAddress: str, metadataOfIssuance: map{data: map{tokenName: str, issuer: str, description: str, userData: map{meta: [map]}}}, metadataOfUtxo: map{userData: map{meta: [map]}}} # An object containing the metadata of a token
 
 @endpoint GET /ntp1/tokenmetadata/{tokenid}/{utxo}
-@required {tokenid: str, utxo: str}
-@optional {verbosity: num}
-@returns(200) {tokenId: str, someUtxo: str, divisibility: num, lockStatus: bool, aggregationPolicy: str, initialIssuanceAmount: num, totalSupply: num, numOfHolders: num, numOfTransfers: num, numOfIssuance: num, numOfBurns: num, firstBlock: num, issuanceTxid: str, issueAddress: str, metadataOfIssuance: map{data: map{tokenName: str, issuer: str, description: str, userData: map{meta: [map]}}}, metadataOfUtxo: map{userData: map{meta: [map]}}}
+@desc Get UTXO Metadata of Token
+@required {tokenid: str # TokenId to request metadata for, utxo: str # Specific UTXO to request metadata for}
+@optional {verbosity: num # 0 (Default) is fastest, 1 contains token stats, 2 contains token holding addresses}
+@returns(200) {tokenId: str, someUtxo: str, divisibility: num, lockStatus: bool, aggregationPolicy: str, initialIssuanceAmount: num, totalSupply: num, numOfHolders: num, numOfTransfers: num, numOfIssuance: num, numOfBurns: num, firstBlock: num, issuanceTxid: str, issueAddress: str, metadataOfIssuance: map{data: map{tokenName: str, issuer: str, description: str, userData: map{meta: [map]}}}, metadataOfUtxo: map{userData: map{meta: [map]}}} # An object containing the metadata of a token for a UTXO
 
 @endpoint GET /ntp1/stakeholders/{tokenid}
-@required {tokenid: str}
-@returns(200) {tokenId: str, holders: [map], divibility: num, lockStatus: bool, aggregationPolicy: str, someUtxo: str}
+@desc Get Addresses Holding a Token
+@required {tokenid: str # TokenId to request metadata for}
+@returns(200) {tokenId: str, holders: [map], divibility: num, lockStatus: bool, aggregationPolicy: str, someUtxo: str} # An object containing all of the addresses holding a token
 
 @endpoint POST /ntp1/issue
-@required {issueAddress: str, amount: num, divisibility: num, fee: num, reissuable: bool, transfer: [map{address: str, amount: num}]}
-@optional {flags: map{splitChange: bool}, metadata: map{tokenName: str, issuer: str, description: str, urls: [map{name: str, url: str, mimeType: str, dataHash: str}], userData: map{meta: [map]}, encryptions: [map{key: str, pubkey: str, format: str, type: str}], rules: map{fees: map, holders: [map], expiration: map}}}
-@returns(200) {tokenId: str, txHex: str}
+@desc Builds a transaction that issues a new NTP1 Token
+@required {issueAddress: str # Address issuing the token, amount: num # Number of tokens to issue, divisibility: num # Number of decimal places the token should be divisble by (0-7), fee: num # Fee in satoshi to include in the issuance transaction min 1000000000 (10 NEBL), reissuable: bool # whether the token should be reissuable, transfer: [map{address: str, amount: num}]}
+@optional {flags: map{splitChange: bool} # Object representing flags that potentialy modify this transaction, metadata: map{tokenName: str, issuer: str, description: str, urls: [map{name: str, url: str, mimeType: str, dataHash: str}], userData: map{meta: [map]}, encryptions: [map{key: str, pubkey: str, format: str, type: str}], rules: map{fees: map, holders: [map], expiration: map}} # Object representing all metadata at token issuance}
+@returns(200) {tokenId: str, txHex: str} # An object representing the token created
 
 @endpoint POST /ntp1/sendtoken
-@required {fee: num, to: [map{address: str, amount: num, tokenId: str}]}
-@optional {from: [str], sendutxo: [str], flags: map{splitChange: bool}, metadata: map{tokenName: str, issuer: str, description: str, urls: [map{name: str, url: str, mimeType: str, dataHash: str}], userData: map{meta: [map]}, encryptions: [map{key: str, pubkey: str, format: str, type: str}], rules: map{fees: map, holders: [map], expiration: map}}}
-@returns(200) {txHex: str, ntp1OutputIndexes: [num], multisigOutputs: [num]}
+@desc Builds a transaction that sends an NTP1 Token
+@required {fee: num # Fee in satoshi to include in the issuance transaction min 10000 (0.0001 NEBL), to: [map{address: str, amount: num, tokenId: str}]}
+@optional {from: [str] # Array of addresses to send the token from, sendutxo: [str] # Array of UTXOs to send the token from, flags: map{splitChange: bool} # Object representing flags that potentialy modify this transaction, metadata: map{tokenName: str, issuer: str, description: str, urls: [map{name: str, url: str, mimeType: str, dataHash: str}], userData: map{meta: [map]}, encryptions: [map{key: str, pubkey: str, format: str, type: str}], rules: map{fees: map, holders: [map], expiration: map}} # Object representing all metadata at token issuance}
+@returns(200) {txHex: str, ntp1OutputIndexes: [num], multisigOutputs: [num]} # An object representing the tx to send the token
 
 @endpoint POST /ntp1/burntoken
-@required {fee: num, burn: [map{amount: num, tokenId: str}]}
-@optional {from: [str], transfer: [map{address: str, amount: num, tokenId: str}]}
-@returns(200) {txHex: str, ntp1OutputIndexes: [num], multisigOutputs: [num]}
+@desc Builds a transaction that burns an NTP1 Token
+@required {fee: num # Fee in satoshi to include in the issuance transaction min 10000 (0.0001 NEBL), burn: [map{amount: num, tokenId: str}] # Array of objects representing tokens to be burned}
+@optional {from: [str] # Array of addresses to send the token from, transfer: [map{address: str, amount: num, tokenId: str}]}
+@returns(200) {txHex: str, ntp1OutputIndexes: [num], multisigOutputs: [num]} # An object representing the tx to burn the token
 
 @endgroup
 
 @group ins
 @endpoint POST /ins/tx/send
-@required {rawtx: str}
-@returns(200) {txid: str}
+@desc Broadcasts a signed raw transaction to the network (not NTP1 specific)
+@required {rawtx: str # Signed raw tx hex to broadcast}
+@returns(200) {txid: str} # An object containing the TXID if the broadcast was successful
 
 @endpoint GET /ins/block/{blockhash}
-@required {blockhash: str}
-@returns(200) {hash: str, confirmations: num, size: num, height: num, version: num, merkleroot: str, tx: [str], time: num, nonce: num, bits: str, difficulty: num, previousblockhash: str, nextblockhash: str, reward: num}
+@desc Returns information regarding a Neblio block
+@required {blockhash: str # Block Hash}
+@returns(200) {hash: str, confirmations: num, size: num, height: num, version: num, merkleroot: str, tx: [str], time: num, nonce: num, bits: str, difficulty: num, previousblockhash: str, nextblockhash: str, reward: num} # Object containing all information on a blockchain block
 
 @endpoint GET /ins/block-index/{blockindex}
-@required {blockindex: num}
-@returns(200) {blockHash: str}
+@desc Returns block hash of block
+@required {blockindex: num # Block Index}
+@returns(200) {blockHash: str} # Object containing block hash
 
 @endpoint GET /ins/tx/{txid}
-@required {txid: str}
-@returns(200) {txid: str, version: num, locktime: num, vin: [map], vout: [map], blocktime: num, blockheight: num, totalsent: num, fee: num, blockhash: str, time: num, confirmations: num, valueOut: num, valueIn: num, fees: num, size: num}
+@desc Returns transaction object
+@required {txid: str # Transaction ID}
+@returns(200) {txid: str, version: num, locktime: num, vin: [map], vout: [map], blocktime: num, blockheight: num, totalsent: num, fee: num, blockhash: str, time: num, confirmations: num, valueOut: num, valueIn: num, fees: num, size: num} # Object containing transaction info
 
 @endpoint GET /ins/rawtx/{txid}
-@required {txid: str}
-@returns(200) {rawtx: str}
+@desc Returns raw transaction hex
+@required {txid: str # Transaction ID}
+@returns(200) {rawtx: str} # Object containing raw hex of transaction
 
 @endpoint GET /ins/addr/{address}
-@required {address: str}
-@returns(200) {addrStr: str, balance: num, balanceSat: num, totalReceived: num, totalReceivedSat: num, totalSent: num, totalSentSat: num, unconfirmedBalance: num, unconfirmedBalanceSat: num, unconfirmedTxAppearances: num, txAppearances: num, transactions: [str]}
+@desc Returns address object
+@required {address: str # Address}
+@returns(200) {addrStr: str, balance: num, balanceSat: num, totalReceived: num, totalReceivedSat: num, totalSent: num, totalSentSat: num, unconfirmedBalance: num, unconfirmedBalanceSat: num, unconfirmedTxAppearances: num, txAppearances: num, transactions: [str]} # Object containing address info
 
 @endpoint GET /ins/addr/{address}/balance
-@required {address: str}
-@returns(200)
+@desc Returns address balance in sats
+@required {address: str # Address}
+@returns(200) Address balance
 
 @endpoint GET /ins/addr/{address}/unconfirmedBalance
-@required {address: str}
-@returns(200)
+@desc Returns address unconfirmed balance in sats
+@required {address: str # Address}
+@returns(200) Address unconfirmed balance
 
 @endpoint GET /ins/addr/{address}/totalReceived
-@required {address: str}
-@returns(200)
+@desc Returns total received by address in sats
+@required {address: str # Address}
+@returns(200) Total received by address
 
 @endpoint GET /ins/addr/{address}/utxo
-@required {address: str}
-@returns(200)
+@desc Returns all UTXOs at a given address
+@required {address: str # Address}
+@returns(200) UTXOs at an address
 
 @endpoint GET /ins/addr/{address}/totalSent
-@required {address: str}
-@returns(200)
+@desc Returns total sent by address in sats
+@required {address: str # Address}
+@returns(200) Total sent by address
 
 @endpoint GET /ins/txs
-@optional {address: str, block: str, pageNum: num}
-@returns(200) {pagesTotal: num, txs: [map]}
+@desc Get transactions by block or address
+@optional {address: str # Address, block: str # Block Hash, pageNum: num # Page number to display}
+@returns(200) {pagesTotal: num, txs: [map]} # List of transactions
 
 @endpoint GET /ins/sync
-@returns(200) {status: str, blockChainHeight: num, syncPercentage: num, height: num, error: str, type: str}
+@desc Get node sync status
+@returns(200) {status: str, blockChainHeight: num, syncPercentage: num, height: num, error: str, type: str} # Sync Info
 
 @endpoint GET /ins/status
-@optional {q: str}
-@returns(200)
+@desc Utility API for calling several blockchain node functions
+@optional {q: str # Function to call, getInfo, getDifficulty, getBestBlockHash, or getLastBlockHash}
+@returns(200) Function Response
 
 @endgroup
 
 @group testnet
 @endpoint POST /testnet/ins/tx/send
-@required {rawtx: str}
-@returns(200) {txid: str}
+@desc Broadcasts a signed raw transaction to the network (not NTP1 specific)
+@required {rawtx: str # Signed raw tx hex to broadcast}
+@returns(200) {txid: str} # An object containing the TXID if the broadcast was successful
 
 @endpoint GET /testnet/ins/block/{blockhash}
-@required {blockhash: str}
-@returns(200) {hash: str, confirmations: num, size: num, height: num, version: num, merkleroot: str, tx: [str], time: num, nonce: num, bits: str, difficulty: num, previousblockhash: str, nextblockhash: str, reward: num}
+@desc Returns information regarding a Neblio block
+@required {blockhash: str # Block Hash}
+@returns(200) {hash: str, confirmations: num, size: num, height: num, version: num, merkleroot: str, tx: [str], time: num, nonce: num, bits: str, difficulty: num, previousblockhash: str, nextblockhash: str, reward: num} # Object containing all information on a blockchain block
 
 @endpoint GET /testnet/ins/block-index/{blockindex}
-@required {blockindex: num}
-@returns(200) {blockHash: str}
+@desc Returns block hash of block
+@required {blockindex: num # Block Index}
+@returns(200) {blockHash: str} # Object containing block hash
 
 @endpoint GET /testnet/ins/tx/{txid}
-@required {txid: str}
-@returns(200) {txid: str, version: num, locktime: num, vin: [map], vout: [map], blocktime: num, blockheight: num, totalsent: num, fee: num, blockhash: str, time: num, confirmations: num, valueOut: num, valueIn: num, fees: num, size: num}
+@desc Returns transaction object
+@required {txid: str # Transaction ID}
+@returns(200) {txid: str, version: num, locktime: num, vin: [map], vout: [map], blocktime: num, blockheight: num, totalsent: num, fee: num, blockhash: str, time: num, confirmations: num, valueOut: num, valueIn: num, fees: num, size: num} # Object containing transaction info
 
 @endpoint GET /testnet/ins/rawtx/{txid}
-@required {txid: str}
-@returns(200) {rawtx: str}
+@desc Returns raw transaction hex
+@required {txid: str # Transaction ID}
+@returns(200) {rawtx: str} # Object containing raw hex of transaction
 
 @endpoint GET /testnet/ins/addr/{address}
-@required {address: str}
-@returns(200) {addrStr: str, balance: num, balanceSat: num, totalReceived: num, totalReceivedSat: num, totalSent: num, totalSentSat: num, unconfirmedBalance: num, unconfirmedBalanceSat: num, unconfirmedTxAppearances: num, txAppearances: num, transactions: [str]}
+@desc Returns address object
+@required {address: str # Address}
+@returns(200) {addrStr: str, balance: num, balanceSat: num, totalReceived: num, totalReceivedSat: num, totalSent: num, totalSentSat: num, unconfirmedBalance: num, unconfirmedBalanceSat: num, unconfirmedTxAppearances: num, txAppearances: num, transactions: [str]} # Object containing address info
 
 @endpoint GET /testnet/ins/addr/{address}/balance
-@required {address: str}
-@returns(200)
+@desc Returns address balance in sats
+@required {address: str # Address}
+@returns(200) Address balance
 
 @endpoint GET /testnet/ins/addr/{address}/unconfirmedBalance
-@required {address: str}
-@returns(200)
+@desc Returns address unconfirmed balance in sats
+@required {address: str # Address}
+@returns(200) Address unconfirmed balance
 
 @endpoint GET /testnet/ins/addr/{address}/totalReceived
-@required {address: str}
-@returns(200)
+@desc Returns total received by address in sats
+@required {address: str # Address}
+@returns(200) Total received by address
 
 @endpoint GET /testnet/ins/addr/{address}/utxo
-@required {address: str}
-@returns(200)
+@desc Returns all UTXOs at a given address
+@required {address: str # Address}
+@returns(200) UTXOs at an address
 
 @endpoint GET /testnet/ins/addr/{address}/totalSent
-@required {address: str}
-@returns(200)
+@desc Returns total sent by address in sats
+@required {address: str # Address}
+@returns(200) Total sent by address
 
 @endpoint GET /testnet/ins/txs
-@optional {address: str, block: str, pageNum: num}
-@returns(200) {pagesTotal: num, txs: [map]}
+@desc Get transactions by block or address
+@optional {address: str # Address, block: str # Block Hash, pageNum: num # Page number to display}
+@returns(200) {pagesTotal: num, txs: [map]} # List of transactions
 
 @endpoint GET /testnet/ins/sync
-@returns(200) {status: str, blockChainHeight: num, syncPercentage: num, height: num, error: str, type: str}
+@desc Get node sync status
+@returns(200) {status: str, blockChainHeight: num, syncPercentage: num, height: num, error: str, type: str} # Sync Info
 
 @endpoint GET /testnet/ins/status
-@optional {q: str}
-@returns(200)
+@desc Utility API for calling several blockchain node functions
+@optional {q: str # Function to call, getInfo, getDifficulty, getBestBlockHash, or getLastBlockHash}
+@returns(200) Function Response
 
 @endpoint GET /testnet/ntp1/tokenid/{tokensymbol}
-@required {tokensymbol: str}
-@returns(200) {tokenId: str, tokenName: str}
+@desc Returns the tokenId representing a token
+@required {tokensymbol: str # Token symbol}
+@returns(200) {tokenId: str, tokenName: str} # Object containing the token symbol and ID, if token symbol does not exist on network, empty object is returned.
 
 @endpoint POST /testnet/ntp1/broadcast
-@required {txHex: str}
-@returns(200) {txid: str}
+@desc Broadcasts a signed raw transaction to the network
+@required {txHex: str # Signed raw tx hex to broadcast}
+@returns(200) {txid: str} # An object containing the TXID if the broadcast was successful
 
 @endpoint GET /testnet/ntp1/addressinfo/{address}
-@required {address: str}
-@returns(200) {address: str, utxos: [map]}
+@desc Information On a Neblio Address
+@required {address: str # Neblio Address to get information on.}
+@returns(200) {address: str, utxos: [map]} # An object with an array of UTXOs for this address
 
 @endpoint GET /testnet/ntp1/transactioninfo/{txid}
-@required {txid: str}
-@returns(200) {hex: str, txid: str, version: num, locktime: num, vin: [map], vout: [map], blocktime: num, blockheight: num, totalsent: num, fee: num, blockhash: str, time: num, confirmations: num}
+@desc Information On an NTP1 Transaction
+@required {txid: str # Neblio txid to get information on.}
+@returns(200) {hex: str, txid: str, version: num, locktime: num, vin: [map], vout: [map], blocktime: num, blockheight: num, totalsent: num, fee: num, blockhash: str, time: num, confirmations: num} # An object represending this transaction
 
 @endpoint GET /testnet/ntp1/tokenmetadata/{tokenid}
-@required {tokenid: str}
-@optional {verbosity: num}
-@returns(200) {tokenId: str, someUtxo: str, divisibility: num, lockStatus: bool, aggregationPolicy: str, initialIssuanceAmount: num, totalSupply: num, numOfHolders: num, numOfTransfers: num, numOfIssuance: num, numOfBurns: num, firstBlock: num, issuanceTxid: str, issueAddress: str, metadataOfIssuance: map{data: map{tokenName: str, issuer: str, description: str, userData: map{meta: [map]}}}, metadataOfUtxo: map{userData: map{meta: [map]}}}
+@desc Get Metadata of Token
+@required {tokenid: str # TokenId to request metadata for}
+@optional {verbosity: num # 0 (Default) is fastest, 1 contains token stats, 2 contains token holding addresses}
+@returns(200) {tokenId: str, someUtxo: str, divisibility: num, lockStatus: bool, aggregationPolicy: str, initialIssuanceAmount: num, totalSupply: num, numOfHolders: num, numOfTransfers: num, numOfIssuance: num, numOfBurns: num, firstBlock: num, issuanceTxid: str, issueAddress: str, metadataOfIssuance: map{data: map{tokenName: str, issuer: str, description: str, userData: map{meta: [map]}}}, metadataOfUtxo: map{userData: map{meta: [map]}}} # An object containing the metadata of a token
 
 @endpoint GET /testnet/ntp1/tokenmetadata/{tokenid}/{utxo}
-@required {tokenid: str, utxo: str}
-@optional {verbosity: num}
-@returns(200) {tokenId: str, someUtxo: str, divisibility: num, lockStatus: bool, aggregationPolicy: str, initialIssuanceAmount: num, totalSupply: num, numOfHolders: num, numOfTransfers: num, numOfIssuance: num, numOfBurns: num, firstBlock: num, issuanceTxid: str, issueAddress: str, metadataOfIssuance: map{data: map{tokenName: str, issuer: str, description: str, userData: map{meta: [map]}}}, metadataOfUtxo: map{userData: map{meta: [map]}}}
+@desc Get UTXO Metadata of Token
+@required {tokenid: str # TokenId to request metadata for, utxo: str # Specific UTXO to request metadata for}
+@optional {verbosity: num # 0 (Default) is fastest, 1 contains token stats, 2 contains token holding addresses}
+@returns(200) {tokenId: str, someUtxo: str, divisibility: num, lockStatus: bool, aggregationPolicy: str, initialIssuanceAmount: num, totalSupply: num, numOfHolders: num, numOfTransfers: num, numOfIssuance: num, numOfBurns: num, firstBlock: num, issuanceTxid: str, issueAddress: str, metadataOfIssuance: map{data: map{tokenName: str, issuer: str, description: str, userData: map{meta: [map]}}}, metadataOfUtxo: map{userData: map{meta: [map]}}} # An object containing the metadata of a token for a UTXO
 
 @endpoint GET /testnet/ntp1/stakeholders/{tokenid}
-@required {tokenid: str}
-@returns(200) {tokenId: str, holders: [map], divibility: num, lockStatus: bool, aggregationPolicy: str, someUtxo: str}
+@desc Get Addresses Holding a Token
+@required {tokenid: str # TokenId to request metadata for}
+@returns(200) {tokenId: str, holders: [map], divibility: num, lockStatus: bool, aggregationPolicy: str, someUtxo: str} # An object containing all of the addresses holding a token
 
 @endpoint POST /testnet/ntp1/issue
-@required {issueAddress: str, amount: num, divisibility: num, fee: num, reissuable: bool, transfer: [map{address: str, amount: num}]}
-@optional {flags: map{splitChange: bool}, metadata: map{tokenName: str, issuer: str, description: str, urls: [map{name: str, url: str, mimeType: str, dataHash: str}], userData: map{meta: [map]}, encryptions: [map{key: str, pubkey: str, format: str, type: str}], rules: map{fees: map, holders: [map], expiration: map}}}
-@returns(200) {tokenId: str, txHex: str}
+@desc Builds a transaction that issues a new NTP1 Token
+@required {issueAddress: str # Address issuing the token, amount: num # Number of tokens to issue, divisibility: num # Number of decimal places the token should be divisble by (0-7), fee: num # Fee in satoshi to include in the issuance transaction min 1000000000 (10 NEBL), reissuable: bool # whether the token should be reissuable, transfer: [map{address: str, amount: num}]}
+@optional {flags: map{splitChange: bool} # Object representing flags that potentialy modify this transaction, metadata: map{tokenName: str, issuer: str, description: str, urls: [map{name: str, url: str, mimeType: str, dataHash: str}], userData: map{meta: [map]}, encryptions: [map{key: str, pubkey: str, format: str, type: str}], rules: map{fees: map, holders: [map], expiration: map}} # Object representing all metadata at token issuance}
+@returns(200) {tokenId: str, txHex: str} # An object representing the token created
 
 @endpoint POST /testnet/ntp1/sendtoken
-@required {fee: num, to: [map{address: str, amount: num, tokenId: str}]}
-@optional {from: [str], sendutxo: [str], flags: map{splitChange: bool}, metadata: map{tokenName: str, issuer: str, description: str, urls: [map{name: str, url: str, mimeType: str, dataHash: str}], userData: map{meta: [map]}, encryptions: [map{key: str, pubkey: str, format: str, type: str}], rules: map{fees: map, holders: [map], expiration: map}}}
-@returns(200) {txHex: str, ntp1OutputIndexes: [num], multisigOutputs: [num]}
+@desc Builds a transaction that sends an NTP1 Token
+@required {fee: num # Fee in satoshi to include in the issuance transaction min 10000 (0.0001 NEBL), to: [map{address: str, amount: num, tokenId: str}]}
+@optional {from: [str] # Array of addresses to send the token from, sendutxo: [str] # Array of UTXOs to send the token from, flags: map{splitChange: bool} # Object representing flags that potentialy modify this transaction, metadata: map{tokenName: str, issuer: str, description: str, urls: [map{name: str, url: str, mimeType: str, dataHash: str}], userData: map{meta: [map]}, encryptions: [map{key: str, pubkey: str, format: str, type: str}], rules: map{fees: map, holders: [map], expiration: map}} # Object representing all metadata at token issuance}
+@returns(200) {txHex: str, ntp1OutputIndexes: [num], multisigOutputs: [num]} # An object representing the tx to send the token
 
 @endpoint POST /testnet/ntp1/burntoken
-@required {fee: num, burn: [map{amount: num, tokenId: str}]}
-@optional {from: [str], transfer: [map{address: str, amount: num, tokenId: str}]}
-@returns(200) {txHex: str, ntp1OutputIndexes: [num], multisigOutputs: [num]}
+@desc Builds a transaction that burns an NTP1 Token
+@required {fee: num # Fee in satoshi to include in the issuance transaction min 10000 (0.0001 NEBL), burn: [map{amount: num, tokenId: str}] # Array of objects representing tokens to be burned}
+@optional {from: [str] # Array of addresses to send the token from, transfer: [map{address: str, amount: num, tokenId: str}]}
+@returns(200) {txHex: str, ntp1OutputIndexes: [num], multisigOutputs: [num]} # An object representing the tx to burn the token
 
 @endpoint GET /testnet/faucet
-@required {address: str}
-@optional {amount: num}
-@returns(200) {status: str, data: map{txId: str}}
+@desc Withdraws testnet NEBL to the specified address
+@required {address: str # Your Neblio Testnet Address}
+@optional {amount: num # Amount of NEBL to withdrawal in satoshis}
+@returns(200) {status: str, data: map{txId: str}} # Object containing the transaction ID of the withdrawal.
 
 @endgroup
 
 @group root
 @endpoint POST /
-@required {jsonrpc: str=1.0, id: str=neblio-apis, method: str, params: [str]}
-@returns(200) {result: map, id: str, error: map}
-@errors {401}
+@desc Send a JSON-RPC call to a localhost neblio-Qt or nebliod node
+@required {jsonrpc: str=1.0 # JSON-RPC version, id: str=neblio-apis # Identifier of RCP caller, method: str # Name of the Neblio RPC method to call, params: [str] # Array of string params that should be passed to the RPC method.}
+@returns(200) {result: map, id: str, error: map} # Object containing the JSON response from the Neblio node.
+@errors {401: Authentication information is missing or invalid}
 
 @endgroup
 

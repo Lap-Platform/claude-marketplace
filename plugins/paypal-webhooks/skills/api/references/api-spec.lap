@@ -8,67 +8,86 @@
 @toc notifications(16)
 
 @endpoint POST /v1/notifications/webhooks
-@required {url: str(uri), event_types: [map{name!: str, description: str, status: str, resource_versions: [str]}]}
-@optional {id: str, links: [map{href!: str, rel!: str, method: str}]}
-@returns(201) {id: str, url: str(uri), event_types: [map], links: [map]}
+@desc Create webhook
+@required {url: str(uri) # The URL that is configured to listen on `localhost` for incoming `POST` notification messages that contain event information., event_types: [map{name!: str, description: str, status: str, resource_versions: [str]}] # An array of events to which to subscribe your webhook. To subscribe to all events, including events as they are added, specify the asterisk wild card. To replace the `event_types` array, specify the asterisk wild card. To list all supported events, <a href="#event-type_list">list available events</a>.}
+@optional {id: str # The ID of the webhook., links: [map{href!: str, rel!: str, method: str}] # An array of request-related [HATEOAS links](/docs/api/reference/api-responses/#hateoas-links/).}
+@returns(201) {id: str, url: str(uri), event_types: [map], links: [map]} # A successful request returns the HTTP `201 Created` status code and a JSON response body with a [`webhook`](/docs/api/webhooks/v1/#definition-webhook) object that includes the webhook ID for later use.
+@example_request {"url":"https://example.com/example_webhook","event_types":[{"name":"PAYMENT.AUTHORIZATION.CREATED"},{"name":"PAYMENT.AUTHORIZATION.VOIDED"}]}
 
 @endpoint GET /v1/notifications/webhooks
-@optional {anchor_type: str(APPLICATION/ACCOUNT)=APPLICATION}
-@returns(200) {webhooks: [map]}
+@desc List webhooks
+@optional {anchor_type: str(APPLICATION/ACCOUNT)=APPLICATION # Filters the webhooks in the response by an `anchor_id` entity type.}
+@returns(200) {webhooks: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that lists webhooks with webhook details.
 
 @endpoint GET /v1/notifications/webhooks/{webhook_id}
-@required {webhook_id: str}
-@returns(200) {id: str, url: str(uri), event_types: [map], links: [map]}
+@desc Show webhook details
+@required {webhook_id: str # The ID of the webhook for which to list subscriptions.}
+@returns(200) {id: str, url: str(uri), event_types: [map], links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that shows webhook details.
 
 @endpoint PATCH /v1/notifications/webhooks/{webhook_id}
-@required {webhook_id: str}
-@returns(200) {id: str, url: str(uri), event_types: [map], links: [map]}
+@desc Update webhook
+@required {webhook_id: str # The ID of the webhook for which to list subscriptions.}
+@returns(200) {id: str, url: str(uri), event_types: [map], links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that shows webhook details.
 
 @endpoint DELETE /v1/notifications/webhooks/{webhook_id}
-@required {webhook_id: str}
-@returns(204)
+@desc Delete webhook
+@required {webhook_id: str # The ID of the webhook for which to list subscriptions.}
+@returns(204) A successful request returns the HTTP `204 No Content` status code with no JSON response body.
 
 @endpoint GET /v1/notifications/webhooks/{webhook_id}/event-types
-@required {webhook_id: str}
-@returns(200) {event_types: [map]}
+@desc List event subscriptions for webhook
+@required {webhook_id: str # The ID of the webhook for which to list subscriptions.}
+@returns(200) {event_types: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that lists event subscriptions for a webhook.
 
 @endpoint POST /v1/notifications/webhooks-lookup
-@returns(201) {id: str, client_id: str, links: [map]}
+@desc Create webhook lookup
+@returns(201) {id: str, client_id: str, links: [map]} # A successful request returns the HTTP `201 Created` status code and a JSON response body that shows webhook lookup details.
 
 @endpoint GET /v1/notifications/webhooks-lookup
-@returns(200) {webhooks_lookups: [map]}
+@desc List webhook lookups
+@returns(200) {webhooks_lookups: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that lists webhook lookups with webhook lookup details.
 
 @endpoint GET /v1/notifications/webhooks-lookup/{webhook_lookup_id}
-@required {webhook_lookup_id: str}
-@returns(200) {id: str, client_id: str, links: [map]}
+@desc Show webhook lookup details
+@required {webhook_lookup_id: str # The ID of the webhook lookup to delete.}
+@returns(200) {id: str, client_id: str, links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that shows webhook lookup details.
 
 @endpoint DELETE /v1/notifications/webhooks-lookup/{webhook_lookup_id}
-@required {webhook_lookup_id: str}
-@returns(204)
+@desc Delete webhook lookup
+@required {webhook_lookup_id: str # The ID of the webhook lookup to delete.}
+@returns(204) A successful request returns the HTTP `204 No Content` status code with no JSON response body.
 
 @endpoint POST /v1/notifications/verify-webhook-signature
-@required {auth_algo: str, cert_url: str(uri), transmission_id: str, transmission_sig: str, transmission_time: str(date-time), webhook_id: str, webhook_event: map{id: str, create_time: str(date-time), resource_type: str, event_version: str, event_type: str, summary: str, resource_version: str, resource: map, links: [map{href!: str, rel!: str, method: str}]}}
-@returns(200) {verification_status: str}
+@desc Verify webhook signature
+@required {auth_algo: str # The algorithm that PayPal uses to generate the signature and that you can use to verify the signature. Extract this value from the `PAYPAL-AUTH-ALGO` response header, which is received with the webhook notification., cert_url: str(uri) # The X.509 public key certificate. Download the certificate from this URL and use it to verify the signature. Extract this value from the `PAYPAL-CERT-URL` response header, which is received with the webhook notification., transmission_id: str # The ID of the HTTP transmission. Contained in the `PAYPAL-TRANSMISSION-ID` header of the notification message., transmission_sig: str # The PayPal-generated asymmetric signature. Appears in the `PAYPAL-TRANSMISSION-SIG` header of the notification message., transmission_time: str(date-time) # The date and time of the HTTP transmission, in [Internet date and time format](https://tools.ietf.org/html/rfc3339#section-5.6). Appears in the `PAYPAL-TRANSMISSION-TIME` header of the notification message., webhook_id: str # The ID of the webhook as configured in your Developer Portal account., webhook_event: map{id: str, create_time: str(date-time), resource_type: str, event_version: str, event_type: str, summary: str, resource_version: str, resource: map, links: [map{href!: str, rel!: str, method: str}]} # A webhook event notification.}
+@returns(200) {verification_status: str} # A successful request returns the HTTP `200 OK` status code and a JSON response body that shows the verification status.
+@example_request {"transmission_id":"69cd13f0-d67a-11e5-baa3-778b53f4ae55","transmission_time":"2016-02-18T20:01:35Z","cert_url":"cert_url","auth_algo":"SHA256withRSA","transmission_sig":"lmI95Jx3Y9nhR5SJWlHVIWpg4AgFk7n9bCHSRxbrd8A9zrhdu2rMyFrmz+Zjh3s3boXB07VXCXUZy/UFzUlnGJn0wDugt7FlSvdKeIJenLRemUxYCPVoEZzg9VFNqOa48gMkvF+XTpxBeUx/kWy6B5cp7GkT2+pOowfRK7OaynuxUoKW3JcMWw272VKjLTtTAShncla7tGF+55rxyt2KNZIIqxNMJ48RDZheGU5w1npu9dZHnPgTXB9iomeVRoD8O/jhRpnKsGrDschyNdkeh81BJJMH4Ctc6lnCCquoP/GzCzz33MMsNdid7vL/NIWaCsekQpW26FpWPi/tfj8nLA==","webhook_id":"1JE4291016473214C","webhook_event":{"id":"8PT597110X687430LKGECATA","create_time":"2013-06-25T21:41:28Z","resource_type":"authorization","event_type":"PAYMENT.AUTHORIZATION.CREATED","summary":"A payment authorization was created","resource":{"id":"2DC87612EK520411B","create_time":"2013-06-25T21:39:15Z","update_time":"2013-06-25T21:39:17Z","state":"authorized","amount":{"total":"7.47","currency":"USD","details":{"subtotal":"7.47"}},"parent_payment":"PAY-36246664YD343335CKHFA4AY","valid_until":"2013-07-24T21:39:15Z","links":[{"href":"https://api-m.paypal.com/v1/payments/authorization/2DC87612EK520411B","rel":"self","method":"GET"},{"href":"https://api-m.paypal.com/v1/payments/authorization/2DC87612EK520411B/capture","rel":"capture","method":"POST"},{"href":"https://api-m.paypal.com/v1/payments/authorization/2DC87612EK520411B/void","rel":"void","method":"POST"},{"href":"https://api-m.paypal.com/v1/payments/payment/PAY-36246664YD343335CKHFA4AY","rel":"parent_payment","method":"GET"}]}}}
 
 @endpoint GET /v1/notifications/webhooks-event-types
-@returns(200) {event_types: [map]}
+@desc List available events
+@returns(200) {event_types: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that lists available events to which any webhook can subscribe.
 
 @endpoint GET /v1/notifications/webhooks-events
-@optional {page_size: int=10, start_time: str, end_time: str, transaction_id: str, event_type: str}
-@returns(200) {events: [map], count: int, links: [map]}
+@desc List event notifications
+@optional {page_size: int=10 # The number of webhook event notifications to return in the response., start_time: str # Filters the webhook event notifications in the response to those created on or after this date and time and on or before the `end_time` value. Both values are in [Internet date and time format](https://tools.ietf.org/html/rfc3339#section-5.6) format. Example: `start_time=2013-03-06T11:00:00Z`., end_time: str # Filters the webhook event notifications in the response to those created on or after the `start_time` and on or before this date and time. Both values are in [Internet date and time format](https://tools.ietf.org/html/rfc3339#section-5.6) format. Example: `end_time=2013-03-06T11:00:00Z`., transaction_id: str # Filters the response to a single transaction, by ID., event_type: str # Filters the response to a single event.}
+@returns(200) {events: [map], count: int, links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that lists webhooks event notifications.
 
 @endpoint GET /v1/notifications/webhooks-events/{event_id}
-@required {event_id: str}
-@returns(200) {id: str, create_time: str(date-time), resource_type: str, event_version: str, event_type: str, summary: str, resource_version: str, resource: map, links: [map]}
+@desc Show event notification details
+@required {event_id: str # The ID of the webhook event notification to resend.}
+@returns(200) {id: str, create_time: str(date-time), resource_type: str, event_version: str, event_type: str, summary: str, resource_version: str, resource: map, links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that shows webhooks event notification details.
 
 @endpoint POST /v1/notifications/webhooks-events/{event_id}/resend
-@required {event_id: str}
-@optional {webhook_ids: [str]}
-@returns(202) {id: str, create_time: str(date-time), resource_type: str, event_version: str, event_type: str, summary: str, resource_version: str, resource: map, links: [map]}
+@desc Resend event notification
+@required {event_id: str # The ID of the webhook event notification to resend.}
+@optional {webhook_ids: [str] # An array of webhook account IDs.}
+@returns(202) {id: str, create_time: str(date-time), resource_type: str, event_version: str, event_type: str, summary: str, resource_version: str, resource: map, links: [map]} # A successful request returns the HTTP `202 Accepted` status code and a JSON response body that shows webhook event notification details.
 
 @endpoint POST /v1/notifications/simulate-event
-@required {event_type: str}
-@optional {webhook_id: str, url: str(uri), resource_version: str}
-@returns(202) {id: str, create_time: str(date-time), resource_type: str, event_version: str, event_type: str, summary: str, resource_version: str, resource: map, links: [map]}
+@desc Simulate webhook event
+@required {event_type: str # The event name. Specify one of the subscribed events. For each request, provide only one event.}
+@optional {webhook_id: str # The ID of the webhook. If omitted, the URL is required., url: str(uri) # The URL for the webhook endpoint. If omitted, the webhook ID is required., resource_version: str # The identifier for event type ex: 1.0/2.0 etc.}
+@returns(202) {id: str, create_time: str(date-time), resource_type: str, event_version: str, event_type: str, summary: str, resource_version: str, resource: map, links: [map]} # A successful request returns the HTTP `202 Accepted` status code and a JSON response body that shows details for the mock event.
+@example_request {"url":"https://example.com/example_webhook","event_type":"PAYMENT.AUTHORIZATION.CREATED","resource_version":"1.0"}
 
 @end

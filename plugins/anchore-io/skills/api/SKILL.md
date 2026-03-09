@@ -219,88 +219,117 @@ Not specified.
 | GET | /imports/images/{operation_id}/image_config | List uploaded image configs |
 | POST | /imports/images/{operation_id}/image_config | Import a docker or OCI image config to associate with the image |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Is the Anchore Engine running and healthy?" -> GET /health
-- "What version of Anchore Engine is deployed?" -> GET /version
-- "How do I add a new container image for scanning?" -> POST /images
-- "What vulnerabilities exist in my image?" -> GET /images/{imageDigest}/vuln/{vtype}
-- "Does my image pass the security policy?" -> GET /images/{imageDigest}/check
-- "What packages are installed in this image?" -> GET /images/{imageDigest}/content/{ctype}
-- "Which images are affected by a specific CVE?" -> GET /query/images/by_vulnerability
-- "Which images contain a specific package?" -> GET /query/images/by_package
-- "How do I set up a new policy bundle?" -> POST /policies
-- "What registries are configured for pulling images?" -> GET /registries
-- "How do I create a new user account?" -> POST /accounts
-- "What events or alerts have fired recently?" -> GET /events
-- "How do I get an OAuth token for API access?" -> POST /oauth/token
-- "What feeds are synced and are they up to date?" -> GET /system/feeds
-- "How do I import an image from an archive file?" -> POST /import/images
-
-## Response Tips
-
-- **Images**: Results are arrays of image records; use `imageDigest` as the stable identifier across all subsequent calls (content, vuln, check). Images can also be referenced by `imageId` via `/images/by_id/` endpoints.
-- **Vulnerabilities**: Vuln responses nest under vulnerability type (`vtype` such as `os`, `non-os`, `all`). Always specify `vtype` to avoid empty results. Use `vendor_only=true` to filter to vendor-confirmed CVEs.
-- **Policies**: Policy check responses contain nested evaluation results per tag. Pass `detail=true` to get per-rule pass/fail breakdown. The `history=true` flag returns previous evaluation results.
-- **Events**: Paginated via `page` and `limit` query params. Filter with `since`/`before` (ISO timestamps), `level`, `event_type`, and `resource_type` to narrow results.
-- **Query endpoints**: `/query/images/by_vulnerability` and `/query/images/by_package` are paginated (`page`/`limit`). Response includes matched image records with digest and tag info.
-- **Accounts/Users**: Account creation returns 409 on name conflicts. User credential endpoints return credential metadata, not raw secrets.
-- **System/Feeds**: Feed and group objects include `enabled` booleans and last sync timestamps. A 400 on PUT means invalid enable/disable state transition.
-- **Archives**: Archive image listing returns references, not full image records. Use the digest to retrieve or delete archived images.
-
-## Anomaly Flags
-
-- **Feed sync lag**: Surface when `GET /system/feeds` shows feeds with last sync time older than 24 hours -- vulnerability data may be stale.
-- **Analysis stuck**: Flag images returned by `GET /images` with `analysis_status` not progressing to `analyzed` after a reasonable period.
-- **Policy evaluation failures**: Alert when `GET /images/{imageDigest}/check` returns 500 -- may indicate a malformed policy bundle or missing image analysis.
-- **Account state changes**: Proactively note when `PUT /accounts/{accountname}/state` returns 400 -- invalid state transition (e.g., trying to re-enable a deleted account).
-- **Registry auth errors**: Flag 500 responses on `POST /registries` with `validate=true` -- likely credential or connectivity issues with the registry.
-- **Malware content hits**: Surface non-empty results from `GET /images/{imageDigest}/content/malware` immediately, as this indicates detected malware in the image.
-- **Secret search hits**: Alert on non-empty `GET /images/{imageDigest}/artifacts/secret_search` results -- secrets embedded in container images are a critical finding.
-- **Bulk delete caution**: Warn before calling `DELETE /images` with `imageDigests` -- this is a bulk operation and not easily reversed.
-
-## Playbook
-
-### Scan a New Image and Review Results
-
-1. Add the image: `POST /images` with `{"image": {"tag": "docker.io/library/nginx:latest"}}` and optionally `autosubscribe=true`
-2. Poll image status: `GET /images/{imageDigest}` until `analysis_status` is `analyzed`
-3. Check policy compliance: `GET /images/{imageDigest}/check` with `tag=docker.io/library/nginx:latest&detail=true`
-4. List vulnerabilities: `GET /images/{imageDigest}/vuln/all` (use `vendor_only=true` to filter noise)
-5. Review installed packages: `GET /images/{imageDigest}/content/os` for OS packages, `content/java` for Java dependencies
-
-### Set Up a Private Registry and Watch for Updates
-
-1. Add registry credentials: `POST /registries` with `registrydata` containing registry URL, username, password, and type; set `validate=true` to test connectivity
-2. Add a repository watch: `POST /repositories` with `repository=registry.example.com/myapp` and `autosubscribe=true`
-3. Verify subscription created: `GET /subscriptions` filtered by `subscription_key=registry.example.com/myapp`
-4. Monitor events for new tag discoveries: `GET /events` with `event_type=tag_update` and `since` set to your start time
-
-### Investigate a CVE Across All Images
-
-1. Query affected images: `GET /query/images/by_vulnerability` with `vulnerability_id=CVE-2024-XXXXX`
-2. Optionally narrow by severity: add `severity=Critical` or `severity=High`
-3. For each affected image digest, get full vuln details: `GET /images/{imageDigest}/vuln/all`
-4. Check if any affected images pass policy despite the CVE: `GET /images/{imageDigest}/check` with the appropriate tag
-5. Review the vulnerability definition: `GET /query/vulnerabilities` with `id=CVE-2024-XXXXX` to see affected packages and namespaces
-
-### Manage Accounts and User Access
-
-1. Create a new account: `POST /accounts` with `{"account": {"name": "team-security", "type": "user"}}`
-2. Add a user to the account: `POST /accounts/team-security/users` with `{"user": {"username": "analyst1", "password": "..."}}`
-3. Set up user credentials: `POST /accounts/team-security/users/analyst1/credentials` with credential object
-4. To disable an account later: `PUT /accounts/team-security/state` with `{"state": "disabled"}`
-5. Verify account state: `GET /accounts/team-security`
-
-### Archive and Clean Up Old Images
-
-1. Review current archive rules: `GET /archives/rules`
-2. Create an archive rule for old images: `POST /archives/rules` with transition criteria (e.g., days since analysis)
-3. Manually archive specific images: `POST /archives/images` with a list of image digests
-4. Verify archived images: `GET /archives/images`
-5. Delete the original image to free resources: `DELETE /images/{imageDigest}` (archived copy remains accessible via `GET /archives/images/{imageDigest}`)
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all health?" -> GET /health
+- "List all version?" -> GET /version
+- "List all policies?" -> GET /policies
+- "Create a policy?" -> POST /policies
+- "Get policy details?" -> GET /policies/{policyId}
+- "Update a policy?" -> PUT /policies/{policyId}
+- "Delete a policy?" -> DELETE /policies/{policyId}
+- "List all subscriptions?" -> GET /subscriptions
+- "Create a subscription?" -> POST /subscriptions
+- "Get subscription details?" -> GET /subscriptions/{subscriptionId}
+- "Update a subscription?" -> PUT /subscriptions/{subscriptionId}
+- "Delete a subscription?" -> DELETE /subscriptions/{subscriptionId}
+- "List all imagetags?" -> GET /summaries/imagetags
+- "Create a image?" -> POST /images
+- "List all images?" -> GET /images
+- "Create a image?" -> POST /import/images
+- "Get image details?" -> GET /images/{imageDigest}
+- "Delete a image?" -> DELETE /images/{imageDigest}
+- "Get by_id details?" -> GET /images/by_id/{imageId}
+- "Delete a by_id?" -> DELETE /images/by_id/{imageId}
+- "List all check?" -> GET /images/{imageDigest}/check
+- "List all check?" -> GET /images/by_id/{imageId}/check
+- "List all vuln?" -> GET /images/{imageDigest}/vuln
+- "Get vuln details?" -> GET /images/{imageDigest}/vuln/{vtype}
+- "List all vuln?" -> GET /images/by_id/{imageId}/vuln
+- "Get vuln details?" -> GET /images/by_id/{imageId}/vuln/{vtype}
+- "List all content?" -> GET /images/{imageDigest}/content
+- "List all content?" -> GET /images/by_id/{imageId}/content
+- "Get content details?" -> GET /images/{imageDigest}/content/{ctype}
+- "List all files?" -> GET /images/{imageDigest}/content/files
+- "List all java?" -> GET /images/{imageDigest}/content/java
+- "List all malware?" -> GET /images/{imageDigest}/content/malware
+- "Get content details?" -> GET /images/by_id/{imageId}/content/{ctype}
+- "List all files?" -> GET /images/by_id/{imageId}/content/files
+- "List all java?" -> GET /images/by_id/{imageId}/content/java
+- "List all retrieved_files?" -> GET /images/{imageDigest}/artifacts/retrieved_files
+- "List all file_content_search?" -> GET /images/{imageDigest}/artifacts/file_content_search
+- "List all secret_search?" -> GET /images/{imageDigest}/artifacts/secret_search
+- "List all metadata?" -> GET /images/{imageDigest}/metadata
+- "List all native?" -> GET /images/{imageDigest}/sboms/native
+- "Get metadata details?" -> GET /images/{imageDigest}/metadata/{mtype}
+- "Create a repository?" -> POST /repositories
+- "List all registries?" -> GET /registries
+- "Create a registry?" -> POST /registries
+- "Get registry details?" -> GET /registries/{registry}
+- "Update a registry?" -> PUT /registries/{registry}
+- "Delete a registry?" -> DELETE /registries/{registry}
+- "List all status?" -> GET /status
+- "List all system?" -> GET /system
+- "List all feeds?" -> GET /system/feeds
+- "Create a feed?" -> POST /system/feeds
+- "Update a feed?" -> PUT /system/feeds/{feed}
+- "Delete a feed?" -> DELETE /system/feeds/{feed}
+- "Update a feed?" -> PUT /system/feeds/{feed}/{group}
+- "Delete a feed?" -> DELETE /system/feeds/{feed}/{group}
+- "List all services?" -> GET /system/services
+- "Get service details?" -> GET /system/services/{servicename}
+- "Get service details?" -> GET /system/services/{servicename}/{hostid}
+- "Delete a service?" -> DELETE /system/services/{servicename}/{hostid}
+- "List all policy_spec?" -> GET /system/policy_spec
+- "List all error_codes?" -> GET /system/error_codes
+- "List all event_types?" -> GET /event_types
+- "List all events?" -> GET /events
+- "Get event details?" -> GET /events/{eventId}
+- "Delete a event?" -> DELETE /events/{eventId}
+- "List all by_vulnerability?" -> GET /query/images/by_vulnerability
+- "List all by_package?" -> GET /query/images/by_package
+- "List all vulnerabilities?" -> GET /query/vulnerabilities
+- "List all accounts?" -> GET /accounts
+- "Create a account?" -> POST /accounts
+- "Get account details?" -> GET /accounts/{accountname}
+- "Delete a account?" -> DELETE /accounts/{accountname}
+- "List all users?" -> GET /accounts/{accountname}/users
+- "Create a user?" -> POST /accounts/{accountname}/users
+- "Delete a user?" -> DELETE /accounts/{accountname}/users/{username}
+- "Get user details?" -> GET /accounts/{accountname}/users/{username}
+- "List all credentials?" -> GET /accounts/{accountname}/users/{username}/credentials
+- "Create a credential?" -> POST /accounts/{accountname}/users/{username}/credentials
+- "List all account?" -> GET /account
+- "List all user?" -> GET /user
+- "List all credentials?" -> GET /user/credentials
+- "Create a credential?" -> POST /user/credentials
+- "List all archives?" -> GET /archives
+- "List all rules?" -> GET /archives/rules
+- "Create a rule?" -> POST /archives/rules
+- "Get rule details?" -> GET /archives/rules/{ruleId}
+- "Delete a rule?" -> DELETE /archives/rules/{ruleId}
+- "List all images?" -> GET /archives/images
+- "Create a image?" -> POST /archives/images
+- "Get image details?" -> GET /archives/images/{imageDigest}
+- "Delete a image?" -> DELETE /archives/images/{imageDigest}
+- "Create a token?" -> POST /oauth/token
+- "Create a test?" -> POST /system/webhooks/{webhook_type}/test
+- "Create a image?" -> POST /imports/images
+- "List all images?" -> GET /imports/images
+- "Get image details?" -> GET /imports/images/{operation_id}
+- "Delete a image?" -> DELETE /imports/images/{operation_id}
+- "List all packages?" -> GET /imports/images/{operation_id}/packages
+- "Create a package?" -> POST /imports/images/{operation_id}/packages
+- "List all dockerfile?" -> GET /imports/images/{operation_id}/dockerfile
+- "Create a dockerfile?" -> POST /imports/images/{operation_id}/dockerfile
+- "List all manifest?" -> GET /imports/images/{operation_id}/manifest
+- "Create a manifest?" -> POST /imports/images/{operation_id}/manifest
+- "List all parent_manifest?" -> GET /imports/images/{operation_id}/parent_manifest
+- "Create a parent_manifest?" -> POST /imports/images/{operation_id}/parent_manifest
+- "List all image_config?" -> GET /imports/images/{operation_id}/image_config
+- "Create a image_config?" -> POST /imports/images/{operation_id}/image_config
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

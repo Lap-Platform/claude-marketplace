@@ -114,87 +114,10 @@ Not specified.
 | POST | / | Shares or unshares an image with one account in the same Amazon Web Services Region by specifying whether that account has permission to copy the image. If the copy image permission is granted, the image is shared with that account. If the copy image permission is revoked, the image is unshared with the account. After an image has been shared, the recipient account can copy the image to other Regions as needed. In the China (Ningxia) Region, you can copy images only within the same Region. In Amazon Web Services GovCloud (US), to copy images to and from other Regions, contact Amazon Web Services Support. For more information about sharing images, see  Share or Unshare a Custom WorkSpaces Image.    To delete an image that has been shared, you must unshare the image before you delete it.   Sharing Bring Your Own License (BYOL) images across Amazon Web Services accounts isn't supported at this time in Amazon Web Services GovCloud (US). To share BYOL images across accounts in Amazon Web Services GovCloud (US), contact Amazon Web Services Support. |
 | POST | / | Updates the specified pool. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I provision new WorkSpaces for my users?" -> POST / (CreateWorkspaces -- requires `Workspaces: [WorkspaceRequest]`)
-- "How do I check the status of my WorkSpaces?" -> POST / (DescribeWorkspaces -- optional filters `WorkspaceIds`, `DirectoryId`, `UserName`)
-- "How do I stop a running WorkSpace to save costs?" -> POST / (StopWorkspaces -- requires `StopWorkspaceRequests: [StopRequest]`)
-- "How do I start WorkSpaces back up for users?" -> POST / (StartWorkspaces -- requires `StartWorkspaceRequests: [StartRequest]`)
-- "How do I terminate WorkSpaces permanently?" -> POST / (TerminateWorkspaces -- requires `TerminateWorkspaceRequests: [TerminateRequest]`)
-- "How do I reboot a misbehaving WorkSpace?" -> POST / (RebootWorkspaces -- requires `RebootWorkspaceRequests: [RebootRequest]`)
-- "How do I create a custom bundle from an existing image?" -> POST / (CreateWorkspaceBundle -- requires `BundleName`, `ImageId`, `ComputeType`, `UserStorage`)
-- "How do I create an image from a running WorkSpace?" -> POST / (CreateWorkspaceImage -- requires `Name`, `Description`, `WorkspaceId`)
-- "How do I set up a WorkSpaces pool for pooled desktops?" -> POST / (CreateWorkspacesPool -- requires `PoolName`, `BundleId`, `DirectoryId`, `Capacity`)
-- "How do I check which users are connected right now?" -> POST / (DescribeWorkspacesConnectionStatus -- optional `WorkspaceIds`)
-- "How do I register a directory for WorkSpaces?" -> POST / (RegisterWorkspaceDirectory -- optional `DirectoryId`, `UserIdentityType`, `Tenancy`)
-- "How do I customize the client login branding?" -> POST / (ImportClientBranding -- requires `ResourceId`, per-device branding attributes)
-- "How do I create an IP access control group?" -> POST / (CreateIpGroup -- requires `GroupName`, optional `UserRules`)
-- "How do I link two AWS accounts for WorkSpaces?" -> POST / (CreateAccountLinkInvitation -- requires `TargetAccountId`)
-- "How do I import a VM image from EC2 into WorkSpaces?" -> POST / (ImportWorkspaceImage -- requires `Ec2ImageId`, `IngestionProcess`, `ImageName`, `ImageDescription`)
-
-## Response Tips
-
-- **Bulk operations** (Create/Start/Stop/Reboot/Rebuild/Terminate): Always check `FailedRequests` array -- partial failures are common; successful items appear in `PendingRequests` or return no error entry.
-- **Paginated lists** (Describe*): Look for `NextToken` in response; pass it back to get the next page. Absence of `NextToken` means you have all results.
-- **Account links**: The `AccountLinkStatus` field tracks lifecycle (`LINKED`, `PENDING_ACCEPTANCE`, `REJECTED`, `DELETING`) -- poll after create/accept/reject.
-- **Pool capacity**: `CapacityStatus` nests four counters (`AvailableUserSessions`, `DesiredUserSessions`, `ActualUserSessions`, `ActiveUserSessions`) -- compare desired vs. actual to detect scaling lag.
-- **Associations**: State/StateReason nesting means errors are in `StateReason.ErrorCode` and `StateReason.ErrorMessage`, not top-level.
-- **Tags & branding**: These return the full current state after mutation, so no separate describe call is needed after create/import.
-
-## Anomaly Flags
-
-- **Partial bulk failures**: Surface any entries in `FailedRequests` immediately with error codes -- users often miss these when the HTTP status is still 200.
-- **Pool capacity drift**: Flag when `ActualUserSessions` is significantly below `DesiredUserSessions` for extended periods, indicating provisioning problems.
-- **Pool errors**: The `Errors: [WorkspacesPoolError]` array on pool responses should be surfaced whenever non-empty -- these indicate infrastructure issues.
-- **Association state errors**: When `WorkspaceResourceAssociation.State` is not `COMPLETED` or `StateReason.ErrorCode` is populated, flag the failed association proactively.
-- **Account link status changes**: Alert on `REJECTED` or unexpected `DELETING` status in account link responses.
-- **Image state**: After create/import, if `State` is not progressing toward `AVAILABLE`, surface as a warning.
-- **Connection status anomalies**: When `DescribeWorkspacesConnectionStatus` shows a workspace as `DISCONNECTED` with an old timestamp, flag potential stuck sessions.
-- **Empty pagination**: If a describe call returns zero results with no `NextToken` when results were expected, surface this as a potential filter/permission issue.
-
-## Playbook
-
-### 1. Provision WorkSpaces for New Employees
-
-1. Call DescribeWorkspaceDirectories (optional `DirectoryIds`) to find your registered directory and confirm its state.
-2. Call DescribeWorkspaceBundles (optional `Owner` filter) to select the appropriate bundle for the user's role.
-3. Call CreateWorkspaces with a `Workspaces` array containing one `WorkspaceRequest` per user (each needs `DirectoryId`, `UserName`, `BundleId`).
-4. Check `FailedRequests` in the response -- retry any that failed with transient errors.
-5. Poll DescribeWorkspaces with the returned workspace IDs until `State` is `AVAILABLE`.
-
-### 2. Create and Distribute a Custom Image
-
-1. Call CreateWorkspaceImage with the `WorkspaceId` of a fully configured workspace, plus `Name` and `Description`.
-2. Poll DescribeWorkspaceImages with the returned `ImageId` until `State` is `AVAILABLE`.
-3. Call UpdateWorkspaceImagePermission with `ImageId`, `SharedAccountId`, and `AllowCopyImage: true` to share with target accounts.
-4. In the target account, call CopyWorkspaceImage with `SourceImageId` and `SourceRegion` to copy it locally.
-5. Call CreateWorkspaceBundle referencing the new `ImageId` to make it available for provisioning.
-
-### 3. Set Up Pooled WorkSpaces with Branding
-
-1. Call RegisterWorkspaceDirectory to register or confirm the directory, noting the returned `DirectoryId`.
-2. Call CreateWorkspacesPool with `PoolName`, `BundleId`, `DirectoryId`, and `Capacity` (set `DesiredUserSessions`).
-3. Verify the pool by calling DescribeWorkspacesPools and checking `CapacityStatus` and `Errors`.
-4. Call ImportClientBranding with the directory's `ResourceId` to set logos, support links, and login messages per device type.
-5. Call StartWorkspacesPool with the `PoolId` to begin accepting user sessions.
-
-### 4. Cost Optimization -- Stop Idle WorkSpaces
-
-1. Call DescribeWorkspacesConnectionStatus to identify WorkSpaces with `ConnectionState: DISCONNECTED` and stale `LastKnownUserConnectionTimestamp`.
-2. Filter for WorkSpaces disconnected beyond your threshold (e.g., 2+ hours).
-3. Call StopWorkspaces with a `StopWorkspaceRequests` batch of the idle workspace IDs.
-4. Check `FailedRequests` for any that could not be stopped (e.g., already stopping, or in maintenance).
-5. Optionally call ModifyWorkspaceState with `WorkspaceState: ADMIN_MAINTENANCE` for long-term idle units.
-
-### 5. Secure Access with IP Controls
-
-1. Call CreateIpGroup with a `GroupName` and initial `UserRules` (each rule has an `ipRule` CIDR and optional `ruleDesc`).
-2. Note the returned `GroupId`.
-3. Call AuthorizeIpRules to add more CIDR rules to the group as needed.
-4. Call AssociateIpGroups with the `DirectoryId` and `GroupIds` array to enforce the rules on that directory's WorkSpaces.
-5. To audit, call DescribeIpGroups and verify the rules match your security policy. Use RevokeIpRules to remove outdated CIDRs.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

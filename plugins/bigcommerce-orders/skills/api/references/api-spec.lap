@@ -8,97 +8,121 @@
 @toc orders(21)
 
 @endpoint POST /orders/{order_id}/payment_actions/capture
-@required {Content-Type: str=application/json}
-@returns(201)
-@errors {400, 404, 422, 502, 503, 504}
+@desc Capture order payment
+@required {Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
+@returns(201) Resource Created.
+@errors {400: Malformed request syntax. Typically need to fix the JSON. Body to resend successfully., 404: The resource was not found., 422: This occurs when missing or unacceptable data is passed for one or more fields. Please correct the values for the fields listed in the errors object., 502: If something happens during the request that causes it to fail, a 502 response will be returned. A new request should be made; however, it could fail., 503: If this occurs, you should retry the request. If you cannot successfully make a request, please check the BigCommerce system status [here](https://status.bigcommerce.com/). A service is likely down, and you will need to make the request again when it is back up (in several hours, usually)., 504: If this occurs, you should retry the request. Typically retrying the request several times will result in a successful request; however, if you cannot successfully make a request, please check the BigCommerce system status [here](https://status.bigcommerce.com/). A service is likely down, and you will need to complete the request again when it is back up (in several hours, usually).}
 
 @endpoint POST /orders/{order_id}/payment_actions/void
-@required {Content-Type: str=application/json}
-@returns(201)
-@errors {400, 404, 422, 502, 503, 504}
+@desc Void
+@required {Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
+@returns(201) Resource Created.
+@errors {400: Malformed request syntax. Typically need to fix the JSON. Body to resend successfully., 404: The resource was not found., 422: This occurs when missing or unacceptable data is passed for one or more fields. Please correct the values for the fields listed in the errors object., 502: If something happens during the request that causes it to fail, a 502 response will be returned. A new request should be made; however, it could fail., 503: If this occurs, you should retry the request. If you cannot successfully make a request, please check the BigCommerce system status [here](https://status.bigcommerce.com/). A service is likely down, and you will need to make the request again when it is back up (in several hours, usually)., 504: If this occurs, you should retry the request. Typically retrying the request several times will result in a successful request; however, if you cannot successfully make a request, please check the BigCommerce system status [here](https://status.bigcommerce.com/). A service is likely down, and you will need to complete the request again when it is back up (in several hours, usually).}
 
 @endpoint GET /orders/{order_id}/transactions
-@returns(200) {data: [any], meta: map{pagination: map{total: int(int32), count: int(int32), per_page: int(int32), current_page: int(int32), total_pages: int(int32), links: map{previous: str, current: str, next: str}}}}
-@returns(204) {status: int, title: str, type: str, instance: str}
-@errors {404, 503}
+@desc Get Transactions
+@returns(200) {data: [any], meta: map{pagination: map{total: int(int32), count: int(int32), per_page: int(int32), current_page: int(int32), total_pages: int(int32), links: map{previous: str, current: str, next: str}}}} # Response payload for the BigCommerce Order Transactions API.
+@returns(204) {status: int, title: str, type: str, instance: str} # No content found to fulfill request.
+@errors {404: The resource was not found., 503: Service Unavailable.}
 
 @endpoint POST /orders/{order_id}/payment_actions/refund_quotes
-@required {Content-Type: str=application/json}
+@desc Create a Refund Quote
+@required {Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
 @returns(201) {data: map{order_id: int, total_refund_amount: num(float), total_refund_tax_amount: num, order_level_refund_amount: num, rounding: num, adjustment: num(float), tax_inclusive: bool, refund_methods: [[map]]}, meta: map}
-@errors {422}
+@errors {422: This occurs when missing or unacceptable data is passed for one or more fields. Please correct the values for the fields listed in the errors object.}
 
 @endpoint POST /orders/{order_id}/payment_actions/refunds
-@required {Content-Type: str=application/json}
+@desc Create a Refund
+@required {Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
 @returns(201) {data: map{id: int, order_id: int, user_id: int, created: str(date-time), reason: str, total_amount: num(float), total_tax: num, uses_merchant_override_values: bool, items: [map], payments: [map]}, meta: map}
-@errors {422, 503}
+@errors {422: Unable to process a guest refund with store credit., 503: Service Unavailable}
 
 @endpoint GET /orders/{order_id}/payment_actions/refunds
+@desc Get Refunds for Order
 @returns(200) {data: [map], meta: map}
 
 @endpoint GET /orders/payment_actions/refunds/{refund_id}
+@desc Get a Refund
 @returns(200) {data: map{id: int, order_id: int, user_id: int, created: str(date-time), reason: str, total_amount: num, total_tax: num, uses_merchant_override_values: bool, payments: [map], items: [map]}, meta: map}
 
 @endpoint GET /orders/payment_actions/refunds
-@optional {order_id:in: [int], id:in: [int], created:min: str(date-time), created:max: str(date-time), transaction_id: str, page: int, limit: int}
+@desc Get All Refunds
+@optional {order_id:in: [int] # Pass a comma-separated list of order IDs to filter the included orders. Accepts multiple values., id:in: [int] # Pass a comma-separated list of refund IDs to filter the included refunds. Accepts multiple values., created:min: str(date-time) # Filter results so they are later than or equal to provided date.   Must be in url-encoded RFC 3339 format. e.g. `2020-01-15T01:02:34-01:00` is RFC 3339 format. Url-encoded this will be `2020-01-15T01%3A02%3A34%2B01%3A00`, created:max: str(date-time) # Filter results so they are earlier than or equal to provided date.  Must be in url-encoded RFC 3339 format. e.g. `2020-01-15T01:02:34-01:00` is RFC 3339 format. Url-encoded this will be `2020-01-15T01%3A02%3A34%2B01%3A00`, transaction_id: str # Filters by refund payment using the BigCommerce `transaction_id`., page: int # Specifies the page number in a limited (paginated) list of items., limit: int # Controls the number of items per page in a limited (paginated) list of items.}
 @returns(200) {data: [map], meta: map}
 
 @endpoint GET /orders/{order_id}/metafields
-@optional {page: int, limit: int, key: str, key:in: [str], namespace: str, namespace:in: [str], direction: str(asc/desc), include_fields: [str], date_created: str, date_modified: str, date_created:min: str, date_created:max: str, date_modified:min: str, date_modified:max: str, before: str, after: str}
-@returns(200) {data: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}}
+@desc Get Order Metafields
+@optional {page: int # Specifies the page number in a limited (paginated) list of products., limit: int # Controls the number of items per page in a limited (paginated) list of products., key: str # Filter based on a metafieldʼs key., key:in: [str] # Filter using a comma-separated list of metafield keys. Could be used with vanilla `key` query parameter., namespace: str # Filter based on a metafieldʼs key., namespace:in: [str] # Filter using a comma-separated list of metafield namespaces. Can be used with vanilla `namespace` query parameter., direction: str(asc/desc) # Sort direction. Acceptable values are: `asc`, `desc`., include_fields: [str] # Fields to include, in a comma-separated list. The ID and the specified fields will be returned., date_created: str # Filter items by date created. For example, `date_created=2019-09-04T00:00:00`. Returns metafields created on this date., date_modified: str # Filter items by date modified. For example, `date_modified=2019-09-04T00:00:00`. Returns metafields modified on this date., date_created:min: str # Filter items by minimum date created. For example, `date_created:min=2019-09-04T00:00:00` or `date_created:min=2019-09-04`. Returns metafields created after this date., date_created:max: str # Filter items by maximum date created. For example, `date_created:max=2019-09-04T00:00:00` or `date_created:max=2019-09-04`. Returns metafields created before this date., date_modified:min: str # Filter items by minimum date modified. For example, `date_modified:min=2019-09-04T00:00:00` or `date_modified:min=2019-09-04`. Returns metafields modified after this date., date_modified:max: str # Filter items by maximum date modified. For example, `date_modified:max=2019-09-04T00:00:00` or `date_modified:max=2019-09-04`. Returns metafields modified before this date., before: str # A cursor indicating where to start retrieving the previous page of results. Use this parameter to paginate backward. Not required for the initial request. For subsequent requests, use the end_cursor value returned in meta.cursor_pagination from the previous response. Works with limit, direction, and other supported query parameters. When specified, offset-based pagination (page) is ignored. Cannot be used in combination with the after parameter., after: str # A cursor indicating where to start retrieving the next page of results. Use this parameter to paginate forward. Not required for the initial request. For subsequent requests, use the start_cursor value returned in meta.cursor_pagination from the previous response. Works with limit, direction, and other supported query parameters. When specified, offset-based pagination (page) is ignored. Cannot be used in combination with the before parameter.}
+@returns(200) {data: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}} # An array of metafields and metadata.
 
 @endpoint POST /orders/{order_id}/metafields
-@required {Content-Type: str=application/json, permission_set: str(app_only/read/write/read_and_sf_access/write_and_sf_access), namespace: str, key: str, value: str}
-@optional {description: str}
-@returns(200) {data: any, meta: map}
-@errors {400, 409, 422}
+@desc Create Metafields
+@required {Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body., permission_set: str(app_only/read/write/read_and_sf_access/write_and_sf_access) # Determines the visibility and writeability of the field by other API consumers.  |Value|Description | |:-|:-| |`app_only`|Private to the app that owns the field| |`read`|Visible to other API consumers| |`write`|Open for reading and writing by other API consumers| |`read_and_sf_access`|Visible to other API consumers, including on storefront| |`write_and_sf_access`|Open for reading and writing by other API consumers, including on storefront|, namespace: str # Namespace for the metafield, for organizational purposes., key: str # The name of the field, for example: `location_id`, `color`., value: str # The value of the field, for example: `1`, `blue`.}
+@optional {description: str # Description for the metafields.}
+@returns(200) {data: any, meta: map} # A `Metafield` object.
+@errors {400: Bad Request. Input is invalid., 409: The metafield conflicts with another metafield. This can result from duplicate unique key combinations of the appʼs client ID, namespace, key, resource type, and resource ID., 422: The `Metafield` is not valid. This is the result of missing required fields or of invalid data. See the response for more details.}
+@example_request {"permission_set":"app_only","namespace":"Sales Department","key":"Staff Name","value":"Sam","description":"Name of staff member"}
 
 @endpoint GET /orders/{order_id}/metafields/{metafield_id}
-@returns(200) {data: any, meta: map}
-@errors {404}
+@desc Get a Metafield
+@returns(200) {data: any, meta: map} # A `Metafield` object.
+@errors {404: A metafield was not found with this query.}
 
 @endpoint PUT /orders/{order_id}/metafields/{metafield_id}
-@required {Content-Type: str=application/json}
-@returns(200) {data: any, meta: map}
-@errors {400, 404}
+@desc Update a Metafield
+@required {Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
+@returns(200) {data: any, meta: map} # A metafield and metadata.
+@errors {400: Bad Request. Input is invalid., 404: A metafield was not found with this query.}
 
 @endpoint DELETE /orders/{order_id}/metafields/{metafield_id}
-@returns(204)
-@errors {404}
+@desc Delete a Metafield
+@returns(204) An empty response.
+@errors {404: The resource was not found.}
 
 @endpoint GET /orders/settings
-@returns(200)
-@errors {400}
+@desc Get Global Order Settings
+@returns(200) OK
+@errors {400: Bad request. Authentication Required.}
 
 @endpoint PUT /orders/settings
-@required {Content-Type: str=application/json}
-@optional {notifications: map{order_placed: map{email_addresses: [str]}, forward_invoice: map{email_addresses: [str]}}}
-@returns(200)
-@errors {400, 422}
+@desc Update Global Order Settings
+@required {Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
+@optional {notifications: map{order_placed: map{email_addresses: [str]}, forward_invoice: map{email_addresses: [str]}} # Global notification settings.}
+@returns(200) OK
+@errors {400: Bad request. Authentication Required., 422: Order settings data is not valid. This is the result of missing required fields, or of invalid data. See the response for more details.}
+@example_request {"notifications":{"order_placed":{"email_addresses":["admin@example.com","another-email@example.com"]},"forward_invoice":{"email_addresses":["admin@example.com","another-email@example.com"]}}}
 
 @endpoint GET /orders/settings/channels/{channel_id}
-@returns(200)
-@errors {400}
+@desc Get Channel Order Settings
+@returns(200) OK
+@errors {400: Bad request. Authentication Required.}
 
 @endpoint PUT /orders/settings/channels/{channel_id}
-@required {Content-Type: str=application/json}
-@optional {notifications: map{order_placed: map{email_addresses: [str]}, forward_invoice: map{email_addresses: [str]}}}
-@returns(200)
-@errors {400, 422}
+@desc Update Channel Order Settings
+@required {Content-Type: str=application/json # The [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types) of the request body.}
+@optional {notifications: map{order_placed: map{email_addresses: [str]}, forward_invoice: map{email_addresses: [str]}} # Channel notification settings.}
+@returns(200) OK
+@errors {400: Bad request. Authentication Required., 422: Order settings data is not valid. This is the result of missing required fields, or of invalid data. See the response for more details.}
+@example_request {"notifications":{"order_placed":{"email_addresses":["admin@example.com","another-email@example.com"]},"forward_invoice":{"email_addresses":[]}}}
 
 @endpoint GET /orders/metafields
-@optional {page: int, limit: int, key: str, key:in: [str], namespace: str, namespace:in: [str], direction: str(asc/desc), include_fields: [str], date_created: str, date_modified: str, date_created:min: str, date_created:max: str, date_modified:min: str, date_modified:max: str, before: str, after: str}
-@returns(200) {data: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}}
+@desc Get All Order Metafields
+@optional {page: int # Specifies the page number in a limited (paginated) list of products., limit: int # Controls the number of items per page in a limited (paginated) list of products., key: str # Filter based on a metafieldʼs key., key:in: [str] # Filter using a comma-separated list of metafield keys. Could be used with vanilla `key` query parameter., namespace: str # Filter based on a metafieldʼs key., namespace:in: [str] # Filter using a comma-separated list of metafield namespaces. Can be used with vanilla `namespace` query parameter., direction: str(asc/desc) # Sort direction. Acceptable values are: `asc`, `desc`., include_fields: [str] # Fields to include, in a comma-separated list. The ID and the specified fields will be returned., date_created: str # Filter items by date created. For example, `date_created=2019-09-04T00:00:00`. Returns metafields created on this date., date_modified: str # Filter items by date modified. For example, `date_modified=2019-09-04T00:00:00`. Returns metafields modified on this date., date_created:min: str # Filter items by minimum date created. For example, `date_created:min=2019-09-04T00:00:00` or `date_created:min=2019-09-04`. Returns metafields created after this date., date_created:max: str # Filter items by maximum date created. For example, `date_created:max=2019-09-04T00:00:00` or `date_created:max=2019-09-04`. Returns metafields created before this date., date_modified:min: str # Filter items by minimum date modified. For example, `date_modified:min=2019-09-04T00:00:00` or `date_modified:min=2019-09-04`. Returns metafields modified after this date., date_modified:max: str # Filter items by maximum date modified. For example, `date_modified:max=2019-09-04T00:00:00` or `date_modified:max=2019-09-04`. Returns metafields modified before this date., before: str # A cursor indicating where to start retrieving the previous page of results. Use this parameter to paginate backward. Not required for the initial request. For subsequent requests, use the end_cursor value returned in meta.cursor_pagination from the previous response. Works with limit, direction, and other supported query parameters. When specified, offset-based pagination (page) is ignored. Cannot be used in combination with the after parameter., after: str # A cursor indicating where to start retrieving the next page of results. Use this parameter to paginate forward. Not required for the initial request. For subsequent requests, use the start_cursor value returned in meta.cursor_pagination from the previous response. Works with limit, direction, and other supported query parameters. When specified, offset-based pagination (page) is ignored. Cannot be used in combination with the before parameter.}
+@returns(200) {data: [any], meta: map{pagination: map{total: int, count: int, per_page: int, current_page: int, total_pages: int, links: map{previous: str, current: str, next: str}}, cursor_pagination: map{count: int, per_page: int, start_cursor: str, end_cursor: str, links: map{previous: str, current: str, next: str}}}} # List of `Metafield` objects.
 
 @endpoint POST /orders/metafields
-@returns(200) {data: [any], errors: [any], meta: map{total: int, success: int, failed: int}}
-@errors {400, 422}
+@desc Create multiple Metafields
+@returns(200) {data: [any], errors: [any], meta: map{total: int, success: int, failed: int}} # List of created `Metafield` objects.
+@errors {400: Bad Request. Input is invalid., 422: Response object for metafields creation with partial success.}
 
 @endpoint PUT /orders/metafields
-@returns(200) {data: [any], errors: [any], meta: map{total: int, success: int, failed: int}}
-@errors {400, 422}
+@desc Update multiple Metafields
+@returns(200) {data: [any], errors: [any], meta: map{total: int, success: int, failed: int}} # List of updated `Metafield` objects.
+@errors {400: Bad Request. Input is invalid., 422: Response object for metafields creation with partial success.}
 
 @endpoint DELETE /orders/metafields
-@returns(200) {data: [int], errors: [any], meta: map{total: int, success: int, failed: int}}
-@errors {400, 422}
+@desc Delete Multiple Metafields
+@returns(200) {data: [int], errors: [any], meta: map{total: int, success: int, failed: int}} # Response object for metafields deletion with success.
+@errors {400: Bad Request. Input is invalid., 422: Response object for metafields deletion with partial success.}
 
 @end

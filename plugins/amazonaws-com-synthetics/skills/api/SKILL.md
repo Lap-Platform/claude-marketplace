@@ -72,82 +72,28 @@ Not specified.
 | POST | /tags/{resourceArn} | Assigns one or more tags (key-value pairs) to the specified canary or group.  Tags can help you organize and categorize your resources. You can also use them to scope user permissions, by granting a user permission to access or change only resources with certain tag values. Tags don't have any semantic meaning to Amazon Web Services and are interpreted strictly as strings of characters. You can use the TagResource action with a resource that already has tags. If you specify a new tag key for the resource, this tag is appended to the list of tags associated with the resource. If you specify a tag key that is already associated with the resource, the new tag value that you specify replaces the previous value for that tag. You can associate as many as 50 tags with a canary or group. |
 | DELETE | /tags/{resourceArn} | Removes one or more tags from the specified resource. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new canary?" -> POST /canary
-- "How do I delete a canary?" -> DELETE /canary/{name}
-- "How do I get details about a specific canary?" -> GET /canary/{name}
-- "How do I list all my canaries?" -> POST /canaries
-- "How do I check the last run status of my canaries?" -> POST /canaries/last-run
-- "How do I see all runs for a specific canary?" -> POST /canary/{name}/runs
-- "How do I start a canary?" -> POST /canary/{name}/start
-- "How do I stop a running canary?" -> POST /canary/{name}/stop
-- "How do I update a canary's schedule or code?" -> PATCH /canary/{name}
-- "How do I create a group and add canaries to it?" -> POST /group, then PATCH /group/{groupIdentifier}/associate
-- "How do I remove a canary from a group?" -> PATCH /group/{groupIdentifier}/disassociate
-- "What runtime versions are available for canaries?" -> POST /runtime-versions
-- "Which groups does a specific resource belong to?" -> POST /resource/{resourceArn}/groups
-- "How do I tag or untag a canary or group?" -> POST /tags/{resourceArn} or DELETE /tags/{resourceArn}
-- "How do I list all resources in a group?" -> POST /group/{groupIdentifier}/resources
-
-## Response Tips
-
-- **Canary objects**: Deeply nested -- Status.State holds the current lifecycle state (CREATING, READY, RUNNING, STOPPED, ERROR, DELETING); Timeline contains timestamps as ISO strings. Always check Status.StateReason when State is ERROR.
-- **List endpoints** (canaries, runs, groups, runtime-versions, group resources): All use token-based pagination via `NextToken`/`MaxResults` in the request body. Keep calling with the returned NextToken until it is absent or null.
-- **Mutating endpoints** (start, stop, delete, update, associate, disassociate): Return empty 200 on success with no body. Absence of an error response means the operation was accepted.
-- **Create endpoints** (POST /canary, POST /group): Return the created object wrapped in a top-level key (`Canary` or `Group`), both nullable -- a null value with a 200 status is unexpected and should be flagged.
-- **Tags**: Returned as a flat `map<str,str>`. DELETE /tags requires `tagKeys` as a query-string array, not a body field.
-
-## Anomaly Flags
-
-- **Canary in ERROR or DELETING state**: Surface `Status.StateReason` and `Status.StateReasonCode` immediately when fetching canary details.
-- **Deprecated runtime version**: After listing runtime versions, compare the canary's `RuntimeVersion` against available versions. Flag if the canary uses a version no longer in the list.
-- **Canary never started**: If `Timeline.LastStarted` is null on a READY canary, the canary was created but never executed -- likely misconfigured or forgotten.
-- **Pagination truncation**: If `NextToken` is present in a response but the caller does not paginate, warn that results are incomplete.
-- **High failure retention with low success retention**: If `FailureRetentionPeriodInDays` greatly exceeds `SuccessRetentionPeriodInDays`, flag the imbalance as it may inflate storage costs.
-- **VPC configuration without security groups**: If `VpcConfig.SubnetIds` is populated but `SecurityGroupIds` is empty, the canary may fail to reach endpoints.
-
-## Playbook
-
-### 1. Create and Launch a Canary
-
-1. `POST /runtime-versions` -- list available runtimes, pick the latest stable version.
-2. `POST /canary` -- provide Name, Code (S3 location + handler), ArtifactS3Location, ExecutionRoleArn, Schedule (cron/rate expression), and the chosen RuntimeVersion.
-3. Confirm the returned `Canary.Status.State` is CREATING or READY.
-4. `POST /canary/{name}/start` -- trigger the first run.
-5. `GET /canary/{name}` -- poll until Status.State is RUNNING.
-
-### 2. Investigate a Failing Canary
-
-1. `POST /canaries/last-run` with `Names: ["{canaryName}"]` -- check `LastRun.Status` for the failure state.
-2. `GET /canary/{name}` -- read `Status.StateReason` and `Status.StateReasonCode` for error details.
-3. `POST /canary/{name}/runs` -- list recent runs to identify when failures began and whether they are intermittent.
-4. Check the `ArtifactS3Location` from the canary details -- download logs and screenshots from S3 for root-cause analysis.
-5. If needed, `PATCH /canary/{name}` to update code, timeout, or VPC config, then `POST /canary/{name}/start` to retry.
-
-### 3. Organize Canaries into Groups
-
-1. `POST /group` with a descriptive Name (e.g., "production-api-monitors").
-2. `PATCH /group/{groupId}/associate` with the `ResourceArn` of each canary to add.
-3. `POST /group/{groupId}/resources` -- verify the group membership list.
-4. To reorganize, `PATCH /group/{groupId}/disassociate` to remove a canary, then associate it with a different group.
-
-### 4. Audit and Manage Tags Across Resources
-
-1. `POST /canaries` -- list all canaries, collect their ARNs from `EngineArn` or construct from name.
-2. `GET /tags/{resourceArn}` for each resource -- collect current tags.
-3. `POST /tags/{resourceArn}` -- apply missing or corrected tags.
-4. `DELETE /tags/{resourceArn}` with `tagKeys` -- remove stale or incorrect tags.
-
-### 5. Decommission a Canary
-
-1. `POST /canary/{name}/stop` -- stop the canary if it is currently running.
-2. `GET /canary/{name}` -- wait for Status.State to reach STOPPED.
-3. `POST /resource/{canaryArn}/groups` -- find all groups the canary belongs to.
-4. `PATCH /group/{groupId}/disassociate` for each group -- remove the canary from groups.
-5. `DELETE /canary/{name}` with `deleteLambda: true` -- delete the canary and its underlying Lambda function.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a canary?" -> POST /canary
+- "Create a group?" -> POST /group
+- "Delete a canary?" -> DELETE /canary/{name}
+- "Delete a group?" -> DELETE /group/{groupIdentifier}
+- "Create a canary?" -> POST /canaries
+- "Create a last-run?" -> POST /canaries/last-run
+- "Create a runtime-version?" -> POST /runtime-versions
+- "Get canary details?" -> GET /canary/{name}
+- "Create a run?" -> POST /canary/{name}/runs
+- "Get group details?" -> GET /group/{groupIdentifier}
+- "Create a group?" -> POST /resource/{resourceArn}/groups
+- "Create a resource?" -> POST /group/{groupIdentifier}/resources
+- "Create a group?" -> POST /groups
+- "Get tag details?" -> GET /tags/{resourceArn}
+- "Create a start?" -> POST /canary/{name}/start
+- "Create a stop?" -> POST /canary/{name}/stop
+- "Delete a tag?" -> DELETE /tags/{resourceArn}
+- "Partially update a canary?" -> PATCH /canary/{name}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

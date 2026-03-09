@@ -10,213 +10,257 @@
 
 @group services
 @endpoint GET /services
-@optional {page: int, size: int}
-@returns(200) {id: str, name: str, version: str, type: str, operations: [map], xmlNS: str, metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}}
+@desc Get Services and APIs
+@optional {page: int # Page of Services to retrieve (starts at and defaults to 0), size: int # Size of a page. Maximum number of Services to include in a response (defaults to 20)}
+@returns(200) {id: str, name: str, version: str, type: str, operations: [map], xmlNS: str, metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}} # List of found Services
 
 @endgroup
 
 @group tests
 @endpoint POST /tests
-@required {serviceId: str, testEndpoint: str, runnerType: str(HTTP/SOAP_HTTP/SOAP_UI/POSTMAN/OPEN_API_SCHEMA/ASYNC_API_SCHEMA/GRPC_PROTOBUF/GRAPHQL_SCHEMA), timeout: int}
-@optional {filteredOperations: [str], operationHeaders: map, secretName: str}
-@returns(201) {id: str, version: num, testNumber: num, testDate: int(int64), testedEndpoint: str, serviceId: str, elapsedTime: num, success: bool, inProgress: bool, runnerType: str, testCaseResults: [any], secretRef: any, operationHeaders: map, timeout: int}
+@desc Create a new Test
+@required {serviceId: str # Unique identifier of service to test, testEndpoint: str # Endpoint to test for this service, runnerType: str(HTTP/SOAP_HTTP/SOAP_UI/POSTMAN/OPEN_API_SCHEMA/ASYNC_API_SCHEMA/GRPC_PROTOBUF/GRAPHQL_SCHEMA) # Type of test strategy (different strategies are implemented by different runners), timeout: int # The maximum time (in milliseconds) to wait for this test ends}
+@optional {filteredOperations: [str] # A restriction on service operations to test, operationHeaders: map # Specification of additional headers for a Service/API operations. Keys are operation name or "globals" (if header applies to all), values are Header objects DTO., secretName: str # The name of Secret to use for connecting the test endpoint}
+@returns(201) {id: str, version: num, testNumber: num, testDate: int(int64), testedEndpoint: str, serviceId: str, elapsedTime: num, success: bool, inProgress: bool, runnerType: str, testCaseResults: [any], secretRef: any, operationHeaders: map, timeout: int} # Created TestResult (empty shell cause tests are executed asynchronously)
 
 @endgroup
 
 @group services
 @endpoint GET /services/count
-@returns(200) {counter: int(int32)}
+@desc Get the Services counter
+@returns(200) {counter: int(int32)} # Number of Services in datastore
 
 @endgroup
 
 @group jobs
 @endpoint GET /jobs
-@optional {page: int, size: int, name: str}
-@returns(200)
+@desc Get ImportJobs
+@optional {page: int # Page of ImportJobs to retrieve (starts at and defaults to 0), size: int # Size of a page. Maximum number of ImportJobs to include in a response (defaults to 20), name: str # Name like criterion for query}
+@returns(200) List of found ImportJobs
 
 @endpoint POST /jobs
-@required {name: str, repositoryUrl: str}
-@optional {id: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn!: int, lastUpdate!: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool}
-@returns(201) {id: str, name: str, repositoryUrl: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool}
+@desc Create ImportJob
+@required {name: str # Unique distinct name of this ImportJob, repositoryUrl: str # URL of mocks and tests repository artifact}
+@optional {id: str # Unique identifier of ImportJob, repositoryDisableSSLValidation: bool # Whether to disable SSL certificate verification when checking repository, frequency: str # Reserved for future usage, createdDate: str(date-time) # Creation date for this ImportJob, lastImportDate: str(date-time) # Date last import was done, lastImportError: str # Error message of last import (if any), active: bool # Whether this ImportJob is active (ie. scheduled for execution), etag: str # Etag of repository URL during previous import. Is used for not re-importing if no recent changes, serviceRefs: [any] # References of Services discovered when checking repository, metadata: map{createdOn!: int, lastUpdate!: int, annotations: map, labels: map} # Commodity object for holding metadata on any entity. This object is inspired by Kubernetes metadata., secretRef: any # Lightweight reference for an existing Secret, mainArtifact: bool # Flag telling if considered as primary or secondary artifact. Default to `true`}
+@returns(201) {id: str, name: str, repositoryUrl: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool} # Created ImportJob
 
 @endpoint GET /jobs/{id}
-@returns(200) {id: str, name: str, repositoryUrl: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool}
+@desc Get ImportJob
+@returns(200) {id: str, name: str, repositoryUrl: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool} # Found ImportJob
 
 @endpoint POST /jobs/{id}
-@required {name: str, repositoryUrl: str}
-@optional {id: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn!: int, lastUpdate!: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool}
-@returns(200) {id: str, name: str, repositoryUrl: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool}
+@desc Update ImportJob
+@required {name: str # Unique distinct name of this ImportJob, repositoryUrl: str # URL of mocks and tests repository artifact}
+@optional {id: str # Unique identifier of ImportJob, repositoryDisableSSLValidation: bool # Whether to disable SSL certificate verification when checking repository, frequency: str # Reserved for future usage, createdDate: str(date-time) # Creation date for this ImportJob, lastImportDate: str(date-time) # Date last import was done, lastImportError: str # Error message of last import (if any), active: bool # Whether this ImportJob is active (ie. scheduled for execution), etag: str # Etag of repository URL during previous import. Is used for not re-importing if no recent changes, serviceRefs: [any] # References of Services discovered when checking repository, metadata: map{createdOn!: int, lastUpdate!: int, annotations: map, labels: map} # Commodity object for holding metadata on any entity. This object is inspired by Kubernetes metadata., secretRef: any # Lightweight reference for an existing Secret, mainArtifact: bool # Flag telling if considered as primary or secondary artifact. Default to `true`}
+@returns(200) {id: str, name: str, repositoryUrl: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool} # Updated ImportJob
 
 @endpoint DELETE /jobs/{id}
-@returns(200)
+@desc Delete ImportJob
+@returns(200) ImportJob deleted
 
 @endpoint PUT /jobs/{id}/activate
-@returns(200) {id: str, name: str, repositoryUrl: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool}
+@desc Activate an ImportJob
+@returns(200) {id: str, name: str, repositoryUrl: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool} # ImportJob is activated
 
 @endpoint PUT /jobs/{id}/start
-@returns(200) {id: str, name: str, repositoryUrl: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool}
+@desc Start an ImportJob
+@returns(200) {id: str, name: str, repositoryUrl: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool} # Started ImportJob
 
 @endpoint PUT /jobs/{id}/stop
-@returns(200) {id: str, name: str, repositoryUrl: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool}
+@desc Stop an ImportJob
+@returns(200) {id: str, name: str, repositoryUrl: str, repositoryDisableSSLValidation: bool, frequency: str, createdDate: str(date-time), lastImportDate: str(date-time), lastImportError: str, active: bool, etag: str, serviceRefs: [any], metadata: map{createdOn: int, lastUpdate: int, annotations: map, labels: map}, secretRef: any, mainArtifact: bool} # Stopped ImportJob
 
 @endgroup
 
 @group services
 @endpoint GET /services/{id}
-@optional {messages: bool}
+@desc Get Service
+@optional {messages: bool # Whether to include details on services messages into result. Default is false}
 @returns(200)
 
 @endpoint DELETE /services/{id}
-@returns(200)
+@desc Delete Service
+@returns(200) Service has been deleted
 
 @endgroup
 
 @group artifact
 @endpoint POST /artifact/upload
-@required {mainArtifact: bool}
-@returns(201)
-@returns(204)
-@errors {400}
+@desc Upload an artifact
+@required {mainArtifact: bool # Flag telling if this should be considered as primary or secondary artifact. Default to 'true'}
+@returns(201) Artifact was imported and Service found
+@returns(204) No file attribute found in uploaded data
+@errors {400: Artifact content is invalid and not understood}
 
 @endgroup
 
 @group jobs
 @endpoint GET /jobs/count
-@returns(200) {counter: int(int32)}
+@desc Get the ImportJobs counter
+@returns(200) {counter: int(int32)} # Number of ImportJobs in datastore
 
 @endgroup
 
 @group secrets
 @endpoint GET /secrets
-@optional {page: int, size: int}
-@returns(200)
+@desc Get Secrets
+@optional {page: int # Page of Secrets to retrieve (starts at and defaults to 0), size: int # Size of a page. Maximum number of Secrets to include in a response (defaults to 20)}
+@returns(200) List of found Secrets
 
 @endpoint POST /secrets
-@required {name: str, description: str}
-@optional {id: str, username: str, password: str, token: str, tokenHeader: str, caCertPem: str}
-@returns(201) {id: str, name: str, username: str, password: str, token: str, tokenHeader: str, caCertPem: str, description: str}
+@desc Create a new Secret
+@required {name: str # Unique distinct name of Secret, description: str # Description of this Secret}
+@optional {id: str # Unique identifier of Secret, username: str, password: str, token: str, tokenHeader: str, caCertPem: str}
+@returns(201) {id: str, name: str, username: str, password: str, token: str, tokenHeader: str, caCertPem: str, description: str} # Created Secret
 
 @endpoint GET /secrets/{id}
-@returns(200) {id: str, name: str, username: str, password: str, token: str, tokenHeader: str, caCertPem: str, description: str}
+@desc Get Secret
+@returns(200) {id: str, name: str, username: str, password: str, token: str, tokenHeader: str, caCertPem: str, description: str} # Found Secret
 
 @endpoint PUT /secrets/{id}
-@returns(200)
+@desc Update Secret
+@returns(200) Updated Secret
 
 @endpoint DELETE /secrets/{id}
-@returns(200)
+@desc Delete Secret
+@returns(200) Secret has been deleted
 
 @endpoint GET /secrets/count
-@returns(200) {counter: int(int32)}
+@desc Get the Secrets counter
+@returns(200) {counter: int(int32)} # Number of Secrets in datastore
 
 @endgroup
 
 @group tests
 @endpoint GET /tests/service/{serviceId}
-@returns(200)
+@desc Get TestResults by Service
+@returns(200) List of TestResults for the Service having the requested id
 
 @endpoint GET /tests/service/{serviceId}/count
-@returns(200) {counter: int(int32)}
+@desc Get the TestResults for Service counter
+@returns(200) {counter: int(int32)} # Number of TestResults for this Service in datastore
 
 @endpoint GET /tests/{id}
-@returns(200) {id: str, version: num, testNumber: num, testDate: int(int64), testedEndpoint: str, serviceId: str, elapsedTime: num, success: bool, inProgress: bool, runnerType: str, testCaseResults: [any], secretRef: any, operationHeaders: map, timeout: int}
+@desc Get TestResult
+@returns(200) {id: str, version: num, testNumber: num, testDate: int(int64), testedEndpoint: str, serviceId: str, elapsedTime: num, success: bool, inProgress: bool, runnerType: str, testCaseResults: [any], secretRef: any, operationHeaders: map, timeout: int} # Requested TestResult
 
 @endpoint GET /tests/{id}/messages/{testCaseId}
-@returns(200)
+@desc Get messages for TestCase
+@returns(200) List of request and response messages for this TestCase
 
 @endpoint POST /tests/{id}/testCaseResult
-@required {operationName: str}
-@returns(200) {success: bool, elapsedTime: num, operationName: str, testStepResults: [any]}
+@desc Report and create a new TestCaseResult
+@required {operationName: str # Name of related operation for this TestCase}
+@returns(200) {success: bool, elapsedTime: num, operationName: str, testStepResults: [any]} # TestCaseResult is reported
 
 @endgroup
 
 @group keycloak
 @endpoint GET /keycloak/config
-@returns(200) {realm: str, auth-server-url: str, public-client: bool, ssl-required: any, resource: str, enabled: bool}
+@desc Get authentification configuration
+@returns(200) {realm: str, auth-server-url: str, public-client: bool, ssl-required: any, resource: str, enabled: bool} # Get current configuration
 
 @endgroup
 
 @group services
 @endpoint PUT /services/{id}/operation
-@required {operationName: str}
-@optional {dispatcher: str, dispatcherRules: str, defaultDelay: int, parameterConstraints: [map{name!: str, required: bool, recopy: bool, mustMatchRegexp: str, in: str}]}
-@returns(200)
-@errors {500}
+@desc Override Service Operation
+@required {operationName: str # Name of operation to update}
+@optional {dispatcher: str # Type of dispatcher to apply for this operation, dispatcherRules: str # Rules of dispatcher for this operation, defaultDelay: int # Default delay in milliseconds to apply to mock responses on this operation, parameterConstraints: [map{name!: str, required: bool, recopy: bool, mustMatchRegexp: str, in: str}] # Constraints that may apply to incoming parameters on this operation}
+@returns(200) Operation has been updated
+@errors {500: Operation cannot be updated}
 
 @endpoint PUT /services/{id}/metadata
-@required {createdOn: int, lastUpdate: int}
-@optional {annotations: map, labels: map}
-@returns(200)
-@errors {500}
+@desc Update Service Metadata
+@required {createdOn: int # Creation date of attached object, lastUpdate: int # Last update of attached object}
+@optional {annotations: map # Annotations of attached object, labels: map # Labels put on attached object}
+@returns(200) Service metadata has been updated
+@errors {500: Update of metadata failed}
 
 @endpoint GET /services/labels
-@returns(200)
+@desc Get the already used labels for Services
+@returns(200) Already used labels: keys are label Keys, values are array of label Values
 
 @endpoint GET /services/search
-@required {queryMap: map}
-@returns(200)
+@desc Search for Services and APIs
+@required {queryMap: map # Map of criterion. Key can be simply 'name' with value as the searched string. You can also search by label using keys like 'labels.x' where 'x' is the label and value the label value}
+@returns(200) List of found Services (filtered according search criteria)
 
 @endgroup
 
 @group tests
 @endpoint GET /tests/{id}/events/{testCaseId}
-@returns(200)
+@desc Get events for TestCase
+@returns(200) List of event messages for this TestCase
 
 @endgroup
 
 @group resources
 @endpoint GET /resources/{name}
-@returns(200) {id: str, name: str, content: str, type: str, serviceId: str, path: str, sourceArtifact: str}
+@desc Get Resource
+@returns(200) {id: str, name: str, content: str, type: str, serviceId: str, path: str, sourceArtifact: str} # Retrieve the resource having this name
 
 @endpoint GET /resources/service/{serviceId}
-@returns(200)
+@desc Get Resources by Service
+@returns(200) List the resources attached to a Service or API
 
 @endgroup
 
 @group features
 @endpoint GET /features/config
-@returns(200)
+@desc Get features configuration
+@returns(200) Get features configuration
 
 @endgroup
 
 @group import
 @endpoint POST /import
-@returns(201)
+@desc Import a snapshot
+@returns(201) Snasphot has been correctly imported
 
 @endgroup
 
 @group export
 @endpoint GET /export
-@required {serviceIds: [str]}
-@returns(200)
+@desc Export a snapshot
+@required {serviceIds: [str] # List of service identifiers to export}
+@returns(200) Snapshot file representing the export of requested services
 
 @endgroup
 
 @group metrics
 @endpoint GET /metrics/invocations/global
-@optional {day: str}
-@returns(200) {id: str, day: str, serviceName: str, serviceVersion: str, dailyCount: num, hourlyCount: map, minuteCount: map}
+@desc Get aggregated invocation statistics for a day
+@optional {day: str # The day to get statistics for (formatted with yyyyMMdd pattern). Default to today if not provided.}
+@returns(200) {id: str, day: str, serviceName: str, serviceVersion: str, dailyCount: num, hourlyCount: map, minuteCount: map} # Aggregated invocation statistics for specified day
 
 @endpoint GET /metrics/conformance/aggregate
-@returns(200)
+@desc Get aggregation of conformance metrics
+@returns(200) Get aggregated coverage metric value
 
 @endpoint GET /metrics/conformance/service/{serviceId}
-@returns(200) {id: str, serviceId: str, aggregationLabelValue: str, maxPossibleScore: num(double), currentScore: num(double), lastUpdateDay: str, latestTrend: str, latestScores: map}
+@desc Get conformance metrics for a Service
+@returns(200) {id: str, serviceId: str, aggregationLabelValue: str, maxPossibleScore: num(double), currentScore: num(double), lastUpdateDay: str, latestTrend: str, latestScores: map} # Test coverage metric for Service
 
 @endpoint GET /metrics/invocations/top
-@optional {day: str, limit: int}
-@returns(200)
+@desc Get top invocation statistics for a day
+@optional {day: str # The day to get statistics for (formatted with yyyyMMdd pattern). Default to today if not provided., limit: int # The number of top invoked mocks to return}
+@returns(200) Top invocations for a defined day
 
 @endpoint GET /metrics/invocations/{serviceName}/{serviceVersion}
-@optional {day: str}
-@returns(200) {id: str, day: str, serviceName: str, serviceVersion: str, dailyCount: num, hourlyCount: map, minuteCount: map}
+@desc Get invocation statistics for Service
+@optional {day: str # The day to get statistics for (formatted with yyyyMMdd pattern). Default to today if not provided.}
+@returns(200) {id: str, day: str, serviceName: str, serviceVersion: str, dailyCount: num, hourlyCount: map, minuteCount: map} # Invocation statistics for service for specified day
 
 @endpoint GET /metrics/invocations/global/latest
-@optional {limit: int}
-@returns(200)
+@desc Get aggregated invocations statistics for latest days
+@optional {limit: int # Number of days to get back in time. Default is 20.}
+@returns(200) A map where keys are day (formatted using yyyyMMdd pattern) and values are counter of invocations on this day
 
 @endpoint GET /metrics/tests/latest
-@optional {limit: int}
-@returns(200)
+@desc Get latest tests results
+@optional {limit: int # Number of days to consider for test results to return. Default is 7 (one week)}
+@returns(200) Test results summary for specified <limit> last days.
 
 @endgroup
 

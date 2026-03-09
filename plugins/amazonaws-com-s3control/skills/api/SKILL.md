@@ -164,87 +164,77 @@ Not specified.
 | POST | /v20180820/tags/{resourceArn+} | Creates a new Amazon Web Services resource tag or updates an existing resource tag. Each tag is a label consisting of a user-defined key and value. Tags can help you manage, identify, organize, search for, and filter resources. You can add up to 50 Amazon Web Services resource tags for each S3 resource.   This operation is only supported for S3 Storage Lens groups and for S3 Access Grants. The tagged resource can be an S3 Storage Lens group or S3 Access Grants instance, registered location, or grant.    Permissions  You must have the s3:TagResource permission to use this operation.    For more information about the required Storage Lens Groups permissions, see Setting account permissions to use S3 Storage Lens groups. For information about S3 Tagging errors, see List of Amazon S3 Tagging error codes. |
 | DELETE | /v20180820/tags/{resourceArn+} | This operation removes the specified Amazon Web Services resource tags from an S3 resource. Each tag is a label consisting of a user-defined key and value. Tags can help you manage, identify, organize, search for, and filter resources.   This operation is only supported for S3 Storage Lens groups and for S3 Access Grants. The tagged resource can be an S3 Storage Lens group or S3 Access Grants instance, registered location, or grant.    Permissions  You must have the s3:UntagResource permission to use this operation.    For more information about the required Storage Lens Groups permissions, see Setting account permissions to use S3 Storage Lens groups. For information about S3 Tagging errors, see List of Amazon S3 Tagging error codes. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new S3 access point?" -> PUT /v20180820/accesspoint/{name}
-- "How do I set up Access Grants for my account?" -> POST /v20180820/accessgrantsinstance
-- "What batch operations jobs are running?" -> GET /v20180820/jobs
-- "How do I grant S3 access to a specific identity?" -> POST /v20180820/accessgrantsinstance/grant
-- "How do I get temporary credentials to access a granted S3 prefix?" -> GET /v20180820/accessgrantsinstance/dataaccess
-- "What is the public access block configuration for my account?" -> GET /v20180820/configuration/publicAccessBlock
-- "How do I create a Multi-Region Access Point?" -> POST /v20180820/async-requests/mrap/create
-- "How do I check the status of an async MRAP operation?" -> GET /v20180820/async-requests/mrap/{request_token+}
-- "How do I set up an Object Lambda access point?" -> PUT /v20180820/accesspointforobjectlambda/{name}
-- "How do I change the priority of a batch job?" -> POST /v20180820/jobs/{id}/priority
-- "How do I cancel or pause a batch operations job?" -> POST /v20180820/jobs/{id}/status
-- "What Storage Lens configurations exist in my account?" -> GET /v20180820/storagelens
-- "How do I tag an S3 Control resource?" -> POST /v20180820/tags/{resourceArn+}
-- "How do I check if an access point policy is public?" -> GET /v20180820/accesspoint/{name}/policyStatus
-- "How do I configure routing for a Multi-Region Access Point?" -> PATCH /v20180820/mrap/instances/{mrap+}/routes
-
-## Response Tips
-
-- **Access Grants (list endpoints):** Paginated via `NextToken`/`maxResults` params; always check `NextToken` in response to retrieve additional pages.
-- **Batch Jobs:** `GET /jobs/{id}` returns a deeply nested `Job` object -- drill into `Operation` for the action type and `ProgressSummary` for task counts and elapsed time.
-- **Async MRAP operations:** These return a `RequestTokenARN` on creation; poll `GET /async-requests/mrap/{request_token+}` and check `RequestStatus` for completion -- `ResponseDetails` may contain `ErrorDetails`.
-- **Access Points / Buckets (list endpoints):** Paginated via `nextToken`/`maxResults`; the list key varies by resource type (`AccessPointList`, `RegionalBucketList`, etc.).
-- **Storage Lens:** `GET /storagelens/{id}` returns a heavily nested `StorageLensConfiguration` with `AccountLevel` containing multiple metric toggle objects -- most fields are optional booleans.
-- **Policy endpoints:** Return `Policy` as a raw JSON string (not parsed object); parse it client-side.
-- **Data Access credentials:** `GET /accessgrantsinstance/dataaccess` returns temporary `Credentials` with `Expiration` timestamp -- treat like STS assume-role output.
-
-## Anomaly Flags
-
-- **Async operation failures:** When polling MRAP async requests, surface `ErrorDetails` (Code, Message) immediately if `RequestStatus` indicates failure.
-- **Public access detected:** Flag when `PolicyStatus.IsPublic` is `true` on any access point or Object Lambda access point -- this may indicate unintended public exposure.
-- **Batch job failures:** Surface when `ProgressSummary.NumberOfTasksFailed` is non-zero or when `FailureReasons` array is populated in job details.
-- **Credential expiration:** When using `dataaccess` endpoint, warn if `Credentials.Expiration` is less than 5 minutes away.
-- **Missing public access block:** Flag when account-level `PublicAccessBlockConfiguration` has any of the four flags set to `false` -- this is a common security misconfiguration.
-- **Job stuck in non-terminal status:** Surface when a batch job `Status` remains in `Preparing` or `Suspended` with a `SuspendedCause` present.
-- **Pagination truncation:** Warn when a list response includes a `NextToken` but the caller did not request all pages -- results are incomplete.
-
-## Playbook
-
-### 1. Set Up Access Grants from Scratch
-
-1. Create an Access Grants instance: `POST /v20180820/accessgrantsinstance` with your account ID and optional Identity Center ARN.
-2. Associate Identity Center (if not done in step 1): `POST /v20180820/accessgrantsinstance/identitycenter` with the `IdentityCenterArn`.
-3. Register a location: `POST /v20180820/accessgrantsinstance/location` with the S3 prefix (`LocationScope`) and an IAM role ARN that can vend credentials.
-4. Create a grant: `POST /v20180820/accessgrantsinstance/grant` referencing the location ID, grantee identity, and permission level (`READ`, `READWRITE`, or `WRITE`).
-5. Verify by fetching temporary credentials: `GET /v20180820/accessgrantsinstance/dataaccess` with the target prefix and permission.
-
-### 2. Create and Monitor a Batch Operations Job
-
-1. Create the job: `POST /v20180820/jobs` with the operation type (e.g., `S3PutObjectTagging`), manifest, report config, priority, and role ARN.
-2. Note the returned `JobId`.
-3. If `ConfirmationRequired` was true, confirm the job: `POST /v20180820/jobs/{id}/status` with `requestedJobStatus: "Ready"`.
-4. Poll job status: `GET /v20180820/jobs/{id}` and check `Status` and `ProgressSummary` for task completion counts.
-5. When complete, review `FailureReasons` for any errors and retrieve the report from the configured S3 bucket.
-
-### 3. Create a Multi-Region Access Point
-
-1. Submit the async create request: `POST /v20180820/async-requests/mrap/create` with the MRAP name, regions, and optional public access block.
-2. Capture the `RequestTokenARN` from the response.
-3. Poll for completion: `GET /v20180820/async-requests/mrap/{request_token+}` until `RequestStatus` is `SUCCEEDED` or `FAILED`.
-4. Retrieve MRAP details: `GET /v20180820/mrap/instances/{name+}` to confirm alias, status, and regional endpoints.
-5. Optionally configure routing: `PATCH /v20180820/mrap/instances/{mrap+}/routes` to set active/passive routing across regions.
-
-### 4. Secure an Account with Public Access Block
-
-1. Check current config: `GET /v20180820/configuration/publicAccessBlock`.
-2. Apply the block: `PUT /v20180820/configuration/publicAccessBlock` with all four flags (`BlockPublicAcls`, `IgnorePublicAcls`, `BlockPublicPolicy`, `RestrictPublicBuckets`) set to `true`.
-3. Audit existing access points: `GET /v20180820/accesspoint` (paginate with `nextToken`), then for each, check `GET /v20180820/accesspoint/{name}/policyStatus` for `IsPublic`.
-4. Audit Object Lambda access points similarly: `GET /v20180820/accesspointforobjectlambda`, then check each policy status.
-5. Remediate any public policies by updating or deleting them via `PUT /v20180820/accesspoint/{name}/policy` or `DELETE /v20180820/accesspoint/{name}/policy`.
-
-### 5. Configure Storage Lens with Export
-
-1. Create a Storage Lens group to define object filters: `POST /v20180820/storagelensgroup` with filter criteria (prefix, suffix, tags, object age/size).
-2. Create or update the Storage Lens configuration: `PUT /v20180820/storagelens/{storagelensid}` with `AccountLevel` metrics enabled, `Include`/`Exclude` bucket/region lists, and `DataExport` pointing to an S3 bucket destination.
-3. Tag the configuration for cost tracking: `PUT /v20180820/storagelens/{storagelensid}/tagging`.
-4. Verify the configuration: `GET /v20180820/storagelens/{storagelensid}` and confirm `IsEnabled` is `true` and export settings are correct.
-5. List all configurations: `GET /v20180820/storagelens` to confirm it appears alongside any existing configurations.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a identitycenter?" -> POST /v20180820/accessgrantsinstance/identitycenter
+- "Create a grant?" -> POST /v20180820/accessgrantsinstance/grant
+- "Create a accessgrantsinstance?" -> POST /v20180820/accessgrantsinstance
+- "Create a location?" -> POST /v20180820/accessgrantsinstance/location
+- "Update a accesspoint?" -> PUT /v20180820/accesspoint/{name}
+- "Update a accesspointforobjectlambda?" -> PUT /v20180820/accesspointforobjectlambda/{name}
+- "Update a bucket?" -> PUT /v20180820/bucket/{name}
+- "Create a job?" -> POST /v20180820/jobs
+- "Create a create?" -> POST /v20180820/async-requests/mrap/create
+- "Create a storagelensgroup?" -> POST /v20180820/storagelensgroup
+- "Delete a grant?" -> DELETE /v20180820/accessgrantsinstance/grant/{id}
+- "Delete a location?" -> DELETE /v20180820/accessgrantsinstance/location/{id}
+- "Delete a accesspoint?" -> DELETE /v20180820/accesspoint/{name}
+- "Delete a accesspointforobjectlambda?" -> DELETE /v20180820/accesspointforobjectlambda/{name}
+- "Delete a bucket?" -> DELETE /v20180820/bucket/{name}
+- "Create a delete?" -> POST /v20180820/async-requests/mrap/delete
+- "Delete a storagelen?" -> DELETE /v20180820/storagelens/{storagelensid}
+- "Delete a storagelensgroup?" -> DELETE /v20180820/storagelensgroup/{name}
+- "Get job details?" -> GET /v20180820/jobs/{id}
+- "Get mrap details?" -> GET /v20180820/async-requests/mrap/{request_token+}
+- "Get grant details?" -> GET /v20180820/accessgrantsinstance/grant/{id}
+- "List all accessgrantsinstance?" -> GET /v20180820/accessgrantsinstance
+- "List all prefix?" -> GET /v20180820/accessgrantsinstance/prefix
+- "List all resourcepolicy?" -> GET /v20180820/accessgrantsinstance/resourcepolicy
+- "Get location details?" -> GET /v20180820/accessgrantsinstance/location/{id}
+- "Get accesspoint details?" -> GET /v20180820/accesspoint/{name}
+- "List all configuration?" -> GET /v20180820/accesspointforobjectlambda/{name}/configuration
+- "Get accesspointforobjectlambda details?" -> GET /v20180820/accesspointforobjectlambda/{name}
+- "List all policy?" -> GET /v20180820/accesspoint/{name}/policy
+- "List all policy?" -> GET /v20180820/accesspointforobjectlambda/{name}/policy
+- "List all policyStatus?" -> GET /v20180820/accesspoint/{name}/policyStatus
+- "List all policyStatus?" -> GET /v20180820/accesspointforobjectlambda/{name}/policyStatus
+- "Get bucket details?" -> GET /v20180820/bucket/{name}
+- "List all lifecycleconfiguration?" -> GET /v20180820/bucket/{name}/lifecycleconfiguration
+- "List all policy?" -> GET /v20180820/bucket/{name}/policy
+- "List all replication?" -> GET /v20180820/bucket/{name}/replication
+- "List all tagging?" -> GET /v20180820/bucket/{name}/tagging
+- "List all versioning?" -> GET /v20180820/bucket/{name}/versioning
+- "List all dataaccess?" -> GET /v20180820/accessgrantsinstance/dataaccess
+- "List all tagging?" -> GET /v20180820/jobs/{id}/tagging
+- "Get instance details?" -> GET /v20180820/mrap/instances/{name+}
+- "List all policy?" -> GET /v20180820/mrap/instances/{name+}/policy
+- "List all policystatus?" -> GET /v20180820/mrap/instances/{name+}/policystatus
+- "List all routes?" -> GET /v20180820/mrap/instances/{mrap+}/routes
+- "List all publicAccessBlock?" -> GET /v20180820/configuration/publicAccessBlock
+- "Get storagelen details?" -> GET /v20180820/storagelens/{storagelensid}
+- "List all tagging?" -> GET /v20180820/storagelens/{storagelensid}/tagging
+- "Get storagelensgroup details?" -> GET /v20180820/storagelensgroup/{name}
+- "List all grants?" -> GET /v20180820/accessgrantsinstance/grants
+- "List all accessgrantsinstances?" -> GET /v20180820/accessgrantsinstances
+- "List all locations?" -> GET /v20180820/accessgrantsinstance/locations
+- "List all accesspoint?" -> GET /v20180820/accesspoint
+- "List all accesspointforobjectlambda?" -> GET /v20180820/accesspointforobjectlambda
+- "List all grants?" -> GET /v20180820/accessgrantsinstance/caller/grants
+- "List all jobs?" -> GET /v20180820/jobs
+- "List all instances?" -> GET /v20180820/mrap/instances
+- "List all bucket?" -> GET /v20180820/bucket
+- "List all storagelens?" -> GET /v20180820/storagelens
+- "List all storagelensgroup?" -> GET /v20180820/storagelensgroup
+- "Get tag details?" -> GET /v20180820/tags/{resourceArn+}
+- "Create a put-policy?" -> POST /v20180820/async-requests/mrap/put-policy
+- "Update a storagelen?" -> PUT /v20180820/storagelens/{storagelensid}
+- "Delete a tag?" -> DELETE /v20180820/tags/{resourceArn+}
+- "Update a location?" -> PUT /v20180820/accessgrantsinstance/location/{id}
+- "Create a priority?" -> POST /v20180820/jobs/{id}/priority
+- "Create a status?" -> POST /v20180820/jobs/{id}/status
+- "Update a storagelensgroup?" -> PUT /v20180820/storagelensgroup/{name}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

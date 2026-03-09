@@ -100,89 +100,10 @@ Not specified.
 | POST | / | Updates a specified user profile.  Required Permissions: To use this action, an IAM user must have an attached policy that explicitly grants permissions. For more information about user permissions, see Managing User Permissions. |
 | POST | / | Updates an Amazon EBS volume's name or mount point. For more information, see Resource Management.  Required Permissions: To use this action, an IAM user must have a Manage permissions level for the stack, or an attached policy that explicitly grants permissions. For more information on user permissions, see Managing User Permissions. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new OpsWorks stack?" -> POST / (CreateStack: Name, Region, ServiceRoleArn, DefaultInstanceProfileArn required)
-- "How do I launch an instance in a layer?" -> POST / (CreateInstance: StackId, LayerIds, InstanceType required)
-- "How do I deploy an app to my stack?" -> POST / (CreateDeployment: StackId, Command required; optionally scope with AppId, InstanceIds, LayerIds)
-- "What instances are running in my stack?" -> POST / (DescribeInstances: filter by StackId, LayerId, or InstanceIds)
-- "How do I clone an existing stack?" -> POST / (CloneStack: SourceStackId, ServiceRoleArn required; toggle ClonePermissions, CloneAppIds)
-- "How do I set up auto-scaling for a layer?" -> POST / (SetLoadBasedAutoScaling: LayerId required, Enable, UpScaling, DownScaling thresholds)
-- "How do I get SSH access to an instance?" -> POST / (GrantAccess: InstanceId required; returns temporary username/password valid for ValidForInMinutes)
-- "How do I register an external instance with my stack?" -> POST / (RegisterInstance: StackId required; provide Hostname, PublicIp, PrivateIp, InstanceIdentity)
-- "How do I check what went wrong with a deployment?" -> POST / (DescribeCommands filtered by DeploymentId) then POST / (DescribeServiceErrors filtered by InstanceId or StackId)
-- "How do I attach an Elastic IP to an instance?" -> POST / (AssociateElasticIp: ElasticIp required, InstanceId optional) or POST / (RegisterElasticIp: ElasticIp, StackId to register first)
-- "How do I add a new layer to my stack?" -> POST / (CreateLayer: StackId, Type, Name, Shortname required)
-- "How do I see the summary health of my stack?" -> POST / (DescribeStackSummary: StackId required; returns InstancesCount with per-status breakdowns)
-- "How do I manage user permissions on a stack?" -> POST / (SetPermission: StackId, IamUserArn required; AllowSsh, AllowSudo, Level optional)
-- "How do I tag my OpsWorks resources?" -> POST / (TagResource: ResourceArn, Tags required) and POST / (ListTags: ResourceArn required with pagination)
-- "How do I safely delete a stack and its resources?" -> POST / (StopInstance for each instance) then POST / (DeleteInstance) then POST / (DeleteLayer) then POST / (DeleteApp) then POST / (DeleteStack: StackId)
-
-## Response Tips
-
-- **Describe* endpoints**: All return nullable arrays (e.g., `Instances: [Instance]?`). An empty result means the array is null or empty, not an error. Always nil-check before iterating.
-- **Create* endpoints**: Return a single nullable ID string (e.g., `{StackId: str?}`). A null ID after a 200 response is abnormal; treat as a silent failure.
-- **DescribeEcsClusters / ListTags**: Only paginated endpoints. Use `NextToken` from the response to fetch additional pages; stop when `NextToken` is null.
-- **DescribeStackSummary**: The `InstancesCount` object nests 17 status counters (Online, Stopped, SetupFailed, etc.). Sum relevant fields for aggregate health checks rather than just checking `Online`.
-- **GrantAccess**: Returns `TemporaryCredential` with a time-limited password. Cache the `ValidForInMinutes` value and refresh before expiry.
-- **Delete/Deregister endpoints**: Return no body on success (void 200). Confirm success by the HTTP status alone.
-
-## Anomaly Flags
-
-- **SetupFailed or StartFailed counts > 0** in DescribeStackSummary: Surface immediately. Instances stuck in failed states need manual intervention.
-- **ConnectionLost instances**: DescribeStackSummary showing `ConnectionLost > 0` indicates agent communication failure. Flag for investigation.
-- **Deployment with no InstanceIds or LayerIds**: CreateDeployment scoped to whole stack. Warn the user if they omit scoping parameters, as the command runs everywhere.
-- **DeleteInstance with DeleteElasticIp/DeleteVolumes = true**: Destructive cascade. Always confirm before issuing with these flags enabled.
-- **GrantAccess credentials expiring**: If `ValidForInMinutes` is low (default or explicit), remind the user of the expiry window.
-- **StopInstance with Force = true**: Hard stop can cause data loss. Surface a warning before executing.
-- **DescribeServiceErrors returning results**: Any non-empty response indicates active problems. Proactively surface error details, especially during or after deployments.
-- **CloneStack without ClonePermissions**: The cloned stack won't inherit IAM permissions. Flag if the user likely expects permission parity.
-- **Null IDs in Create responses**: A 200 with a null StackId/InstanceId/LayerId is unexpected. Flag as a potential silent failure.
-
-## Playbook
-
-### 1. Provision a Full Stack from Scratch
-
-1. **CreateStack** with Name, Region, ServiceRoleArn, DefaultInstanceProfileArn. Note the returned `StackId`.
-2. **CreateLayer** with the StackId, specifying Type (e.g., `custom`, `rails-app`), Name, and Shortname. Note the returned `LayerId`.
-3. **CreateApp** with the StackId, app Name, and Type (e.g., `other`, `rails`). Configure AppSource for your code repo. Note the returned `AppId`.
-4. **CreateInstance** with the StackId, LayerIds (array with your LayerId), and InstanceType. Note the returned `InstanceId`.
-5. **StartInstance** with the InstanceId. Wait for the instance to reach `online` status.
-6. **CreateDeployment** with the StackId, AppId, and Command `{Name: "deploy"}` to deploy the app.
-7. **DescribeDeployments** to monitor deployment progress until status is `successful`.
-
-### 2. Investigate and Recover from a Failed Deployment
-
-1. **DescribeDeployments** filtered by StackId or DeploymentIds to find the failed deployment and its status.
-2. **DescribeCommands** filtered by the DeploymentId to see per-instance command results and exit codes.
-3. **DescribeServiceErrors** filtered by StackId to get detailed error messages and timestamps.
-4. **DescribeInstances** to check if any instances are in `setup_failed` or `start_failed` state.
-5. Fix the root cause (e.g., update app source, fix recipes), then **CreateDeployment** again to re-deploy.
-
-### 3. Set Up Load-Based Auto Scaling for a Layer
-
-1. **DescribeLayers** to confirm the target LayerId and review current configuration.
-2. **SetLoadBasedAutoScaling** with the LayerId, `Enable: true`, and configure `UpScaling` thresholds (e.g., CPU > 80% for 5 minutes triggers scale-up) and `DownScaling` thresholds.
-3. **CreateInstance** with `AutoScalingType: "load"` to add load-based instances to the layer's pool.
-4. **DescribeLoadBasedAutoScaling** with the LayerIds to verify the configuration was applied correctly.
-
-### 4. Grant Temporary SSH Access to an Instance
-
-1. **DescribeInstances** filtered by StackId to find the target instance and confirm it is `online`.
-2. **GrantAccess** with the InstanceId and optionally set `ValidForInMinutes` (default varies). Note the returned `TemporaryCredential`.
-3. Use the returned `Username` and `Password` to SSH into the instance's public or private IP.
-4. Credentials expire automatically after `ValidForInMinutes`. No cleanup needed.
-
-### 5. Safely Tear Down a Stack
-
-1. **DescribeInstances** filtered by StackId to list all instances.
-2. **StopInstance** for each running instance. Wait until all reach `stopped` status via repeated DescribeInstances calls.
-3. **DeleteInstance** for each instance (set `DeleteElasticIp: true` and `DeleteVolumes: true` only if those resources should be cleaned up).
-4. **DescribeApps** filtered by StackId, then **DeleteApp** for each app.
-5. **DescribeLayers** filtered by StackId, then **DeleteLayer** for each layer.
-6. **DeleteStack** with the StackId. Confirm success by verifying DescribeStacks no longer returns it.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

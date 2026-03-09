@@ -9,9 +9,11 @@
 
 @group tracking
 @endpoint POST /tracking/v0/trackers/{TrackerName}/consumers
+@desc Creates an association between a geofence collection and a tracker resource. This allows the tracker resource to communicate location data to the linked geofence collection.  You can associate up to five geofence collections to each tracker resource.  Currently not supported — Cross-account configurations, such as creating associations between a tracker resource in one account and a geofence collection in another account.
 @required {TrackerName: str, ConsumerArn: str}
 
 @endpoint POST /tracking/v0/trackers/{TrackerName}/delete-positions
+@desc Deletes the position history of one or more devices from a tracker resource.
 @required {TrackerName: str, DeviceIds: [str]}
 @returns(200) {Errors: [BatchDeleteDevicePositionHistoryError]}
 
@@ -19,10 +21,12 @@
 
 @group geofencing
 @endpoint POST /geofencing/v0/collections/{CollectionName}/delete-geofences
+@desc Deletes a batch of geofences from a geofence collection.  This operation deletes the resource permanently.
 @required {CollectionName: str, GeofenceIds: [str]}
 @returns(200) {Errors: [BatchDeleteGeofenceError]}
 
 @endpoint POST /geofencing/v0/collections/{CollectionName}/positions
+@desc Evaluates device positions against the geofence geometries from a given geofence collection. This operation always returns an empty response because geofences are asynchronously evaluated. The evaluation determines if the device has entered or exited a geofenced area, and then publishes one of the following events to Amazon EventBridge:    ENTER if Amazon Location determines that the tracked device has entered a geofenced area.    EXIT if Amazon Location determines that the tracked device has exited a geofenced area.    The last geofence that a device was observed within is tracked for 30 days after the most recent device position update.   Geofence evaluation uses the given device position. It does not account for the optional Accuracy of a DevicePositionUpdate.   The DeviceID is used as a string to represent the device. You do not need to have a Tracker associated with the DeviceID.
 @required {CollectionName: str, DevicePositionUpdates: [DevicePositionUpdate]}
 @returns(200) {Errors: [BatchEvaluateGeofencesError]}
 
@@ -30,6 +34,7 @@
 
 @group tracking
 @endpoint POST /tracking/v0/trackers/{TrackerName}/get-positions
+@desc Lists the latest device positions for requested devices.
 @required {TrackerName: str, DeviceIds: [str]}
 @returns(200) {Errors: [BatchGetDevicePositionError], DevicePositions: [DevicePosition]}
 
@@ -37,6 +42,7 @@
 
 @group geofencing
 @endpoint POST /geofencing/v0/collections/{CollectionName}/put-geofences
+@desc A batch request for storing geofence geometries into a given geofence collection, or updates the geometry of an existing geofence if a geofence ID is included in the request.
 @required {CollectionName: str, Entries: [BatchPutGeofenceRequestEntry]}
 @returns(200) {Successes: [BatchPutGeofenceSuccess], Errors: [BatchPutGeofenceError]}
 
@@ -44,6 +50,7 @@
 
 @group tracking
 @endpoint POST /tracking/v0/trackers/{TrackerName}/positions
+@desc Uploads position update data for one or more devices to a tracker resource (up to 10 devices per batch). Amazon Location uses the data when it reports the last known device position and position history. Amazon Location retains location data for 30 days.  Position updates are handled based on the PositionFiltering property of the tracker. When PositionFiltering is set to TimeBased, updates are evaluated against linked geofence collections, and location data is stored at a maximum of one position per 30 second interval. If your update frequency is more often than every 30 seconds, only one update per 30 seconds is stored for each unique device ID. When PositionFiltering is set to DistanceBased filtering, location data is stored and evaluated against linked geofence collections only if the device has moved more than 30 m (98.4 ft). When PositionFiltering is set to AccuracyBased filtering, location data is stored and evaluated against linked geofence collections only if the device has moved more than the measured accuracy. For example, if two consecutive updates from a device have a horizontal accuracy of 5 m and 10 m, the second update is neither stored or evaluated if the device has moved less than 15 m. If PositionFiltering is set to AccuracyBased filtering, Amazon Location uses the default value { "Horizontal": 0} when accuracy is not provided on a DevicePositionUpdate.
 @required {TrackerName: str, Updates: [DevicePositionUpdate]}
 @returns(200) {Errors: [BatchUpdateDevicePositionError]}
 
@@ -51,11 +58,13 @@
 
 @group routes
 @endpoint POST /routes/v0/calculators/{CalculatorName}/calculate/route
+@desc Calculates a route given the following required parameters: DeparturePosition and DestinationPosition. Requires that you first create a route calculator resource. By default, a request that doesn't specify a departure time uses the best time of day to travel with the best traffic conditions when calculating the route. Additional options include:    Specifying a departure time using either DepartureTime or DepartNow. This calculates a route based on predictive traffic data at the given time.   You can't specify both DepartureTime and DepartNow in a single request. Specifying both parameters returns a validation error.     Specifying a travel mode using TravelMode sets the transportation mode used to calculate the routes. This also lets you specify additional route preferences in CarModeOptions if traveling by Car, or TruckModeOptions if traveling by Truck.  If you specify walking for the travel mode and your data provider is Esri, the start and destination must be within 40km.
 @required {CalculatorName: str, DeparturePosition: [num(f64)], DestinationPosition: [num(f64)]}
 @optional {key: str, WaypointPositions: [[num(f64)]], TravelMode: str, DepartureTime: str(timestamp), DepartNow: bool, DistanceUnit: str, IncludeLegGeometry: bool, CarModeOptions: CalculateRouteCarModeOptions, TruckModeOptions: CalculateRouteTruckModeOptions, ArrivalTime: str(timestamp), OptimizeFor: str}
 @returns(200) {Legs: [Leg], Summary: CalculateRouteSummary{RouteBBox: [num(f64)], DataSource: str, Distance: num(f64), DurationSeconds: num(f64), DistanceUnit: str}}
 
 @endpoint POST /routes/v0/calculators/{CalculatorName}/calculate/route-matrix
+@desc Calculates a route matrix given the following required parameters: DeparturePositions and DestinationPositions. CalculateRouteMatrix calculates routes and returns the travel time and travel distance from each departure position to each destination position in the request. For example, given departure positions A and B, and destination positions X and Y, CalculateRouteMatrix will return time and distance for routes from A to X, A to Y, B to X, and B to Y (in that order). The number of results returned (and routes calculated) will be the number of DeparturePositions times the number of DestinationPositions.  Your account is charged for each route calculated, not the number of requests.  Requires that you first create a route calculator resource. By default, a request that doesn't specify a departure time uses the best time of day to travel with the best traffic conditions when calculating routes. Additional options include:     Specifying a departure time using either DepartureTime or DepartNow. This calculates routes based on predictive traffic data at the given time.   You can't specify both DepartureTime and DepartNow in a single request. Specifying both parameters returns a validation error.     Specifying a travel mode using TravelMode sets the transportation mode used to calculate the routes. This also lets you specify additional route preferences in CarModeOptions if traveling by Car, or TruckModeOptions if traveling by Truck.
 @required {CalculatorName: str, DeparturePositions: [[num(f64)]], DestinationPositions: [[num(f64)]]}
 @optional {key: str, TravelMode: str, DepartureTime: str(timestamp), DepartNow: bool, DistanceUnit: str, CarModeOptions: CalculateRouteCarModeOptions, TruckModeOptions: CalculateRouteTruckModeOptions}
 @returns(200) {RouteMatrix: [[RouteMatrixEntry]], SnappedDeparturePositions: [[num(f64)]]?, SnappedDestinationPositions: [[num(f64)]]?, Summary: CalculateRouteMatrixSummary{DataSource: str, RouteCount: int, ErrorCount: int, DistanceUnit: str}}
@@ -64,6 +73,7 @@
 
 @group geofencing
 @endpoint POST /geofencing/v0/collections
+@desc Creates a geofence collection, which manages and stores geofences.
 @required {CollectionName: str}
 @optional {PricingPlan: str, PricingPlanDataSource: str, Description: str, Tags: map<str,str>, KmsKeyId: str}
 @returns(200) {CollectionName: str, CollectionArn: str, CreateTime: str(timestamp)}
@@ -72,6 +82,7 @@
 
 @group metadata
 @endpoint POST /metadata/v0/keys
+@desc Creates an API key resource in your Amazon Web Services account, which lets you grant actions for Amazon Location resources to the API key bearer.  For more information, see Using API keys.
 @required {KeyName: str, Restrictions: ApiKeyRestrictions}
 @optional {Description: str, ExpireTime: str(timestamp), NoExpiry: bool, Tags: map<str,str>}
 @returns(200) {Key: str, KeyArn: str, KeyName: str, CreateTime: str(timestamp)}
@@ -80,6 +91,7 @@
 
 @group maps
 @endpoint POST /maps/v0/maps
+@desc Creates a map resource in your Amazon Web Services account, which provides map tiles of different styles sourced from global location data providers.  If your application is tracking or routing assets you use in your business, such as delivery vehicles or employees, you must not use Esri as your geolocation provider. See section 82 of the Amazon Web Services service terms for more details.
 @required {MapName: str, Configuration: MapConfiguration}
 @optional {PricingPlan: str, Description: str, Tags: map<str,str>}
 @returns(200) {MapName: str, MapArn: str, CreateTime: str(timestamp)}
@@ -88,6 +100,7 @@
 
 @group places
 @endpoint POST /places/v0/indexes
+@desc Creates a place index resource in your Amazon Web Services account. Use a place index resource to geocode addresses and other text queries by using the SearchPlaceIndexForText operation, and reverse geocode coordinates by using the SearchPlaceIndexForPosition operation, and enable autosuggestions by using the SearchPlaceIndexForSuggestions operation.  If your application is tracking or routing assets you use in your business, such as delivery vehicles or employees, you must not use Esri as your geolocation provider. See section 82 of the Amazon Web Services service terms for more details.
 @required {IndexName: str, DataSource: str}
 @optional {PricingPlan: str, Description: str, DataSourceConfiguration: DataSourceConfiguration, Tags: map<str,str>}
 @returns(200) {IndexName: str, IndexArn: str, CreateTime: str(timestamp)}
@@ -96,6 +109,7 @@
 
 @group routes
 @endpoint POST /routes/v0/calculators
+@desc Creates a route calculator resource in your Amazon Web Services account. You can send requests to a route calculator resource to estimate travel time, distance, and get directions. A route calculator sources traffic and road network data from your chosen data provider.  If your application is tracking or routing assets you use in your business, such as delivery vehicles or employees, you must not use Esri as your geolocation provider. See section 82 of the Amazon Web Services service terms for more details.
 @required {CalculatorName: str, DataSource: str}
 @optional {PricingPlan: str, Description: str, Tags: map<str,str>}
 @returns(200) {CalculatorName: str, CalculatorArn: str, CreateTime: str(timestamp)}
@@ -104,6 +118,7 @@
 
 @group tracking
 @endpoint POST /tracking/v0/trackers
+@desc Creates a tracker resource in your Amazon Web Services account, which lets you retrieve current and historical location of devices.
 @required {TrackerName: str}
 @optional {PricingPlan: str, KmsKeyId: str, PricingPlanDataSource: str, Description: str, Tags: map<str,str>, PositionFiltering: str, EventBridgeEnabled: bool, KmsKeyEnableGeospatialQueries: bool}
 @returns(200) {TrackerName: str, TrackerArn: str, CreateTime: str(timestamp)}
@@ -112,12 +127,14 @@
 
 @group geofencing
 @endpoint DELETE /geofencing/v0/collections/{CollectionName}
+@desc Deletes a geofence collection from your Amazon Web Services account.  This operation deletes the resource permanently. If the geofence collection is the target of a tracker resource, the devices will no longer be monitored.
 @required {CollectionName: str}
 
 @endgroup
 
 @group metadata
 @endpoint DELETE /metadata/v0/keys/{KeyName}
+@desc Deletes the specified API key. The API key must have been deactivated more than 90 days previously.
 @required {KeyName: str}
 @optional {forceDelete: bool}
 
@@ -125,30 +142,35 @@
 
 @group maps
 @endpoint DELETE /maps/v0/maps/{MapName}
+@desc Deletes a map resource from your Amazon Web Services account.  This operation deletes the resource permanently. If the map is being used in an application, the map may not render.
 @required {MapName: str}
 
 @endgroup
 
 @group places
 @endpoint DELETE /places/v0/indexes/{IndexName}
+@desc Deletes a place index resource from your Amazon Web Services account.  This operation deletes the resource permanently.
 @required {IndexName: str}
 
 @endgroup
 
 @group routes
 @endpoint DELETE /routes/v0/calculators/{CalculatorName}
+@desc Deletes a route calculator resource from your Amazon Web Services account.  This operation deletes the resource permanently.
 @required {CalculatorName: str}
 
 @endgroup
 
 @group tracking
 @endpoint DELETE /tracking/v0/trackers/{TrackerName}
+@desc Deletes a tracker resource from your Amazon Web Services account.  This operation deletes the resource permanently. If the tracker resource is in use, you may encounter an error. Make sure that the target resource isn't a dependency for your applications.
 @required {TrackerName: str}
 
 @endgroup
 
 @group geofencing
 @endpoint GET /geofencing/v0/collections/{CollectionName}
+@desc Retrieves the geofence collection details.
 @required {CollectionName: str}
 @returns(200) {CollectionName: str, CollectionArn: str, Description: str, PricingPlan: str?, PricingPlanDataSource: str?, KmsKeyId: str?, Tags: map<str,str>?, CreateTime: str(timestamp), UpdateTime: str(timestamp), GeofenceCount: int?}
 
@@ -156,6 +178,7 @@
 
 @group metadata
 @endpoint GET /metadata/v0/keys/{KeyName}
+@desc Retrieves the API key resource details.
 @required {KeyName: str}
 @returns(200) {Key: str, KeyArn: str, KeyName: str, Restrictions: ApiKeyRestrictions{AllowActions: [str], AllowResources: [str], AllowReferers: [str]?}, CreateTime: str(timestamp), ExpireTime: str(timestamp), UpdateTime: str(timestamp), Description: str?, Tags: map<str,str>?}
 
@@ -163,6 +186,7 @@
 
 @group maps
 @endpoint GET /maps/v0/maps/{MapName}
+@desc Retrieves the map resource details.
 @required {MapName: str}
 @returns(200) {MapName: str, MapArn: str, PricingPlan: str?, DataSource: str, Configuration: MapConfiguration{Style: str, PoliticalView: str?, CustomLayers: [str]?}, Description: str, Tags: map<str,str>?, CreateTime: str(timestamp), UpdateTime: str(timestamp)}
 
@@ -170,6 +194,7 @@
 
 @group places
 @endpoint GET /places/v0/indexes/{IndexName}
+@desc Retrieves the place index resource details.
 @required {IndexName: str}
 @returns(200) {IndexName: str, IndexArn: str, PricingPlan: str?, Description: str, CreateTime: str(timestamp), UpdateTime: str(timestamp), DataSource: str, DataSourceConfiguration: DataSourceConfiguration{IntendedUse: str?}, Tags: map<str,str>?}
 
@@ -177,6 +202,7 @@
 
 @group routes
 @endpoint GET /routes/v0/calculators/{CalculatorName}
+@desc Retrieves the route calculator resource details.
 @required {CalculatorName: str}
 @returns(200) {CalculatorName: str, CalculatorArn: str, PricingPlan: str?, Description: str, CreateTime: str(timestamp), UpdateTime: str(timestamp), DataSource: str, Tags: map<str,str>?}
 
@@ -184,16 +210,19 @@
 
 @group tracking
 @endpoint GET /tracking/v0/trackers/{TrackerName}
+@desc Retrieves the tracker resource details.
 @required {TrackerName: str}
 @returns(200) {TrackerName: str, TrackerArn: str, Description: str, PricingPlan: str?, PricingPlanDataSource: str?, Tags: map<str,str>?, CreateTime: str(timestamp), UpdateTime: str(timestamp), KmsKeyId: str?, PositionFiltering: str?, EventBridgeEnabled: bool?, KmsKeyEnableGeospatialQueries: bool?}
 
 @endpoint DELETE /tracking/v0/trackers/{TrackerName}/consumers/{ConsumerArn}
+@desc Removes the association between a tracker resource and a geofence collection.  Once you unlink a tracker resource from a geofence collection, the tracker positions will no longer be automatically evaluated against geofences.
 @required {TrackerName: str, ConsumerArn: str}
 
 @endgroup
 
 @group geofencing
 @endpoint POST /geofencing/v0/collections/{CollectionName}/forecast-geofence-events
+@desc Evaluates device positions against geofence geometries from a given geofence collection. The event forecasts three states for which a device can be in relative to a geofence:  ENTER: If a device is outside of a geofence, but would breach the fence if the device is moving at its current speed within time horizon window.  EXIT: If a device is inside of a geofence, but would breach the fence if the device is moving at its current speed within time horizon window.  IDLE: If a device is inside of a geofence, and the device is not moving.
 @required {CollectionName: str, DeviceState: ForecastGeofenceEventsDeviceState}
 @optional {TimeHorizonMinutes: num(f64), DistanceUnit: str, SpeedUnit: str, NextToken: str, MaxResults: int}
 @returns(200) {ForecastedEvents: [ForecastedEvent], NextToken: str?, DistanceUnit: str, SpeedUnit: str}
@@ -202,10 +231,12 @@
 
 @group tracking
 @endpoint GET /tracking/v0/trackers/{TrackerName}/devices/{DeviceId}/positions/latest
+@desc Retrieves a device's most recent position according to its sample time.  Device positions are deleted after 30 days.
 @required {TrackerName: str, DeviceId: str}
 @returns(200) {DeviceId: str?, SampleTime: str(timestamp), ReceivedTime: str(timestamp), Position: [num(f64)], Accuracy: PositionalAccuracy?{Horizontal: num(f64)}, PositionProperties: map<str,str>?}
 
 @endpoint POST /tracking/v0/trackers/{TrackerName}/devices/{DeviceId}/list-positions
+@desc Retrieves the device position history from a tracker resource within a specified range of time.  Device positions are deleted after 30 days.
 @required {TrackerName: str, DeviceId: str}
 @optional {NextToken: str, StartTimeInclusive: str(timestamp), EndTimeExclusive: str(timestamp), MaxResults: int}
 @returns(200) {DevicePositions: [DevicePosition], NextToken: str?}
@@ -214,6 +245,7 @@
 
 @group geofencing
 @endpoint GET /geofencing/v0/collections/{CollectionName}/geofences/{GeofenceId}
+@desc Retrieves the geofence details from a geofence collection.  The returned geometry will always match the geometry format used when the geofence was created.
 @required {CollectionName: str, GeofenceId: str}
 @returns(200) {GeofenceId: str, Geometry: GeofenceGeometry{Polygon: [[[num(f64)]]]?, Circle: Circle?{Center: [num(f64)], Radius: num(f64)}, Geobuf: bytes?}, Status: str, CreateTime: str(timestamp), UpdateTime: str(timestamp), GeofenceProperties: map<str,str>?}
 
@@ -221,21 +253,25 @@
 
 @group maps
 @endpoint GET /maps/v0/maps/{MapName}/glyphs/{FontStack}/{FontUnicodeRange}
+@desc Retrieves glyphs used to display labels on a map.
 @required {MapName: str, FontStack: str, FontUnicodeRange: str}
 @optional {key: str}
 @returns(200) {Blob: bytes?, ContentType: str?, CacheControl: str?}
 
 @endpoint GET /maps/v0/maps/{MapName}/sprites/{FileName}
+@desc Retrieves the sprite sheet corresponding to a map resource. The sprite sheet is a PNG image paired with a JSON document describing the offsets of individual icons that will be displayed on a rendered map.
 @required {MapName: str, FileName: str}
 @optional {key: str}
 @returns(200) {Blob: bytes?, ContentType: str?, CacheControl: str?}
 
 @endpoint GET /maps/v0/maps/{MapName}/style-descriptor
+@desc Retrieves the map style descriptor from a map resource.  The style descriptor contains speciﬁcations on how features render on a map. For example, what data to display, what order to display the data in, and the style for the data. Style descriptors follow the Mapbox Style Specification.
 @required {MapName: str}
 @optional {key: str}
 @returns(200) {Blob: bytes?, ContentType: str?, CacheControl: str?}
 
 @endpoint GET /maps/v0/maps/{MapName}/tiles/{Z}/{X}/{Y}
+@desc Retrieves a vector data tile from the map resource. Map tiles are used by clients to render a map. they're addressed using a grid arrangement with an X coordinate, Y coordinate, and Z (zoom) level.  The origin (0, 0) is the top left of the map. Increasing the zoom level by 1 doubles both the X and Y dimensions, so a tile containing data for the entire world at (0/0/0) will be split into 4 tiles at zoom 1 (1/0/0, 1/0/1, 1/1/0, 1/1/1).
 @required {MapName: str, Z: str, X: str, Y: str}
 @optional {key: str}
 @returns(200) {Blob: bytes?, ContentType: str?, CacheControl: str?}
@@ -244,6 +280,7 @@
 
 @group places
 @endpoint GET /places/v0/indexes/{IndexName}/places/{PlaceId}
+@desc Finds a place by its unique ID. A PlaceId is returned by other search operations.  A PlaceId is valid only if all of the following are the same in the original search request and the call to GetPlace.   Customer Amazon Web Services account   Amazon Web Services Region   Data provider specified in the place index resource
 @required {IndexName: str, PlaceId: str}
 @optional {language: str, key: str}
 @returns(200) {Place: Place{Label: str?, Geometry: PlaceGeometry{Point: [num(f64)]?}, AddressNumber: str?, Street: str?, Neighborhood: str?, Municipality: str?, SubRegion: str?, Region: str?, Country: str?, PostalCode: str?, Interpolated: bool?, TimeZone: TimeZone?{Name: str, Offset: int?}, UnitType: str?, UnitNumber: str?, Categories: [str]?, SupplementalCategories: [str]?, SubMunicipality: str?}}
@@ -252,6 +289,7 @@
 
 @group tracking
 @endpoint POST /tracking/v0/trackers/{TrackerName}/list-positions
+@desc A batch request to retrieve all device positions.
 @required {TrackerName: str}
 @optional {MaxResults: int, NextToken: str, FilterGeometry: TrackingFilterGeometry}
 @returns(200) {Entries: [ListDevicePositionsResponseEntry], NextToken: str?}
@@ -260,10 +298,12 @@
 
 @group geofencing
 @endpoint POST /geofencing/v0/list-collections
+@desc Lists geofence collections in your Amazon Web Services account.
 @optional {MaxResults: int, NextToken: str}
 @returns(200) {Entries: [ListGeofenceCollectionsResponseEntry], NextToken: str?}
 
 @endpoint POST /geofencing/v0/collections/{CollectionName}/list-geofences
+@desc Lists geofences stored in a given geofence collection.
 @required {CollectionName: str}
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {Entries: [ListGeofenceResponseEntry], NextToken: str?}
@@ -272,6 +312,7 @@
 
 @group metadata
 @endpoint POST /metadata/v0/list-keys
+@desc Lists API key resources in your Amazon Web Services account.
 @optional {MaxResults: int, NextToken: str, Filter: ApiKeyFilter}
 @returns(200) {Entries: [ListKeysResponseEntry], NextToken: str?}
 
@@ -279,6 +320,7 @@
 
 @group maps
 @endpoint POST /maps/v0/list-maps
+@desc Lists map resources in your Amazon Web Services account.
 @optional {MaxResults: int, NextToken: str}
 @returns(200) {Entries: [ListMapsResponseEntry], NextToken: str?}
 
@@ -286,6 +328,7 @@
 
 @group places
 @endpoint POST /places/v0/list-indexes
+@desc Lists place index resources in your Amazon Web Services account.
 @optional {MaxResults: int, NextToken: str}
 @returns(200) {Entries: [ListPlaceIndexesResponseEntry], NextToken: str?}
 
@@ -293,6 +336,7 @@
 
 @group routes
 @endpoint POST /routes/v0/list-calculators
+@desc Lists route calculator resources in your Amazon Web Services account.
 @optional {MaxResults: int, NextToken: str}
 @returns(200) {Entries: [ListRouteCalculatorsResponseEntry], NextToken: str?}
 
@@ -300,6 +344,7 @@
 
 @group tags
 @endpoint GET /tags/{ResourceArn}
+@desc Returns a list of tags that are applied to the specified Amazon Location resource.
 @required {ResourceArn: str}
 @returns(200) {Tags: map<str,str>?}
 
@@ -307,11 +352,13 @@
 
 @group tracking
 @endpoint POST /tracking/v0/trackers/{TrackerName}/list-consumers
+@desc Lists geofence collections currently associated to the given tracker resource.
 @required {TrackerName: str}
 @optional {MaxResults: int, NextToken: str}
 @returns(200) {ConsumerArns: [str], NextToken: str?}
 
 @endpoint POST /tracking/v0/list-trackers
+@desc Lists tracker resources in your Amazon Web Services account.
 @optional {MaxResults: int, NextToken: str}
 @returns(200) {Entries: [ListTrackersResponseEntry], NextToken: str?}
 
@@ -319,6 +366,7 @@
 
 @group geofencing
 @endpoint PUT /geofencing/v0/collections/{CollectionName}/geofences/{GeofenceId}
+@desc Stores a geofence geometry in a given geofence collection, or updates the geometry of an existing geofence if a geofence ID is included in the request.
 @required {CollectionName: str, GeofenceId: str, Geometry: GeofenceGeometry}
 @optional {GeofenceProperties: map<str,str>}
 @returns(200) {GeofenceId: str, CreateTime: str(timestamp), UpdateTime: str(timestamp)}
@@ -327,16 +375,19 @@
 
 @group places
 @endpoint POST /places/v0/indexes/{IndexName}/search/position
+@desc Reverse geocodes a given coordinate and returns a legible address. Allows you to search for Places or points of interest near a given position.
 @required {IndexName: str, Position: [num(f64)]}
 @optional {key: str, MaxResults: int, Language: str}
 @returns(200) {Summary: SearchPlaceIndexForPositionSummary{Position: [num(f64)], MaxResults: int?, DataSource: str, Language: str?}, Results: [SearchForPositionResult]}
 
 @endpoint POST /places/v0/indexes/{IndexName}/search/suggestions
+@desc Generates suggestions for addresses and points of interest based on partial or misspelled free-form text. This operation is also known as autocomplete, autosuggest, or fuzzy matching. Optional parameters let you narrow your search results by bounding box or country, or bias your search toward a specific position on the globe.  You can search for suggested place names near a specified position by using BiasPosition, or filter results within a bounding box by using FilterBBox. These parameters are mutually exclusive; using both BiasPosition and FilterBBox in the same command returns an error.
 @required {IndexName: str, Text: str}
 @optional {key: str, BiasPosition: [num(f64)], FilterBBox: [num(f64)], FilterCountries: [str], MaxResults: int, Language: str, FilterCategories: [str]}
 @returns(200) {Summary: SearchPlaceIndexForSuggestionsSummary{Text: str, BiasPosition: [num(f64)]?, FilterBBox: [num(f64)]?, FilterCountries: [str]?, MaxResults: int?, DataSource: str, Language: str?, FilterCategories: [str]?}, Results: [SearchForSuggestionsResult]}
 
 @endpoint POST /places/v0/indexes/{IndexName}/search/text
+@desc Geocodes free-form text, such as an address, name, city, or region to allow you to search for Places or points of interest.  Optional parameters let you narrow your search results by bounding box or country, or bias your search toward a specific position on the globe.  You can search for places near a given position using BiasPosition, or filter results within a bounding box using FilterBBox. Providing both parameters simultaneously returns an error.  Search results are returned in order of highest to lowest relevance.
 @required {IndexName: str, Text: str}
 @optional {key: str, BiasPosition: [num(f64)], FilterBBox: [num(f64)], FilterCountries: [str], MaxResults: int, Language: str, FilterCategories: [str]}
 @returns(200) {Summary: SearchPlaceIndexForTextSummary{Text: str, BiasPosition: [num(f64)]?, FilterBBox: [num(f64)]?, FilterCountries: [str]?, MaxResults: int?, ResultBBox: [num(f64)]?, DataSource: str, Language: str?, FilterCategories: [str]?}, Results: [SearchForTextResult]}
@@ -345,15 +396,18 @@
 
 @group tags
 @endpoint POST /tags/{ResourceArn}
+@desc Assigns one or more tags (key-value pairs) to the specified Amazon Location Service resource. Tags can help you organize and categorize your resources. You can also use them to scope user permissions, by granting a user permission to access or change only resources with certain tag values. You can use the TagResource operation with an Amazon Location Service resource that already has tags. If you specify a new tag key for the resource, this tag is appended to the tags already associated with the resource. If you specify a tag key that's already associated with the resource, the new tag value that you specify replaces the previous value for that tag.  You can associate up to 50 tags with a resource.
 @required {ResourceArn: str, Tags: map<str,str>}
 
 @endpoint DELETE /tags/{ResourceArn}
+@desc Removes one or more tags from the specified Amazon Location resource.
 @required {ResourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group geofencing
 @endpoint PATCH /geofencing/v0/collections/{CollectionName}
+@desc Updates the specified properties of a given geofence collection.
 @required {CollectionName: str}
 @optional {PricingPlan: str, PricingPlanDataSource: str, Description: str}
 @returns(200) {CollectionName: str, CollectionArn: str, UpdateTime: str(timestamp)}
@@ -362,6 +416,7 @@
 
 @group metadata
 @endpoint PATCH /metadata/v0/keys/{KeyName}
+@desc Updates the specified properties of a given API key resource.
 @required {KeyName: str}
 @optional {Description: str, ExpireTime: str(timestamp), NoExpiry: bool, ForceUpdate: bool, Restrictions: ApiKeyRestrictions}
 @returns(200) {KeyArn: str, KeyName: str, UpdateTime: str(timestamp)}
@@ -370,6 +425,7 @@
 
 @group maps
 @endpoint PATCH /maps/v0/maps/{MapName}
+@desc Updates the specified properties of a given map resource.
 @required {MapName: str}
 @optional {PricingPlan: str, Description: str, ConfigurationUpdate: MapConfigurationUpdate}
 @returns(200) {MapName: str, MapArn: str, UpdateTime: str(timestamp)}
@@ -378,6 +434,7 @@
 
 @group places
 @endpoint PATCH /places/v0/indexes/{IndexName}
+@desc Updates the specified properties of a given place index resource.
 @required {IndexName: str}
 @optional {PricingPlan: str, Description: str, DataSourceConfiguration: DataSourceConfiguration}
 @returns(200) {IndexName: str, IndexArn: str, UpdateTime: str(timestamp)}
@@ -386,6 +443,7 @@
 
 @group routes
 @endpoint PATCH /routes/v0/calculators/{CalculatorName}
+@desc Updates the specified properties for a given route calculator resource.
 @required {CalculatorName: str}
 @optional {PricingPlan: str, Description: str}
 @returns(200) {CalculatorName: str, CalculatorArn: str, UpdateTime: str(timestamp)}
@@ -394,11 +452,13 @@
 
 @group tracking
 @endpoint PATCH /tracking/v0/trackers/{TrackerName}
+@desc Updates the specified properties of a given tracker resource.
 @required {TrackerName: str}
 @optional {PricingPlan: str, PricingPlanDataSource: str, Description: str, PositionFiltering: str, EventBridgeEnabled: bool, KmsKeyEnableGeospatialQueries: bool}
 @returns(200) {TrackerName: str, TrackerArn: str, UpdateTime: str(timestamp)}
 
 @endpoint POST /tracking/v0/trackers/{TrackerName}/positions/verify
+@desc Verifies the integrity of the device's position by determining if it was reported behind a proxy, and by comparing it to an inferred position estimated based on the device's state.
 @required {TrackerName: str, DeviceState: DeviceState}
 @optional {DistanceUnit: str}
 @returns(200) {InferredState: InferredState{Position: [num(f64)]?, Accuracy: PositionalAccuracy?{Horizontal: num(f64)}, DeviationDistance: num(f64)?, ProxyDetected: bool}, DeviceId: str, SampleTime: str(timestamp), ReceivedTime: str(timestamp), DistanceUnit: str}

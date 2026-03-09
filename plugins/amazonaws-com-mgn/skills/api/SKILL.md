@@ -365,86 +365,79 @@ Not specified.
 |--------|------|-------------|
 | POST | /UpdateWave | Update wave. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all my source servers?" -> POST /DescribeSourceServers
-- "What migration waves exist in my account?" -> POST /ListWaves
-- "How do I group servers into an application?" -> POST /AssociateSourceServers
-- "How do I start replicating a server?" -> POST /StartReplication
-- "What is the replication status of my server?" -> POST /DescribeSourceServers (check `dataReplicationInfo.dataReplicationState`)
-- "How do I kick off a cutover for a batch of servers?" -> POST /StartCutover
-- "How do I test a migration before cutting over?" -> POST /StartTest
-- "What jobs are running or completed?" -> POST /DescribeJobs
-- "How do I see the logs for a specific migration job?" -> POST /DescribeJobLogItems
-- "How do I add tags to a migration resource?" -> POST /tags/{resourceArn}
-- "How do I create a wave and assign applications to it?" -> POST /CreateWave, then POST /AssociateApplications
-- "How do I pause replication without losing progress?" -> POST /PauseReplication
-- "How do I export my migration inventory to S3?" -> POST /StartExport
-- "How do I import servers from a CSV in S3?" -> POST /StartImport
-- "How do I finalize a cutover after validation?" -> POST /FinalizeCutover
-
-## Response Tips
-
-- **List/Describe endpoints** (`DescribeSourceServers`, `ListApplications`, `ListWaves`, `DescribeJobs`, etc.): All return `{items: [...], nextToken: str?}`. Page through results by passing `nextToken` back in subsequent requests with `maxResults` controlling page size.
-- **Source server responses** (`StartReplication`, `PauseReplication`, `FinalizeCutover`, `ChangeServerLifeCycleState`, etc.): Return the full SourceServer object. Key nested objects are `dataReplicationInfo` (replication state, lag, ETA, errors), `lifeCycle` (cutover/test history with timestamps and jobIDs), and `sourceProperties` (OS, CPU, disks, network).
-- **Job-returning endpoints** (`StartCutover`, `StartTest`, `TerminateTargetInstances`): Return a `job` wrapper containing `jobID`, `status`, `participatingServers[]`, and `type`. Use the `jobID` with `DescribeJobs`/`DescribeJobLogItems` to track progress.
-- **Export/Import responses** (`StartExport`, `StartImport`): Return task objects with `progressPercentage` (float 0-100), `status`, and `summary` with created/modified counts. Poll `ListExports`/`ListImports` until status is terminal.
-- **Void responses** (`AssociateApplications`, `DisassociateApplications`, `DeleteApplication`, `RemoveSourceServerAction`, etc.): Return empty 200 on success. Any non-200 indicates failure.
-
-## Anomaly Flags
-
-- **Replication errors**: Surface `dataReplicationInfo.dataReplicationError` immediately when `error` is non-null -- indicates replication has stalled and needs `RetryDataReplication` or investigation.
-- **Replication lag**: Flag when `dataReplicationInfo.lagDuration` exceeds a reasonable threshold (e.g., >1 hour) as it means the target is falling behind the source.
-- **Stalled initiation**: If `dataReplicationInfo.dataReplicationState` stays in an initiation state while `dataReplicationInitiation.nextAttemptDateTime` is in the past, replication may be stuck.
-- **Archived resources**: Warn if `isArchived` is `true` on a source server, application, or wave that the user is trying to act on -- most operations will fail on archived resources.
-- **Missing application association**: Flag source servers with a null `applicationID` -- these servers are not grouped into any application and will be excluded from wave-based cutover workflows.
-- **Job failures**: When `DescribeJobs` returns jobs with `status` indicating failure, proactively surface the jobID and suggest checking `DescribeJobLogItems` for details.
-- **Cutover not finalized**: If `lifeCycle.lastCutover.initiated` exists but `lifeCycle.lastCutover.finalized` is null, the cutover is in limbo -- prompt the user to finalize or revert.
-- **EBS encryption without KMS key**: If `ebsEncryption` is set to `CUSTOM` but `ebsEncryptionKeyArn` is empty, replication will fail at launch time.
-
-## Playbook
-
-### 1. First-time setup: Initialize and configure replication
-
-1. Call `POST /InitializeService` to set up MGN in the account (idempotent, safe to call multiple times).
-2. Call `POST /CreateReplicationConfigurationTemplate` with your subnet, security groups, instance type, encryption, and staging area tags.
-3. Call `POST /CreateLaunchConfigurationTemplate` with boot mode, licensing, and post-launch action settings.
-4. Install the AWS Replication Agent on each source server (outside API -- agent auto-registers with MGN).
-5. Verify servers appear via `POST /DescribeSourceServers`.
-
-### 2. Organize servers into waves and applications
-
-1. Call `POST /CreateWave` with a descriptive name (e.g., "Wave 1 - Web Tier").
-2. Call `POST /CreateApplication` for each logical application grouping (e.g., "Frontend App").
-3. Call `POST /AssociateApplications` to link applications to the wave.
-4. Call `POST /AssociateSourceServers` to assign source servers to each application.
-5. Verify the hierarchy via `POST /ListWaves` and check `waveAggregatedStatus.totalApplications`.
-
-### 3. Test migration before cutover
-
-1. Confirm replication is healthy: `POST /DescribeSourceServers` and check `dataReplicationInfo.dataReplicationState` is `CONTINUOUS`.
-2. Call `POST /StartTest` with the list of `sourceServerIDs` to launch test instances.
-3. Track the test job: `POST /DescribeJobs` using the returned `jobID`, then `POST /DescribeJobLogItems` for details.
-4. Validate the launched test instances in EC2 (check `launchedInstance.ec2InstanceID` on the source server response).
-5. When done testing, call `POST /TerminateTargetInstances` to clean up test instances.
-
-### 4. Execute cutover
-
-1. Ensure replication lag is minimal: check `dataReplicationInfo.lagDuration` via `POST /DescribeSourceServers`.
-2. Call `POST /StartCutover` with all `sourceServerIDs` in the batch.
-3. Monitor the cutover job via `POST /DescribeJobs` and `POST /DescribeJobLogItems`.
-4. Validate the new EC2 instances, update DNS, and redirect traffic.
-5. Call `POST /FinalizeCutover` for each source server to mark migration complete -- this stops replication and cleans up staging resources.
-
-### 5. Bulk export and import for inventory management
-
-1. Call `POST /StartExport` with your target `s3Bucket` and `s3Key` to export the full migration inventory.
-2. Poll `POST /ListExports` until `status` is `SUCCEEDED` and check `summary` for counts.
-3. If errors occurred, call `POST /ListExportErrors` with the `exportID` to get details.
-4. To import servers from a CSV, call `POST /StartImport` with an `S3BucketSource` pointing to your file.
-5. Poll `POST /ListImports` until complete, then call `POST /ListImportErrors` if `status` indicates partial failure.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a ArchiveApplication?" -> POST /ArchiveApplication
+- "Create a ArchiveWave?" -> POST /ArchiveWave
+- "Create a AssociateApplication?" -> POST /AssociateApplications
+- "Create a AssociateSourceServer?" -> POST /AssociateSourceServers
+- "Create a ChangeServerLifeCycleState?" -> POST /ChangeServerLifeCycleState
+- "Create a CreateApplication?" -> POST /CreateApplication
+- "Create a CreateConnector?" -> POST /CreateConnector
+- "Create a CreateLaunchConfigurationTemplate?" -> POST /CreateLaunchConfigurationTemplate
+- "Create a CreateReplicationConfigurationTemplate?" -> POST /CreateReplicationConfigurationTemplate
+- "Create a CreateWave?" -> POST /CreateWave
+- "Create a DeleteApplication?" -> POST /DeleteApplication
+- "Create a DeleteConnector?" -> POST /DeleteConnector
+- "Create a DeleteJob?" -> POST /DeleteJob
+- "Create a DeleteLaunchConfigurationTemplate?" -> POST /DeleteLaunchConfigurationTemplate
+- "Create a DeleteReplicationConfigurationTemplate?" -> POST /DeleteReplicationConfigurationTemplate
+- "Create a DeleteSourceServer?" -> POST /DeleteSourceServer
+- "Create a DeleteVcenterClient?" -> POST /DeleteVcenterClient
+- "Create a DeleteWave?" -> POST /DeleteWave
+- "Create a DescribeJobLogItem?" -> POST /DescribeJobLogItems
+- "Create a DescribeJob?" -> POST /DescribeJobs
+- "Create a DescribeLaunchConfigurationTemplate?" -> POST /DescribeLaunchConfigurationTemplates
+- "Create a DescribeReplicationConfigurationTemplate?" -> POST /DescribeReplicationConfigurationTemplates
+- "Create a DescribeSourceServer?" -> POST /DescribeSourceServers
+- "List all DescribeVcenterClients?" -> GET /DescribeVcenterClients
+- "Create a DisassociateApplication?" -> POST /DisassociateApplications
+- "Create a DisassociateSourceServer?" -> POST /DisassociateSourceServers
+- "Create a DisconnectFromService?" -> POST /DisconnectFromService
+- "Create a FinalizeCutover?" -> POST /FinalizeCutover
+- "Create a GetLaunchConfiguration?" -> POST /GetLaunchConfiguration
+- "Create a GetReplicationConfiguration?" -> POST /GetReplicationConfiguration
+- "Create a InitializeService?" -> POST /InitializeService
+- "Create a ListApplication?" -> POST /ListApplications
+- "Create a ListConnector?" -> POST /ListConnectors
+- "Create a ListExportError?" -> POST /ListExportErrors
+- "Create a ListExport?" -> POST /ListExports
+- "Create a ListImportError?" -> POST /ListImportErrors
+- "Create a ListImport?" -> POST /ListImports
+- "Create a ListManagedAccount?" -> POST /ListManagedAccounts
+- "Create a ListSourceServerAction?" -> POST /ListSourceServerActions
+- "Get tag details?" -> GET /tags/{resourceArn}
+- "Create a ListTemplateAction?" -> POST /ListTemplateActions
+- "Create a ListWave?" -> POST /ListWaves
+- "Create a MarkAsArchived?" -> POST /MarkAsArchived
+- "Create a PauseReplication?" -> POST /PauseReplication
+- "Create a PutSourceServerAction?" -> POST /PutSourceServerAction
+- "Create a PutTemplateAction?" -> POST /PutTemplateAction
+- "Create a RemoveSourceServerAction?" -> POST /RemoveSourceServerAction
+- "Create a RemoveTemplateAction?" -> POST /RemoveTemplateAction
+- "Create a ResumeReplication?" -> POST /ResumeReplication
+- "Create a RetryDataReplication?" -> POST /RetryDataReplication
+- "Create a StartCutover?" -> POST /StartCutover
+- "Create a StartExport?" -> POST /StartExport
+- "Create a StartImport?" -> POST /StartImport
+- "Create a StartReplication?" -> POST /StartReplication
+- "Create a StartTest?" -> POST /StartTest
+- "Create a StopReplication?" -> POST /StopReplication
+- "Create a TerminateTargetInstance?" -> POST /TerminateTargetInstances
+- "Create a UnarchiveApplication?" -> POST /UnarchiveApplication
+- "Create a UnarchiveWave?" -> POST /UnarchiveWave
+- "Delete a tag?" -> DELETE /tags/{resourceArn}
+- "Create a UpdateApplication?" -> POST /UpdateApplication
+- "Create a UpdateConnector?" -> POST /UpdateConnector
+- "Create a UpdateLaunchConfiguration?" -> POST /UpdateLaunchConfiguration
+- "Create a UpdateLaunchConfigurationTemplate?" -> POST /UpdateLaunchConfigurationTemplate
+- "Create a UpdateReplicationConfiguration?" -> POST /UpdateReplicationConfiguration
+- "Create a UpdateReplicationConfigurationTemplate?" -> POST /UpdateReplicationConfigurationTemplate
+- "Create a UpdateSourceServer?" -> POST /UpdateSourceServer
+- "Create a UpdateSourceServerReplicationType?" -> POST /UpdateSourceServerReplicationType
+- "Create a UpdateWave?" -> POST /UpdateWave
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

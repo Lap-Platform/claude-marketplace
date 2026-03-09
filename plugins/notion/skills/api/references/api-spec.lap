@@ -4,153 +4,175 @@
 @base https://api.notion.com
 @version 2.0.0
 @auth Bearer bearer | Bearer basic
-@common_fields {Notion-Version: str=2025-09-03}
+@common_fields {Notion-Version: str=2025-09-03 # The Notion API version}
 @endpoints 22
 @hint download_for_search
 @toc users(3), search(1), blocks(5), pages(5), comments(2), data_sources(5), databases(1)
 
 @group users
 @endpoint GET /v1/users/{user_id}
+@desc Retrieve a user
 @required {user_id: str(uuid)}
-@returns(200)
-@errors {400}
+@returns(200) 200
+@errors {400: 400}
 
 @endpoint GET /v1/users
-@optional {start_cursor: str, page_size: int=100}
-@returns(200)
-@errors {400}
+@desc List all users
+@optional {start_cursor: str # If supplied, this endpoint will return a page of results starting after the cursor provided. If not supplied, this endpoint will return the first page of results., page_size: int=100 # The number of items from the full list desired in the response. Maximum: 100}
+@returns(200) Successful response
+@errors {400: 400}
 
 @endpoint GET /v1/users/me
-@returns(200) {object: str, id: str, name: str, avatar_url: any, type: str, bot: map{owner: map{type: str, user: map{object: str, id: str, name: str, avatar_url: any, type: str, person: map}}}}
-@errors {400}
+@desc Retrieve your token's bot user
+@returns(200) {object: str, id: str, name: str, avatar_url: any, type: str, bot: map{owner: map{type: str, user: map{object: str, id: str, name: str, avatar_url: any, type: str, person: map}}}} # 200
+@errors {400: Bad request}
 
 @endgroup
 
 @group search
 @endpoint POST /v1/search
-@optional {query: str, sort: map{direction: str, timestamp: str}, filter: map{value: str, property: str}, start_cursor: str, page_size: int(int32)=100}
-@returns(200)
-@errors {400}
+@desc Search by title
+@optional {query: str # The text that the API compares page and database titles against., sort: map{direction: str, timestamp: str} # A set of criteria, `direction` and `timestamp` keys, that orders the results. The **only** supported timestamp value is `"last_edited_time"`. Supported `direction` values are `"ascending"` and `"descending"`. If `sort` is not provided, then the most recently edited results are returned first., filter: map{value: str, property: str} # A set of criteria, `value` and `property` keys, that limits the results to either only pages or only data sources. Possible `value` values are `"page"` or `"data_source"`. The only supported `property` value is `"object"`., start_cursor: str # A `cursor` value returned in a previous response that If supplied, limits the response to results starting after the `cursor`. If not supplied, then the first page of results is returned. Refer to [pagination](https://developers.notion.com/reference/intro#pagination) for more details., page_size: int(int32)=100 # The number of items from the full list to include in the response. Maximum: `100`.}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endgroup
 
 @group blocks
 @endpoint GET /v1/blocks/{block_id}/children
-@required {block_id: str}
-@optional {start_cursor: str, page_size: int(int32)=100}
-@returns(200)
-@errors {400}
+@desc Retrieve block children
+@required {block_id: str # Identifier for a [block](ref:block)}
+@optional {start_cursor: str # If supplied, this endpoint will return a page of results starting after the cursor provided. If not supplied, this endpoint will return the first page of results., page_size: int(int32)=100 # The number of items from the full list desired in the response. Maximum: 100}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endpoint PATCH /v1/blocks/{block_id}/children
-@required {block_id: str, children: [any]}
-@optional {after: str}
-@returns(200)
-@errors {400}
+@desc Append block children
+@required {block_id: str # Identifier for a [block](ref:block). Also accepts a [page](ref:page) ID., children: [any] # Child content to append to a container block as an array of [block objects](ref:block)}
+@optional {after: str # The ID of the existing block that the new block should be appended after.}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endpoint GET /v1/blocks/{block_id}
-@required {block_id: str}
-@returns(200)
-@errors {400}
+@desc Retrieve a block
+@required {block_id: str # Identifier for a Notion block}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endpoint PATCH /v1/blocks/{block_id}
-@required {block_id: str}
-@optional {type: map, archived: bool=True}
-@returns(200)
-@errors {400}
+@desc Update a block
+@required {block_id: str # Identifier for a Notion block}
+@optional {type: map # The [block object `type`](ref:block#block-object-keys) value with the properties to be updated. Currently only `text` (for supported block types) and `checked` (for `to_do` blocks) fields can be updated., archived: bool=True # Set to true to archive (delete) a block. Set to false to un-archive (restore) a block.}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endpoint DELETE /v1/blocks/{block_id}
-@required {block_id: str}
-@returns(200)
-@errors {400}
+@desc Delete a block
+@required {block_id: str # Identifier for a Notion block}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endgroup
 
 @group pages
 @endpoint GET /v1/pages/{page_id}
-@required {page_id: str}
-@optional {filter_properties: str}
-@returns(200)
-@errors {400}
+@desc Retrieve a page
+@required {page_id: str # Identifier for a Notion page}
+@optional {filter_properties: str # A list of page property value IDs associated with the page. Use this param to limit the response to a specific page property value or values. To retrieve multiple properties, specify each page property ID. For example: `?filter_properties=iAk8&filter_properties=b7dh`.}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endpoint PATCH /v1/pages/{page_id}
-@required {page_id: str}
-@optional {properties: map, in_trash: bool=False, archived: bool, icon: map{emoji!: str}, cover: map{external!: map{url!: str}, type: str}}
-@returns(200)
-@errors {400}
+@desc Update page properties
+@required {page_id: str # The identifier for the Notion page to be updated.}
+@optional {properties: map # The property values to update for the page. The keys are the names or IDs of the property and the values are property values. If a page property ID is not included, then it is not changed., in_trash: bool=False # Set to true to delete a block. Set to false to restore a block., archived: bool, icon: map{emoji!: str} # A page icon for the page. Supported types are [external file object](https://developers.notion.com/reference/file-object) or [emoji object](https://developers.notion.com/reference/emoji-object)., cover: map{external!: map{url!: str}, type: str} # A cover image for the page. Only [external file objects](https://developers.notion.com/reference/file-object) are supported.}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endpoint POST /v1/pages
-@required {parent: any, properties: map}
-@optional {children: [str], icon: str(json), cover: str(json)}
-@returns(200)
-@errors {400}
+@desc Create a page
+@required {parent: any, properties: map # The property values for the new page. The keys are the names or IDs of the property and the values are property values.}
+@optional {children: [str] # The content to be rendered on the new page, represented as an array of [block objects](https://developers.notion.com/reference/block)., icon: str(json) # The icon of the new page. Either an [emoji object](https://developers.notion.com/reference/emoji-object) or an [external file object](https://developers.notion.com/reference/file-object).., cover: str(json) # The cover image of the new page, represented as a [file object](https://developers.notion.com/reference/file-object).}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endpoint GET /v1/pages/{page_id}/properties/{property_id}
-@required {page_id: str, property_id: str}
-@optional {page_size: int(int32), start_cursor: str}
-@returns(200)
-@errors {400}
+@desc Retrieve a page property item
+@required {page_id: str # Identifier for a Notion page, property_id: str # Identifier for a page [property](https://developers.notion.com/reference/page#all-property-values)}
+@optional {page_size: int(int32) # For paginated properties. The max number of property item objects on a page. The default size is 100, start_cursor: str # For paginated properties.}
+@returns(200) 200
+@errors {400: Bad request}
 
 @endgroup
 
 @group comments
 @endpoint GET /v1/comments
-@required {block_id: str}
-@optional {start_cursor: str, page_size: int(int32)}
-@returns(200)
-@errors {400}
+@desc Retrieve comments
+@required {block_id: str # Identifier for a Notion block or page}
+@optional {start_cursor: str # If supplied, this endpoint will return a page of results starting after the cursor provided. If not supplied, this endpoint will return the first page of results., page_size: int(int32) # The number of items from the full list desired in the response. Maximum: 100}
+@returns(200) 200
+@errors {400: Bad request}
 
 @endpoint POST /v1/comments
-@required {parent: map{page_id!: str}, rich_text: [map{text!: map{content!: str}}]}
-@returns(200)
-@errors {400}
+@desc Create comment
+@required {parent: map{page_id!: str} # The page that contains the comment, rich_text: [map{text!: map{content!: str}}]}
+@returns(200) 200
+@errors {400: Bad request}
 
 @endgroup
 
 @group data_sources
 @endpoint POST /v1/data_sources/{data_source_id}/query
-@required {data_source_id: str}
-@optional {filter_properties: [str], filter: map, sorts: [map{property!: str, direction!: str}], start_cursor: str, page_size: int=100, archived: bool, in_trash: bool}
-@returns(200)
-@errors {400}
+@desc Query a data source
+@required {data_source_id: str # Identifier for a Notion data source (database)}
+@optional {filter_properties: [str] # A list of page property value IDs to limit the response, filter: map # Filter conditions for querying the data source, sorts: [map{property!: str, direction!: str}], start_cursor: str, page_size: int=100, archived: bool, in_trash: bool}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endpoint GET /v1/data_sources/{data_source_id}
-@required {data_source_id: str}
-@returns(200)
-@errors {400}
+@desc Retrieve a data source
+@required {data_source_id: str # Identifier for a Notion data source}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endpoint PATCH /v1/data_sources/{data_source_id}
-@required {data_source_id: str}
-@optional {title: [map{text!: map{content!: str, link: map}, type: str}], description: [map{text!: map{content!: str, link: map}, type: str}], properties: map}
-@returns(200)
-@errors {400}
+@desc Update a data source
+@required {data_source_id: str # Identifier for a Notion data source}
+@optional {title: [map{text!: map{content!: str, link: map}, type: str}], description: [map{text!: map{content!: str, link: map}, type: str}], properties: map # Property schema updates}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endpoint POST /v1/data_sources
-@required {parent: map{page_id!: str(uuid)}, properties: map}
+@desc Create a data source
+@required {parent: map{page_id!: str(uuid)}, properties: map # Property schema of data source}
 @optional {title: [map{text!: map{content!: str, link: map}, type: str}]}
-@returns(200)
-@errors {400}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endpoint GET /v1/data_sources/{data_source_id}/templates
-@required {data_source_id: str}
+@desc List templates in a data source
+@required {data_source_id: str # Identifier for a Notion data source}
 @optional {start_cursor: str, page_size: int=100}
-@returns(200)
-@errors {400}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endgroup
 
 @group databases
 @endpoint GET /v1/databases/{database_id}
-@required {database_id: str}
-@returns(200)
-@errors {400}
+@desc Retrieve a database
+@required {database_id: str # Identifier for a Notion database}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endgroup
 
 @group pages
 @endpoint POST /v1/pages/{page_id}/move
-@required {page_id: str(uuid), parent: any}
-@returns(200)
-@errors {400}
+@desc Move a page
+@required {page_id: str(uuid) # Identifier for a Notion page, parent: any}
+@returns(200) Successful response
+@errors {400: Bad request}
 
 @endgroup
 

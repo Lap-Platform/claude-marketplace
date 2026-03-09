@@ -8,83 +8,104 @@
 @toc customer(15)
 
 @endpoint GET /v1/customer/disputes
-@optional {start_time: str=Current date and time, disputed_transaction_id: str, page_size: int=10, next_page_token: str=The first page of data, dispute_state: str, update_time_before: str, update_time_after: str}
-@returns(200) {items: [map], links: [map]}
-@errors {400}
+@desc List disputes
+@optional {start_time: str=Current date and time # Filters the disputes in the response by a creation date and time. The start time must be within the last 180 days. Value is in [Internet date and time format](https://tools.ietf.org/html/rfc3339#section-5.6). For example, *`yyyy`*-*`MM`*-*`dd`*`T`*`HH`*:*`mm`*:*`ss`*.*`SSS`*`Z`.<br/><br/>You can specify either but not both the `start_time` and `disputed_transaction_id` query parameters., disputed_transaction_id: str # Filters the disputes in the response by a transaction, by ID.<br/><br/>You can specify either but not both the `start_time` and `disputed_transaction_id` query parameter., page_size: int=10 # Limits the number of disputes in the response to this value., next_page_token: str=The first page of data # The token that describes the next page of results to fetch. The <a href="/docs/api/customer-disputes/v1/#disputes_list">list disputes</a> call returns this token in the HATEOAS links in the response., dispute_state: str # Filters the disputes in the response by a state. Separate multiple values with a comma (`,`). When you specify more than one dispute_state, the response lists disputes that belong to any of the specified dispute_state., update_time_before: str # The date and time when the dispute was last updated, in [Internet date and time format](https://tools.ietf.org/html/rfc3339#section-5.6). For example, *`yyyy`*-*`MM`*-*`dd`*`T`*`HH`*:*`mm`*:*`ss`*.*`SSS`*`Z`. update_time_before must be within the last 180 days and the default is the current time., update_time_after: str # The date and time when the dispute was last updated, in [Internet date and time format](https://tools.ietf.org/html/rfc3339#section-5.6). For example, *`yyyy`*-*`MM`*-*`dd`*`T`*`HH`*:*`mm`*:*`ss`*.*`SSS`*`Z`. update_time_after must be within the last 180 days and the default is the maximum time (180 days) supported.}
+@returns(200) {items: [map], links: [map]} # A successful request returns the HTTP <code>200 OK</code> status code and a JSON response body that lists disputes with a full or summary set of details. Default is a summary set of details, which shows the <code>dispute_id</code>, <code>reason</code>, <code>status</code>, <code>dispute_amount</code>, <code>create_time</code>, and <code>update_time</code> fields for each dispute.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code.}
 
 @endpoint GET /v1/customer/disputes/{id}
-@required {id: str}
-@returns(200) {dispute_id: str, create_time: str(ppaas_date_time_v3), update_time: str(ppaas_date_time_v3), disputed_transactions: [map], reason: str, status: str, dispute_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, dispute_asset: map{asset_symbol: str, quantity: str, quantity_in_subunits: str, decimals: int}, fee_policy: map, external_reason_code: str, dispute_outcome: map{outcome_code: str, outcome_reason: str, amount_refunded: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, asset_refunded: map{asset_symbol: str, quantity: str, quantity_in_subunits: str, decimals: int}}, adjudications: [map], money_movements: [map], fund_movements: [map], dispute_life_cycle_stage: str, dispute_channel: str, messages: [map], extensions: map{merchant_contacted: bool, merchant_contacted_outcome: str, merchant_contacted_time: str(ppaas_date_time_v3), merchant_contacted_mode: str, buyer_contacted_time: str(ppaas_date_time_v3), buyer_contacted_channel: str, billing_dispute_properties: map{duplicate_transaction: map{received_duplicate: bool, original_transaction: map}, incorrect_transaction_amount: map{correct_transaction_amount: map, correct_transaction_asset: map, correct_transaction_time: str(ppaas_date_time_v3)}, payment_by_other_means: map{charge_different_from_original: bool, received_duplicate: bool, payment_method: str, payment_instrument_suffix: str}, credit_not_processed: map{issue_type: str, expected_refund: map, cancellation_details: map, product_details: map, service_details: map, agreed_refund_details: map}, canceled_recurring_billing: map{expected_refund: map, cancellation_details: map}}, merchandize_dispute_properties: map{issue_type: str, product_details: map{description: str, product_received: str, product_received_time: str(ppaas_date_time_v3), expected_delivery_date: str(ppaas_date_time_v3), sub_reasons: [str], purchase_url: str(uri), return_details: map}, service_details: map{description: str, service_started: str, note: str, sub_reasons: [str], purchase_url: str(uri)}, cancellation_details: map{cancellation_date: str(ppaas_date_time_v3), cancellation_number: str, cancelled: bool, cancellation_mode: str}, return_shipping_address: map{address_line_1: str, address_line_2: str, address_line_3: str, admin_area_4: str, admin_area_3: str, admin_area_2: str, admin_area_1: str, postal_code: str, country_code: str(ppaas_common_country_code_v2), address_details: map}}, reported_source: str}, evidences: [map], buyer_response_due_date: str(ppaas_date_time_v3), seller_response_due_date: str(ppaas_date_time_v3), offer: map{buyer_requested_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, seller_offered_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, offer_type: str, history: [map]}, refund_details: map{allowed_refund_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}}, communication_details: map{email: str(ppaas_common_email_address_v2), note: str, time_posted: str(ppaas_date_time_v3)}, supporting_info: [map], allowed_response_options: map{acknowledge_return_item: map{acknowledgement_types: [str]}, accept_claim: map{accept_claim_types: [str]}, make_offer: map{offer_types: [str]}}, links: [map]}
-@errors {500}
+@desc Show dispute details
+@required {id: str # The ID of the dispute for which to provide the supporting information.}
+@returns(200) {dispute_id: str, create_time: str(ppaas_date_time_v3), update_time: str(ppaas_date_time_v3), disputed_transactions: [map], reason: str, status: str, dispute_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, dispute_asset: map{asset_symbol: str, quantity: str, quantity_in_subunits: str, decimals: int}, fee_policy: map, external_reason_code: str, dispute_outcome: map{outcome_code: str, outcome_reason: str, amount_refunded: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, asset_refunded: map{asset_symbol: str, quantity: str, quantity_in_subunits: str, decimals: int}}, adjudications: [map], money_movements: [map], fund_movements: [map], dispute_life_cycle_stage: str, dispute_channel: str, messages: [map], extensions: map{merchant_contacted: bool, merchant_contacted_outcome: str, merchant_contacted_time: str(ppaas_date_time_v3), merchant_contacted_mode: str, buyer_contacted_time: str(ppaas_date_time_v3), buyer_contacted_channel: str, billing_dispute_properties: map{duplicate_transaction: map{received_duplicate: bool, original_transaction: map}, incorrect_transaction_amount: map{correct_transaction_amount: map, correct_transaction_asset: map, correct_transaction_time: str(ppaas_date_time_v3)}, payment_by_other_means: map{charge_different_from_original: bool, received_duplicate: bool, payment_method: str, payment_instrument_suffix: str}, credit_not_processed: map{issue_type: str, expected_refund: map, cancellation_details: map, product_details: map, service_details: map, agreed_refund_details: map}, canceled_recurring_billing: map{expected_refund: map, cancellation_details: map}}, merchandize_dispute_properties: map{issue_type: str, product_details: map{description: str, product_received: str, product_received_time: str(ppaas_date_time_v3), expected_delivery_date: str(ppaas_date_time_v3), sub_reasons: [str], purchase_url: str(uri), return_details: map}, service_details: map{description: str, service_started: str, note: str, sub_reasons: [str], purchase_url: str(uri)}, cancellation_details: map{cancellation_date: str(ppaas_date_time_v3), cancellation_number: str, cancelled: bool, cancellation_mode: str}, return_shipping_address: map{address_line_1: str, address_line_2: str, address_line_3: str, admin_area_4: str, admin_area_3: str, admin_area_2: str, admin_area_1: str, postal_code: str, country_code: str(ppaas_common_country_code_v2), address_details: map}}, reported_source: str}, evidences: [map], buyer_response_due_date: str(ppaas_date_time_v3), seller_response_due_date: str(ppaas_date_time_v3), offer: map{buyer_requested_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, seller_offered_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}, offer_type: str, history: [map]}, refund_details: map{allowed_refund_amount: map{currency_code: str(ppaas_common_currency_code_v2), value: str}}, communication_details: map{email: str(ppaas_common_email_address_v2), note: str, time_posted: str(ppaas_date_time_v3)}, supporting_info: [map], allowed_response_options: map{acknowledge_return_item: map{acknowledgement_types: [str]}, accept_claim: map{accept_claim_types: [str]}, make_offer: map{offer_types: [str]}}, links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that shows dispute details.
+@errors {500: An internal server error occurred. The request returns the HTTP `500 Internal Server Error` status code.}
 
 @endpoint PATCH /v1/customer/disputes/{id}
-@required {id: str}
-@returns(202) {links: [map]}
-@returns(204)
-@errors {400, 422, 500}
+@desc Partially update dispute
+@required {id: str # The ID of the dispute for which to provide the supporting information.}
+@returns(202) {links: [map]} # A successfully accepted request returns the HTTP `202 Accepted` status code and a JSON response body that includes a [HATEOAS link](/docs/api/reference/api-responses/#hateoas-links) to the ID of the request. The Clients can choose webhook option as well to receive dispute update notification.
+@returns(204) A successful request returns the HTTP `204 No Content` status code with no JSON response body.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code., 422: The requested action could not be completed. The request returns the HTTP `422 Unprocessable Entity` status code., 500: An internal server error occurred. The request returns the HTTP `500 Internal Server Error` status code.}
 
 @endpoint POST /v1/customer/disputes/{id}/provide-evidence
-@required {id: str}
-@returns(200) {links: [map]}
-@errors {400}
+@desc Provide evidence
+@required {id: str # The ID of the dispute for which to provide the supporting information.}
+@returns(200) {links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that includes a link to the dispute.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code.}
 
 @endpoint POST /v1/customer/disputes/{id}/appeal
-@required {id: str}
-@returns(200) {links: [map]}
-@errors {400}
+@desc Appeal dispute
+@required {id: str # The ID of the dispute for which to provide the supporting information.}
+@returns(200) {links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that includes a link to the dispute.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code.}
 
 @endpoint POST /v1/customer/disputes/{id}/accept-claim
-@required {id: str}
-@returns(200) {links: [map]}
-@errors {400}
+@desc Accept claim
+@required {id: str # The ID of the dispute for which to provide the supporting information.}
+@returns(200) {links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that includes a link to the dispute.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code.}
 
 @endpoint POST /v1/customer/disputes/{id}/adjudicate
-@required {id: str, adjudication_outcome: str(BUYER_FAVOR/SELLER_FAVOR)}
-@returns(200) {links: [map]}
-@errors {400, 422, 500}
+@desc Settle dispute
+@required {id: str # The ID of the dispute for which to provide the supporting information., adjudication_outcome: str(BUYER_FAVOR/SELLER_FAVOR) # The outcome of the adjudication.}
+@returns(200) {links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that includes a link to the dispute.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code., 422: The requested action could not be completed. The request returns the HTTP `422 Unprocessable Entity` status code., 500: An internal server error occurred. The request returns the HTTP `500 Internal Server Error` status code.}
+@example_request {"adjudication_outcome":"BUYER_FAVOR"}
 
 @endpoint POST /v1/customer/disputes/{id}/require-evidence
-@required {id: str, action: str(BUYER_EVIDENCE/SELLER_EVIDENCE)}
-@returns(200) {links: [map]}
-@errors {400, 422, 500}
+@desc Update dispute status
+@required {id: str # The ID of the dispute for which to provide the supporting information., action: str(BUYER_EVIDENCE/SELLER_EVIDENCE) # The action. Indicates whether the state change enables the customer or merchant to submit evidence.}
+@returns(200) {links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that includes a link to the dispute.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code., 422: The requested action could not be completed. The request returns the HTTP `422 Unprocessable Entity` status code., 500: An internal server error occurred. The request returns the HTTP `500 Internal Server Error` status code.}
+@example_request {"note":"Escalating to PayPal claim for resolution."}
 
 @endpoint POST /v1/customer/disputes/{id}/escalate
-@required {id: str}
-@optional {note: str, buyer_escalation_reason: any}
-@returns(200) {links: [map]}
-@errors {400, 422, 500}
+@desc Escalate dispute to claim
+@required {id: str # The ID of the dispute for which to provide the supporting information.}
+@optional {note: str # The notes about the escalation of the dispute to a claim., buyer_escalation_reason: any}
+@returns(200) {links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that includes a link to the dispute.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code., 422: The requested action could not be completed. The request returns the HTTP `422 Unprocessable Entity` status code., 500: An internal server error occurred. The request returns the HTTP `500 Internal Server Error` status code.}
+@example_request {"action":"BUYER_EVIDENCE"}
 
 @endpoint POST /v1/customer/disputes/{id}/send-message
-@required {id: str}
-@returns(200) {links: [map]}
-@errors {400, 422, 500}
+@desc Send message about dispute to other party
+@required {id: str # The ID of the dispute for which to provide the supporting information.}
+@returns(200) {links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that includes a link to the dispute.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code., 422: The requested action could not be completed. The request returns the HTTP `422 Unprocessable Entity` status code., 500: An internal server error occurred. The request returns the HTTP `500 Internal Server Error` status code.}
 
 @endpoint POST /v1/customer/disputes/{id}/make-offer
-@required {id: str, note: str, offer_type: str(REFUND/REFUND_WITH_RETURN/REFUND_WITH_REPLACEMENT/REPLACEMENT_WITHOUT_REFUND)}
-@optional {offer_amount: map{currency_code!: str(ppaas_common_currency_code_v2), value!: str}, return_shipping_address: map{address_line_1: str, address_line_2: str, address_line_3: str, admin_area_4: str, admin_area_3: str, admin_area_2: str, admin_area_1: str, postal_code: str, country_code!: str(ppaas_common_country_code_v2), address_details: map{street_number: str, street_name: str, street_type: str, delivery_service: str, building_name: str, sub_building: str}}, invoice_id: str}
-@returns(200) {links: [map]}
-@errors {400, 422, 500}
+@desc Make offer to resolve dispute
+@required {id: str # The ID of the dispute for which to provide the supporting information., note: str # The merchant's notes about the offer., offer_type: str(REFUND/REFUND_WITH_RETURN/REFUND_WITH_REPLACEMENT/REPLACEMENT_WITHOUT_REFUND) # The merchant-proposed offer type for the dispute.}
+@optional {offer_amount: map{currency_code!: str(ppaas_common_currency_code_v2), value!: str} # The currency and amount for a financial transaction, such as a balance or payment due., return_shipping_address: map{address_line_1: str, address_line_2: str, address_line_3: str, admin_area_4: str, admin_area_3: str, admin_area_2: str, admin_area_1: str, postal_code: str, country_code!: str(ppaas_common_country_code_v2), address_details: map{street_number: str, street_name: str, street_type: str, delivery_service: str, building_name: str, sub_building: str}} # The portable international postal address. Maps to [AddressValidationMetadata](https://github.com/googlei18n/libaddressinput/wiki/AddressValidationMetadata) and HTML 5.1 [Autofilling form controls: the autocomplete attribute](https://www.w3.org/TR/html51/sec-forms.html#autofilling-form-controls-the-autocomplete-attribute)., invoice_id: str # The merchant-provided ID of the invoice for the refund. This optional value maps the refund to an invoice ID in the merchant's system.}
+@returns(200) {links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that includes a link to the dispute.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code., 422: The requested action could not be completed. The request returns the HTTP `422 Unprocessable Entity` status code., 500: An internal server error occurred. The request returns the HTTP `500 Internal Server Error` status code.}
+@example_request {"note":"Offer refund with replacement item.","offer_amount":{"currency_code":"USD","value":"23"},"offer_type":"REFUND_WITH_REPLACEMENT"}
 
 @endpoint POST /v1/customer/disputes/{id}/accept-offer
-@required {id: str}
-@optional {note: str}
-@returns(200) {links: [map]}
-@returns(202) {links: [map]}
-@errors {400, 422, 500}
+@desc Accept offer to resolve dispute
+@required {id: str # The ID of the dispute for which to provide the supporting information.}
+@optional {note: str # The customer notes about accepting of offer. PayPal can but the merchant cannot view these notes.}
+@returns(200) {links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that includes a link to the dispute.
+@returns(202) {links: [map]} # A successfully accepted request returns the HTTP `202 Accepted` status code and a JSON response body that includes a [HATEOAS link](/docs/api/reference/api-responses/#hateoas-links) to the ID of the request. The request returns `202 Accepted` status in case money movement for the offer is delayed due to some internal reasons.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code., 422: The requested action could not be completed. The request returns the HTTP `422 Unprocessable Entity` status code., 500: An internal server error occurred. The request returns the HTTP `500 Internal Server Error` status code.}
+@example_request {"note":"I am ok with the refund offered."}
 
 @endpoint POST /v1/customer/disputes/{id}/deny-offer
-@required {id: str, note: str}
-@returns(200) {links: [map]}
-@errors {400, 422, 500}
+@desc Deny offer to resolve dispute
+@required {id: str # The ID of the dispute for which to provide the supporting information., note: str # The customer notes about the denial of offer. PayPal can but the merchant cannot view these notes.}
+@returns(200) {links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that includes a link to the dispute.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code., 422: The requested action could not be completed. The request returns the HTTP `422 Unprocessable Entity` status code., 500: An internal server error occurred. The request returns the HTTP `500 Internal Server Error` status code.}
+@example_request {"note":"refund offer is very low."}
 
 @endpoint POST /v1/customer/disputes/{id}/acknowledge-return-item
-@required {id: str}
-@returns(200) {links: [map]}
-@errors {400, 422, 500}
+@desc Acknowledge returned item
+@required {id: str # The ID of the dispute for which to provide the supporting information.}
+@returns(200) {links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that includes a link to the dispute.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code., 422: The requested action could not be completed. The request returns the HTTP `422 Unprocessable Entity` status code., 500: An internal server error occurred. The request returns the HTTP `500 Internal Server Error` status code.}
 
 @endpoint POST /v1/customer/disputes/{id}/provide-supporting-info
-@required {id: str}
-@returns(200) {links: [map]}
-@errors {400, 404, 422, 500}
+@desc Provide supporting information for dispute
+@required {id: str # The ID of the dispute for which to provide the supporting information.}
+@returns(200) {links: [map]} # A successful request returns the HTTP `200 OK` status code and a JSON response body that includes a link to the dispute.
+@errors {400: The request failed due to a validation error. The request returns the HTTP `400 Bad Request` status code., 404: The request failed due to the dispute is not available. The request returns the HTTP `404 Not Found` status code., 422: The requested action could not be completed. The request returns the HTTP `422 Unprocessable Entity` status code., 500: An internal server error occurred. The request returns the HTTP `500 Internal Server Error` status code.}
 
 @end

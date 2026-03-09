@@ -50,87 +50,32 @@ https://api.taggun.io/
 | PUT | /api/validation/v1/campaign/settings/update/{campaignId} | update campaign settings for a client |
 | DELETE | /api/validation/v1/campaign/settings/delete/{campaignId} | delete campaign settings for a client |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I scan a receipt from a file?" -> POST /api/receipt/v1/simple/file
-- "How do I scan a receipt from a URL?" -> POST /api/receipt/v1/simple/url
-- "How do I get detailed line items from a receipt image?" -> POST /api/receipt/v1/verbose/file
-- "How do I scan a base64-encoded receipt?" -> POST /api/receipt/v1/simple/encoded
-- "How do I validate a receipt against a campaign?" -> POST /api/validation/v1/campaign/receipt-validation/file
-- "How do I verify a product code on a receipt?" -> POST /api/validation/v1/campaign/product-validation/file
-- "How do I export my known merchants list?" -> GET /api/account/v1/known-merchants/export
-- "How do I import known merchants in bulk?" -> POST /api/account/v1/known-merchants/import
-- "How do I add a single merchant name?" -> POST /api/account/v1/merchantname/add
-- "How do I create a new validation campaign?" -> POST /api/validation/v1/campaign/settings/create/{campaignId}
-- "How do I list all my campaign settings?" -> GET /api/validation/v1/campaign/settings/list
-- "How do I update an existing campaign?" -> PUT /api/validation/v1/campaign/settings/update/{campaignId}
-- "How do I delete a campaign?" -> DELETE /api/validation/v1/campaign/settings/delete/{campaignId}
-- "How do I import product categories?" -> POST /api/account/v1/product-categories/import
-- "How do I submit feedback on a scan result?" -> POST /api/account/v1/feedback
-
-## Response Tips
-
-- **Receipt scanning (simple):** Returns extracted merchant name, total amount, date, and tax. The `simple` variants omit line items -- use `verbose` if you need itemized data.
-- **Receipt scanning (verbose):** Includes everything from `simple` plus `lineItems` array with per-item descriptions, quantities, and prices. Pass `extractLineItems: true` on the file endpoint for best results.
-- **Validation endpoints:** Return match/no-match verdicts against campaign rules. Check the top-level status field before reading nested validation details.
-- **Account exports:** Return file downloads (CSV/JSON). Handle the response as a binary stream, not parsed JSON.
-- **Account imports:** Accept multipart file uploads. A 200 response includes a summary with counts of created, updated, and skipped records.
-- **Campaign settings:** CRUD responses mirror the campaign object. On create/update, the full saved object is returned for confirmation.
-- **All endpoints:** A 400 error means malformed input -- the response body contains a message field describing what went wrong. There are no other documented error codes.
-
-## Anomaly Flags
-
-- **400 on every endpoint:** This is the only documented error code. If you receive a 401 or 403, the API key is missing or invalid -- surface this immediately as an auth configuration problem.
-- **Missing or empty OCR results:** If a scan returns 200 but with null/empty merchant, total, or date fields, flag that the image quality may be too low or the file format unsupported.
-- **Verbose vs simple mismatch:** If a user requests line items but is calling a `simple` endpoint, proactively suggest switching to the `verbose` variant.
-- **Large file uploads:** Receipt image files over 20MB may time out or be rejected. Flag oversized files before upload.
-- **Incognito mode usage:** When `incognito: true` is passed, results are not stored -- warn the user that feedback and merchant learning will not apply to that scan.
-- **Campaign ID not found:** If campaign endpoints return 400, verify the campaignId exists by checking GET /api/validation/v1/campaign/settings/{campaignId} first.
-- **Deprecated or undocumented status codes:** Any 5xx response should be surfaced as a TAGGUN service issue, not a client error.
-
-## Playbook
-
-### 1. Scan a Receipt and Extract Totals
-
-1. Prepare the receipt image file (JPEG, PNG, or PDF).
-2. Call `POST /api/receipt/v1/simple/file` with the file in multipart form data and `apikey` header set.
-3. Optionally pass `language` to improve OCR accuracy for non-English receipts.
-4. Read the response for `merchantName`, `totalAmount`, `taxAmount`, and `date`.
-5. If results look wrong, call `POST /api/account/v1/feedback` with corrections to improve future scans.
-
-### 2. Get Itemized Line Items from a Receipt
-
-1. Call `POST /api/receipt/v1/verbose/file` with the receipt file and set `extractLineItems: true`.
-2. Parse the `lineItems` array from the response -- each entry contains description, quantity, unit price, and total.
-3. Cross-reference totals: sum line item totals and compare against `totalAmount` to catch OCR misreads.
-4. For receipts hosted online, use `POST /api/receipt/v1/verbose/url` with the image URL in the body instead.
-
-### 3. Set Up and Run a Receipt Validation Campaign
-
-1. Create a campaign: `POST /api/validation/v1/campaign/settings/create/{campaignId}` with your rules in the body.
-2. Verify the campaign exists: `GET /api/validation/v1/campaign/settings/{campaignId}`.
-3. Submit receipts for validation: `POST /api/validation/v1/campaign/receipt-validation/file` with the `campaignId` and receipt file.
-4. Review the validation verdict in the response to determine if the receipt meets campaign criteria.
-5. To adjust rules, call `PUT /api/validation/v1/campaign/settings/update/{campaignId}`.
-
-### 4. Manage Known Merchants for Better Accuracy
-
-1. Export your current merchant list: `GET /api/account/v1/known-merchants/export` and save the file.
-2. Edit the export file to add or correct merchant names.
-3. Re-import the updated list: `POST /api/account/v1/known-merchants/import` with the file.
-4. To add a single merchant without a full import, call `POST /api/account/v1/merchantname/add` with the merchant details in the body.
-5. Scan a test receipt to confirm the merchant is now recognized correctly.
-
-### 5. Bulk Import Product Categories and Codes
-
-1. Export existing product categories: `GET /api/account/v1/product-categories/export`.
-2. Export existing product codes: `GET /api/account/v1/known-product-codes/export`.
-3. Prepare import files with new categories and codes in the expected format (matching export structure).
-4. Import categories: `POST /api/account/v1/product-categories/import`.
-5. Import product codes: `POST /api/account/v1/known-product-codes/import`.
-6. Validate by running `POST /api/validation/v1/campaign/product-validation/file` with a receipt containing a known product code.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all export?" -> GET /api/account/v1/known-merchants/export
+- "List all export?" -> GET /api/account/v1/known-product-codes/export
+- "List all export?" -> GET /api/account/v1/product-categories/export
+- "List all list?" -> GET /api/validation/v1/campaign/settings/list
+- "Get setting details?" -> GET /api/validation/v1/campaign/settings/{campaignId}
+- "Create a feedback?" -> POST /api/account/v1/feedback
+- "Create a import?" -> POST /api/account/v1/known-merchants/import
+- "Create a import?" -> POST /api/account/v1/known-product-codes/import
+- "Create a add?" -> POST /api/account/v1/merchantname/add
+- "Create a import?" -> POST /api/account/v1/product-categories/import
+- "Create a encoded?" -> POST /api/receipt/v1/simple/encoded
+- "Create a file?" -> POST /api/receipt/v1/simple/file
+- "Create a url?" -> POST /api/receipt/v1/simple/url
+- "Create a encoded?" -> POST /api/receipt/v1/verbose/encoded
+- "Create a file?" -> POST /api/receipt/v1/verbose/file
+- "Create a url?" -> POST /api/receipt/v1/verbose/url
+- "Create a file?" -> POST /api/validation/v1/campaign/file
+- "Create a file?" -> POST /api/validation/v1/campaign/product-validation/file
+- "Create a file?" -> POST /api/validation/v1/campaign/receipt-validation/file
+- "Create a url?" -> POST /api/validation/v1/campaign/receipt-validation/url
+- "Update a update?" -> PUT /api/validation/v1/campaign/settings/update/{campaignId}
+- "Delete a delete?" -> DELETE /api/validation/v1/campaign/settings/delete/{campaignId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

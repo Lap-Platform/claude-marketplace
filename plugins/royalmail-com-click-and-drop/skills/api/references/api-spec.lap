@@ -8,84 +8,98 @@
 
 @group version
 @endpoint GET /version
-@returns(200)
-@errors {500}
+@desc Get API version details.
+@returns(200) Returns details about the API version
+@errors {500: Internal Server Error}
 
 @endgroup
 
 @group orders
 @endpoint GET /orders/{orderIdentifiers}
-@required {orderIdentifiers: any}
-@returns(200)
-@errors {400, 401, 404, 500}
+@desc Retrieve specific orders
+@required {orderIdentifiers: any # One or several Order Identifiers or Order References separated by semicolon. Order Identifiers are integer numbers. Order References are strings - each must be percent-encoded and surrounded by double quotation marks. The maximum number of identifiers is 100.}
+@returns(200) Return list of specific orders
+@errors {400: Bad Request (Request has missing or invalid parameters and cannot be parsed), 401: Unauthorized, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /orders/{orderIdentifiers}
-@required {orderIdentifiers: any}
-@returns(200)
-@errors {400, 401, 403, 404, 500}
+@desc Delete orders
+@required {orderIdentifiers: any # One or several Order Identifiers or Order References separated by semicolon. Order Identifiers are integer numbers. Order References are strings - each must be percent-encoded and surrounded by double quotation marks. The maximum number of identifiers is 100.}
+@returns(200) Provides a list of deleted orders references and ids and errors for orders that failed to delete
+@errors {400: Bad Request (Request has missing or invalid parameters and cannot be parsed), 401: Unauthorized, 403: Forbidden (Feature not available), 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /orders/status
-@required {request: map}
-@returns(200)
-@errors {400, 401, 404, 500}
+@desc Set order status
+@required {request: map # At least one of 'orderIdentifier' and 'orderReference' is required. Providing both is disallowed to avoid ambiguity.  When the status is set to 'despatchedByOtherCourier', if the optional parameter 'trackingNumber' is provided then the parameters 'despatchDate', 'shippingCarrier' and 'shippingService' are also required. The maximum collection length is 100.}
+@returns(200) Provides a list of orders
+@errors {400: Bad Request (Request has missing or invalid parameters and cannot be parsed), 401: Unauthorized, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /orders/{orderIdentifiers}/full
-@required {orderIdentifiers: any}
-@returns(200)
-@errors {400, 401, 403, 404, 500}
+@desc Retrieve details of the specific orders
+@required {orderIdentifiers: any # One or several Order Identifiers or Order References separated by semicolon. Order Identifiers are integer numbers. Order References are strings - each must be percent-encoded and surrounded by double quotation marks. The maximum number of identifiers is 100.}
+@returns(200) Return detailed information about the orders
+@errors {400: Bad Request (Request has missing or invalid parameters and cannot be parsed), 401: Unauthorized, 403: Forbidden (Feature not available), 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /orders
-@optional {pageSize: any, startDateTime: any, endDateTime: any, continuationToken: any}
-@returns(200)
-@errors {400, 401, 404, 500}
+@desc Retrieve pageable list of orders
+@optional {pageSize: any # The number of items to return, startDateTime: any # Date and time lower bound for items filtering, endDateTime: any # Date and time upper bound for items filtering, continuationToken: any # The token for retrieving the next page of items}
+@returns(200) Return pageable list of orders
+@errors {400: Bad Request (Request has missing or invalid parameters and cannot be parsed), 401: Unauthorized, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /orders
+@desc Create orders
 @required {request: map}
-@returns(200)
-@errors {400, 401, 500}
+@returns(200) Request Processed Successfully
+@errors {400: Bad Request (Request has missing or invalid parameters and cannot be parsed), 401: Unauthorized, 500: Internal Server Error}
 
 @endpoint GET /orders/full
-@optional {pageSize: any, startDateTime: any, endDateTime: any, continuationToken: any}
-@returns(200)
-@errors {400, 401, 403, 404, 500}
+@desc Retrieve pageable list of orders with details
+@optional {pageSize: any # The number of items to return, startDateTime: any # Date and time lower bound for items filtering, endDateTime: any # Date and time upper bound for items filtering, continuationToken: any # The token for retrieving the next page of items}
+@returns(200) Return a pageable list of orders with details
+@errors {400: Bad Request (Request has missing or invalid parameters and cannot be parsed), 401: Unauthorized, 403: Forbidden (Feature not available), 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /orders/{orderIdentifiers}/label
-@required {orderIdentifiers: any, documentType: any}
-@optional {includeReturnsLabel: any, includeCN: any}
-@returns(200)
-@errors {400, 401, 403, 404, 500}
+@desc Return a single PDF file with generated label and/or associated document(s)
+@required {orderIdentifiers: any # One or several Order Identifiers or Order References separated by semicolon. Order Identifiers are integer numbers. Order References are strings - each must be percent-encoded and surrounded by double quotation marks. The maximum number of identifiers is 100., documentType: any # Document generation mode. When documentType is set to "postageLabel" the additional parameters below must be used. These additional parameters will be ignored when documentType is not set to "postageLabel"}
+@optional {includeReturnsLabel: any # Include returns label. Required when documentType is set to 'postageLabel', includeCN: any # Include CN22/CN23 with label. Optional parameter. If this parameter is used the setting will override the default account behaviour specified in the "Label format" setting "Generate customs declarations with orders"}
+@returns(200) Return the PDF file with labels
+@errors {400: Bad Request (Request has missing or invalid parameters and cannot be parsed), 401: Unauthorized, 403: Forbidden (Feature available for OBA accounts only), 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group manifests
 @endpoint POST /manifests
+@desc Manifest eligible orders
 @optional {request: map}
-@returns(201)
-@returns(202)
-@errors {400, 401, 403, 404, 500}
+@returns(201) The Manifest all eligible orders request was successful, and a manifest has been created. The Printable PDF manifest is available for download.
+@returns(202) The Manifest eligible orders request was successful, and a manifest has been created. However, the printable manifest PDF is not yet available. The printable manifest PDF should be accessible later via the Get Manifest endpoint. If it is not available after a reasonable period, please <a href='https://help.parcel.royalmail.com/hc/en-gb/articles/115003806094-Contact-Support' target='_self'>contact support</a> for assistance.
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden (Feature not available), 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /manifests/retry/{manifestIdentifier}
-@required {manifestIdentifier: any}
-@returns(201)
-@returns(202)
-@errors {400, 401, 403, 404, 500}
+@desc Retry manifest
+@required {manifestIdentifier: any # The manifest number returned from the initial ‘Manifest eligible orders’ endpoint call}
+@returns(201) The Retry Manifest request was successful, and a manifest has been created. The printable manifest PDF is available for download.
+@returns(202) The retry request was successfully processed, and a manifest has been created, but the documentation is not yet available. The manifest should be accessible later via the Get Manifest endpoint. If it is not available after a reasonable period, please <a href='https://help.parcel.royalmail.com/hc/en-gb/articles/115003806094-Contact-Support' target='_self'>contact support</a> for assistance.
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden (Feature not available), 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /manifests/{manifestIdentifier}
-@required {manifestIdentifier: any}
-@returns(200)
-@errors {400, 401, 403, 404, 500}
+@desc Get manifest
+@required {manifestIdentifier: any # The manifest number returned from the initial ‘Manifest eligible orders’ endpoint call}
+@returns(200) The Get Manifest request was successfully processed. The manifest details were retrieved, but the Printable PDF Manifest may or may not be available at this time. Please try the Get Manifest endpoint. If it is not available after a reasonable period, please <a href='https://help.parcel.royalmail.com/hc/en-gb/articles/115003806094-Contact-Support' target='_self'>contact support</a> for assistance.
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden (Feature not available), 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group returns
 @endpoint GET /returns/services
-@returns(200)
-@errors {401, 500}
+@desc List available return services
+@returns(200) Lists all available return services for generating return labels
+@errors {401: Unauthorized, 500: Internal Server Error}
 
 @endpoint POST /returns
-@required {body: map}
-@returns(200)
-@errors {400, 401, 500}
+@desc Create a return shipment
+@required {body: map # Return creation request}
+@returns(200) Successfully created return shipment
+@errors {400: Bad Request, 401: Unauthorized, 500: Internal Server Error}
 
 @endgroup
 

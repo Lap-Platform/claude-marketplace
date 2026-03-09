@@ -12,7 +12,7 @@ API version: 5.1.0
 ApiKey Authorization in header | OAuth2
 
 ## Base URL
-https://{yourOktaDomain}
+https://subdomain.okta.com
 
 ## Setup
 1. Set your API key in the appropriate header
@@ -768,90 +768,658 @@ https://{yourOktaDomain}
 | DELETE | /webauthn-registration/api/v1/users/{userId}/enrollments/{authenticatorEnrollmentId} | Delete a WebAuthn preregistration factor |
 | POST | /webauthn-registration/api/v1/users/{userId}/enrollments/{authenticatorEnrollmentId}/mark-error | Assign the fulfillment error status to a WebAuthn preregistration factor |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all users in my Okta org?" -> GET /api/v1/users
-- "How do I create a new user with a password?" -> POST /api/v1/users
-- "How do I deactivate a user account?" -> POST /api/v1/users/{id}/lifecycle/deactivate
-- "How do I reset a user's password?" -> POST /api/v1/users/{id}/lifecycle/reset_password
-- "What apps are assigned to a specific group?" -> GET /api/v1/groups/{groupId}/apps
-- "How do I add a user to a group?" -> PUT /api/v1/groups/{groupId}/users/{userId}
-- "How do I list all applications in my org?" -> GET /api/v1/apps
-- "How do I check the system logs for a specific event?" -> GET /api/v1/logs
-- "How do I create a custom authorization server?" -> POST /api/v1/authorizationServers
-- "How do I add an OAuth scope to an authorization server?" -> POST /api/v1/authorizationServers/{authServerId}/scopes
-- "How do I assign an admin role to a user?" -> POST /api/v1/users/{userId}/roles
-- "How do I suspend a user without deleting them?" -> POST /api/v1/users/{id}/lifecycle/suspend
-- "How do I configure a network zone for IP blocking?" -> POST /api/v1/zones
-- "How do I set up an event hook for user creation?" -> POST /api/v1/eventHooks
-- "How do I rotate signing keys on an authorization server?" -> POST /api/v1/authorizationServers/{authServerId}/credentials/lifecycle/keyRotate
-
-## Response Tips
-
-- **Users/Groups/Apps (list endpoints):** Results are arrays with cursor-based pagination via `after` param; follow `_links.next.href` to get subsequent pages. Default limits vary (users: 200, groups: 200, apps: unlimited). Always check for a `next` link rather than assuming all results arrived.
-- **Lifecycle actions (activate/deactivate/suspend):** Return 200 with the updated object or 204 with no body. A 404 means the resource does not exist or is already in the target state. Check the `status` and `transitioningToStatus` fields to confirm state changes took effect.
-- **System logs:** Returns time-ordered entries. Use `since`/`until` (ISO 8601) for time windows and `filter` (SCIM syntax) for event types. Pagination uses opaque `after` tokens, not numeric offsets. The `sortOrder` default is ASCENDING.
-- **Authorization server resources (claims/scopes/policies/rules):** Nested under `authServerId`. Responses include `_links` for navigating between parent and child resources. Rules have `priority` fields -- lower numbers evaluate first.
-- **Credentials/keys endpoints:** Key responses include `expiresAt`, `kid`, and `x5c` (certificate chain). Always check `status` field (ACTIVE/INACTIVE) -- inactive keys do not participate in signing.
-- **Delete operations:** Consistently return 204 with no body on success. A subsequent GET returning 404 confirms deletion. User deletion requires deactivation first or you get a 400.
-
-## Anomaly Flags
-
-- **429 Too Many Requests on every endpoint:** Surface rate limit headers (`X-Rate-Limit-Limit`, `X-Rate-Limit-Remaining`, `X-Rate-Limit-Reset`) proactively when remaining count drops below 20% of limit. All 705 endpoints can return 429.
-- **User status transitions:** Flag when `transitioningToStatus` is non-null, as the user is mid-lifecycle change. Also flag if `status` is `LOCKED_OUT` or `PASSWORD_EXPIRED` unexpectedly.
-- **Key/certificate expiration:** When `expiresAt` on signing keys or credentials is within 30 days, surface a rotation warning. Check credentials on apps, IdPs, and authorization servers.
-- **Deactivated resources still referenced:** Flag when policies, authenticators, or IdPs have `status: INACTIVE` but are still bound to active apps or auth server policies.
-- **Event hook verification status:** Surface `verificationStatus: UNVERIFIED` on event hooks -- these will not receive events until verified.
-- **Principal rate limit overrides:** When `defaultPercentage` or `defaultConcurrencyPercentage` on principal rate limits are set unusually high (>80%), warn about potential org-wide rate limit starvation.
-- **Agent pool update failures:** Flag `status: Failed` on agent pool updates, as these indicate agents that did not successfully upgrade and may be running outdated versions.
-- **Log stream status:** Alert when log streams are `INACTIVE`, as security events may not be forwarding to SIEM.
-
-## Playbook
-
-### 1. Onboard a New User with App and Group Assignment
-
-1. Create the user: POST /api/v1/users with `profile` (login, email, firstName, lastName) and `credentials.password`. Set `activate=true`.
-2. Assign the user to a group: PUT /api/v1/groups/{groupId}/users/{userId} (returns 204).
-3. Verify group membership: GET /api/v1/users/{id}/groups to confirm the group appears.
-4. Check app access: GET /api/v1/users/{id}/appLinks to confirm apps inherited from the group are visible.
-5. If MFA is required, enroll a factor: POST /api/v1/users/{userId}/factors with the desired `factorType` and `provider`.
-
-### 2. Set Up a Custom Authorization Server with Scopes and Policies
-
-1. Create the authorization server: POST /api/v1/authorizationServers with `name`, `audiences`, and `description`.
-2. Add custom scopes: POST /api/v1/authorizationServers/{authServerId}/scopes with `name` for each scope (e.g., `read:data`, `write:data`).
-3. Add custom claims: POST /api/v1/authorizationServers/{authServerId}/claims with `name`, `value` (Okta Expression Language), and `claimType` (RESOURCE or IDENTITY).
-4. Create an access policy: POST /api/v1/authorizationServers/{authServerId}/policies targeting specific client apps.
-5. Add a policy rule: POST /api/v1/authorizationServers/{authServerId}/policies/{policyId}/rules specifying grant types, scopes, and user/group conditions.
-6. Activate the server: POST /api/v1/authorizationServers/{authServerId}/lifecycle/activate (returns 204).
-
-### 3. Investigate a Security Incident via System Logs
-
-1. Query recent logs: GET /api/v1/logs with `filter=eventType eq "user.session.start"` and `since` set to the incident window.
-2. Narrow by suspect user: Add `&filter=actor.id eq "{userId}"` or `&q=suspect@example.com`.
-3. Check for suspicious IPs: Look for `client.ipAddress` in results and cross-reference with network zones: GET /api/v1/zones.
-4. Review user sessions: GET /api/v1/users/{userId}/sessions -- revoke if compromised: DELETE /api/v1/users/{userId}/sessions with `oauthTokens=true`.
-5. If needed, suspend the user: POST /api/v1/users/{id}/lifecycle/suspend. This preserves the account but blocks access.
-6. Revoke all grants: DELETE /api/v1/users/{userId}/grants to invalidate outstanding OAuth tokens.
-
-### 4. Offboard a Departing Employee
-
-1. Deactivate the user: POST /api/v1/users/{id}/lifecycle/deactivate (must happen before deletion).
-2. Revoke all active sessions: DELETE /api/v1/users/{userId}/sessions with `oauthTokens=true` and `forgetDevices=true`.
-3. Remove app-specific assignments: For each app, DELETE /api/v1/apps/{appId}/users/{userId} with `sendEmail=false`.
-4. Remove from groups: For each group, DELETE /api/v1/groups/{groupId}/users/{userId}.
-5. Optionally delete the user permanently: DELETE /api/v1/users/{id} with `sendEmail=false`. This is irreversible.
-
-### 5. Rotate Application Credentials
-
-1. List current keys: GET /api/v1/apps/{appId}/credentials/keys to see active signing keys and their `expiresAt` dates.
-2. Generate a new key: POST /api/v1/apps/{appId}/credentials/keys/generate with `validityYears` (e.g., 2).
-3. Update the app to use the new key: PUT /api/v1/apps/{appId} referencing the new `kid` in the credentials section.
-4. For client secrets (OIDC apps): POST /api/v1/apps/{appId}/credentials/secrets to create a new secret, then distribute to the app.
-5. Deactivate the old secret: POST /api/v1/apps/{appId}/credentials/secrets/{secretId}/lifecycle/deactivate.
-6. After confirming no traffic on the old secret, delete it: DELETE /api/v1/apps/{appId}/credentials/secrets/{secretId}.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all app-authenticator-configuration?" -> GET /.well-known/app-authenticator-configuration
+- "List all apple-app-site-association?" -> GET /.well-known/apple-app-site-association
+- "List all assetlinks.json?" -> GET /.well-known/assetlinks.json
+- "List all okta-organization?" -> GET /.well-known/okta-organization
+- "List all ssf-configuration?" -> GET /.well-known/ssf-configuration
+- "List all webauthn?" -> GET /.well-known/webauthn
+- "List all agentPools?" -> GET /api/v1/agentPools
+- "List all updates?" -> GET /api/v1/agentPools/{poolId}/updates
+- "Create a update?" -> POST /api/v1/agentPools/{poolId}/updates
+- "List all settings?" -> GET /api/v1/agentPools/{poolId}/updates/settings
+- "Create a setting?" -> POST /api/v1/agentPools/{poolId}/updates/settings
+- "Get update details?" -> GET /api/v1/agentPools/{poolId}/updates/{updateId}
+- "Delete a update?" -> DELETE /api/v1/agentPools/{poolId}/updates/{updateId}
+- "Create a activate?" -> POST /api/v1/agentPools/{poolId}/updates/{updateId}/activate
+- "Create a deactivate?" -> POST /api/v1/agentPools/{poolId}/updates/{updateId}/deactivate
+- "Create a pause?" -> POST /api/v1/agentPools/{poolId}/updates/{updateId}/pause
+- "Create a resume?" -> POST /api/v1/agentPools/{poolId}/updates/{updateId}/resume
+- "Create a retry?" -> POST /api/v1/agentPools/{poolId}/updates/{updateId}/retry
+- "Create a stop?" -> POST /api/v1/agentPools/{poolId}/updates/{updateId}/stop
+- "List all api-tokens?" -> GET /api/v1/api-tokens
+- "Get api-token details?" -> GET /api/v1/api-tokens/{apiTokenId}
+- "Update a api-token?" -> PUT /api/v1/api-tokens/{apiTokenId}
+- "Delete a api-token?" -> DELETE /api/v1/api-tokens/{apiTokenId}
+- "Search apps?" -> GET /api/v1/apps
+- "Create a app?" -> POST /api/v1/apps
+- "Get app details?" -> GET /api/v1/apps/{appId}
+- "Update a app?" -> PUT /api/v1/apps/{appId}
+- "Delete a app?" -> DELETE /api/v1/apps/{appId}
+- "List all default?" -> GET /api/v1/apps/{appId}/connections/default
+- "Create a default?" -> POST /api/v1/apps/{appId}/connections/default
+- "List all jwks?" -> GET /api/v1/apps/{appId}/connections/default/jwks
+- "Create a activate?" -> POST /api/v1/apps/{appId}/connections/default/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/apps/{appId}/connections/default/lifecycle/deactivate
+- "List all csrs?" -> GET /api/v1/apps/{appId}/credentials/csrs
+- "Create a csr?" -> POST /api/v1/apps/{appId}/credentials/csrs
+- "Get csr details?" -> GET /api/v1/apps/{appId}/credentials/csrs/{csrId}
+- "Delete a csr?" -> DELETE /api/v1/apps/{appId}/credentials/csrs/{csrId}
+- "Create a publish?" -> POST /api/v1/apps/{appId}/credentials/csrs/{csrId}/lifecycle/publish
+- "List all jwks?" -> GET /api/v1/apps/{appId}/credentials/jwks
+- "Create a jwk?" -> POST /api/v1/apps/{appId}/credentials/jwks
+- "Get jwk details?" -> GET /api/v1/apps/{appId}/credentials/jwks/{keyId}
+- "Delete a jwk?" -> DELETE /api/v1/apps/{appId}/credentials/jwks/{keyId}
+- "Create a activate?" -> POST /api/v1/apps/{appId}/credentials/jwks/{keyId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/apps/{appId}/credentials/jwks/{keyId}/lifecycle/deactivate
+- "List all keys?" -> GET /api/v1/apps/{appId}/credentials/keys
+- "Create a generate?" -> POST /api/v1/apps/{appId}/credentials/keys/generate
+- "Get key details?" -> GET /api/v1/apps/{appId}/credentials/keys/{keyId}
+- "Create a clone?" -> POST /api/v1/apps/{appId}/credentials/keys/{keyId}/clone
+- "List all secrets?" -> GET /api/v1/apps/{appId}/credentials/secrets
+- "Create a secret?" -> POST /api/v1/apps/{appId}/credentials/secrets
+- "Get secret details?" -> GET /api/v1/apps/{appId}/credentials/secrets/{secretId}
+- "Delete a secret?" -> DELETE /api/v1/apps/{appId}/credentials/secrets/{secretId}
+- "Create a activate?" -> POST /api/v1/apps/{appId}/credentials/secrets/{secretId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/apps/{appId}/credentials/secrets/{secretId}/lifecycle/deactivate
+- "List all connections?" -> GET /api/v1/apps/{appId}/cwo/connections
+- "Create a connection?" -> POST /api/v1/apps/{appId}/cwo/connections
+- "Get connection details?" -> GET /api/v1/apps/{appId}/cwo/connections/{connectionId}
+- "Partially update a connection?" -> PATCH /api/v1/apps/{appId}/cwo/connections/{connectionId}
+- "Delete a connection?" -> DELETE /api/v1/apps/{appId}/cwo/connections/{connectionId}
+- "List all features?" -> GET /api/v1/apps/{appId}/features
+- "Get feature details?" -> GET /api/v1/apps/{appId}/features/{featureName}
+- "Update a feature?" -> PUT /api/v1/apps/{appId}/features/{featureName}
+- "List all federated-claims?" -> GET /api/v1/apps/{appId}/federated-claims
+- "Create a federated-claim?" -> POST /api/v1/apps/{appId}/federated-claims
+- "Get federated-claim details?" -> GET /api/v1/apps/{appId}/federated-claims/{claimId}
+- "Update a federated-claim?" -> PUT /api/v1/apps/{appId}/federated-claims/{claimId}
+- "Delete a federated-claim?" -> DELETE /api/v1/apps/{appId}/federated-claims/{claimId}
+- "List all grants?" -> GET /api/v1/apps/{appId}/grants
+- "Create a grant?" -> POST /api/v1/apps/{appId}/grants
+- "Get grant details?" -> GET /api/v1/apps/{appId}/grants/{grantId}
+- "Delete a grant?" -> DELETE /api/v1/apps/{appId}/grants/{grantId}
+- "List all mappings?" -> GET /api/v1/apps/{appId}/group-push/mappings
+- "Create a mapping?" -> POST /api/v1/apps/{appId}/group-push/mappings
+- "Get mapping details?" -> GET /api/v1/apps/{appId}/group-push/mappings/{mappingId}
+- "Partially update a mapping?" -> PATCH /api/v1/apps/{appId}/group-push/mappings/{mappingId}
+- "Delete a mapping?" -> DELETE /api/v1/apps/{appId}/group-push/mappings/{mappingId}
+- "Search groups?" -> GET /api/v1/apps/{appId}/groups
+- "Get group details?" -> GET /api/v1/apps/{appId}/groups/{groupId}
+- "Update a group?" -> PUT /api/v1/apps/{appId}/groups/{groupId}
+- "Partially update a group?" -> PATCH /api/v1/apps/{appId}/groups/{groupId}
+- "Delete a group?" -> DELETE /api/v1/apps/{appId}/groups/{groupId}
+- "Create a activate?" -> POST /api/v1/apps/{appId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/apps/{appId}/lifecycle/deactivate
+- "Create a logo?" -> POST /api/v1/apps/{appId}/logo
+- "Update a policy?" -> PUT /api/v1/apps/{appId}/policies/{policyId}
+- "List all metadata?" -> GET /api/v1/apps/{appId}/sso/saml/metadata
+- "List all tokens?" -> GET /api/v1/apps/{appId}/tokens
+- "Get token details?" -> GET /api/v1/apps/{appId}/tokens/{tokenId}
+- "Delete a token?" -> DELETE /api/v1/apps/{appId}/tokens/{tokenId}
+- "Search users?" -> GET /api/v1/apps/{appId}/users
+- "Create a user?" -> POST /api/v1/apps/{appId}/users
+- "Get user details?" -> GET /api/v1/apps/{appId}/users/{userId}
+- "Delete a user?" -> DELETE /api/v1/apps/{appId}/users/{userId}
+- "Create a callback?" -> POST /api/v1/apps/{appName}/{appId}/oauth2/callback
+- "List all authenticators?" -> GET /api/v1/authenticators
+- "Create a authenticator?" -> POST /api/v1/authenticators
+- "Get authenticator details?" -> GET /api/v1/authenticators/{authenticatorId}
+- "Update a authenticator?" -> PUT /api/v1/authenticators/{authenticatorId}
+- "List all aaguids?" -> GET /api/v1/authenticators/{authenticatorId}/aaguids
+- "Create a aaguid?" -> POST /api/v1/authenticators/{authenticatorId}/aaguids
+- "Get aaguid details?" -> GET /api/v1/authenticators/{authenticatorId}/aaguids/{aaguid}
+- "Update a aaguid?" -> PUT /api/v1/authenticators/{authenticatorId}/aaguids/{aaguid}
+- "Partially update a aaguid?" -> PATCH /api/v1/authenticators/{authenticatorId}/aaguids/{aaguid}
+- "Delete a aaguid?" -> DELETE /api/v1/authenticators/{authenticatorId}/aaguids/{aaguid}
+- "Create a activate?" -> POST /api/v1/authenticators/{authenticatorId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/authenticators/{authenticatorId}/lifecycle/deactivate
+- "List all methods?" -> GET /api/v1/authenticators/{authenticatorId}/methods
+- "Get method details?" -> GET /api/v1/authenticators/{authenticatorId}/methods/{methodType}
+- "Update a method?" -> PUT /api/v1/authenticators/{authenticatorId}/methods/{methodType}
+- "Create a activate?" -> POST /api/v1/authenticators/{authenticatorId}/methods/{methodType}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/authenticators/{authenticatorId}/methods/{methodType}/lifecycle/deactivate
+- "Search authorizationServers?" -> GET /api/v1/authorizationServers
+- "Create a authorizationServer?" -> POST /api/v1/authorizationServers
+- "Get authorizationServer details?" -> GET /api/v1/authorizationServers/{authServerId}
+- "Update a authorizationServer?" -> PUT /api/v1/authorizationServers/{authServerId}
+- "Delete a authorizationServer?" -> DELETE /api/v1/authorizationServers/{authServerId}
+- "Search associatedServers?" -> GET /api/v1/authorizationServers/{authServerId}/associatedServers
+- "Create a associatedServer?" -> POST /api/v1/authorizationServers/{authServerId}/associatedServers
+- "Delete a associatedServer?" -> DELETE /api/v1/authorizationServers/{authServerId}/associatedServers/{associatedServerId}
+- "List all claims?" -> GET /api/v1/authorizationServers/{authServerId}/claims
+- "Create a claim?" -> POST /api/v1/authorizationServers/{authServerId}/claims
+- "Get claim details?" -> GET /api/v1/authorizationServers/{authServerId}/claims/{claimId}
+- "Update a claim?" -> PUT /api/v1/authorizationServers/{authServerId}/claims/{claimId}
+- "Delete a claim?" -> DELETE /api/v1/authorizationServers/{authServerId}/claims/{claimId}
+- "List all clients?" -> GET /api/v1/authorizationServers/{authServerId}/clients
+- "List all tokens?" -> GET /api/v1/authorizationServers/{authServerId}/clients/{clientId}/tokens
+- "Get token details?" -> GET /api/v1/authorizationServers/{authServerId}/clients/{clientId}/tokens/{tokenId}
+- "Delete a token?" -> DELETE /api/v1/authorizationServers/{authServerId}/clients/{clientId}/tokens/{tokenId}
+- "List all keys?" -> GET /api/v1/authorizationServers/{authServerId}/credentials/keys
+- "Get key details?" -> GET /api/v1/authorizationServers/{authServerId}/credentials/keys/{keyId}
+- "Create a keyRotate?" -> POST /api/v1/authorizationServers/{authServerId}/credentials/lifecycle/keyRotate
+- "Create a activate?" -> POST /api/v1/authorizationServers/{authServerId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/authorizationServers/{authServerId}/lifecycle/deactivate
+- "List all policies?" -> GET /api/v1/authorizationServers/{authServerId}/policies
+- "Create a policy?" -> POST /api/v1/authorizationServers/{authServerId}/policies
+- "Get policy details?" -> GET /api/v1/authorizationServers/{authServerId}/policies/{policyId}
+- "Update a policy?" -> PUT /api/v1/authorizationServers/{authServerId}/policies/{policyId}
+- "Delete a policy?" -> DELETE /api/v1/authorizationServers/{authServerId}/policies/{policyId}
+- "Create a activate?" -> POST /api/v1/authorizationServers/{authServerId}/policies/{policyId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/authorizationServers/{authServerId}/policies/{policyId}/lifecycle/deactivate
+- "List all rules?" -> GET /api/v1/authorizationServers/{authServerId}/policies/{policyId}/rules
+- "Create a rule?" -> POST /api/v1/authorizationServers/{authServerId}/policies/{policyId}/rules
+- "Get rule details?" -> GET /api/v1/authorizationServers/{authServerId}/policies/{policyId}/rules/{ruleId}
+- "Update a rule?" -> PUT /api/v1/authorizationServers/{authServerId}/policies/{policyId}/rules/{ruleId}
+- "Delete a rule?" -> DELETE /api/v1/authorizationServers/{authServerId}/policies/{policyId}/rules/{ruleId}
+- "Create a activate?" -> POST /api/v1/authorizationServers/{authServerId}/policies/{policyId}/rules/{ruleId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/authorizationServers/{authServerId}/policies/{policyId}/rules/{ruleId}/lifecycle/deactivate
+- "List all keys?" -> GET /api/v1/authorizationServers/{authServerId}/resourceservercredentials/keys
+- "Create a key?" -> POST /api/v1/authorizationServers/{authServerId}/resourceservercredentials/keys
+- "Get key details?" -> GET /api/v1/authorizationServers/{authServerId}/resourceservercredentials/keys/{keyId}
+- "Delete a key?" -> DELETE /api/v1/authorizationServers/{authServerId}/resourceservercredentials/keys/{keyId}
+- "Create a activate?" -> POST /api/v1/authorizationServers/{authServerId}/resourceservercredentials/keys/{keyId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/authorizationServers/{authServerId}/resourceservercredentials/keys/{keyId}/lifecycle/deactivate
+- "Search scopes?" -> GET /api/v1/authorizationServers/{authServerId}/scopes
+- "Create a scope?" -> POST /api/v1/authorizationServers/{authServerId}/scopes
+- "Get scope details?" -> GET /api/v1/authorizationServers/{authServerId}/scopes/{scopeId}
+- "Update a scope?" -> PUT /api/v1/authorizationServers/{authServerId}/scopes/{scopeId}
+- "Delete a scope?" -> DELETE /api/v1/authorizationServers/{authServerId}/scopes/{scopeId}
+- "List all behaviors?" -> GET /api/v1/behaviors
+- "Create a behavior?" -> POST /api/v1/behaviors
+- "Get behavior details?" -> GET /api/v1/behaviors/{behaviorId}
+- "Update a behavior?" -> PUT /api/v1/behaviors/{behaviorId}
+- "Delete a behavior?" -> DELETE /api/v1/behaviors/{behaviorId}
+- "Create a activate?" -> POST /api/v1/behaviors/{behaviorId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/behaviors/{behaviorId}/lifecycle/deactivate
+- "Search brands?" -> GET /api/v1/brands
+- "Create a brand?" -> POST /api/v1/brands
+- "Get brand details?" -> GET /api/v1/brands/{brandId}
+- "Update a brand?" -> PUT /api/v1/brands/{brandId}
+- "Delete a brand?" -> DELETE /api/v1/brands/{brandId}
+- "List all domains?" -> GET /api/v1/brands/{brandId}/domains
+- "List all error?" -> GET /api/v1/brands/{brandId}/pages/error
+- "List all customized?" -> GET /api/v1/brands/{brandId}/pages/error/customized
+- "List all default?" -> GET /api/v1/brands/{brandId}/pages/error/default
+- "List all preview?" -> GET /api/v1/brands/{brandId}/pages/error/preview
+- "List all sign-in?" -> GET /api/v1/brands/{brandId}/pages/sign-in
+- "List all customized?" -> GET /api/v1/brands/{brandId}/pages/sign-in/customized
+- "List all default?" -> GET /api/v1/brands/{brandId}/pages/sign-in/default
+- "List all preview?" -> GET /api/v1/brands/{brandId}/pages/sign-in/preview
+- "List all widget-versions?" -> GET /api/v1/brands/{brandId}/pages/sign-in/widget-versions
+- "List all customized?" -> GET /api/v1/brands/{brandId}/pages/sign-out/customized
+- "List all email?" -> GET /api/v1/brands/{brandId}/templates/email
+- "Get email details?" -> GET /api/v1/brands/{brandId}/templates/email/{templateName}
+- "List all customizations?" -> GET /api/v1/brands/{brandId}/templates/email/{templateName}/customizations
+- "Create a customization?" -> POST /api/v1/brands/{brandId}/templates/email/{templateName}/customizations
+- "Get customization details?" -> GET /api/v1/brands/{brandId}/templates/email/{templateName}/customizations/{customizationId}
+- "Update a customization?" -> PUT /api/v1/brands/{brandId}/templates/email/{templateName}/customizations/{customizationId}
+- "Delete a customization?" -> DELETE /api/v1/brands/{brandId}/templates/email/{templateName}/customizations/{customizationId}
+- "List all preview?" -> GET /api/v1/brands/{brandId}/templates/email/{templateName}/customizations/{customizationId}/preview
+- "List all default-content?" -> GET /api/v1/brands/{brandId}/templates/email/{templateName}/default-content
+- "List all preview?" -> GET /api/v1/brands/{brandId}/templates/email/{templateName}/default-content/preview
+- "List all settings?" -> GET /api/v1/brands/{brandId}/templates/email/{templateName}/settings
+- "Create a test?" -> POST /api/v1/brands/{brandId}/templates/email/{templateName}/test
+- "List all themes?" -> GET /api/v1/brands/{brandId}/themes
+- "Get theme details?" -> GET /api/v1/brands/{brandId}/themes/{themeId}
+- "Update a theme?" -> PUT /api/v1/brands/{brandId}/themes/{themeId}
+- "Create a background-image?" -> POST /api/v1/brands/{brandId}/themes/{themeId}/background-image
+- "Create a favicon?" -> POST /api/v1/brands/{brandId}/themes/{themeId}/favicon
+- "Create a logo?" -> POST /api/v1/brands/{brandId}/themes/{themeId}/logo
+- "List all well-known-uris?" -> GET /api/v1/brands/{brandId}/well-known-uris
+- "Get well-known-uris details?" -> GET /api/v1/brands/{brandId}/well-known-uris/{path}
+- "List all customized?" -> GET /api/v1/brands/{brandId}/well-known-uris/{path}/customized
+- "List all captchas?" -> GET /api/v1/captchas
+- "Create a captcha?" -> POST /api/v1/captchas
+- "Get captcha details?" -> GET /api/v1/captchas/{captchaId}
+- "Update a captcha?" -> PUT /api/v1/captchas/{captchaId}
+- "Delete a captcha?" -> DELETE /api/v1/captchas/{captchaId}
+- "List all device-assurances?" -> GET /api/v1/device-assurances
+- "Create a device-assurance?" -> POST /api/v1/device-assurances
+- "Get device-assurance details?" -> GET /api/v1/device-assurances/{deviceAssuranceId}
+- "Update a device-assurance?" -> PUT /api/v1/device-assurances/{deviceAssuranceId}
+- "Delete a device-assurance?" -> DELETE /api/v1/device-assurances/{deviceAssuranceId}
+- "List all device-integrations?" -> GET /api/v1/device-integrations
+- "Get device-integration details?" -> GET /api/v1/device-integrations/{deviceIntegrationId}
+- "Create a activate?" -> POST /api/v1/device-integrations/{deviceIntegrationId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/device-integrations/{deviceIntegrationId}/lifecycle/deactivate
+- "List all device-posture-checks?" -> GET /api/v1/device-posture-checks
+- "Create a device-posture-check?" -> POST /api/v1/device-posture-checks
+- "List all default?" -> GET /api/v1/device-posture-checks/default
+- "Get device-posture-check details?" -> GET /api/v1/device-posture-checks/{postureCheckId}
+- "Update a device-posture-check?" -> PUT /api/v1/device-posture-checks/{postureCheckId}
+- "Delete a device-posture-check?" -> DELETE /api/v1/device-posture-checks/{postureCheckId}
+- "Search devices?" -> GET /api/v1/devices
+- "Get device details?" -> GET /api/v1/devices/{deviceId}
+- "Delete a device?" -> DELETE /api/v1/devices/{deviceId}
+- "Create a activate?" -> POST /api/v1/devices/{deviceId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/devices/{deviceId}/lifecycle/deactivate
+- "Create a suspend?" -> POST /api/v1/devices/{deviceId}/lifecycle/suspend
+- "Create a unsuspend?" -> POST /api/v1/devices/{deviceId}/lifecycle/unsuspend
+- "List all users?" -> GET /api/v1/devices/{deviceId}/users
+- "Create a modify?" -> POST /api/v1/directories/{appInstanceId}/groups/modify
+- "List all domains?" -> GET /api/v1/domains
+- "Create a domain?" -> POST /api/v1/domains
+- "Get domain details?" -> GET /api/v1/domains/{domainId}
+- "Update a domain?" -> PUT /api/v1/domains/{domainId}
+- "Delete a domain?" -> DELETE /api/v1/domains/{domainId}
+- "Create a verify?" -> POST /api/v1/domains/{domainId}/verify
+- "List all email-domains?" -> GET /api/v1/email-domains
+- "Create a email-domain?" -> POST /api/v1/email-domains
+- "Get email-domain details?" -> GET /api/v1/email-domains/{emailDomainId}
+- "Update a email-domain?" -> PUT /api/v1/email-domains/{emailDomainId}
+- "Delete a email-domain?" -> DELETE /api/v1/email-domains/{emailDomainId}
+- "Create a verify?" -> POST /api/v1/email-domains/{emailDomainId}/verify
+- "List all email-servers?" -> GET /api/v1/email-servers
+- "Create a email-server?" -> POST /api/v1/email-servers
+- "Get email-server details?" -> GET /api/v1/email-servers/{emailServerId}
+- "Partially update a email-server?" -> PATCH /api/v1/email-servers/{emailServerId}
+- "Delete a email-server?" -> DELETE /api/v1/email-servers/{emailServerId}
+- "Create a test?" -> POST /api/v1/email-servers/{emailServerId}/test
+- "List all eventHooks?" -> GET /api/v1/eventHooks
+- "Create a eventHook?" -> POST /api/v1/eventHooks
+- "Get eventHook details?" -> GET /api/v1/eventHooks/{eventHookId}
+- "Update a eventHook?" -> PUT /api/v1/eventHooks/{eventHookId}
+- "Delete a eventHook?" -> DELETE /api/v1/eventHooks/{eventHookId}
+- "Create a activate?" -> POST /api/v1/eventHooks/{eventHookId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/eventHooks/{eventHookId}/lifecycle/deactivate
+- "Create a verify?" -> POST /api/v1/eventHooks/{eventHookId}/lifecycle/verify
+- "List all features?" -> GET /api/v1/features
+- "Get feature details?" -> GET /api/v1/features/{featureId}
+- "List all dependencies?" -> GET /api/v1/features/{featureId}/dependencies
+- "List all dependents?" -> GET /api/v1/features/{featureId}/dependents
+- "Get first-party-app-setting details?" -> GET /api/v1/first-party-app-settings/{appName}
+- "Update a first-party-app-setting?" -> PUT /api/v1/first-party-app-settings/{appName}
+- "Search groups?" -> GET /api/v1/groups
+- "Create a group?" -> POST /api/v1/groups
+- "Search rules?" -> GET /api/v1/groups/rules
+- "Create a rule?" -> POST /api/v1/groups/rules
+- "Get rule details?" -> GET /api/v1/groups/rules/{groupRuleId}
+- "Update a rule?" -> PUT /api/v1/groups/rules/{groupRuleId}
+- "Delete a rule?" -> DELETE /api/v1/groups/rules/{groupRuleId}
+- "Create a activate?" -> POST /api/v1/groups/rules/{groupRuleId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/groups/rules/{groupRuleId}/lifecycle/deactivate
+- "Get group details?" -> GET /api/v1/groups/{groupId}
+- "Update a group?" -> PUT /api/v1/groups/{groupId}
+- "Delete a group?" -> DELETE /api/v1/groups/{groupId}
+- "List all apps?" -> GET /api/v1/groups/{groupId}/apps
+- "Search owners?" -> GET /api/v1/groups/{groupId}/owners
+- "Create a owner?" -> POST /api/v1/groups/{groupId}/owners
+- "Delete a owner?" -> DELETE /api/v1/groups/{groupId}/owners/{ownerId}
+- "List all roles?" -> GET /api/v1/groups/{groupId}/roles
+- "Create a role?" -> POST /api/v1/groups/{groupId}/roles
+- "Get role details?" -> GET /api/v1/groups/{groupId}/roles/{roleAssignmentId}
+- "Delete a role?" -> DELETE /api/v1/groups/{groupId}/roles/{roleAssignmentId}
+- "List all apps?" -> GET /api/v1/groups/{groupId}/roles/{roleAssignmentId}/targets/catalog/apps
+- "Update a app?" -> PUT /api/v1/groups/{groupId}/roles/{roleAssignmentId}/targets/catalog/apps/{appName}
+- "Delete a app?" -> DELETE /api/v1/groups/{groupId}/roles/{roleAssignmentId}/targets/catalog/apps/{appName}
+- "Update a app?" -> PUT /api/v1/groups/{groupId}/roles/{roleAssignmentId}/targets/catalog/apps/{appName}/{appId}
+- "Delete a app?" -> DELETE /api/v1/groups/{groupId}/roles/{roleAssignmentId}/targets/catalog/apps/{appName}/{appId}
+- "List all groups?" -> GET /api/v1/groups/{groupId}/roles/{roleAssignmentId}/targets/groups
+- "Update a group?" -> PUT /api/v1/groups/{groupId}/roles/{roleAssignmentId}/targets/groups/{targetGroupId}
+- "Delete a group?" -> DELETE /api/v1/groups/{groupId}/roles/{roleAssignmentId}/targets/groups/{targetGroupId}
+- "List all users?" -> GET /api/v1/groups/{groupId}/users
+- "Update a user?" -> PUT /api/v1/groups/{groupId}/users/{userId}
+- "Delete a user?" -> DELETE /api/v1/groups/{groupId}/users/{userId}
+- "List all hook-keys?" -> GET /api/v1/hook-keys
+- "Create a hook-key?" -> POST /api/v1/hook-keys
+- "Get public details?" -> GET /api/v1/hook-keys/public/{keyId}
+- "Get hook-key details?" -> GET /api/v1/hook-keys/{id}
+- "Update a hook-key?" -> PUT /api/v1/hook-keys/{id}
+- "Delete a hook-key?" -> DELETE /api/v1/hook-keys/{id}
+- "List all users?" -> GET /api/v1/iam/assignees/users
+- "List all bundles?" -> GET /api/v1/iam/governance/bundles
+- "Create a bundle?" -> POST /api/v1/iam/governance/bundles
+- "Get bundle details?" -> GET /api/v1/iam/governance/bundles/{bundleId}
+- "Update a bundle?" -> PUT /api/v1/iam/governance/bundles/{bundleId}
+- "Delete a bundle?" -> DELETE /api/v1/iam/governance/bundles/{bundleId}
+- "List all entitlements?" -> GET /api/v1/iam/governance/bundles/{bundleId}/entitlements
+- "List all values?" -> GET /api/v1/iam/governance/bundles/{bundleId}/entitlements/{entitlementId}/values
+- "List all optIn?" -> GET /api/v1/iam/governance/optIn
+- "Create a optIn?" -> POST /api/v1/iam/governance/optIn
+- "Create a optOut?" -> POST /api/v1/iam/governance/optOut
+- "List all resource-sets?" -> GET /api/v1/iam/resource-sets
+- "Create a resource-set?" -> POST /api/v1/iam/resource-sets
+- "Get resource-set details?" -> GET /api/v1/iam/resource-sets/{resourceSetIdOrLabel}
+- "Update a resource-set?" -> PUT /api/v1/iam/resource-sets/{resourceSetIdOrLabel}
+- "Delete a resource-set?" -> DELETE /api/v1/iam/resource-sets/{resourceSetIdOrLabel}
+- "List all bindings?" -> GET /api/v1/iam/resource-sets/{resourceSetIdOrLabel}/bindings
+- "Create a binding?" -> POST /api/v1/iam/resource-sets/{resourceSetIdOrLabel}/bindings
+- "Get binding details?" -> GET /api/v1/iam/resource-sets/{resourceSetIdOrLabel}/bindings/{roleIdOrLabel}
+- "Delete a binding?" -> DELETE /api/v1/iam/resource-sets/{resourceSetIdOrLabel}/bindings/{roleIdOrLabel}
+- "List all members?" -> GET /api/v1/iam/resource-sets/{resourceSetIdOrLabel}/bindings/{roleIdOrLabel}/members
+- "Get member details?" -> GET /api/v1/iam/resource-sets/{resourceSetIdOrLabel}/bindings/{roleIdOrLabel}/members/{memberId}
+- "Delete a member?" -> DELETE /api/v1/iam/resource-sets/{resourceSetIdOrLabel}/bindings/{roleIdOrLabel}/members/{memberId}
+- "List all resources?" -> GET /api/v1/iam/resource-sets/{resourceSetIdOrLabel}/resources
+- "Create a resource?" -> POST /api/v1/iam/resource-sets/{resourceSetIdOrLabel}/resources
+- "Get resource details?" -> GET /api/v1/iam/resource-sets/{resourceSetIdOrLabel}/resources/{resourceId}
+- "Update a resource?" -> PUT /api/v1/iam/resource-sets/{resourceSetIdOrLabel}/resources/{resourceId}
+- "Delete a resource?" -> DELETE /api/v1/iam/resource-sets/{resourceSetIdOrLabel}/resources/{resourceId}
+- "List all roles?" -> GET /api/v1/iam/roles
+- "Create a role?" -> POST /api/v1/iam/roles
+- "Get role details?" -> GET /api/v1/iam/roles/{roleIdOrLabel}
+- "Update a role?" -> PUT /api/v1/iam/roles/{roleIdOrLabel}
+- "Delete a role?" -> DELETE /api/v1/iam/roles/{roleIdOrLabel}
+- "List all permissions?" -> GET /api/v1/iam/roles/{roleIdOrLabel}/permissions
+- "Get permission details?" -> GET /api/v1/iam/roles/{roleIdOrLabel}/permissions/{permissionType}
+- "Update a permission?" -> PUT /api/v1/iam/roles/{roleIdOrLabel}/permissions/{permissionType}
+- "Delete a permission?" -> DELETE /api/v1/iam/roles/{roleIdOrLabel}/permissions/{permissionType}
+- "List all sessions?" -> GET /api/v1/identity-sources/{identitySourceId}/sessions
+- "Create a session?" -> POST /api/v1/identity-sources/{identitySourceId}/sessions
+- "Get session details?" -> GET /api/v1/identity-sources/{identitySourceId}/sessions/{sessionId}
+- "Delete a session?" -> DELETE /api/v1/identity-sources/{identitySourceId}/sessions/{sessionId}
+- "Create a bulk-delete?" -> POST /api/v1/identity-sources/{identitySourceId}/sessions/{sessionId}/bulk-delete
+- "Create a bulk-upsert?" -> POST /api/v1/identity-sources/{identitySourceId}/sessions/{sessionId}/bulk-upsert
+- "Create a start-import?" -> POST /api/v1/identity-sources/{identitySourceId}/sessions/{sessionId}/start-import
+- "Search idps?" -> GET /api/v1/idps
+- "Create a idp?" -> POST /api/v1/idps
+- "List all keys?" -> GET /api/v1/idps/credentials/keys
+- "Create a key?" -> POST /api/v1/idps/credentials/keys
+- "Get key details?" -> GET /api/v1/idps/credentials/keys/{kid}
+- "Update a key?" -> PUT /api/v1/idps/credentials/keys/{kid}
+- "Delete a key?" -> DELETE /api/v1/idps/credentials/keys/{kid}
+- "Get idp details?" -> GET /api/v1/idps/{idpId}
+- "Update a idp?" -> PUT /api/v1/idps/{idpId}
+- "Delete a idp?" -> DELETE /api/v1/idps/{idpId}
+- "List all csrs?" -> GET /api/v1/idps/{idpId}/credentials/csrs
+- "Create a csr?" -> POST /api/v1/idps/{idpId}/credentials/csrs
+- "Get csr details?" -> GET /api/v1/idps/{idpId}/credentials/csrs/{idpCsrId}
+- "Delete a csr?" -> DELETE /api/v1/idps/{idpId}/credentials/csrs/{idpCsrId}
+- "Create a publish?" -> POST /api/v1/idps/{idpId}/credentials/csrs/{idpCsrId}/lifecycle/publish
+- "List all keys?" -> GET /api/v1/idps/{idpId}/credentials/keys
+- "List all active?" -> GET /api/v1/idps/{idpId}/credentials/keys/active
+- "Create a generate?" -> POST /api/v1/idps/{idpId}/credentials/keys/generate
+- "Get key details?" -> GET /api/v1/idps/{idpId}/credentials/keys/{kid}
+- "Create a clone?" -> POST /api/v1/idps/{idpId}/credentials/keys/{kid}/clone
+- "Create a activate?" -> POST /api/v1/idps/{idpId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/idps/{idpId}/lifecycle/deactivate
+- "Search users?" -> GET /api/v1/idps/{idpId}/users
+- "Get user details?" -> GET /api/v1/idps/{idpId}/users/{userId}
+- "Delete a user?" -> DELETE /api/v1/idps/{idpId}/users/{userId}
+- "List all tokens?" -> GET /api/v1/idps/{idpId}/users/{userId}/credentials/tokens
+- "List all inlineHooks?" -> GET /api/v1/inlineHooks
+- "Create a inlineHook?" -> POST /api/v1/inlineHooks
+- "Get inlineHook details?" -> GET /api/v1/inlineHooks/{inlineHookId}
+- "Update a inlineHook?" -> PUT /api/v1/inlineHooks/{inlineHookId}
+- "Delete a inlineHook?" -> DELETE /api/v1/inlineHooks/{inlineHookId}
+- "Create a execute?" -> POST /api/v1/inlineHooks/{inlineHookId}/execute
+- "Create a activate?" -> POST /api/v1/inlineHooks/{inlineHookId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/inlineHooks/{inlineHookId}/lifecycle/deactivate
+- "List all logStreams?" -> GET /api/v1/logStreams
+- "Create a logStream?" -> POST /api/v1/logStreams
+- "Get logStream details?" -> GET /api/v1/logStreams/{logStreamId}
+- "Update a logStream?" -> PUT /api/v1/logStreams/{logStreamId}
+- "Delete a logStream?" -> DELETE /api/v1/logStreams/{logStreamId}
+- "Create a activate?" -> POST /api/v1/logStreams/{logStreamId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/logStreams/{logStreamId}/lifecycle/deactivate
+- "Search logs?" -> GET /api/v1/logs
+- "List all mappings?" -> GET /api/v1/mappings
+- "Get mapping details?" -> GET /api/v1/mappings/{mappingId}
+- "List all default?" -> GET /api/v1/meta/schemas/apps/{appId}/default
+- "Create a default?" -> POST /api/v1/meta/schemas/apps/{appId}/default
+- "List all default?" -> GET /api/v1/meta/schemas/group/default
+- "Create a default?" -> POST /api/v1/meta/schemas/group/default
+- "List all logStream?" -> GET /api/v1/meta/schemas/logStream
+- "Get logStream details?" -> GET /api/v1/meta/schemas/logStream/{logStreamType}
+- "List all linkedObjects?" -> GET /api/v1/meta/schemas/user/linkedObjects
+- "Create a linkedObject?" -> POST /api/v1/meta/schemas/user/linkedObjects
+- "Get linkedObject details?" -> GET /api/v1/meta/schemas/user/linkedObjects/{linkedObjectName}
+- "Delete a linkedObject?" -> DELETE /api/v1/meta/schemas/user/linkedObjects/{linkedObjectName}
+- "Get user details?" -> GET /api/v1/meta/schemas/user/{schemaId}
+- "List all user?" -> GET /api/v1/meta/types/user
+- "Create a user?" -> POST /api/v1/meta/types/user
+- "Get user details?" -> GET /api/v1/meta/types/user/{typeId}
+- "Update a user?" -> PUT /api/v1/meta/types/user/{typeId}
+- "Delete a user?" -> DELETE /api/v1/meta/types/user/{typeId}
+- "List all uischemas?" -> GET /api/v1/meta/uischemas
+- "Create a uischema?" -> POST /api/v1/meta/uischemas
+- "Get uischema details?" -> GET /api/v1/meta/uischemas/{id}
+- "Update a uischema?" -> PUT /api/v1/meta/uischemas/{id}
+- "Delete a uischema?" -> DELETE /api/v1/meta/uischemas/{id}
+- "List all org?" -> GET /api/v1/org
+- "Create a org?" -> POST /api/v1/org
+- "List all captcha?" -> GET /api/v1/org/captcha
+- "List all contacts?" -> GET /api/v1/org/contacts
+- "Get contact details?" -> GET /api/v1/org/contacts/{contactType}
+- "Update a contact?" -> PUT /api/v1/org/contacts/{contactType}
+- "Create a remove-list?" -> POST /api/v1/org/email/bounces/remove-list
+- "List all tokens?" -> GET /api/v1/org/factors/yubikey_token/tokens
+- "Create a token?" -> POST /api/v1/org/factors/yubikey_token/tokens
+- "Get token details?" -> GET /api/v1/org/factors/yubikey_token/tokens/{tokenId}
+- "Create a logo?" -> POST /api/v1/org/logo
+- "List all thirdPartyAdminSetting?" -> GET /api/v1/org/orgSettings/thirdPartyAdminSetting
+- "Create a thirdPartyAdminSetting?" -> POST /api/v1/org/orgSettings/thirdPartyAdminSetting
+- "List all preferences?" -> GET /api/v1/org/preferences
+- "Create a hideEndUserFooter?" -> POST /api/v1/org/preferences/hideEndUserFooter
+- "Create a showEndUserFooter?" -> POST /api/v1/org/preferences/showEndUserFooter
+- "List all aerial?" -> GET /api/v1/org/privacy/aerial
+- "Create a grant?" -> POST /api/v1/org/privacy/aerial/grant
+- "Create a revoke?" -> POST /api/v1/org/privacy/aerial/revoke
+- "List all oktaCommunication?" -> GET /api/v1/org/privacy/oktaCommunication
+- "Create a optIn?" -> POST /api/v1/org/privacy/oktaCommunication/optIn
+- "Create a optOut?" -> POST /api/v1/org/privacy/oktaCommunication/optOut
+- "List all oktaSupport?" -> GET /api/v1/org/privacy/oktaSupport
+- "List all cases?" -> GET /api/v1/org/privacy/oktaSupport/cases
+- "Partially update a case?" -> PATCH /api/v1/org/privacy/oktaSupport/cases/{caseNumber}
+- "Create a extend?" -> POST /api/v1/org/privacy/oktaSupport/extend
+- "Create a grant?" -> POST /api/v1/org/privacy/oktaSupport/grant
+- "Create a revoke?" -> POST /api/v1/org/privacy/oktaSupport/revoke
+- "List all autoAssignAdminAppSetting?" -> GET /api/v1/org/settings/autoAssignAdminAppSetting
+- "Create a autoAssignAdminAppSetting?" -> POST /api/v1/org/settings/autoAssignAdminAppSetting
+- "List all clientPrivilegesSetting?" -> GET /api/v1/org/settings/clientPrivilegesSetting
+- "Create a org?" -> POST /api/v1/orgs
+- "Search policies?" -> GET /api/v1/policies
+- "Create a policy?" -> POST /api/v1/policies
+- "Create a simulate?" -> POST /api/v1/policies/simulate
+- "Get policy details?" -> GET /api/v1/policies/{policyId}
+- "Update a policy?" -> PUT /api/v1/policies/{policyId}
+- "Delete a policy?" -> DELETE /api/v1/policies/{policyId}
+- "List all app?" -> GET /api/v1/policies/{policyId}/app
+- "Create a clone?" -> POST /api/v1/policies/{policyId}/clone
+- "Create a activate?" -> POST /api/v1/policies/{policyId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/policies/{policyId}/lifecycle/deactivate
+- "List all mappings?" -> GET /api/v1/policies/{policyId}/mappings
+- "Create a mapping?" -> POST /api/v1/policies/{policyId}/mappings
+- "Get mapping details?" -> GET /api/v1/policies/{policyId}/mappings/{mappingId}
+- "Delete a mapping?" -> DELETE /api/v1/policies/{policyId}/mappings/{mappingId}
+- "List all rules?" -> GET /api/v1/policies/{policyId}/rules
+- "Create a rule?" -> POST /api/v1/policies/{policyId}/rules
+- "Get rule details?" -> GET /api/v1/policies/{policyId}/rules/{ruleId}
+- "Update a rule?" -> PUT /api/v1/policies/{policyId}/rules/{ruleId}
+- "Delete a rule?" -> DELETE /api/v1/policies/{policyId}/rules/{ruleId}
+- "Create a activate?" -> POST /api/v1/policies/{policyId}/rules/{ruleId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/policies/{policyId}/rules/{ruleId}/lifecycle/deactivate
+- "List all principal-rate-limits?" -> GET /api/v1/principal-rate-limits
+- "Create a principal-rate-limit?" -> POST /api/v1/principal-rate-limits
+- "Get principal-rate-limit details?" -> GET /api/v1/principal-rate-limits/{principalRateLimitId}
+- "Update a principal-rate-limit?" -> PUT /api/v1/principal-rate-limits/{principalRateLimitId}
+- "List all push-providers?" -> GET /api/v1/push-providers
+- "Create a push-provider?" -> POST /api/v1/push-providers
+- "Get push-provider details?" -> GET /api/v1/push-providers/{pushProviderId}
+- "Update a push-provider?" -> PUT /api/v1/push-providers/{pushProviderId}
+- "Delete a push-provider?" -> DELETE /api/v1/push-providers/{pushProviderId}
+- "List all admin-notifications?" -> GET /api/v1/rate-limit-settings/admin-notifications
+- "List all per-client?" -> GET /api/v1/rate-limit-settings/per-client
+- "List all warning-threshold?" -> GET /api/v1/rate-limit-settings/warning-threshold
+- "List all realm-assignments?" -> GET /api/v1/realm-assignments
+- "Create a realm-assignment?" -> POST /api/v1/realm-assignments
+- "List all operations?" -> GET /api/v1/realm-assignments/operations
+- "Create a operation?" -> POST /api/v1/realm-assignments/operations
+- "Get realm-assignment details?" -> GET /api/v1/realm-assignments/{assignmentId}
+- "Update a realm-assignment?" -> PUT /api/v1/realm-assignments/{assignmentId}
+- "Delete a realm-assignment?" -> DELETE /api/v1/realm-assignments/{assignmentId}
+- "Create a activate?" -> POST /api/v1/realm-assignments/{assignmentId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/realm-assignments/{assignmentId}/lifecycle/deactivate
+- "Search realms?" -> GET /api/v1/realms
+- "Create a realm?" -> POST /api/v1/realms
+- "Get realm details?" -> GET /api/v1/realms/{realmId}
+- "Update a realm?" -> PUT /api/v1/realms/{realmId}
+- "Delete a realm?" -> DELETE /api/v1/realms/{realmId}
+- "Create a ip?" -> POST /api/v1/risk/events/ip
+- "List all providers?" -> GET /api/v1/risk/providers
+- "Create a provider?" -> POST /api/v1/risk/providers
+- "Get provider details?" -> GET /api/v1/risk/providers/{riskProviderId}
+- "Update a provider?" -> PUT /api/v1/risk/providers/{riskProviderId}
+- "Delete a provider?" -> DELETE /api/v1/risk/providers/{riskProviderId}
+- "List all subscriptions?" -> GET /api/v1/roles/{roleRef}/subscriptions
+- "Get subscription details?" -> GET /api/v1/roles/{roleRef}/subscriptions/{notificationType}
+- "Create a subscribe?" -> POST /api/v1/roles/{roleRef}/subscriptions/{notificationType}/subscribe
+- "Create a unsubscribe?" -> POST /api/v1/roles/{roleRef}/subscriptions/{notificationType}/unsubscribe
+- "List all security-events-providers?" -> GET /api/v1/security-events-providers
+- "Create a security-events-provider?" -> POST /api/v1/security-events-providers
+- "Get security-events-provider details?" -> GET /api/v1/security-events-providers/{securityEventProviderId}
+- "Update a security-events-provider?" -> PUT /api/v1/security-events-providers/{securityEventProviderId}
+- "Delete a security-events-provider?" -> DELETE /api/v1/security-events-providers/{securityEventProviderId}
+- "Create a activate?" -> POST /api/v1/security-events-providers/{securityEventProviderId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/security-events-providers/{securityEventProviderId}/lifecycle/deactivate
+- "Create a session?" -> POST /api/v1/sessions
+- "List all me?" -> GET /api/v1/sessions/me
+- "Create a refresh?" -> POST /api/v1/sessions/me/lifecycle/refresh
+- "Get session details?" -> GET /api/v1/sessions/{sessionId}
+- "Delete a session?" -> DELETE /api/v1/sessions/{sessionId}
+- "Create a refresh?" -> POST /api/v1/sessions/{sessionId}/lifecycle/refresh
+- "List all stream?" -> GET /api/v1/ssf/stream
+- "Create a stream?" -> POST /api/v1/ssf/stream
+- "List all status?" -> GET /api/v1/ssf/stream/status
+- "Create a verification?" -> POST /api/v1/ssf/stream/verification
+- "List all sms?" -> GET /api/v1/templates/sms
+- "Create a sm?" -> POST /api/v1/templates/sms
+- "Get sm details?" -> GET /api/v1/templates/sms/{templateId}
+- "Update a sm?" -> PUT /api/v1/templates/sms/{templateId}
+- "Delete a sm?" -> DELETE /api/v1/templates/sms/{templateId}
+- "List all configuration?" -> GET /api/v1/threats/configuration
+- "Create a configuration?" -> POST /api/v1/threats/configuration
+- "Search trustedOrigins?" -> GET /api/v1/trustedOrigins
+- "Create a trustedOrigin?" -> POST /api/v1/trustedOrigins
+- "Get trustedOrigin details?" -> GET /api/v1/trustedOrigins/{trustedOriginId}
+- "Update a trustedOrigin?" -> PUT /api/v1/trustedOrigins/{trustedOriginId}
+- "Delete a trustedOrigin?" -> DELETE /api/v1/trustedOrigins/{trustedOriginId}
+- "Create a activate?" -> POST /api/v1/trustedOrigins/{trustedOriginId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/trustedOrigins/{trustedOriginId}/lifecycle/deactivate
+- "Search users?" -> GET /api/v1/users
+- "Create a user?" -> POST /api/v1/users
+- "Create a delete_session?" -> POST /api/v1/users/me/lifecycle/delete_sessions
+- "Get user details?" -> GET /api/v1/users/{id}
+- "Update a user?" -> PUT /api/v1/users/{id}
+- "Delete a user?" -> DELETE /api/v1/users/{id}
+- "List all appLinks?" -> GET /api/v1/users/{id}/appLinks
+- "List all blocks?" -> GET /api/v1/users/{id}/blocks
+- "List all groups?" -> GET /api/v1/users/{id}/groups
+- "List all idps?" -> GET /api/v1/users/{id}/idps
+- "Create a activate?" -> POST /api/v1/users/{id}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/users/{id}/lifecycle/deactivate
+- "Create a expire_password?" -> POST /api/v1/users/{id}/lifecycle/expire_password
+- "Create a expire_password_with_temp_password?" -> POST /api/v1/users/{id}/lifecycle/expire_password_with_temp_password
+- "Create a reactivate?" -> POST /api/v1/users/{id}/lifecycle/reactivate
+- "Create a reset_factor?" -> POST /api/v1/users/{id}/lifecycle/reset_factors
+- "Create a reset_password?" -> POST /api/v1/users/{id}/lifecycle/reset_password
+- "Create a suspend?" -> POST /api/v1/users/{id}/lifecycle/suspend
+- "Create a unlock?" -> POST /api/v1/users/{id}/lifecycle/unlock
+- "Create a unsuspend?" -> POST /api/v1/users/{id}/lifecycle/unsuspend
+- "Update a linkedObject?" -> PUT /api/v1/users/{userIdOrLogin}/linkedObjects/{primaryRelationshipName}/{primaryUserId}
+- "Get linkedObject details?" -> GET /api/v1/users/{userIdOrLogin}/linkedObjects/{relationshipName}
+- "Delete a linkedObject?" -> DELETE /api/v1/users/{userIdOrLogin}/linkedObjects/{relationshipName}
+- "List all authenticator-enrollments?" -> GET /api/v1/users/{userId}/authenticator-enrollments
+- "Create a phone?" -> POST /api/v1/users/{userId}/authenticator-enrollments/phone
+- "Create a tac?" -> POST /api/v1/users/{userId}/authenticator-enrollments/tac
+- "Get authenticator-enrollment details?" -> GET /api/v1/users/{userId}/authenticator-enrollments/{enrollmentId}
+- "Delete a authenticator-enrollment?" -> DELETE /api/v1/users/{userId}/authenticator-enrollments/{enrollmentId}
+- "List all classification?" -> GET /api/v1/users/{userId}/classification
+- "List all clients?" -> GET /api/v1/users/{userId}/clients
+- "List all grants?" -> GET /api/v1/users/{userId}/clients/{clientId}/grants
+- "List all tokens?" -> GET /api/v1/users/{userId}/clients/{clientId}/tokens
+- "Get token details?" -> GET /api/v1/users/{userId}/clients/{clientId}/tokens/{tokenId}
+- "Delete a token?" -> DELETE /api/v1/users/{userId}/clients/{clientId}/tokens/{tokenId}
+- "Create a change_password?" -> POST /api/v1/users/{userId}/credentials/change_password
+- "Create a change_recovery_question?" -> POST /api/v1/users/{userId}/credentials/change_recovery_question
+- "Create a forgot_password?" -> POST /api/v1/users/{userId}/credentials/forgot_password
+- "Create a forgot_password_recovery_question?" -> POST /api/v1/users/{userId}/credentials/forgot_password_recovery_question
+- "List all devices?" -> GET /api/v1/users/{userId}/devices
+- "List all factors?" -> GET /api/v1/users/{userId}/factors
+- "Create a factor?" -> POST /api/v1/users/{userId}/factors
+- "List all catalog?" -> GET /api/v1/users/{userId}/factors/catalog
+- "List all questions?" -> GET /api/v1/users/{userId}/factors/questions
+- "Get factor details?" -> GET /api/v1/users/{userId}/factors/{factorId}
+- "Delete a factor?" -> DELETE /api/v1/users/{userId}/factors/{factorId}
+- "Create a activate?" -> POST /api/v1/users/{userId}/factors/{factorId}/lifecycle/activate
+- "Create a resend?" -> POST /api/v1/users/{userId}/factors/{factorId}/resend
+- "Get transaction details?" -> GET /api/v1/users/{userId}/factors/{factorId}/transactions/{transactionId}
+- "Create a verify?" -> POST /api/v1/users/{userId}/factors/{factorId}/verify
+- "List all grants?" -> GET /api/v1/users/{userId}/grants
+- "Get grant details?" -> GET /api/v1/users/{userId}/grants/{grantId}
+- "Delete a grant?" -> DELETE /api/v1/users/{userId}/grants/{grantId}
+- "List all risk?" -> GET /api/v1/users/{userId}/risk
+- "List all roles?" -> GET /api/v1/users/{userId}/roles
+- "Create a role?" -> POST /api/v1/users/{userId}/roles
+- "Get role details?" -> GET /api/v1/users/{userId}/roles/{roleAssignmentId}
+- "Delete a role?" -> DELETE /api/v1/users/{userId}/roles/{roleAssignmentId}
+- "List all governance?" -> GET /api/v1/users/{userId}/roles/{roleAssignmentId}/governance
+- "Get governance details?" -> GET /api/v1/users/{userId}/roles/{roleAssignmentId}/governance/{grantId}
+- "List all resources?" -> GET /api/v1/users/{userId}/roles/{roleAssignmentId}/governance/{grantId}/resources
+- "List all apps?" -> GET /api/v1/users/{userId}/roles/{roleAssignmentId}/targets/catalog/apps
+- "Update a app?" -> PUT /api/v1/users/{userId}/roles/{roleAssignmentId}/targets/catalog/apps/{appName}
+- "Delete a app?" -> DELETE /api/v1/users/{userId}/roles/{roleAssignmentId}/targets/catalog/apps/{appName}
+- "Update a app?" -> PUT /api/v1/users/{userId}/roles/{roleAssignmentId}/targets/catalog/apps/{appName}/{appId}
+- "Delete a app?" -> DELETE /api/v1/users/{userId}/roles/{roleAssignmentId}/targets/catalog/apps/{appName}/{appId}
+- "List all groups?" -> GET /api/v1/users/{userId}/roles/{roleAssignmentId}/targets/groups
+- "Update a group?" -> PUT /api/v1/users/{userId}/roles/{roleAssignmentId}/targets/groups/{groupId}
+- "Delete a group?" -> DELETE /api/v1/users/{userId}/roles/{roleAssignmentId}/targets/groups/{groupId}
+- "List all targets?" -> GET /api/v1/users/{userId}/roles/{roleIdOrEncodedRoleId}/targets
+- "List all subscriptions?" -> GET /api/v1/users/{userId}/subscriptions
+- "Get subscription details?" -> GET /api/v1/users/{userId}/subscriptions/{notificationType}
+- "Create a subscribe?" -> POST /api/v1/users/{userId}/subscriptions/{notificationType}/subscribe
+- "Create a unsubscribe?" -> POST /api/v1/users/{userId}/subscriptions/{notificationType}/unsubscribe
+- "List all zones?" -> GET /api/v1/zones
+- "Create a zone?" -> POST /api/v1/zones
+- "Get zone details?" -> GET /api/v1/zones/{zoneId}
+- "Update a zone?" -> PUT /api/v1/zones/{zoneId}
+- "Delete a zone?" -> DELETE /api/v1/zones/{zoneId}
+- "Create a activate?" -> POST /api/v1/zones/{zoneId}/lifecycle/activate
+- "Create a deactivate?" -> POST /api/v1/zones/{zoneId}/lifecycle/deactivate
+- "List all authenticator-settings?" -> GET /attack-protection/api/v1/authenticator-settings
+- "List all user-lockout-settings?" -> GET /attack-protection/api/v1/user-lockout-settings
+- "List all enforce-number-matching-challenge-settings?" -> GET /device-access/api/v1/desktop-mfa/enforce-number-matching-challenge-settings
+- "List all recovery-pin-settings?" -> GET /device-access/api/v1/desktop-mfa/recovery-pin-settings
+- "List all api-services?" -> GET /integrations/api/v1/api-services
+- "Create a api-service?" -> POST /integrations/api/v1/api-services
+- "Get api-service details?" -> GET /integrations/api/v1/api-services/{apiServiceId}
+- "Delete a api-service?" -> DELETE /integrations/api/v1/api-services/{apiServiceId}
+- "List all secrets?" -> GET /integrations/api/v1/api-services/{apiServiceId}/credentials/secrets
+- "Create a secret?" -> POST /integrations/api/v1/api-services/{apiServiceId}/credentials/secrets
+- "Delete a secret?" -> DELETE /integrations/api/v1/api-services/{apiServiceId}/credentials/secrets/{secretId}
+- "Create a activate?" -> POST /integrations/api/v1/api-services/{apiServiceId}/credentials/secrets/{secretId}/lifecycle/activate
+- "Create a deactivate?" -> POST /integrations/api/v1/api-services/{apiServiceId}/credentials/secrets/{secretId}/lifecycle/deactivate
+- "List all roles?" -> GET /oauth2/v1/clients/{clientId}/roles
+- "Create a role?" -> POST /oauth2/v1/clients/{clientId}/roles
+- "Get role details?" -> GET /oauth2/v1/clients/{clientId}/roles/{roleAssignmentId}
+- "Delete a role?" -> DELETE /oauth2/v1/clients/{clientId}/roles/{roleAssignmentId}
+- "List all apps?" -> GET /oauth2/v1/clients/{clientId}/roles/{roleAssignmentId}/targets/catalog/apps
+- "Update a app?" -> PUT /oauth2/v1/clients/{clientId}/roles/{roleAssignmentId}/targets/catalog/apps/{appName}
+- "Delete a app?" -> DELETE /oauth2/v1/clients/{clientId}/roles/{roleAssignmentId}/targets/catalog/apps/{appName}
+- "Update a app?" -> PUT /oauth2/v1/clients/{clientId}/roles/{roleAssignmentId}/targets/catalog/apps/{appName}/{appId}
+- "Delete a app?" -> DELETE /oauth2/v1/clients/{clientId}/roles/{roleAssignmentId}/targets/catalog/apps/{appName}/{appId}
+- "List all groups?" -> GET /oauth2/v1/clients/{clientId}/roles/{roleAssignmentId}/targets/groups
+- "Update a group?" -> PUT /oauth2/v1/clients/{clientId}/roles/{roleAssignmentId}/targets/groups/{groupId}
+- "Delete a group?" -> DELETE /oauth2/v1/clients/{clientId}/roles/{roleAssignmentId}/targets/groups/{groupId}
+- "List all export-blocklists?" -> GET /okta-personal-settings/api/v1/export-blocklists
+- "List all service-accounts?" -> GET /privileged-access/api/v1/service-accounts
+- "Create a service-account?" -> POST /privileged-access/api/v1/service-accounts
+- "Get service-account details?" -> GET /privileged-access/api/v1/service-accounts/{id}
+- "Partially update a service-account?" -> PATCH /privileged-access/api/v1/service-accounts/{id}
+- "Delete a service-account?" -> DELETE /privileged-access/api/v1/service-accounts/{id}
+- "Create a security-event?" -> POST /security/api/v1/security-events
+- "Create a activate?" -> POST /webauthn-registration/api/v1/activate
+- "Create a enroll?" -> POST /webauthn-registration/api/v1/enroll
+- "Create a initiate-fulfillment-request?" -> POST /webauthn-registration/api/v1/initiate-fulfillment-request
+- "Create a send-pin?" -> POST /webauthn-registration/api/v1/send-pin
+- "List all enrollments?" -> GET /webauthn-registration/api/v1/users/{userId}/enrollments
+- "Delete a enrollment?" -> DELETE /webauthn-registration/api/v1/users/{userId}/enrollments/{authenticatorEnrollmentId}
+- "Create a mark-error?" -> POST /webauthn-registration/api/v1/users/{userId}/enrollments/{authenticatorEnrollmentId}/mark-error
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -97,87 +97,62 @@ https://management.azure.com
 | PATCH | /{resourceId} | Updates a resource by ID. |
 | PUT | /{resourceId} | Create a resource by ID. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "List all deployments in a management group?" -> GET /providers/Microsoft.Management/managementGroups/{groupId}/providers/Microsoft.Resources/deployments/
-- "What deployments exist in my subscription?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Resources/deployments/
-- "List deployments in a specific resource group?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/
-- "Get details of a specific deployment?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/{deploymentName}
-- "Does a deployment exist?" -> HEAD /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/{deploymentName}
-- "Create or update a deployment in a resource group?" -> PUT /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/{deploymentName}
-- "Cancel a running deployment?" -> POST /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/{deploymentName}/cancel
-- "Export a deployment template?" -> POST /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/{deploymentName}/exportTemplate
-- "Validate a deployment template before deploying?" -> POST /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/{deploymentName}/validate
-- "List all resource groups in a subscription?" -> GET /subscriptions/{subscriptionId}/resourcegroups
-- "Move resources between resource groups?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{sourceResourceGroupName}/moveResources
-- "Register a resource provider for my subscription?" -> POST /subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/register
-- "What operations happened during a deployment?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/deployments/{deploymentName}/operations
-- "Get a resource by its full resource ID?" -> GET /{resourceId}
-- "Calculate the hash of an ARM template?" -> POST /providers/Microsoft.Resources/calculateTemplateHash
-
-## Response Tips
-
-- **Deployment lists**: Paginated via `nextLink` in response body; follow it until absent. Use `$filter` (OData) and `$top` to limit results server-side.
-- **Deployment details (GET/PUT)**: Response includes nested `properties` object with `provisioningState`, `outputs`, `dependencies`, and `template` -- check `provisioningState` for terminal states (`Succeeded`, `Failed`, `Canceled`).
-- **HEAD endpoints**: Return no body -- 204 means the resource exists, 404 means it does not. Use these for cheap existence checks instead of full GETs.
-- **Async operations (DELETE, PUT, move)**: 202 means accepted but not complete -- poll the `Location` or `Azure-AsyncOperation` header URL until the operation finishes.
-- **Validation (POST .../validate)**: 200 means valid, 400 returns structured error details in `error.details[]` with per-resource failure reasons.
-- **Resource groups**: GET returns `id`, `name`, `location`, `tags`, and `properties.provisioningState`. PATCH merges tags -- send only changed tags, not the full set.
-- **Generic resource endpoints (/{resourceId})**: Require `api-version` as a query param matching the resource provider's version, not the ARM version.
-
-## Anomaly Flags
-
-- **`provisioningState` stuck in non-terminal state**: Surface when a deployment stays in `Running`, `Accepted`, or `Deleting` for longer than expected -- it may be hung.
-- **202 without polling headers**: If a DELETE or PUT returns 202 but no `Location` or `Azure-AsyncOperation` header, flag it -- the client has no way to track completion.
-- **Validation returns 400**: Proactively display the full `error.details[]` array -- individual resource errors are buried in nested objects and easy to miss.
-- **409 on validateMoveResources**: Indicates a resource lock or policy conflict blocking the move -- surface the `error.code` (e.g., `ScopeLocked`, `PolicyViolation`) before the user attempts the actual move.
-- **$top silently capped**: Azure may return fewer results than `$top` requests without indicating truncation; if the response includes `nextLink` despite a small `$top`, flag that more pages exist.
-- **api-version mismatch**: The spec uses `2019-05-01` globally, but generic resource endpoints (`/{resourceId}`) need the resource provider's own api-version -- flag if the user passes the wrong one.
-- **204 on DELETE**: Could mean "deleted" or "already didn't exist" -- surface which case it is when the user may care about idempotency.
-- **Unregistered provider**: If a deployment fails with `MissingSubscriptionRegistration`, proactively suggest the register endpoint.
-
-## Playbook
-
-### 1. Deploy an ARM Template to a Resource Group
-
-1. Validate the template first: `POST /subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments/{name}/validate` with the deployment parameters body.
-2. If validation returns 200, create the deployment: `PUT /subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments/{name}` with the same parameters.
-3. If PUT returns 201, the deployment is in progress. Poll with `GET /subscriptions/{sub}/resourcegroups/{rg}/providers/Microsoft.Resources/deployments/{name}` until `properties.provisioningState` is `Succeeded` or `Failed`.
-4. If failed, inspect deployment operations: `GET .../deployments/{name}/operations` to find which resource caused the failure.
-5. Export the final template for auditing: `POST .../deployments/{name}/exportTemplate`.
-
-### 2. Move Resources Between Resource Groups
-
-1. Validate the move: `POST /subscriptions/{sub}/resourceGroups/{source}/validateMoveResources` with `{ "resources": [...ids], "targetResourceGroup": "/subscriptions/{sub}/resourceGroups/{target}" }`.
-2. Poll the 202 response's `Location` header until it returns 204 (valid) or 409 (conflict).
-3. If valid, execute the move: `POST /subscriptions/{sub}/resourceGroups/{source}/moveResources` with the same body.
-4. Poll the 202 response until 204 -- moves can take several minutes.
-5. Verify by listing resources in the target group: `GET /subscriptions/{sub}/resourceGroups/{target}/resources`.
-
-### 3. Set Up a New Resource Group with Tags
-
-1. Check if the resource group exists: `HEAD /subscriptions/{sub}/resourcegroups/{rg}` -- 204 means it exists, 404 means it does not.
-2. Create or update: `PUT /subscriptions/{sub}/resourcegroups/{rg}` with `{ "location": "eastus", "tags": { "env": "prod", "team": "platform" } }`.
-3. Confirm creation: response 201 means newly created, 200 means updated in place.
-4. To add tags later without overwriting: `PATCH /subscriptions/{sub}/resourcegroups/{rg}` with only the new tags in the body.
-
-### 4. Register a Resource Provider and Deploy
-
-1. List available providers: `GET /subscriptions/{sub}/providers` to find the namespace.
-2. Check registration state: `GET /subscriptions/{sub}/providers/{namespace}` and inspect `registrationState`.
-3. If not registered: `POST /subscriptions/{sub}/providers/{namespace}/register`.
-4. Poll the provider GET endpoint until `registrationState` is `Registered`.
-5. Proceed with deployment as in Playbook 1.
-
-### 5. Clean Up a Failed Deployment
-
-1. Cancel the deployment if still running: `POST .../deployments/{name}/cancel` -- returns 204 on success.
-2. Review what happened: `GET .../deployments/{name}/operations` with `$top=100` to see all operations.
-3. Inspect each failed operation's `properties.statusMessage` for root cause.
-4. Delete the failed deployment record: `DELETE .../deployments/{name}` -- returns 202 (async deletion) or 204 (already gone).
-5. Fix the template issues and redeploy with a new deployment name.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all deployments?" -> GET /providers/Microsoft.Management/managementGroups/{groupId}/providers/Microsoft.Resources/deployments/
+- "Delete a deployment?" -> DELETE /providers/Microsoft.Management/managementGroups/{groupId}/providers/Microsoft.Resources/deployments/{deploymentName}
+- "Get deployment details?" -> GET /providers/Microsoft.Management/managementGroups/{groupId}/providers/Microsoft.Resources/deployments/{deploymentName}
+- "Update a deployment?" -> PUT /providers/Microsoft.Management/managementGroups/{groupId}/providers/Microsoft.Resources/deployments/{deploymentName}
+- "Create a cancel?" -> POST /providers/Microsoft.Management/managementGroups/{groupId}/providers/Microsoft.Resources/deployments/{deploymentName}/cancel
+- "Create a exportTemplate?" -> POST /providers/Microsoft.Management/managementGroups/{groupId}/providers/Microsoft.Resources/deployments/{deploymentName}/exportTemplate
+- "List all operations?" -> GET /providers/Microsoft.Management/managementGroups/{groupId}/providers/Microsoft.Resources/deployments/{deploymentName}/operations
+- "Get operation details?" -> GET /providers/Microsoft.Management/managementGroups/{groupId}/providers/Microsoft.Resources/deployments/{deploymentName}/operations/{operationId}
+- "Create a validate?" -> POST /providers/Microsoft.Management/managementGroups/{groupId}/providers/Microsoft.Resources/deployments/{deploymentName}/validate
+- "Create a calculateTemplateHash?" -> POST /providers/Microsoft.Resources/calculateTemplateHash
+- "List all operations?" -> GET /providers/Microsoft.Resources/operations
+- "List all providers?" -> GET /subscriptions/{subscriptionId}/providers
+- "List all deployments?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Resources/deployments/
+- "Delete a deployment?" -> DELETE /subscriptions/{subscriptionId}/providers/Microsoft.Resources/deployments/{deploymentName}
+- "Get deployment details?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Resources/deployments/{deploymentName}
+- "Update a deployment?" -> PUT /subscriptions/{subscriptionId}/providers/Microsoft.Resources/deployments/{deploymentName}
+- "Create a cancel?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Resources/deployments/{deploymentName}/cancel
+- "Create a exportTemplate?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Resources/deployments/{deploymentName}/exportTemplate
+- "List all operations?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Resources/deployments/{deploymentName}/operations
+- "Get operation details?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Resources/deployments/{deploymentName}/operations/{operationId}
+- "Create a validate?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Resources/deployments/{deploymentName}/validate
+- "Get provider details?" -> GET /subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}
+- "Create a register?" -> POST /subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/register
+- "Create a unregister?" -> POST /subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/unregister
+- "List all resources?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/resources
+- "Create a moveResource?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{sourceResourceGroupName}/moveResources
+- "Create a validateMoveResource?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{sourceResourceGroupName}/validateMoveResources
+- "List all resourcegroups?" -> GET /subscriptions/{subscriptionId}/resourcegroups
+- "Delete a resourcegroup?" -> DELETE /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}
+- "Get resourcegroup details?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}
+- "Partially update a resourcegroup?" -> PATCH /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}
+- "Update a resourcegroup?" -> PUT /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}
+- "List all operations?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/deployments/{deploymentName}/operations
+- "Get operation details?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/deployments/{deploymentName}/operations/{operationId}
+- "Create a exportTemplate?" -> POST /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/exportTemplate
+- "List all deployments?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/
+- "Delete a deployment?" -> DELETE /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/{deploymentName}
+- "Get deployment details?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/{deploymentName}
+- "Update a deployment?" -> PUT /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/{deploymentName}
+- "Create a cancel?" -> POST /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/{deploymentName}/cancel
+- "Create a exportTemplate?" -> POST /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/{deploymentName}/exportTemplate
+- "Create a validate?" -> POST /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/Microsoft.Resources/deployments/{deploymentName}/validate
+- "Delete a provider?" -> DELETE /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}
+- "Get provider details?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}
+- "Partially update a provider?" -> PATCH /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}
+- "Update a provider?" -> PUT /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{parentResourcePath}/{resourceType}/{resourceName}
+- "List all resources?" -> GET /subscriptions/{subscriptionId}/resources
+- "List all tagNames?" -> GET /subscriptions/{subscriptionId}/tagNames
+- "Delete a tagName?" -> DELETE /subscriptions/{subscriptionId}/tagNames/{tagName}
+- "Update a tagName?" -> PUT /subscriptions/{subscriptionId}/tagNames/{tagName}
+- "Delete a tagValue?" -> DELETE /subscriptions/{subscriptionId}/tagNames/{tagName}/tagValues/{tagValue}
+- "Update a tagValue?" -> PUT /subscriptions/{subscriptionId}/tagNames/{tagName}/tagValues/{tagValue}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -9,288 +9,346 @@
 @toc api(58)
 
 @endpoint POST /api/articles
+@desc Publish article
 @optional {article: map{title: str, body_markdown: str, published: bool, series: str, main_image: str, canonical_url: str, description: str, tags: str, organization_id: int}}
-@returns(201)
-@errors {401, 422}
+@returns(201) An Article
+@errors {401: Unauthorized, 422: Unprocessable Entity}
 
 @endpoint GET /api/articles
-@optional {page: int(int32)=1, per_page: int(int32)=30, tag: str, tags: str, tags_exclude: str, username: str, state: str(fresh/rising/all), top: int(int32), collection_id: int(int32)}
-@returns(200)
+@desc Published articles
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable., tag: str # Using this parameter will retrieve articles that contain the requested tag. Articles will be ordered by descending popularity.This parameter can be used in conjuction with `top`., tags: str # Using this parameter will retrieve articles with any of the comma-separated tags. Articles will be ordered by descending popularity., tags_exclude: str # Using this parameter will retrieve articles that do _not_ contain _any_ of comma-separated tags. Articles will be ordered by descending popularity., username: str # Using this parameter will retrieve articles belonging             to a User or Organization ordered by descending publication date.             If `state=all` the number of items returned will be `1000` instead of the default `30`.             This parameter can be used in conjuction with `state`., state: str(fresh/rising/all) # Using this parameter will allow the client to check which articles are fresh or rising.             If `state=fresh` the server will return fresh articles.             If `state=rising` the server will return rising articles.             This param can be used in conjuction with `username`, only if set to `all`., top: int(int32) # Using this parameter will allow the client to return the most popular articles in the last `N` days. `top` indicates the number of days since publication of the articles returned. This param can be used in conjuction with `tag`., collection_id: int(int32) # Adding this will allow the client to return the list of articles belonging to the requested collection, ordered by ascending publication date.}
+@returns(200) A List of Articles
 
 @endpoint GET /api/articles/latest
-@optional {page: int(int32)=1, per_page: int(int32)=30}
-@returns(200)
+@desc Published articles sorted by published date
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable.}
+@returns(200) A List of Articles
 
 @endpoint GET /api/articles/{id}
+@desc Published article by id
 @required {id: int}
-@returns(200)
-@errors {404}
+@returns(200) An Article
+@errors {404: Article Not Found}
 
 @endpoint PUT /api/articles/{id}
-@required {id: int(int32)}
+@desc Update an article by id
+@required {id: int(int32) # The ID of the user to unpublish.}
 @optional {article: map{title: str, body_markdown: str, published: bool, series: str, main_image: str, canonical_url: str, description: str, tags: str, organization_id: int}}
-@returns(200)
-@errors {404, 401, 422}
+@returns(200) An Article
+@errors {404: Article Not Found, 401: Unauthorized, 422: Unprocessable Entity}
 
 @endpoint GET /api/articles/{username}/{slug}
+@desc Published article by path
 @required {username: str, slug: str}
-@returns(200)
-@errors {404}
+@returns(200) An Article
+@errors {404: Article Not Found}
 
 @endpoint GET /api/articles/me
-@optional {page: int(int32)=1, per_page: int(int32)=30}
-@returns(200)
-@errors {401}
+@desc User's articles
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable.}
+@returns(200) A List of the authenticated user's Articles
+@errors {401: Unauthorized}
 
 @endpoint GET /api/articles/me/published
-@optional {page: int(int32)=1, per_page: int(int32)=30}
-@returns(200)
-@errors {401}
+@desc User's published articles
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable.}
+@returns(200) A List of the authenticated user's Articles
+@errors {401: Unauthorized}
 
 @endpoint GET /api/articles/me/unpublished
-@optional {page: int(int32)=1, per_page: int(int32)=30}
-@returns(200)
-@errors {401}
+@desc User's unpublished articles
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable.}
+@returns(200) A List of the authenticated user's Articles
+@errors {401: Unauthorized}
 
 @endpoint GET /api/articles/me/all
-@optional {page: int(int32)=1, per_page: int(int32)=30}
-@returns(200)
-@errors {401}
+@desc User's all articles
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable.}
+@returns(200) A List of the authenticated user's Articles
+@errors {401: Unauthorized}
 
 @endpoint PUT /api/articles/{id}/unpublish
-@required {id: int(int32)}
-@optional {note: str}
-@returns(204)
-@errors {401, 404}
+@desc Unpublish an article
+@required {id: int(int32) # The ID of the article to unpublish.}
+@optional {note: str # Content for the note that's created along with unpublishing}
+@returns(204) Article successfully unpublished
+@errors {401: Unauthorized, 404: Article Not Found}
 
 @endpoint GET /api/segments
-@optional {per_page: int(int32)=30}
-@returns(200)
-@errors {401}
+@desc Manually managed audience segments
+@optional {per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable.}
+@returns(200) A List of manually managed audience segments
+@errors {401: Unauthorized}
 
 @endpoint POST /api/segments
-@returns(201)
-@errors {401}
+@desc Create a manually managed audience segment
+@returns(201) A manually managed audience segment
+@errors {401: Unauthorized}
 
 @endpoint GET /api/segments/{id}
+@desc A manually managed audience segment
 @required {id: int(int32)}
-@returns(200)
-@errors {401, 404}
+@returns(200) The audience segment
+@errors {401: Unauthorized, 404: Audience Segment Not Found}
 
 @endpoint DELETE /api/segments/{id}
+@desc Delete a manually managed audience segment
 @required {id: int(int32)}
-@returns(200)
-@errors {401, 404, 409}
+@returns(200) The deleted audience segment
+@errors {401: Unauthorized, 404: Audience Segment Not Found, 409: Audience segment could not be deleted}
 
 @endpoint GET /api/segments/{id}/users
+@desc Users in a manually managed audience segment
 @required {id: int(int32)}
-@optional {per_page: int(int32)=30}
-@returns(200)
-@errors {401, 404}
+@optional {per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable.}
+@returns(200) A List of users in the audience segment
+@errors {401: Unauthorized, 404: Audience Segment Not Found}
 
 @endpoint PUT /api/segments/{id}/add_users
+@desc Add users to a manually managed audience segment
 @required {id: int(int32)}
 @optional {user_ids: [int]}
-@returns(200)
-@errors {401, 404, 422}
+@returns(200) Result of adding the users to the segment.
+@errors {401: Unauthorized, 404: Audience Segment Not Found, 422: Unprocessable Entity}
 
 @endpoint PUT /api/segments/{id}/remove_users
+@desc Remove users from a manually managed audience segment
 @required {id: int(int32)}
 @optional {user_ids: [int]}
-@returns(200)
-@errors {401, 404, 422}
+@returns(200) Result of removing the users to the segment.
+@errors {401: Unauthorized, 404: Audience Segment Not Found, 422: Unprocessable Entity}
 
 @endpoint GET /api/billboards
-@returns(200)
-@errors {401}
+@desc Billboards
+@returns(200) successful
+@errors {401: unauthorized}
 
 @endpoint POST /api/billboards
-@returns(201)
-@errors {401, 422}
+@desc Create a billboard
+@returns(201) A billboard
+@errors {401: unauthorized, 422: unprocessable}
 
 @endpoint GET /api/billboards/{id}
-@required {id: int(int32)}
-@returns(200)
-@errors {401, 404}
+@desc A billboard (by id)
+@required {id: int(int32) # The ID of the billboard.}
+@returns(200) successful
+@errors {401: unauthorized, 404: Unknown Billboard ID}
 
 @endpoint PUT /api/billboards/{id}
-@required {id: int(int32)}
-@returns(200)
-@errors {404, 401}
+@desc Update a billboard by ID
+@required {id: int(int32) # The ID of the billboard.}
+@returns(200) successful
+@errors {404: not found, 401: unauthorized}
 
 @endpoint PUT /api/billboards/{id}/unpublish
-@required {id: int(int32)}
-@returns(204)
-@errors {404, 401}
+@desc Unpublish a billboard
+@required {id: int(int32) # The ID of the billboard to unpublish.}
+@returns(204) no content
+@errors {404: not found, 401: unauthorized}
 
 @endpoint GET /api/comments
-@optional {page: int(int32)=1, per_page: int(int32)=30, a_id: str, p_id: str, page: str}
-@returns(200)
-@errors {404}
+@desc Comments
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable., a_id: str # Article identifier., p_id: str # Podcast Episode identifier., page: str # Page}
+@returns(200) A List of Comments
+@errors {404: Resource Not Found}
 
 @endpoint GET /api/comments/{id}
-@required {id: int}
-@returns(200)
-@errors {404}
+@desc Comment by id
+@required {id: int # Comment identifier.}
+@returns(200) A List of the Comments
+@errors {404: Comment Not Found}
 
 @endpoint GET /api/follows/tags
-@returns(200)
-@errors {401}
+@desc Followed Tags
+@returns(200) A List of followed tags
+@errors {401: unauthorized}
 
 @endpoint GET /api/followers/users
-@optional {page: int(int32)=1, per_page: int(int32)=30, sort: str}
-@returns(200)
-@errors {401}
+@desc Followers
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable., sort: str # Default is 'created_at'. Specifies the sort order for the created_at param of the follow                                 relationship. To sort by newest followers first (descending order) specify                                 ?sort=-created_at.}
+@returns(200) A List of followers
+@errors {401: unauthorized}
 
 @endpoint GET /api/organizations/{username}
+@desc An organization (by username)
 @required {username: str}
-@returns(200)
-@errors {404}
+@returns(200) An Organization
+@errors {404: Not Found}
 
 @endpoint GET /api/organizations/{organization_id_or_username}/users
+@desc Organization's users
 @required {organization_id_or_username: str}
-@optional {page: int(int32)=1, per_page: int(int32)=30}
-@returns(200)
-@errors {404}
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable.}
+@returns(200) An Organization's users (with ID)
+@errors {404: Not Found}
 
 @endpoint GET /api/organizations/{organization_id_or_username}/articles
+@desc Organization's Articles
 @required {organization_id_or_username: str}
-@optional {page: int(int32)=1, per_page: int(int32)=30}
-@returns(200)
-@errors {404}
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable.}
+@returns(200) An Organization's Articles (with ID)
+@errors {404: Not Found}
 
 @endpoint GET /api/organizations
-@optional {page: int(int32)=1, per_page: int(int32)=10}
-@returns(200)
+@desc Organizations
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=10 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable.}
+@returns(200) A list of all organizations
 
 @endpoint POST /api/organizations
+@desc Create an Organization
 @optional {type_of: str, username: str, name: str, summary: str, twitter_username: str, github_username: str, url: str, location: str, joined_at: str, tech_stack: str, tag_line: str, story: str}
-@returns(201)
-@errors {401, 422}
+@returns(201) Successful
+@errors {401: Unauthorized, 422: Unprocessable Entity}
 
 @endpoint GET /api/organizations/{id}
+@desc An organization (by id)
 @required {id: int}
-@returns(200)
-@errors {404}
+@returns(200) An Organization
+@errors {404: Not Found}
 
 @endpoint PUT /api/organizations/{id}
-@required {id: int(int32)}
+@desc Update an organization by id
+@required {id: int(int32) # The ID of the organization to update.}
 @optional {type_of: str, username: str, name: str, summary: str, twitter_username: str, github_username: str, url: str, location: str, joined_at: str, tech_stack: str, tag_line: str, story: str}
-@returns(200)
-@errors {404, 401, 422}
+@returns(200) An Organization
+@errors {404: organization Not Found, 401: Unauthorized, 422: Unprocessable Entity}
 
 @endpoint DELETE /api/organizations/{id}
-@required {id: int(int32)}
-@returns(200)
-@errors {401}
+@desc Delete an Organization by id
+@required {id: int(int32) # The ID of the organization.}
+@returns(200) successful
+@errors {401: unauthorized}
 
 @endpoint GET /api/pages
-@returns(200)
+@desc show details for all pages
+@returns(200) successful
 
 @endpoint POST /api/pages
-@optional {title: str, slug: str, description: str, body_markdown: str, body_json: str, is_top_level_path: bool, template: str(contained/full_within_layout/nav_bar_included/json)=contained}
-@returns(200)
-@errors {401, 422}
+@desc pages
+@optional {title: str # Title of the page, slug: str # Used to link to this page in URLs, must be unique and URL-safe, description: str # For internal use, helps similar pages from one another, body_markdown: str # The text (in markdown) of the ad (required), body_json: str # For JSON pages, the JSON body, is_top_level_path: bool # If true, the page is available at '/{slug}' instead of '/page/{slug}', use with caution, template: str(contained/full_within_layout/nav_bar_included/json)=contained # Controls what kind of layout the page is rendered in}
+@returns(200) successful
+@errors {401: unauthorized, 422: unprocessable}
 
 @endpoint GET /api/pages/{id}
-@required {id: int(int32)}
-@returns(200) {title: str, slug: str, description: str, body_markdown: str?, body_json: str?, is_top_level_path: bool, social_image: map?, template: str}
+@desc show details for a page
+@required {id: int(int32) # The ID of the page.}
+@returns(200) {title: str, slug: str, description: str, body_markdown: str?, body_json: str?, is_top_level_path: bool, social_image: map?, template: str} # successful
 
 @endpoint PUT /api/pages/{id}
-@required {id: int(int32), title: str, slug: str, description: str, template: str(contained/full_within_layout/nav_bar_included/json)=contained}
-@optional {body_markdown: str, body_json: str, is_top_level_path: bool, social_image: map}
-@returns(200) {title: str, slug: str, description: str, body_markdown: str?, body_json: str?, is_top_level_path: bool, social_image: map?, template: str}
-@errors {401, 422}
+@desc update details for a page
+@required {id: int(int32) # The ID of the page., title: str # Title of the page, slug: str # Used to link to this page in URLs, must be unique and URL-safe, description: str # For internal use, helps similar pages from one another, template: str(contained/full_within_layout/nav_bar_included/json)=contained # Controls what kind of layout the page is rendered in}
+@optional {body_markdown: str # The text (in markdown) of the ad (required), body_json: str # For JSON pages, the JSON body, is_top_level_path: bool # If true, the page is available at '/{slug}' instead of '/page/{slug}', use with caution, social_image: map}
+@returns(200) {title: str, slug: str, description: str, body_markdown: str?, body_json: str?, is_top_level_path: bool, social_image: map?, template: str} # successful
+@errors {401: unauthorized, 422: unprocessable}
 
 @endpoint DELETE /api/pages/{id}
-@required {id: int(int32)}
-@returns(200) {title: str, slug: str, description: str, body_markdown: str?, body_json: str?, is_top_level_path: bool, social_image: map?, template: str}
-@errors {401, 422}
+@desc remove a page
+@required {id: int(int32) # The ID of the page.}
+@returns(200) {title: str, slug: str, description: str, body_markdown: str?, body_json: str?, is_top_level_path: bool, social_image: map?, template: str} # successful
+@errors {401: unauthorized, 422: unprocessable}
 
 @endpoint GET /api/podcast_episodes
-@optional {page: int(int32)=1, per_page: int(int32)=30, username: str}
-@returns(200)
-@errors {404}
+@desc Podcast Episodes
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable., username: str # Using this parameter will retrieve episodes belonging to a specific podcast.}
+@returns(200) A List of Podcast episodes filtered by username
+@errors {404: Unknown Podcast username}
 
 @endpoint GET /api/profile_images/{username}
-@required {username: str}
-@returns(200)
-@errors {404}
+@desc A Users or organizations profile image
+@required {username: str # The parameter is the username of the user or the username of the organization.}
+@returns(200) An object containing profile image details
+@errors {404: Resource Not Found}
 
 @endpoint POST /api/reactions/toggle
+@desc toggle reaction
 @required {category: str(like/unicorn/exploding_head/raised_hands/fire), reactable_id: int(int32), reactable_type: str(Comment/Article/User)}
-@returns(200)
-@errors {401}
+@returns(200) successful
+@errors {401: unauthorized}
 
 @endpoint POST /api/reactions
+@desc create reaction
 @required {category: str(like/unicorn/exploding_head/raised_hands/fire), reactable_id: int(int32), reactable_type: str(Comment/Article/User)}
-@returns(200)
-@errors {401}
+@returns(200) successful
+@errors {401: unauthorized}
 
 @endpoint GET /api/readinglist
-@optional {page: int(int32)=1, per_page: int(int32)=30}
-@returns(200)
-@errors {401}
+@desc Readinglist
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=30 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable.}
+@returns(200) A list of articles in the users readinglist
+@errors {401: Unauthorized}
 
 @endpoint GET /api/tags
-@optional {page: int(int32)=1, per_page: int(int32)=10}
-@returns(200)
+@desc Tags
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=10 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable.}
+@returns(200) A List of all tags
 
 @endpoint PUT /api/users/{id}/suspend
-@required {id: int(int32)}
-@returns(204)
-@errors {401, 404}
+@desc Suspend a User
+@required {id: int(int32) # The ID of the user to suspend.}
+@returns(204) User successfully unpublished
+@errors {401: Unauthorized, 404: Unknown User ID}
 
 @endpoint PUT /api/users/{id}/limited
-@required {id: int(int32)}
-@returns(204)
-@errors {401, 404}
+@desc Add limited role for a User
+@required {id: int(int32) # The ID of the user to limit.}
+@returns(204) User successfully limited
+@errors {401: Unauthorized, 404: Unknown User ID}
 
 @endpoint DELETE /api/users/{id}/limited
-@required {id: int(int32)}
-@returns(204)
-@errors {401, 404}
+@desc Remove limited for a User
+@required {id: int(int32) # The ID of the user to un-limit.}
+@returns(204) User successfully un-limited
+@errors {401: Unauthorized, 404: Unknown User ID}
 
 @endpoint PUT /api/users/{id}/spam
-@required {id: int(int32)}
-@returns(204)
-@errors {401, 404}
+@desc Add spam role for a User
+@required {id: int(int32) # The ID of the user to assign the spam role.}
+@returns(204) Spam role assigned to the user successfully
+@errors {401: Unauthorized, 404: Unknown User ID}
 
 @endpoint DELETE /api/users/{id}/spam
-@required {id: int(int32)}
-@returns(204)
-@errors {401, 404}
+@desc Remove spam role from a User
+@required {id: int(int32) # The ID of the user to remove the spam role from.}
+@returns(204) Successfully removed the spam role from a user
+@errors {401: Unauthorized, 404: Unknown User ID}
 
 @endpoint PUT /api/users/{id}/trusted
-@required {id: int(int32)}
-@returns(204)
-@errors {401, 404}
+@desc Add trusted role for a User
+@required {id: int(int32) # The ID of the user to assign the trusted role.}
+@returns(204) Trusted role assigned to the user successfully
+@errors {401: Unauthorized, 404: Unknown User ID}
 
 @endpoint DELETE /api/users/{id}/trusted
-@required {id: int(int32)}
-@returns(204)
-@errors {401, 404}
+@desc Remove trusted role from a User
+@required {id: int(int32) # The ID of the user to remove the trusted role from.}
+@returns(204) Successfully removed the trusted role from a user
+@errors {401: Unauthorized, 404: Unknown User ID}
 
 @endpoint GET /api/users/me
-@returns(200)
-@errors {401}
+@desc The authenticated user
+@returns(200) successful
+@errors {401: Unauthorized}
 
 @endpoint GET /api/users/{id}
+@desc A User
 @required {id: str}
-@returns(200)
+@returns(200) successful
 
 @endpoint PUT /api/users/{id}/unpublish
-@required {id: int(int32)}
-@returns(204)
-@errors {401, 404}
+@desc Unpublish a User's Articles and Comments
+@required {id: int(int32) # The ID of the user to unpublish.}
+@returns(204) User's articles and comments successfully unpublished
+@errors {401: Unauthorized, 404: Unknown User ID (still accepted for async processing)}
 
 @endpoint POST /api/admin/users
+@desc Invite a User
 @optional {email: str, name: str}
-@returns(200)
-@errors {401, 422}
+@returns(200) Successful
+@errors {401: Unauthorized, 422: Unprocessable Entity}
 
 @endpoint GET /api/videos
-@optional {page: int(int32)=1, per_page: int(int32)=24}
-@returns(200)
+@desc Articles with a video
+@optional {page: int(int32)=1 # Pagination page, per_page: int(int32)=24 # Page size (the number of items to return per page). The default maximum value can be overridden by "API_PER_PAGE_MAX" environment variable.}
+@returns(200) A List of all articles with videos
 
 @end

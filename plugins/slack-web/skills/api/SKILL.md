@@ -893,84 +893,184 @@ https://slack.com/api
 |--------|------|-------------|
 | GET | /workflows.updateStep | Update the configuration for a workflow extension step. |
 
-## Enhanced Skill Content
+## Common Questions
 
-
-## Question Mapping
-
-- "How do I send a message to a channel?" -> POST /chat.postMessage
-- "How do I list all channels in the workspace?" -> GET /conversations.list
-- "How do I find a user by their email address?" -> GET /users.lookupByEmail
-- "How do I get the message history of a channel?" -> GET /conversations.history
-- "How do I upload a file to Slack?" -> POST /files.upload
-- "How do I add a reaction to a message?" -> POST /reactions.add
-- "How do I search for messages across the workspace?" -> GET /search.messages
-- "How do I create a new channel?" -> POST /conversations.create
-- "How do I invite a user to a channel?" -> POST /conversations.invite
-- "How do I set a user's Do Not Disturb snooze?" -> POST /dnd.setSnooze
-- "How do I get thread replies for a message?" -> GET /conversations.replies
-- "How do I schedule a message for later?" -> POST /chat.scheduleMessage
-- "How do I list all members of a channel?" -> GET /conversations.members
-- "How do I verify my bot's authentication token?" -> GET /auth.test
-- "How do I add a custom emoji to the workspace?" -> POST /admin.emoji.add
-
-## Response Tips
-
-- **Conversations/Users/Files lists**: All return cursor-based pagination; check `response_metadata.next_cursor` and pass it as `cursor` on the next call. An empty string means no more pages.
-- **Chat methods**: `chat.postMessage` and `chat.update` return `ts` (timestamp) which is the message ID; save it for edits, deletions, and threading.
-- **All endpoints**: Every response includes a top-level `ok` boolean. When `ok: false`, read the `error` string field for the machine-readable error code (e.g., `channel_not_found`, `not_authed`).
-- **Files**: `files.info` nests comments and reactions inside the `file` object; use `count`/`page` params to paginate comments.
-- **Search**: `search.messages` wraps results in `messages.matches[]` with `total` and `paging` for offset-based pagination (not cursor).
-- **Admin endpoints**: Require Enterprise Grid org-level tokens with admin scopes; standard bot tokens will return `missing_scope`.
-
-## Anomaly Flags
-
-- **`ok: false` with `error: ratelimited`**: Surface immediately with the `Retry-After` header value. Slack enforces per-method tier limits (Tier 1 = 1/min, Tier 4 = 100+/min).
-- **`error: token_revoked` or `error: not_authed`**: The OAuth token has been invalidated. Alert the user to reauthorize.
-- **`error: missing_scope`**: The token lacks a required OAuth scope. Surface the needed scope so the user can update their app permissions.
-- **`error: account_inactive`**: The target user has been deactivated. Flag this when bulk-operating on user lists.
-- **`response_metadata.warnings`**: Slack sometimes returns deprecation warnings in this array. Surface any entries proactively.
-- **`error: channel_not_found` on a known channel**: May indicate the bot was removed from the channel or the channel was converted to private. Suggest checking membership.
-- **Pagination with no progress**: If `next_cursor` returns the same value across calls, flag a potential infinite loop.
-- **`error: restricted_action`**: Workspace settings prevent the action. Surface to the user that an admin policy is blocking the request.
-
-## Playbook
-
-### 1. Post a threaded reply with a file attachment
-
-1. Upload the file: `POST /files.upload` with `channels` set to the target channel and `thread_ts` set to the parent message timestamp.
-2. Confirm upload succeeded by checking `ok: true` and extracting `file.id` from the response.
-3. Optionally post a text reply in the same thread: `POST /chat.postMessage` with `channel`, `thread_ts`, and `text`.
-
-### 2. Onboard a new user to specific channels
-
-1. Invite the user to the workspace: `POST /admin.users.invite` with `email`, `team_id`, and `channel_ids` for default channels.
-2. After the user accepts, look them up: `GET /users.lookupByEmail` with their email to get their `user.id`.
-3. Invite them to additional channels: `POST /conversations.invite` with `channel` and `users` for each extra channel.
-4. Optionally send a welcome DM: `POST /conversations.open` with `users` set to the new user's ID, then `POST /chat.postMessage` to the returned `channel.id`.
-
-### 3. Archive a channel and notify members
-
-1. Get channel members: `GET /conversations.members` with `channel`, paginating through all `next_cursor` values.
-2. Fetch user details for notification: `GET /users.info` for each member (or batch with `users.list`).
-3. Post a notice in the channel: `POST /chat.postMessage` with a message explaining the archive.
-4. Archive the channel: `POST /conversations.archive` with the `channel` ID.
-
-### 4. Search messages and export matching files
-
-1. Search for messages: `GET /search.messages` with `query`, iterating through pages using `page` parameter.
-2. For each matching message, check if it contains file attachments in the `files[]` array.
-3. Get file details: `GET /files.info` with each `file` ID to retrieve download URLs.
-4. Generate public download links if needed: `POST /files.sharedPublicURL` with the `file` ID.
-
-### 5. Create and populate a user group
-
-1. Create the group: `POST /usergroups.create` with `name`, `handle`, and optional `description`.
-2. Extract the `usergroup.id` from the response.
-3. Add members: `POST /usergroups.users.update` with the `usergroup` ID and a comma-separated `users` list.
-4. Optionally assign default channels: `POST /admin.usergroups.addChannels` with `usergroup_id` and `channel_ids`.
-5. Verify membership: `GET /usergroups.users.list` with the `usergroup` ID.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a admin.apps.approve?" -> POST /admin.apps.approve
+- "List all admin.apps.approved.list?" -> GET /admin.apps.approved.list
+- "List all admin.apps.requests.list?" -> GET /admin.apps.requests.list
+- "Create a admin.apps.restrict?" -> POST /admin.apps.restrict
+- "List all admin.apps.restricted.list?" -> GET /admin.apps.restricted.list
+- "Create a admin.conversations.archive?" -> POST /admin.conversations.archive
+- "Create a admin.conversations.convertToPrivate?" -> POST /admin.conversations.convertToPrivate
+- "Create a admin.conversations.create?" -> POST /admin.conversations.create
+- "Create a admin.conversations.delete?" -> POST /admin.conversations.delete
+- "Create a admin.conversations.disconnectShared?" -> POST /admin.conversations.disconnectShared
+- "List all admin.conversations.ekm.listOriginalConnectedChannelInfo?" -> GET /admin.conversations.ekm.listOriginalConnectedChannelInfo
+- "List all admin.conversations.getConversationPrefs?" -> GET /admin.conversations.getConversationPrefs
+- "List all admin.conversations.getTeams?" -> GET /admin.conversations.getTeams
+- "Create a admin.conversations.invite?" -> POST /admin.conversations.invite
+- "Create a admin.conversations.rename?" -> POST /admin.conversations.rename
+- "Create a admin.conversations.restrictAccess.addGroup?" -> POST /admin.conversations.restrictAccess.addGroup
+- "List all admin.conversations.restrictAccess.listGroups?" -> GET /admin.conversations.restrictAccess.listGroups
+- "Create a admin.conversations.restrictAccess.removeGroup?" -> POST /admin.conversations.restrictAccess.removeGroup
+- "Search admin.conversations.search?" -> GET /admin.conversations.search
+- "Create a admin.conversations.setConversationPref?" -> POST /admin.conversations.setConversationPrefs
+- "Create a admin.conversations.setTeam?" -> POST /admin.conversations.setTeams
+- "Create a admin.conversations.unarchive?" -> POST /admin.conversations.unarchive
+- "Create a admin.emoji.add?" -> POST /admin.emoji.add
+- "Create a admin.emoji.addAlia?" -> POST /admin.emoji.addAlias
+- "List all admin.emoji.list?" -> GET /admin.emoji.list
+- "Create a admin.emoji.remove?" -> POST /admin.emoji.remove
+- "Create a admin.emoji.rename?" -> POST /admin.emoji.rename
+- "Create a admin.inviteRequests.approve?" -> POST /admin.inviteRequests.approve
+- "List all admin.inviteRequests.approved.list?" -> GET /admin.inviteRequests.approved.list
+- "List all admin.inviteRequests.denied.list?" -> GET /admin.inviteRequests.denied.list
+- "Create a admin.inviteRequests.deny?" -> POST /admin.inviteRequests.deny
+- "List all admin.inviteRequests.list?" -> GET /admin.inviteRequests.list
+- "List all admin.teams.admins.list?" -> GET /admin.teams.admins.list
+- "Create a admin.teams.create?" -> POST /admin.teams.create
+- "List all admin.teams.list?" -> GET /admin.teams.list
+- "List all admin.teams.owners.list?" -> GET /admin.teams.owners.list
+- "List all admin.teams.settings.info?" -> GET /admin.teams.settings.info
+- "Create a admin.teams.settings.setDefaultChannel?" -> POST /admin.teams.settings.setDefaultChannels
+- "Create a admin.teams.settings.setDescription?" -> POST /admin.teams.settings.setDescription
+- "Create a admin.teams.settings.setDiscoverability?" -> POST /admin.teams.settings.setDiscoverability
+- "Create a admin.teams.settings.setIcon?" -> POST /admin.teams.settings.setIcon
+- "Create a admin.teams.settings.setName?" -> POST /admin.teams.settings.setName
+- "Create a admin.usergroups.addChannel?" -> POST /admin.usergroups.addChannels
+- "Create a admin.usergroups.addTeam?" -> POST /admin.usergroups.addTeams
+- "List all admin.usergroups.listChannels?" -> GET /admin.usergroups.listChannels
+- "Create a admin.usergroups.removeChannel?" -> POST /admin.usergroups.removeChannels
+- "Create a admin.users.assign?" -> POST /admin.users.assign
+- "Create a admin.users.invite?" -> POST /admin.users.invite
+- "List all admin.users.list?" -> GET /admin.users.list
+- "Create a admin.users.remove?" -> POST /admin.users.remove
+- "Create a admin.users.session.invalidate?" -> POST /admin.users.session.invalidate
+- "Create a admin.users.session.reset?" -> POST /admin.users.session.reset
+- "Create a admin.users.setAdmin?" -> POST /admin.users.setAdmin
+- "Create a admin.users.setExpiration?" -> POST /admin.users.setExpiration
+- "Create a admin.users.setOwner?" -> POST /admin.users.setOwner
+- "Create a admin.users.setRegular?" -> POST /admin.users.setRegular
+- "List all api.test?" -> GET /api.test
+- "List all apps.event.authorizations.list?" -> GET /apps.event.authorizations.list
+- "List all apps.permissions.info?" -> GET /apps.permissions.info
+- "List all apps.permissions.request?" -> GET /apps.permissions.request
+- "List all apps.permissions.resources.list?" -> GET /apps.permissions.resources.list
+- "List all apps.permissions.scopes.list?" -> GET /apps.permissions.scopes.list
+- "List all apps.permissions.users.list?" -> GET /apps.permissions.users.list
+- "List all apps.permissions.users.request?" -> GET /apps.permissions.users.request
+- "List all apps.uninstall?" -> GET /apps.uninstall
+- "List all auth.revoke?" -> GET /auth.revoke
+- "List all auth.test?" -> GET /auth.test
+- "List all bots.info?" -> GET /bots.info
+- "Create a calls.add?" -> POST /calls.add
+- "Create a calls.end?" -> POST /calls.end
+- "List all calls.info?" -> GET /calls.info
+- "Create a calls.participants.add?" -> POST /calls.participants.add
+- "Create a calls.participants.remove?" -> POST /calls.participants.remove
+- "Create a calls.update?" -> POST /calls.update
+- "Create a chat.delete?" -> POST /chat.delete
+- "Create a chat.deleteScheduledMessage?" -> POST /chat.deleteScheduledMessage
+- "List all chat.getPermalink?" -> GET /chat.getPermalink
+- "Create a chat.meMessage?" -> POST /chat.meMessage
+- "Create a chat.postEphemeral?" -> POST /chat.postEphemeral
+- "Create a chat.postMessage?" -> POST /chat.postMessage
+- "Create a chat.scheduleMessage?" -> POST /chat.scheduleMessage
+- "List all chat.scheduledMessages.list?" -> GET /chat.scheduledMessages.list
+- "Create a chat.unfurl?" -> POST /chat.unfurl
+- "Create a chat.update?" -> POST /chat.update
+- "Create a conversations.archive?" -> POST /conversations.archive
+- "Create a conversations.close?" -> POST /conversations.close
+- "Create a conversations.create?" -> POST /conversations.create
+- "List all conversations.history?" -> GET /conversations.history
+- "List all conversations.info?" -> GET /conversations.info
+- "Create a conversations.invite?" -> POST /conversations.invite
+- "Create a conversations.join?" -> POST /conversations.join
+- "Create a conversations.kick?" -> POST /conversations.kick
+- "Create a conversations.leave?" -> POST /conversations.leave
+- "List all conversations.list?" -> GET /conversations.list
+- "Create a conversations.mark?" -> POST /conversations.mark
+- "List all conversations.members?" -> GET /conversations.members
+- "Create a conversations.open?" -> POST /conversations.open
+- "Create a conversations.rename?" -> POST /conversations.rename
+- "List all conversations.replies?" -> GET /conversations.replies
+- "Create a conversations.setPurpose?" -> POST /conversations.setPurpose
+- "Create a conversations.setTopic?" -> POST /conversations.setTopic
+- "Create a conversations.unarchive?" -> POST /conversations.unarchive
+- "List all dialog.open?" -> GET /dialog.open
+- "Create a dnd.endDnd?" -> POST /dnd.endDnd
+- "Create a dnd.endSnooze?" -> POST /dnd.endSnooze
+- "List all dnd.info?" -> GET /dnd.info
+- "Create a dnd.setSnooze?" -> POST /dnd.setSnooze
+- "List all dnd.teamInfo?" -> GET /dnd.teamInfo
+- "List all emoji.list?" -> GET /emoji.list
+- "Create a files.comments.delete?" -> POST /files.comments.delete
+- "Create a files.delete?" -> POST /files.delete
+- "List all files.info?" -> GET /files.info
+- "List all files.list?" -> GET /files.list
+- "Create a files.remote.add?" -> POST /files.remote.add
+- "List all files.remote.info?" -> GET /files.remote.info
+- "List all files.remote.list?" -> GET /files.remote.list
+- "Create a files.remote.remove?" -> POST /files.remote.remove
+- "List all files.remote.share?" -> GET /files.remote.share
+- "Create a files.remote.update?" -> POST /files.remote.update
+- "Create a files.revokePublicURL?" -> POST /files.revokePublicURL
+- "Create a files.sharedPublicURL?" -> POST /files.sharedPublicURL
+- "Create a files.upload?" -> POST /files.upload
+- "List all migration.exchange?" -> GET /migration.exchange
+- "List all oauth.access?" -> GET /oauth.access
+- "List all oauth.token?" -> GET /oauth.token
+- "List all oauth.v2.access?" -> GET /oauth.v2.access
+- "Create a pins.add?" -> POST /pins.add
+- "List all pins.list?" -> GET /pins.list
+- "Create a pins.remove?" -> POST /pins.remove
+- "Create a reactions.add?" -> POST /reactions.add
+- "List all reactions.get?" -> GET /reactions.get
+- "List all reactions.list?" -> GET /reactions.list
+- "Create a reactions.remove?" -> POST /reactions.remove
+- "Create a reminders.add?" -> POST /reminders.add
+- "Create a reminders.complete?" -> POST /reminders.complete
+- "Create a reminders.delete?" -> POST /reminders.delete
+- "List all reminders.info?" -> GET /reminders.info
+- "List all reminders.list?" -> GET /reminders.list
+- "List all rtm.connect?" -> GET /rtm.connect
+- "Search search.messages?" -> GET /search.messages
+- "Create a stars.add?" -> POST /stars.add
+- "List all stars.list?" -> GET /stars.list
+- "Create a stars.remove?" -> POST /stars.remove
+- "List all team.accessLogs?" -> GET /team.accessLogs
+- "List all team.billableInfo?" -> GET /team.billableInfo
+- "List all team.info?" -> GET /team.info
+- "List all team.integrationLogs?" -> GET /team.integrationLogs
+- "List all team.profile.get?" -> GET /team.profile.get
+- "Create a usergroups.create?" -> POST /usergroups.create
+- "Create a usergroups.disable?" -> POST /usergroups.disable
+- "Create a usergroups.enable?" -> POST /usergroups.enable
+- "List all usergroups.list?" -> GET /usergroups.list
+- "Create a usergroups.update?" -> POST /usergroups.update
+- "List all usergroups.users.list?" -> GET /usergroups.users.list
+- "Create a usergroups.users.update?" -> POST /usergroups.users.update
+- "List all users.conversations?" -> GET /users.conversations
+- "Create a users.deletePhoto?" -> POST /users.deletePhoto
+- "List all users.getPresence?" -> GET /users.getPresence
+- "List all users.identity?" -> GET /users.identity
+- "List all users.info?" -> GET /users.info
+- "List all users.list?" -> GET /users.list
+- "List all users.lookupByEmail?" -> GET /users.lookupByEmail
+- "List all users.profile.get?" -> GET /users.profile.get
+- "Create a users.profile.set?" -> POST /users.profile.set
+- "Create a users.setActive?" -> POST /users.setActive
+- "Create a users.setPhoto?" -> POST /users.setPhoto
+- "Create a users.setPresence?" -> POST /users.setPresence
+- "List all views.open?" -> GET /views.open
+- "List all views.publish?" -> GET /views.publish
+- "List all views.push?" -> GET /views.push
+- "List all views.update?" -> GET /views.update
+- "List all workflows.stepCompleted?" -> GET /workflows.stepCompleted
+- "List all workflows.stepFailed?" -> GET /workflows.stepFailed
+- "List all workflows.updateStep?" -> GET /workflows.updateStep
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

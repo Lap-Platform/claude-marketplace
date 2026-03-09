@@ -113,86 +113,10 @@ Not specified.
 | POST | / | Update a major or minor version of a service template. |
 | POST | / | Update template sync configuration parameters, except for the templateName and templateType. Repository details (branch, name, and provider) should be of a linked repository. A linked repository is a repository that has been registered with Proton. For more information, see CreateRepository. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new environment?" -> POST / (CreateEnvironment: name, spec, templateMajorVersion, templateName required)
-- "What is the deployment status of my service instance?" -> POST / (GetServiceInstance: name, serviceName required; check deploymentStatus field)
-- "How many resources are behind on template versions?" -> POST / (GetResourcesSummary: no params; inspect counts.*.behindMajor and behindMinor)
-- "How do I roll back a failed component deployment?" -> POST / (CancelComponentDeployment: componentName required; then UpdateComponent with previous templateFile)
-- "What environments exist in my account?" -> POST / (ListEnvironments: optional filters by environmentTemplates, paginate with nextToken)
-- "How do I register a new source code repository?" -> POST / (CreateRepository: connectionArn, name, provider required)
-- "What outputs did my environment deployment produce?" -> POST / (ListEnvironmentOutputs: environmentName required, optional deploymentId)
-- "How do I connect a cross-account environment?" -> POST / (CreateEnvironmentAccountConnection: environmentName, managementAccountId required)
-- "Is my template sync up to date?" -> POST / (GetTemplateSyncStatus: templateName, templateType, templateVersion required; check latestSync.status)
-- "How do I update a service instance to a new template version?" -> POST / (UpdateServiceInstance: deploymentType, name, serviceName required; set templateMajorVersion/templateMinorVersion)
-- "What service sync blockers are active?" -> POST / (GetServiceSyncBlockerSummary: serviceName required; inspect latestBlockers array)
-- "How do I tag a Proton resource?" -> POST / (TagResource: resourceArn, tags required)
-- "What provisioned resources back my service instance?" -> POST / (ListServiceInstanceProvisionedResources: serviceInstanceName, serviceName required)
-- "How do I configure pipeline-level account settings?" -> POST / (UpdateAccountSettings: optional pipelineCodebuildRoleArn, pipelineServiceRoleArn, pipelineProvisioningRepository)
-
-## Response Tips
-
-- **All endpoints** return 200 on success; errors use standard AWS exception shapes (ValidationException, ResourceNotFoundException, ConflictException) -- always check for error type before reading the response body.
-- **List operations** paginate via `nextToken`; keep calling with the returned `nextToken` until it is null. Use `maxResults` (typically 1-100) to control page size.
-- **Deployment fields** are deeply nested: `deploymentStatus` is a top-level string enum (IN_PROGRESS, FAILED, SUCCEEDED, DELETE_IN_PROGRESS, etc.) while `deploymentStatusMessage` is nullable and only populated on failure.
-- **Get vs Delete** responses: Get returns nullable root objects (e.g., `environment?`) meaning a 200 with null indicates the resource was not found; Delete returns the resource as non-nullable on success.
-- **Sync status** responses contain nested `Revision` objects with `sha`, `branch`, `directory` -- compare `latestSync.targetRevision.sha` with `desiredState.sha` to determine drift.
-- **Timestamps** are ISO 8601 strings -- parse with Date constructor; `completedAt` on Deployments is null while in-progress.
-
-## Anomaly Flags
-
-- **Deployment stuck**: Surface when `deploymentStatus` is `IN_PROGRESS` and `lastDeploymentAttemptedAt` is older than 30 minutes.
-- **Failed deployments**: Proactively alert when any `deploymentStatus` equals `FAILED` or `DELETE_FAILED`, and include the `deploymentStatusMessage`.
-- **Template version drift**: Flag when `GetResourcesSummary` shows `behindMajor > 0` for any resource category -- these resources are running outdated infrastructure templates.
-- **Sync blockers**: Alert when `GetServiceSyncBlockerSummary` returns `latestBlockers` with status not `RESOLVED` -- these block automated deployments.
-- **Pending account connections**: Flag `EnvironmentAccountConnection` entries with `status: PENDING` -- they require acceptance before environments can deploy.
-- **Template version status**: Warn when template versions have `status: REGISTRATION_FAILED` and surface the `statusMessage`.
-- **Orphaned components**: Flag components where `serviceInstanceName` and `serviceName` are both null -- they may be unattached infrastructure.
-
-## Playbook
-
-### 1. Deploy a New Service End-to-End
-
-1. **Create a service template** with `CreateServiceTemplate` (name, optional pipelineProvisioning).
-2. **Register a template version** with `CreateServiceTemplateVersion` (source bundle, compatibleEnvironmentTemplates).
-3. **Wait for registration** by polling `GetServiceTemplateVersion` until `status` is `PUBLISHED`.
-4. **Create the service** with `CreateService` (name, spec, templateMajorVersion, templateName).
-5. **Monitor deployment** by polling `GetServiceInstance` for each instance until `deploymentStatus` is `SUCCEEDED`.
-6. **Retrieve outputs** with `ListServiceInstanceOutputs` to get connection strings, endpoints, or resource IDs.
-
-### 2. Update an Environment to a New Template Version
-
-1. **Check current state** with `GetEnvironment` -- note the current `templateMajorVersion` and `templateMinorVersion`.
-2. **Verify target version exists** with `GetEnvironmentTemplateVersion` and confirm `status` is `PUBLISHED`.
-3. **Update the environment** with `UpdateEnvironment` setting `deploymentType: MAJOR_VERSION` or `MINOR_VERSION`, plus new version fields.
-4. **Monitor progress** by polling `GetEnvironment` until `deploymentStatus` leaves `IN_PROGRESS`.
-5. **If failed**, read `deploymentStatusMessage`, fix the issue, and retry. Use `CancelEnvironmentDeployment` if stuck.
-
-### 3. Set Up Cross-Account Environment Provisioning
-
-1. **Create connection** from the management account with `CreateEnvironmentAccountConnection` (environmentName, managementAccountId).
-2. **Accept connection** from the environment account with `AcceptEnvironmentAccountConnection` (id).
-3. **Verify status** with `GetEnvironmentAccountConnection` -- confirm `status` is `CONNECTED`.
-4. **Create the environment** with `CreateEnvironment`, passing the `environmentAccountConnectionId`.
-5. **Optionally assign roles** with `UpdateEnvironmentAccountConnection` (codebuildRoleArn, componentRoleArn).
-
-### 4. Configure and Monitor Template Sync from Git
-
-1. **Register the repository** with `CreateRepository` (connectionArn, name, provider).
-2. **Create sync config** with `CreateTemplateSyncConfig` (branch, repositoryName, repositoryProvider, templateName, templateType).
-3. **Check sync status** with `GetTemplateSyncStatus` -- inspect `latestSync.status` for SUCCESS, FAILED, or IN_PROGRESS.
-4. **If sync fails**, examine `latestSync.events` for error details and verify the repository branch and subdirectory are correct.
-5. **List sync definitions** with `ListRepositorySyncDefinitions` to see all templates syncing from that repository.
-
-### 5. Diagnose and Resolve a Failed Deployment
-
-1. **Identify the failure** with `GetDeployment` (id) -- read `deploymentStatus` and `deploymentStatusMessage`.
-2. **Compare states** by inspecting `initialState` vs `targetState` to understand what changed.
-3. **Check outputs** with the relevant ListOutputs endpoint (component, environment, or service instance) for the failed `deploymentId`.
-4. **Cancel if stuck** using the appropriate Cancel endpoint (CancelComponentDeployment, CancelEnvironmentDeployment, CancelServiceInstanceDeployment, CancelServicePipelineDeployment).
-5. **Retry** by calling the Update endpoint with corrected parameters and `deploymentType: CURRENT_VERSION` to redeploy without changing the template version.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

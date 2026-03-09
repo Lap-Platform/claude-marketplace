@@ -64,85 +64,43 @@ Not specified.
 | POST | /api/web-verifications/by-referenceid | Retrieves secure links to web verification pages searching by the Reference Id. |
 | POST | /api/web-verifications/by-registrationid | Retrieves secure link to web verification page searching by the Registration Id. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I verify a bank account?" -> POST /api/bank-accounts/verify
-- "How do I look up a company by its ID?" -> GET /api/companies/{companyId}
-- "How do I register a new company?" -> POST /api/companies
-- "How do I run a credit check on someone?" -> POST /api/credit-status/perform
-- "How do I create a new identity registration?" -> POST /api/registrations
-- "How do I search for a registration by name or email?" -> GET /api/registrations/search
-- "How do I get a summary of a registration?" -> GET /api/registrations/{id}/summary
-- "How do I upload an ID document for verification?" -> POST /api/images/id-document
-- "How do I check if liveness detection was performed?" -> GET /api/images/liveness-performed/{registrationId}
-- "How do I export a registration as a PDF?" -> GET /api/registrations/{id}/pdf-export
-- "How do I export only specific sections of a registration PDF?" -> GET /api/registrations/{id}/pdf-export-sections
-- "How do I override the check status on a registration?" -> PUT /api/registrations/{id}/override-check-status
-- "How do I resend an invitation to a registrant?" -> POST /api/registrations/{id}/resend-invitation
-- "How do I update a registration's contact details?" -> PUT /api/registrations/{id}/contact-details
-- "What registration types are available?" -> GET /api/reg-types
-
-## Response Tips
-
-- **Registrations:** Summaries can be fetched by internal ID, reference ID, or reg code -- all return the same structure. Use the lookup that matches the identifier you have on hand.
-- **Search:** `GET /api/registrations/search` supports `pageNum` and `pageSize` for pagination. Always check if more pages exist by comparing result count to `pageSize`.
-- **Images:** GET endpoints for selfie, liveness, and id-document return binary image data tied to a `registrationId`. A 403 means the registration exists but you lack access; a 404 (liveness-performed) means the check has not been run yet.
-- **PDF exports:** `/pdf-export` returns the full report. `/pdf-export-sections` accepts boolean flags (Comments, StandardChecks, PepSanctionChecks, etc.) to include or exclude specific sections.
-- **Errors:** All endpoints share a common error pattern -- 400 (bad input), 401 (missing or invalid API key), 402 (insufficient credits/billing issue), 403 (access denied to resource), 500 (server error). A 402 specifically signals a billing or quota problem.
-
-## Anomaly Flags
-
-- **402 Payment Required:** Surface immediately -- indicates the account has run out of credits or the billing plan does not cover this operation. The user needs to top up before retrying.
-- **401 on previously working calls:** API key may have been rotated or revoked. Prompt the user to verify their `apikey` header value.
-- **404 on registration lookups:** Could mean the ID/referenceId/regCode is wrong, or the registration was deleted. Confirm the identifier before retrying.
-- **403 on image retrieval:** The registration exists but the caller lacks permission. This may indicate a multi-tenant access boundary issue.
-- **Liveness not performed (404 on /liveness-performed):** The registrant has not completed the liveness step yet. Flag this when it blocks downstream workflows like PDF export or summary review.
-- **Repeated 500 errors:** Likely a transient backend issue. Surface after two consecutive failures on the same endpoint and suggest waiting before retry.
-
-## Playbook
-
-### 1. Full Identity Verification (KYC Flow)
-
-1. Create a registration: `POST /api/registrations` with the applicant's details.
-2. Note the returned registration `id`.
-3. Upload a selfie: `POST /api/images/selfie` with the registration ID.
-4. Upload an ID document: `POST /api/images/id-document` with the registration ID.
-5. Submit liveness check: `POST /api/images/liveness` with the registration ID.
-6. Run a data check: `POST /api/datachecks` referencing the registration.
-7. Retrieve the full summary: `GET /api/registrations/{id}/summary`.
-8. Export the PDF report: `GET /api/registrations/{id}/pdf-export`.
-
-### 2. Company Due Diligence with Credit Check
-
-1. Register the company: `POST /api/companies` with the company number.
-2. Retrieve full company details: `GET /api/companies/{companyId}`.
-3. Run a credit status check: `POST /api/credit-status/perform` with the company reference.
-4. Optionally verify a bank account: `POST /api/bank-accounts/verify`.
-5. Review results and flag any 402 errors indicating billing limits.
-
-### 3. Search and Review Existing Registrations
-
-1. Search for registrations: `GET /api/registrations/search?forename=Jane&surname=Doe&pageSize=20`.
-2. Pick the matching result and note its `id`.
-3. Get the summary: `GET /api/registrations/{id}/summary`.
-4. Check submitted documents: `GET /api/registrations/{id}/check-submitted-id-documents`.
-5. If needed, export a sectioned PDF: `GET /api/registrations/{id}/pdf-export-sections?StandardChecks=true&PepSanctionChecks=true`.
-
-### 4. Resend Invitation and Update Contact Details
-
-1. Look up the registration summary by reference ID: `GET /api/registrations/referenceid/{referenceId}/summary`.
-2. Update contact details if they have changed: `PUT /api/registrations/{id}/contact-details` with the corrected info.
-3. Resend the invitation: `POST /api/registrations/{id}/resend-invitation`.
-4. Confirm settings are correct: `GET /api/registrations/{id}/settings`.
-
-### 5. Generate Report Views for External Stakeholders
-
-1. Generate a report view by reference ID: `POST /api/report-view/by-referenceid` with the reference.
-2. Alternatively, use the registration ID: `POST /api/report-view/by-registrationid`.
-3. For web-based verification links, use `POST /api/web-verifications/by-referenceid` or `POST /api/web-verifications/by-registrationid`.
-4. Share the resulting report or verification URL with the stakeholder.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a verify?" -> POST /api/bank-accounts/verify
+- "Create a company?" -> POST /api/companies
+- "Get company details?" -> GET /api/companies/{companyId}
+- "Create a perform?" -> POST /api/credit-status/perform
+- "Create a datacheck?" -> POST /api/datachecks
+- "Get selfie details?" -> GET /api/images/selfie/{registrationId}
+- "Create a selfie?" -> POST /api/images/selfie
+- "Get liveness details?" -> GET /api/images/liveness/{registrationId}
+- "Create a liveness?" -> POST /api/images/liveness
+- "Get liveness-performed details?" -> GET /api/images/liveness-performed/{registrationId}
+- "Get id-document details?" -> GET /api/images/id-document/{registrationId}
+- "Create a id-document?" -> POST /api/images/id-document
+- "Get scan-report-pdf details?" -> GET /api/images/scan-report-pdf/{scanId}
+- "Create a property-register?" -> POST /api/property-register
+- "Get property-register details?" -> GET /api/property-register/{id}
+- "Create a instant?" -> POST /api/registrations/instant
+- "Create a registration?" -> POST /api/registrations
+- "List all check-submitted-id-documents?" -> GET /api/registrations/{id}/check-submitted-id-documents
+- "List all summary?" -> GET /api/registrations/referenceid/{referenceId}/summary
+- "List all summary?" -> GET /api/registrations/{id}/summary
+- "List all summary?" -> GET /api/registrations/regcode/{regCode}/summary
+- "List all supported-id-documents?" -> GET /api/registrations/{id}/supported-id-documents
+- "List all pdf-export?" -> GET /api/registrations/{id}/pdf-export
+- "List all pdf-export-sections?" -> GET /api/registrations/{id}/pdf-export-sections
+- "Create a resend-invitation?" -> POST /api/registrations/{id}/resend-invitation
+- "List all settings?" -> GET /api/registrations/{id}/settings
+- "List all search?" -> GET /api/registrations/search
+- "List all pdf-settlement-status?" -> GET /api/registrations/{id}/pdf-settlement-status
+- "List all reg-types?" -> GET /api/reg-types
+- "Create a by-referenceid?" -> POST /api/report-view/by-referenceid
+- "Create a by-registrationid?" -> POST /api/report-view/by-registrationid
+- "Create a by-referenceid?" -> POST /api/web-verifications/by-referenceid
+- "Create a by-registrationid?" -> POST /api/web-verifications/by-registrationid
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

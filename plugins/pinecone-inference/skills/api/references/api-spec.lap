@@ -1,0 +1,46 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Pinecone Inference API
+@base https://api.pinecone.io
+@version 2025-10
+@auth ApiKey Api-Key in header
+@endpoints 4
+@toc embed(1), rerank(1), models(2)
+
+@group embed
+@endpoint POST /embed
+@desc Generate vectors
+@required {X-Pinecone-Api-Version: str=2025-10 # Required date-based version header, model: str # The [model](https://docs.pinecone.io/guides/index-data/create-an-index#embedding-models) to use for embedding generation., inputs: [map{text: str}] # List of inputs to generate embeddings for.}
+@optional {parameters: map # Additional model-specific parameters. Refer to the [model guide](https://docs.pinecone.io/guides/index-data/create-an-index#embedding-models) for available model parameters.}
+@returns(200) {model: str, vector_type: str, data: [map], usage: map{total_tokens: int(int32)}} # OK
+@errors {400: Bad request. The request body included invalid request parameters., 401: Unauthorized. Possible causes: Invalid API key., 500: Internal server error.}
+
+@endgroup
+
+@group rerank
+@endpoint POST /rerank
+@desc Rerank results
+@required {X-Pinecone-Api-Version: str=2025-10 # Required date-based version header, model: str # The [model](https://docs.pinecone.io/guides/search/rerank-results#reranking-models) to use for reranking., query: str # The query to rerank documents against., documents: [map] # The documents to rerank.}
+@optional {top_n: int # The number of results to return sorted by relevance. Defaults to the number of inputs., return_documents: bool=True # Whether to return the documents in the response., rank_fields: [str]=['text'] # The field(s) to consider for reranking. If not provided, the default is `["text"]`.  The number of fields supported is [model-specific](https://docs.pinecone.io/guides/search/rerank-results#reranking-models)., parameters: map # Additional model-specific parameters. Refer to the [model guide](https://docs.pinecone.io/guides/search/rerank-results#reranking-models) for available model parameters.}
+@returns(200) {model: str, data: [map], usage: map{rerank_units: int(int32)}} # OK
+@errors {400: Bad request. The request body included invalid request parameters., 401: Unauthorized. Possible causes: Invalid API key., 500: Internal server error.}
+
+@endgroup
+
+@group models
+@endpoint GET /models
+@desc List available models
+@required {X-Pinecone-Api-Version: str=2025-10 # Required date-based version header}
+@optional {type: str # Filter models by type ('embed' or 'rerank')., vector_type: str # Filter embedding models by vector type ('dense' or 'sparse'). Only relevant when `type=embed`.}
+@returns(200) {models: [map]} # The list of available models.
+@errors {401: Unauthorized. Possible causes: Invalid API key., 404: Model not found., 500: Internal server error.}
+
+@endpoint GET /models/{model_name}
+@desc Describe a model
+@required {X-Pinecone-Api-Version: str=2025-10 # Required date-based version header, model_name: str # The name of the model to look up.}
+@returns(200) {model: str, short_description: str, type: str, vector_type: str, default_dimension: int(int32), modality: str, max_sequence_length: int(int32), max_batch_size: int(int32), provider_name: str, supported_dimensions: [int(int32)], supported_metrics: [str], supported_parameters: [map]} # The model details.
+@errors {401: Unauthorized. Possible causes: Invalid API key., 404: Model not found., 500: Internal server error.}
+
+@endgroup
+
+@end

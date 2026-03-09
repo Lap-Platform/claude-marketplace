@@ -69,81 +69,30 @@ Not specified.
 | POST | /oauth2/token | Exchange ACR Refresh token for an ACR Access Token |
 | GET | /oauth2/token | Exchange Username, Password and Scope an ACR Access Token |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What repositories exist in my registry?" -> GET /acr/v1/_catalog
-- "How do I pull a container image manifest?" -> GET /v2/{name}/manifests/{reference}
-- "How do I push a new manifest to my repository?" -> PUT /v2/{name}/manifests/{reference}
-- "How do I delete an image by tag or digest?" -> DELETE /v2/{name}/manifests/{reference}
-- "Does a specific blob exist in my repository?" -> HEAD /v2/{name}/blobs/{digest}
-- "How do I start uploading a blob or mount from another repo?" -> POST /v2/{name}/blobs/uploads/
-- "How do I list all tags for a repository?" -> GET /acr/v1/{name}/_tags
-- "How do I get details about a specific tag?" -> GET /acr/v1/{name}/_tags/{reference}
-- "How do I delete a specific tag without deleting the manifest?" -> DELETE /acr/v1/{name}/_tags/{reference}
-- "How do I update repository attributes (e.g., enable/disable write)?" -> PATCH /acr/v1/{name}
-- "How do I get an OAuth2 access token for ACR?" -> POST /oauth2/token
-- "How do I exchange an AAD token for an ACR refresh token?" -> POST /oauth2/exchange
-- "How do I list all manifests for a repository?" -> GET /acr/v1/{name}/_manifests
-- "How do I resume a chunked blob upload?" -> PATCH /{nextBlobUuidLink}
-- "How do I check if the registry supports the V2 API?" -> GET /v2/
-
-## Response Tips
-
-- **Catalog & tag lists** (`/acr/v1/_catalog`, `/_tags`, `/_manifests`): Paginated via `last` and `n` params -- if `n` results return, fetch next page passing the last item name as `last`.
-- **Manifest operations** (`/v2/{name}/manifests/`): 200 returns the manifest body with `Content-Type` and `Docker-Content-Digest` headers; set `accept` header to request a specific media type (e.g., OCI vs Docker v2).
-- **Blob operations** (`/v2/{name}/blobs/`): GET/HEAD may return 307 redirects to the actual storage URL -- follow the `Location` header automatically.
-- **Blob uploads** (`/v2/{name}/blobs/uploads/`, `/{nextBlobUuidLink}`): Chunked upload returns 202 with `Location` header containing `{nextBlobUuidLink}` for the next chunk; final PUT with `digest` completes the upload and returns 201.
-- **ACR metadata** (`/acr/v1/{name}`, tags, manifests): PATCH endpoints accept attribute objects in `value` for toggling properties like deleteEnabled and writeEnabled.
-- **OAuth2** (`/oauth2/`): Token responses include `access_token` and expiry; exchange endpoint converts AAD tokens to ACR refresh tokens.
-
-## Anomaly Flags
-
-- **307 redirects on blob downloads**: Agent should transparently follow redirects but surface if redirect targets fail or timeout, as this indicates storage-layer issues.
-- **202 on deletes**: Deletion is asynchronous -- if the agent needs to confirm removal, it should poll the resource and surface if the item persists after a reasonable interval.
-- **Pagination truncation**: If the response count equals `n`, warn the user that results may be truncated and offer to fetch additional pages.
-- **Auth failures (401/403)**: Surface immediately with guidance to check token expiry; suggest re-running `/oauth2/token` or `/oauth2/exchange` to refresh credentials.
-- **Manifest media type mismatch**: If a GET manifest returns an unexpected `Content-Type`, flag it -- the caller may need to set the `accept` header explicitly.
-- **Empty `value` on PATCH responses**: If a metadata update returns 200 but the response body shows unchanged attributes, alert the user that the patch may not have applied.
-- **Deprecated API version**: The spec is versioned `2019-08-15-preview` -- flag that this is a preview API and behavior may change.
-
-## Playbook
-
-### 1. Authenticate and List All Repositories
-
-1. POST `/oauth2/exchange` with `grant_type=access_token`, your AAD `access_token`, and `service` set to your registry login server (e.g., `myregistry.azurecr.io`).
-2. Use the returned `refresh_token` to POST `/oauth2/token` with `grant_type=refresh_token`, `service`, and `scope=registry:catalog:*`.
-3. GET `/acr/v1/_catalog` with the access token as a Bearer header.
-4. If results are paginated, repeat with `last` set to the final repository name and `n` for page size.
-
-### 2. Inspect and Delete an Image by Tag
-
-1. GET `/acr/v1/{name}/_tags/{reference}` to retrieve tag metadata including the manifest digest.
-2. GET `/v2/{name}/manifests/{reference}` with `accept: application/vnd.docker.distribution.manifest.v2+json` to fetch the full manifest and confirm the digest.
-3. DELETE `/v2/{name}/manifests/{digest}` using the digest (not the tag) to remove the image.
-4. Optionally DELETE `/acr/v1/{name}/_tags/{reference}` to clean up the tag pointer if it was not auto-removed.
-
-### 3. Push a New Image (Blob + Manifest)
-
-1. POST `/v2/{name}/blobs/uploads/` to initiate a blob upload session; capture the `Location` header as `{nextBlobUuidLink}`.
-2. PATCH `/{nextBlobUuidLink}` with each chunk of the layer data; capture the updated `Location` after each 202 response.
-3. PUT `/{nextBlobUuidLink}?digest={digest}` with the final chunk to complete the blob upload.
-4. Repeat steps 1-3 for each layer and the config blob.
-5. PUT `/v2/{name}/manifests/{tag}` with the manifest JSON referencing all uploaded blob digests.
-
-### 4. Manage Repository and Tag Attributes
-
-1. GET `/acr/v1/{name}` to view current repository attributes (deleteEnabled, writeEnabled, listEnabled, readEnabled).
-2. PATCH `/acr/v1/{name}` with `value` containing the attributes to change (e.g., `{"deleteEnabled": false}` to lock the repo).
-3. To lock a specific tag, PATCH `/acr/v1/{name}/_tags/{reference}` with the desired attribute overrides.
-4. Verify by GET on the same resource to confirm the update took effect.
-
-### 5. Cross-Repository Blob Mount
-
-1. POST `/v2/{targetName}/blobs/uploads/?mount={digest}&from={sourceName}` to request a blob mount from another repository.
-2. If the blob exists in the source, the registry returns 201 with `Location` pointing to the blob in the target -- no upload needed.
-3. If the mount fails (blob not found in source), the response initiates a regular upload session; proceed with the chunked upload flow from Playbook 3.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get manifest details?" -> GET /v2/{name}/manifests/{reference}
+- "Update a manifest?" -> PUT /v2/{name}/manifests/{reference}
+- "Delete a manifest?" -> DELETE /v2/{name}/manifests/{reference}
+- "Get blob details?" -> GET /v2/{name}/blobs/{digest}
+- "Delete a blob?" -> DELETE /v2/{name}/blobs/{digest}
+- "Create a upload?" -> POST /v2/{name}/blobs/uploads/
+- "List all _catalog?" -> GET /acr/v1/_catalog
+- "Get acr details?" -> GET /acr/v1/{name}
+- "Delete a acr?" -> DELETE /acr/v1/{name}
+- "Partially update a acr?" -> PATCH /acr/v1/{name}
+- "List all _tags?" -> GET /acr/v1/{name}/_tags
+- "Get _tag details?" -> GET /acr/v1/{name}/_tags/{reference}
+- "Partially update a _tag?" -> PATCH /acr/v1/{name}/_tags/{reference}
+- "Delete a _tag?" -> DELETE /acr/v1/{name}/_tags/{reference}
+- "List all _manifests?" -> GET /acr/v1/{name}/_manifests
+- "Get _manifest details?" -> GET /acr/v1/{name}/_manifests/{reference}
+- "Partially update a _manifest?" -> PATCH /acr/v1/{name}/_manifests/{reference}
+- "Create a exchange?" -> POST /oauth2/exchange
+- "Create a token?" -> POST /oauth2/token
+- "List all token?" -> GET /oauth2/token
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

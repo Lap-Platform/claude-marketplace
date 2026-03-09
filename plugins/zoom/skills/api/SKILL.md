@@ -234,86 +234,140 @@ https://api.zoom.us/v2
 | PATCH | /webhooks/{webhookId} | Update a webhook |
 | DELETE | /webhooks/{webhookId} | Delete a webhook |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all users in my Zoom account?" -> GET /users
-- "How do I create a new meeting for a user?" -> POST /users/{userId}/meetings
-- "How do I get details about a specific meeting?" -> GET /meetings/{meetingId}
-- "How do I delete a recording from a meeting?" -> DELETE /meetings/{meetingId}/recordings/{recordingId}
-- "How do I list all recordings for a user in a date range?" -> GET /users/{userId}/recordings
-- "Who attended a past meeting?" -> GET /past_meetings/{meetingUUID}/participants
-- "How do I register someone for a webinar?" -> POST /webinars/{webinarId}/registrants
-- "How do I check meeting quality metrics for a participant?" -> GET /metrics/meetings/{meetingId}/participants/{participantId}/qos
-- "How do I update a user's settings?" -> PATCH /users/{userId}/settings
-- "How do I add members to a group?" -> POST /groups/{groupId}/members
-- "How do I get the daily usage report?" -> GET /report/daily
-- "How do I set up a webhook for event notifications?" -> POST /webhooks
-- "How do I approve or deny meeting registrants?" -> PUT /meetings/{meetingId}/registrants/status
-- "How do I configure livestreaming for a meeting?" -> PATCH /meetings/{meetingId}/livestream
-- "How do I look up a user by email address?" -> GET /users/email
-
-## Response Tips
-
-- **List endpoints** (users, meetings, accounts, groups): Paginated via `page_size` and `page_number` params; response includes `total_records` and `page_count` -- always check if more pages exist.
-- **Token-paginated endpoints** (recordings, past meeting participants, metrics, IM chat, reports): Use `next_page_token` from the response for cursor-based pagination; stop when token is empty string.
-- **Detail endpoints** (GET by ID): Return the full object; 404 means the resource was deleted or the ID is invalid -- double-check UUID encoding for past meetings.
-- **Mutating endpoints** (POST/PATCH/PUT/DELETE): 201 returns the created resource with its new ID; 204 returns no body -- confirm success by status code alone.
-- **Report endpoints**: Require `from`/`to` date range params (format: YYYY-MM-DD); `cloud_recording` report may return 300 for ambiguous results.
-- **Metrics endpoints**: Support `type` param to filter live vs past sessions; QoS data includes nested audio/video/screen-sharing quality objects.
-
-## Anomaly Flags
-
-- **Rate limiting**: Zoom enforces per-second and daily rate limits. Surface `Retry-After` headers and HTTP 429 responses immediately -- back off exponentially.
-- **Past meeting UUID encoding**: UUIDs starting with `/` or containing `//` must be double-URL-encoded, or the API returns 404. Flag when a past_meetings call fails with 404.
-- **409 Conflict on creation**: User or account already exists. Surface the conflicting resource details so the caller can update instead of create.
-- **300 on cloud recording report**: Ambiguous response -- multiple matches found. Flag this unusual status and suggest narrowing the date range.
-- **Token expiration**: The `access_token` query param auth model means tokens can leak in logs. Flag if tokens appear in error messages or redirect URLs.
-- **Deprecated pagination**: Some endpoints use `page_number` (offset-based) while newer ones use `next_page_token` (cursor-based). Flag when mixing pagination styles across a workflow.
-- **Empty participant lists**: If `past_meetings/{UUID}/participants` returns 200 but zero participants, the meeting data may have been purged (retained ~30 days). Surface a retention warning.
-
-## Playbook
-
-### 1. Schedule a Meeting and Track Registrants
-
-1. List users to find the host: `GET /users?status=active`
-2. Create the meeting: `POST /users/{userId}/meetings` with topic, type (2=scheduled), start_time, and settings (approval_type for registration)
-3. Share the meeting invitation: `GET /meetings/{meetingId}/invitation`
-4. Check registrants: `GET /meetings/{meetingId}/registrants` -- paginate through all pages
-5. Approve or deny registrants: `PUT /meetings/{meetingId}/registrants/status` with action and registrant IDs
-
-### 2. Pull Post-Meeting Analytics
-
-1. Get past meeting details: `GET /past_meetings/{meetingUUID}` (double-encode UUID if it starts with `/`)
-2. List all participants: `GET /past_meetings/{meetingUUID}/participants` -- use `next_page_token` to paginate
-3. Get QoS for a specific participant: `GET /metrics/meetings/{meetingId}/participants/{participantId}/qos`
-4. Pull the meeting report: `GET /report/meetings/{meetingId}`
-5. Get poll results if applicable: `GET /report/meetings/{meetingId}/polls`
-
-### 3. Manage Webinar with Panelists and Polls
-
-1. Create the webinar: `POST /users/{userId}/webinars` with topic, type, start_time, duration
-2. Add panelists: `POST /webinars/{webinarId}/panelists` with array of name/email pairs
-3. Create a poll: `POST /webinars/{webinarId}/polls` with title and questions
-4. Open registration: registrants self-register or bulk-add via `POST /webinars/{webinarId}/registrants`
-5. After the event, review poll results: `GET /report/webinars/{webinarId}/polls` and Q&A: `GET /report/webinars/{webinarId}/qa`
-
-### 4. Set Up Webhook Event Notifications
-
-1. Check current webhook configuration: `GET /webhooks`
-2. Create a new webhook: `POST /webhooks` with event types, notification URL, and auth token
-3. Verify delivery by checking your endpoint for Zoom's validation request
-4. Update webhook settings if needed: `PATCH /webhooks/{webhookId}`
-5. Adjust global webhook options: `PATCH /webhooks/options`
-
-### 5. Bulk User Provisioning and Group Assignment
-
-1. Create the user: `POST /users` with action (create/autoCreate/ssoCreate) and user_info
-2. Upload profile picture: `POST /users/{userId}/picture` with pic_file
-3. Configure user settings: `PATCH /users/{userId}/settings` with feature toggles
-4. Create or find a group: `GET /groups` then optionally `POST /groups`
-5. Add the user to the group: `POST /groups/{groupId}/members` with member ID
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all accounts?" -> GET /accounts
+- "Create a account?" -> POST /accounts
+- "Get account details?" -> GET /accounts/{accountId}
+- "Delete a account?" -> DELETE /accounts/{accountId}
+- "List all settings?" -> GET /accounts/{accountId}/settings
+- "List all managed_domains?" -> GET /accounts/{accountId}/managed_domains
+- "List all billing?" -> GET /accounts/{accountId}/billing
+- "List all plans?" -> GET /accounts/{accountId}/plans
+- "Create a plan?" -> POST /accounts/{accountId}/plans
+- "Create a addon?" -> POST /accounts/{accountId}/plans/addons
+- "List all groups?" -> GET /groups
+- "Create a group?" -> POST /groups
+- "Get group details?" -> GET /groups/{groupId}
+- "Partially update a group?" -> PATCH /groups/{groupId}
+- "Delete a group?" -> DELETE /groups/{groupId}
+- "List all members?" -> GET /groups/{groupId}/members
+- "Create a member?" -> POST /groups/{groupId}/members
+- "Delete a member?" -> DELETE /groups/{groupId}/members/{memberId}
+- "List all devices?" -> GET /h323/devices
+- "Create a device?" -> POST /h323/devices
+- "Partially update a device?" -> PATCH /h323/devices/{deviceId}
+- "Delete a device?" -> DELETE /h323/devices/{deviceId}
+- "List all tracking_fields?" -> GET /v2/tracking_fields
+- "Create a tracking_field?" -> POST /v2/tracking_fields
+- "Get tracking_field details?" -> GET /v2/tracking_fields/{fieldId}
+- "Partially update a tracking_field?" -> PATCH /v2/tracking_fields/{fieldId}
+- "Delete a tracking_field?" -> DELETE /v2/tracking_fields/{fieldId}
+- "List all groups?" -> GET /im/groups
+- "Create a group?" -> POST /im/groups
+- "Get group details?" -> GET /im/groups/{groupId}
+- "Partially update a group?" -> PATCH /im/groups/{groupId}
+- "Delete a group?" -> DELETE /im/groups/{groupId}
+- "List all members?" -> GET /im/groups/{groupId}/members
+- "Create a member?" -> POST /im/groups/{groupId}/members
+- "Delete a member?" -> DELETE /im/groups/{groupId}/members/{memberId}
+- "List all sessions?" -> GET /im/chat/sessions
+- "Get session details?" -> GET /im/chat/sessions/{sessionId}
+- "List all meetings?" -> GET /users/{userId}/meetings
+- "Create a meeting?" -> POST /users/{userId}/meetings
+- "Get meeting details?" -> GET /meetings/{meetingId}
+- "Partially update a meeting?" -> PATCH /meetings/{meetingId}
+- "Delete a meeting?" -> DELETE /meetings/{meetingId}
+- "List all invitation?" -> GET /meetings/{meetingId}/invitation
+- "List all registrants?" -> GET /meetings/{meetingId}/registrants
+- "Create a registrant?" -> POST /meetings/{meetingId}/registrants
+- "Get past_meeting details?" -> GET /past_meetings/{meetingUUID}
+- "List all participants?" -> GET /past_meetings/{meetingUUID}/participants
+- "List all instances?" -> GET /past_meetings/{meetingId}/instances
+- "List all polls?" -> GET /meetings/{meetingId}/polls
+- "Create a poll?" -> POST /meetings/{meetingId}/polls
+- "Get poll details?" -> GET /meetings/{meetingId}/polls/{pollId}
+- "Update a poll?" -> PUT /meetings/{meetingId}/polls/{pollId}
+- "Delete a poll?" -> DELETE /meetings/{meetingId}/polls/{pollId}
+- "List all recordings?" -> GET /users/{userId}/recordings
+- "List all recordings?" -> GET /meetings/{meetingId}/recordings
+- "Delete a recording?" -> DELETE /meetings/{meetingId}/recordings/{recordingId}
+- "List all settings?" -> GET /meetings/{meetingId}/recordings/settings
+- "List all meetings?" -> GET /metrics/meetings
+- "Get meeting details?" -> GET /metrics/meetings/{meetingId}
+- "List all participants?" -> GET /metrics/meetings/{meetingId}/participants
+- "List all qos?" -> GET /metrics/meetings/{meetingId}/participants/{participantId}/qos
+- "List all qos?" -> GET /metrics/meetings/{meetingId}/participants/qos
+- "List all sharing?" -> GET /metrics/meetings/{meetingId}/participants/sharing
+- "List all webinars?" -> GET /metrics/webinars
+- "Get webinar details?" -> GET /metrics/webinars/{webinarId}
+- "List all participants?" -> GET /metrics/webinars/{webinarId}/participants
+- "List all qos?" -> GET /metrics/webinars/{webinarId}/participants/{participantId}/qos
+- "List all qos?" -> GET /metrics/webinars/{webinarId}/participants/qos
+- "List all sharing?" -> GET /metrics/webinars/{webinarId}/participants/sharing
+- "List all zoomrooms?" -> GET /metrics/zoomrooms
+- "Get zoomroom details?" -> GET /metrics/zoomrooms/{zoomroomId}
+- "List all crc?" -> GET /metrics/crc
+- "List all im?" -> GET /metrics/im
+- "List all daily?" -> GET /report/daily
+- "List all users?" -> GET /report/users
+- "List all meetings?" -> GET /report/users/{userId}/meetings
+- "Get meeting details?" -> GET /report/meetings/{meetingId}
+- "List all participants?" -> GET /report/meetings/{meetingId}/participants
+- "List all polls?" -> GET /report/meetings/{meetingId}/polls
+- "Get webinar details?" -> GET /report/webinars/{webinarId}
+- "List all participants?" -> GET /report/webinars/{webinarId}/participants
+- "List all polls?" -> GET /report/webinars/{webinarId}/polls
+- "List all qa?" -> GET /report/webinars/{webinarId}/qa
+- "List all telephone?" -> GET /report/telephone
+- "List all cloud_recording?" -> GET /report/cloud_recording
+- "List all tsp?" -> GET /tsp
+- "List all users?" -> GET /users
+- "Create a user?" -> POST /users
+- "Get user details?" -> GET /users/{userId}
+- "Partially update a user?" -> PATCH /users/{userId}
+- "Delete a user?" -> DELETE /users/{userId}
+- "List all assistants?" -> GET /users/{userId}/assistants
+- "Create a assistant?" -> POST /users/{userId}/assistants
+- "Delete a assistant?" -> DELETE /users/{userId}/assistants/{assistantId}
+- "List all schedulers?" -> GET /users/{userId}/schedulers
+- "Delete a scheduler?" -> DELETE /users/{userId}/schedulers/{schedulerId}
+- "Create a picture?" -> POST /users/{userId}/picture
+- "List all settings?" -> GET /users/{userId}/settings
+- "List all permissions?" -> GET /users/{userId}/permissions
+- "List all pac?" -> GET /users/{userId}/pac
+- "List all tsp?" -> GET /users/{userId}/tsp
+- "Create a tsp?" -> POST /users/{userId}/tsp
+- "Get tsp details?" -> GET /users/{userId}/tsp/{tspId}
+- "Partially update a tsp?" -> PATCH /users/{userId}/tsp/{tspId}
+- "Delete a tsp?" -> DELETE /users/{userId}/tsp/{tspId}
+- "List all token?" -> GET /users/{userId}/token
+- "List all zpk?" -> GET /users/zpk
+- "List all email?" -> GET /users/email
+- "List all vanity_name?" -> GET /users/vanity_name
+- "List all webinars?" -> GET /users/{userId}/webinars
+- "Create a webinar?" -> POST /users/{userId}/webinars
+- "Get webinar details?" -> GET /webinars/{webinarId}
+- "Partially update a webinar?" -> PATCH /webinars/{webinarId}
+- "Delete a webinar?" -> DELETE /webinars/{webinarId}
+- "List all panelists?" -> GET /webinars/{webinarId}/panelists
+- "Create a panelist?" -> POST /webinars/{webinarId}/panelists
+- "Delete a panelist?" -> DELETE /webinars/{webinarId}/panelists/{panelistId}
+- "List all registrants?" -> GET /webinars/{webinarId}/registrants
+- "Create a registrant?" -> POST /webinars/{webinarId}/registrants
+- "List all instances?" -> GET /past_webinars/{webinarId}/instances
+- "List all polls?" -> GET /webinars/{webinarId}/polls
+- "Create a poll?" -> POST /webinars/{webinarId}/polls
+- "Get poll details?" -> GET /webinars/{webinarId}/polls/{pollId}
+- "Update a poll?" -> PUT /webinars/{webinarId}/polls/{pollId}
+- "Delete a poll?" -> DELETE /webinars/{webinarId}/polls/{pollId}
+- "List all webhooks?" -> GET /webhooks
+- "Create a webhook?" -> POST /webhooks
+- "Get webhook details?" -> GET /webhooks/{webhookId}
+- "Partially update a webhook?" -> PATCH /webhooks/{webhookId}
+- "Delete a webhook?" -> DELETE /webhooks/{webhookId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

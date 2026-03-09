@@ -10,182 +10,210 @@
 
 @group fields
 @endpoint GET /v4/fields
-@optional {X-Next-Token: str, X-Limit: int(int32), fieldName: str}
-@returns(200) {results: [any]}
-@returns(206) {results: [any]}
-@errors {304, 400, 401, 403, 429, 500, 503}
+@desc Retrieve list of Fields
+@optional {X-Next-Token: str # Opaque string which allows for fetching the next batch of results.  Can be used to poll for changes., X-Limit: int(int32) # Max number of results to return per batch.  Must be between 1 and 100 inclusive.  Defaults to 100., fieldName: str # Optional prefix filter for field name. Must be at least 3 characters.}
+@returns(200) {results: [any]} # OK
+@returns(206) {results: [any]} # Partial Result
+@errors {304: Not Modified, 400: Bad Input, 401: Unauthorized, 403: Forbidden, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint GET /v4/fields/{fieldId}
-@required {fieldId: str(uuid)}
-@returns(200) {id: str(uuid), name: str, boundaryId: str(uuid), resourceOwnerId: str(uuid), parent: any}
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Retrieve a specific Field by ID
+@required {fieldId: str(uuid) # Unique identifier of the Field.}
+@returns(200) {id: str(uuid), name: str, boundaryId: str(uuid), resourceOwnerId: str(uuid), parent: any} # Returns the requested Field.
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endgroup
 
 @group farmOrganizations
 @endpoint GET /v4/farmOrganizations/{farmOrganizationType}/{farmOrganizationId}
-@required {farmOrganizationType: str, farmOrganizationId: str(uuid)}
-@returns(200) {id: str(uuid), name: str, type: str}
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Retrieve a specific farm organization by organization type and ID
+@required {farmOrganizationType: str # Type of the farm organization., farmOrganizationId: str(uuid) # Unique identifier of the farm organization.}
+@returns(200) {id: str(uuid), name: str, type: str} # Returns the requested farm organization.
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endgroup
 
 @group operations
 @endpoint GET /v4/operations/all
-@optional {resourceOwnerId: str}
-@returns(200) {results: [map]}
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Retrieve the operations accessible to a a given user.
+@optional {resourceOwnerId: str # Optional comma-separated list of resource owner unique identifiers by which to filter results.}
+@returns(200) {results: [map]} # Returns the requested operations.
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endgroup
 
 @group resourceOwners
 @endpoint GET /v4/resourceOwners/{resourceOwnerId}
-@required {resourceOwnerId: str(uuid)}
-@returns(200) {id: str(uuid), name: str, email: str}
-@errors {400, 404, 500}
+@desc Retrieve a resource owner by ID
+@required {resourceOwnerId: str(uuid) # Unique identifier of the resource owner.}
+@returns(200) {id: str(uuid), name: str, email: str} # OK
+@errors {400: Bad Input, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group boundaries
 @endpoint GET /v4/boundaries/{boundaryId}
-@required {boundaryId: str(uuid)}
-@returns(200) {id: str(uuid), type: str, geometry: any, properties: any}
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Retrieve a Boundary by ID
+@required {boundaryId: str(uuid) # Unique identifier of the Boundary}
+@returns(200) {id: str(uuid), type: str, geometry: any, properties: any} # OK
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint POST /v4/boundaries/query
+@desc Retrieve Boundaries in batch
 @required {ids: [str(uuid)]}
-@returns(200) {type: str, features: [any]}
-@errors {400, 401, 403, 404, 429, 500, 503}
+@returns(200) {type: str, features: [any]} # OK
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint POST /v4/boundaries
-@required {geometry: any}
-@returns(200) {id: str(uuid)}
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Upload a boundary
+@required {geometry: any # GeoJSON}
+@returns(200) {id: str(uuid)} # OK
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endgroup
 
 @group uploads
 @endpoint POST /v4/uploads
-@required {contentType: str(mime-type)(image/vnd.climate.thermal.geotiff/image/vnd.climate.ndvi.geotiff/image/vnd.climate.rgb.geotiff/image/vnd.climate.rgb-nir.geotiff/image/vnd.climate.rgb-cir.geotiff/image/vnd.climate.waterstress.geotiff/image/vnd.climate.elevation.geotiff/image/vnd.climate.raw.geotiff/application/vnd.climate.field.geojson/application/vnd.climate.rx.planting.shp/application/vnd.climate.prescription.zones.shp/application/vnd.climate.modus.xml/application/vnd.climate.as-applied.zip/application/vnd.climate.as-planted.zip/application/vnd.climate.as-harvested.zip), md5: str, length: int(int64)}
-@optional {X-Recipient-Email: str, metadata: map}
-@returns(201)
-@errors {400, 401, 403, 429, 500, 503}
+@desc Initiate a new upload
+@required {contentType: str(mime-type)(image/vnd.climate.thermal.geotiff/image/vnd.climate.ndvi.geotiff/image/vnd.climate.rgb.geotiff/image/vnd.climate.rgb-nir.geotiff/image/vnd.climate.rgb-cir.geotiff/image/vnd.climate.waterstress.geotiff/image/vnd.climate.elevation.geotiff/image/vnd.climate.raw.geotiff/application/vnd.climate.field.geojson/application/vnd.climate.rx.planting.shp/application/vnd.climate.prescription.zones.shp/application/vnd.climate.modus.xml/application/vnd.climate.as-applied.zip/application/vnd.climate.as-planted.zip/application/vnd.climate.as-harvested.zip) # Content type representing data being uploaded (e.g. image/vnd.climate.rgb.geotiff), md5: str # Base64 encoded md5 hash of the content, length: int(int64) # Content size in bytes}
+@optional {X-Recipient-Email: str # Email address associated with a Climate account, used when to sending to another user., metadata: map}
+@returns(201) Returns a new upload with ID used to PUT file contents.
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint PUT /v4/uploads/{uploadId}
-@required {Content-Range: str, uploadId: str(uuid), Content-Type: str}
-@returns(204)
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Chunked upload of data
+@required {Content-Range: str # Byte range `bytes start-end/total` (https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.16). e.g. bytes 0-5242880/10242880. Downloads larger than 5MiB (5242880 bytes) in size must be downloaded in chunks no larger than 5MiB (5242880 bytes) and no smaller than 1MiB (1048576 bytes). The last chunk could be less than 1MiB (1048576 bytes)., uploadId: str(uuid) # Unique identifier of an Upload., Content-Type: str # Must be `application/octet-stream`}
+@returns(204) No Content
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint GET /v4/uploads/{uploadId}/status
-@required {uploadId: str(uuid)}
-@returns(200) {id: str(uuid), status: str}
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Retrieve Upload status
+@required {uploadId: str(uuid) # Unique identifier of an Upload.}
+@returns(200) {id: str(uuid), status: str} # OK
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint POST /v4/uploads/status/query
+@desc Retrieve Upload statuses in batch
 @required {ids: [str(uuid)]}
-@returns(200) {results: [map]}
-@errors {400, 401, 403, 404, 429, 500, 503}
+@returns(200) {results: [map]} # OK
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endgroup
 
 @group exports
 @endpoint POST /v4/exports
-@required {contentType: str(mime-type)(application/vnd.climate.acrsi.geojson/application/vnd.climate.harvest.geojson)}
-@optional {definition: map}
-@returns(201) {id: str(uuid)}
-@errors {400, 401, 403, 429, 500, 503}
+@desc Initiate a new export request.
+@required {contentType: str(mime-type)(application/vnd.climate.acrsi.geojson/application/vnd.climate.harvest.geojson) # Content type representing data being exported (e.g. application/vnd.climate.acrsi.geojson).}
+@optional {definition: map # Additional specifications for a client's data export request, dependent on the content type.}
+@returns(201) {id: str(uuid)} # OK
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint GET /v4/exports/{exportId}/status
-@required {exportId: str(uuid)}
-@returns(200) {status: str, error: str, size: int(int64), checksum: str, xNextToken: str}
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Retrieve the status of an Export.
+@required {exportId: str(uuid) # Unique identifier of an Export.}
+@returns(200) {status: str, error: str, size: int(int64), checksum: str, xNextToken: str} # OK
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint GET /v4/exports/{exportId}/contents
-@required {Accept: str, exportId: str(uuid), Range: str}
-@returns(204)
-@returns(206)
-@errors {304, 400, 401, 403, 404, 409, 410, 416, 429, 500, 503}
+@desc Retrieve the binary contents of a processed export request.
+@required {Accept: str # Must be either \*/* or application/octet-stream,application/json, exportId: str(uuid) # Unique identifier of an Export., Range: str # Byte range `bytes=start-end` (https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.1). e.g. bytes=0-1048576. Currently only single range value is supported. Both start and end need to be specified, end value should be greater than start and end - start should not be greater than 5MiB.}
+@returns(204) No Content
+@returns(206) Partial Result
+@errors {304: Not Modified, 400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict (Report generation is still in progress), 410: Gone (Report is expired), 416: Range Not Satisfiable, 429: Too Many Requests, 500: Internal Server Error, 503: Server Busy}
 
 @endgroup
 
 @group layers
 @endpoint GET /v4/layers/scoutingObservations
-@optional {X-Next-Token: str, X-Limit: int(int32), occurredAfter: str(date-time), occurredBefore: str(date-time)}
-@returns(200) {results: [map]}
-@returns(206) {results: [map]}
-@errors {304, 400}
+@desc Retrieve a list of scouting observations
+@optional {X-Next-Token: str # Opaque string which allows for fetching the next batch of results.  Can be used to poll for changes., X-Limit: int(int32) # Max number of results to return per batch.  Must be between 1 and 100 inclusive.  Defaults to 100., occurredAfter: str(date-time) # Optional start time by which to filter layer results. Time must be in ISO 8601 format with time zone, e.g. 2016-05-13T00:00:00Z (https://tools.ietf.org/html/rfc3339). Layers with an end time at or after (inclusive) the specified time will match this filter. If both occurredAfter and occurredBefore are populated, occurredAfter must be <= occurredBefore., occurredBefore: str(date-time) # Optional end time by which to filter layer results. Time must be in ISO 8601 format with time zone, e.g. 2016-05-13T00:00:00Z (https://tools.ietf.org/html/rfc3339). Layers with a start time at or before (inclusive) the specified time. If both occurredAfter and occurredBefore are populated, occurredAfter must be <= occurredBefore.}
+@returns(200) {results: [map]} # OK
+@returns(206) {results: [map]} # Partial Result
+@errors {304: Not Modified, 400: Bad Input}
 
 @endpoint GET /v4/layers/scoutingObservations/{scoutingObservationId}
-@required {scoutingObservationId: str(uuid)}
-@returns(200) {id: str(uuid), title: str, note: str, location: any, startTime: str(date-time), endTime: str(date-time), updatedAt: str(date-time), fieldIds: [str], tags: [map], timespan: str, locationDisplayColor: str, status: str}
-@errors {400, 403, 404}
+@desc Retrieve individual scouting observation
+@required {scoutingObservationId: str(uuid) # Unique identifier of the Scouting Observation.}
+@returns(200) {id: str(uuid), title: str, note: str, location: any, startTime: str(date-time), endTime: str(date-time), updatedAt: str(date-time), fieldIds: [str], tags: [map], timespan: str, locationDisplayColor: str, status: str} # Returns the requested scouting observation.
+@errors {400: Bad Input, 403: Forbidden, 404: Not Found}
 
 @endpoint GET /v4/layers/scoutingObservations/{scoutingObservationId}/attachments
-@required {scoutingObservationId: str(uuid)}
-@optional {X-Next-Token: str, X-Limit: int(int32)}
-@returns(200) {results: [map]}
-@returns(206) {results: [map]}
-@errors {304, 400, 403, 404}
+@desc Retrieve attachments associated with a given scouting observation.
+@required {scoutingObservationId: str(uuid) # Unique identifier of the Scouting Observation.}
+@optional {X-Next-Token: str # Opaque string which allows for fetching the next batch of results.  Can be used to poll for changes., X-Limit: int(int32) # Max number of results to return per batch.  Must be between 1 and 100 inclusive.  Defaults to 100.}
+@returns(200) {results: [map]} # OK
+@returns(206) {results: [map]} # Partial Result
+@errors {304: Not Modified, 400: Bad Input, 403: Forbidden, 404: Not Found}
 
 @endpoint GET /v4/layers/scoutingObservations/{scoutingObservationId}/attachments/{attachmentId}/contents
-@required {Accept: str, scoutingObservationId: str(uuid), attachmentId: str(uuid), Range: str}
-@returns(200)
-@returns(206)
-@errors {400, 401, 403, 404, 416, 500, 503}
+@desc Retrieve the binary contents of a scouting observation’s attachment.
+@required {Accept: str # Must be either \*/* or application/octet-stream,application/json, scoutingObservationId: str(uuid) # Unique identifier of the Scouting Observation., attachmentId: str(uuid) # Unique identifier of the attachment., Range: str # Byte range `bytes=start-end` (https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.1). e.g. bytes=0-1048576. Currently only single range value is supported. Both start and end need to be specified, end value should be greater than start and end - start should not be greater than 5MiB.}
+@returns(200) OK
+@returns(206) Partial Result
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 416: Range Not Satisfiable, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint GET /v4/layers/asPlanted
-@required {Accept: str}
-@optional {X-Next-Token: str, X-Limit: int(int32), resourceOwnerId: str(uuid), occurredAfter: str(date-time), occurredBefore: str(date-time), updatedAfter: str(date-time)}
-@returns(200) {results: [map]}
-@returns(206) {results: [map]}
-@errors {304, 400}
+@desc Retrieve a list of planting activities
+@required {Accept: str # Must be either \*/* or application/octet-stream,application/json}
+@optional {X-Next-Token: str # Opaque string which allows for fetching the next batch of results.  Can be used to poll for changes., X-Limit: int(int32) # Max number of results to return per batch.  Must be between 1 and 100 inclusive.  Defaults to 100., resourceOwnerId: str(uuid) # Optional unique identifier of the resource owner.  If resourceOwnerId is not specified, it defaults to the x-authenticated-user-uuid., occurredAfter: str(date-time) # Optional start time by which to filter layer results. Time must be in ISO 8601 format with time zone, e.g. 2016-05-13T00:00:00Z (https://tools.ietf.org/html/rfc3339). Layers with an end time at or after (inclusive) the specified time will match this filter. If both occurredAfter and occurredBefore are populated, occurredAfter must be <= occurredBefore., occurredBefore: str(date-time) # Optional end time by which to filter layer results. Time must be in ISO 8601 format with time zone, e.g. 2016-05-13T00:00:00Z (https://tools.ietf.org/html/rfc3339). Layers with a start time at or before (inclusive) the specified time. If both occurredAfter and occurredBefore are populated, occurredAfter must be <= occurredBefore., updatedAfter: str(date-time) # Optional updated time by which to filter layer results. Time must be in ISO 8601 format with time zone, e.g. 2016-05-13T00:00:00Z (https://tools.ietf.org/html/rfc3339). Layers with a modification time at or after (inclusive) the specified time.}
+@returns(200) {results: [map]} # OK
+@returns(206) {results: [map]} # Partial Result
+@errors {304: Not Modified, 400: Bad Input}
 
 @endpoint GET /v4/layers/asPlanted/{activityId}/contents
-@required {Accept: str, activityId: str(uuid), Range: str}
-@returns(200)
-@returns(206)
-@errors {304, 400, 401, 403, 404, 416, 500, 503}
+@desc Retrieve the raw planting activity
+@required {Accept: str # Must be either \*/* or application/octet-stream,application/json, activityId: str(uuid) # Unique identifier of the Planting Activity., Range: str # Byte range `bytes=start-end` (https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.1). e.g. bytes=0-1048576. Currently only single range value is supported. Both start and end need to be specified, end value should be greater than start and end - start should not be greater than 5MiB.}
+@returns(200) OK
+@returns(206) Partial Result
+@errors {304: Not Modified, 400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 416: Range Not Satisfiable, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint GET /v4/layers/asPlanted/{activityId}
-@required {Accept: str, activityId: str(uuid)}
-@returns(200) {id: str(uuid), fieldId: str(uuid), fileName: str, fileSize: int(int64), indexedAt: str(date-time), lastProcessedAt: str(date-time), originalSrcModified: str(date-time), serialNumber: int(int32), srcLastModified: str(date-time), area: num(float), boundary: str, cropId: int(int64), dataChecksum: str, endTime: str(date-time), machineId: str, processorVersion: str, recordCount: int(int64), seasonCode: str, startTime: str(date-time), moisturePct: num(float), originalCropName: str, actualPopAvg: num(float), speedAvg: num(float), excessDfPct: num(float), goodSpacingPct: num(float), lossGcPct: num(float), newSeeds: int(int64), popUnit: str, singulationPct: num(float), split: bool, targetPopAvg: num(float)}
-@errors {400, 401, 403, 404, 500, 503}
+@desc Retrieve the summary of an activity as planted agronomic data
+@required {Accept: str # Must be either \*/* or application/octet-stream,application/json, activityId: str(uuid) # Unique identifier of the Planting Activity.}
+@returns(200) {id: str(uuid), fieldId: str(uuid), fileName: str, fileSize: int(int64), indexedAt: str(date-time), lastProcessedAt: str(date-time), originalSrcModified: str(date-time), serialNumber: int(int32), srcLastModified: str(date-time), area: num(float), boundary: str, cropId: int(int64), dataChecksum: str, endTime: str(date-time), machineId: str, processorVersion: str, recordCount: int(int64), seasonCode: str, startTime: str(date-time), moisturePct: num(float), originalCropName: str, actualPopAvg: num(float), speedAvg: num(float), excessDfPct: num(float), goodSpacingPct: num(float), lossGcPct: num(float), newSeeds: int(int64), popUnit: str, singulationPct: num(float), split: bool, targetPopAvg: num(float)} # OK
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint GET /v4/layers/asApplied
-@required {Accept: str}
-@optional {X-Next-Token: str, X-Limit: int(int32), resourceOwnerId: str(uuid), occurredAfter: str(date-time), occurredBefore: str(date-time), updatedAfter: str(date-time)}
-@returns(200) {results: [map]}
-@returns(206) {results: [map]}
-@errors {304, 400}
+@desc Retrieve a list of application activities
+@required {Accept: str # Must be either \*/* or application/octet-stream,application/json}
+@optional {X-Next-Token: str # Opaque string which allows for fetching the next batch of results.  Can be used to poll for changes., X-Limit: int(int32) # Max number of results to return per batch.  Must be between 1 and 100 inclusive.  Defaults to 100., resourceOwnerId: str(uuid) # Optional unique identifier of the resource owner.  If resourceOwnerId is not specified, it defaults to the x-authenticated-user-uuid., occurredAfter: str(date-time) # Optional start time by which to filter layer results. Time must be in ISO 8601 format with time zone, e.g. 2016-05-13T00:00:00Z (https://tools.ietf.org/html/rfc3339). Layers with an end time at or after (inclusive) the specified time will match this filter. If both occurredAfter and occurredBefore are populated, occurredAfter must be <= occurredBefore., occurredBefore: str(date-time) # Optional end time by which to filter layer results. Time must be in ISO 8601 format with time zone, e.g. 2016-05-13T00:00:00Z (https://tools.ietf.org/html/rfc3339). Layers with a start time at or before (inclusive) the specified time. If both occurredAfter and occurredBefore are populated, occurredAfter must be <= occurredBefore., updatedAfter: str(date-time) # Optional updated time by which to filter layer results. Time must be in ISO 8601 format with time zone, e.g. 2016-05-13T00:00:00Z (https://tools.ietf.org/html/rfc3339). Layers with a modification time at or after (inclusive) the specified time.}
+@returns(200) {results: [map]} # OK
+@returns(206) {results: [map]} # Partial Result
+@errors {304: Not Modified, 400: Bad Input}
 
 @endpoint GET /v4/layers/asApplied/{activityId}/contents
-@required {Accept: str, activityId: str(uuid), Range: str}
-@returns(200)
-@returns(206)
-@errors {304, 400, 401, 403, 404, 416, 500, 503}
+@desc Retrieve the raw application activity
+@required {Accept: str # Must be either \*/* or application/octet-stream,application/json, activityId: str(uuid) # Unique identifier of the Application Activity., Range: str # Byte range `bytes=start-end` (https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.1). e.g. bytes=0-1048576. Currently only single range value is supported. Both start and end need to be specified, end value should be greater than start and end - start should not be greater than 5MiB.}
+@returns(200) OK
+@returns(206) Partial Result
+@errors {304: Not Modified, 400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 416: Range Not Satisfiable, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint GET /v4/layers/asApplied/{activityId}
-@required {Accept: str, activityId: str(uuid)}
-@returns(200) {id: str(uuid), fieldId: str(uuid), fileName: str, fileSize: int(int64), indexedAt: str(date-time), lastProcessedAt: str(date-time), originalSrcModified: str(date-time), serialNumber: int(int32), srcLastModified: str(date-time), area: num(float), boundary: str, cropId: int(int64), dataChecksum: str, endTime: str(date-time), machineId: str, processorVersion: str, recordCount: int(int64), seasonCode: str, startTime: str(date-time), passName: str}
-@errors {400, 401, 403, 404, 500, 503}
+@desc Retrieve the summary of an activity as applied agronomic data
+@required {Accept: str # Must be either \*/* or application/octet-stream,application/json, activityId: str(uuid) # Unique identifier of the Application Activity.}
+@returns(200) {id: str(uuid), fieldId: str(uuid), fileName: str, fileSize: int(int64), indexedAt: str(date-time), lastProcessedAt: str(date-time), originalSrcModified: str(date-time), serialNumber: int(int32), srcLastModified: str(date-time), area: num(float), boundary: str, cropId: int(int64), dataChecksum: str, endTime: str(date-time), machineId: str, processorVersion: str, recordCount: int(int64), seasonCode: str, startTime: str(date-time), passName: str} # OK
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint GET /v4/layers/asHarvested
-@required {Accept: str}
-@optional {X-Next-Token: str, X-Limit: int(int32), resourceOwnerId: str(uuid), occurredAfter: str(date-time), occurredBefore: str(date-time), updatedAfter: str(date-time)}
-@returns(200) {results: [map]}
-@returns(206) {results: [map]}
-@errors {304, 400}
+@desc Retrieve a list of harvest activities
+@required {Accept: str # Must be either \*/* or application/octet-stream,application/json}
+@optional {X-Next-Token: str # Opaque string which allows for fetching the next batch of results.  Can be used to poll for changes., X-Limit: int(int32) # Max number of results to return per batch.  Must be between 1 and 100 inclusive.  Defaults to 100., resourceOwnerId: str(uuid) # Optional unique identifier of the resource owner.  If resourceOwnerId is not specified, it defaults to the x-authenticated-user-uuid., occurredAfter: str(date-time) # Optional start time by which to filter layer results. Time must be in ISO 8601 format with time zone, e.g. 2016-05-13T00:00:00Z (https://tools.ietf.org/html/rfc3339). Layers with an end time at or after (inclusive) the specified time will match this filter. If both occurredAfter and occurredBefore are populated, occurredAfter must be <= occurredBefore., occurredBefore: str(date-time) # Optional end time by which to filter layer results. Time must be in ISO 8601 format with time zone, e.g. 2016-05-13T00:00:00Z (https://tools.ietf.org/html/rfc3339). Layers with a start time at or before (inclusive) the specified time. If both occurredAfter and occurredBefore are populated, occurredAfter must be <= occurredBefore., updatedAfter: str(date-time) # Optional updated time by which to filter layer results. Time must be in ISO 8601 format with time zone, e.g. 2016-05-13T00:00:00Z (https://tools.ietf.org/html/rfc3339). Layers with a modification time at or after (inclusive) the specified time.}
+@returns(200) {results: [map]} # OK
+@returns(206) {results: [map]} # Partial Result
+@errors {304: Not Modified, 400: Bad Input}
 
 @endpoint GET /v4/layers/asHarvested/{activityId}/contents
-@required {Accept: str, activityId: str(uuid), Range: str}
-@returns(200)
-@returns(206)
-@errors {304, 400, 401, 403, 404, 416, 500, 503}
+@desc Retrieve the raw harvest activity
+@required {Accept: str # Must be either \*/* or application/octet-stream,application/json, activityId: str(uuid) # Unique identifier of the Harvest Activity., Range: str # Byte range `bytes=start-end` (https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.35.1). e.g. bytes=0-1048576. Currently only single range value is supported. Both start and end need to be specified, end value should be greater than start and end - start should not be greater than 5MiB.}
+@returns(200) OK
+@returns(206) Partial Result
+@errors {304: Not Modified, 400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 416: Range Not Satisfiable, 500: Internal Server Error, 503: Server Busy}
 
 @endpoint GET /v4/layers/asHarvested/{activityId}
-@required {Accept: str, activityId: str(uuid)}
-@returns(200) {id: str(uuid), fieldId: str(uuid), fileName: str, fileSize: int(int64), indexedAt: str(date-time), lastProcessedAt: str(date-time), originalSrcModified: str(date-time), serialNumber: int(int32), srcLastModified: str(date-time), area: num(float), boundary: str, cropId: int(int64), dataChecksum: str, endTime: str(date-time), machineId: str, processorVersion: str, recordCount: int(int64), seasonCode: str, startTime: str(date-time), moisturePct: num(float), originalCropName: str, wetMass: num(float), loadNumber: int(int32)}
-@errors {400, 401, 403, 404, 500, 503}
+@desc Retrieve the summary of an activity as harvested agronomic data
+@required {Accept: str # Must be either \*/* or application/octet-stream,application/json, activityId: str(uuid) # Unique identifier of the Harvest Activity.}
+@returns(200) {id: str(uuid), fieldId: str(uuid), fileName: str, fileSize: int(int64), indexedAt: str(date-time), lastProcessedAt: str(date-time), originalSrcModified: str(date-time), serialNumber: int(int32), srcLastModified: str(date-time), area: num(float), boundary: str, cropId: int(int64), dataChecksum: str, endTime: str(date-time), machineId: str, processorVersion: str, recordCount: int(int64), seasonCode: str, startTime: str(date-time), moisturePct: num(float), originalCropName: str, wetMass: num(float), loadNumber: int(int32)} # OK
+@errors {400: Bad Input, 401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal Server Error, 503: Server Busy}
 
 @endgroup
 

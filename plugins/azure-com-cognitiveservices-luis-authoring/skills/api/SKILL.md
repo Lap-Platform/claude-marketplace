@@ -203,93 +203,167 @@ Not specified.
 | GET | /package/{appId}/slot/{slotName}/gzip | package - Gets published LUIS application package in binary stream GZip format |
 | GET | /package/{appId}/versions/{versionId}/gzip | package - Gets trained LUIS application package in binary stream GZip format |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new LUIS app?" -> POST /apps/
-- "What LUIS apps do I have?" -> GET /apps/
-- "How do I add a training utterance to my app?" -> POST /apps/{appId}/versions/{versionId}/example
-- "How do I batch-add multiple utterances at once?" -> POST /apps/{appId}/versions/{versionId}/examples
-- "How do I create a new intent?" -> POST /apps/{appId}/versions/{versionId}/intents
-- "How do I train my LUIS app version?" -> POST /apps/{appId}/versions/{versionId}/train
-- "Is my model done training?" -> GET /apps/{appId}/versions/{versionId}/train
-- "How do I publish my app?" -> POST /apps/{appId}/publish
-- "How do I export a version of my app?" -> GET /apps/{appId}/versions/{versionId}/export
-- "How do I add a phrase list feature?" -> POST /apps/{appId}/versions/{versionId}/phraselists
-- "What prebuilt entities are available for my culture?" -> GET /apps/{appId}/versions/{versionId}/listprebuilts
-- "How do I clone an app version?" -> POST /apps/{appId}/versions/{versionId}/clone
-- "How do I add a pattern rule for an intent?" -> POST /apps/{appId}/versions/{versionId}/patternrule
-- "How do I get suggested utterances for an intent?" -> GET /apps/{appId}/versions/{versionId}/intents/{intentId}/suggest
-- "How do I download a packaged model for offline use?" -> GET /package/{appId}/slot/{slotName}/gzip
-
-## Response Tips
-
-- **App listing/search (GET /apps/, GET /apps/{appId}/versions):** Results support `skip` and `take` pagination params -- default page size varies, always pass both to paginate reliably.
-- **Batch utterance upload (POST /examples):** Can return 201 (all succeeded) or 207 (partial success) -- inspect per-item results in the response array for individual errors.
-- **Training (POST then GET /train):** POST returns 202 (accepted, async); poll GET /train until all model statuses show "Success" or "UpToDate" -- do not assume training is instant.
-- **Publish (POST /publish):** Can return 201 or 207 -- a 207 means some slots/regions failed; check each region's status in the response body.
-- **Entity/intent CRUD:** GET single-resource endpoints return flat objects; list endpoints return arrays. IDs are GUIDs returned on creation (201 body).
-- **Roles and features:** Nested under their parent entity path; responses are arrays of role/feature-relation objects keyed by role or feature ID.
-- **Azure accounts:** Require both `Authorization` (user token) and optionally `ArmToken` -- these are separate from the `Ocp-Apim-Subscription-Key` header used for all other endpoints.
-
-## Anomaly Flags
-
-- **207 Multi-Status on publish or batch examples:** Surface immediately -- partial failures mean some items succeeded and others did not; the agent should list which items failed and why.
-- **Training status stuck or regressed:** If polling GET /train returns statuses other than "Success" or "UpToDate" (e.g., "Fail", "InProgress" for extended periods), flag to the user with the specific model name and status.
-- **Hierarchical and composite entities (deprecated):** These entity types are legacy in LUIS v3; if a user creates or modifies them, warn that Microsoft recommends migrating to machine-learned entities with children instead.
-- **Missing `Ocp-Apim-Subscription-Key`:** Any 401 should prompt the agent to verify the API key header is set, since all 168 endpoints require it.
-- **Large skip/take values:** If a user requests `take` values over 500 for list endpoints, flag that the API may silently cap results or degrade performance.
-- **Force-delete of an app (DELETE /apps/{appId} with `force=true`):** Warn that this bypasses safety checks and permanently removes the app and all versions.
-- **Version import conflicts:** POST /apps/{appId}/versions/import with an existing `versionId` will fail -- surface a suggestion to use a new version ID or clone first.
-
-## Playbook
-
-### 1. Create an App, Add Intents and Utterances, Then Train and Publish
-
-1. POST /apps/ with `{ name, culture, description }` -- save the returned `appId`
-2. Note the default version (usually "0.1") or POST /apps/{appId}/versions/{versionId}/clone to create a working version
-3. POST /apps/{appId}/versions/{versionId}/intents with `{ name: "OrderFood" }` -- save the `intentId`
-4. POST /apps/{appId}/versions/{versionId}/examples with an array of labeled utterances referencing the intent
-5. Check for 207 partial failures in the response; fix and re-submit any failed utterances
-6. POST /apps/{appId}/versions/{versionId}/train to kick off training
-7. Poll GET /apps/{appId}/versions/{versionId}/train until all models report "Success"
-8. POST /apps/{appId}/publish with `{ versionId, isStaging: false }` to deploy to production slot
-
-### 2. Add Entities with Roles and Phrase List Features
-
-1. POST /apps/{appId}/versions/{versionId}/entities with `{ name: "Location" }` -- save `entityId`
-2. POST /apps/{appId}/versions/{versionId}/entities/{entityId}/roles with `{ name: "Origin" }`
-3. POST /apps/{appId}/versions/{versionId}/entities/{entityId}/roles with `{ name: "Destination" }`
-4. POST /apps/{appId}/versions/{versionId}/phraselists with `{ name: "CityNames", phrases: "Seattle,Portland,Vancouver", isExchangeable: true }`
-5. POST /apps/{appId}/versions/{versionId}/entities/{entityId}/features to link the phrase list as a feature for the entity
-6. Retrain and republish (see Playbook 1, steps 6-8)
-
-### 3. Review and Improve Model Using Suggested Utterances
-
-1. GET /apps/{appId}/versions/{versionId}/intents to list all intents and their IDs
-2. For each intent of interest, GET /apps/{appId}/versions/{versionId}/intents/{intentId}/suggest with `take=20`
-3. Review suggested utterances; label and correct entity annotations as needed
-4. POST /apps/{appId}/versions/{versionId}/examples with the accepted suggestions
-5. DELETE /apps/{appId}/versions/{versionId}/suggest for any utterance you want to dismiss from the suggestion pool
-6. Retrain and republish
-
-### 4. Export, Clone, and Manage Versions
-
-1. GET /apps/{appId}/versions to list all versions with training/publish status
-2. GET /apps/{appId}/versions/{versionId}/export to download the full version as JSON (backup)
-3. POST /apps/{appId}/versions/{versionId}/clone with `{ version: "0.2" }` to create an experimental branch
-4. Make changes on version "0.2" (add intents, entities, utterances)
-5. Train and test version "0.2"; if satisfied, publish it
-6. Optionally DELETE /apps/{appId}/versions/{oldVersionId}/ to clean up obsolete versions
-
-### 5. Set Up Pattern Rules for Intent Recognition
-
-1. GET /apps/{appId}/versions/{versionId}/intents to find the target `intentId`
-2. POST /apps/{appId}/versions/{versionId}/patternrule with `{ pattern: "book a flight to {Location}", intent: "BookFlight" }`
-3. To bulk-add patterns: POST /apps/{appId}/versions/{versionId}/patternrules with an array of pattern objects
-4. GET /apps/{appId}/versions/{versionId}/intents/{intentId}/patternrules to verify patterns are attached
-5. Retrain and republish; test with utterances matching the pattern structure
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a phraselist?" -> POST /apps/{appId}/versions/{versionId}/phraselists
+- "List all phraselists?" -> GET /apps/{appId}/versions/{versionId}/phraselists
+- "List all features?" -> GET /apps/{appId}/versions/{versionId}/features
+- "Get phraselist details?" -> GET /apps/{appId}/versions/{versionId}/phraselists/{phraselistId}
+- "Update a phraselist?" -> PUT /apps/{appId}/versions/{versionId}/phraselists/{phraselistId}
+- "Delete a phraselist?" -> DELETE /apps/{appId}/versions/{versionId}/phraselists/{phraselistId}
+- "Create a example?" -> POST /apps/{appId}/versions/{versionId}/example
+- "Create a example?" -> POST /apps/{appId}/versions/{versionId}/examples
+- "List all examples?" -> GET /apps/{appId}/versions/{versionId}/examples
+- "Delete a example?" -> DELETE /apps/{appId}/versions/{versionId}/examples/{exampleId}
+- "Create a intent?" -> POST /apps/{appId}/versions/{versionId}/intents
+- "List all intents?" -> GET /apps/{appId}/versions/{versionId}/intents
+- "Create a entity?" -> POST /apps/{appId}/versions/{versionId}/entities
+- "List all entities?" -> GET /apps/{appId}/versions/{versionId}/entities
+- "List all hierarchicalentities?" -> GET /apps/{appId}/versions/{versionId}/hierarchicalentities
+- "List all compositeentities?" -> GET /apps/{appId}/versions/{versionId}/compositeentities
+- "List all closedlists?" -> GET /apps/{appId}/versions/{versionId}/closedlists
+- "Create a closedlist?" -> POST /apps/{appId}/versions/{versionId}/closedlists
+- "Create a prebuilt?" -> POST /apps/{appId}/versions/{versionId}/prebuilts
+- "List all prebuilts?" -> GET /apps/{appId}/versions/{versionId}/prebuilts
+- "List all listprebuilts?" -> GET /apps/{appId}/versions/{versionId}/listprebuilts
+- "List all models?" -> GET /apps/{appId}/versions/{versionId}/models
+- "List all examples?" -> GET /apps/{appId}/versions/{versionId}/models/{modelId}/examples
+- "Get intent details?" -> GET /apps/{appId}/versions/{versionId}/intents/{intentId}
+- "Update a intent?" -> PUT /apps/{appId}/versions/{versionId}/intents/{intentId}
+- "Delete a intent?" -> DELETE /apps/{appId}/versions/{versionId}/intents/{intentId}
+- "Get entity details?" -> GET /apps/{appId}/versions/{versionId}/entities/{entityId}
+- "Delete a entity?" -> DELETE /apps/{appId}/versions/{versionId}/entities/{entityId}
+- "Partially update a entity?" -> PATCH /apps/{appId}/versions/{versionId}/entities/{entityId}
+- "Create a feature?" -> POST /apps/{appId}/versions/{versionId}/intents/{intentId}/features
+- "List all features?" -> GET /apps/{appId}/versions/{versionId}/intents/{intentId}/features
+- "Create a feature?" -> POST /apps/{appId}/versions/{versionId}/entities/{entityId}/features
+- "List all features?" -> GET /apps/{appId}/versions/{versionId}/entities/{entityId}/features
+- "Get hierarchicalentity details?" -> GET /apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}
+- "Partially update a hierarchicalentity?" -> PATCH /apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}
+- "Delete a hierarchicalentity?" -> DELETE /apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}
+- "Get compositeentity details?" -> GET /apps/{appId}/versions/{versionId}/compositeentities/{cEntityId}
+- "Update a compositeentity?" -> PUT /apps/{appId}/versions/{versionId}/compositeentities/{cEntityId}
+- "Delete a compositeentity?" -> DELETE /apps/{appId}/versions/{versionId}/compositeentities/{cEntityId}
+- "Get closedlist details?" -> GET /apps/{appId}/versions/{versionId}/closedlists/{clEntityId}
+- "Update a closedlist?" -> PUT /apps/{appId}/versions/{versionId}/closedlists/{clEntityId}
+- "Partially update a closedlist?" -> PATCH /apps/{appId}/versions/{versionId}/closedlists/{clEntityId}
+- "Delete a closedlist?" -> DELETE /apps/{appId}/versions/{versionId}/closedlists/{clEntityId}
+- "Get prebuilt details?" -> GET /apps/{appId}/versions/{versionId}/prebuilts/{prebuiltId}
+- "Delete a prebuilt?" -> DELETE /apps/{appId}/versions/{versionId}/prebuilts/{prebuiltId}
+- "Delete a sublist?" -> DELETE /apps/{appId}/versions/{versionId}/closedlists/{clEntityId}/sublists/{subListId}
+- "Update a sublist?" -> PUT /apps/{appId}/versions/{versionId}/closedlists/{clEntityId}/sublists/{subListId}
+- "List all suggest?" -> GET /apps/{appId}/versions/{versionId}/intents/{intentId}/suggest
+- "List all suggest?" -> GET /apps/{appId}/versions/{versionId}/entities/{entityId}/suggest
+- "Create a app?" -> POST /apps/
+- "List all apps?" -> GET /apps/
+- "Create a import?" -> POST /apps/import
+- "List all assistants?" -> GET /apps/assistants
+- "List all domains?" -> GET /apps/domains
+- "List all usagescenarios?" -> GET /apps/usagescenarios
+- "List all cultures?" -> GET /apps/cultures
+- "List all querylogs?" -> GET /apps/{appId}/querylogs
+- "Get app details?" -> GET /apps/{appId}
+- "Update a app?" -> PUT /apps/{appId}
+- "Delete a app?" -> DELETE /apps/{appId}
+- "Create a clone?" -> POST /apps/{appId}/versions/{versionId}/clone
+- "Create a publish?" -> POST /apps/{appId}/publish
+- "List all versions?" -> GET /apps/{appId}/versions
+- "Get version details?" -> GET /apps/{appId}/versions/{versionId}/
+- "Update a version?" -> PUT /apps/{appId}/versions/{versionId}/
+- "Delete a version?" -> DELETE /apps/{appId}/versions/{versionId}/
+- "List all export?" -> GET /apps/{appId}/versions/{versionId}/export
+- "Create a train?" -> POST /apps/{appId}/versions/{versionId}/train
+- "List all train?" -> GET /apps/{appId}/versions/{versionId}/train
+- "Create a import?" -> POST /apps/{appId}/versions/import
+- "List all settings?" -> GET /apps/{appId}/settings
+- "List all publishsettings?" -> GET /apps/{appId}/publishsettings
+- "List all endpoints?" -> GET /apps/{appId}/endpoints
+- "Create a sublist?" -> POST /apps/{appId}/versions/{versionId}/closedlists/{clEntityId}/sublists
+- "Create a customprebuiltdomain?" -> POST /apps/{appId}/versions/{versionId}/customprebuiltdomains
+- "Create a customprebuiltintent?" -> POST /apps/{appId}/versions/{versionId}/customprebuiltintents
+- "List all customprebuiltintents?" -> GET /apps/{appId}/versions/{versionId}/customprebuiltintents
+- "Create a customprebuiltentity?" -> POST /apps/{appId}/versions/{versionId}/customprebuiltentities
+- "List all customprebuiltentities?" -> GET /apps/{appId}/versions/{versionId}/customprebuiltentities
+- "List all customprebuiltmodels?" -> GET /apps/{appId}/versions/{versionId}/customprebuiltmodels
+- "Delete a customprebuiltdomain?" -> DELETE /apps/{appId}/versions/{versionId}/customprebuiltdomains/{domainName}
+- "List all customprebuiltdomains?" -> GET /apps/customprebuiltdomains
+- "Create a customprebuiltdomain?" -> POST /apps/customprebuiltdomains
+- "Get customprebuiltdomain details?" -> GET /apps/customprebuiltdomains/{culture}
+- "Create a children?" -> POST /apps/{appId}/versions/{versionId}/entities/{entityId}/children
+- "Get children details?" -> GET /apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}/children/{hChildId}
+- "Partially update a children?" -> PATCH /apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}/children/{hChildId}
+- "Delete a children?" -> DELETE /apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}/children/{hChildId}
+- "Create a children?" -> POST /apps/{appId}/versions/{versionId}/compositeentities/{cEntityId}/children
+- "Delete a children?" -> DELETE /apps/{appId}/versions/{versionId}/compositeentities/{cEntityId}/children/{cChildId}
+- "List all regexentities?" -> GET /apps/{appId}/versions/{versionId}/regexentities
+- "Create a regexentity?" -> POST /apps/{appId}/versions/{versionId}/regexentities
+- "List all patternanyentities?" -> GET /apps/{appId}/versions/{versionId}/patternanyentities
+- "Create a patternanyentity?" -> POST /apps/{appId}/versions/{versionId}/patternanyentities
+- "List all roles?" -> GET /apps/{appId}/versions/{versionId}/entities/{entityId}/roles
+- "Create a role?" -> POST /apps/{appId}/versions/{versionId}/entities/{entityId}/roles
+- "List all roles?" -> GET /apps/{appId}/versions/{versionId}/prebuilts/{entityId}/roles
+- "Create a role?" -> POST /apps/{appId}/versions/{versionId}/prebuilts/{entityId}/roles
+- "List all roles?" -> GET /apps/{appId}/versions/{versionId}/closedlists/{entityId}/roles
+- "Create a role?" -> POST /apps/{appId}/versions/{versionId}/closedlists/{entityId}/roles
+- "List all roles?" -> GET /apps/{appId}/versions/{versionId}/regexentities/{entityId}/roles
+- "Create a role?" -> POST /apps/{appId}/versions/{versionId}/regexentities/{entityId}/roles
+- "List all roles?" -> GET /apps/{appId}/versions/{versionId}/compositeentities/{cEntityId}/roles
+- "Create a role?" -> POST /apps/{appId}/versions/{versionId}/compositeentities/{cEntityId}/roles
+- "List all roles?" -> GET /apps/{appId}/versions/{versionId}/patternanyentities/{entityId}/roles
+- "Create a role?" -> POST /apps/{appId}/versions/{versionId}/patternanyentities/{entityId}/roles
+- "List all roles?" -> GET /apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}/roles
+- "Create a role?" -> POST /apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}/roles
+- "List all roles?" -> GET /apps/{appId}/versions/{versionId}/customprebuiltentities/{entityId}/roles
+- "Create a role?" -> POST /apps/{appId}/versions/{versionId}/customprebuiltentities/{entityId}/roles
+- "List all explicitlist?" -> GET /apps/{appId}/versions/{versionId}/patternanyentities/{entityId}/explicitlist
+- "Create a explicitlist?" -> POST /apps/{appId}/versions/{versionId}/patternanyentities/{entityId}/explicitlist
+- "Get regexentity details?" -> GET /apps/{appId}/versions/{versionId}/regexentities/{regexEntityId}
+- "Update a regexentity?" -> PUT /apps/{appId}/versions/{versionId}/regexentities/{regexEntityId}
+- "Delete a regexentity?" -> DELETE /apps/{appId}/versions/{versionId}/regexentities/{regexEntityId}
+- "Get patternanyentity details?" -> GET /apps/{appId}/versions/{versionId}/patternanyentities/{entityId}
+- "Update a patternanyentity?" -> PUT /apps/{appId}/versions/{versionId}/patternanyentities/{entityId}
+- "Delete a patternanyentity?" -> DELETE /apps/{appId}/versions/{versionId}/patternanyentities/{entityId}
+- "Get role details?" -> GET /apps/{appId}/versions/{versionId}/entities/{entityId}/roles/{roleId}
+- "Update a role?" -> PUT /apps/{appId}/versions/{versionId}/entities/{entityId}/roles/{roleId}
+- "Delete a role?" -> DELETE /apps/{appId}/versions/{versionId}/entities/{entityId}/roles/{roleId}
+- "Get role details?" -> GET /apps/{appId}/versions/{versionId}/prebuilts/{entityId}/roles/{roleId}
+- "Update a role?" -> PUT /apps/{appId}/versions/{versionId}/prebuilts/{entityId}/roles/{roleId}
+- "Delete a role?" -> DELETE /apps/{appId}/versions/{versionId}/prebuilts/{entityId}/roles/{roleId}
+- "Get role details?" -> GET /apps/{appId}/versions/{versionId}/closedlists/{entityId}/roles/{roleId}
+- "Update a role?" -> PUT /apps/{appId}/versions/{versionId}/closedlists/{entityId}/roles/{roleId}
+- "Delete a role?" -> DELETE /apps/{appId}/versions/{versionId}/closedlists/{entityId}/roles/{roleId}
+- "Get role details?" -> GET /apps/{appId}/versions/{versionId}/regexentities/{entityId}/roles/{roleId}
+- "Update a role?" -> PUT /apps/{appId}/versions/{versionId}/regexentities/{entityId}/roles/{roleId}
+- "Delete a role?" -> DELETE /apps/{appId}/versions/{versionId}/regexentities/{entityId}/roles/{roleId}
+- "Get role details?" -> GET /apps/{appId}/versions/{versionId}/compositeentities/{cEntityId}/roles/{roleId}
+- "Update a role?" -> PUT /apps/{appId}/versions/{versionId}/compositeentities/{cEntityId}/roles/{roleId}
+- "Delete a role?" -> DELETE /apps/{appId}/versions/{versionId}/compositeentities/{cEntityId}/roles/{roleId}
+- "Get role details?" -> GET /apps/{appId}/versions/{versionId}/patternanyentities/{entityId}/roles/{roleId}
+- "Update a role?" -> PUT /apps/{appId}/versions/{versionId}/patternanyentities/{entityId}/roles/{roleId}
+- "Delete a role?" -> DELETE /apps/{appId}/versions/{versionId}/patternanyentities/{entityId}/roles/{roleId}
+- "Get role details?" -> GET /apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}/roles/{roleId}
+- "Update a role?" -> PUT /apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}/roles/{roleId}
+- "Delete a role?" -> DELETE /apps/{appId}/versions/{versionId}/hierarchicalentities/{hEntityId}/roles/{roleId}
+- "Get role details?" -> GET /apps/{appId}/versions/{versionId}/customprebuiltentities/{entityId}/roles/{roleId}
+- "Update a role?" -> PUT /apps/{appId}/versions/{versionId}/customprebuiltentities/{entityId}/roles/{roleId}
+- "Delete a role?" -> DELETE /apps/{appId}/versions/{versionId}/customprebuiltentities/{entityId}/roles/{roleId}
+- "Get explicitlist details?" -> GET /apps/{appId}/versions/{versionId}/patternanyentities/{entityId}/explicitlist/{itemId}
+- "Update a explicitlist?" -> PUT /apps/{appId}/versions/{versionId}/patternanyentities/{entityId}/explicitlist/{itemId}
+- "Delete a explicitlist?" -> DELETE /apps/{appId}/versions/{versionId}/patternanyentities/{entityId}/explicitlist/{itemId}
+- "Create a patternrule?" -> POST /apps/{appId}/versions/{versionId}/patternrule
+- "List all patternrules?" -> GET /apps/{appId}/versions/{versionId}/patternrules
+- "Create a patternrule?" -> POST /apps/{appId}/versions/{versionId}/patternrules
+- "Update a patternrule?" -> PUT /apps/{appId}/versions/{versionId}/patternrules/{patternId}
+- "Delete a patternrule?" -> DELETE /apps/{appId}/versions/{versionId}/patternrules/{patternId}
+- "List all patternrules?" -> GET /apps/{appId}/versions/{versionId}/intents/{intentId}/patternrules
+- "List all settings?" -> GET /apps/{appId}/versions/{versionId}/settings
+- "Create a azureaccount?" -> POST /apps/{appId}/azureaccounts
+- "List all azureaccounts?" -> GET /apps/{appId}/azureaccounts
+- "List all azureaccounts?" -> GET /azureaccounts
+- "List all gzip?" -> GET /package/{appId}/slot/{slotName}/gzip
+- "List all gzip?" -> GET /package/{appId}/versions/{versionId}/gzip
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

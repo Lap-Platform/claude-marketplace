@@ -86,83 +86,37 @@ Not specified.
 | POST | /tags/{ResourceArn} | Adds tags to the specified resource. |
 | DELETE | /tags/{ResourceArn} | Removes tags from the specified resource. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new Outpost?" -> POST /outposts
-- "What Outposts do I have?" -> GET /outposts
-- "Show me details for a specific Outpost" -> GET /outposts/{OutpostId}
-- "What instance types are available on my Outpost?" -> GET /outposts/{OutpostId}/instanceTypes
-- "How do I place an order for Outpost hardware?" -> POST /orders
-- "What is the status of my order?" -> GET /orders/{OrderId}
-- "How do I cancel an Outpost order?" -> POST /orders/{OrderId}/cancel
-- "List all my Outpost sites" -> GET /sites
-- "What are the rack specs for a site?" -> GET /sites/{SiteId} (check RackPhysicalProperties)
-- "How do I update a site's shipping address?" -> PUT /sites/{SiteId}/address
-- "What catalog items can I order?" -> GET /catalog/items
-- "How do I start a capacity task on my Outpost?" -> POST /outposts/{OutpostId}/capacity
-- "What assets are deployed on my Outpost?" -> GET /outposts/{OutpostId}/assets
-- "How do I establish a local connection to an Outpost asset?" -> POST /connections
-- "How do I tag an Outpost or site resource?" -> POST /tags/{ResourceArn}
-
-## Response Tips
-
-- **Outposts/Sites/Orders (list endpoints):** Paginated via `NextToken` + `MaxResults`. Keep calling with the returned `NextToken` until it is absent or null.
-- **Single-resource GETs:** Response wraps the object in a top-level key (`Outpost`, `Site`, `Order`, `CatalogItem`). Fields are nullable -- always nil-check before accessing nested properties.
-- **Capacity tasks:** `CapacityTaskStatus` drives the lifecycle. A non-null `Failed` object (with `Reason` and optional `Type`) means the task errored -- surface it immediately.
-- **Connections:** Response returns `ConnectionId` and `UnderlayIpAddress` on creation; use `GET /connections/{ConnectionId}` to retrieve tunnel details (`ClientTunnelAddress`, `ServerTunnelAddress`, `AllowedIps`).
-- **Tags:** `GET /tags/{ResourceArn}` returns a flat `map<str,str>`. `DELETE /tags/{ResourceArn}` requires `tagKeys` as a list of key names, not key-value pairs.
-
-## Anomaly Flags
-
-- **Order status stuck:** If `Order.Status` remains unchanged across repeated polls, flag that fulfillment may be stalled and suggest contacting AWS support.
-- **Capacity task failure:** Surface `Failed.Reason` and `Failed.Type` immediately when `CapacityTaskStatus` is not progressing or the `Failed` object is present.
-- **LifeCycleStatus unexpected values:** If an Outpost's `LifeCycleStatus` is anything other than `ACTIVE` (e.g., `PENDING`, `DECOMMISSIONING`), proactively warn the user before they attempt operations on it.
-- **Pagination truncation:** If a list response returns `NextToken` but the user did not request all pages, warn that results are incomplete.
-- **Empty instance type lists:** If `GET /outposts/{OutpostId}/instanceTypes` returns an empty `InstanceTypes` array, flag that the Outpost may not be fully provisioned yet.
-- **Rack physical properties all null:** If a site's `RackPhysicalProperties` has all null fields, alert the user that site specs are incomplete -- this can block order fulfillment.
-- **DryRun capacity responses:** When `DryRun: true` is returned, remind the user that no capacity was actually allocated.
-
-## Playbook
-
-### 1. Provision a New Outpost End-to-End
-
-1. Create a site: `POST /sites` with `Name`, `OperatingAddress`, and `RackPhysicalProperties`.
-2. Set the site address: `PUT /sites/{SiteId}/address` with `AddressType: SHIPPING_ADDRESS`.
-3. Create the Outpost: `POST /outposts` with `Name`, `SiteId`, and desired `AvailabilityZone`.
-4. Browse the catalog: `GET /catalog/items` to find the right `CatalogItemId` for your needs.
-5. Place an order: `POST /orders` with `OutpostIdentifier`, `LineItems` referencing catalog items, and `PaymentOption`.
-6. Monitor the order: Poll `GET /orders/{OrderId}` until `Status` shows fulfillment.
-
-### 2. Start and Monitor a Capacity Task
-
-1. Identify the Outpost and order: Note `OutpostId` and `OrderId` from previous steps.
-2. Check supported instance types: `GET /outposts/{OutpostId}/supportedInstanceTypes` with the `OrderId`.
-3. Start capacity allocation: `POST /outposts/{OutpostId}/capacity` with `InstancePools` (optionally set `DryRun: true` first).
-4. Poll task status: `GET /outposts/{OutpostId}/capacity/{CapacityTaskId}` until `CapacityTaskStatus` is terminal.
-5. If `Failed` is present, read `Failed.Reason` and adjust instance pools or contact support.
-
-### 3. Manage Site Infrastructure Details
-
-1. Retrieve site info: `GET /sites/{SiteId}` to review current configuration.
-2. Update rack specs: `PATCH /sites/{SiteId}/rackPhysicalProperties` with power, uplink, and weight parameters.
-3. Update site metadata: `PATCH /sites/{SiteId}` to change `Name`, `Description`, or `Notes`.
-4. Verify address: `GET /sites/{SiteId}/address` with `AddressType: OPERATING_ADDRESS` to confirm.
-
-### 4. Establish a Local Connection to an Outpost Asset
-
-1. List assets: `GET /outposts/{OutpostId}/assets` to find the target `AssetId`.
-2. Create connection: `POST /connections` with `AssetId`, `ClientPublicKey`, and `NetworkInterfaceDeviceIndex`.
-3. Retrieve tunnel details: `GET /connections/{ConnectionId}` to get `ServerEndpoint`, tunnel addresses, and `AllowedIps`.
-4. Configure local WireGuard or tunnel client using the returned keys and addresses.
-
-### 5. Tag and Organize Resources
-
-1. Get the resource ARN from any Outpost or Site response (`OutpostArn` or `SiteArn`).
-2. Add tags: `POST /tags/{ResourceArn}` with a `Tags` map (e.g., `{"env": "production", "team": "infra"}`).
-3. Verify tags: `GET /tags/{ResourceArn}` to confirm they were applied.
-4. Remove tags: `DELETE /tags/{ResourceArn}` with `tagKeys: ["env"]` to remove specific keys.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a cancel?" -> POST /orders/{OrderId}/cancel
+- "Create a order?" -> POST /orders
+- "Create a outpost?" -> POST /outposts
+- "Create a site?" -> POST /sites
+- "Delete a outpost?" -> DELETE /outposts/{OutpostId}
+- "Delete a site?" -> DELETE /sites/{SiteId}
+- "Get capacity details?" -> GET /outposts/{OutpostId}/capacity/{CapacityTaskId}
+- "Get item details?" -> GET /catalog/item/{CatalogItemId}
+- "Get connection details?" -> GET /connections/{ConnectionId}
+- "Get order details?" -> GET /orders/{OrderId}
+- "Get outpost details?" -> GET /outposts/{OutpostId}
+- "List all instanceTypes?" -> GET /outposts/{OutpostId}/instanceTypes
+- "List all supportedInstanceTypes?" -> GET /outposts/{OutpostId}/supportedInstanceTypes
+- "Get site details?" -> GET /sites/{SiteId}
+- "List all address?" -> GET /sites/{SiteId}/address
+- "List all assets?" -> GET /outposts/{OutpostId}/assets
+- "List all tasks?" -> GET /capacity/tasks
+- "List all items?" -> GET /catalog/items
+- "List all list-orders?" -> GET /list-orders
+- "List all outposts?" -> GET /outposts
+- "List all sites?" -> GET /sites
+- "Get tag details?" -> GET /tags/{ResourceArn}
+- "Create a capacity?" -> POST /outposts/{OutpostId}/capacity
+- "Create a connection?" -> POST /connections
+- "Delete a tag?" -> DELETE /tags/{ResourceArn}
+- "Partially update a outpost?" -> PATCH /outposts/{OutpostId}
+- "Partially update a site?" -> PATCH /sites/{SiteId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

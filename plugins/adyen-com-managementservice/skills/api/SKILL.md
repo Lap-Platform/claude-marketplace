@@ -173,93 +173,129 @@ https://management-test.adyen.com/v1
 | GET | /terminals/{terminalId}/terminalSettings | Get terminal settings |
 | PATCH | /terminals/{terminalId}/terminalSettings | Update terminal settings |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What companies do I have access to?" -> GET /companies
-- "Show me details for a specific company" -> GET /companies/{companyId}
-- "Who are the users under this merchant account?" -> GET /merchants/{merchantId}/users
-- "What API credentials exist for my company?" -> GET /companies/{companyId}/apiCredentials
-- "How do I rotate an API key for a credential?" -> POST /companies/{companyId}/apiCredentials/{apiCredentialId}/generateApiKey
-- "What payment methods are configured for this merchant?" -> GET /merchants/{merchantId}/paymentMethodSettings
-- "How do I enable Apple Pay on a merchant?" -> POST /merchants/{merchantId}/paymentMethodSettings (type: "applepay", with domains)
-- "What terminals do I have and where are they?" -> GET /terminals
-- "How do I order new terminals for a merchant?" -> POST /merchants/{merchantId}/terminalOrders
-- "What webhooks are configured and are any failing?" -> GET /companies/{companyId}/webhooks
-- "How do I test if a webhook endpoint is reachable?" -> POST /companies/{companyId}/webhooks/{webhookId}/test
-- "What stores belong to this merchant?" -> GET /merchants/{merchantId}/stores
-- "How do I create a new merchant account under my company?" -> POST /merchants
-- "What are the current terminal settings at the store level?" -> GET /merchants/{merchantId}/stores/{reference}/terminalSettings
-- "Who am I authenticated as right now?" -> GET /me
-
-## Response Tips
-
-- **Paginated lists** (companies, merchants, users, credentials, webhooks, stores, terminals): Check `pagesTotal` and `itemsTotal`; follow `_links.next.href` to page forward. An empty `data` array or 204 means no results.
-- **Entity details** (company, merchant, store, user): The `_links` object contains HATEOAS URLs for related resources (credentials, webhooks, users) -- use these instead of constructing URLs manually.
-- **Terminal settings**: Deeply nested object with 20+ top-level config sections. PATCH merges at the section level -- only send the sections you want to change.
-- **Payment method settings**: Response contains config blocks for every supported method (visa, mc, klarna, etc.) but only the one matching `type` is populated. Check `enabled`, `allowed`, and `verificationStatus` to understand actual state.
-- **Webhooks**: `hasError: true` signals delivery failures; `hasPassword: true` confirms auth is set without exposing the value. The HMAC key is only returned from the `/generateHmac` endpoint.
-- **Terminal orders**: `status` tracks order lifecycle; `trackingUrl` is only populated after shipment. 204 responses on merchant-scoped endpoints indicate the merchant exists but has no matching data.
-- **Error responses** (400/401/403/422/500): All endpoints share the same error code set. 422 typically means valid JSON but failed business validation (e.g., duplicate domain, invalid role).
-
-## Anomaly Flags
-
-- **Webhook `hasError: true`**: Proactively warn when any webhook shows delivery errors -- this means notifications are being dropped.
-- **API credential `active: false`**: Flag inactive credentials that may be blocking integrations, especially if recently changed via PATCH.
-- **Payment method `verificationStatus` not verified**: Surface when a configured payment method has a pending or failed verification -- it will not process live transactions.
-- **Payment method `allowed: false` but `enabled: true`**: Contradictory state indicating Adyen has disallowed a method the merchant tried to enable. Requires Adyen support.
-- **Store `status: closed` or `inactive`**: Alert when operating on a store that is not active, as terminal settings and orders may not apply.
-- **Terminal order `status` unchanged**: If an order stays in the same status across checks, flag potential fulfillment delays.
-- **Webhook SSL settings**: Flag `acceptsExpiredCertificate`, `acceptsSelfSignedCertificate`, or `acceptsUntrustedRootCertificate` set to true -- these weaken security.
-- **429 on payment method endpoints**: This group uniquely returns 429 (rate limit). Surface immediately and advise backing off.
-- **Empty `data` arrays with 200 status**: Distinguish from 204 (no content) -- 200 with empty data means the parent entity exists but has no children of that type.
-
-## Playbook
-
-### 1. Onboard a new merchant with a store and terminals
-
-1. `POST /merchants` with `companyId` and optional `description`, `pricingPlan`
-2. Note the returned `id` as `merchantId`
-3. `POST /merchants/{merchantId}/stores` with address, phone, shopperStatement
-4. `POST /merchants/{merchantId}/paymentMethodSettings` for each payment method (e.g., visa, mc, applepay)
-5. `GET /merchants/{merchantId}/terminalProducts?country=XX` to find available terminal models
-6. `POST /merchants/{merchantId}/shippingLocations` to set delivery address
-7. `GET /merchants/{merchantId}/billingEntities` to find billing entity ID
-8. `POST /merchants/{merchantId}/terminalOrders` with items, shippingLocationId, billingEntityId
-
-### 2. Set up webhook notifications for a company
-
-1. `POST /companies/{companyId}/webhooks` with `url`, `type`, `communicationFormat: "json"`, `active: true`, `filterMerchantAccountType`, and `filterMerchantAccounts`
-2. Note the returned webhook `id`
-3. `POST /companies/{companyId}/webhooks/{webhookId}/generateHmac` to get the HMAC key for signature verification
-4. `POST /companies/{companyId}/webhooks/{webhookId}/test` with a sample notification to verify delivery
-5. Check the test response `data` array for success/failure per merchant
-
-### 3. Rotate API credentials safely
-
-1. `GET /companies/{companyId}/apiCredentials` to list all credentials
-2. Identify the target credential by `description` or `username`
-3. `POST /companies/{companyId}/apiCredentials/{apiCredentialId}/generateApiKey` to get a new API key (old key is immediately invalidated)
-4. Update the consuming application with the new `apiKey` value
-5. `POST /companies/{companyId}/apiCredentials/{apiCredentialId}/generateClientKey` if a client-side key is also needed
-6. Optionally `PATCH /companies/{companyId}/apiCredentials/{apiCredentialId}` to update `allowedOrigins` or `roles`
-
-### 4. Configure terminal settings across the hierarchy
-
-1. `PATCH /companies/{companyId}/terminalSettings` to set company-wide defaults (localization, receipt printing, refund policy)
-2. `PATCH /merchants/{merchantId}/terminalSettings` to override at the merchant level (e.g., different gratuity config)
-3. `PATCH /merchants/{merchantId}/stores/{reference}/terminalSettings` for store-specific overrides (e.g., pay-at-table, standalone mode)
-4. `PATCH /terminals/{terminalId}/terminalSettings` for individual terminal exceptions
-5. Settings inherit downward: company -> merchant -> store -> terminal. Only send the sections you want to override at each level.
-
-### 5. Manage user access for a merchant
-
-1. `GET /merchants/{merchantId}/users` to list current users (use `pageSize` and `pageNumber` for large lists)
-2. `POST /merchants/{merchantId}/users` with `email`, `username`, `name`, and `roles` to invite a new user
-3. `PATCH /merchants/{merchantId}/users/{userId}` to change roles, deactivate (`active: false`), or update email
-4. To audit a specific user: `GET /merchants/{merchantId}/users/{userId}` and review `roles`, `accountGroups`, and `active` status
-5. Repeat at company level via `/companies/{companyId}/users` for broader access -- company users can have `associatedMerchantAccounts` to scope their access
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all companies?" -> GET /companies
+- "Get company details?" -> GET /companies/{companyId}
+- "List all androidApps?" -> GET /companies/{companyId}/androidApps
+- "Get androidApp details?" -> GET /companies/{companyId}/androidApps/{id}
+- "List all androidCertificates?" -> GET /companies/{companyId}/androidCertificates
+- "List all apiCredentials?" -> GET /companies/{companyId}/apiCredentials
+- "Create a apiCredential?" -> POST /companies/{companyId}/apiCredentials
+- "Get apiCredential details?" -> GET /companies/{companyId}/apiCredentials/{apiCredentialId}
+- "Partially update a apiCredential?" -> PATCH /companies/{companyId}/apiCredentials/{apiCredentialId}
+- "List all allowedOrigins?" -> GET /companies/{companyId}/apiCredentials/{apiCredentialId}/allowedOrigins
+- "Create a allowedOrigin?" -> POST /companies/{companyId}/apiCredentials/{apiCredentialId}/allowedOrigins
+- "Delete a allowedOrigin?" -> DELETE /companies/{companyId}/apiCredentials/{apiCredentialId}/allowedOrigins/{originId}
+- "Get allowedOrigin details?" -> GET /companies/{companyId}/apiCredentials/{apiCredentialId}/allowedOrigins/{originId}
+- "Create a generateApiKey?" -> POST /companies/{companyId}/apiCredentials/{apiCredentialId}/generateApiKey
+- "Create a generateClientKey?" -> POST /companies/{companyId}/apiCredentials/{apiCredentialId}/generateClientKey
+- "List all billingEntities?" -> GET /companies/{companyId}/billingEntities
+- "List all merchants?" -> GET /companies/{companyId}/merchants
+- "List all shippingLocations?" -> GET /companies/{companyId}/shippingLocations
+- "Create a shippingLocation?" -> POST /companies/{companyId}/shippingLocations
+- "List all terminalActions?" -> GET /companies/{companyId}/terminalActions
+- "Get terminalAction details?" -> GET /companies/{companyId}/terminalActions/{actionId}
+- "List all terminalLogos?" -> GET /companies/{companyId}/terminalLogos
+- "List all terminalModels?" -> GET /companies/{companyId}/terminalModels
+- "List all terminalOrders?" -> GET /companies/{companyId}/terminalOrders
+- "Create a terminalOrder?" -> POST /companies/{companyId}/terminalOrders
+- "Get terminalOrder details?" -> GET /companies/{companyId}/terminalOrders/{orderId}
+- "Partially update a terminalOrder?" -> PATCH /companies/{companyId}/terminalOrders/{orderId}
+- "Create a cancel?" -> POST /companies/{companyId}/terminalOrders/{orderId}/cancel
+- "List all terminalProducts?" -> GET /companies/{companyId}/terminalProducts
+- "List all terminalSettings?" -> GET /companies/{companyId}/terminalSettings
+- "List all users?" -> GET /companies/{companyId}/users
+- "Create a user?" -> POST /companies/{companyId}/users
+- "Get user details?" -> GET /companies/{companyId}/users/{userId}
+- "Partially update a user?" -> PATCH /companies/{companyId}/users/{userId}
+- "List all webhooks?" -> GET /companies/{companyId}/webhooks
+- "Create a webhook?" -> POST /companies/{companyId}/webhooks
+- "Delete a webhook?" -> DELETE /companies/{companyId}/webhooks/{webhookId}
+- "Get webhook details?" -> GET /companies/{companyId}/webhooks/{webhookId}
+- "Partially update a webhook?" -> PATCH /companies/{companyId}/webhooks/{webhookId}
+- "Create a generateHmac?" -> POST /companies/{companyId}/webhooks/{webhookId}/generateHmac
+- "Create a test?" -> POST /companies/{companyId}/webhooks/{webhookId}/test
+- "List all me?" -> GET /me
+- "List all allowedOrigins?" -> GET /me/allowedOrigins
+- "Create a allowedOrigin?" -> POST /me/allowedOrigins
+- "Delete a allowedOrigin?" -> DELETE /me/allowedOrigins/{originId}
+- "Get allowedOrigin details?" -> GET /me/allowedOrigins/{originId}
+- "Create a generateClientKey?" -> POST /me/generateClientKey
+- "List all merchants?" -> GET /merchants
+- "Create a merchant?" -> POST /merchants
+- "Get merchant details?" -> GET /merchants/{merchantId}
+- "Create a activate?" -> POST /merchants/{merchantId}/activate
+- "List all apiCredentials?" -> GET /merchants/{merchantId}/apiCredentials
+- "Create a apiCredential?" -> POST /merchants/{merchantId}/apiCredentials
+- "Get apiCredential details?" -> GET /merchants/{merchantId}/apiCredentials/{apiCredentialId}
+- "Partially update a apiCredential?" -> PATCH /merchants/{merchantId}/apiCredentials/{apiCredentialId}
+- "List all allowedOrigins?" -> GET /merchants/{merchantId}/apiCredentials/{apiCredentialId}/allowedOrigins
+- "Create a allowedOrigin?" -> POST /merchants/{merchantId}/apiCredentials/{apiCredentialId}/allowedOrigins
+- "Delete a allowedOrigin?" -> DELETE /merchants/{merchantId}/apiCredentials/{apiCredentialId}/allowedOrigins/{originId}
+- "Get allowedOrigin details?" -> GET /merchants/{merchantId}/apiCredentials/{apiCredentialId}/allowedOrigins/{originId}
+- "Create a generateApiKey?" -> POST /merchants/{merchantId}/apiCredentials/{apiCredentialId}/generateApiKey
+- "Create a generateClientKey?" -> POST /merchants/{merchantId}/apiCredentials/{apiCredentialId}/generateClientKey
+- "List all billingEntities?" -> GET /merchants/{merchantId}/billingEntities
+- "List all paymentMethodSettings?" -> GET /merchants/{merchantId}/paymentMethodSettings
+- "Create a paymentMethodSetting?" -> POST /merchants/{merchantId}/paymentMethodSettings
+- "Get paymentMethodSetting details?" -> GET /merchants/{merchantId}/paymentMethodSettings/{paymentMethodId}
+- "Partially update a paymentMethodSetting?" -> PATCH /merchants/{merchantId}/paymentMethodSettings/{paymentMethodId}
+- "Create a addApplePayDomain?" -> POST /merchants/{merchantId}/paymentMethodSettings/{paymentMethodId}/addApplePayDomains
+- "List all getApplePayDomains?" -> GET /merchants/{merchantId}/paymentMethodSettings/{paymentMethodId}/getApplePayDomains
+- "List all payoutSettings?" -> GET /merchants/{merchantId}/payoutSettings
+- "Create a payoutSetting?" -> POST /merchants/{merchantId}/payoutSettings
+- "Delete a payoutSetting?" -> DELETE /merchants/{merchantId}/payoutSettings/{payoutSettingsId}
+- "Get payoutSetting details?" -> GET /merchants/{merchantId}/payoutSettings/{payoutSettingsId}
+- "Partially update a payoutSetting?" -> PATCH /merchants/{merchantId}/payoutSettings/{payoutSettingsId}
+- "List all shippingLocations?" -> GET /merchants/{merchantId}/shippingLocations
+- "Create a shippingLocation?" -> POST /merchants/{merchantId}/shippingLocations
+- "List all splitConfigurations?" -> GET /merchants/{merchantId}/splitConfigurations
+- "Create a splitConfiguration?" -> POST /merchants/{merchantId}/splitConfigurations
+- "Delete a splitConfiguration?" -> DELETE /merchants/{merchantId}/splitConfigurations/{splitConfigurationId}
+- "Get splitConfiguration details?" -> GET /merchants/{merchantId}/splitConfigurations/{splitConfigurationId}
+- "Partially update a splitConfiguration?" -> PATCH /merchants/{merchantId}/splitConfigurations/{splitConfigurationId}
+- "Delete a rule?" -> DELETE /merchants/{merchantId}/splitConfigurations/{splitConfigurationId}/rules/{ruleId}
+- "Partially update a rule?" -> PATCH /merchants/{merchantId}/splitConfigurations/{splitConfigurationId}/rules/{ruleId}
+- "Partially update a splitLogic?" -> PATCH /merchants/{merchantId}/splitConfigurations/{splitConfigurationId}/rules/{ruleId}/splitLogic/{splitLogicId}
+- "List all stores?" -> GET /merchants/{merchantId}/stores
+- "Create a store?" -> POST /merchants/{merchantId}/stores
+- "List all terminalLogos?" -> GET /merchants/{merchantId}/stores/{reference}/terminalLogos
+- "List all terminalSettings?" -> GET /merchants/{merchantId}/stores/{reference}/terminalSettings
+- "Get store details?" -> GET /merchants/{merchantId}/stores/{storeId}
+- "Partially update a store?" -> PATCH /merchants/{merchantId}/stores/{storeId}
+- "List all terminalLogos?" -> GET /merchants/{merchantId}/terminalLogos
+- "List all terminalModels?" -> GET /merchants/{merchantId}/terminalModels
+- "List all terminalOrders?" -> GET /merchants/{merchantId}/terminalOrders
+- "Create a terminalOrder?" -> POST /merchants/{merchantId}/terminalOrders
+- "Get terminalOrder details?" -> GET /merchants/{merchantId}/terminalOrders/{orderId}
+- "Partially update a terminalOrder?" -> PATCH /merchants/{merchantId}/terminalOrders/{orderId}
+- "Create a cancel?" -> POST /merchants/{merchantId}/terminalOrders/{orderId}/cancel
+- "List all terminalProducts?" -> GET /merchants/{merchantId}/terminalProducts
+- "List all terminalSettings?" -> GET /merchants/{merchantId}/terminalSettings
+- "List all users?" -> GET /merchants/{merchantId}/users
+- "Create a user?" -> POST /merchants/{merchantId}/users
+- "Get user details?" -> GET /merchants/{merchantId}/users/{userId}
+- "Partially update a user?" -> PATCH /merchants/{merchantId}/users/{userId}
+- "List all webhooks?" -> GET /merchants/{merchantId}/webhooks
+- "Create a webhook?" -> POST /merchants/{merchantId}/webhooks
+- "Delete a webhook?" -> DELETE /merchants/{merchantId}/webhooks/{webhookId}
+- "Get webhook details?" -> GET /merchants/{merchantId}/webhooks/{webhookId}
+- "Partially update a webhook?" -> PATCH /merchants/{merchantId}/webhooks/{webhookId}
+- "Create a generateHmac?" -> POST /merchants/{merchantId}/webhooks/{webhookId}/generateHmac
+- "Create a test?" -> POST /merchants/{merchantId}/webhooks/{webhookId}/test
+- "List all stores?" -> GET /stores
+- "Create a store?" -> POST /stores
+- "Get store details?" -> GET /stores/{storeId}
+- "Partially update a store?" -> PATCH /stores/{storeId}
+- "List all terminalLogos?" -> GET /stores/{storeId}/terminalLogos
+- "List all terminalSettings?" -> GET /stores/{storeId}/terminalSettings
+- "List all terminals?" -> GET /terminals
+- "Create a scheduleAction?" -> POST /terminals/scheduleActions
+- "List all terminalLogos?" -> GET /terminals/{terminalId}/terminalLogos
+- "List all terminalSettings?" -> GET /terminals/{terminalId}/terminalSettings
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

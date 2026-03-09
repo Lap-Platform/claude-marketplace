@@ -127,87 +127,97 @@ https://api.victorops.com/
 | GET | /api-reporting/v1/team/{team}/oncall/log | A list of shift changes for a team |
 | GET | /api-reporting/v2/incidents | Get/search incident history |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Who is currently on call?" -> GET /api-public/v1/oncall/current
-- "What is a user's on-call schedule?" -> GET /api-public/v2/user/{user}/oncall/schedule
-- "List all open incidents" -> GET /api-public/v1/incidents
-- "Get details for incident #1234" -> GET /api-public/v1/incidents/{incidentNumber}
-- "Acknowledge one or more incidents" -> PATCH /api-public/v1/incidents/ack
-- "Resolve incidents assigned to me" -> PATCH /api-public/v1/incidents/byUser/resolve
-- "Create a new user account" -> POST /api-public/v1/user
-- "What teams does a user belong to?" -> GET /api-public/v1/user/{user}/teams
-- "Add an email contact method for a user" -> POST /api-public/v1/user/{user}/contact-methods/emails
-- "Put the system into maintenance mode" -> POST /api-public/v1/maintenancemode/start
-- "Search incident history with filters" -> GET /api-reporting/v2/incidents
-- "Create a new escalation policy" -> POST /api-public/v1/policies
-- "Override who is on call for a policy" -> PUT /api-public/v1/overrides/{publicId}/assignments/{policySlug}
-- "Take someone on or off call immediately" -> PATCH /api-public/v1/team/{team}/oncall/user
-- "Send a stakeholder notification" -> POST /api-public/v1/stakeholders/sendMessage
-
-## Response Tips
-
-- **Users**: List endpoints return arrays of user objects; v2 adds optional `email` filter for narrowing results.
-- **Incidents**: `GET /incidents` returns all current incidents; use `GET /api-reporting/v2/incidents` with `offset`/`limit` for paginated historical queries filtered by phase, host, service, or routing key.
-- **On-call schedules**: Responses are shaped by `daysForward`, `daysSkip`, and `step` params; omitting them returns defaults (typically 14 days forward).
-- **Contact methods**: Three sub-resources (devices, emails, phones) each return their own list; aggregate by calling all three.
-- **Policies/Overrides**: Nested step/rule structure -- policies contain steps, steps contain rules; address each level by its own path segment.
-- **Errors**: 422 indicates validation failure (check required body fields); 409 signals conflict (duplicate user, maintenance mode already active); 429 means rate limit hit.
-
-## Anomaly Flags
-
-- **429 on schedules or stakeholder messages**: Rate limit reached -- surface immediately and suggest backing off or batching requests.
-- **409 on user creation or maintenance mode**: Conflict state -- alert that the resource already exists or mode is already active before retrying.
-- **422 on any write**: Validation failure -- surface the response body which typically contains field-level error details.
-- **Maintenance mode active**: When `GET /maintenancemode` returns an active mode, warn that alerts may be suppressed and incidents won't trigger escalations.
-- **Empty on-call response**: If `GET /oncall/current` returns no users, flag that no one is currently on call -- this is a coverage gap that needs attention.
-- **Deprecated v1 vs v2 endpoints**: When a v2 exists (users, on-call schedule, rotations, policies, incidents reporting), flag if the agent is using the v1 variant and suggest upgrading.
-- **420 on maintenance mode start**: Non-standard status code unique to this API -- surface as "enhancement already active or rate limited."
-
-## Playbook
-
-### 1. Respond to a New Incident
-
-1. GET /api-public/v1/incidents -- list current incidents, identify the new one
-2. GET /api-public/v1/incidents/{incidentNumber} -- get full details
-3. GET /api-public/v1/oncall/current -- confirm who is on call
-4. PATCH /api-public/v1/incidents/ack -- acknowledge the incident (pass incident names in body)
-5. POST /api-public/v1/incidents/{incidentNumber}/notes -- add a timeline note with initial findings
-6. PATCH /api-public/v1/incidents/resolve -- resolve once remediated
-
-### 2. Onboard a New Team Member
-
-1. POST /api-public/v1/user -- create the user account
-2. POST /api-public/v1/user/{user}/contact-methods/emails -- add email contact
-3. POST /api-public/v1/user/{user}/contact-methods/phones -- add phone contact
-4. POST /api-public/v1/team/{team}/members -- add user to their team
-5. POST /api-public/v1/profile/{username}/policies -- set up their personal notification policy
-
-### 3. Set Up a Temporary On-Call Override
-
-1. GET /api-public/v1/team/{team}/oncall/schedule -- review current schedule
-2. POST /api-public/v1/overrides -- create a new override with start/end times
-3. PUT /api-public/v1/overrides/{publicId}/assignments/{policySlug} -- assign the override to the target policy
-4. GET /api-public/v1/overrides/{publicId} -- verify the override is active
-5. DELETE /api-public/v1/overrides/{publicId} -- remove when no longer needed
-
-### 4. Investigate Historical Incidents
-
-1. GET /api-reporting/v2/incidents?startedAfter=...&startedBefore=... -- query by date range
-2. Filter further with `currentPhase`, `routingKey`, `host`, or `service` params
-3. Use `offset` and `limit` to paginate through large result sets
-4. GET /api-public/v1/incidents/{incidentNumber}/notes -- pull timeline notes for specific incidents
-5. GET /api-reporting/v1/team/{team}/oncall/log?start=...&end=... -- correlate with on-call log to see who responded
-
-### 5. Enter and Exit Maintenance Mode
-
-1. GET /api-public/v1/maintenancemode -- check if maintenance mode is already active
-2. POST /api-public/v1/maintenancemode/start -- activate with routing keys and target names in body
-3. POST /api-public/v1/stakeholders/sendMessage -- notify stakeholders that maintenance is underway
-4. PUT /api-public/v1/maintenancemode/{maintenancemodeid}/end -- end maintenance when work is complete
-5. GET /api-public/v1/incidents -- verify no incidents were suppressed that need follow-up
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a user?" -> POST /api-public/v1/user
+- "List all user?" -> GET /api-public/v1/user
+- "List all user?" -> GET /api-public/v2/user
+- "Create a batch?" -> POST /api-public/v1/user/batch
+- "Get user details?" -> GET /api-public/v1/user/{user}
+- "Update a user?" -> PUT /api-public/v1/user/{user}
+- "Delete a user?" -> DELETE /api-public/v1/user/{user}
+- "List all teams?" -> GET /api-public/v1/user/{user}/teams
+- "List all notifications?" -> GET /api-public/v1/policies/types/notifications
+- "List all contacts?" -> GET /api-public/v1/policies/types/contacts
+- "List all timeouts?" -> GET /api-public/v1/policies/types/timeouts
+- "List all policies?" -> GET /api-public/v1/profile/{username}/policies
+- "Create a policy?" -> POST /api-public/v1/profile/{username}/policies
+- "Get policy details?" -> GET /api-public/v1/profile/{username}/policies/{step}
+- "Update a policy?" -> PUT /api-public/v1/profile/{username}/policies/{step}
+- "Get policy details?" -> GET /api-public/v1/profile/{username}/policies/{step}/{rule}
+- "Update a policy?" -> PUT /api-public/v1/profile/{username}/policies/{step}/{rule}
+- "Delete a policy?" -> DELETE /api-public/v1/profile/{username}/policies/{step}/{rule}
+- "List all policies?" -> GET /api-public/v2/profile/{username}/policies
+- "List all contact-methods?" -> GET /api-public/v1/user/{user}/contact-methods
+- "List all devices?" -> GET /api-public/v1/user/{user}/contact-methods/devices
+- "Get device details?" -> GET /api-public/v1/user/{user}/contact-methods/devices/{contactId}
+- "Update a device?" -> PUT /api-public/v1/user/{user}/contact-methods/devices/{contactId}
+- "Delete a device?" -> DELETE /api-public/v1/user/{user}/contact-methods/devices/{contactId}
+- "List all emails?" -> GET /api-public/v1/user/{user}/contact-methods/emails
+- "Create a email?" -> POST /api-public/v1/user/{user}/contact-methods/emails
+- "Get email details?" -> GET /api-public/v1/user/{user}/contact-methods/emails/{contactId}
+- "Delete a email?" -> DELETE /api-public/v1/user/{user}/contact-methods/emails/{contactId}
+- "List all phones?" -> GET /api-public/v1/user/{user}/contact-methods/phones
+- "Create a phone?" -> POST /api-public/v1/user/{user}/contact-methods/phones
+- "Get phone details?" -> GET /api-public/v1/user/{user}/contact-methods/phones/{contactId}
+- "Delete a phone?" -> DELETE /api-public/v1/user/{user}/contact-methods/phones/{contactId}
+- "List all policies?" -> GET /api-public/v1/user/{user}/policies
+- "List all schedule?" -> GET /api-public/v1/user/{user}/oncall/schedule
+- "List all schedule?" -> GET /api-public/v2/user/{user}/oncall/schedule
+- "List all schedule?" -> GET /api-public/v1/team/{team}/oncall/schedule
+- "List all schedule?" -> GET /api-public/v2/team/{team}/oncall/schedule
+- "List all current?" -> GET /api-public/v1/oncall/current
+- "List all log?" -> GET /api-reporting/v1/team/{team}/oncall/log
+- "Get incident details?" -> GET /api-public/v1/incidents/{incidentNumber}
+- "List all incidents?" -> GET /api-public/v1/incidents
+- "Create a incident?" -> POST /api-public/v1/incidents
+- "Create a reroute?" -> POST /api-public/v1/incidents/reroute
+- "List all notes?" -> GET /api-public/v1/incidents/{incidentNumber}/notes
+- "Create a note?" -> POST /api-public/v1/incidents/{incidentNumber}/notes
+- "Update a note?" -> PUT /api-public/v1/incidents/{incidentNumber}/notes/{noteName}
+- "Delete a note?" -> DELETE /api-public/v1/incidents/{incidentNumber}/notes/{noteName}
+- "Get alert details?" -> GET /api-public/v1/alerts/{uuid}
+- "List all routing-keys?" -> GET /api-public/v1/org/routing-keys
+- "Create a routing-key?" -> POST /api-public/v1/org/routing-keys
+- "List all overrides?" -> GET /api-public/v1/overrides
+- "Create a override?" -> POST /api-public/v1/overrides
+- "Get override details?" -> GET /api-public/v1/overrides/{publicId}
+- "Delete a override?" -> DELETE /api-public/v1/overrides/{publicId}
+- "List all assignments?" -> GET /api-public/v1/overrides/{publicId}/assignments
+- "Get assignment details?" -> GET /api-public/v1/overrides/{publicId}/assignments/{policySlug}
+- "Update a assignment?" -> PUT /api-public/v1/overrides/{publicId}/assignments/{policySlug}
+- "Delete a assignment?" -> DELETE /api-public/v1/overrides/{publicId}/assignments/{policySlug}
+- "List all rotations?" -> GET /api-public/v1/teams/{team}/rotations
+- "Create a rotation?" -> POST /api-public/v1/teams/{team}/rotations
+- "Delete a rotation?" -> DELETE /api-public/v1/teams/{team}/rotations/{groupId}
+- "List all scheduled?" -> GET /api-public/v1/teams/{team}/rotations/{groupId}/{shiftId}/scheduled
+- "List all rotations?" -> GET /api-public/v2/team/{team}/rotations
+- "List all webhooks?" -> GET /api-public/v1/webhooks
+- "List all policies?" -> GET /api-public/v1/policies
+- "Create a policy?" -> POST /api-public/v1/policies
+- "Get policy details?" -> GET /api-public/v1/policies/{policy}
+- "Delete a policy?" -> DELETE /api-public/v1/policies/{policy}
+- "List all incidents?" -> GET /api-reporting/v2/incidents
+- "Create a team?" -> POST /api-public/v1/team
+- "List all team?" -> GET /api-public/v1/team
+- "Get team details?" -> GET /api-public/v1/team/{team}
+- "Update a team?" -> PUT /api-public/v1/team/{team}
+- "Delete a team?" -> DELETE /api-public/v1/team/{team}
+- "List all policies?" -> GET /api-public/v1/team/{team}/policies
+- "List all admins?" -> GET /api-public/v1/team/{team}/admins
+- "List all members?" -> GET /api-public/v1/team/{team}/members
+- "Create a member?" -> POST /api-public/v1/team/{team}/members
+- "Delete a member?" -> DELETE /api-public/v1/team/{team}/members/{user}
+- "List all maintenancemode?" -> GET /api-public/v1/maintenancemode
+- "Create a start?" -> POST /api-public/v1/maintenancemode/start
+- "Create a chat?" -> POST /api-public/v1/chat
+- "Create a sendMessage?" -> POST /api-public/v1/stakeholders/sendMessage
+- "List all alertRules?" -> GET /api-public/v1/alertRules
+- "Create a alertRule?" -> POST /api-public/v1/alertRules
+- "Update a alertRule?" -> PUT /api-public/v1/alertRules/{ruleId}
+- "Delete a alertRule?" -> DELETE /api-public/v1/alertRules/{ruleId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

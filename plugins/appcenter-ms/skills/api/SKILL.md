@@ -292,88 +292,266 @@ https://api.appcenter.ms/
 | POST | /v0.1/api_tokens | Creates a new User API token |
 | GET | /v0.1/administeredOrgs | Returns a list organizations in which the requesting user is an admin |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all my apps?" -> GET /v0.1/apps
-- "How do I create a new app?" -> POST /v0.1/apps
-- "How do I get details for a specific app?" -> GET /v0.1/apps/{owner_name}/{app_name}
-- "How do I upload a new release?" -> POST /v0.1/apps/{owner_name}/{app_name}/uploads/releases
-- "How do I list releases for an app?" -> GET /v0.1/apps/{owner_name}/{app_name}/releases
-- "How do I distribute a release to a group?" -> POST /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/groups
-- "How do I check crash reports for my app?" -> GET /v0.1/apps/{owner_name}/{app_name}/crash_groups
-- "How do I see error-free device percentages?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorfreeDevicePercentages
-- "How do I manage distribution groups?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups
-- "How do I invite a user to my organization?" -> POST /v0.1/orgs/{org_name}/invitations
-- "How do I get analytics for active devices?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/active_device_counts
-- "How do I generate an API token?" -> POST /v0.1/api_tokens
-- "How do I transfer an app to another org?" -> POST /v0.1/apps/{owner_name}/{app_name}/transfer/{destination_owner_name}
-- "How do I upload debug symbols?" -> POST /v0.1/apps/{owner_name}/{app_name}/symbol_uploads
-- "How do I get the stacktrace for a crash group?" -> GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/stacktrace
-
-## Response Tips
-
-- **Apps & Orgs**: List endpoints return flat arrays of objects; use `owner.name` and `app.name` from each item to construct paths for detail calls.
-- **Releases**: List responses may include `published_only` and `scope` filters; pass `top` to limit results since there is no cursor-based pagination -- use `$skip`/`$top` on error and analytics endpoints instead.
-- **Errors & Crashes**: Grouped responses use `errorGroups` and `crash_groups` wrappers; always drill into a group ID before fetching individual stacktraces. Use `continuation_token` for paging crash groups.
-- **Analytics**: All analytics endpoints require a `start` date and return time-series arrays; `end` defaults to now if omitted. Version filtering uses a comma-separated `versions` parameter.
-- **Distribution**: Member mutation endpoints (add/bulk_delete) return 200 with per-member status objects showing which emails succeeded or failed -- always inspect the array, not just the HTTP status.
-- **Uploads**: Release upload is a multi-step process; POST returns an `upload_id` and `upload_url` -- the 201 response body contains the signed URL you must PUT the binary to before calling PATCH to commit.
-- **Auth tokens**: POST /v0.1/api_tokens returns the token value only once in the 201 response; subsequent GET calls return metadata without the secret.
-
-## Anomaly Flags
-
-- **403 on device endpoints**: Indicates the user lacks permissions for device management -- surface this as a possible org role issue, not just a bad token.
-- **404 on release or symbol endpoints**: May mean the resource was deleted or the upload never completed -- check upload status via the uploads endpoint before assuming the ID is wrong.
-- **500 on symbol operations**: Symbol processing is async; a 500 may indicate a transient backend failure -- recommend retrying after a short delay and checking symbol status.
-- **501 on distribution group release**: The feature may not be available for the app's platform -- flag this as a platform limitation.
-- **Upload PATCH returning 400**: Usually means the binary upload to the signed URL was skipped or failed -- surface the upload workflow steps to the user.
-- **Deprecated DSR endpoints**: The `/user/dsr/export` and `/user/dsr/delete` endpoints return 202 with async tokens and may 503 under load -- flag 503 as a retry-later situation, not a permanent error.
-- **Empty error groups with high error-free percentage**: If `errorfreeDevicePercentages` shows near-100% but error groups exist, the version filter may be masking recent crashes -- suggest broadening the date range.
-
-## Playbook
-
-### 1. Upload and Distribute a Release
-
-1. Create an upload slot: `POST /v0.1/apps/{owner_name}/{app_name}/uploads/releases` to get `upload_id` and `upload_url`.
-2. Upload the binary to the `upload_url` using a PUT request with the file content (outside App Center API).
-3. Commit the upload: `PATCH /v0.1/apps/{owner_name}/{app_name}/uploads/releases/{upload_id}` with status set to committed.
-4. Poll `GET /v0.1/apps/{owner_name}/{app_name}/uploads/releases/{upload_id}` until `upload_status` shows `readyToBePublished` and note the `release_id`.
-5. Distribute to a group: `POST /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/groups` with the target group ID.
-6. Optionally distribute to a store: `POST /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/stores`.
-
-### 2. Investigate a Crash
-
-1. List crash groups: `GET /v0.1/apps/{owner_name}/{app_name}/crash_groups` with date filters.
-2. Get group details: `GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}` to see count, affected versions, and status.
-3. Fetch the stacktrace: `GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/stacktrace`.
-4. List individual crashes in the group: `GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes` with `include_stacktrace=true`.
-5. If needed, download the raw crash report: `GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes/{crash_id}/native/download`.
-6. Update group state (close/open): `PATCH /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}` with the new state.
-
-### 3. Set Up a Distribution Group and Add Members
-
-1. Create the group: `POST /v0.1/apps/{owner_name}/{app_name}/distribution_groups` with a name.
-2. Add members: `POST /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/members` with an array of email addresses.
-3. Check member status: `GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/members` to verify invitations.
-4. Resend invites if needed: `POST /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/resend_invite`.
-
-### 4. Monitor App Health with Analytics
-
-1. Check active devices: `GET /v0.1/apps/{owner_name}/{app_name}/analytics/active_device_counts` with a `start` date.
-2. Review session counts: `GET /v0.1/apps/{owner_name}/{app_name}/analytics/session_counts` for usage trends.
-3. Check crash-free rate: `GET /v0.1/apps/{owner_name}/{app_name}/analytics/crashfree_device_percentages` with version and date range.
-4. Review error counts per day: `GET /v0.1/apps/{owner_name}/{app_name}/errors/errorCountsPerDay` to spot spikes.
-5. Drill into top error groups: `GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups` sorted by count to prioritize fixes.
-
-### 5. Manage Organization Teams and Permissions
-
-1. Create a team: `POST /v0.1/orgs/{org_name}/teams` with team name and permissions.
-2. Add users to the team: `POST /v0.1/orgs/{org_name}/teams/{team_name}/users` with user email.
-3. Assign apps to the team: `POST /v0.1/orgs/{org_name}/teams/{team_name}/apps` with the app object.
-4. Adjust app-level permissions: `PATCH /v0.1/orgs/{org_name}/teams/{team_name}/apps/{app_name}` to change the team's role for that app.
-5. Review membership: `GET /v0.1/orgs/{org_name}/teams/{team_name}/users` to audit who has access.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a register?" -> POST /v0.1/users/{user_id}/devices/register
+- "List all emailSettings?" -> GET /v0.1/user/notifications/emailSettings
+- "List all optimizely?" -> GET /v0.1/user/metadata/optimizely
+- "Create a reject?" -> POST /v0.1/user/invitations/orgs/{invitation_token}/reject
+- "Create a accept?" -> POST /v0.1/user/invitations/orgs/{invitation_token}/accept
+- "Create a accept?" -> POST /v0.1/user/invitations/distribution_groups/accept
+- "Create a reject?" -> POST /v0.1/user/invitations/apps/{invitation_token}/reject
+- "Create a accept?" -> POST /v0.1/user/invitations/apps/{invitation_token}/accept
+- "List all serviceConnections?" -> GET /v0.1/user/export/serviceConnections
+- "Create a cancel?" -> POST /v0.1/user/dsr/export/{token}/cancel
+- "Get export details?" -> GET /v0.1/user/dsr/export/{token}
+- "Create a export?" -> POST /v0.1/user/dsr/export
+- "Create a cancel?" -> POST /v0.1/user/dsr/delete/{token}/cancel
+- "Get delete details?" -> GET /v0.1/user/dsr/delete/{token}
+- "Create a delete?" -> POST /v0.1/user/dsr/delete
+- "Get device details?" -> GET /v0.1/user/devices/{device_udid}
+- "Delete a device?" -> DELETE /v0.1/user/devices/{device_udid}
+- "List all devices?" -> GET /v0.1/user/devices
+- "List all user?" -> GET /v0.1/user
+- "Get release details?" -> GET /v0.1/sdk/apps/{app_secret}/releases/{release_hash}
+- "List all latest?" -> GET /v0.1/sdk/apps/{app_secret}/releases/private/latest
+- "Get app details?" -> GET /v0.1/public/sparkle/apps/{app_secret}
+- "List all public_distribution_groups?" -> GET /v0.1/public/sdk/apps/{app_secret}/releases/{release_hash}/public_distribution_groups
+- "List all latest?" -> GET /v0.1/public/sdk/apps/{app_secret}/releases/latest
+- "List all latest?" -> GET /v0.1/public/sdk/apps/{app_secret}/distribution_groups/{distribution_group_id}/releases/latest
+- "Create a install_analytic?" -> POST /v0.1/public/apps/{owner_name}/{app_name}/install_analytics
+- "List all ios_manifest?" -> GET /v0.1/public/apps/{app_id}/releases/{release_id}/ios_manifest
+- "List all apps?" -> GET /v0.1/orgs/{org_name}/users/{user_name}/apps
+- "Partially update a user?" -> PATCH /v0.1/orgs/{org_name}/users/{user_name}
+- "Delete a user?" -> DELETE /v0.1/orgs/{org_name}/users/{user_name}
+- "Get user details?" -> GET /v0.1/orgs/{org_name}/users/{user_name}
+- "List all users?" -> GET /v0.1/orgs/{org_name}/users
+- "List all testers?" -> GET /v0.1/orgs/{org_name}/testers
+- "Delete a user?" -> DELETE /v0.1/orgs/{org_name}/teams/{team_name}/users/{user_name}
+- "List all users?" -> GET /v0.1/orgs/{org_name}/teams/{team_name}/users
+- "Create a user?" -> POST /v0.1/orgs/{org_name}/teams/{team_name}/users
+- "Partially update a app?" -> PATCH /v0.1/orgs/{org_name}/teams/{team_name}/apps/{app_name}
+- "Delete a app?" -> DELETE /v0.1/orgs/{org_name}/teams/{team_name}/apps/{app_name}
+- "Create a app?" -> POST /v0.1/orgs/{org_name}/teams/{team_name}/apps
+- "List all apps?" -> GET /v0.1/orgs/{org_name}/teams/{team_name}/apps
+- "Get team details?" -> GET /v0.1/orgs/{org_name}/teams/{team_name}
+- "Delete a team?" -> DELETE /v0.1/orgs/{org_name}/teams/{team_name}
+- "Partially update a team?" -> PATCH /v0.1/orgs/{org_name}/teams/{team_name}
+- "List all teams?" -> GET /v0.1/orgs/{org_name}/teams
+- "Create a team?" -> POST /v0.1/orgs/{org_name}/teams
+- "Create a revoke?" -> POST /v0.1/orgs/{org_name}/invitations/{email}/revoke
+- "Create a resend?" -> POST /v0.1/orgs/{org_name}/invitations/{email}/resend
+- "Partially update a invitation?" -> PATCH /v0.1/orgs/{org_name}/invitations/{email}
+- "Create a invitation?" -> POST /v0.1/orgs/{org_name}/invitations
+- "List all invitations?" -> GET /v0.1/orgs/{org_name}/invitations
+- "List all distribution_groups_details?" -> GET /v0.1/orgs/{org_name}/distribution_groups_details
+- "Create a resend_invite?" -> POST /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/resend_invite
+- "Create a bulk_delete?" -> POST /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/members/bulk_delete
+- "List all members?" -> GET /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/members
+- "Create a member?" -> POST /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/members
+- "Create a bulk_delete?" -> POST /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/apps/bulk_delete
+- "List all apps?" -> GET /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/apps
+- "Create a app?" -> POST /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/apps
+- "Get distribution_group details?" -> GET /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}
+- "Partially update a distribution_group?" -> PATCH /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}
+- "Delete a distribution_group?" -> DELETE /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}
+- "Create a distribution_group?" -> POST /v0.1/orgs/{org_name}/distribution_groups
+- "List all distribution_groups?" -> GET /v0.1/orgs/{org_name}/distribution_groups
+- "List all azure_subscriptions?" -> GET /v0.1/orgs/{org_name}/azure_subscriptions
+- "Create a avatar?" -> POST /v0.1/orgs/{org_name}/avatar
+- "Create a app?" -> POST /v0.1/orgs/{org_name}/apps
+- "List all apps?" -> GET /v0.1/orgs/{org_name}/apps
+- "Get org details?" -> GET /v0.1/orgs/{org_name}
+- "Partially update a org?" -> PATCH /v0.1/orgs/{org_name}
+- "Delete a org?" -> DELETE /v0.1/orgs/{org_name}
+- "Create a org?" -> POST /v0.1/orgs
+- "List all orgs?" -> GET /v0.1/orgs
+- "List all sent?" -> GET /v0.1/invitations/sent
+- "List all azure_subscriptions?" -> GET /v0.1/azure_subscriptions
+- "List all webhooks?" -> GET /v0.1/apps/{owner_name}/{app_name}/webhooks
+- "List all versions?" -> GET /v0.1/apps/{owner_name}/{app_name}/versions
+- "Delete a user?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/users/{user_email}
+- "Partially update a user?" -> PATCH /v0.1/apps/{owner_name}/{app_name}/users/{user_email}
+- "List all users?" -> GET /v0.1/apps/{owner_name}/{app_name}/users
+- "Get release details?" -> GET /v0.1/apps/{owner_name}/{app_name}/uploads/releases/{upload_id}
+- "Partially update a release?" -> PATCH /v0.1/apps/{owner_name}/{app_name}/uploads/releases/{upload_id}
+- "Create a release?" -> POST /v0.1/apps/{owner_name}/{app_name}/uploads/releases
+- "Create a transfer_to_org?" -> POST /v0.1/apps/{owner_name}/{app_name}/transfer_to_org
+- "Delete a tester?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/testers/{tester_id}
+- "List all testers?" -> GET /v0.1/apps/{owner_name}/{app_name}/testers
+- "List all teams?" -> GET /v0.1/apps/{owner_name}/{app_name}/teams
+- "List all status?" -> GET /v0.1/apps/{owner_name}/{app_name}/symbols/{symbol_id}/status
+- "List all location?" -> GET /v0.1/apps/{owner_name}/{app_name}/symbols/{symbol_id}/location
+- "Create a ignore?" -> POST /v0.1/apps/{owner_name}/{app_name}/symbols/{symbol_id}/ignore
+- "Get symbol details?" -> GET /v0.1/apps/{owner_name}/{app_name}/symbols/{symbol_id}
+- "List all symbols?" -> GET /v0.1/apps/{owner_name}/{app_name}/symbols
+- "List all location?" -> GET /v0.1/apps/{owner_name}/{app_name}/symbol_uploads/{symbol_upload_id}/location
+- "Get symbol_upload details?" -> GET /v0.1/apps/{owner_name}/{app_name}/symbol_uploads/{symbol_upload_id}
+- "Partially update a symbol_upload?" -> PATCH /v0.1/apps/{owner_name}/{app_name}/symbol_uploads/{symbol_upload_id}
+- "Delete a symbol_upload?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/symbol_uploads/{symbol_upload_id}
+- "List all symbol_uploads?" -> GET /v0.1/apps/{owner_name}/{app_name}/symbol_uploads
+- "Create a symbol_upload?" -> POST /v0.1/apps/{owner_name}/{app_name}/symbol_uploads
+- "List all store_service_status?" -> GET /v0.1/apps/{owner_name}/{app_name}/store_service_status
+- "Get update_device details?" -> GET /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/update_devices/{resign_id}
+- "Update a tester?" -> PUT /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/testers/{tester_id}
+- "Delete a tester?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/testers/{tester_id}
+- "Create a tester?" -> POST /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/testers
+- "Delete a store?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/stores/{store_id}
+- "Create a store?" -> POST /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/stores
+- "List all provisioning_profile?" -> GET /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/provisioning_profile
+- "Update a group?" -> PUT /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/groups/{group_id}
+- "Delete a group?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/groups/{group_id}
+- "Create a group?" -> POST /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/groups
+- "Get release details?" -> GET /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}
+- "Update a release?" -> PUT /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}
+- "Partially update a release?" -> PATCH /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}
+- "Delete a release?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}
+- "List all filter_by_tester?" -> GET /v0.1/apps/{owner_name}/{app_name}/releases/filter_by_tester
+- "List all releases?" -> GET /v0.1/apps/{owner_name}/{app_name}/releases
+- "List all recent_releases?" -> GET /v0.1/apps/{owner_name}/{app_name}/recent_releases
+- "List all emailSettings?" -> GET /v0.1/apps/{owner_name}/{app_name}/notifications/emailSettings
+- "Partially update a invitation?" -> PATCH /v0.1/apps/{owner_name}/{app_name}/invitations/{user_email}
+- "Delete a invitation?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/invitations/{user_email}
+- "Create a invitation?" -> POST /v0.1/apps/{owner_name}/{app_name}/invitations
+- "List all invitations?" -> GET /v0.1/apps/{owner_name}/{app_name}/invitations
+- "Create a enable?" -> POST /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks/{export_configuration_id}/enable
+- "Create a disable?" -> POST /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks/{export_configuration_id}/disable
+- "Get export_configurations_ak details?" -> GET /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks/{export_configuration_id}
+- "Partially update a export_configurations_ak?" -> PATCH /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks/{export_configuration_id}
+- "Delete a export_configurations_ak?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks/{export_configuration_id}
+- "List all export_configurations_aks?" -> GET /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks
+- "Create a export_configurations_ak?" -> POST /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks
+- "List all sessionLogs?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/{errorId}/sessionLogs
+- "List all text?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/{errorId}/attachments/{attachmentId}/text
+- "List all location?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/{errorId}/attachments/{attachmentId}/location
+- "List all attachments?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/{errorId}/attachments
+- "Search search?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/search
+- "List all retention_settings?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/retention_settings
+- "List all errorfreeDevicePercentages?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorfreeDevicePercentages
+- "List all stacktrace?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/stacktrace
+- "List all operatingSystems?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/operatingSystems
+- "List all models?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/models
+- "List all stacktrace?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors/{errorId}/stacktrace
+- "List all location?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors/{errorId}/location
+- "List all download?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors/{errorId}/download
+- "Get error details?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors/{errorId}
+- "Delete a error?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors/{errorId}
+- "List all latest?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors/latest
+- "List all errors?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors
+- "List all errorfreeDevicePercentages?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errorfreeDevicePercentages
+- "List all errorCountsPerDay?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errorCountsPerDay
+- "Get errorGroup details?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}
+- "Partially update a errorGroup?" -> PATCH /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}
+- "Search search?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/search
+- "List all errorGroups?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups
+- "List all errorCountsPerDay?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/errorCountsPerDay
+- "List all available_versions?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/available_versions
+- "List all availableAppBuilds?" -> GET /v0.1/apps/{owner_name}/{app_name}/errors/availableAppBuilds
+- "List all realtimestatus?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/releases/{release_id}/realtimestatus
+- "List all publish_logs?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/releases/{release_id}/publish_logs
+- "List all publish_error_details?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/releases/{release_id}/publish_error_details
+- "Get release details?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/releases/{release_id}
+- "Delete a release?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/releases/{release_id}
+- "List all releases?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/releases
+- "List all latest_release?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/latest_release
+- "Get distribution_store details?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}
+- "Partially update a distribution_store?" -> PATCH /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}
+- "Delete a distribution_store?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}
+- "Create a distribution_store?" -> POST /v0.1/apps/{owner_name}/{app_name}/distribution_stores
+- "List all distribution_stores?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores
+- "Create a resend_invite?" -> POST /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/resend_invite
+- "Get release details?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/releases/{release_id}
+- "Delete a release?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/releases/{release_id}
+- "List all releases?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/releases
+- "Create a bulk_delete?" -> POST /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/members/bulk_delete
+- "List all members?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/members
+- "Create a member?" -> POST /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/members
+- "List all download_devices_list?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/devices/download_devices_list
+- "List all devices?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/devices
+- "Get distribution_group details?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}
+- "Partially update a distribution_group?" -> PATCH /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}
+- "Delete a distribution_group?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}
+- "List all distribution_groups?" -> GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups
+- "Create a distribution_group?" -> POST /v0.1/apps/{owner_name}/{app_name}/distribution_groups
+- "List all symbol_groups_info?" -> GET /v0.1/apps/{owner_name}/{app_name}/diagnostics/symbol_groups_info
+- "Get symbol_group details?" -> GET /v0.1/apps/{owner_name}/{app_name}/diagnostics/symbol_groups/{symbol_group_id}
+- "List all symbol_groups?" -> GET /v0.1/apps/{owner_name}/{app_name}/diagnostics/symbol_groups
+- "Update a block_log?" -> PUT /v0.1/apps/{owner_name}/{app_name}/devices/block_logs/{install_id}
+- "List all crashes_info?" -> GET /v0.1/apps/{owner_name}/{app_name}/crashes_info
+- "List all session_logs?" -> GET /v0.1/apps/{owner_name}/{app_name}/crashes/{crash_id}/session_logs
+- "List all text?" -> GET /v0.1/apps/{owner_name}/{app_name}/crashes/{crash_id}/attachments/{attachment_id}/text
+- "List all location?" -> GET /v0.1/apps/{owner_name}/{app_name}/crashes/{crash_id}/attachments/{attachment_id}/location
+- "List all attachments?" -> GET /v0.1/apps/{owner_name}/{app_name}/crashes/{crash_id}/attachments
+- "List all stacktrace?" -> GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/stacktrace
+- "List all stacktrace?" -> GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes/{crash_id}/stacktrace
+- "List all location?" -> GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes/{crash_id}/raw/location
+- "List all download?" -> GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes/{crash_id}/native/download
+- "List all native?" -> GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes/{crash_id}/native
+- "Get crashe details?" -> GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes/{crash_id}
+- "Delete a crashe?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes/{crash_id}
+- "List all crashes?" -> GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes
+- "Get crash_group details?" -> GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}
+- "Partially update a crash_group?" -> PATCH /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}
+- "List all crash_groups?" -> GET /v0.1/apps/{owner_name}/{app_name}/crash_groups
+- "Get crashGroup details?" -> GET /v0.1/apps/{owner_name}/{app_name}/bugtracker/crashGroup/{crash_group_id}
+- "List all bugtracker?" -> GET /v0.1/apps/{owner_name}/{app_name}/bugtracker
+- "Delete a azure_subscription?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/azure_subscriptions/{azure_subscription_id}
+- "List all azure_subscriptions?" -> GET /v0.1/apps/{owner_name}/{app_name}/azure_subscriptions
+- "Create a azure_subscription?" -> POST /v0.1/apps/{owner_name}/{app_name}/azure_subscriptions
+- "Create a avatar?" -> POST /v0.1/apps/{owner_name}/{app_name}/avatar
+- "List all apple_test_flight_groups?" -> GET /v0.1/apps/{owner_name}/{app_name}/apple_test_flight_groups
+- "List all apple_mapping?" -> GET /v0.1/apps/{owner_name}/{app_name}/apple_mapping
+- "Create a apple_mapping?" -> POST /v0.1/apps/{owner_name}/{app_name}/apple_mapping
+- "Delete a api_token?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/api_tokens/{api_token_id}
+- "List all api_tokens?" -> GET /v0.1/apps/{owner_name}/{app_name}/api_tokens
+- "Create a api_token?" -> POST /v0.1/apps/{owner_name}/{app_name}/api_tokens
+- "List all versions?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/versions
+- "List all sessions_per_device?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/sessions_per_device
+- "List all session_durations_distribution?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/session_durations_distribution
+- "List all session_counts?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/session_counts
+- "List all places?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/places
+- "List all oses?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/oses
+- "List all models?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/models
+- "List all log_flow?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/log_flow
+- "List all languages?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/languages
+- "List all generic_log_flow?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/generic_log_flow
+- "List all counts?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}/properties/{event_property_name}/counts
+- "List all properties?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}/properties
+- "List all event_count?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}/event_count
+- "List all device_count?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}/device_count
+- "List all count_per_session?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}/count_per_session
+- "List all count_per_device?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}/count_per_device
+- "Delete a event?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}
+- "List all events?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/events
+- "Delete a event_log?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/analytics/event_logs/{event_name}
+- "Create a release_count?" -> POST /v0.1/apps/{owner_name}/{app_name}/analytics/distribution/release_counts
+- "List all crashfree_device_percentages?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/crashfree_device_percentages
+- "List all overall?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/crash_groups/{crash_group_id}/overall
+- "List all operating_systems?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/crash_groups/{crash_group_id}/operating_systems
+- "List all models?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/crash_groups/{crash_group_id}/models
+- "List all crash_counts?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/crash_groups/{crash_group_id}/crash_counts
+- "Create a crash_group?" -> POST /v0.1/apps/{owner_name}/{app_name}/analytics/crash_groups
+- "List all crash_counts?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/crash_counts
+- "Delete a audience?" -> DELETE /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/{audience_name}
+- "Get audience details?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/{audience_name}
+- "Update a audience?" -> PUT /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/{audience_name}
+- "List all values?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/metadata/device_properties/{property_name}/values
+- "List all device_properties?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/metadata/device_properties
+- "List all custom_properties?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/metadata/custom_properties
+- "Create a test?" -> POST /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/definition/test
+- "List all audiences?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/audiences
+- "List all active_device_counts?" -> GET /v0.1/apps/{owner_name}/{app_name}/analytics/active_device_counts
+- "Get app details?" -> GET /v0.1/apps/{owner_name}/{app_name}
+- "Partially update a app?" -> PATCH /v0.1/apps/{owner_name}/{app_name}
+- "Delete a app?" -> DELETE /v0.1/apps/{owner_name}/{app_name}
+- "Create a app?" -> POST /v0.1/apps
+- "List all apps?" -> GET /v0.1/apps
+- "Delete a api_token?" -> DELETE /v0.1/api_tokens/{api_token_id}
+- "List all api_tokens?" -> GET /v0.1/api_tokens
+- "Create a api_token?" -> POST /v0.1/api_tokens
+- "List all administeredOrgs?" -> GET /v0.1/administeredOrgs
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

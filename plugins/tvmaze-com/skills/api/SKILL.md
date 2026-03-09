@@ -77,84 +77,52 @@ https://api.tvmaze.com/v1
 | POST | /auth/poll | Poll whether an authentication request was confirmed |
 | GET | /auth/validate | Validate your authentication credentials |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What episodes has the user watched?" -> GET /user/episodes
-- "Has the user watched a specific episode?" -> GET /user/episodes/{episode_id}
-- "Mark an episode as watched" -> PUT /user/episodes/{episode_id}
-- "Remove an episode from my watched list" -> DELETE /user/episodes/{episode_id}
-- "What shows am I following?" -> GET /user/follows/shows
-- "Follow a new show" -> PUT /user/follows/shows/{show_id}
-- "Unfollow a show" -> DELETE /user/follows/shows/{show_id}
-- "List all my custom tags" -> GET /user/tags
-- "Create a new tag for organizing shows" -> POST /user/tags
-- "Which shows have I tagged with a specific tag?" -> GET /user/tags/{tag_id}/shows
-- "Tag a show" -> PUT /user/tags/{tag_id}/shows/{show_id}
-- "What shows have I voted on?" -> GET /user/votes/shows
-- "Rate a show" -> PUT /user/votes/shows/{show_id}
-- "Bulk import my watch history" -> POST /scrobble/episodes
-- "Is my API token still valid?" -> GET /auth/validate
-
-## Response Tips
-
-- **Episodes/Follows/Votes lists** (`GET /user/*`): Returns flat arrays; use the `embed` param on follows to inline full show/person/network objects and avoid extra lookups.
-- **Single resource GETs** (`GET /user/*/{ id }`): Returns the object directly; a 404 means the user has no relationship with that resource (not watched, not followed, etc.) -- this is normal, not an error.
-- **PUT/DELETE on resources**: 200 confirms the action; response body is the updated or removed relationship object.
-- **Scrobble POST endpoints**: Watch for 207 Multi-Status -- this means partial success where some episodes were accepted and others rejected. Parse the per-item status in the response body.
-- **Validation errors (422)**: Returned when a PUT/POST body is malformed or contains invalid values. The response body contains field-level error details.
-- **Auth endpoints**: `POST /auth/start` initiates a device-auth flow; `POST /auth/poll` returns 403 while the user has not yet approved -- this is expected polling behavior, not a failure.
-
-## Anomaly Flags
-
-- **429 on auth endpoints**: Rate limit hit on `/auth/start` or `/auth/poll` -- back off exponentially and surface to the user that they are polling too frequently.
-- **207 Multi-Status on scrobble**: Partial success -- agent should parse individual item results and report which episodes failed and why.
-- **Repeated 404s on follows/votes**: May indicate stale show/episode IDs from a cached list -- suggest refreshing the resource list.
-- **422 on PUT with body**: Likely a schema mismatch -- surface the validation error details so the user can correct their input.
-- **401 on /auth/validate**: Token has expired or been revoked -- prompt re-authentication via the `/auth/start` flow.
-- **Bulk scrobble with all failures**: If a `POST /scrobble/episodes` returns 422 rather than 207, the entire payload was rejected -- flag the format issue immediately.
-
-## Playbook
-
-### 1. Authenticate and validate a session
-
-1. Call `POST /auth/start` with the required credentials body to initiate device auth.
-2. Poll `POST /auth/poll` at intervals (respect 429 backoff) until a 200 response with a token is returned.
-3. Confirm the token works with `GET /auth/validate` (expect 200).
-4. Use the token as Basic auth credentials for all subsequent requests.
-
-### 2. Track and organize shows with tags
-
-1. List existing tags with `GET /user/tags`.
-2. Create a new tag via `POST /user/tags` with a body containing the tag name.
-3. Follow the show first with `PUT /user/follows/shows/{show_id}` if not already followed.
-4. Assign the tag to a show with `PUT /user/tags/{tag_id}/shows/{show_id}`.
-5. Verify by fetching `GET /user/tags/{tag_id}/shows` with `embed` to see full show details.
-
-### 3. Bulk import watch history via scrobble
-
-1. Identify the show using `GET /scrobble/shows/{show_id}` to confirm it exists and get episode structure.
-2. Build an episodes array with episode identifiers and watch timestamps.
-3. Submit via `POST /scrobble/episodes` with the episodes payload.
-4. If 207 is returned, parse per-episode results and retry or fix failed entries.
-5. Verify the import with `GET /user/episodes?show_id={show_id}` to confirm episodes are tracked.
-
-### 4. Rate and review your watched shows
-
-1. Fetch your watched episodes with `GET /user/episodes` to identify shows you have engaged with.
-2. Check existing votes with `GET /user/votes/shows` to avoid duplicates.
-3. Submit a vote with `PUT /user/votes/shows/{show_id}` including the vote value in the body.
-4. Optionally vote on individual episodes with `PUT /user/votes/episodes/{episode_id}`.
-5. To change a vote, call the same PUT endpoint with an updated body; to remove it, use DELETE.
-
-### 5. Manage follows across all resource types
-
-1. List current follows: `GET /user/follows/shows`, `/people`, `/networks`, `/webchannels` (use `embed` for full details).
-2. Check a specific follow with `GET /user/follows/shows/{show_id}` -- 404 means not following.
-3. Add a follow with `PUT /user/follows/shows/{show_id}` (same pattern for people, networks, webchannels).
-4. Remove with `DELETE /user/follows/shows/{show_id}`.
-5. Repeat across resource types as needed -- the API pattern is identical for shows, people, networks, and webchannels.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all episodes?" -> GET /user/episodes
+- "Get episode details?" -> GET /user/episodes/{episode_id}
+- "Update a episode?" -> PUT /user/episodes/{episode_id}
+- "Delete a episode?" -> DELETE /user/episodes/{episode_id}
+- "List all shows?" -> GET /user/follows/shows
+- "Get show details?" -> GET /user/follows/shows/{show_id}
+- "Update a show?" -> PUT /user/follows/shows/{show_id}
+- "Delete a show?" -> DELETE /user/follows/shows/{show_id}
+- "List all people?" -> GET /user/follows/people
+- "Get people details?" -> GET /user/follows/people/{person_id}
+- "Update a people?" -> PUT /user/follows/people/{person_id}
+- "Delete a people?" -> DELETE /user/follows/people/{person_id}
+- "List all networks?" -> GET /user/follows/networks
+- "Get network details?" -> GET /user/follows/networks/{network_id}
+- "Update a network?" -> PUT /user/follows/networks/{network_id}
+- "Delete a network?" -> DELETE /user/follows/networks/{network_id}
+- "List all webchannels?" -> GET /user/follows/webchannels
+- "Get webchannel details?" -> GET /user/follows/webchannels/{webchannel_id}
+- "Update a webchannel?" -> PUT /user/follows/webchannels/{webchannel_id}
+- "Delete a webchannel?" -> DELETE /user/follows/webchannels/{webchannel_id}
+- "List all tags?" -> GET /user/tags
+- "Create a tag?" -> POST /user/tags
+- "Delete a tag?" -> DELETE /user/tags/{tag_id}
+- "Partially update a tag?" -> PATCH /user/tags/{tag_id}
+- "List all shows?" -> GET /user/tags/{tag_id}/shows
+- "Update a show?" -> PUT /user/tags/{tag_id}/shows/{show_id}
+- "Delete a show?" -> DELETE /user/tags/{tag_id}/shows/{show_id}
+- "List all shows?" -> GET /user/votes/shows
+- "Get show details?" -> GET /user/votes/shows/{show_id}
+- "Update a show?" -> PUT /user/votes/shows/{show_id}
+- "Delete a show?" -> DELETE /user/votes/shows/{show_id}
+- "List all episodes?" -> GET /user/votes/episodes
+- "Get episode details?" -> GET /user/votes/episodes/{episode_id}
+- "Update a episode?" -> PUT /user/votes/episodes/{episode_id}
+- "Delete a episode?" -> DELETE /user/votes/episodes/{episode_id}
+- "Get show details?" -> GET /scrobble/shows/{show_id}
+- "Update a episode?" -> PUT /scrobble/episodes/{episode_id}
+- "Create a show?" -> POST /scrobble/shows
+- "Create a episode?" -> POST /scrobble/episodes
+- "Create a start?" -> POST /auth/start
+- "Create a poll?" -> POST /auth/poll
+- "List all validate?" -> GET /auth/validate
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

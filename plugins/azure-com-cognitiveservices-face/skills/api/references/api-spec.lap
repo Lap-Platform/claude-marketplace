@@ -9,303 +9,366 @@
 
 @group findsimilars
 @endpoint POST /findsimilars
-@required {body: map}
-@returns(200)
+@desc Given query face's faceId, to search the similar-looking faces from a faceId array, a face list or a large face list. faceId array contains the faces created by [Face - Detect With Url](https://docs.microsoft.com/rest/api/faceapi/face/detectwithurl) or [Face - Detect With Stream](https://docs.microsoft.com/rest/api/faceapi/face/detectwithstream), which will expire at the time specified by faceIdTimeToLive after creation. A "faceListId" is created by [FaceList - Create](https://docs.microsoft.com/rest/api/faceapi/facelist/create) containing persistedFaceIds that will not expire. And a "largeFaceListId" is created by [LargeFaceList - Create](https://docs.microsoft.com/rest/api/faceapi/largefacelist/create) containing persistedFaceIds that will also not expire. Depending on the input the returned similar faces list contains faceIds or persistedFaceIds ranked by similarity.
+@required {body: map # Request body for Find Similar.}
+@returns(200) A successful call returns an array of the most similar faces represented in faceId if the input parameter is faceIds or persistedFaceId if the input parameter is faceListId.
 
 @endgroup
 
 @group group
 @endpoint POST /group
-@required {body: map}
-@returns(200)
+@desc Divide candidate faces into groups based on face similarity.<br />
+@required {body: map # Request body for grouping.}
+@returns(200) A successful call returns one or more groups of similar faces (rank by group size) and a messyGroup.
 
 @endgroup
 
 @group identify
 @endpoint POST /identify
-@required {body: map}
-@returns(200)
+@desc 1-to-many identification to find the closest matches of the specific query person face from a person group or large person group.
+@required {body: map # Request body for identify operation.}
+@returns(200) A successful call returns the identified candidate person(s) for each query face.
 
 @endgroup
 
 @group verify
 @endpoint POST /verify
-@required {body: map}
-@returns(200)
+@desc Verify whether two faces belong to a same person or whether one face belongs to a person.
+@required {body: map # Request body for face to face verification.}
+@returns(200) A successful call returns the verification result.
 
 @endgroup
 
 @group persongroups
 @endpoint POST /persongroups/{personGroupId}/persons
-@required {personGroupId: any, body: map}
-@returns(200)
+@desc Create a new person in a specified person group.
+@required {personGroupId: any # Id referencing a particular person group., body: map # Request body for creating new person.}
+@returns(200) A successful call returns a new personId created.
 
 @endpoint GET /persongroups/{personGroupId}/persons
-@required {personGroupId: any}
-@optional {start: any, top: any}
-@returns(200)
+@desc List all persons in a person group, and retrieve person information (including personId, name, userData and persistedFaceIds of registered faces of the person).
+@required {personGroupId: any # Id referencing a particular person group.}
+@optional {start: any # Starting person id to return (used to list a range of persons)., top: any # Number of persons to return starting with the person id indicated by the 'start' parameter.}
+@returns(200) A successful call returns an array of person information that belong to the person group.
 
 @endpoint DELETE /persongroups/{personGroupId}/persons/{personId}
-@required {personGroupId: any, personId: any}
-@returns(200)
+@desc Delete an existing person from a person group. The persistedFaceId, userData, person name and face feature in the person entry will all be deleted.
+@required {personGroupId: any # Id referencing a particular person group., personId: any # Id referencing a particular person.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint GET /persongroups/{personGroupId}/persons/{personId}
-@required {personGroupId: any, personId: any}
-@returns(200)
+@desc Retrieve a person's information, including registered persisted faces, name and userData.
+@required {personGroupId: any # Id referencing a particular person group., personId: any # Id referencing a particular person.}
+@returns(200) A successful call returns the person's information.
 
 @endpoint PATCH /persongroups/{personGroupId}/persons/{personId}
-@required {personGroupId: any, personId: any, body: map}
-@returns(200)
+@desc Update name or userData of a person.
+@required {personGroupId: any # Id referencing a particular person group., personId: any # Id referencing a particular person., body: map # Request body for person update operation.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint DELETE /persongroups/{personGroupId}/persons/{personId}/persistedfaces/{persistedFaceId}
-@required {personGroupId: any, personId: any, persistedFaceId: any}
-@returns(200)
+@desc Delete a face from a person in a person group by specified personGroupId, personId and persistedFaceId.
+@required {personGroupId: any # Id referencing a particular person group., personId: any # Id referencing a particular person., persistedFaceId: any # Id referencing a particular persistedFaceId of an existing face.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint GET /persongroups/{personGroupId}/persons/{personId}/persistedfaces/{persistedFaceId}
-@required {personGroupId: any, personId: any, persistedFaceId: any}
-@returns(200)
+@desc Retrieve information about a persisted face (specified by persistedFaceId, personId and its belonging personGroupId).
+@required {personGroupId: any # Id referencing a particular person group., personId: any # Id referencing a particular person., persistedFaceId: any # Id referencing a particular persistedFaceId of an existing face.}
+@returns(200) A successful call returns target persisted face's information (persistedFaceId and userData).
 
 @endpoint PATCH /persongroups/{personGroupId}/persons/{personId}/persistedfaces/{persistedFaceId}
-@required {personGroupId: any, personId: any, persistedFaceId: any, body: map}
-@returns(200)
+@desc Add a face to a person into a person group for face identification or verification. To deal with an image contains multiple faces, input face can be specified as an image with a targetFace rectangle. It returns a persistedFaceId representing the added face. No image will be stored. Only the extracted face feature will be stored on server until [PersonGroup PersonFace - Delete](https://docs.microsoft.com/rest/api/faceapi/persongroupperson/deleteface), [PersonGroup Person - Delete](https://docs.microsoft.com/rest/api/faceapi/persongroupperson/delete) or [PersonGroup - Delete](https://docs.microsoft.com/rest/api/faceapi/persongroup/delete) is called.
+@required {personGroupId: any # Id referencing a particular person group., personId: any # Id referencing a particular person., persistedFaceId: any # Id referencing a particular persistedFaceId of an existing face., body: map # Request body for updating persisted face.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint PUT /persongroups/{personGroupId}
-@required {personGroupId: any, body: map}
-@returns(200)
+@desc Create a new person group with specified personGroupId, name, user-provided userData and recognitionModel.
+@required {personGroupId: any # Id referencing a particular person group., body: map # Request body for creating new person group.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint DELETE /persongroups/{personGroupId}
-@required {personGroupId: any}
-@returns(200)
+@desc Delete an existing person group. Persisted face features of all people in the person group will also be deleted.
+@required {personGroupId: any # Id referencing a particular person group.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint GET /persongroups/{personGroupId}
-@required {personGroupId: any}
-@optional {returnRecognitionModel: any}
-@returns(200)
+@desc Retrieve person group name, userData and recognitionModel. To get person information under this personGroup, use [PersonGroup Person - List](https://docs.microsoft.com/rest/api/faceapi/persongroupperson/list).
+@required {personGroupId: any # Id referencing a particular person group.}
+@optional {returnRecognitionModel: any # A value indicating whether the operation should return 'recognitionModel' in response.}
+@returns(200) A successful call returns the person group's information.
 
 @endpoint PATCH /persongroups/{personGroupId}
-@required {personGroupId: any, body: map}
-@returns(200)
+@desc Update an existing person group's display name and userData. The properties which does not appear in request body will not be updated.
+@required {personGroupId: any # Id referencing a particular person group., body: map # Request body for updating person group.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint GET /persongroups/{personGroupId}/training
-@required {personGroupId: any}
-@returns(200)
+@desc Retrieve the training status of a person group (completed or ongoing).
+@required {personGroupId: any # Id referencing a particular person group.}
+@returns(200) A successful call returns the person group's training status.
 
 @endpoint GET /persongroups
-@optional {start: any, top: any, returnRecognitionModel: any}
-@returns(200)
+@desc List person groups’ personGroupId, name, userData and recognitionModel.<br />
+@optional {start: any # List person groups from the least personGroupId greater than the "start"., top: any # The number of person groups to list., returnRecognitionModel: any # A value indicating whether the operation should return 'recognitionModel' in response.}
+@returns(200) A successful call returns an array of person groups and their information.
 
 @endpoint POST /persongroups/{personGroupId}/train
-@required {personGroupId: any}
-@returns(202)
+@desc Queue a person group training task, the training task may not be started immediately.
+@required {personGroupId: any # Id referencing a particular person group.}
+@returns(202) The training task was queued successfully.
 
 @endgroup
 
 @group facelists
 @endpoint PUT /facelists/{faceListId}
-@required {faceListId: any, body: map}
-@returns(200)
+@desc Create an empty face list with user-specified faceListId, name, an optional userData and recognitionModel. Up to 64 face lists are allowed in one subscription.
+@required {faceListId: any # Id referencing a particular face list., body: map # Request body for creating a face list.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint GET /facelists/{faceListId}
-@required {faceListId: any}
-@optional {returnRecognitionModel: any}
-@returns(200)
+@desc Retrieve a face list’s faceListId, name, userData, recognitionModel and faces in the face list.
+@required {faceListId: any # Id referencing a particular face list.}
+@optional {returnRecognitionModel: any # A value indicating whether the operation should return 'recognitionModel' in response.}
+@returns(200) A successful call returns the face list's information.
 
 @endpoint PATCH /facelists/{faceListId}
-@required {faceListId: any, body: map}
-@returns(200)
+@desc Update information of a face list.
+@required {faceListId: any # Id referencing a particular face list., body: map # Request body for updating a face list.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint DELETE /facelists/{faceListId}
-@required {faceListId: any}
-@returns(200)
+@desc Delete a specified face list.
+@required {faceListId: any # Id referencing a particular face list.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint GET /facelists
-@optional {returnRecognitionModel: any}
-@returns(200)
+@desc List face lists’ faceListId, name, userData and recognitionModel. <br />
+@optional {returnRecognitionModel: any # A value indicating whether the operation should return 'recognitionModel' in response.}
+@returns(200) A successful call returns an array of faceList.
 
 @endpoint DELETE /facelists/{faceListId}/persistedfaces/{persistedFaceId}
-@required {faceListId: any, persistedFaceId: any}
-@returns(200)
+@desc Delete a face from a face list by specified faceListId and persistedFaceId.
+@required {faceListId: any # Id referencing a particular face list., persistedFaceId: any # Id referencing a particular persistedFaceId of an existing face.}
+@returns(200) A successful call returns an empty response body.
 
 @endgroup
 
 @group persongroups
 @endpoint POST /persongroups/{personGroupId}/persons/{personId}/persistedfaces
-@required {personGroupId: any, personId: any}
-@optional {userData: any, targetFace: any, detectionModel: any}
-@returns(200)
+@desc Add a face to a person into a person group for face identification or verification. To deal with an image contains multiple faces, input face can be specified as an image with a targetFace rectangle. It returns a persistedFaceId representing the added face. No image will be stored. Only the extracted face feature will be stored on server until [PersonGroup PersonFace - Delete](https://docs.microsoft.com/rest/api/faceapi/persongroupperson/deleteface), [PersonGroup Person - Delete](https://docs.microsoft.com/rest/api/faceapi/persongroupperson/delete) or [PersonGroup - Delete](https://docs.microsoft.com/rest/api/faceapi/persongroup/delete) is called.
+@required {personGroupId: any # Id referencing a particular person group., personId: any # Id referencing a particular person.}
+@optional {userData: any # User-specified data about the face for any purpose. The maximum length is 1KB., targetFace: any # A face rectangle to specify the target face to be added to a person in the format of "targetFace=left,top,width,height". E.g. "targetFace=10,10,100,100". If there is more than one face in the image, targetFace is required to specify which face to add. No targetFace means there is only one face detected in the entire image., detectionModel: any # Name of detection model. Detection model is used to detect faces in the submitted image. A detection model name can be provided when performing Face - Detect or (Large)FaceList - Add Face or (Large)PersonGroup - Add Face. The default value is 'detection_01', if another model is needed, please explicitly specify it.}
+@returns(200) A successful call returns the new persistedFaceId.
 
 @endgroup
 
 @group detect
 @endpoint POST /detect
-@optional {returnFaceId: any, returnFaceLandmarks: any, returnFaceAttributes: any, recognitionModel: any, returnRecognitionModel: any, detectionModel: any, faceIdTimeToLive: any}
-@returns(200)
+@desc Detect human faces in an image, return face rectangles, and optionally with faceIds, landmarks, and attributes.<br />
+@optional {returnFaceId: any # A value indicating whether the operation should return faceIds of detected faces. Detecting with this value set to true requires additional access approvals at https://aka.ms/facerecognition., returnFaceLandmarks: any # A value indicating whether the operation should return landmarks of the detected faces., returnFaceAttributes: any # Analyze and return the one or more specified face attributes in the comma-separated string like "returnFaceAttributes=age,gender". The available attributes depends on the 'detectionModel' specified. 'detection_01' supports age, gender, headPose, smile, facialHair, glasses, emotion, hair, makeup, occlusion, accessories, blur, exposure, noise, and qualityForRecognition. While 'detection_02' does not support any attributes and 'detection_03' only supports mask and qualityForRecognition. Additionally, qualityForRecognition is only supported when the 'recognitionModel' is specified as 'recognition_03' or 'recognition_04'. Note that each face attribute analysis has additional computational and time cost., recognitionModel: any # Name of recognition model. Recognition model is used when the face features are extracted and associated with detected faceIds, (Large)FaceList or (Large)PersonGroup. A recognition model name can be provided when performing Face - Detect or (Large)FaceList - Create or (Large)PersonGroup - Create. The default value is 'recognition_01', if latest model needed, please explicitly specify the model you need., returnRecognitionModel: any # A value indicating whether the operation should return 'recognitionModel' in response., detectionModel: any # Name of detection model. Detection model is used to detect faces in the submitted image. A detection model name can be provided when performing Face - Detect or (Large)FaceList - Add Face or (Large)PersonGroup - Add Face. The default value is 'detection_01', if another model is needed, please explicitly specify it., faceIdTimeToLive: any # The number of seconds for the faceId being cached. Supported range from 60 seconds up to 86400 seconds. The default value is 86400 (24 hours).}
+@returns(200) A successful call returns an array of face entries ranked by face rectangle size in descending order. An empty response indicates no faces detected.
 
 @endgroup
 
 @group facelists
 @endpoint POST /facelists/{faceListId}/persistedfaces
-@required {faceListId: any}
-@optional {userData: any, targetFace: any, detectionModel: any}
-@returns(200)
+@desc Add a face to a specified face list, up to 1,000 faces.
+@required {faceListId: any # Id referencing a particular face list.}
+@optional {userData: any # User-specified data about the face for any purpose. The maximum length is 1KB., targetFace: any # A face rectangle to specify the target face to be added to a person in the format of "targetFace=left,top,width,height". E.g. "targetFace=10,10,100,100". If there is more than one face in the image, targetFace is required to specify which face to add. No targetFace means there is only one face detected in the entire image., detectionModel: any # Name of detection model. Detection model is used to detect faces in the submitted image. A detection model name can be provided when performing Face - Detect or (Large)FaceList - Add Face or (Large)PersonGroup - Add Face. The default value is 'detection_01', if another model is needed, please explicitly specify it.}
+@returns(200) A successful call returns a new persistedFaceId.
 
 @endgroup
 
 @group largepersongroups
 @endpoint POST /largepersongroups/{largePersonGroupId}/persons
-@required {largePersonGroupId: any, body: map}
-@returns(200)
+@desc Create a new person in a specified large person group.
+@required {largePersonGroupId: any # Id referencing a particular large person group., body: map # Request body for creating new person.}
+@returns(200) A successful call returns a new personId created.
 
 @endpoint GET /largepersongroups/{largePersonGroupId}/persons
-@required {largePersonGroupId: any}
-@optional {start: any, top: any}
-@returns(200)
+@desc List all persons in a large person group, and retrieve person information (including personId, name, userData and persistedFaceIds of registered faces of the person).
+@required {largePersonGroupId: any # Id referencing a particular large person group.}
+@optional {start: any # Starting person id to return (used to list a range of persons)., top: any # Number of persons to return starting with the person id indicated by the 'start' parameter.}
+@returns(200) A successful call returns an array of person information that belong to the large person group.
 
 @endpoint DELETE /largepersongroups/{largePersonGroupId}/persons/{personId}
-@required {largePersonGroupId: any, personId: any}
-@returns(200)
+@desc Delete an existing person from a large person group. The persistedFaceId, userData, person name and face feature in the person entry will all be deleted.
+@required {largePersonGroupId: any # Id referencing a particular large person group., personId: any # Id referencing a particular person.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint GET /largepersongroups/{largePersonGroupId}/persons/{personId}
-@required {largePersonGroupId: any, personId: any}
-@returns(200)
+@desc Retrieve a person's name and userData, and the persisted faceIds representing the registered person face feature.
+@required {largePersonGroupId: any # Id referencing a particular large person group., personId: any # Id referencing a particular person.}
+@returns(200) A successful call returns the person's information.
 
 @endpoint PATCH /largepersongroups/{largePersonGroupId}/persons/{personId}
-@required {largePersonGroupId: any, personId: any, body: map}
-@returns(200)
+@desc Update name or userData of a person.
+@required {largePersonGroupId: any # Id referencing a particular large person group., personId: any # Id referencing a particular person., body: map # Request body for person update operation.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint DELETE /largepersongroups/{largePersonGroupId}/persons/{personId}/persistedfaces/{persistedFaceId}
-@required {largePersonGroupId: any, personId: any, persistedFaceId: any}
-@returns(200)
+@desc Delete a face from a person in a large person group by specified largePersonGroupId, personId and persistedFaceId.
+@required {largePersonGroupId: any # Id referencing a particular large person group., personId: any # Id referencing a particular person., persistedFaceId: any # Id referencing a particular persistedFaceId of an existing face.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint GET /largepersongroups/{largePersonGroupId}/persons/{personId}/persistedfaces/{persistedFaceId}
-@required {largePersonGroupId: any, personId: any, persistedFaceId: any}
-@returns(200)
+@desc Retrieve information about a persisted face (specified by persistedFaceId, personId and its belonging largePersonGroupId).
+@required {largePersonGroupId: any # Id referencing a particular large person group., personId: any # Id referencing a particular person., persistedFaceId: any # Id referencing a particular persistedFaceId of an existing face.}
+@returns(200) A successful call returns target persisted face's information (persistedFaceId and userData).
 
 @endpoint PATCH /largepersongroups/{largePersonGroupId}/persons/{personId}/persistedfaces/{persistedFaceId}
-@required {largePersonGroupId: any, personId: any, persistedFaceId: any, body: map}
-@returns(200)
+@desc Update a person persisted face's userData field.
+@required {largePersonGroupId: any # Id referencing a particular large person group., personId: any # Id referencing a particular person., persistedFaceId: any # Id referencing a particular persistedFaceId of an existing face., body: map # Request body for updating persisted face.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint PUT /largepersongroups/{largePersonGroupId}
-@required {largePersonGroupId: any, body: map}
-@returns(200)
+@desc Create a new large person group with user-specified largePersonGroupId, name, an optional userData and recognitionModel.
+@required {largePersonGroupId: any # Id referencing a particular large person group., body: map # Request body for creating new large person group.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint DELETE /largepersongroups/{largePersonGroupId}
-@required {largePersonGroupId: any}
-@returns(200)
+@desc Delete an existing large person group. Persisted face features of all people in the large person group will also be deleted.
+@required {largePersonGroupId: any # Id referencing a particular large person group.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint GET /largepersongroups/{largePersonGroupId}
-@required {largePersonGroupId: any}
-@optional {returnRecognitionModel: any}
-@returns(200)
+@desc Retrieve the information of a large person group, including its name, userData and recognitionModel. This API returns large person group information only, use [LargePersonGroup Person - List](https://docs.microsoft.com/rest/api/faceapi/largepersongroupperson/list) instead to retrieve person information under the large person group.
+@required {largePersonGroupId: any # Id referencing a particular large person group.}
+@optional {returnRecognitionModel: any # A value indicating whether the operation should return 'recognitionModel' in response.}
+@returns(200) A successful call returns the large person group's information.
 
 @endpoint PATCH /largepersongroups/{largePersonGroupId}
-@required {largePersonGroupId: any, body: map}
-@returns(200)
+@desc Update an existing large person group's display name and userData. The properties which does not appear in request body will not be updated.
+@required {largePersonGroupId: any # Id referencing a particular large person group., body: map # Request body for updating large person group.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint GET /largepersongroups/{largePersonGroupId}/training
-@required {largePersonGroupId: any}
-@returns(200)
+@desc Retrieve the training status of a large person group (completed or ongoing).
+@required {largePersonGroupId: any # Id referencing a particular large person group.}
+@returns(200) A successful call returns the large person group's training status.
 
 @endpoint GET /largepersongroups
-@optional {start: any, top: any, returnRecognitionModel: any}
-@returns(200)
+@desc List all existing large person groups’ largePersonGroupId, name, userData and recognitionModel.<br />
+@optional {start: any # List large person groups from the least largePersonGroupId greater than the "start"., top: any # The number of large person groups to list., returnRecognitionModel: any # A value indicating whether the operation should return 'recognitionModel' in response.}
+@returns(200) A successful call returns an array of large person groups and their information.
 
 @endpoint POST /largepersongroups/{largePersonGroupId}/train
-@required {largePersonGroupId: any}
-@returns(202)
+@desc Queue a large person group training task, the training task may not be started immediately.
+@required {largePersonGroupId: any # Id referencing a particular large person group.}
+@returns(202) The training task was queued successfully.
 
 @endpoint POST /largepersongroups/{largePersonGroupId}/persons/{personId}/persistedfaces
-@required {largePersonGroupId: any, personId: any}
-@optional {userData: any, targetFace: any, detectionModel: any}
-@returns(200)
+@desc Add a face to a person into a large person group for face identification or verification. To deal with an image contains multiple faces, input face can be specified as an image with a targetFace rectangle. It returns a persistedFaceId representing the added face. No image will be stored. Only the extracted face feature will be stored on server until [LargePersonGroup PersonFace - Delete](https://docs.microsoft.com/rest/api/faceapi/largepersongroupperson/deleteface), [LargePersonGroup Person - Delete](https://docs.microsoft.com/rest/api/faceapi/largepersongroupperson/delete) or [LargePersonGroup - Delete](https://docs.microsoft.com/rest/api/faceapi/largepersongroup/delete) is called.
+@required {largePersonGroupId: any # Id referencing a particular large person group., personId: any # Id referencing a particular person.}
+@optional {userData: any # User-specified data about the face for any purpose. The maximum length is 1KB., targetFace: any # A face rectangle to specify the target face to be added to a person in the format of "targetFace=left,top,width,height". E.g. "targetFace=10,10,100,100". If there is more than one face in the image, targetFace is required to specify which face to add. No targetFace means there is only one face detected in the entire image., detectionModel: any # Name of detection model. Detection model is used to detect faces in the submitted image. A detection model name can be provided when performing Face - Detect or (Large)FaceList - Add Face or (Large)PersonGroup - Add Face. The default value is 'detection_01', if another model is needed, please explicitly specify it.}
+@returns(200) A successful call returns the new persistedFaceId.
 
 @endgroup
 
 @group largefacelists
 @endpoint PUT /largefacelists/{largeFaceListId}
-@required {largeFaceListId: any, body: map}
-@returns(200)
+@desc Create an empty large face list with user-specified largeFaceListId, name, an optional userData and recognitionModel.
+@required {largeFaceListId: any # Id referencing a particular large face list., body: map # Request body for creating a large face list.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint GET /largefacelists/{largeFaceListId}
-@required {largeFaceListId: any}
-@optional {returnRecognitionModel: any}
-@returns(200)
+@desc Retrieve a large face list’s largeFaceListId, name, userData and recognitionModel.
+@required {largeFaceListId: any # Id referencing a particular large face list.}
+@optional {returnRecognitionModel: any # A value indicating whether the operation should return 'recognitionModel' in response.}
+@returns(200) A successful call returns the large face list's information.
 
 @endpoint PATCH /largefacelists/{largeFaceListId}
-@required {largeFaceListId: any, body: map}
-@returns(200)
+@desc Update information of a large face list.
+@required {largeFaceListId: any # Id referencing a particular large face list., body: map # Request body for updating a large face list.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint DELETE /largefacelists/{largeFaceListId}
-@required {largeFaceListId: any}
-@returns(200)
+@desc Delete a specified large face list.
+@required {largeFaceListId: any # Id referencing a particular large face list.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint GET /largefacelists/{largeFaceListId}/training
-@required {largeFaceListId: any}
-@returns(200)
+@desc Retrieve the training status of a large face list (completed or ongoing).
+@required {largeFaceListId: any # Id referencing a particular large face list.}
+@returns(200) A successful call returns the large face list's training status.
 
 @endpoint GET /largefacelists
-@optional {returnRecognitionModel: any, start: any, top: any}
-@returns(200)
+@desc List large face lists’ information of largeFaceListId, name, userData and recognitionModel. <br />
+@optional {returnRecognitionModel: any # A value indicating whether the operation should return 'recognitionModel' in response., start: any # Starting large face list id to return (used to list a range of large face lists)., top: any # Number of large face lists to return starting with the large face list id indicated by the 'start' parameter.}
+@returns(200) A successful call returns an array of largeFaceList.
 
 @endpoint POST /largefacelists/{largeFaceListId}/train
-@required {largeFaceListId: any}
-@returns(202)
+@desc Queue a large face list training task, the training task may not be started immediately.
+@required {largeFaceListId: any # Id referencing a particular large face list.}
+@returns(202) The training task was queued successfully.
 
 @endpoint DELETE /largefacelists/{largeFaceListId}/persistedfaces/{persistedFaceId}
-@required {largeFaceListId: any, persistedFaceId: any}
-@returns(200)
+@desc Delete a face from a large face list by specified largeFaceListId and persistedFaceId.
+@required {largeFaceListId: any # Id referencing a particular large face list., persistedFaceId: any # Id referencing a particular persistedFaceId of an existing face.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint GET /largefacelists/{largeFaceListId}/persistedfaces/{persistedFaceId}
-@required {largeFaceListId: any, persistedFaceId: any}
-@returns(200)
+@desc Retrieve information about a persisted face (specified by persistedFaceId and its belonging largeFaceListId).
+@required {largeFaceListId: any # Id referencing a particular large face list., persistedFaceId: any # Id referencing a particular persistedFaceId of an existing face.}
+@returns(200) A successful call returns target persisted face's information (persistedFaceId and userData).
 
 @endpoint PATCH /largefacelists/{largeFaceListId}/persistedfaces/{persistedFaceId}
-@required {largeFaceListId: any, persistedFaceId: any, body: map}
-@returns(200)
+@desc Update a persisted face's userData field.
+@required {largeFaceListId: any # Id referencing a particular large face list., persistedFaceId: any # Id referencing a particular persistedFaceId of an existing face., body: map # Request body for updating persisted face.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint POST /largefacelists/{largeFaceListId}/persistedfaces
-@required {largeFaceListId: any}
-@optional {userData: any, targetFace: any, detectionModel: any}
-@returns(200)
+@desc Add a face to a specified large face list, up to 1,000,000 faces.
+@required {largeFaceListId: any # Id referencing a particular large face list.}
+@optional {userData: any # User-specified data about the face for any purpose. The maximum length is 1KB., targetFace: any # A face rectangle to specify the target face to be added to a person in the format of "targetFace=left,top,width,height". E.g. "targetFace=10,10,100,100". If there is more than one face in the image, targetFace is required to specify which face to add. No targetFace means there is only one face detected in the entire image., detectionModel: any # Name of detection model. Detection model is used to detect faces in the submitted image. A detection model name can be provided when performing Face - Detect or (Large)FaceList - Add Face or (Large)PersonGroup - Add Face. The default value is 'detection_01', if another model is needed, please explicitly specify it.}
+@returns(200) A successful call returns a new persistedFaceId.
 
 @endpoint GET /largefacelists/{largeFaceListId}/persistedfaces
-@required {largeFaceListId: any}
-@optional {start: any, top: any}
-@returns(200)
+@desc List all faces in a large face list, and retrieve face information (including userData and persistedFaceIds of registered faces of the face).
+@required {largeFaceListId: any # Id referencing a particular large face list.}
+@optional {start: any # Starting face id to return (used to list a range of faces)., top: any # Number of faces to return starting with the face id indicated by the 'start' parameter.}
+@returns(200) A successful call returns an array of face information that belong to the large face list.
 
 @endgroup
 
 @group snapshots
 @endpoint POST /snapshots
-@required {body: map}
-@returns(202)
+@desc Submit an operation to take a snapshot of face list, large face list, person group or large person group, with user-specified snapshot type, source object id, apply scope and an optional user data.<br />
+@required {body: map # Request body for taking a snapshot.}
+@returns(202) The snapshot taking task was queued successfully.
 
 @endpoint GET /snapshots
-@optional {type: any, applyScope: any}
-@returns(200)
+@desc List all accessible snapshots with related information, including snapshots that were taken by the user, or snapshots to be applied to the user (subscription id was included in the applyScope in Snapshot - Take).
+@optional {type: any # User specified object type as a search filter., applyScope: any # User specified snapshot apply scopes as a search filter. ApplyScope is an array of the target Azure subscription ids for the snapshot, specified by the user who created the snapshot by Snapshot - Take.}
+@returns(200) A successful call returns an array of snapshots with snapshot information.
 
 @endpoint GET /snapshots/{snapshotId}
-@required {snapshotId: any}
-@returns(200)
+@desc Retrieve information about a snapshot. Snapshot is only accessible to the source subscription who took it, and target subscriptions included in the applyScope in Snapshot - Take.
+@required {snapshotId: any # Id referencing a particular snapshot.}
+@returns(200) A successful call returns the snapshot's information.
 
 @endpoint PATCH /snapshots/{snapshotId}
-@required {snapshotId: any, body: map}
-@returns(200)
+@desc Update the information of a snapshot. Only the source subscription who took the snapshot can update the snapshot.
+@required {snapshotId: any # Id referencing a particular snapshot., body: map # Request body for updating a snapshot.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint DELETE /snapshots/{snapshotId}
-@required {snapshotId: any}
-@returns(200)
+@desc Delete an existing snapshot according to the snapshotId. All object data and information in the snapshot will also be deleted. Only the source subscription who took the snapshot can delete the snapshot. If the user does not delete a snapshot with this API, the snapshot will still be automatically deleted in 48 hours after creation.
+@required {snapshotId: any # Id referencing a particular snapshot.}
+@returns(200) A successful call returns an empty response body.
 
 @endpoint POST /snapshots/{snapshotId}/apply
-@required {snapshotId: any, body: map}
-@returns(202)
+@desc Submit an operation to apply a snapshot to current subscription. For each snapshot, only subscriptions included in the applyScope of Snapshot - Take can apply it.<br />
+@required {snapshotId: any # Id referencing a particular snapshot., body: map # Request body for applying a snapshot.}
+@returns(202) The snapshot applying task was queued successfully.
 
 @endgroup
 
 @group operations
 @endpoint GET /operations/{operationId}
-@required {operationId: any}
-@returns(200)
+@desc Retrieve the status of a take/apply snapshot operation.
+@required {operationId: any # Id referencing a particular take/apply snapshot operation.}
+@returns(200) A successful call returns the snapshot operation's status.
 
 @endgroup
 

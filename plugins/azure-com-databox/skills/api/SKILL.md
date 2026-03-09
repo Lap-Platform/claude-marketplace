@@ -47,81 +47,26 @@ https://management.azure.com
 | POST | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}/listCredentials | This method gets the unencrypted secrets related to the job. |
 | POST | /subscriptions/{subscriptionId}/providers/Microsoft.DataBox/locations/{location}/regionConfiguration | This API provides configuration details specific to given region/location. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What operations are available for the DataBox provider?" -> GET /providers/Microsoft.DataBox/operations
-- "List all DataBox jobs in my subscription" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.DataBox/jobs
-- "List DataBox jobs in a specific resource group" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs
-- "Get details of a specific DataBox job" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}
-- "What DataBox SKUs are available in a region?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.DataBox/locations/{location}/availableSkus
-- "Which SKUs are available for my resource group's location?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/locations/{location}/availableSkus
-- "Create a new DataBox order" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}
-- "Update an existing DataBox job" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}
-- "Cancel a DataBox order" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}/cancel
-- "Delete a DataBox job" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}
-- "Schedule a shipment pickup for my DataBox" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}/bookShipmentPickUp
-- "Get credentials for a DataBox job" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}/listCredentials
-- "Validate a shipping address before placing an order" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.DataBox/locations/{location}/validateAddress
-- "Validate all inputs before creating a job" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.DataBox/locations/{location}/validateInputs
-- "Get region configuration for DataBox in a location" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.DataBox/locations/{location}/regionConfiguration
-
-## Response Tips
-
-- **Job listings** (GET .../jobs): Paginated via `$skipToken`; when `nextLink` is present in the response, pass its token to fetch the next page. An empty list means no jobs exist in that scope.
-- **Job details** (GET .../jobs/{jobName}): Use `$expand=details` to include copy progress, shipping info, and error details in the response. Without it, you get summary-level fields only.
-- **Job create/update** (PUT, PATCH): 200 means completed synchronously; 202 means the operation is async -- check the `Location` or `Azure-AsyncOperation` header to poll for completion.
-- **Job delete/cancel** (DELETE, POST .../cancel): 202 means deletion is in progress; 204 means the resource was already gone or cancellation succeeded with no content returned.
-- **Validation endpoints** (validateAddress, validateInputs): Return structured validation results with per-field error details. A 200 does not mean valid -- inspect the `status` field inside the response body.
-- **SKU and region config** (availableSkus, regionConfiguration): Returns arrays of available options filtered by location. Empty results mean the service is not available in that region.
-
-## Anomaly Flags
-
-- **202 responses on PUT/PATCH/DELETE**: The operation is long-running. Surface the async operation URL and remind the user to poll for completion status.
-- **Empty SKU results**: No DataBox SKUs available in the requested region -- flag this before the user attempts to create a job that will fail.
-- **Address validation failures**: If `validateAddress` returns alternate suggestions, surface them proactively so the user can correct before placing an order.
-- **`$skipToken` present in response**: More pages of results exist. Alert the user that the listing is incomplete and offer to fetch remaining pages.
-- **`If-Match` header on PATCH**: If omitted, the update may overwrite concurrent changes. Flag when the user updates a job without providing an ETag for optimistic concurrency.
-- **Job stuck in transitional state**: If a GET on a job shows a status like `Dispatched` or `InProgress` for an unusual duration, surface it as potentially stuck.
-- **api-version mismatch**: All calls require `api-version=2019-09-01`. Flag if a different version is used, as it may produce unexpected schema differences.
-
-## Playbook
-
-### 1. Place a New DataBox Order
-
-1. Call `POST .../locations/{location}/availableSkus` to check which device types are available in your target region
-2. Call `POST .../locations/{location}/validateAddress` with the destination shipping address to confirm it is valid
-3. Call `POST .../locations/{location}/validateInputs` with the full job parameters to catch errors before submission
-4. Call `PUT .../jobs/{jobName}` with the complete `jobResource` body to create the order
-5. If you receive 202, poll the async operation URL until the job reaches a terminal state
-
-### 2. Monitor and Manage an Active Order
-
-1. Call `GET .../jobs/{jobName}?$expand=details` to retrieve full job status including copy progress and shipping tracking
-2. If the device has arrived and data copy is complete, call `POST .../jobs/{jobName}/bookShipmentPickUp` with pickup date/time details
-3. If the order is no longer needed, call `POST .../jobs/{jobName}/cancel` with a `cancellationReason` body
-
-### 3. Retrieve Device Credentials
-
-1. Call `GET .../jobs/{jobName}` to confirm the job exists and is in a state where credentials are available (e.g., `Delivered`)
-2. Call `POST .../jobs/{jobName}/listCredentials` to retrieve unlock passwords and share credentials for the device
-3. Store credentials securely -- they grant direct access to the DataBox device
-
-### 4. Audit All Jobs Across a Subscription
-
-1. Call `GET /subscriptions/{subscriptionId}/providers/Microsoft.DataBox/jobs` to list all jobs at the subscription level
-2. If the response includes a `nextLink`, extract the `$skipToken` and repeat the call to fetch subsequent pages
-3. For each job requiring detailed inspection, call `GET .../jobs/{jobName}?$expand=details`
-4. Aggregate statuses to identify jobs that are stuck, cancelled, or errored
-
-### 5. Update a Job Before Shipment
-
-1. Call `GET .../jobs/{jobName}` to retrieve the current job state and its `ETag` header
-2. Confirm the job is still in a modifiable state (e.g., `DeviceOrdered`, not yet `Dispatched`)
-3. Call `PATCH .../jobs/{jobName}` with the `jobResourceUpdateParameter` body and set `If-Match` to the ETag value
-4. If you receive 202, poll the async operation URL until the update completes
-5. Call `GET .../jobs/{jobName}` again to verify the changes took effect
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all operations?" -> GET /providers/Microsoft.DataBox/operations
+- "List all jobs?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.DataBox/jobs
+- "Create a availableSkus?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.DataBox/locations/{location}/availableSkus
+- "Create a availableSkus?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/locations/{location}/availableSkus
+- "Create a validateAddress?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.DataBox/locations/{location}/validateAddress
+- "Create a validateInput?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/locations/{location}/validateInputs
+- "Create a validateInput?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.DataBox/locations/{location}/validateInputs
+- "List all jobs?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs
+- "Get job details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}
+- "Update a job?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}
+- "Delete a job?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}
+- "Partially update a job?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}
+- "Create a bookShipmentPickUp?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}/bookShipmentPickUp
+- "Create a cancel?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}/cancel
+- "Create a listCredential?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBox/jobs/{jobName}/listCredentials
+- "Create a regionConfiguration?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.DataBox/locations/{location}/regionConfiguration
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -644,92 +644,529 @@ https://your-domain.atlassian.net
 | PUT | /rest/forge/1/app/properties/{propertyKey} | Set app property (Forge) |
 | POST | /rest/internal/api/latest/worklog/bulk | Get worklogs by issue id and worklog id |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I search for issues using JQL?" -> GET /rest/api/3/search or POST /rest/api/3/search
-- "How do I create a new issue in a project?" -> POST /rest/api/3/issue
-- "How do I transition an issue to a different status?" -> POST /rest/api/3/issue/{issueIdOrKey}/transitions
-- "How do I add a comment to an issue?" -> POST /rest/api/3/issue/{issueIdOrKey}/comment
-- "How do I assign an issue to someone?" -> PUT /rest/api/3/issue/{issueIdOrKey}/assignee
-- "How do I log work time on an issue?" -> POST /rest/api/3/issue/{issueIdOrKey}/worklog
-- "How do I get details about the current user?" -> GET /rest/api/3/myself
-- "How do I find users who can be assigned to a project?" -> GET /rest/api/3/user/assignable/search
-- "How do I create a new project?" -> POST /rest/api/3/project
-- "How do I bulk move or edit issues?" -> POST /rest/api/3/bulk/issues/move or POST /rest/api/3/bulk/issues/fields
-- "How do I list all available statuses for a project?" -> GET /rest/api/3/project/{projectIdOrKey}/statuses
-- "How do I link two issues together?" -> POST /rest/api/3/issueLink
-- "How do I upload an attachment to an issue?" -> POST /rest/api/3/issue/{issueIdOrKey}/attachments
-- "How do I get the changelog for an issue?" -> GET /rest/api/3/issue/{issueIdOrKey}/changelog
-- "How do I create or manage a saved filter?" -> POST /rest/api/3/filter or PUT /rest/api/3/filter/{id}
-
-## Response Tips
-
-- **Paginated lists** (issues, fields, components, versions, filters, schemes): Look for `isLast`, `startAt`, `total`, and `nextPage` fields; follow `nextPage` URI for automatic cursor-based iteration. Some endpoints (search/jql) use `nextPageToken` instead.
-- **Issue search**: The `issues` array contains full issue objects; field values live under `fields` as a flat map keyed by field ID or name. Use `expand` and `fields` params to control payload size.
-- **Bulk operations**: Return a `taskId` string; poll GET /rest/api/3/bulk/queue/{taskId} for `status`, `progressPercent`, and `failedAccessibleIssues` to track completion.
-- **User objects**: Nested throughout (assignee, reporter, watchers); always reference users by `accountId`, never by `name` or `key` (deprecated).
-- **Error responses**: 400 returns validation details in the body; 401 means missing/invalid auth; 403 means insufficient permissions; 404 means the resource does not exist or the caller lacks visibility.
-- **Workflow/scheme endpoints**: Return deeply nested maps of mappings, issue types, and statuses; always check `draft` boolean to know if you are reading a published or draft version.
-- **Async tasks** (archive, bulk ops, workflow publish): Return 202/303 with a task or redirect; use GET /rest/api/3/task/{taskId} to poll for `status` (enqueued/running/complete/failed).
-
-## Anomaly Flags
-
-- **429 Too Many Requests**: Surface immediately when hit on user search, group membership, or picker endpoints; back off and inform the user that Jira rate limits are active.
-- **409 Conflict**: Indicates a concurrent modification or naming collision (workflow schemes, issue types, statuses); surface with the specific resource name so the user can resolve the conflict.
-- **413 Request Entity Too Large**: Triggered on attachment uploads, comment bodies, or issue link creation; flag the payload size limit before the user retries.
-- **422 Unprocessable Entity**: Returned on issue create/update when required fields are missing or field values are invalid for the target project/issue type; extract and surface the specific field errors.
-- **Bulk task failures**: When polling bulk queue, proactively flag if `failedAccessibleIssues` is non-empty or `invalidOrInaccessibleIssueCount` > 0; list the affected issue keys.
-- **Deprecated fields**: Flag use of `username`, `key`, `name`, or `groupname` parameters -- Jira Cloud has migrated to `accountId` and `groupId`; warn the user to switch.
-- **Permission gaps**: When 403 errors occur on write operations, surface the specific permission needed (e.g., EDIT_ISSUES, ADMINISTER_PROJECTS) and suggest checking via GET /rest/api/3/mypermissions.
-- **303 redirects**: Several delete/async endpoints return 303 instead of 204; flag that the operation is async and provide the task URL from the Location header.
-- **Attachment settings disabled**: If GET /rest/api/3/attachment/meta returns `enabled: false`, proactively warn before attempting any attachment upload.
-
-## Playbook
-
-### 1. Create and transition an issue through a workflow
-
-1. GET /rest/api/3/issue/createmeta/{projectIdOrKey}/issuetypes to find available issue types for the target project.
-2. GET /rest/api/3/issue/createmeta/{projectIdOrKey}/issuetypes/{issueTypeId} to discover required and optional fields for that issue type.
-3. POST /rest/api/3/issue with `fields` containing at minimum `project.key`, `issuetype.id`, and `summary`.
-4. Capture the returned `key` (e.g., PROJ-123).
-5. GET /rest/api/3/issue/{key}/transitions to list available transitions from the current status.
-6. POST /rest/api/3/issue/{key}/transitions with `transition.id` set to the desired transition; include `fields` or `update` if the transition screen requires input.
-7. Optionally POST /rest/api/3/issue/{key}/comment to add a note explaining the transition.
-
-### 2. Bulk edit issues with progress tracking
-
-1. POST /rest/api/3/search with a JQL query to identify the target issues; collect all `key` values across paginated results.
-2. POST /rest/api/3/bulk/issues/fields with `selectedIssueIdsOrKeys`, `selectedActions`, and `editedFieldsInput` describing the changes.
-3. Capture the returned `taskId`.
-4. Poll GET /rest/api/3/bulk/queue/{taskId} until `status` is `COMPLETE` or `FAILED`; report `progressPercent` to the user.
-5. Inspect `failedAccessibleIssues` and `invalidOrInaccessibleIssueCount` for any issues that were skipped; surface these for manual review.
-
-### 3. Set up a project with custom workflow scheme
-
-1. POST /rest/api/3/project with `key`, `name`, `projectTypeKey`, and `leadAccountId` to create the project.
-2. POST /rest/api/3/workflow with `name`, `statuses`, and `transitions` to define a custom workflow.
-3. POST /rest/api/3/workflowscheme with the workflow name and issue type mappings.
-4. PUT /rest/api/3/workflowscheme/project with the new `workflowSchemeId` and `projectId` to associate the scheme.
-5. POST /rest/api/3/issuetype if custom issue types are needed; then PUT /rest/api/3/issuetypescheme/project to associate the issue type scheme.
-6. Verify by GET /rest/api/3/project/{key}/statuses to confirm the expected statuses are available.
-
-### 4. Manage users and permissions for a project
-
-1. GET /rest/api/3/myself to confirm the current user's identity and admin status.
-2. GET /rest/api/3/project/{projectIdOrKey}/role to list all roles on the project.
-3. GET /rest/api/3/project/{projectIdOrKey}/role/{roleId} to see current actors (users/groups) in each role.
-4. POST /rest/api/3/project/{projectIdOrKey}/role/{roleId} with `user` or `groupId` arrays to add new members.
-5. To verify effective permissions, POST /rest/api/3/permissions/check with the target `accountId` and `projectPermissions` to confirm they have the expected access.
-
-### 5. Export and analyze issue history via changelogs
-
-1. POST /rest/api/3/search with a JQL filter (e.g., `project = PROJ AND updated >= -30d`) to get issue keys; paginate using `startAt` and `maxResults`.
-2. For each issue, GET /rest/api/3/issue/{key}/changelog with pagination (`startAt`, `maxResults=100`) to retrieve all change records.
-3. Alternatively, for bulk retrieval, POST /rest/api/3/changelog/bulkfetch with up to multiple `issueIdsOrKeys` at once and optional `fieldIds` filter to limit to specific fields (e.g., status, assignee).
-4. Parse each changelog entry's `items` array for `field`, `fromString`, `toString`, and `created` timestamp.
-5. Aggregate the data to build reports (e.g., average time in each status, assignment frequency, field change patterns).
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all announcementBanner?" -> GET /rest/api/3/announcementBanner
+- "Create a list?" -> POST /rest/api/3/app/field/context/configuration/list
+- "Create a value?" -> POST /rest/api/3/app/field/value
+- "List all configuration?" -> GET /rest/api/3/app/field/{fieldIdOrKey}/context/configuration
+- "List all application-properties?" -> GET /rest/api/3/application-properties
+- "List all advanced-settings?" -> GET /rest/api/3/application-properties/advanced-settings
+- "Update a application-property?" -> PUT /rest/api/3/application-properties/{id}
+- "List all applicationrole?" -> GET /rest/api/3/applicationrole
+- "Get applicationrole details?" -> GET /rest/api/3/applicationrole/{key}
+- "Get content details?" -> GET /rest/api/3/attachment/content/{id}
+- "List all meta?" -> GET /rest/api/3/attachment/meta
+- "Get thumbnail details?" -> GET /rest/api/3/attachment/thumbnail/{id}
+- "Delete a attachment?" -> DELETE /rest/api/3/attachment/{id}
+- "Get attachment details?" -> GET /rest/api/3/attachment/{id}
+- "List all human?" -> GET /rest/api/3/attachment/{id}/expand/human
+- "List all raw?" -> GET /rest/api/3/attachment/{id}/expand/raw
+- "List all record?" -> GET /rest/api/3/auditing/record
+- "List all system?" -> GET /rest/api/3/avatar/{type}/system
+- "Create a delete?" -> POST /rest/api/3/bulk/issues/delete
+- "List all fields?" -> GET /rest/api/3/bulk/issues/fields
+- "Create a field?" -> POST /rest/api/3/bulk/issues/fields
+- "Create a move?" -> POST /rest/api/3/bulk/issues/move
+- "List all transition?" -> GET /rest/api/3/bulk/issues/transition
+- "Create a transition?" -> POST /rest/api/3/bulk/issues/transition
+- "Create a unwatch?" -> POST /rest/api/3/bulk/issues/unwatch
+- "Create a watch?" -> POST /rest/api/3/bulk/issues/watch
+- "Get queue details?" -> GET /rest/api/3/bulk/queue/{taskId}
+- "Create a bulkfetch?" -> POST /rest/api/3/changelog/bulkfetch
+- "List all classification-levels?" -> GET /rest/api/3/classification-levels
+- "Create a list?" -> POST /rest/api/3/comment/list
+- "List all properties?" -> GET /rest/api/3/comment/{commentId}/properties
+- "Delete a property?" -> DELETE /rest/api/3/comment/{commentId}/properties/{propertyKey}
+- "Get property details?" -> GET /rest/api/3/comment/{commentId}/properties/{propertyKey}
+- "Update a property?" -> PUT /rest/api/3/comment/{commentId}/properties/{propertyKey}
+- "Search component?" -> GET /rest/api/3/component
+- "Create a component?" -> POST /rest/api/3/component
+- "Delete a component?" -> DELETE /rest/api/3/component/{id}
+- "Get component details?" -> GET /rest/api/3/component/{id}
+- "Update a component?" -> PUT /rest/api/3/component/{id}
+- "List all relatedIssueCounts?" -> GET /rest/api/3/component/{id}/relatedIssueCounts
+- "Search fieldschemes?" -> GET /rest/api/3/config/fieldschemes
+- "Create a fieldscheme?" -> POST /rest/api/3/config/fieldschemes
+- "List all projects?" -> GET /rest/api/3/config/fieldschemes/projects
+- "Delete a fieldscheme?" -> DELETE /rest/api/3/config/fieldschemes/{id}
+- "Get fieldscheme details?" -> GET /rest/api/3/config/fieldschemes/{id}
+- "Update a fieldscheme?" -> PUT /rest/api/3/config/fieldschemes/{id}
+- "Create a clone?" -> POST /rest/api/3/config/fieldschemes/{id}/clone
+- "List all fields?" -> GET /rest/api/3/config/fieldschemes/{id}/fields
+- "List all parameters?" -> GET /rest/api/3/config/fieldschemes/{id}/fields/{fieldId}/parameters
+- "List all projects?" -> GET /rest/api/3/config/fieldschemes/{id}/projects
+- "List all configuration?" -> GET /rest/api/3/configuration
+- "List all timetracking?" -> GET /rest/api/3/configuration/timetracking
+- "List all list?" -> GET /rest/api/3/configuration/timetracking/list
+- "List all options?" -> GET /rest/api/3/configuration/timetracking/options
+- "Get customFieldOption details?" -> GET /rest/api/3/customFieldOption/{id}
+- "List all dashboard?" -> GET /rest/api/3/dashboard
+- "Create a dashboard?" -> POST /rest/api/3/dashboard
+- "List all gadgets?" -> GET /rest/api/3/dashboard/gadgets
+- "List all search?" -> GET /rest/api/3/dashboard/search
+- "List all gadget?" -> GET /rest/api/3/dashboard/{dashboardId}/gadget
+- "Create a gadget?" -> POST /rest/api/3/dashboard/{dashboardId}/gadget
+- "Delete a gadget?" -> DELETE /rest/api/3/dashboard/{dashboardId}/gadget/{gadgetId}
+- "Update a gadget?" -> PUT /rest/api/3/dashboard/{dashboardId}/gadget/{gadgetId}
+- "List all properties?" -> GET /rest/api/3/dashboard/{dashboardId}/items/{itemId}/properties
+- "Delete a property?" -> DELETE /rest/api/3/dashboard/{dashboardId}/items/{itemId}/properties/{propertyKey}
+- "Get property details?" -> GET /rest/api/3/dashboard/{dashboardId}/items/{itemId}/properties/{propertyKey}
+- "Update a property?" -> PUT /rest/api/3/dashboard/{dashboardId}/items/{itemId}/properties/{propertyKey}
+- "Delete a dashboard?" -> DELETE /rest/api/3/dashboard/{id}
+- "Get dashboard details?" -> GET /rest/api/3/dashboard/{id}
+- "Update a dashboard?" -> PUT /rest/api/3/dashboard/{id}
+- "Create a copy?" -> POST /rest/api/3/dashboard/{id}/copy
+- "List all data-policy?" -> GET /rest/api/3/data-policy
+- "List all project?" -> GET /rest/api/3/data-policy/project
+- "List all events?" -> GET /rest/api/3/events
+- "Create a analyse?" -> POST /rest/api/3/expression/analyse
+- "Create a eval?" -> POST /rest/api/3/expression/eval
+- "Create a evaluate?" -> POST /rest/api/3/expression/evaluate
+- "List all field?" -> GET /rest/api/3/field
+- "Create a field?" -> POST /rest/api/3/field
+- "Search search?" -> GET /rest/api/3/field/search
+- "Search trashed?" -> GET /rest/api/3/field/search/trashed
+- "Update a field?" -> PUT /rest/api/3/field/{fieldId}
+- "List all context?" -> GET /rest/api/3/field/{fieldId}/context
+- "Create a context?" -> POST /rest/api/3/field/{fieldId}/context
+- "List all defaultValue?" -> GET /rest/api/3/field/{fieldId}/context/defaultValue
+- "List all issuetypemapping?" -> GET /rest/api/3/field/{fieldId}/context/issuetypemapping
+- "Create a mapping?" -> POST /rest/api/3/field/{fieldId}/context/mapping
+- "List all projectmapping?" -> GET /rest/api/3/field/{fieldId}/context/projectmapping
+- "Delete a context?" -> DELETE /rest/api/3/field/{fieldId}/context/{contextId}
+- "Update a context?" -> PUT /rest/api/3/field/{fieldId}/context/{contextId}
+- "Create a remove?" -> POST /rest/api/3/field/{fieldId}/context/{contextId}/issuetype/remove
+- "List all option?" -> GET /rest/api/3/field/{fieldId}/context/{contextId}/option
+- "Create a option?" -> POST /rest/api/3/field/{fieldId}/context/{contextId}/option
+- "Delete a option?" -> DELETE /rest/api/3/field/{fieldId}/context/{contextId}/option/{optionId}
+- "Create a remove?" -> POST /rest/api/3/field/{fieldId}/context/{contextId}/project/remove
+- "List all contexts?" -> GET /rest/api/3/field/{fieldId}/contexts
+- "List all screens?" -> GET /rest/api/3/field/{fieldId}/screens
+- "List all option?" -> GET /rest/api/3/field/{fieldKey}/option
+- "Create a option?" -> POST /rest/api/3/field/{fieldKey}/option
+- "List all edit?" -> GET /rest/api/3/field/{fieldKey}/option/suggestions/edit
+- "List all search?" -> GET /rest/api/3/field/{fieldKey}/option/suggestions/search
+- "Delete a option?" -> DELETE /rest/api/3/field/{fieldKey}/option/{optionId}
+- "Get option details?" -> GET /rest/api/3/field/{fieldKey}/option/{optionId}
+- "Update a option?" -> PUT /rest/api/3/field/{fieldKey}/option/{optionId}
+- "Delete a field?" -> DELETE /rest/api/3/field/{id}
+- "Create a restore?" -> POST /rest/api/3/field/{id}/restore
+- "Create a trash?" -> POST /rest/api/3/field/{id}/trash
+- "Search fieldconfiguration?" -> GET /rest/api/3/fieldconfiguration
+- "Create a fieldconfiguration?" -> POST /rest/api/3/fieldconfiguration
+- "Delete a fieldconfiguration?" -> DELETE /rest/api/3/fieldconfiguration/{id}
+- "Update a fieldconfiguration?" -> PUT /rest/api/3/fieldconfiguration/{id}
+- "List all fields?" -> GET /rest/api/3/fieldconfiguration/{id}/fields
+- "List all fieldconfigurationscheme?" -> GET /rest/api/3/fieldconfigurationscheme
+- "Create a fieldconfigurationscheme?" -> POST /rest/api/3/fieldconfigurationscheme
+- "List all mapping?" -> GET /rest/api/3/fieldconfigurationscheme/mapping
+- "List all project?" -> GET /rest/api/3/fieldconfigurationscheme/project
+- "Delete a fieldconfigurationscheme?" -> DELETE /rest/api/3/fieldconfigurationscheme/{id}
+- "Update a fieldconfigurationscheme?" -> PUT /rest/api/3/fieldconfigurationscheme/{id}
+- "Create a delete?" -> POST /rest/api/3/fieldconfigurationscheme/{id}/mapping/delete
+- "Create a filter?" -> POST /rest/api/3/filter
+- "List all defaultShareScope?" -> GET /rest/api/3/filter/defaultShareScope
+- "List all favourite?" -> GET /rest/api/3/filter/favourite
+- "List all my?" -> GET /rest/api/3/filter/my
+- "List all search?" -> GET /rest/api/3/filter/search
+- "Delete a filter?" -> DELETE /rest/api/3/filter/{id}
+- "Get filter details?" -> GET /rest/api/3/filter/{id}
+- "Update a filter?" -> PUT /rest/api/3/filter/{id}
+- "List all columns?" -> GET /rest/api/3/filter/{id}/columns
+- "List all permission?" -> GET /rest/api/3/filter/{id}/permission
+- "Create a permission?" -> POST /rest/api/3/filter/{id}/permission
+- "Delete a permission?" -> DELETE /rest/api/3/filter/{id}/permission/{permissionId}
+- "Get permission details?" -> GET /rest/api/3/filter/{id}/permission/{permissionId}
+- "List all group?" -> GET /rest/api/3/group
+- "Create a group?" -> POST /rest/api/3/group
+- "List all bulk?" -> GET /rest/api/3/group/bulk
+- "List all member?" -> GET /rest/api/3/group/member
+- "Create a user?" -> POST /rest/api/3/group/user
+- "Search picker?" -> GET /rest/api/3/groups/picker
+- "Search groupuserpicker?" -> GET /rest/api/3/groupuserpicker
+- "List all license?" -> GET /rest/api/3/instance/license
+- "Create a issue?" -> POST /rest/api/3/issue
+- "Create a archive?" -> POST /rest/api/3/issue/archive
+- "Create a bulk?" -> POST /rest/api/3/issue/bulk
+- "Create a bulkfetch?" -> POST /rest/api/3/issue/bulkfetch
+- "List all createmeta?" -> GET /rest/api/3/issue/createmeta
+- "List all issuetypes?" -> GET /rest/api/3/issue/createmeta/{projectIdOrKey}/issuetypes
+- "Get issuetype details?" -> GET /rest/api/3/issue/createmeta/{projectIdOrKey}/issuetypes/{issueTypeId}
+- "List all report?" -> GET /rest/api/3/issue/limit/report
+- "Search picker?" -> GET /rest/api/3/issue/picker
+- "Create a property?" -> POST /rest/api/3/issue/properties
+- "Create a multi?" -> POST /rest/api/3/issue/properties/multi
+- "Delete a property?" -> DELETE /rest/api/3/issue/properties/{propertyKey}
+- "Update a property?" -> PUT /rest/api/3/issue/properties/{propertyKey}
+- "Create a watching?" -> POST /rest/api/3/issue/watching
+- "Delete a issue?" -> DELETE /rest/api/3/issue/{issueIdOrKey}
+- "Get issue details?" -> GET /rest/api/3/issue/{issueIdOrKey}
+- "Update a issue?" -> PUT /rest/api/3/issue/{issueIdOrKey}
+- "Create a attachment?" -> POST /rest/api/3/issue/{issueIdOrKey}/attachments
+- "List all changelog?" -> GET /rest/api/3/issue/{issueIdOrKey}/changelog
+- "Create a list?" -> POST /rest/api/3/issue/{issueIdOrKey}/changelog/list
+- "List all comment?" -> GET /rest/api/3/issue/{issueIdOrKey}/comment
+- "Create a comment?" -> POST /rest/api/3/issue/{issueIdOrKey}/comment
+- "Delete a comment?" -> DELETE /rest/api/3/issue/{issueIdOrKey}/comment/{id}
+- "Get comment details?" -> GET /rest/api/3/issue/{issueIdOrKey}/comment/{id}
+- "Update a comment?" -> PUT /rest/api/3/issue/{issueIdOrKey}/comment/{id}
+- "List all editmeta?" -> GET /rest/api/3/issue/{issueIdOrKey}/editmeta
+- "Create a notify?" -> POST /rest/api/3/issue/{issueIdOrKey}/notify
+- "List all properties?" -> GET /rest/api/3/issue/{issueIdOrKey}/properties
+- "Delete a property?" -> DELETE /rest/api/3/issue/{issueIdOrKey}/properties/{propertyKey}
+- "Get property details?" -> GET /rest/api/3/issue/{issueIdOrKey}/properties/{propertyKey}
+- "Update a property?" -> PUT /rest/api/3/issue/{issueIdOrKey}/properties/{propertyKey}
+- "List all remotelink?" -> GET /rest/api/3/issue/{issueIdOrKey}/remotelink
+- "Create a remotelink?" -> POST /rest/api/3/issue/{issueIdOrKey}/remotelink
+- "Delete a remotelink?" -> DELETE /rest/api/3/issue/{issueIdOrKey}/remotelink/{linkId}
+- "Get remotelink details?" -> GET /rest/api/3/issue/{issueIdOrKey}/remotelink/{linkId}
+- "Update a remotelink?" -> PUT /rest/api/3/issue/{issueIdOrKey}/remotelink/{linkId}
+- "List all transitions?" -> GET /rest/api/3/issue/{issueIdOrKey}/transitions
+- "Create a transition?" -> POST /rest/api/3/issue/{issueIdOrKey}/transitions
+- "List all votes?" -> GET /rest/api/3/issue/{issueIdOrKey}/votes
+- "Create a vote?" -> POST /rest/api/3/issue/{issueIdOrKey}/votes
+- "List all watchers?" -> GET /rest/api/3/issue/{issueIdOrKey}/watchers
+- "Create a watcher?" -> POST /rest/api/3/issue/{issueIdOrKey}/watchers
+- "List all worklog?" -> GET /rest/api/3/issue/{issueIdOrKey}/worklog
+- "Create a worklog?" -> POST /rest/api/3/issue/{issueIdOrKey}/worklog
+- "Create a move?" -> POST /rest/api/3/issue/{issueIdOrKey}/worklog/move
+- "Delete a worklog?" -> DELETE /rest/api/3/issue/{issueIdOrKey}/worklog/{id}
+- "Get worklog details?" -> GET /rest/api/3/issue/{issueIdOrKey}/worklog/{id}
+- "Update a worklog?" -> PUT /rest/api/3/issue/{issueIdOrKey}/worklog/{id}
+- "List all properties?" -> GET /rest/api/3/issue/{issueIdOrKey}/worklog/{worklogId}/properties
+- "Delete a property?" -> DELETE /rest/api/3/issue/{issueIdOrKey}/worklog/{worklogId}/properties/{propertyKey}
+- "Get property details?" -> GET /rest/api/3/issue/{issueIdOrKey}/worklog/{worklogId}/properties/{propertyKey}
+- "Update a property?" -> PUT /rest/api/3/issue/{issueIdOrKey}/worklog/{worklogId}/properties/{propertyKey}
+- "Create a issueLink?" -> POST /rest/api/3/issueLink
+- "Delete a issueLink?" -> DELETE /rest/api/3/issueLink/{linkId}
+- "Get issueLink details?" -> GET /rest/api/3/issueLink/{linkId}
+- "List all issueLinkType?" -> GET /rest/api/3/issueLinkType
+- "Create a issueLinkType?" -> POST /rest/api/3/issueLinkType
+- "Delete a issueLinkType?" -> DELETE /rest/api/3/issueLinkType/{issueLinkTypeId}
+- "Get issueLinkType details?" -> GET /rest/api/3/issueLinkType/{issueLinkTypeId}
+- "Update a issueLinkType?" -> PUT /rest/api/3/issueLinkType/{issueLinkTypeId}
+- "List all issuesecurityschemes?" -> GET /rest/api/3/issuesecurityschemes
+- "Create a issuesecurityscheme?" -> POST /rest/api/3/issuesecurityschemes
+- "List all level?" -> GET /rest/api/3/issuesecurityschemes/level
+- "List all member?" -> GET /rest/api/3/issuesecurityschemes/level/member
+- "List all project?" -> GET /rest/api/3/issuesecurityschemes/project
+- "List all search?" -> GET /rest/api/3/issuesecurityschemes/search
+- "Get issuesecurityscheme details?" -> GET /rest/api/3/issuesecurityschemes/{id}
+- "Update a issuesecurityscheme?" -> PUT /rest/api/3/issuesecurityschemes/{id}
+- "List all members?" -> GET /rest/api/3/issuesecurityschemes/{issueSecuritySchemeId}/members
+- "Delete a issuesecurityscheme?" -> DELETE /rest/api/3/issuesecurityschemes/{schemeId}
+- "Delete a level?" -> DELETE /rest/api/3/issuesecurityschemes/{schemeId}/level/{levelId}
+- "Update a level?" -> PUT /rest/api/3/issuesecurityschemes/{schemeId}/level/{levelId}
+- "Delete a member?" -> DELETE /rest/api/3/issuesecurityschemes/{schemeId}/level/{levelId}/member/{memberId}
+- "List all issuetype?" -> GET /rest/api/3/issuetype
+- "Create a issuetype?" -> POST /rest/api/3/issuetype
+- "List all project?" -> GET /rest/api/3/issuetype/project
+- "Delete a issuetype?" -> DELETE /rest/api/3/issuetype/{id}
+- "Get issuetype details?" -> GET /rest/api/3/issuetype/{id}
+- "Update a issuetype?" -> PUT /rest/api/3/issuetype/{id}
+- "List all alternatives?" -> GET /rest/api/3/issuetype/{id}/alternatives
+- "Create a avatar2?" -> POST /rest/api/3/issuetype/{id}/avatar2
+- "List all properties?" -> GET /rest/api/3/issuetype/{issueTypeId}/properties
+- "Delete a property?" -> DELETE /rest/api/3/issuetype/{issueTypeId}/properties/{propertyKey}
+- "Get property details?" -> GET /rest/api/3/issuetype/{issueTypeId}/properties/{propertyKey}
+- "Update a property?" -> PUT /rest/api/3/issuetype/{issueTypeId}/properties/{propertyKey}
+- "List all issuetypescheme?" -> GET /rest/api/3/issuetypescheme
+- "Create a issuetypescheme?" -> POST /rest/api/3/issuetypescheme
+- "List all mapping?" -> GET /rest/api/3/issuetypescheme/mapping
+- "List all project?" -> GET /rest/api/3/issuetypescheme/project
+- "Delete a issuetypescheme?" -> DELETE /rest/api/3/issuetypescheme/{issueTypeSchemeId}
+- "Update a issuetypescheme?" -> PUT /rest/api/3/issuetypescheme/{issueTypeSchemeId}
+- "Delete a issuetype?" -> DELETE /rest/api/3/issuetypescheme/{issueTypeSchemeId}/issuetype/{issueTypeId}
+- "List all issuetypescreenscheme?" -> GET /rest/api/3/issuetypescreenscheme
+- "Create a issuetypescreenscheme?" -> POST /rest/api/3/issuetypescreenscheme
+- "List all mapping?" -> GET /rest/api/3/issuetypescreenscheme/mapping
+- "List all project?" -> GET /rest/api/3/issuetypescreenscheme/project
+- "Delete a issuetypescreenscheme?" -> DELETE /rest/api/3/issuetypescreenscheme/{issueTypeScreenSchemeId}
+- "Update a issuetypescreenscheme?" -> PUT /rest/api/3/issuetypescreenscheme/{issueTypeScreenSchemeId}
+- "Create a remove?" -> POST /rest/api/3/issuetypescreenscheme/{issueTypeScreenSchemeId}/mapping/remove
+- "Search project?" -> GET /rest/api/3/issuetypescreenscheme/{issueTypeScreenSchemeId}/project
+- "List all autocompletedata?" -> GET /rest/api/3/jql/autocompletedata
+- "Create a autocompletedata?" -> POST /rest/api/3/jql/autocompletedata
+- "List all suggestions?" -> GET /rest/api/3/jql/autocompletedata/suggestions
+- "List all computation?" -> GET /rest/api/3/jql/function/computation
+- "Create a computation?" -> POST /rest/api/3/jql/function/computation
+- "Create a search?" -> POST /rest/api/3/jql/function/computation/search
+- "Create a match?" -> POST /rest/api/3/jql/match
+- "Create a parse?" -> POST /rest/api/3/jql/parse
+- "Create a pdcleaner?" -> POST /rest/api/3/jql/pdcleaner
+- "Create a sanitize?" -> POST /rest/api/3/jql/sanitize
+- "List all label?" -> GET /rest/api/3/label
+- "List all approximateLicenseCount?" -> GET /rest/api/3/license/approximateLicenseCount
+- "Get product details?" -> GET /rest/api/3/license/approximateLicenseCount/product/{applicationKey}
+- "List all mypermissions?" -> GET /rest/api/3/mypermissions
+- "List all mypreferences?" -> GET /rest/api/3/mypreferences
+- "List all locale?" -> GET /rest/api/3/mypreferences/locale
+- "List all myself?" -> GET /rest/api/3/myself
+- "List all notificationscheme?" -> GET /rest/api/3/notificationscheme
+- "Create a notificationscheme?" -> POST /rest/api/3/notificationscheme
+- "List all project?" -> GET /rest/api/3/notificationscheme/project
+- "Get notificationscheme details?" -> GET /rest/api/3/notificationscheme/{id}
+- "Update a notificationscheme?" -> PUT /rest/api/3/notificationscheme/{id}
+- "Delete a notificationscheme?" -> DELETE /rest/api/3/notificationscheme/{notificationSchemeId}
+- "Delete a notification?" -> DELETE /rest/api/3/notificationscheme/{notificationSchemeId}/notification/{notificationId}
+- "List all permissions?" -> GET /rest/api/3/permissions
+- "Create a check?" -> POST /rest/api/3/permissions/check
+- "Create a project?" -> POST /rest/api/3/permissions/project
+- "List all permissionscheme?" -> GET /rest/api/3/permissionscheme
+- "Create a permissionscheme?" -> POST /rest/api/3/permissionscheme
+- "Delete a permissionscheme?" -> DELETE /rest/api/3/permissionscheme/{schemeId}
+- "Get permissionscheme details?" -> GET /rest/api/3/permissionscheme/{schemeId}
+- "Update a permissionscheme?" -> PUT /rest/api/3/permissionscheme/{schemeId}
+- "List all permission?" -> GET /rest/api/3/permissionscheme/{schemeId}/permission
+- "Create a permission?" -> POST /rest/api/3/permissionscheme/{schemeId}/permission
+- "Delete a permission?" -> DELETE /rest/api/3/permissionscheme/{schemeId}/permission/{permissionId}
+- "Get permission details?" -> GET /rest/api/3/permissionscheme/{schemeId}/permission/{permissionId}
+- "List all plan?" -> GET /rest/api/3/plans/plan
+- "Create a plan?" -> POST /rest/api/3/plans/plan
+- "Get plan details?" -> GET /rest/api/3/plans/plan/{planId}
+- "Update a plan?" -> PUT /rest/api/3/plans/plan/{planId}
+- "Create a duplicate?" -> POST /rest/api/3/plans/plan/{planId}/duplicate
+- "List all team?" -> GET /rest/api/3/plans/plan/{planId}/team
+- "Create a atlassian?" -> POST /rest/api/3/plans/plan/{planId}/team/atlassian
+- "Delete a atlassian?" -> DELETE /rest/api/3/plans/plan/{planId}/team/atlassian/{atlassianTeamId}
+- "Get atlassian details?" -> GET /rest/api/3/plans/plan/{planId}/team/atlassian/{atlassianTeamId}
+- "Update a atlassian?" -> PUT /rest/api/3/plans/plan/{planId}/team/atlassian/{atlassianTeamId}
+- "Create a planonly?" -> POST /rest/api/3/plans/plan/{planId}/team/planonly
+- "Delete a planonly?" -> DELETE /rest/api/3/plans/plan/{planId}/team/planonly/{planOnlyTeamId}
+- "Get planonly details?" -> GET /rest/api/3/plans/plan/{planId}/team/planonly/{planOnlyTeamId}
+- "Update a planonly?" -> PUT /rest/api/3/plans/plan/{planId}/team/planonly/{planOnlyTeamId}
+- "List all priority?" -> GET /rest/api/3/priority
+- "Create a priority?" -> POST /rest/api/3/priority
+- "List all search?" -> GET /rest/api/3/priority/search
+- "Delete a priority?" -> DELETE /rest/api/3/priority/{id}
+- "Get priority details?" -> GET /rest/api/3/priority/{id}
+- "Update a priority?" -> PUT /rest/api/3/priority/{id}
+- "List all priorityscheme?" -> GET /rest/api/3/priorityscheme
+- "Create a priorityscheme?" -> POST /rest/api/3/priorityscheme
+- "Create a mapping?" -> POST /rest/api/3/priorityscheme/mappings
+- "Search available?" -> GET /rest/api/3/priorityscheme/priorities/available
+- "Delete a priorityscheme?" -> DELETE /rest/api/3/priorityscheme/{schemeId}
+- "Update a priorityscheme?" -> PUT /rest/api/3/priorityscheme/{schemeId}
+- "List all priorities?" -> GET /rest/api/3/priorityscheme/{schemeId}/priorities
+- "Search projects?" -> GET /rest/api/3/priorityscheme/{schemeId}/projects
+- "List all project?" -> GET /rest/api/3/project
+- "Create a project?" -> POST /rest/api/3/project
+- "Create a project-template?" -> POST /rest/api/3/project-template
+- "List all live-template?" -> GET /rest/api/3/project-template/live-template
+- "Create a save-template?" -> POST /rest/api/3/project-template/save-template
+- "List all recent?" -> GET /rest/api/3/project/recent
+- "Search search?" -> GET /rest/api/3/project/search
+- "List all type?" -> GET /rest/api/3/project/type
+- "List all accessible?" -> GET /rest/api/3/project/type/accessible
+- "Get type details?" -> GET /rest/api/3/project/type/{projectTypeKey}
+- "List all accessible?" -> GET /rest/api/3/project/type/{projectTypeKey}/accessible
+- "Delete a project?" -> DELETE /rest/api/3/project/{projectIdOrKey}
+- "Get project details?" -> GET /rest/api/3/project/{projectIdOrKey}
+- "Update a project?" -> PUT /rest/api/3/project/{projectIdOrKey}
+- "Create a archive?" -> POST /rest/api/3/project/{projectIdOrKey}/archive
+- "Delete a avatar?" -> DELETE /rest/api/3/project/{projectIdOrKey}/avatar/{id}
+- "Create a avatar2?" -> POST /rest/api/3/project/{projectIdOrKey}/avatar2
+- "List all avatars?" -> GET /rest/api/3/project/{projectIdOrKey}/avatars
+- "List all default?" -> GET /rest/api/3/project/{projectIdOrKey}/classification-level/default
+- "Search component?" -> GET /rest/api/3/project/{projectIdOrKey}/component
+- "List all components?" -> GET /rest/api/3/project/{projectIdOrKey}/components
+- "Create a delete?" -> POST /rest/api/3/project/{projectIdOrKey}/delete
+- "List all features?" -> GET /rest/api/3/project/{projectIdOrKey}/features
+- "Update a feature?" -> PUT /rest/api/3/project/{projectIdOrKey}/features/{featureKey}
+- "List all properties?" -> GET /rest/api/3/project/{projectIdOrKey}/properties
+- "Delete a property?" -> DELETE /rest/api/3/project/{projectIdOrKey}/properties/{propertyKey}
+- "Get property details?" -> GET /rest/api/3/project/{projectIdOrKey}/properties/{propertyKey}
+- "Update a property?" -> PUT /rest/api/3/project/{projectIdOrKey}/properties/{propertyKey}
+- "Create a restore?" -> POST /rest/api/3/project/{projectIdOrKey}/restore
+- "List all role?" -> GET /rest/api/3/project/{projectIdOrKey}/role
+- "Delete a role?" -> DELETE /rest/api/3/project/{projectIdOrKey}/role/{id}
+- "Get role details?" -> GET /rest/api/3/project/{projectIdOrKey}/role/{id}
+- "Update a role?" -> PUT /rest/api/3/project/{projectIdOrKey}/role/{id}
+- "List all roledetails?" -> GET /rest/api/3/project/{projectIdOrKey}/roledetails
+- "List all statuses?" -> GET /rest/api/3/project/{projectIdOrKey}/statuses
+- "Search version?" -> GET /rest/api/3/project/{projectIdOrKey}/version
+- "List all versions?" -> GET /rest/api/3/project/{projectIdOrKey}/versions
+- "List all email?" -> GET /rest/api/3/project/{projectId}/email
+- "List all hierarchy?" -> GET /rest/api/3/project/{projectId}/hierarchy
+- "List all issuesecuritylevelscheme?" -> GET /rest/api/3/project/{projectKeyOrId}/issuesecuritylevelscheme
+- "List all notificationscheme?" -> GET /rest/api/3/project/{projectKeyOrId}/notificationscheme
+- "List all permissionscheme?" -> GET /rest/api/3/project/{projectKeyOrId}/permissionscheme
+- "List all securitylevel?" -> GET /rest/api/3/project/{projectKeyOrId}/securitylevel
+- "List all projectCategory?" -> GET /rest/api/3/projectCategory
+- "Create a projectCategory?" -> POST /rest/api/3/projectCategory
+- "Delete a projectCategory?" -> DELETE /rest/api/3/projectCategory/{id}
+- "Get projectCategory details?" -> GET /rest/api/3/projectCategory/{id}
+- "Update a projectCategory?" -> PUT /rest/api/3/projectCategory/{id}
+- "List all fields?" -> GET /rest/api/3/projects/fields
+- "List all key?" -> GET /rest/api/3/projectvalidate/key
+- "List all validProjectKey?" -> GET /rest/api/3/projectvalidate/validProjectKey
+- "List all validProjectName?" -> GET /rest/api/3/projectvalidate/validProjectName
+- "Create a redact?" -> POST /rest/api/3/redact
+- "Get status details?" -> GET /rest/api/3/redact/status/{jobId}
+- "List all resolution?" -> GET /rest/api/3/resolution
+- "Create a resolution?" -> POST /rest/api/3/resolution
+- "List all search?" -> GET /rest/api/3/resolution/search
+- "Delete a resolution?" -> DELETE /rest/api/3/resolution/{id}
+- "Get resolution details?" -> GET /rest/api/3/resolution/{id}
+- "Update a resolution?" -> PUT /rest/api/3/resolution/{id}
+- "List all role?" -> GET /rest/api/3/role
+- "Create a role?" -> POST /rest/api/3/role
+- "Delete a role?" -> DELETE /rest/api/3/role/{id}
+- "Get role details?" -> GET /rest/api/3/role/{id}
+- "Update a role?" -> PUT /rest/api/3/role/{id}
+- "List all actors?" -> GET /rest/api/3/role/{id}/actors
+- "Create a actor?" -> POST /rest/api/3/role/{id}/actors
+- "List all screens?" -> GET /rest/api/3/screens
+- "Create a screen?" -> POST /rest/api/3/screens
+- "List all tabs?" -> GET /rest/api/3/screens/tabs
+- "Delete a screen?" -> DELETE /rest/api/3/screens/{screenId}
+- "Update a screen?" -> PUT /rest/api/3/screens/{screenId}
+- "List all availableFields?" -> GET /rest/api/3/screens/{screenId}/availableFields
+- "List all tabs?" -> GET /rest/api/3/screens/{screenId}/tabs
+- "Create a tab?" -> POST /rest/api/3/screens/{screenId}/tabs
+- "Delete a tab?" -> DELETE /rest/api/3/screens/{screenId}/tabs/{tabId}
+- "Update a tab?" -> PUT /rest/api/3/screens/{screenId}/tabs/{tabId}
+- "List all fields?" -> GET /rest/api/3/screens/{screenId}/tabs/{tabId}/fields
+- "Create a field?" -> POST /rest/api/3/screens/{screenId}/tabs/{tabId}/fields
+- "Delete a field?" -> DELETE /rest/api/3/screens/{screenId}/tabs/{tabId}/fields/{id}
+- "Create a move?" -> POST /rest/api/3/screens/{screenId}/tabs/{tabId}/fields/{id}/move
+- "List all screenscheme?" -> GET /rest/api/3/screenscheme
+- "Create a screenscheme?" -> POST /rest/api/3/screenscheme
+- "Delete a screenscheme?" -> DELETE /rest/api/3/screenscheme/{screenSchemeId}
+- "Update a screenscheme?" -> PUT /rest/api/3/screenscheme/{screenSchemeId}
+- "List all search?" -> GET /rest/api/3/search
+- "Create a search?" -> POST /rest/api/3/search
+- "Create a approximate-count?" -> POST /rest/api/3/search/approximate-count
+- "List all jql?" -> GET /rest/api/3/search/jql
+- "Create a jql?" -> POST /rest/api/3/search/jql
+- "Get securitylevel details?" -> GET /rest/api/3/securitylevel/{id}
+- "List all serverInfo?" -> GET /rest/api/3/serverInfo
+- "List all columns?" -> GET /rest/api/3/settings/columns
+- "List all status?" -> GET /rest/api/3/status
+- "Get status details?" -> GET /rest/api/3/status/{idOrName}
+- "List all statuscategory?" -> GET /rest/api/3/statuscategory
+- "Get statuscategory details?" -> GET /rest/api/3/statuscategory/{idOrKey}
+- "List all statuses?" -> GET /rest/api/3/statuses
+- "Create a statuse?" -> POST /rest/api/3/statuses
+- "List all byNames?" -> GET /rest/api/3/statuses/byNames
+- "List all search?" -> GET /rest/api/3/statuses/search
+- "List all issueTypeUsages?" -> GET /rest/api/3/statuses/{statusId}/project/{projectId}/issueTypeUsages
+- "List all projectUsages?" -> GET /rest/api/3/statuses/{statusId}/projectUsages
+- "List all workflowUsages?" -> GET /rest/api/3/statuses/{statusId}/workflowUsages
+- "Get task details?" -> GET /rest/api/3/task/{taskId}
+- "Create a cancel?" -> POST /rest/api/3/task/{taskId}/cancel
+- "List all uiModifications?" -> GET /rest/api/3/uiModifications
+- "Create a uiModification?" -> POST /rest/api/3/uiModifications
+- "Delete a uiModification?" -> DELETE /rest/api/3/uiModifications/{uiModificationId}
+- "Update a uiModification?" -> PUT /rest/api/3/uiModifications/{uiModificationId}
+- "Get owner details?" -> GET /rest/api/3/universal_avatar/type/{type}/owner/{entityId}
+- "Delete a avatar?" -> DELETE /rest/api/3/universal_avatar/type/{type}/owner/{owningObjectId}/avatar/{id}
+- "Get type details?" -> GET /rest/api/3/universal_avatar/view/type/{type}
+- "Get avatar details?" -> GET /rest/api/3/universal_avatar/view/type/{type}/avatar/{id}
+- "Get owner details?" -> GET /rest/api/3/universal_avatar/view/type/{type}/owner/{entityId}
+- "List all user?" -> GET /rest/api/3/user
+- "Create a user?" -> POST /rest/api/3/user
+- "Search multiProjectSearch?" -> GET /rest/api/3/user/assignable/multiProjectSearch
+- "Search search?" -> GET /rest/api/3/user/assignable/search
+- "List all bulk?" -> GET /rest/api/3/user/bulk
+- "List all migration?" -> GET /rest/api/3/user/bulk/migration
+- "List all columns?" -> GET /rest/api/3/user/columns
+- "List all email?" -> GET /rest/api/3/user/email
+- "List all bulk?" -> GET /rest/api/3/user/email/bulk
+- "List all groups?" -> GET /rest/api/3/user/groups
+- "Search search?" -> GET /rest/api/3/user/permission/search
+- "Search picker?" -> GET /rest/api/3/user/picker
+- "List all properties?" -> GET /rest/api/3/user/properties
+- "Delete a property?" -> DELETE /rest/api/3/user/properties/{propertyKey}
+- "Get property details?" -> GET /rest/api/3/user/properties/{propertyKey}
+- "Update a property?" -> PUT /rest/api/3/user/properties/{propertyKey}
+- "Search search?" -> GET /rest/api/3/user/search
+- "Search query?" -> GET /rest/api/3/user/search/query
+- "Search key?" -> GET /rest/api/3/user/search/query/key
+- "Search search?" -> GET /rest/api/3/user/viewissue/search
+- "List all users?" -> GET /rest/api/3/users
+- "List all search?" -> GET /rest/api/3/users/search
+- "Create a version?" -> POST /rest/api/3/version
+- "Delete a version?" -> DELETE /rest/api/3/version/{id}
+- "Get version details?" -> GET /rest/api/3/version/{id}
+- "Update a version?" -> PUT /rest/api/3/version/{id}
+- "Update a mergeto?" -> PUT /rest/api/3/version/{id}/mergeto/{moveIssuesTo}
+- "Create a move?" -> POST /rest/api/3/version/{id}/move
+- "List all relatedIssueCounts?" -> GET /rest/api/3/version/{id}/relatedIssueCounts
+- "List all relatedwork?" -> GET /rest/api/3/version/{id}/relatedwork
+- "Create a relatedwork?" -> POST /rest/api/3/version/{id}/relatedwork
+- "Create a removeAndSwap?" -> POST /rest/api/3/version/{id}/removeAndSwap
+- "List all unresolvedIssueCount?" -> GET /rest/api/3/version/{id}/unresolvedIssueCount
+- "Delete a relatedwork?" -> DELETE /rest/api/3/version/{versionId}/relatedwork/{relatedWorkId}
+- "List all webhook?" -> GET /rest/api/3/webhook
+- "Create a webhook?" -> POST /rest/api/3/webhook
+- "List all failed?" -> GET /rest/api/3/webhook/failed
+- "List all workflow?" -> GET /rest/api/3/workflow
+- "Create a workflow?" -> POST /rest/api/3/workflow
+- "Create a history?" -> POST /rest/api/3/workflow/history
+- "Create a list?" -> POST /rest/api/3/workflow/history/list
+- "List all config?" -> GET /rest/api/3/workflow/rule/config
+- "List all search?" -> GET /rest/api/3/workflow/search
+- "List all properties?" -> GET /rest/api/3/workflow/transitions/{transitionId}/properties
+- "Create a property?" -> POST /rest/api/3/workflow/transitions/{transitionId}/properties
+- "Delete a workflow?" -> DELETE /rest/api/3/workflow/{entityId}
+- "List all issueTypeUsages?" -> GET /rest/api/3/workflow/{workflowId}/project/{projectId}/issueTypeUsages
+- "List all projectUsages?" -> GET /rest/api/3/workflow/{workflowId}/projectUsages
+- "List all workflowSchemes?" -> GET /rest/api/3/workflow/{workflowId}/workflowSchemes
+- "Create a workflow?" -> POST /rest/api/3/workflows
+- "List all capabilities?" -> GET /rest/api/3/workflows/capabilities
+- "Create a create?" -> POST /rest/api/3/workflows/create
+- "Create a validation?" -> POST /rest/api/3/workflows/create/validation
+- "List all defaultEditor?" -> GET /rest/api/3/workflows/defaultEditor
+- "Create a preview?" -> POST /rest/api/3/workflows/preview
+- "List all search?" -> GET /rest/api/3/workflows/search
+- "Create a update?" -> POST /rest/api/3/workflows/update
+- "Create a validation?" -> POST /rest/api/3/workflows/update/validation
+- "List all workflowscheme?" -> GET /rest/api/3/workflowscheme
+- "Create a workflowscheme?" -> POST /rest/api/3/workflowscheme
+- "List all project?" -> GET /rest/api/3/workflowscheme/project
+- "Create a switch?" -> POST /rest/api/3/workflowscheme/project/switch
+- "Create a read?" -> POST /rest/api/3/workflowscheme/read
+- "Create a update?" -> POST /rest/api/3/workflowscheme/update
+- "Create a mapping?" -> POST /rest/api/3/workflowscheme/update/mappings
+- "Delete a workflowscheme?" -> DELETE /rest/api/3/workflowscheme/{id}
+- "Get workflowscheme details?" -> GET /rest/api/3/workflowscheme/{id}
+- "Update a workflowscheme?" -> PUT /rest/api/3/workflowscheme/{id}
+- "Create a createdraft?" -> POST /rest/api/3/workflowscheme/{id}/createdraft
+- "List all default?" -> GET /rest/api/3/workflowscheme/{id}/default
+- "List all draft?" -> GET /rest/api/3/workflowscheme/{id}/draft
+- "List all default?" -> GET /rest/api/3/workflowscheme/{id}/draft/default
+- "Delete a issuetype?" -> DELETE /rest/api/3/workflowscheme/{id}/draft/issuetype/{issueType}
+- "Get issuetype details?" -> GET /rest/api/3/workflowscheme/{id}/draft/issuetype/{issueType}
+- "Update a issuetype?" -> PUT /rest/api/3/workflowscheme/{id}/draft/issuetype/{issueType}
+- "Create a publish?" -> POST /rest/api/3/workflowscheme/{id}/draft/publish
+- "List all workflow?" -> GET /rest/api/3/workflowscheme/{id}/draft/workflow
+- "Delete a issuetype?" -> DELETE /rest/api/3/workflowscheme/{id}/issuetype/{issueType}
+- "Get issuetype details?" -> GET /rest/api/3/workflowscheme/{id}/issuetype/{issueType}
+- "Update a issuetype?" -> PUT /rest/api/3/workflowscheme/{id}/issuetype/{issueType}
+- "List all workflow?" -> GET /rest/api/3/workflowscheme/{id}/workflow
+- "List all projectUsages?" -> GET /rest/api/3/workflowscheme/{workflowSchemeId}/projectUsages
+- "List all deleted?" -> GET /rest/api/3/worklog/deleted
+- "Create a list?" -> POST /rest/api/3/worklog/list
+- "List all updated?" -> GET /rest/api/3/worklog/updated
+- "List all properties?" -> GET /rest/atlassian-connect/1/addons/{addonKey}/properties
+- "Delete a property?" -> DELETE /rest/atlassian-connect/1/addons/{addonKey}/properties/{propertyKey}
+- "Get property details?" -> GET /rest/atlassian-connect/1/addons/{addonKey}/properties/{propertyKey}
+- "Update a property?" -> PUT /rest/atlassian-connect/1/addons/{addonKey}/properties/{propertyKey}
+- "List all dynamic?" -> GET /rest/atlassian-connect/1/app/module/dynamic
+- "Create a dynamic?" -> POST /rest/atlassian-connect/1/app/module/dynamic
+- "Update a property?" -> PUT /rest/atlassian-connect/1/migration/properties/{entityType}
+- "Create a search?" -> POST /rest/atlassian-connect/1/migration/workflow/rule/search
+- "List all task?" -> GET /rest/atlassian-connect/1/migration/{connectKey}/{jiraIssueFieldsKey}/task
+- "List all service-registry?" -> GET /rest/atlassian-connect/1/service-registry
+- "List all properties?" -> GET /rest/forge/1/app/properties
+- "Delete a property?" -> DELETE /rest/forge/1/app/properties/{propertyKey}
+- "Get property details?" -> GET /rest/forge/1/app/properties/{propertyKey}
+- "Update a property?" -> PUT /rest/forge/1/app/properties/{propertyKey}
+- "Create a bulk?" -> POST /rest/internal/api/latest/worklog/bulk
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

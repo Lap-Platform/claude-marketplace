@@ -3040,88 +3040,2740 @@ https://webservices5.autotask.net/ATServicesRest
 |--------|------|-------------|
 | GET | /VersionInformation |  |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I find a company by name?" -> POST /V1.0/Companies/query
-- "What fields are available on the Tickets entity?" -> GET /V1.0/Tickets/entityInformation/fields
-- "How do I create a new service ticket?" -> POST /V1.0/Tickets
-- "What contacts belong to a specific company?" -> GET /V1.0/Companies/{parentId}/Contacts
-- "How do I log time against a ticket?" -> POST /V1.0/TimeEntries
-- "How many open tickets match my filter?" -> POST /V1.0/Tickets/query/count
-- "How do I add a note to an existing ticket?" -> POST /V1.0/Tickets/{parentId}/Notes
-- "What configuration items are associated with a company?" -> POST /V1.0/ConfigurationItems/query
-- "How do I attach a file to a ticket?" -> POST /V1.0/Tickets/{parentId}/Attachments
-- "What contracts does a company have?" -> POST /V1.0/Contracts/query
-- "How do I check which API zone to use?" -> GET /V1.0/ZoneInformation
-- "How do I update a contact's information?" -> PATCH /V1.0/Contacts (via parent) or PUT /V1.0/Companies/{parentId}/Contacts
-- "What user-defined fields exist on configuration items?" -> GET /V1.0/ConfigurationItems/entityInformation/userDefinedFields
-- "How do I get an invoice as PDF?" -> GET /V1.0/Invoices/{id}/InvoicePdf
-- "How do I verify my API credentials are working?" -> GET /V1.0/Authenticate
-
-## Response Tips
-
-- **Query endpoints**: Results are returned in an `items` array; use POST /query with a `queryModel` for complex filters (field, op, value) and GET /query with a `search` parameter for simple filters. Counts via `/query/count` return an integer, not an array.
-- **Entity CRUD**: PUT replaces the full entity, PATCH updates only provided fields. POST creates new. All return the resulting entity object. Delete returns 200 on success with no body.
-- **Entity information**: `/entityInformation` returns metadata about the entity (canCreate, canUpdate, canDelete). `/entityInformation/fields` returns all field definitions including picklist values. `/entityInformation/userDefinedFields` returns UDF schema.
-- **Parent-child resources**: Child endpoints (e.g., `Companies/{parentId}/Contacts`) scope results to that parent. The same entity may also have a top-level `/query` endpoint for cross-parent searches.
-- **Attachments**: Attachment endpoints return binary content metadata; the actual file data is base64-encoded in the `data` field of the response.
-- **Errors**: 401 means invalid or expired credentials. 403 means the API user lacks permission for that entity or action. Both return error detail objects with `errors[]` array.
-
-## Anomaly Flags
-
-- **401 on any call**: Surface immediately -- credentials (ApiIntegrationCode, UserName, or Secret) are invalid, expired, or the integration was disabled in Autotask admin.
-- **403 on previously working endpoints**: The API user's security level was changed, or the resource was moved to a restricted entity. Flag the specific entity and suggest checking API User permissions in Autotask.
-- **Wrong API zone**: If ZoneInformation returns a different `url` than the base URL being used, all subsequent calls will fail or return unexpected results. Surface the correct zone URL proactively.
-- **Empty entityInformation/fields**: If a fields call returns no results, the entity may be disabled in this Autotask instance. Flag this before attempting CRUD operations.
-- **Query returning 0 results unexpectedly**: Autotask queries are AND-based and case-sensitive by default. Surface a suggestion to verify filter field names against `/entityInformation/fields` and check for picklist value IDs vs. display labels.
-- **ImpersonationResourceId usage**: If set, all actions execute as that resource. Flag when this header is present, as it affects audit trails and permission scoping.
-- **Threshold limits**: Surface data from GET /V1.0/ThresholdInformation proactively when the user is doing bulk operations -- Autotask enforces API call rate limits and query result size limits.
-
-## Playbook
-
-### 1. Onboard and Validate API Access
-
-1. Call `GET /V1.0/ZoneInformation?user={username}` to discover your correct API zone base URL
-2. Update your base URL to match the returned zone (e.g., `webservices5.autotask.net`)
-3. Call `GET /V1.0/Authenticate` with headers `ApiIntegrationCode`, `UserName`, and `Secret` to verify credentials
-4. Call `GET /V1.0/ThresholdInformation` to understand rate limits for your integration
-5. Call `GET /V1.0/Version` to confirm the API version you are targeting
-
-### 2. Create a Ticket with Notes and Attachments
-
-1. Query for the company: `POST /V1.0/Companies/query` with filter on company name
-2. Query for the contact: `GET /V1.0/Companies/{companyId}/Contacts` to find the relevant contact
-3. Check required fields: `GET /V1.0/Tickets/entityInformation/fields` to identify mandatory fields and valid picklist values (status, priority, queue, etc.)
-4. Create the ticket: `POST /V1.0/Tickets` with `companyID`, `contactID`, `title`, `status`, `priority`, and other required fields
-5. Add a note: `POST /V1.0/Tickets/{ticketId}/Notes` with note title, description, and publish type
-6. Add an attachment: `POST /V1.0/Tickets/{ticketId}/Attachments` with base64-encoded file data
-
-### 3. Bulk Query and Export Configuration Items
-
-1. Get the total count: `POST /V1.0/ConfigurationItems/query/count` with your filter criteria
-2. Understand available fields: `GET /V1.0/ConfigurationItems/entityInformation/fields` and `GET /V1.0/ConfigurationItems/entityInformation/userDefinedFields`
-3. Page through results: `POST /V1.0/ConfigurationItems/query` using `id > {lastId}` filter pattern (Autotask uses keyset pagination, not offset-based)
-4. For each item, fetch related data as needed: `GET /V1.0/ConfigurationItems/{id}/Notes`, `GET /V1.0/ConfigurationItems/{id}/BillingProductAssociations`
-5. Monitor `GET /V1.0/ThresholdInformation` if processing large volumes to avoid hitting rate limits
-
-### 4. Set Up Webhooks for Ticket Changes
-
-1. Review available webhook fields: `GET /V1.0/TicketWebhooks/entityInformation/fields`
-2. Create the webhook: `POST /V1.0/TicketWebhooks` with your callback URL, active status, and trigger conditions
-3. Add tracked fields: `POST /V1.0/TicketWebhooks/{webhookId}/Fields` for each field you want change notifications on
-4. Add UDF tracking if needed: `POST /V1.0/TicketWebhooks/{webhookId}/UdfFields`
-5. Optionally exclude specific resources from triggering: `POST /V1.0/TicketWebhooks/{webhookId}/ExcludedResources`
-6. Monitor for delivery failures: `GET /V1.0/WebhookEventErrorLogs/query`
-
-### 5. Manage Contracts and Billing
-
-1. Find the company's contracts: `POST /V1.0/Contracts/query` filtering by `companyID`
-2. Check contract details: `GET /V1.0/Contracts/{id}` including type (Time & Materials, Fixed Price, Block Hours, etc.)
-3. View remaining block hours: `GET /V1.0/Contracts/{contractId}/Blocks` to see purchased vs. used hours
-4. Add a charge: `POST /V1.0/Contracts/{contractId}/Charges` with product, quantity, and billing code
-5. Review billing items: `POST /V1.0/BillingItems/query` filtered by contract to see what will appear on the next invoice
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all invoiceSettings?" -> GET /V1.0/Companies/{id}/invoiceSettings
+- "Create a contactRecipient?" -> POST /V1.0/Companies/{id}/invoiceSettings/contactRecipients
+- "Delete a contactRecipient?" -> DELETE /V1.0/Companies/{id}/invoiceSettings/contactRecipients/{contactId}
+- "Create a resourceRecipient?" -> POST /V1.0/Companies/{id}/invoiceSettings/resourceRecipients
+- "Delete a resourceRecipient?" -> DELETE /V1.0/Companies/{id}/invoiceSettings/resourceRecipients/{resourceId}
+- "Search query?" -> GET /V1.0/ActionTypes/query
+- "Create a query?" -> POST /V1.0/ActionTypes/query
+- "Get ActionType details?" -> GET /V1.0/ActionTypes/{id}
+- "Delete a ActionType?" -> DELETE /V1.0/ActionTypes/{id}
+- "Search count?" -> GET /V1.0/ActionTypes/query/count
+- "Create a count?" -> POST /V1.0/ActionTypes/query/count
+- "Create a ActionType?" -> POST /V1.0/ActionTypes
+- "List all entityInformation?" -> GET /V1.0/ActionTypes/entityInformation
+- "List all fields?" -> GET /V1.0/ActionTypes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ActionTypes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/AdditionalInvoiceFieldValues/query
+- "Create a query?" -> POST /V1.0/AdditionalInvoiceFieldValues/query
+- "Get AdditionalInvoiceFieldValue details?" -> GET /V1.0/AdditionalInvoiceFieldValues/{id}
+- "Search count?" -> GET /V1.0/AdditionalInvoiceFieldValues/query/count
+- "Create a count?" -> POST /V1.0/AdditionalInvoiceFieldValues/query/count
+- "List all entityInformation?" -> GET /V1.0/AdditionalInvoiceFieldValues/entityInformation
+- "List all fields?" -> GET /V1.0/AdditionalInvoiceFieldValues/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/AdditionalInvoiceFieldValues/entityInformation/userDefinedFields
+- "List all VersionInformation?" -> GET /VersionInformation
+- "Search query?" -> GET /V1.0/Appointments/query
+- "Create a query?" -> POST /V1.0/Appointments/query
+- "Get Appointment details?" -> GET /V1.0/Appointments/{id}
+- "Delete a Appointment?" -> DELETE /V1.0/Appointments/{id}
+- "Search count?" -> GET /V1.0/Appointments/query/count
+- "Create a count?" -> POST /V1.0/Appointments/query/count
+- "Create a Appointment?" -> POST /V1.0/Appointments
+- "List all entityInformation?" -> GET /V1.0/Appointments/entityInformation
+- "List all fields?" -> GET /V1.0/Appointments/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Appointments/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/ArticleAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/ArticleAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/ArticleAttachments/query
+- "Create a query?" -> POST /V1.0/ArticleAttachments/query
+- "Get ArticleAttachment details?" -> GET /V1.0/ArticleAttachments/{id}
+- "Search count?" -> GET /V1.0/ArticleAttachments/query/count
+- "Create a count?" -> POST /V1.0/ArticleAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/KnowledgeBaseArticles/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/KnowledgeBaseArticles/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/ArticleConfigurationItemCategoryAssociations/query
+- "Create a query?" -> POST /V1.0/ArticleConfigurationItemCategoryAssociations/query
+- "Get ArticleConfigurationItemCategoryAssociation details?" -> GET /V1.0/ArticleConfigurationItemCategoryAssociations/{id}
+- "Search count?" -> GET /V1.0/ArticleConfigurationItemCategoryAssociations/query/count
+- "Create a count?" -> POST /V1.0/ArticleConfigurationItemCategoryAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/ArticleConfigurationItemCategoryAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/ArticleConfigurationItemCategoryAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ArticleConfigurationItemCategoryAssociations/entityInformation/userDefinedFields
+- "List all ConfigurationItemCategoryAssociations?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/ConfigurationItemCategoryAssociations
+- "Create a ConfigurationItemCategoryAssociation?" -> POST /V1.0/KnowledgeBaseArticles/{parentId}/ConfigurationItemCategoryAssociations
+- "Get ConfigurationItemCategoryAssociation details?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/ConfigurationItemCategoryAssociations/{id}
+- "Delete a ConfigurationItemCategoryAssociation?" -> DELETE /V1.0/KnowledgeBaseArticles/{parentId}/ConfigurationItemCategoryAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/ConfigurationItemCategoryAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/ConfigurationItemCategoryAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/ConfigurationItemCategoryAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ArticleNotes/query
+- "Create a query?" -> POST /V1.0/ArticleNotes/query
+- "Get ArticleNote details?" -> GET /V1.0/ArticleNotes/{id}
+- "Search count?" -> GET /V1.0/ArticleNotes/query/count
+- "Create a count?" -> POST /V1.0/ArticleNotes/query/count
+- "List all entityInformation?" -> GET /V1.0/ArticleNotes/entityInformation
+- "List all fields?" -> GET /V1.0/ArticleNotes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ArticleNotes/entityInformation/userDefinedFields
+- "List all Notes?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/Notes
+- "Create a Note?" -> POST /V1.0/KnowledgeBaseArticles/{parentId}/Notes
+- "Get Note details?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/Notes/{id}
+- "Delete a Note?" -> DELETE /V1.0/KnowledgeBaseArticles/{parentId}/Notes/{id}
+- "List all entityInformation?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/Notes/entityInformation
+- "List all fields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/Notes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/Notes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ArticlePlainTextContent/query
+- "Create a query?" -> POST /V1.0/ArticlePlainTextContent/query
+- "Get ArticlePlainTextContent details?" -> GET /V1.0/ArticlePlainTextContent/{id}
+- "Search count?" -> GET /V1.0/ArticlePlainTextContent/query/count
+- "Create a count?" -> POST /V1.0/ArticlePlainTextContent/query/count
+- "List all entityInformation?" -> GET /V1.0/ArticlePlainTextContent/entityInformation
+- "List all fields?" -> GET /V1.0/ArticlePlainTextContent/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ArticlePlainTextContent/entityInformation/userDefinedFields
+- "List all PlainTextContent?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/PlainTextContent
+- "Get PlainTextContent details?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/PlainTextContent/{id}
+- "List all entityInformation?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/PlainTextContent/entityInformation
+- "List all fields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/PlainTextContent/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/PlainTextContent/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ArticleTagAssociations/query
+- "Create a query?" -> POST /V1.0/ArticleTagAssociations/query
+- "Get ArticleTagAssociation details?" -> GET /V1.0/ArticleTagAssociations/{id}
+- "Search count?" -> GET /V1.0/ArticleTagAssociations/query/count
+- "Create a count?" -> POST /V1.0/ArticleTagAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/ArticleTagAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/ArticleTagAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ArticleTagAssociations/entityInformation/userDefinedFields
+- "List all TagAssociations?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/TagAssociations
+- "Create a TagAssociation?" -> POST /V1.0/KnowledgeBaseArticles/{parentId}/TagAssociations
+- "Get TagAssociation details?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/TagAssociations/{id}
+- "Delete a TagAssociation?" -> DELETE /V1.0/KnowledgeBaseArticles/{parentId}/TagAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/TagAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/TagAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/TagAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ArticleTicketAssociations/query
+- "Create a query?" -> POST /V1.0/ArticleTicketAssociations/query
+- "Get ArticleTicketAssociation details?" -> GET /V1.0/ArticleTicketAssociations/{id}
+- "Search count?" -> GET /V1.0/ArticleTicketAssociations/query/count
+- "Create a count?" -> POST /V1.0/ArticleTicketAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/ArticleTicketAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/ArticleTicketAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ArticleTicketAssociations/entityInformation/userDefinedFields
+- "List all TicketAssociations?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/TicketAssociations
+- "Create a TicketAssociation?" -> POST /V1.0/KnowledgeBaseArticles/{parentId}/TicketAssociations
+- "Get TicketAssociation details?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/TicketAssociations/{id}
+- "Delete a TicketAssociation?" -> DELETE /V1.0/KnowledgeBaseArticles/{parentId}/TicketAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/TicketAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/TicketAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/TicketAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ArticleToArticleAssociations/query
+- "Create a query?" -> POST /V1.0/ArticleToArticleAssociations/query
+- "Get ArticleToArticleAssociation details?" -> GET /V1.0/ArticleToArticleAssociations/{id}
+- "Search count?" -> GET /V1.0/ArticleToArticleAssociations/query/count
+- "Create a count?" -> POST /V1.0/ArticleToArticleAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/ArticleToArticleAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/ArticleToArticleAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ArticleToArticleAssociations/entityInformation/userDefinedFields
+- "List all ArticleAssociations?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/ArticleAssociations
+- "Create a ArticleAssociation?" -> POST /V1.0/KnowledgeBaseArticles/{parentId}/ArticleAssociations
+- "Get ArticleAssociation details?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/ArticleAssociations/{id}
+- "Delete a ArticleAssociation?" -> DELETE /V1.0/KnowledgeBaseArticles/{parentId}/ArticleAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/ArticleAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/ArticleAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/ArticleAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ArticleToDocumentAssociations/query
+- "Create a query?" -> POST /V1.0/ArticleToDocumentAssociations/query
+- "Get ArticleToDocumentAssociation details?" -> GET /V1.0/ArticleToDocumentAssociations/{id}
+- "Search count?" -> GET /V1.0/ArticleToDocumentAssociations/query/count
+- "Create a count?" -> POST /V1.0/ArticleToDocumentAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/ArticleToDocumentAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/ArticleToDocumentAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ArticleToDocumentAssociations/entityInformation/userDefinedFields
+- "List all DocumentAssociations?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/DocumentAssociations
+- "Create a DocumentAssociation?" -> POST /V1.0/KnowledgeBaseArticles/{parentId}/DocumentAssociations
+- "Get DocumentAssociation details?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/DocumentAssociations/{id}
+- "Delete a DocumentAssociation?" -> DELETE /V1.0/KnowledgeBaseArticles/{parentId}/DocumentAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/DocumentAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/DocumentAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/KnowledgeBaseArticles/{parentId}/DocumentAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/AttachmentInfo/query
+- "Create a query?" -> POST /V1.0/AttachmentInfo/query
+- "Get AttachmentInfo details?" -> GET /V1.0/AttachmentInfo/{id}
+- "Search count?" -> GET /V1.0/AttachmentInfo/query/count
+- "Create a count?" -> POST /V1.0/AttachmentInfo/query/count
+- "List all entityInformation?" -> GET /V1.0/AttachmentInfo/entityInformation
+- "List all fields?" -> GET /V1.0/AttachmentInfo/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/AttachmentInfo/entityInformation/userDefinedFields
+- "List all Authenticate?" -> GET /V1.0/Authenticate
+- "List all Version?" -> GET /V1.0/Version
+- "Search query?" -> GET /V1.0/BillingCodes/query
+- "Create a query?" -> POST /V1.0/BillingCodes/query
+- "Get BillingCode details?" -> GET /V1.0/BillingCodes/{id}
+- "Search count?" -> GET /V1.0/BillingCodes/query/count
+- "Create a count?" -> POST /V1.0/BillingCodes/query/count
+- "List all entityInformation?" -> GET /V1.0/BillingCodes/entityInformation
+- "List all fields?" -> GET /V1.0/BillingCodes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/BillingCodes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/BillingItemApprovalLevels/query
+- "Create a query?" -> POST /V1.0/BillingItemApprovalLevels/query
+- "Get BillingItemApprovalLevel details?" -> GET /V1.0/BillingItemApprovalLevels/{id}
+- "Search count?" -> GET /V1.0/BillingItemApprovalLevels/query/count
+- "Create a count?" -> POST /V1.0/BillingItemApprovalLevels/query/count
+- "Create a BillingItemApprovalLevel?" -> POST /V1.0/BillingItemApprovalLevels
+- "List all entityInformation?" -> GET /V1.0/BillingItemApprovalLevels/entityInformation
+- "List all fields?" -> GET /V1.0/BillingItemApprovalLevels/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/BillingItemApprovalLevels/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/BillingItems/query
+- "Create a query?" -> POST /V1.0/BillingItems/query
+- "Get BillingItem details?" -> GET /V1.0/BillingItems/{id}
+- "Search count?" -> GET /V1.0/BillingItems/query/count
+- "Create a count?" -> POST /V1.0/BillingItems/query/count
+- "List all entityInformation?" -> GET /V1.0/BillingItems/entityInformation
+- "List all fields?" -> GET /V1.0/BillingItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/BillingItems/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ChangeOrderCharges/query
+- "Create a query?" -> POST /V1.0/ChangeOrderCharges/query
+- "Get ChangeOrderCharge details?" -> GET /V1.0/ChangeOrderCharges/{id}
+- "Delete a ChangeOrderCharge?" -> DELETE /V1.0/ChangeOrderCharges/{id}
+- "Search count?" -> GET /V1.0/ChangeOrderCharges/query/count
+- "Create a count?" -> POST /V1.0/ChangeOrderCharges/query/count
+- "Create a ChangeOrderCharge?" -> POST /V1.0/ChangeOrderCharges
+- "List all entityInformation?" -> GET /V1.0/ChangeOrderCharges/entityInformation
+- "List all fields?" -> GET /V1.0/ChangeOrderCharges/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ChangeOrderCharges/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ChangeRequestLinks/query
+- "Create a query?" -> POST /V1.0/ChangeRequestLinks/query
+- "Get ChangeRequestLink details?" -> GET /V1.0/ChangeRequestLinks/{id}
+- "Delete a ChangeRequestLink?" -> DELETE /V1.0/ChangeRequestLinks/{id}
+- "Search count?" -> GET /V1.0/ChangeRequestLinks/query/count
+- "Create a count?" -> POST /V1.0/ChangeRequestLinks/query/count
+- "Create a ChangeRequestLink?" -> POST /V1.0/ChangeRequestLinks
+- "List all entityInformation?" -> GET /V1.0/ChangeRequestLinks/entityInformation
+- "List all fields?" -> GET /V1.0/ChangeRequestLinks/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ChangeRequestLinks/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ChecklistLibraries/query
+- "Create a query?" -> POST /V1.0/ChecklistLibraries/query
+- "Get ChecklistLibrary details?" -> GET /V1.0/ChecklistLibraries/{id}
+- "Delete a ChecklistLibrary?" -> DELETE /V1.0/ChecklistLibraries/{id}
+- "Search count?" -> GET /V1.0/ChecklistLibraries/query/count
+- "Create a count?" -> POST /V1.0/ChecklistLibraries/query/count
+- "Create a ChecklistLibrary?" -> POST /V1.0/ChecklistLibraries
+- "List all entityInformation?" -> GET /V1.0/ChecklistLibraries/entityInformation
+- "List all fields?" -> GET /V1.0/ChecklistLibraries/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ChecklistLibraries/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ChecklistLibraryChecklistItems/query
+- "Create a query?" -> POST /V1.0/ChecklistLibraryChecklistItems/query
+- "Get ChecklistLibraryChecklistItem details?" -> GET /V1.0/ChecklistLibraryChecklistItems/{id}
+- "Search count?" -> GET /V1.0/ChecklistLibraryChecklistItems/query/count
+- "Create a count?" -> POST /V1.0/ChecklistLibraryChecklistItems/query/count
+- "List all entityInformation?" -> GET /V1.0/ChecklistLibraryChecklistItems/entityInformation
+- "List all fields?" -> GET /V1.0/ChecklistLibraryChecklistItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ChecklistLibraryChecklistItems/entityInformation/userDefinedFields
+- "List all ChecklistItems?" -> GET /V1.0/ChecklistLibraries/{parentId}/ChecklistItems
+- "Create a ChecklistItem?" -> POST /V1.0/ChecklistLibraries/{parentId}/ChecklistItems
+- "Get ChecklistItem details?" -> GET /V1.0/ChecklistLibraries/{parentId}/ChecklistItems/{id}
+- "Delete a ChecklistItem?" -> DELETE /V1.0/ChecklistLibraries/{parentId}/ChecklistItems/{id}
+- "List all entityInformation?" -> GET /V1.0/ChecklistLibraries/{parentId}/ChecklistItems/entityInformation
+- "List all fields?" -> GET /V1.0/ChecklistLibraries/{parentId}/ChecklistItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ChecklistLibraries/{parentId}/ChecklistItems/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ClassificationIcons/query
+- "Create a query?" -> POST /V1.0/ClassificationIcons/query
+- "Get ClassificationIcon details?" -> GET /V1.0/ClassificationIcons/{id}
+- "Search count?" -> GET /V1.0/ClassificationIcons/query/count
+- "Create a count?" -> POST /V1.0/ClassificationIcons/query/count
+- "List all entityInformation?" -> GET /V1.0/ClassificationIcons/entityInformation
+- "List all fields?" -> GET /V1.0/ClassificationIcons/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ClassificationIcons/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ClientPortalUsers/query
+- "Create a query?" -> POST /V1.0/ClientPortalUsers/query
+- "Get ClientPortalUser details?" -> GET /V1.0/ClientPortalUsers/{id}
+- "Search count?" -> GET /V1.0/ClientPortalUsers/query/count
+- "Create a count?" -> POST /V1.0/ClientPortalUsers/query/count
+- "Create a ClientPortalUser?" -> POST /V1.0/ClientPortalUsers
+- "List all entityInformation?" -> GET /V1.0/ClientPortalUsers/entityInformation
+- "List all fields?" -> GET /V1.0/ClientPortalUsers/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ClientPortalUsers/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ComanagedAssociations/query
+- "Create a query?" -> POST /V1.0/ComanagedAssociations/query
+- "Get ComanagedAssociation details?" -> GET /V1.0/ComanagedAssociations/{id}
+- "Delete a ComanagedAssociation?" -> DELETE /V1.0/ComanagedAssociations/{id}
+- "Search count?" -> GET /V1.0/ComanagedAssociations/query/count
+- "Create a count?" -> POST /V1.0/ComanagedAssociations/query/count
+- "Create a ComanagedAssociation?" -> POST /V1.0/ComanagedAssociations
+- "List all entityInformation?" -> GET /V1.0/ComanagedAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/ComanagedAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ComanagedAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Companies/query
+- "Create a query?" -> POST /V1.0/Companies/query
+- "Get Company details?" -> GET /V1.0/Companies/{id}
+- "Search count?" -> GET /V1.0/Companies/query/count
+- "Create a count?" -> POST /V1.0/Companies/query/count
+- "Create a Company?" -> POST /V1.0/Companies
+- "List all entityInformation?" -> GET /V1.0/Companies/entityInformation
+- "List all fields?" -> GET /V1.0/Companies/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Companies/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/CompanyAlerts/query
+- "Create a query?" -> POST /V1.0/CompanyAlerts/query
+- "Get CompanyAlert details?" -> GET /V1.0/CompanyAlerts/{id}
+- "Search count?" -> GET /V1.0/CompanyAlerts/query/count
+- "Create a count?" -> POST /V1.0/CompanyAlerts/query/count
+- "List all entityInformation?" -> GET /V1.0/CompanyAlerts/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyAlerts/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanyAlerts/entityInformation/userDefinedFields
+- "List all Alerts?" -> GET /V1.0/Companies/{parentId}/Alerts
+- "Create a Alert?" -> POST /V1.0/Companies/{parentId}/Alerts
+- "Get Alert details?" -> GET /V1.0/Companies/{parentId}/Alerts/{id}
+- "Delete a Alert?" -> DELETE /V1.0/Companies/{parentId}/Alerts/{id}
+- "List all entityInformation?" -> GET /V1.0/Companies/{parentId}/Alerts/entityInformation
+- "List all fields?" -> GET /V1.0/Companies/{parentId}/Alerts/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Companies/{parentId}/Alerts/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/CompanyAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/CompanyAttachments/query
+- "Create a query?" -> POST /V1.0/CompanyAttachments/query
+- "Get CompanyAttachment details?" -> GET /V1.0/CompanyAttachments/{id}
+- "Search count?" -> GET /V1.0/CompanyAttachments/query/count
+- "Create a count?" -> POST /V1.0/CompanyAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/Companies/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/Companies/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/Companies/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/Companies/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/CompanyCategories/query
+- "Create a query?" -> POST /V1.0/CompanyCategories/query
+- "Get CompanyCategory details?" -> GET /V1.0/CompanyCategories/{id}
+- "Search count?" -> GET /V1.0/CompanyCategories/query/count
+- "Create a count?" -> POST /V1.0/CompanyCategories/query/count
+- "List all entityInformation?" -> GET /V1.0/CompanyCategories/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyCategories/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanyCategories/entityInformation/userDefinedFields
+- "List all Contacts?" -> GET /V1.0/Companies/{parentId}/Contacts
+- "Create a Contact?" -> POST /V1.0/Companies/{parentId}/Contacts
+- "Get Contact details?" -> GET /V1.0/Companies/{parentId}/Contacts/{id}
+- "Delete a Contact?" -> DELETE /V1.0/Companies/{parentId}/Contacts/{id}
+- "List all entityInformation?" -> GET /V1.0/Companies/{parentId}/Contacts/entityInformation
+- "List all fields?" -> GET /V1.0/Companies/{parentId}/Contacts/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Companies/{parentId}/Contacts/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/CompanyLocations/query
+- "Create a query?" -> POST /V1.0/CompanyLocations/query
+- "Get CompanyLocation details?" -> GET /V1.0/CompanyLocations/{id}
+- "Search count?" -> GET /V1.0/CompanyLocations/query/count
+- "Create a count?" -> POST /V1.0/CompanyLocations/query/count
+- "List all entityInformation?" -> GET /V1.0/CompanyLocations/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyLocations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanyLocations/entityInformation/userDefinedFields
+- "List all Locations?" -> GET /V1.0/Companies/{parentId}/Locations
+- "Create a Location?" -> POST /V1.0/Companies/{parentId}/Locations
+- "Get Location details?" -> GET /V1.0/Companies/{parentId}/Locations/{id}
+- "Delete a Location?" -> DELETE /V1.0/Companies/{parentId}/Locations/{id}
+- "List all entityInformation?" -> GET /V1.0/Companies/{parentId}/Locations/entityInformation
+- "List all fields?" -> GET /V1.0/Companies/{parentId}/Locations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Companies/{parentId}/Locations/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/CompanyNoteAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyNoteAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/CompanyNoteAttachments/query
+- "Create a query?" -> POST /V1.0/CompanyNoteAttachments/query
+- "Get CompanyNoteAttachment details?" -> GET /V1.0/CompanyNoteAttachments/{id}
+- "Search count?" -> GET /V1.0/CompanyNoteAttachments/query/count
+- "Create a count?" -> POST /V1.0/CompanyNoteAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/CompanyNotes/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/CompanyNotes/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/CompanyNotes/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/CompanyNotes/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/CompanyNotes/query
+- "Create a query?" -> POST /V1.0/CompanyNotes/query
+- "Get CompanyNote details?" -> GET /V1.0/CompanyNotes/{id}
+- "Search count?" -> GET /V1.0/CompanyNotes/query/count
+- "Create a count?" -> POST /V1.0/CompanyNotes/query/count
+- "List all entityInformation?" -> GET /V1.0/CompanyNotes/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyNotes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanyNotes/entityInformation/userDefinedFields
+- "List all Notes?" -> GET /V1.0/Companies/{parentId}/Notes
+- "Create a Note?" -> POST /V1.0/Companies/{parentId}/Notes
+- "Get Note details?" -> GET /V1.0/Companies/{parentId}/Notes/{id}
+- "List all entityInformation?" -> GET /V1.0/Companies/{parentId}/Notes/entityInformation
+- "List all fields?" -> GET /V1.0/Companies/{parentId}/Notes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Companies/{parentId}/Notes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/CompanySiteConfigurations/query
+- "Create a query?" -> POST /V1.0/CompanySiteConfigurations/query
+- "Get CompanySiteConfiguration details?" -> GET /V1.0/CompanySiteConfigurations/{id}
+- "Search count?" -> GET /V1.0/CompanySiteConfigurations/query/count
+- "Create a count?" -> POST /V1.0/CompanySiteConfigurations/query/count
+- "List all entityInformation?" -> GET /V1.0/CompanySiteConfigurations/entityInformation
+- "List all fields?" -> GET /V1.0/CompanySiteConfigurations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanySiteConfigurations/entityInformation/userDefinedFields
+- "List all SiteConfigurations?" -> GET /V1.0/Companies/{parentId}/SiteConfigurations
+- "Get SiteConfiguration details?" -> GET /V1.0/Companies/{parentId}/SiteConfigurations/{id}
+- "List all entityInformation?" -> GET /V1.0/Companies/{parentId}/SiteConfigurations/entityInformation
+- "List all fields?" -> GET /V1.0/Companies/{parentId}/SiteConfigurations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Companies/{parentId}/SiteConfigurations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/CompanyTeams/query
+- "Create a query?" -> POST /V1.0/CompanyTeams/query
+- "Get CompanyTeam details?" -> GET /V1.0/CompanyTeams/{id}
+- "Search count?" -> GET /V1.0/CompanyTeams/query/count
+- "Create a count?" -> POST /V1.0/CompanyTeams/query/count
+- "List all entityInformation?" -> GET /V1.0/CompanyTeams/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyTeams/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanyTeams/entityInformation/userDefinedFields
+- "List all Teams?" -> GET /V1.0/Companies/{parentId}/Teams
+- "Create a Team?" -> POST /V1.0/Companies/{parentId}/Teams
+- "Get Team details?" -> GET /V1.0/Companies/{parentId}/Teams/{id}
+- "Delete a Team?" -> DELETE /V1.0/Companies/{parentId}/Teams/{id}
+- "List all entityInformation?" -> GET /V1.0/Companies/{parentId}/Teams/entityInformation
+- "List all fields?" -> GET /V1.0/Companies/{parentId}/Teams/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Companies/{parentId}/Teams/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/CompanyToDos/query
+- "Create a query?" -> POST /V1.0/CompanyToDos/query
+- "Get CompanyToDo details?" -> GET /V1.0/CompanyToDos/{id}
+- "Search count?" -> GET /V1.0/CompanyToDos/query/count
+- "Create a count?" -> POST /V1.0/CompanyToDos/query/count
+- "List all entityInformation?" -> GET /V1.0/CompanyToDos/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyToDos/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanyToDos/entityInformation/userDefinedFields
+- "List all ToDos?" -> GET /V1.0/Companies/{parentId}/ToDos
+- "Create a ToDo?" -> POST /V1.0/Companies/{parentId}/ToDos
+- "Get ToDo details?" -> GET /V1.0/Companies/{parentId}/ToDos/{id}
+- "Delete a ToDo?" -> DELETE /V1.0/Companies/{parentId}/ToDos/{id}
+- "List all entityInformation?" -> GET /V1.0/Companies/{parentId}/ToDos/entityInformation
+- "List all fields?" -> GET /V1.0/Companies/{parentId}/ToDos/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Companies/{parentId}/ToDos/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/CompanyWebhookExcludedResources/query
+- "Create a query?" -> POST /V1.0/CompanyWebhookExcludedResources/query
+- "Get CompanyWebhookExcludedResource details?" -> GET /V1.0/CompanyWebhookExcludedResources/{id}
+- "Search count?" -> GET /V1.0/CompanyWebhookExcludedResources/query/count
+- "Create a count?" -> POST /V1.0/CompanyWebhookExcludedResources/query/count
+- "List all entityInformation?" -> GET /V1.0/CompanyWebhookExcludedResources/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyWebhookExcludedResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanyWebhookExcludedResources/entityInformation/userDefinedFields
+- "List all ExcludedResources?" -> GET /V1.0/CompanyWebhooks/{parentId}/ExcludedResources
+- "Create a ExcludedResource?" -> POST /V1.0/CompanyWebhooks/{parentId}/ExcludedResources
+- "Get ExcludedResource details?" -> GET /V1.0/CompanyWebhooks/{parentId}/ExcludedResources/{id}
+- "Delete a ExcludedResource?" -> DELETE /V1.0/CompanyWebhooks/{parentId}/ExcludedResources/{id}
+- "List all entityInformation?" -> GET /V1.0/CompanyWebhooks/{parentId}/ExcludedResources/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyWebhooks/{parentId}/ExcludedResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanyWebhooks/{parentId}/ExcludedResources/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/CompanyWebhookFields/query
+- "Create a query?" -> POST /V1.0/CompanyWebhookFields/query
+- "Get CompanyWebhookField details?" -> GET /V1.0/CompanyWebhookFields/{id}
+- "Search count?" -> GET /V1.0/CompanyWebhookFields/query/count
+- "Create a count?" -> POST /V1.0/CompanyWebhookFields/query/count
+- "List all entityInformation?" -> GET /V1.0/CompanyWebhookFields/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyWebhookFields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanyWebhookFields/entityInformation/userDefinedFields
+- "List all Fields?" -> GET /V1.0/CompanyWebhooks/{parentId}/Fields
+- "Create a Field?" -> POST /V1.0/CompanyWebhooks/{parentId}/Fields
+- "Get Field details?" -> GET /V1.0/CompanyWebhooks/{parentId}/Fields/{id}
+- "Delete a Field?" -> DELETE /V1.0/CompanyWebhooks/{parentId}/Fields/{id}
+- "List all entityInformation?" -> GET /V1.0/CompanyWebhooks/{parentId}/Fields/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyWebhooks/{parentId}/Fields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanyWebhooks/{parentId}/Fields/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/CompanyWebhooks/query
+- "Create a query?" -> POST /V1.0/CompanyWebhooks/query
+- "Get CompanyWebhook details?" -> GET /V1.0/CompanyWebhooks/{id}
+- "Delete a CompanyWebhook?" -> DELETE /V1.0/CompanyWebhooks/{id}
+- "Search count?" -> GET /V1.0/CompanyWebhooks/query/count
+- "Create a count?" -> POST /V1.0/CompanyWebhooks/query/count
+- "Create a CompanyWebhook?" -> POST /V1.0/CompanyWebhooks
+- "List all entityInformation?" -> GET /V1.0/CompanyWebhooks/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyWebhooks/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanyWebhooks/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/CompanyWebhookUdfFields/query
+- "Create a query?" -> POST /V1.0/CompanyWebhookUdfFields/query
+- "Get CompanyWebhookUdfField details?" -> GET /V1.0/CompanyWebhookUdfFields/{id}
+- "Search count?" -> GET /V1.0/CompanyWebhookUdfFields/query/count
+- "Create a count?" -> POST /V1.0/CompanyWebhookUdfFields/query/count
+- "List all entityInformation?" -> GET /V1.0/CompanyWebhookUdfFields/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyWebhookUdfFields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanyWebhookUdfFields/entityInformation/userDefinedFields
+- "List all UdfFields?" -> GET /V1.0/CompanyWebhooks/{parentId}/UdfFields
+- "Create a UdfField?" -> POST /V1.0/CompanyWebhooks/{parentId}/UdfFields
+- "Get UdfField details?" -> GET /V1.0/CompanyWebhooks/{parentId}/UdfFields/{id}
+- "Delete a UdfField?" -> DELETE /V1.0/CompanyWebhooks/{parentId}/UdfFields/{id}
+- "List all entityInformation?" -> GET /V1.0/CompanyWebhooks/{parentId}/UdfFields/entityInformation
+- "List all fields?" -> GET /V1.0/CompanyWebhooks/{parentId}/UdfFields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/CompanyWebhooks/{parentId}/UdfFields/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/ConfigurationItemAttachments/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemAttachments/query
+- "Get ConfigurationItemAttachment details?" -> GET /V1.0/ConfigurationItemAttachments/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemAttachments/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/ConfigurationItems/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/ConfigurationItems/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/ConfigurationItems/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/ConfigurationItems/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/ConfigurationItemBillingProductAssociations/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemBillingProductAssociations/query
+- "Get ConfigurationItemBillingProductAssociation details?" -> GET /V1.0/ConfigurationItemBillingProductAssociations/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemBillingProductAssociations/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemBillingProductAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemBillingProductAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemBillingProductAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemBillingProductAssociations/entityInformation/userDefinedFields
+- "List all BillingProductAssociations?" -> GET /V1.0/ConfigurationItems/{parentId}/BillingProductAssociations
+- "Create a BillingProductAssociation?" -> POST /V1.0/ConfigurationItems/{parentId}/BillingProductAssociations
+- "Get BillingProductAssociation details?" -> GET /V1.0/ConfigurationItems/{parentId}/BillingProductAssociations/{id}
+- "Delete a BillingProductAssociation?" -> DELETE /V1.0/ConfigurationItems/{parentId}/BillingProductAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItems/{parentId}/BillingProductAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItems/{parentId}/BillingProductAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItems/{parentId}/BillingProductAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ConfigurationItemCategories/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemCategories/query
+- "Get ConfigurationItemCategory details?" -> GET /V1.0/ConfigurationItemCategories/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemCategories/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemCategories/query/count
+- "Create a ConfigurationItemCategory?" -> POST /V1.0/ConfigurationItemCategories
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemCategories/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemCategories/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemCategories/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ConfigurationItemCategoryUdfAssociations/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemCategoryUdfAssociations/query
+- "Get ConfigurationItemCategoryUdfAssociation details?" -> GET /V1.0/ConfigurationItemCategoryUdfAssociations/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemCategoryUdfAssociations/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemCategoryUdfAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemCategoryUdfAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemCategoryUdfAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemCategoryUdfAssociations/entityInformation/userDefinedFields
+- "List all UdfAssociations?" -> GET /V1.0/ConfigurationItemCategories/{parentId}/UdfAssociations
+- "Create a UdfAssociation?" -> POST /V1.0/ConfigurationItemCategories/{parentId}/UdfAssociations
+- "Get UdfAssociation details?" -> GET /V1.0/ConfigurationItemCategories/{parentId}/UdfAssociations/{id}
+- "Delete a UdfAssociation?" -> DELETE /V1.0/ConfigurationItemCategories/{parentId}/UdfAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemCategories/{parentId}/UdfAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemCategories/{parentId}/UdfAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemCategories/{parentId}/UdfAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ConfigurationItemDnsRecords/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemDnsRecords/query
+- "Get ConfigurationItemDnsRecord details?" -> GET /V1.0/ConfigurationItemDnsRecords/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemDnsRecords/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemDnsRecords/query/count
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemDnsRecords/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemDnsRecords/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemDnsRecords/entityInformation/userDefinedFields
+- "List all DnsRecords?" -> GET /V1.0/ConfigurationItems/{parentId}/DnsRecords
+- "Get DnsRecord details?" -> GET /V1.0/ConfigurationItems/{parentId}/DnsRecords/{id}
+- "Delete a DnsRecord?" -> DELETE /V1.0/ConfigurationItems/{parentId}/DnsRecords/{id}
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItems/{parentId}/DnsRecords/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItems/{parentId}/DnsRecords/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItems/{parentId}/DnsRecords/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemNoteAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemNoteAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/ConfigurationItemNoteAttachments/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemNoteAttachments/query
+- "Get ConfigurationItemNoteAttachment details?" -> GET /V1.0/ConfigurationItemNoteAttachments/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemNoteAttachments/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemNoteAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/ConfigurationItemNotes/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/ConfigurationItemNotes/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/ConfigurationItemNotes/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/ConfigurationItemNotes/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/ConfigurationItemNotes/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemNotes/query
+- "Get ConfigurationItemNote details?" -> GET /V1.0/ConfigurationItemNotes/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemNotes/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemNotes/query/count
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemNotes/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemNotes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemNotes/entityInformation/userDefinedFields
+- "List all Notes?" -> GET /V1.0/ConfigurationItems/{parentId}/Notes
+- "Create a Note?" -> POST /V1.0/ConfigurationItems/{parentId}/Notes
+- "Get Note details?" -> GET /V1.0/ConfigurationItems/{parentId}/Notes/{id}
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItems/{parentId}/Notes/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItems/{parentId}/Notes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItems/{parentId}/Notes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ConfigurationItemRelatedItems/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemRelatedItems/query
+- "Get ConfigurationItemRelatedItem details?" -> GET /V1.0/ConfigurationItemRelatedItems/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemRelatedItems/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemRelatedItems/query/count
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemRelatedItems/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemRelatedItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemRelatedItems/entityInformation/userDefinedFields
+- "List all RelatedItems?" -> GET /V1.0/ConfigurationItems/{parentId}/RelatedItems
+- "Create a RelatedItem?" -> POST /V1.0/ConfigurationItems/{parentId}/RelatedItems
+- "Get RelatedItem details?" -> GET /V1.0/ConfigurationItems/{parentId}/RelatedItems/{id}
+- "Delete a RelatedItem?" -> DELETE /V1.0/ConfigurationItems/{parentId}/RelatedItems/{id}
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItems/{parentId}/RelatedItems/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItems/{parentId}/RelatedItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItems/{parentId}/RelatedItems/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ConfigurationItems/query
+- "Create a query?" -> POST /V1.0/ConfigurationItems/query
+- "Get ConfigurationItem details?" -> GET /V1.0/ConfigurationItems/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItems/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItems/query/count
+- "Create a ConfigurationItem?" -> POST /V1.0/ConfigurationItems
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItems/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItems/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ConfigurationItemSslSubjectAlternativeNames/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemSslSubjectAlternativeNames/query
+- "Get ConfigurationItemSslSubjectAlternativeName details?" -> GET /V1.0/ConfigurationItemSslSubjectAlternativeNames/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemSslSubjectAlternativeNames/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemSslSubjectAlternativeNames/query/count
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemSslSubjectAlternativeNames/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemSslSubjectAlternativeNames/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemSslSubjectAlternativeNames/entityInformation/userDefinedFields
+- "List all SslSubjectAlternativeNames?" -> GET /V1.0/ConfigurationItems/{parentId}/SslSubjectAlternativeNames
+- "Get SslSubjectAlternativeName details?" -> GET /V1.0/ConfigurationItems/{parentId}/SslSubjectAlternativeNames/{id}
+- "Delete a SslSubjectAlternativeName?" -> DELETE /V1.0/ConfigurationItems/{parentId}/SslSubjectAlternativeNames/{id}
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItems/{parentId}/SslSubjectAlternativeNames/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItems/{parentId}/SslSubjectAlternativeNames/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItems/{parentId}/SslSubjectAlternativeNames/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ConfigurationItemTypes/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemTypes/query
+- "Get ConfigurationItemType details?" -> GET /V1.0/ConfigurationItemTypes/{id}
+- "Delete a ConfigurationItemType?" -> DELETE /V1.0/ConfigurationItemTypes/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemTypes/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemTypes/query/count
+- "Create a ConfigurationItemType?" -> POST /V1.0/ConfigurationItemTypes
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemTypes/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemTypes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemTypes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ConfigurationItemWebhookExcludedResources/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemWebhookExcludedResources/query
+- "Get ConfigurationItemWebhookExcludedResource details?" -> GET /V1.0/ConfigurationItemWebhookExcludedResources/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemWebhookExcludedResources/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemWebhookExcludedResources/query/count
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemWebhookExcludedResources/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemWebhookExcludedResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemWebhookExcludedResources/entityInformation/userDefinedFields
+- "List all ExcludedResources?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/ExcludedResources
+- "Create a ExcludedResource?" -> POST /V1.0/ConfigurationItemWebhooks/{parentId}/ExcludedResources
+- "Get ExcludedResource details?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/ExcludedResources/{id}
+- "Delete a ExcludedResource?" -> DELETE /V1.0/ConfigurationItemWebhooks/{parentId}/ExcludedResources/{id}
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/ExcludedResources/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/ExcludedResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/ExcludedResources/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ConfigurationItemWebhookFields/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemWebhookFields/query
+- "Get ConfigurationItemWebhookField details?" -> GET /V1.0/ConfigurationItemWebhookFields/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemWebhookFields/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemWebhookFields/query/count
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemWebhookFields/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemWebhookFields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemWebhookFields/entityInformation/userDefinedFields
+- "List all Fields?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/Fields
+- "Create a Field?" -> POST /V1.0/ConfigurationItemWebhooks/{parentId}/Fields
+- "Get Field details?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/Fields/{id}
+- "Delete a Field?" -> DELETE /V1.0/ConfigurationItemWebhooks/{parentId}/Fields/{id}
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/Fields/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/Fields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/Fields/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ConfigurationItemWebhooks/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemWebhooks/query
+- "Get ConfigurationItemWebhook details?" -> GET /V1.0/ConfigurationItemWebhooks/{id}
+- "Delete a ConfigurationItemWebhook?" -> DELETE /V1.0/ConfigurationItemWebhooks/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemWebhooks/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemWebhooks/query/count
+- "Create a ConfigurationItemWebhook?" -> POST /V1.0/ConfigurationItemWebhooks
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemWebhooks/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemWebhooks/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemWebhooks/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ConfigurationItemWebhookUdfFields/query
+- "Create a query?" -> POST /V1.0/ConfigurationItemWebhookUdfFields/query
+- "Get ConfigurationItemWebhookUdfField details?" -> GET /V1.0/ConfigurationItemWebhookUdfFields/{id}
+- "Search count?" -> GET /V1.0/ConfigurationItemWebhookUdfFields/query/count
+- "Create a count?" -> POST /V1.0/ConfigurationItemWebhookUdfFields/query/count
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemWebhookUdfFields/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemWebhookUdfFields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemWebhookUdfFields/entityInformation/userDefinedFields
+- "List all UdfFields?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/UdfFields
+- "Create a UdfField?" -> POST /V1.0/ConfigurationItemWebhooks/{parentId}/UdfFields
+- "Get UdfField details?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/UdfFields/{id}
+- "Delete a UdfField?" -> DELETE /V1.0/ConfigurationItemWebhooks/{parentId}/UdfFields/{id}
+- "List all entityInformation?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/UdfFields/entityInformation
+- "List all fields?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/UdfFields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ConfigurationItemWebhooks/{parentId}/UdfFields/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContactBillingProductAssociations/query
+- "Create a query?" -> POST /V1.0/ContactBillingProductAssociations/query
+- "Get ContactBillingProductAssociation details?" -> GET /V1.0/ContactBillingProductAssociations/{id}
+- "Search count?" -> GET /V1.0/ContactBillingProductAssociations/query/count
+- "Create a count?" -> POST /V1.0/ContactBillingProductAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/ContactBillingProductAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/ContactBillingProductAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContactBillingProductAssociations/entityInformation/userDefinedFields
+- "List all BillingProductAssociations?" -> GET /V1.0/Contacts/{parentId}/BillingProductAssociations
+- "Create a BillingProductAssociation?" -> POST /V1.0/Contacts/{parentId}/BillingProductAssociations
+- "Get BillingProductAssociation details?" -> GET /V1.0/Contacts/{parentId}/BillingProductAssociations/{id}
+- "Delete a BillingProductAssociation?" -> DELETE /V1.0/Contacts/{parentId}/BillingProductAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/Contacts/{parentId}/BillingProductAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/Contacts/{parentId}/BillingProductAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contacts/{parentId}/BillingProductAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContactGroupContacts/query
+- "Create a query?" -> POST /V1.0/ContactGroupContacts/query
+- "Get ContactGroupContact details?" -> GET /V1.0/ContactGroupContacts/{id}
+- "Search count?" -> GET /V1.0/ContactGroupContacts/query/count
+- "Create a count?" -> POST /V1.0/ContactGroupContacts/query/count
+- "List all entityInformation?" -> GET /V1.0/ContactGroupContacts/entityInformation
+- "List all fields?" -> GET /V1.0/ContactGroupContacts/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContactGroupContacts/entityInformation/userDefinedFields
+- "List all Contacts?" -> GET /V1.0/ContactGroups/{parentId}/Contacts
+- "Create a Contact?" -> POST /V1.0/ContactGroups/{parentId}/Contacts
+- "Get Contact details?" -> GET /V1.0/ContactGroups/{parentId}/Contacts/{id}
+- "Delete a Contact?" -> DELETE /V1.0/ContactGroups/{parentId}/Contacts/{id}
+- "List all entityInformation?" -> GET /V1.0/ContactGroups/{parentId}/Contacts/entityInformation
+- "List all fields?" -> GET /V1.0/ContactGroups/{parentId}/Contacts/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContactGroups/{parentId}/Contacts/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContactGroups/query
+- "Create a query?" -> POST /V1.0/ContactGroups/query
+- "Get ContactGroup details?" -> GET /V1.0/ContactGroups/{id}
+- "Delete a ContactGroup?" -> DELETE /V1.0/ContactGroups/{id}
+- "Search count?" -> GET /V1.0/ContactGroups/query/count
+- "Create a count?" -> POST /V1.0/ContactGroups/query/count
+- "Create a ContactGroup?" -> POST /V1.0/ContactGroups
+- "List all entityInformation?" -> GET /V1.0/ContactGroups/entityInformation
+- "List all fields?" -> GET /V1.0/ContactGroups/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContactGroups/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Contacts/query
+- "Create a query?" -> POST /V1.0/Contacts/query
+- "Get Contact details?" -> GET /V1.0/Contacts/{id}
+- "Search count?" -> GET /V1.0/Contacts/query/count
+- "Create a count?" -> POST /V1.0/Contacts/query/count
+- "List all entityInformation?" -> GET /V1.0/Contacts/entityInformation
+- "List all fields?" -> GET /V1.0/Contacts/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contacts/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContactWebhookExcludedResources/query
+- "Create a query?" -> POST /V1.0/ContactWebhookExcludedResources/query
+- "Get ContactWebhookExcludedResource details?" -> GET /V1.0/ContactWebhookExcludedResources/{id}
+- "Search count?" -> GET /V1.0/ContactWebhookExcludedResources/query/count
+- "Create a count?" -> POST /V1.0/ContactWebhookExcludedResources/query/count
+- "List all entityInformation?" -> GET /V1.0/ContactWebhookExcludedResources/entityInformation
+- "List all fields?" -> GET /V1.0/ContactWebhookExcludedResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContactWebhookExcludedResources/entityInformation/userDefinedFields
+- "List all ExcludedResources?" -> GET /V1.0/ContactWebhooks/{parentId}/ExcludedResources
+- "Create a ExcludedResource?" -> POST /V1.0/ContactWebhooks/{parentId}/ExcludedResources
+- "Get ExcludedResource details?" -> GET /V1.0/ContactWebhooks/{parentId}/ExcludedResources/{id}
+- "Delete a ExcludedResource?" -> DELETE /V1.0/ContactWebhooks/{parentId}/ExcludedResources/{id}
+- "List all entityInformation?" -> GET /V1.0/ContactWebhooks/{parentId}/ExcludedResources/entityInformation
+- "List all fields?" -> GET /V1.0/ContactWebhooks/{parentId}/ExcludedResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContactWebhooks/{parentId}/ExcludedResources/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContactWebhookFields/query
+- "Create a query?" -> POST /V1.0/ContactWebhookFields/query
+- "Get ContactWebhookField details?" -> GET /V1.0/ContactWebhookFields/{id}
+- "Search count?" -> GET /V1.0/ContactWebhookFields/query/count
+- "Create a count?" -> POST /V1.0/ContactWebhookFields/query/count
+- "List all entityInformation?" -> GET /V1.0/ContactWebhookFields/entityInformation
+- "List all fields?" -> GET /V1.0/ContactWebhookFields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContactWebhookFields/entityInformation/userDefinedFields
+- "List all Fields?" -> GET /V1.0/ContactWebhooks/{parentId}/Fields
+- "Create a Field?" -> POST /V1.0/ContactWebhooks/{parentId}/Fields
+- "Get Field details?" -> GET /V1.0/ContactWebhooks/{parentId}/Fields/{id}
+- "Delete a Field?" -> DELETE /V1.0/ContactWebhooks/{parentId}/Fields/{id}
+- "List all entityInformation?" -> GET /V1.0/ContactWebhooks/{parentId}/Fields/entityInformation
+- "List all fields?" -> GET /V1.0/ContactWebhooks/{parentId}/Fields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContactWebhooks/{parentId}/Fields/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContactWebhooks/query
+- "Create a query?" -> POST /V1.0/ContactWebhooks/query
+- "Get ContactWebhook details?" -> GET /V1.0/ContactWebhooks/{id}
+- "Delete a ContactWebhook?" -> DELETE /V1.0/ContactWebhooks/{id}
+- "Search count?" -> GET /V1.0/ContactWebhooks/query/count
+- "Create a count?" -> POST /V1.0/ContactWebhooks/query/count
+- "Create a ContactWebhook?" -> POST /V1.0/ContactWebhooks
+- "List all entityInformation?" -> GET /V1.0/ContactWebhooks/entityInformation
+- "List all fields?" -> GET /V1.0/ContactWebhooks/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContactWebhooks/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContactWebhookUdfFields/query
+- "Create a query?" -> POST /V1.0/ContactWebhookUdfFields/query
+- "Get ContactWebhookUdfField details?" -> GET /V1.0/ContactWebhookUdfFields/{id}
+- "Search count?" -> GET /V1.0/ContactWebhookUdfFields/query/count
+- "Create a count?" -> POST /V1.0/ContactWebhookUdfFields/query/count
+- "List all entityInformation?" -> GET /V1.0/ContactWebhookUdfFields/entityInformation
+- "List all fields?" -> GET /V1.0/ContactWebhookUdfFields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContactWebhookUdfFields/entityInformation/userDefinedFields
+- "List all UdfFields?" -> GET /V1.0/ContactWebhooks/{parentId}/UdfFields
+- "Create a UdfField?" -> POST /V1.0/ContactWebhooks/{parentId}/UdfFields
+- "Get UdfField details?" -> GET /V1.0/ContactWebhooks/{parentId}/UdfFields/{id}
+- "Delete a UdfField?" -> DELETE /V1.0/ContactWebhooks/{parentId}/UdfFields/{id}
+- "List all entityInformation?" -> GET /V1.0/ContactWebhooks/{parentId}/UdfFields/entityInformation
+- "List all fields?" -> GET /V1.0/ContactWebhooks/{parentId}/UdfFields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContactWebhooks/{parentId}/UdfFields/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractBillingRules/query
+- "Create a query?" -> POST /V1.0/ContractBillingRules/query
+- "Get ContractBillingRule details?" -> GET /V1.0/ContractBillingRules/{id}
+- "Search count?" -> GET /V1.0/ContractBillingRules/query/count
+- "Create a count?" -> POST /V1.0/ContractBillingRules/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractBillingRules/entityInformation
+- "List all fields?" -> GET /V1.0/ContractBillingRules/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractBillingRules/entityInformation/userDefinedFields
+- "List all BillingRules?" -> GET /V1.0/Contracts/{parentId}/BillingRules
+- "Create a BillingRule?" -> POST /V1.0/Contracts/{parentId}/BillingRules
+- "Get BillingRule details?" -> GET /V1.0/Contracts/{parentId}/BillingRules/{id}
+- "Delete a BillingRule?" -> DELETE /V1.0/Contracts/{parentId}/BillingRules/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/BillingRules/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/BillingRules/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/BillingRules/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractBlockHourFactors/query
+- "Create a query?" -> POST /V1.0/ContractBlockHourFactors/query
+- "Get ContractBlockHourFactor details?" -> GET /V1.0/ContractBlockHourFactors/{id}
+- "Search count?" -> GET /V1.0/ContractBlockHourFactors/query/count
+- "Create a count?" -> POST /V1.0/ContractBlockHourFactors/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractBlockHourFactors/entityInformation
+- "List all fields?" -> GET /V1.0/ContractBlockHourFactors/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractBlockHourFactors/entityInformation/userDefinedFields
+- "List all BlockHourFactors?" -> GET /V1.0/Contracts/{parentId}/BlockHourFactors
+- "Create a BlockHourFactor?" -> POST /V1.0/Contracts/{parentId}/BlockHourFactors
+- "Get BlockHourFactor details?" -> GET /V1.0/Contracts/{parentId}/BlockHourFactors/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/BlockHourFactors/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/BlockHourFactors/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/BlockHourFactors/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractBlocks/query
+- "Create a query?" -> POST /V1.0/ContractBlocks/query
+- "Get ContractBlock details?" -> GET /V1.0/ContractBlocks/{id}
+- "Search count?" -> GET /V1.0/ContractBlocks/query/count
+- "Create a count?" -> POST /V1.0/ContractBlocks/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractBlocks/entityInformation
+- "List all fields?" -> GET /V1.0/ContractBlocks/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractBlocks/entityInformation/userDefinedFields
+- "List all Blocks?" -> GET /V1.0/Contracts/{parentId}/Blocks
+- "Create a Block?" -> POST /V1.0/Contracts/{parentId}/Blocks
+- "Get Block details?" -> GET /V1.0/Contracts/{parentId}/Blocks/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/Blocks/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/Blocks/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/Blocks/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractCharges/query
+- "Create a query?" -> POST /V1.0/ContractCharges/query
+- "Get ContractCharge details?" -> GET /V1.0/ContractCharges/{id}
+- "Search count?" -> GET /V1.0/ContractCharges/query/count
+- "Create a count?" -> POST /V1.0/ContractCharges/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractCharges/entityInformation
+- "List all fields?" -> GET /V1.0/ContractCharges/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractCharges/entityInformation/userDefinedFields
+- "List all Charges?" -> GET /V1.0/Contracts/{parentId}/Charges
+- "Create a Charge?" -> POST /V1.0/Contracts/{parentId}/Charges
+- "Get Charge details?" -> GET /V1.0/Contracts/{parentId}/Charges/{id}
+- "Delete a Charge?" -> DELETE /V1.0/Contracts/{parentId}/Charges/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/Charges/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/Charges/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/Charges/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractExclusionBillingCodes/query
+- "Create a query?" -> POST /V1.0/ContractExclusionBillingCodes/query
+- "Get ContractExclusionBillingCode details?" -> GET /V1.0/ContractExclusionBillingCodes/{id}
+- "Search count?" -> GET /V1.0/ContractExclusionBillingCodes/query/count
+- "Create a count?" -> POST /V1.0/ContractExclusionBillingCodes/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractExclusionBillingCodes/entityInformation
+- "List all fields?" -> GET /V1.0/ContractExclusionBillingCodes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractExclusionBillingCodes/entityInformation/userDefinedFields
+- "List all ExclusionBillingCodes?" -> GET /V1.0/Contracts/{parentId}/ExclusionBillingCodes
+- "Create a ExclusionBillingCode?" -> POST /V1.0/Contracts/{parentId}/ExclusionBillingCodes
+- "Get ExclusionBillingCode details?" -> GET /V1.0/Contracts/{parentId}/ExclusionBillingCodes/{id}
+- "Delete a ExclusionBillingCode?" -> DELETE /V1.0/Contracts/{parentId}/ExclusionBillingCodes/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/ExclusionBillingCodes/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/ExclusionBillingCodes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/ExclusionBillingCodes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractExclusionRoles/query
+- "Create a query?" -> POST /V1.0/ContractExclusionRoles/query
+- "Get ContractExclusionRole details?" -> GET /V1.0/ContractExclusionRoles/{id}
+- "Search count?" -> GET /V1.0/ContractExclusionRoles/query/count
+- "Create a count?" -> POST /V1.0/ContractExclusionRoles/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractExclusionRoles/entityInformation
+- "List all fields?" -> GET /V1.0/ContractExclusionRoles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractExclusionRoles/entityInformation/userDefinedFields
+- "List all ExclusionRoles?" -> GET /V1.0/Contracts/{parentId}/ExclusionRoles
+- "Create a ExclusionRole?" -> POST /V1.0/Contracts/{parentId}/ExclusionRoles
+- "Get ExclusionRole details?" -> GET /V1.0/Contracts/{parentId}/ExclusionRoles/{id}
+- "Delete a ExclusionRole?" -> DELETE /V1.0/Contracts/{parentId}/ExclusionRoles/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/ExclusionRoles/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/ExclusionRoles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/ExclusionRoles/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractExclusionSetExcludedRoles/query
+- "Create a query?" -> POST /V1.0/ContractExclusionSetExcludedRoles/query
+- "Get ContractExclusionSetExcludedRole details?" -> GET /V1.0/ContractExclusionSetExcludedRoles/{id}
+- "Search count?" -> GET /V1.0/ContractExclusionSetExcludedRoles/query/count
+- "Create a count?" -> POST /V1.0/ContractExclusionSetExcludedRoles/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractExclusionSetExcludedRoles/entityInformation
+- "List all fields?" -> GET /V1.0/ContractExclusionSetExcludedRoles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractExclusionSetExcludedRoles/entityInformation/userDefinedFields
+- "List all ExcludedRoles?" -> GET /V1.0/ContractExclusionSets/{parentId}/ExcludedRoles
+- "Create a ExcludedRole?" -> POST /V1.0/ContractExclusionSets/{parentId}/ExcludedRoles
+- "Get ExcludedRole details?" -> GET /V1.0/ContractExclusionSets/{parentId}/ExcludedRoles/{id}
+- "Delete a ExcludedRole?" -> DELETE /V1.0/ContractExclusionSets/{parentId}/ExcludedRoles/{id}
+- "List all entityInformation?" -> GET /V1.0/ContractExclusionSets/{parentId}/ExcludedRoles/entityInformation
+- "List all fields?" -> GET /V1.0/ContractExclusionSets/{parentId}/ExcludedRoles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractExclusionSets/{parentId}/ExcludedRoles/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractExclusionSetExcludedWorkTypes/query
+- "Create a query?" -> POST /V1.0/ContractExclusionSetExcludedWorkTypes/query
+- "Get ContractExclusionSetExcludedWorkType details?" -> GET /V1.0/ContractExclusionSetExcludedWorkTypes/{id}
+- "Search count?" -> GET /V1.0/ContractExclusionSetExcludedWorkTypes/query/count
+- "Create a count?" -> POST /V1.0/ContractExclusionSetExcludedWorkTypes/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractExclusionSetExcludedWorkTypes/entityInformation
+- "List all fields?" -> GET /V1.0/ContractExclusionSetExcludedWorkTypes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractExclusionSetExcludedWorkTypes/entityInformation/userDefinedFields
+- "List all ExcludedWorkTypes?" -> GET /V1.0/ContractExclusionSets/{parentId}/ExcludedWorkTypes
+- "Create a ExcludedWorkType?" -> POST /V1.0/ContractExclusionSets/{parentId}/ExcludedWorkTypes
+- "Get ExcludedWorkType details?" -> GET /V1.0/ContractExclusionSets/{parentId}/ExcludedWorkTypes/{id}
+- "Delete a ExcludedWorkType?" -> DELETE /V1.0/ContractExclusionSets/{parentId}/ExcludedWorkTypes/{id}
+- "List all entityInformation?" -> GET /V1.0/ContractExclusionSets/{parentId}/ExcludedWorkTypes/entityInformation
+- "List all fields?" -> GET /V1.0/ContractExclusionSets/{parentId}/ExcludedWorkTypes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractExclusionSets/{parentId}/ExcludedWorkTypes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractExclusionSets/query
+- "Create a query?" -> POST /V1.0/ContractExclusionSets/query
+- "Get ContractExclusionSet details?" -> GET /V1.0/ContractExclusionSets/{id}
+- "Delete a ContractExclusionSet?" -> DELETE /V1.0/ContractExclusionSets/{id}
+- "Search count?" -> GET /V1.0/ContractExclusionSets/query/count
+- "Create a count?" -> POST /V1.0/ContractExclusionSets/query/count
+- "Create a ContractExclusionSet?" -> POST /V1.0/ContractExclusionSets
+- "List all entityInformation?" -> GET /V1.0/ContractExclusionSets/entityInformation
+- "List all fields?" -> GET /V1.0/ContractExclusionSets/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractExclusionSets/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractMilestones/query
+- "Create a query?" -> POST /V1.0/ContractMilestones/query
+- "Get ContractMilestone details?" -> GET /V1.0/ContractMilestones/{id}
+- "Search count?" -> GET /V1.0/ContractMilestones/query/count
+- "Create a count?" -> POST /V1.0/ContractMilestones/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractMilestones/entityInformation
+- "List all fields?" -> GET /V1.0/ContractMilestones/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractMilestones/entityInformation/userDefinedFields
+- "List all Milestones?" -> GET /V1.0/Contracts/{parentId}/Milestones
+- "Create a Milestone?" -> POST /V1.0/Contracts/{parentId}/Milestones
+- "Get Milestone details?" -> GET /V1.0/Contracts/{parentId}/Milestones/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/Milestones/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/Milestones/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/Milestones/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/ContractNoteAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/ContractNoteAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/ContractNoteAttachments/query
+- "Create a query?" -> POST /V1.0/ContractNoteAttachments/query
+- "Get ContractNoteAttachment details?" -> GET /V1.0/ContractNoteAttachments/{id}
+- "Search count?" -> GET /V1.0/ContractNoteAttachments/query/count
+- "Create a count?" -> POST /V1.0/ContractNoteAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/ContractNotes/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/ContractNotes/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/ContractNotes/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/ContractNotes/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/ContractNotes/query
+- "Create a query?" -> POST /V1.0/ContractNotes/query
+- "Get ContractNote details?" -> GET /V1.0/ContractNotes/{id}
+- "Search count?" -> GET /V1.0/ContractNotes/query/count
+- "Create a count?" -> POST /V1.0/ContractNotes/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractNotes/entityInformation
+- "List all fields?" -> GET /V1.0/ContractNotes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractNotes/entityInformation/userDefinedFields
+- "List all Notes?" -> GET /V1.0/Contracts/{parentId}/Notes
+- "Create a Note?" -> POST /V1.0/Contracts/{parentId}/Notes
+- "Get Note details?" -> GET /V1.0/Contracts/{parentId}/Notes/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/Notes/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/Notes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/Notes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractRates/query
+- "Create a query?" -> POST /V1.0/ContractRates/query
+- "Get ContractRate details?" -> GET /V1.0/ContractRates/{id}
+- "Search count?" -> GET /V1.0/ContractRates/query/count
+- "Create a count?" -> POST /V1.0/ContractRates/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractRates/entityInformation
+- "List all fields?" -> GET /V1.0/ContractRates/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractRates/entityInformation/userDefinedFields
+- "List all Rates?" -> GET /V1.0/Contracts/{parentId}/Rates
+- "Create a Rate?" -> POST /V1.0/Contracts/{parentId}/Rates
+- "Get Rate details?" -> GET /V1.0/Contracts/{parentId}/Rates/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/Rates/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/Rates/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/Rates/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractRetainers/query
+- "Create a query?" -> POST /V1.0/ContractRetainers/query
+- "Get ContractRetainer details?" -> GET /V1.0/ContractRetainers/{id}
+- "Search count?" -> GET /V1.0/ContractRetainers/query/count
+- "Create a count?" -> POST /V1.0/ContractRetainers/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractRetainers/entityInformation
+- "List all fields?" -> GET /V1.0/ContractRetainers/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractRetainers/entityInformation/userDefinedFields
+- "List all Retainers?" -> GET /V1.0/Contracts/{parentId}/Retainers
+- "Create a Retainer?" -> POST /V1.0/Contracts/{parentId}/Retainers
+- "Get Retainer details?" -> GET /V1.0/Contracts/{parentId}/Retainers/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/Retainers/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/Retainers/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/Retainers/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractRoleCosts/query
+- "Create a query?" -> POST /V1.0/ContractRoleCosts/query
+- "Get ContractRoleCost details?" -> GET /V1.0/ContractRoleCosts/{id}
+- "Search count?" -> GET /V1.0/ContractRoleCosts/query/count
+- "Create a count?" -> POST /V1.0/ContractRoleCosts/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractRoleCosts/entityInformation
+- "List all fields?" -> GET /V1.0/ContractRoleCosts/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractRoleCosts/entityInformation/userDefinedFields
+- "List all RoleCosts?" -> GET /V1.0/Contracts/{parentId}/RoleCosts
+- "Create a RoleCost?" -> POST /V1.0/Contracts/{parentId}/RoleCosts
+- "Get RoleCost details?" -> GET /V1.0/Contracts/{parentId}/RoleCosts/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/RoleCosts/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/RoleCosts/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/RoleCosts/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Contracts/query
+- "Create a query?" -> POST /V1.0/Contracts/query
+- "Get Contract details?" -> GET /V1.0/Contracts/{id}
+- "Search count?" -> GET /V1.0/Contracts/query/count
+- "Create a count?" -> POST /V1.0/Contracts/query/count
+- "Create a Contract?" -> POST /V1.0/Contracts
+- "List all entityInformation?" -> GET /V1.0/Contracts/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/entityInformation/userDefinedFields
+- "Create a ContractServiceAdjustment?" -> POST /V1.0/ContractServiceAdjustments
+- "List all entityInformation?" -> GET /V1.0/ContractServiceAdjustments/entityInformation
+- "List all fields?" -> GET /V1.0/ContractServiceAdjustments/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractServiceAdjustments/entityInformation/userDefinedFields
+- "Create a ServiceAdjustment?" -> POST /V1.0/Contracts/{parentId}/ServiceAdjustments
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/ServiceAdjustments/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/ServiceAdjustments/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/ServiceAdjustments/entityInformation/userDefinedFields
+- "Create a ContractServiceBundleAdjustment?" -> POST /V1.0/ContractServiceBundleAdjustments
+- "List all entityInformation?" -> GET /V1.0/ContractServiceBundleAdjustments/entityInformation
+- "List all fields?" -> GET /V1.0/ContractServiceBundleAdjustments/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractServiceBundleAdjustments/entityInformation/userDefinedFields
+- "Create a ServiceBundleAdjustment?" -> POST /V1.0/Contracts/{parentId}/ServiceBundleAdjustments
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/ServiceBundleAdjustments/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/ServiceBundleAdjustments/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/ServiceBundleAdjustments/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractServiceBundles/query
+- "Create a query?" -> POST /V1.0/ContractServiceBundles/query
+- "Get ContractServiceBundle details?" -> GET /V1.0/ContractServiceBundles/{id}
+- "Search count?" -> GET /V1.0/ContractServiceBundles/query/count
+- "Create a count?" -> POST /V1.0/ContractServiceBundles/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractServiceBundles/entityInformation
+- "List all fields?" -> GET /V1.0/ContractServiceBundles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractServiceBundles/entityInformation/userDefinedFields
+- "List all ServiceBundles?" -> GET /V1.0/Contracts/{parentId}/ServiceBundles
+- "Create a ServiceBundle?" -> POST /V1.0/Contracts/{parentId}/ServiceBundles
+- "Get ServiceBundle details?" -> GET /V1.0/Contracts/{parentId}/ServiceBundles/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/ServiceBundles/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/ServiceBundles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/ServiceBundles/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractServiceBundleUnits/query
+- "Create a query?" -> POST /V1.0/ContractServiceBundleUnits/query
+- "Get ContractServiceBundleUnit details?" -> GET /V1.0/ContractServiceBundleUnits/{id}
+- "Search count?" -> GET /V1.0/ContractServiceBundleUnits/query/count
+- "Create a count?" -> POST /V1.0/ContractServiceBundleUnits/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractServiceBundleUnits/entityInformation
+- "List all fields?" -> GET /V1.0/ContractServiceBundleUnits/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractServiceBundleUnits/entityInformation/userDefinedFields
+- "List all ServiceBundleUnits?" -> GET /V1.0/Contracts/{parentId}/ServiceBundleUnits
+- "Get ServiceBundleUnit details?" -> GET /V1.0/Contracts/{parentId}/ServiceBundleUnits/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/ServiceBundleUnits/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/ServiceBundleUnits/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/ServiceBundleUnits/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractServices/query
+- "Create a query?" -> POST /V1.0/ContractServices/query
+- "Get ContractService details?" -> GET /V1.0/ContractServices/{id}
+- "Search count?" -> GET /V1.0/ContractServices/query/count
+- "Create a count?" -> POST /V1.0/ContractServices/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractServices/entityInformation
+- "List all fields?" -> GET /V1.0/ContractServices/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractServices/entityInformation/userDefinedFields
+- "List all Services?" -> GET /V1.0/Contracts/{parentId}/Services
+- "Create a Service?" -> POST /V1.0/Contracts/{parentId}/Services
+- "Get Service details?" -> GET /V1.0/Contracts/{parentId}/Services/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/Services/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/Services/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/Services/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractServiceUnits/query
+- "Create a query?" -> POST /V1.0/ContractServiceUnits/query
+- "Get ContractServiceUnit details?" -> GET /V1.0/ContractServiceUnits/{id}
+- "Search count?" -> GET /V1.0/ContractServiceUnits/query/count
+- "Create a count?" -> POST /V1.0/ContractServiceUnits/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractServiceUnits/entityInformation
+- "List all fields?" -> GET /V1.0/ContractServiceUnits/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractServiceUnits/entityInformation/userDefinedFields
+- "List all ServiceUnits?" -> GET /V1.0/Contracts/{parentId}/ServiceUnits
+- "Get ServiceUnit details?" -> GET /V1.0/Contracts/{parentId}/ServiceUnits/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/ServiceUnits/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/ServiceUnits/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/ServiceUnits/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ContractTicketPurchases/query
+- "Create a query?" -> POST /V1.0/ContractTicketPurchases/query
+- "Get ContractTicketPurchase details?" -> GET /V1.0/ContractTicketPurchases/{id}
+- "Search count?" -> GET /V1.0/ContractTicketPurchases/query/count
+- "Create a count?" -> POST /V1.0/ContractTicketPurchases/query/count
+- "List all entityInformation?" -> GET /V1.0/ContractTicketPurchases/entityInformation
+- "List all fields?" -> GET /V1.0/ContractTicketPurchases/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ContractTicketPurchases/entityInformation/userDefinedFields
+- "List all TicketPurchases?" -> GET /V1.0/Contracts/{parentId}/TicketPurchases
+- "Create a TicketPurchase?" -> POST /V1.0/Contracts/{parentId}/TicketPurchases
+- "Get TicketPurchase details?" -> GET /V1.0/Contracts/{parentId}/TicketPurchases/{id}
+- "List all entityInformation?" -> GET /V1.0/Contracts/{parentId}/TicketPurchases/entityInformation
+- "List all fields?" -> GET /V1.0/Contracts/{parentId}/TicketPurchases/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Contracts/{parentId}/TicketPurchases/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Countries/query
+- "Create a query?" -> POST /V1.0/Countries/query
+- "Get Country details?" -> GET /V1.0/Countries/{id}
+- "Search count?" -> GET /V1.0/Countries/query/count
+- "Create a count?" -> POST /V1.0/Countries/query/count
+- "List all entityInformation?" -> GET /V1.0/Countries/entityInformation
+- "List all fields?" -> GET /V1.0/Countries/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Countries/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Currencies/query
+- "Create a query?" -> POST /V1.0/Currencies/query
+- "Get Currency details?" -> GET /V1.0/Currencies/{id}
+- "Search count?" -> GET /V1.0/Currencies/query/count
+- "Create a count?" -> POST /V1.0/Currencies/query/count
+- "List all entityInformation?" -> GET /V1.0/Currencies/entityInformation
+- "List all fields?" -> GET /V1.0/Currencies/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Currencies/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/DeletedTaskActivityLogs/query
+- "Create a query?" -> POST /V1.0/DeletedTaskActivityLogs/query
+- "Get DeletedTaskActivityLog details?" -> GET /V1.0/DeletedTaskActivityLogs/{id}
+- "Search count?" -> GET /V1.0/DeletedTaskActivityLogs/query/count
+- "Create a count?" -> POST /V1.0/DeletedTaskActivityLogs/query/count
+- "List all entityInformation?" -> GET /V1.0/DeletedTaskActivityLogs/entityInformation
+- "List all fields?" -> GET /V1.0/DeletedTaskActivityLogs/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DeletedTaskActivityLogs/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/DeletedTicketActivityLogs/query
+- "Create a query?" -> POST /V1.0/DeletedTicketActivityLogs/query
+- "Get DeletedTicketActivityLog details?" -> GET /V1.0/DeletedTicketActivityLogs/{id}
+- "Search count?" -> GET /V1.0/DeletedTicketActivityLogs/query/count
+- "Create a count?" -> POST /V1.0/DeletedTicketActivityLogs/query/count
+- "List all entityInformation?" -> GET /V1.0/DeletedTicketActivityLogs/entityInformation
+- "List all fields?" -> GET /V1.0/DeletedTicketActivityLogs/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DeletedTicketActivityLogs/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/DeletedTicketLogs/query
+- "Create a query?" -> POST /V1.0/DeletedTicketLogs/query
+- "Get DeletedTicketLog details?" -> GET /V1.0/DeletedTicketLogs/{id}
+- "Search count?" -> GET /V1.0/DeletedTicketLogs/query/count
+- "Create a count?" -> POST /V1.0/DeletedTicketLogs/query/count
+- "List all entityInformation?" -> GET /V1.0/DeletedTicketLogs/entityInformation
+- "List all fields?" -> GET /V1.0/DeletedTicketLogs/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DeletedTicketLogs/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Departments/query
+- "Create a query?" -> POST /V1.0/Departments/query
+- "Get Department details?" -> GET /V1.0/Departments/{id}
+- "Search count?" -> GET /V1.0/Departments/query/count
+- "Create a count?" -> POST /V1.0/Departments/query/count
+- "Create a Department?" -> POST /V1.0/Departments
+- "List all entityInformation?" -> GET /V1.0/Departments/entityInformation
+- "List all fields?" -> GET /V1.0/Departments/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Departments/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/DocumentAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/DocumentAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/DocumentAttachments/query
+- "Create a query?" -> POST /V1.0/DocumentAttachments/query
+- "Get DocumentAttachment details?" -> GET /V1.0/DocumentAttachments/{id}
+- "Search count?" -> GET /V1.0/DocumentAttachments/query/count
+- "Create a count?" -> POST /V1.0/DocumentAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/Documents/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/Documents/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/Documents/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/Documents/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/DocumentCategories/query
+- "Create a query?" -> POST /V1.0/DocumentCategories/query
+- "Get DocumentCategory details?" -> GET /V1.0/DocumentCategories/{id}
+- "Delete a DocumentCategory?" -> DELETE /V1.0/DocumentCategories/{id}
+- "Search count?" -> GET /V1.0/DocumentCategories/query/count
+- "Create a count?" -> POST /V1.0/DocumentCategories/query/count
+- "Create a DocumentCategory?" -> POST /V1.0/DocumentCategories
+- "List all entityInformation?" -> GET /V1.0/DocumentCategories/entityInformation
+- "List all fields?" -> GET /V1.0/DocumentCategories/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DocumentCategories/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/DocumentChecklistItems/query
+- "Create a query?" -> POST /V1.0/DocumentChecklistItems/query
+- "Get DocumentChecklistItem details?" -> GET /V1.0/DocumentChecklistItems/{id}
+- "Search count?" -> GET /V1.0/DocumentChecklistItems/query/count
+- "Create a count?" -> POST /V1.0/DocumentChecklistItems/query/count
+- "List all entityInformation?" -> GET /V1.0/DocumentChecklistItems/entityInformation
+- "List all fields?" -> GET /V1.0/DocumentChecklistItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DocumentChecklistItems/entityInformation/userDefinedFields
+- "List all ChecklistItems?" -> GET /V1.0/Documents/{parentId}/ChecklistItems
+- "Create a ChecklistItem?" -> POST /V1.0/Documents/{parentId}/ChecklistItems
+- "Get ChecklistItem details?" -> GET /V1.0/Documents/{parentId}/ChecklistItems/{id}
+- "Delete a ChecklistItem?" -> DELETE /V1.0/Documents/{parentId}/ChecklistItems/{id}
+- "List all entityInformation?" -> GET /V1.0/Documents/{parentId}/ChecklistItems/entityInformation
+- "List all fields?" -> GET /V1.0/Documents/{parentId}/ChecklistItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Documents/{parentId}/ChecklistItems/entityInformation/userDefinedFields
+- "Create a DocumentChecklistLibrary?" -> POST /V1.0/DocumentChecklistLibraries
+- "List all entityInformation?" -> GET /V1.0/DocumentChecklistLibraries/entityInformation
+- "List all fields?" -> GET /V1.0/DocumentChecklistLibraries/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DocumentChecklistLibraries/entityInformation/userDefinedFields
+- "Create a ChecklistLibrary?" -> POST /V1.0/Documents/{parentId}/ChecklistLibraries
+- "List all entityInformation?" -> GET /V1.0/Documents/{parentId}/ChecklistLibraries/entityInformation
+- "List all fields?" -> GET /V1.0/Documents/{parentId}/ChecklistLibraries/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Documents/{parentId}/ChecklistLibraries/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/DocumentConfigurationItemAssociations/query
+- "Create a query?" -> POST /V1.0/DocumentConfigurationItemAssociations/query
+- "Get DocumentConfigurationItemAssociation details?" -> GET /V1.0/DocumentConfigurationItemAssociations/{id}
+- "Search count?" -> GET /V1.0/DocumentConfigurationItemAssociations/query/count
+- "Create a count?" -> POST /V1.0/DocumentConfigurationItemAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/DocumentConfigurationItemAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/DocumentConfigurationItemAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DocumentConfigurationItemAssociations/entityInformation/userDefinedFields
+- "List all ConfigurationItemAssociations?" -> GET /V1.0/Documents/{parentId}/ConfigurationItemAssociations
+- "Create a ConfigurationItemAssociation?" -> POST /V1.0/Documents/{parentId}/ConfigurationItemAssociations
+- "Get ConfigurationItemAssociation details?" -> GET /V1.0/Documents/{parentId}/ConfigurationItemAssociations/{id}
+- "Delete a ConfigurationItemAssociation?" -> DELETE /V1.0/Documents/{parentId}/ConfigurationItemAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/Documents/{parentId}/ConfigurationItemAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/Documents/{parentId}/ConfigurationItemAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Documents/{parentId}/ConfigurationItemAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/DocumentConfigurationItemCategoryAssociations/query
+- "Create a query?" -> POST /V1.0/DocumentConfigurationItemCategoryAssociations/query
+- "Get DocumentConfigurationItemCategoryAssociation details?" -> GET /V1.0/DocumentConfigurationItemCategoryAssociations/{id}
+- "Search count?" -> GET /V1.0/DocumentConfigurationItemCategoryAssociations/query/count
+- "Create a count?" -> POST /V1.0/DocumentConfigurationItemCategoryAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/DocumentConfigurationItemCategoryAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/DocumentConfigurationItemCategoryAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DocumentConfigurationItemCategoryAssociations/entityInformation/userDefinedFields
+- "List all ConfigurationItemCategoryAssociations?" -> GET /V1.0/Documents/{parentId}/ConfigurationItemCategoryAssociations
+- "Create a ConfigurationItemCategoryAssociation?" -> POST /V1.0/Documents/{parentId}/ConfigurationItemCategoryAssociations
+- "Get ConfigurationItemCategoryAssociation details?" -> GET /V1.0/Documents/{parentId}/ConfigurationItemCategoryAssociations/{id}
+- "Delete a ConfigurationItemCategoryAssociation?" -> DELETE /V1.0/Documents/{parentId}/ConfigurationItemCategoryAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/Documents/{parentId}/ConfigurationItemCategoryAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/Documents/{parentId}/ConfigurationItemCategoryAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Documents/{parentId}/ConfigurationItemCategoryAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/DocumentNotes/query
+- "Create a query?" -> POST /V1.0/DocumentNotes/query
+- "Get DocumentNote details?" -> GET /V1.0/DocumentNotes/{id}
+- "Search count?" -> GET /V1.0/DocumentNotes/query/count
+- "Create a count?" -> POST /V1.0/DocumentNotes/query/count
+- "List all entityInformation?" -> GET /V1.0/DocumentNotes/entityInformation
+- "List all fields?" -> GET /V1.0/DocumentNotes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DocumentNotes/entityInformation/userDefinedFields
+- "List all Notes?" -> GET /V1.0/Documents/{parentId}/Notes
+- "Create a Note?" -> POST /V1.0/Documents/{parentId}/Notes
+- "Get Note details?" -> GET /V1.0/Documents/{parentId}/Notes/{id}
+- "Delete a Note?" -> DELETE /V1.0/Documents/{parentId}/Notes/{id}
+- "List all entityInformation?" -> GET /V1.0/Documents/{parentId}/Notes/entityInformation
+- "List all fields?" -> GET /V1.0/Documents/{parentId}/Notes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Documents/{parentId}/Notes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/DocumentPlainTextContent/query
+- "Create a query?" -> POST /V1.0/DocumentPlainTextContent/query
+- "Get DocumentPlainTextContent details?" -> GET /V1.0/DocumentPlainTextContent/{id}
+- "Search count?" -> GET /V1.0/DocumentPlainTextContent/query/count
+- "Create a count?" -> POST /V1.0/DocumentPlainTextContent/query/count
+- "List all entityInformation?" -> GET /V1.0/DocumentPlainTextContent/entityInformation
+- "List all fields?" -> GET /V1.0/DocumentPlainTextContent/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DocumentPlainTextContent/entityInformation/userDefinedFields
+- "List all PlainTextContent?" -> GET /V1.0/Documents/{parentId}/PlainTextContent
+- "Get PlainTextContent details?" -> GET /V1.0/Documents/{parentId}/PlainTextContent/{id}
+- "List all entityInformation?" -> GET /V1.0/Documents/{parentId}/PlainTextContent/entityInformation
+- "List all fields?" -> GET /V1.0/Documents/{parentId}/PlainTextContent/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Documents/{parentId}/PlainTextContent/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Documents/query
+- "Create a query?" -> POST /V1.0/Documents/query
+- "Get Document details?" -> GET /V1.0/Documents/{id}
+- "Search count?" -> GET /V1.0/Documents/query/count
+- "Create a count?" -> POST /V1.0/Documents/query/count
+- "List all entityInformation?" -> GET /V1.0/Documents/entityInformation
+- "List all fields?" -> GET /V1.0/Documents/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Documents/entityInformation/userDefinedFields
+- "List all Documents?" -> GET /V1.0/DocumentCategories/{parentId}/Documents
+- "Create a Document?" -> POST /V1.0/DocumentCategories/{parentId}/Documents
+- "Get Document details?" -> GET /V1.0/DocumentCategories/{parentId}/Documents/{id}
+- "Delete a Document?" -> DELETE /V1.0/DocumentCategories/{parentId}/Documents/{id}
+- "List all entityInformation?" -> GET /V1.0/DocumentCategories/{parentId}/Documents/entityInformation
+- "List all fields?" -> GET /V1.0/DocumentCategories/{parentId}/Documents/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DocumentCategories/{parentId}/Documents/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/DocumentTagAssociations/query
+- "Create a query?" -> POST /V1.0/DocumentTagAssociations/query
+- "Get DocumentTagAssociation details?" -> GET /V1.0/DocumentTagAssociations/{id}
+- "Search count?" -> GET /V1.0/DocumentTagAssociations/query/count
+- "Create a count?" -> POST /V1.0/DocumentTagAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/DocumentTagAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/DocumentTagAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DocumentTagAssociations/entityInformation/userDefinedFields
+- "List all TagAssociations?" -> GET /V1.0/Documents/{parentId}/TagAssociations
+- "Create a TagAssociation?" -> POST /V1.0/Documents/{parentId}/TagAssociations
+- "Get TagAssociation details?" -> GET /V1.0/Documents/{parentId}/TagAssociations/{id}
+- "Delete a TagAssociation?" -> DELETE /V1.0/Documents/{parentId}/TagAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/Documents/{parentId}/TagAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/Documents/{parentId}/TagAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Documents/{parentId}/TagAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/DocumentTicketAssociations/query
+- "Create a query?" -> POST /V1.0/DocumentTicketAssociations/query
+- "Get DocumentTicketAssociation details?" -> GET /V1.0/DocumentTicketAssociations/{id}
+- "Search count?" -> GET /V1.0/DocumentTicketAssociations/query/count
+- "Create a count?" -> POST /V1.0/DocumentTicketAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/DocumentTicketAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/DocumentTicketAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DocumentTicketAssociations/entityInformation/userDefinedFields
+- "List all TicketAssociations?" -> GET /V1.0/Documents/{parentId}/TicketAssociations
+- "Create a TicketAssociation?" -> POST /V1.0/Documents/{parentId}/TicketAssociations
+- "Get TicketAssociation details?" -> GET /V1.0/Documents/{parentId}/TicketAssociations/{id}
+- "Delete a TicketAssociation?" -> DELETE /V1.0/Documents/{parentId}/TicketAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/Documents/{parentId}/TicketAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/Documents/{parentId}/TicketAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Documents/{parentId}/TicketAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/DocumentToArticleAssociations/query
+- "Create a query?" -> POST /V1.0/DocumentToArticleAssociations/query
+- "Get DocumentToArticleAssociation details?" -> GET /V1.0/DocumentToArticleAssociations/{id}
+- "Search count?" -> GET /V1.0/DocumentToArticleAssociations/query/count
+- "Create a count?" -> POST /V1.0/DocumentToArticleAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/DocumentToArticleAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/DocumentToArticleAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DocumentToArticleAssociations/entityInformation/userDefinedFields
+- "List all ArticleAssociations?" -> GET /V1.0/Documents/{parentId}/ArticleAssociations
+- "Create a ArticleAssociation?" -> POST /V1.0/Documents/{parentId}/ArticleAssociations
+- "Get ArticleAssociation details?" -> GET /V1.0/Documents/{parentId}/ArticleAssociations/{id}
+- "Delete a ArticleAssociation?" -> DELETE /V1.0/Documents/{parentId}/ArticleAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/Documents/{parentId}/ArticleAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/Documents/{parentId}/ArticleAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Documents/{parentId}/ArticleAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/DocumentToDocumentAssociations/query
+- "Create a query?" -> POST /V1.0/DocumentToDocumentAssociations/query
+- "Get DocumentToDocumentAssociation details?" -> GET /V1.0/DocumentToDocumentAssociations/{id}
+- "Search count?" -> GET /V1.0/DocumentToDocumentAssociations/query/count
+- "Create a count?" -> POST /V1.0/DocumentToDocumentAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/DocumentToDocumentAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/DocumentToDocumentAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DocumentToDocumentAssociations/entityInformation/userDefinedFields
+- "List all DocumentAssociations?" -> GET /V1.0/Documents/{parentId}/DocumentAssociations
+- "Create a DocumentAssociation?" -> POST /V1.0/Documents/{parentId}/DocumentAssociations
+- "Get DocumentAssociation details?" -> GET /V1.0/Documents/{parentId}/DocumentAssociations/{id}
+- "Delete a DocumentAssociation?" -> DELETE /V1.0/Documents/{parentId}/DocumentAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/Documents/{parentId}/DocumentAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/Documents/{parentId}/DocumentAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Documents/{parentId}/DocumentAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/DomainRegistrars/query
+- "Create a query?" -> POST /V1.0/DomainRegistrars/query
+- "Get DomainRegistrar details?" -> GET /V1.0/DomainRegistrars/{id}
+- "Search count?" -> GET /V1.0/DomainRegistrars/query/count
+- "Create a count?" -> POST /V1.0/DomainRegistrars/query/count
+- "Create a DomainRegistrar?" -> POST /V1.0/DomainRegistrars
+- "List all entityInformation?" -> GET /V1.0/DomainRegistrars/entityInformation
+- "List all fields?" -> GET /V1.0/DomainRegistrars/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/DomainRegistrars/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/ExpenseItemAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/ExpenseItemAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/ExpenseItemAttachments/query
+- "Create a query?" -> POST /V1.0/ExpenseItemAttachments/query
+- "Get ExpenseItemAttachment details?" -> GET /V1.0/ExpenseItemAttachments/{id}
+- "Search count?" -> GET /V1.0/ExpenseItemAttachments/query/count
+- "Create a count?" -> POST /V1.0/ExpenseItemAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/ExpenseItems/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/ExpenseItems/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/ExpenseItems/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/ExpenseItems/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/ExpenseItems/query
+- "Create a query?" -> POST /V1.0/ExpenseItems/query
+- "Get ExpenseItem details?" -> GET /V1.0/ExpenseItems/{id}
+- "Search count?" -> GET /V1.0/ExpenseItems/query/count
+- "Create a count?" -> POST /V1.0/ExpenseItems/query/count
+- "List all entityInformation?" -> GET /V1.0/ExpenseItems/entityInformation
+- "List all fields?" -> GET /V1.0/ExpenseItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ExpenseItems/entityInformation/userDefinedFields
+- "List all Items?" -> GET /V1.0/Expenses/{parentId}/Items
+- "Create a Item?" -> POST /V1.0/Expenses/{parentId}/Items
+- "Get Item details?" -> GET /V1.0/Expenses/{parentId}/Items/{id}
+- "List all entityInformation?" -> GET /V1.0/Expenses/{parentId}/Items/entityInformation
+- "List all fields?" -> GET /V1.0/Expenses/{parentId}/Items/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Expenses/{parentId}/Items/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/ExpenseReportAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/ExpenseReportAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/ExpenseReportAttachments/query
+- "Create a query?" -> POST /V1.0/ExpenseReportAttachments/query
+- "Get ExpenseReportAttachment details?" -> GET /V1.0/ExpenseReportAttachments/{id}
+- "Search count?" -> GET /V1.0/ExpenseReportAttachments/query/count
+- "Create a count?" -> POST /V1.0/ExpenseReportAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/ExpenseReports/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/ExpenseReports/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/ExpenseReports/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/ExpenseReports/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/ExpenseReports/query
+- "Create a query?" -> POST /V1.0/ExpenseReports/query
+- "Get ExpenseReport details?" -> GET /V1.0/ExpenseReports/{id}
+- "Search count?" -> GET /V1.0/ExpenseReports/query/count
+- "Create a count?" -> POST /V1.0/ExpenseReports/query/count
+- "Create a ExpenseReport?" -> POST /V1.0/ExpenseReports
+- "List all entityInformation?" -> GET /V1.0/ExpenseReports/entityInformation
+- "List all fields?" -> GET /V1.0/ExpenseReports/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ExpenseReports/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Holidays/query
+- "Create a query?" -> POST /V1.0/Holidays/query
+- "Get Holiday details?" -> GET /V1.0/Holidays/{id}
+- "Search count?" -> GET /V1.0/Holidays/query/count
+- "Create a count?" -> POST /V1.0/Holidays/query/count
+- "List all entityInformation?" -> GET /V1.0/Holidays/entityInformation
+- "List all fields?" -> GET /V1.0/Holidays/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Holidays/entityInformation/userDefinedFields
+- "List all Holidays?" -> GET /V1.0/HolidaySets/{parentId}/Holidays
+- "Create a Holiday?" -> POST /V1.0/HolidaySets/{parentId}/Holidays
+- "Get Holiday details?" -> GET /V1.0/HolidaySets/{parentId}/Holidays/{id}
+- "Delete a Holiday?" -> DELETE /V1.0/HolidaySets/{parentId}/Holidays/{id}
+- "List all entityInformation?" -> GET /V1.0/HolidaySets/{parentId}/Holidays/entityInformation
+- "List all fields?" -> GET /V1.0/HolidaySets/{parentId}/Holidays/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/HolidaySets/{parentId}/Holidays/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/HolidaySets/query
+- "Create a query?" -> POST /V1.0/HolidaySets/query
+- "Get HolidaySet details?" -> GET /V1.0/HolidaySets/{id}
+- "Delete a HolidaySet?" -> DELETE /V1.0/HolidaySets/{id}
+- "Search count?" -> GET /V1.0/HolidaySets/query/count
+- "Create a count?" -> POST /V1.0/HolidaySets/query/count
+- "Create a HolidaySet?" -> POST /V1.0/HolidaySets
+- "List all entityInformation?" -> GET /V1.0/HolidaySets/entityInformation
+- "List all fields?" -> GET /V1.0/HolidaySets/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/HolidaySets/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/IntegrationVendorInsights/query
+- "Create a query?" -> POST /V1.0/IntegrationVendorInsights/query
+- "Get IntegrationVendorInsight details?" -> GET /V1.0/IntegrationVendorInsights/{id}
+- "Delete a IntegrationVendorInsight?" -> DELETE /V1.0/IntegrationVendorInsights/{id}
+- "Search count?" -> GET /V1.0/IntegrationVendorInsights/query/count
+- "Create a count?" -> POST /V1.0/IntegrationVendorInsights/query/count
+- "Create a IntegrationVendorInsight?" -> POST /V1.0/IntegrationVendorInsights
+- "List all entityInformation?" -> GET /V1.0/IntegrationVendorInsights/entityInformation
+- "List all fields?" -> GET /V1.0/IntegrationVendorInsights/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/IntegrationVendorInsights/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/IntegrationVendorWidgets/query
+- "Create a query?" -> POST /V1.0/IntegrationVendorWidgets/query
+- "Get IntegrationVendorWidget details?" -> GET /V1.0/IntegrationVendorWidgets/{id}
+- "Delete a IntegrationVendorWidget?" -> DELETE /V1.0/IntegrationVendorWidgets/{id}
+- "Search count?" -> GET /V1.0/IntegrationVendorWidgets/query/count
+- "Create a count?" -> POST /V1.0/IntegrationVendorWidgets/query/count
+- "Create a IntegrationVendorWidget?" -> POST /V1.0/IntegrationVendorWidgets
+- "List all entityInformation?" -> GET /V1.0/IntegrationVendorWidgets/entityInformation
+- "List all fields?" -> GET /V1.0/IntegrationVendorWidgets/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/IntegrationVendorWidgets/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/InternalLocations/query
+- "Create a query?" -> POST /V1.0/InternalLocations/query
+- "Get InternalLocation details?" -> GET /V1.0/InternalLocations/{id}
+- "Search count?" -> GET /V1.0/InternalLocations/query/count
+- "Create a count?" -> POST /V1.0/InternalLocations/query/count
+- "List all entityInformation?" -> GET /V1.0/InternalLocations/entityInformation
+- "List all fields?" -> GET /V1.0/InternalLocations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InternalLocations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/InternalLocationWithBusinessHours/query
+- "Create a query?" -> POST /V1.0/InternalLocationWithBusinessHours/query
+- "Get InternalLocationWithBusinessHour details?" -> GET /V1.0/InternalLocationWithBusinessHours/{id}
+- "Search count?" -> GET /V1.0/InternalLocationWithBusinessHours/query/count
+- "Create a count?" -> POST /V1.0/InternalLocationWithBusinessHours/query/count
+- "Create a InternalLocationWithBusinessHour?" -> POST /V1.0/InternalLocationWithBusinessHours
+- "List all entityInformation?" -> GET /V1.0/InternalLocationWithBusinessHours/entityInformation
+- "List all fields?" -> GET /V1.0/InternalLocationWithBusinessHours/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InternalLocationWithBusinessHours/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/InventoryItems/query
+- "Create a query?" -> POST /V1.0/InventoryItems/query
+- "Get InventoryItem details?" -> GET /V1.0/InventoryItems/{id}
+- "Search count?" -> GET /V1.0/InventoryItems/query/count
+- "Create a count?" -> POST /V1.0/InventoryItems/query/count
+- "Create a InventoryItem?" -> POST /V1.0/InventoryItems
+- "List all entityInformation?" -> GET /V1.0/InventoryItems/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryItems/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/InventoryItemSerialNumbers/query
+- "Create a query?" -> POST /V1.0/InventoryItemSerialNumbers/query
+- "Get InventoryItemSerialNumber details?" -> GET /V1.0/InventoryItemSerialNumbers/{id}
+- "Search count?" -> GET /V1.0/InventoryItemSerialNumbers/query/count
+- "Create a count?" -> POST /V1.0/InventoryItemSerialNumbers/query/count
+- "List all entityInformation?" -> GET /V1.0/InventoryItemSerialNumbers/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryItemSerialNumbers/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryItemSerialNumbers/entityInformation/userDefinedFields
+- "List all SerialNumbers?" -> GET /V1.0/InventoryItems/{parentId}/SerialNumbers
+- "Create a SerialNumber?" -> POST /V1.0/InventoryItems/{parentId}/SerialNumbers
+- "Get SerialNumber details?" -> GET /V1.0/InventoryItems/{parentId}/SerialNumbers/{id}
+- "List all entityInformation?" -> GET /V1.0/InventoryItems/{parentId}/SerialNumbers/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryItems/{parentId}/SerialNumbers/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryItems/{parentId}/SerialNumbers/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/InventoryLocations/query
+- "Create a query?" -> POST /V1.0/InventoryLocations/query
+- "Get InventoryLocation details?" -> GET /V1.0/InventoryLocations/{id}
+- "Search count?" -> GET /V1.0/InventoryLocations/query/count
+- "Create a count?" -> POST /V1.0/InventoryLocations/query/count
+- "Create a InventoryLocation?" -> POST /V1.0/InventoryLocations
+- "List all entityInformation?" -> GET /V1.0/InventoryLocations/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryLocations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryLocations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/InventoryProducts/query
+- "Create a query?" -> POST /V1.0/InventoryProducts/query
+- "Get InventoryProduct details?" -> GET /V1.0/InventoryProducts/{id}
+- "Delete a InventoryProduct?" -> DELETE /V1.0/InventoryProducts/{id}
+- "Search count?" -> GET /V1.0/InventoryProducts/query/count
+- "Create a count?" -> POST /V1.0/InventoryProducts/query/count
+- "Create a InventoryProduct?" -> POST /V1.0/InventoryProducts
+- "List all entityInformation?" -> GET /V1.0/InventoryProducts/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryProducts/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryProducts/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/InventoryStockedItems/query
+- "Create a query?" -> POST /V1.0/InventoryStockedItems/query
+- "Get InventoryStockedItem details?" -> GET /V1.0/InventoryStockedItems/{id}
+- "Search count?" -> GET /V1.0/InventoryStockedItems/query/count
+- "Create a count?" -> POST /V1.0/InventoryStockedItems/query/count
+- "List all entityInformation?" -> GET /V1.0/InventoryStockedItems/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryStockedItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryStockedItems/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/InventoryStockedItemsAdd/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryStockedItemsAdd/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryStockedItemsAdd/entityInformation/userDefinedFields
+- "Create a StockedItemsAdd?" -> POST /V1.0/InventoryProducts/{parentId}/StockedItemsAdd
+- "List all entityInformation?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItemsAdd/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItemsAdd/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItemsAdd/entityInformation/userDefinedFields
+- "List all StockedItems?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItems
+- "Get StockedItem details?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItems/{id}
+- "List all entityInformation?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItems/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItems/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/InventoryStockedItemsRemove/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryStockedItemsRemove/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryStockedItemsRemove/entityInformation/userDefinedFields
+- "Create a StockedItemsRemove?" -> POST /V1.0/InventoryProducts/{parentId}/StockedItemsRemove
+- "List all entityInformation?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItemsRemove/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItemsRemove/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItemsRemove/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/InventoryStockedItemsTransfer/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryStockedItemsTransfer/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryStockedItemsTransfer/entityInformation/userDefinedFields
+- "Create a StockedItemsTransfer?" -> POST /V1.0/InventoryProducts/{parentId}/StockedItemsTransfer
+- "List all entityInformation?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItemsTransfer/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItemsTransfer/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryProducts/{parentId}/StockedItemsTransfer/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/InventoryTransfers/query
+- "Create a query?" -> POST /V1.0/InventoryTransfers/query
+- "Get InventoryTransfer details?" -> GET /V1.0/InventoryTransfers/{id}
+- "Search count?" -> GET /V1.0/InventoryTransfers/query/count
+- "Create a count?" -> POST /V1.0/InventoryTransfers/query/count
+- "Create a InventoryTransfer?" -> POST /V1.0/InventoryTransfers
+- "List all entityInformation?" -> GET /V1.0/InventoryTransfers/entityInformation
+- "List all fields?" -> GET /V1.0/InventoryTransfers/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InventoryTransfers/entityInformation/userDefinedFields
+- "List all InvoiceMarkupHtml?" -> GET /V1.0/Invoices/{id}/InvoiceMarkupHtml
+- "List all InvoiceMarkupXml?" -> GET /V1.0/Invoices/{id}/InvoiceMarkupXml
+- "List all InvoicePdf?" -> GET /V1.0/Invoices/{id}/InvoicePdf
+- "Search query?" -> GET /V1.0/Invoices/query
+- "Create a query?" -> POST /V1.0/Invoices/query
+- "Get Invoice details?" -> GET /V1.0/Invoices/{id}
+- "Search count?" -> GET /V1.0/Invoices/query/count
+- "Create a count?" -> POST /V1.0/Invoices/query/count
+- "List all entityInformation?" -> GET /V1.0/Invoices/entityInformation
+- "List all fields?" -> GET /V1.0/Invoices/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Invoices/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/InvoiceTemplates/query
+- "Create a query?" -> POST /V1.0/InvoiceTemplates/query
+- "Get InvoiceTemplate details?" -> GET /V1.0/InvoiceTemplates/{id}
+- "Search count?" -> GET /V1.0/InvoiceTemplates/query/count
+- "Create a count?" -> POST /V1.0/InvoiceTemplates/query/count
+- "List all entityInformation?" -> GET /V1.0/InvoiceTemplates/entityInformation
+- "List all fields?" -> GET /V1.0/InvoiceTemplates/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/InvoiceTemplates/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/KnowledgeBaseArticles/query
+- "Create a query?" -> POST /V1.0/KnowledgeBaseArticles/query
+- "Get KnowledgeBaseArticle details?" -> GET /V1.0/KnowledgeBaseArticles/{id}
+- "Search count?" -> GET /V1.0/KnowledgeBaseArticles/query/count
+- "Create a count?" -> POST /V1.0/KnowledgeBaseArticles/query/count
+- "List all entityInformation?" -> GET /V1.0/KnowledgeBaseArticles/entityInformation
+- "List all fields?" -> GET /V1.0/KnowledgeBaseArticles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/KnowledgeBaseArticles/entityInformation/userDefinedFields
+- "List all KnowledgeBaseArticles?" -> GET /V1.0/KnowledgeBaseCategories/{parentId}/KnowledgeBaseArticles
+- "Create a KnowledgeBaseArticle?" -> POST /V1.0/KnowledgeBaseCategories/{parentId}/KnowledgeBaseArticles
+- "Get KnowledgeBaseArticle details?" -> GET /V1.0/KnowledgeBaseCategories/{parentId}/KnowledgeBaseArticles/{id}
+- "Delete a KnowledgeBaseArticle?" -> DELETE /V1.0/KnowledgeBaseCategories/{parentId}/KnowledgeBaseArticles/{id}
+- "List all entityInformation?" -> GET /V1.0/KnowledgeBaseCategories/{parentId}/KnowledgeBaseArticles/entityInformation
+- "List all fields?" -> GET /V1.0/KnowledgeBaseCategories/{parentId}/KnowledgeBaseArticles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/KnowledgeBaseCategories/{parentId}/KnowledgeBaseArticles/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/KnowledgeBaseCategories/query
+- "Create a query?" -> POST /V1.0/KnowledgeBaseCategories/query
+- "Get KnowledgeBaseCategory details?" -> GET /V1.0/KnowledgeBaseCategories/{id}
+- "Delete a KnowledgeBaseCategory?" -> DELETE /V1.0/KnowledgeBaseCategories/{id}
+- "Search count?" -> GET /V1.0/KnowledgeBaseCategories/query/count
+- "Create a count?" -> POST /V1.0/KnowledgeBaseCategories/query/count
+- "Create a KnowledgeBaseCategory?" -> POST /V1.0/KnowledgeBaseCategories
+- "List all entityInformation?" -> GET /V1.0/KnowledgeBaseCategories/entityInformation
+- "List all fields?" -> GET /V1.0/KnowledgeBaseCategories/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/KnowledgeBaseCategories/entityInformation/userDefinedFields
+- "List all EntityInformation?" -> GET /V1.0/EntityInformation
+- "List all Modules?" -> GET /V1.0/Modules
+- "Search query?" -> GET /V1.0/NotificationHistory/query
+- "Create a query?" -> POST /V1.0/NotificationHistory/query
+- "Get NotificationHistory details?" -> GET /V1.0/NotificationHistory/{id}
+- "Search count?" -> GET /V1.0/NotificationHistory/query/count
+- "Create a count?" -> POST /V1.0/NotificationHistory/query/count
+- "List all entityInformation?" -> GET /V1.0/NotificationHistory/entityInformation
+- "List all fields?" -> GET /V1.0/NotificationHistory/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/NotificationHistory/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Opportunities/query
+- "Create a query?" -> POST /V1.0/Opportunities/query
+- "Get Opportunity details?" -> GET /V1.0/Opportunities/{id}
+- "Search count?" -> GET /V1.0/Opportunities/query/count
+- "Create a count?" -> POST /V1.0/Opportunities/query/count
+- "Create a Opportunity?" -> POST /V1.0/Opportunities
+- "List all entityInformation?" -> GET /V1.0/Opportunities/entityInformation
+- "List all fields?" -> GET /V1.0/Opportunities/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Opportunities/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/OpportunityAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/OpportunityAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/OpportunityAttachments/query
+- "Create a query?" -> POST /V1.0/OpportunityAttachments/query
+- "Get OpportunityAttachment details?" -> GET /V1.0/OpportunityAttachments/{id}
+- "Search count?" -> GET /V1.0/OpportunityAttachments/query/count
+- "Create a count?" -> POST /V1.0/OpportunityAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/Opportunities/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/Opportunities/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/Opportunities/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/Opportunities/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/OpportunityCategories/query
+- "Create a query?" -> POST /V1.0/OpportunityCategories/query
+- "Get OpportunityCategory details?" -> GET /V1.0/OpportunityCategories/{id}
+- "Search count?" -> GET /V1.0/OpportunityCategories/query/count
+- "Create a count?" -> POST /V1.0/OpportunityCategories/query/count
+- "List all entityInformation?" -> GET /V1.0/OpportunityCategories/entityInformation
+- "List all fields?" -> GET /V1.0/OpportunityCategories/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/OpportunityCategories/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/OrganizationalLevel1s/query
+- "Create a query?" -> POST /V1.0/OrganizationalLevel1s/query
+- "Get OrganizationalLevel1 details?" -> GET /V1.0/OrganizationalLevel1s/{id}
+- "Search count?" -> GET /V1.0/OrganizationalLevel1s/query/count
+- "Create a count?" -> POST /V1.0/OrganizationalLevel1s/query/count
+- "Create a OrganizationalLevel1?" -> POST /V1.0/OrganizationalLevel1s
+- "List all entityInformation?" -> GET /V1.0/OrganizationalLevel1s/entityInformation
+- "List all fields?" -> GET /V1.0/OrganizationalLevel1s/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/OrganizationalLevel1s/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/OrganizationalLevel2s/query
+- "Create a query?" -> POST /V1.0/OrganizationalLevel2s/query
+- "Get OrganizationalLevel2 details?" -> GET /V1.0/OrganizationalLevel2s/{id}
+- "Search count?" -> GET /V1.0/OrganizationalLevel2s/query/count
+- "Create a count?" -> POST /V1.0/OrganizationalLevel2s/query/count
+- "Create a OrganizationalLevel2?" -> POST /V1.0/OrganizationalLevel2s
+- "List all entityInformation?" -> GET /V1.0/OrganizationalLevel2s/entityInformation
+- "List all fields?" -> GET /V1.0/OrganizationalLevel2s/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/OrganizationalLevel2s/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/OrganizationalLevelAssociations/query
+- "Create a query?" -> POST /V1.0/OrganizationalLevelAssociations/query
+- "Get OrganizationalLevelAssociation details?" -> GET /V1.0/OrganizationalLevelAssociations/{id}
+- "Search count?" -> GET /V1.0/OrganizationalLevelAssociations/query/count
+- "Create a count?" -> POST /V1.0/OrganizationalLevelAssociations/query/count
+- "Create a OrganizationalLevelAssociation?" -> POST /V1.0/OrganizationalLevelAssociations
+- "List all entityInformation?" -> GET /V1.0/OrganizationalLevelAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/OrganizationalLevelAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/OrganizationalLevelAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/OrganizationalResources/query
+- "Create a query?" -> POST /V1.0/OrganizationalResources/query
+- "Get OrganizationalResource details?" -> GET /V1.0/OrganizationalResources/{id}
+- "Search count?" -> GET /V1.0/OrganizationalResources/query/count
+- "Create a count?" -> POST /V1.0/OrganizationalResources/query/count
+- "List all entityInformation?" -> GET /V1.0/OrganizationalResources/entityInformation
+- "List all fields?" -> GET /V1.0/OrganizationalResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/OrganizationalResources/entityInformation/userDefinedFields
+- "List all Resources?" -> GET /V1.0/OrganizationalLevelAssociations/{parentId}/Resources
+- "Get Resource details?" -> GET /V1.0/OrganizationalLevelAssociations/{parentId}/Resources/{id}
+- "List all entityInformation?" -> GET /V1.0/OrganizationalLevelAssociations/{parentId}/Resources/entityInformation
+- "List all fields?" -> GET /V1.0/OrganizationalLevelAssociations/{parentId}/Resources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/OrganizationalLevelAssociations/{parentId}/Resources/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/PaymentTerms/query
+- "Create a query?" -> POST /V1.0/PaymentTerms/query
+- "Get PaymentTerm details?" -> GET /V1.0/PaymentTerms/{id}
+- "Search count?" -> GET /V1.0/PaymentTerms/query/count
+- "Create a count?" -> POST /V1.0/PaymentTerms/query/count
+- "Create a PaymentTerm?" -> POST /V1.0/PaymentTerms
+- "List all entityInformation?" -> GET /V1.0/PaymentTerms/entityInformation
+- "List all fields?" -> GET /V1.0/PaymentTerms/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PaymentTerms/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Phases/query
+- "Create a query?" -> POST /V1.0/Phases/query
+- "Get Phase details?" -> GET /V1.0/Phases/{id}
+- "Search count?" -> GET /V1.0/Phases/query/count
+- "Create a count?" -> POST /V1.0/Phases/query/count
+- "List all entityInformation?" -> GET /V1.0/Phases/entityInformation
+- "List all fields?" -> GET /V1.0/Phases/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Phases/entityInformation/userDefinedFields
+- "List all Phases?" -> GET /V1.0/Projects/{parentId}/Phases
+- "Create a Phase?" -> POST /V1.0/Projects/{parentId}/Phases
+- "Get Phase details?" -> GET /V1.0/Projects/{parentId}/Phases/{id}
+- "List all entityInformation?" -> GET /V1.0/Projects/{parentId}/Phases/entityInformation
+- "List all fields?" -> GET /V1.0/Projects/{parentId}/Phases/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Projects/{parentId}/Phases/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/PriceListMaterialCodes/query
+- "Create a query?" -> POST /V1.0/PriceListMaterialCodes/query
+- "Get PriceListMaterialCode details?" -> GET /V1.0/PriceListMaterialCodes/{id}
+- "Search count?" -> GET /V1.0/PriceListMaterialCodes/query/count
+- "Create a count?" -> POST /V1.0/PriceListMaterialCodes/query/count
+- "List all entityInformation?" -> GET /V1.0/PriceListMaterialCodes/entityInformation
+- "List all fields?" -> GET /V1.0/PriceListMaterialCodes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PriceListMaterialCodes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/PriceListProducts/query
+- "Create a query?" -> POST /V1.0/PriceListProducts/query
+- "Get PriceListProduct details?" -> GET /V1.0/PriceListProducts/{id}
+- "Search count?" -> GET /V1.0/PriceListProducts/query/count
+- "Create a count?" -> POST /V1.0/PriceListProducts/query/count
+- "List all entityInformation?" -> GET /V1.0/PriceListProducts/entityInformation
+- "List all fields?" -> GET /V1.0/PriceListProducts/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PriceListProducts/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/PriceListProductTiers/query
+- "Create a query?" -> POST /V1.0/PriceListProductTiers/query
+- "Get PriceListProductTier details?" -> GET /V1.0/PriceListProductTiers/{id}
+- "Search count?" -> GET /V1.0/PriceListProductTiers/query/count
+- "Create a count?" -> POST /V1.0/PriceListProductTiers/query/count
+- "List all entityInformation?" -> GET /V1.0/PriceListProductTiers/entityInformation
+- "List all fields?" -> GET /V1.0/PriceListProductTiers/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PriceListProductTiers/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/PriceListRoles/query
+- "Create a query?" -> POST /V1.0/PriceListRoles/query
+- "Get PriceListRole details?" -> GET /V1.0/PriceListRoles/{id}
+- "Search count?" -> GET /V1.0/PriceListRoles/query/count
+- "Create a count?" -> POST /V1.0/PriceListRoles/query/count
+- "List all entityInformation?" -> GET /V1.0/PriceListRoles/entityInformation
+- "List all fields?" -> GET /V1.0/PriceListRoles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PriceListRoles/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/PriceListServiceBundles/query
+- "Create a query?" -> POST /V1.0/PriceListServiceBundles/query
+- "Get PriceListServiceBundle details?" -> GET /V1.0/PriceListServiceBundles/{id}
+- "Search count?" -> GET /V1.0/PriceListServiceBundles/query/count
+- "Create a count?" -> POST /V1.0/PriceListServiceBundles/query/count
+- "List all entityInformation?" -> GET /V1.0/PriceListServiceBundles/entityInformation
+- "List all fields?" -> GET /V1.0/PriceListServiceBundles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PriceListServiceBundles/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/PriceListServices/query
+- "Create a query?" -> POST /V1.0/PriceListServices/query
+- "Get PriceListService details?" -> GET /V1.0/PriceListServices/{id}
+- "Search count?" -> GET /V1.0/PriceListServices/query/count
+- "Create a count?" -> POST /V1.0/PriceListServices/query/count
+- "List all entityInformation?" -> GET /V1.0/PriceListServices/entityInformation
+- "List all fields?" -> GET /V1.0/PriceListServices/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PriceListServices/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/PriceListWorkTypeModifiers/query
+- "Create a query?" -> POST /V1.0/PriceListWorkTypeModifiers/query
+- "Get PriceListWorkTypeModifier details?" -> GET /V1.0/PriceListWorkTypeModifiers/{id}
+- "Search count?" -> GET /V1.0/PriceListWorkTypeModifiers/query/count
+- "Create a count?" -> POST /V1.0/PriceListWorkTypeModifiers/query/count
+- "List all entityInformation?" -> GET /V1.0/PriceListWorkTypeModifiers/entityInformation
+- "List all fields?" -> GET /V1.0/PriceListWorkTypeModifiers/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PriceListWorkTypeModifiers/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ProductNotes/query
+- "Create a query?" -> POST /V1.0/ProductNotes/query
+- "Get ProductNote details?" -> GET /V1.0/ProductNotes/{id}
+- "Search count?" -> GET /V1.0/ProductNotes/query/count
+- "Create a count?" -> POST /V1.0/ProductNotes/query/count
+- "List all entityInformation?" -> GET /V1.0/ProductNotes/entityInformation
+- "List all fields?" -> GET /V1.0/ProductNotes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ProductNotes/entityInformation/userDefinedFields
+- "List all Notes?" -> GET /V1.0/Products/{parentId}/Notes
+- "Create a Note?" -> POST /V1.0/Products/{parentId}/Notes
+- "Get Note details?" -> GET /V1.0/Products/{parentId}/Notes/{id}
+- "List all entityInformation?" -> GET /V1.0/Products/{parentId}/Notes/entityInformation
+- "List all fields?" -> GET /V1.0/Products/{parentId}/Notes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Products/{parentId}/Notes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Products/query
+- "Create a query?" -> POST /V1.0/Products/query
+- "Get Product details?" -> GET /V1.0/Products/{id}
+- "Search count?" -> GET /V1.0/Products/query/count
+- "Create a count?" -> POST /V1.0/Products/query/count
+- "Create a Product?" -> POST /V1.0/Products
+- "List all entityInformation?" -> GET /V1.0/Products/entityInformation
+- "List all fields?" -> GET /V1.0/Products/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Products/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ProductTiers/query
+- "Create a query?" -> POST /V1.0/ProductTiers/query
+- "Get ProductTier details?" -> GET /V1.0/ProductTiers/{id}
+- "Search count?" -> GET /V1.0/ProductTiers/query/count
+- "Create a count?" -> POST /V1.0/ProductTiers/query/count
+- "List all entityInformation?" -> GET /V1.0/ProductTiers/entityInformation
+- "List all fields?" -> GET /V1.0/ProductTiers/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ProductTiers/entityInformation/userDefinedFields
+- "List all Tiers?" -> GET /V1.0/Products/{parentId}/Tiers
+- "Create a Tier?" -> POST /V1.0/Products/{parentId}/Tiers
+- "Get Tier details?" -> GET /V1.0/Products/{parentId}/Tiers/{id}
+- "Delete a Tier?" -> DELETE /V1.0/Products/{parentId}/Tiers/{id}
+- "List all entityInformation?" -> GET /V1.0/Products/{parentId}/Tiers/entityInformation
+- "List all fields?" -> GET /V1.0/Products/{parentId}/Tiers/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Products/{parentId}/Tiers/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ProductVendors/query
+- "Create a query?" -> POST /V1.0/ProductVendors/query
+- "Get ProductVendor details?" -> GET /V1.0/ProductVendors/{id}
+- "Search count?" -> GET /V1.0/ProductVendors/query/count
+- "Create a count?" -> POST /V1.0/ProductVendors/query/count
+- "List all entityInformation?" -> GET /V1.0/ProductVendors/entityInformation
+- "List all fields?" -> GET /V1.0/ProductVendors/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ProductVendors/entityInformation/userDefinedFields
+- "List all Vendors?" -> GET /V1.0/Products/{parentId}/Vendors
+- "Create a Vendor?" -> POST /V1.0/Products/{parentId}/Vendors
+- "Get Vendor details?" -> GET /V1.0/Products/{parentId}/Vendors/{id}
+- "List all entityInformation?" -> GET /V1.0/Products/{parentId}/Vendors/entityInformation
+- "List all fields?" -> GET /V1.0/Products/{parentId}/Vendors/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Products/{parentId}/Vendors/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/ProjectAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/ProjectAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/ProjectAttachments/query
+- "Create a query?" -> POST /V1.0/ProjectAttachments/query
+- "Get ProjectAttachment details?" -> GET /V1.0/ProjectAttachments/{id}
+- "Search count?" -> GET /V1.0/ProjectAttachments/query/count
+- "Create a count?" -> POST /V1.0/ProjectAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/Projects/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/Projects/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/Projects/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/Projects/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/ProjectCharges/query
+- "Create a query?" -> POST /V1.0/ProjectCharges/query
+- "Get ProjectCharge details?" -> GET /V1.0/ProjectCharges/{id}
+- "Search count?" -> GET /V1.0/ProjectCharges/query/count
+- "Create a count?" -> POST /V1.0/ProjectCharges/query/count
+- "List all entityInformation?" -> GET /V1.0/ProjectCharges/entityInformation
+- "List all fields?" -> GET /V1.0/ProjectCharges/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ProjectCharges/entityInformation/userDefinedFields
+- "List all Charges?" -> GET /V1.0/Projects/{parentId}/Charges
+- "Create a Charge?" -> POST /V1.0/Projects/{parentId}/Charges
+- "Get Charge details?" -> GET /V1.0/Projects/{parentId}/Charges/{id}
+- "Delete a Charge?" -> DELETE /V1.0/Projects/{parentId}/Charges/{id}
+- "List all entityInformation?" -> GET /V1.0/Projects/{parentId}/Charges/entityInformation
+- "List all fields?" -> GET /V1.0/Projects/{parentId}/Charges/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Projects/{parentId}/Charges/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/ProjectNoteAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/ProjectNoteAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/ProjectNoteAttachments/query
+- "Create a query?" -> POST /V1.0/ProjectNoteAttachments/query
+- "Get ProjectNoteAttachment details?" -> GET /V1.0/ProjectNoteAttachments/{id}
+- "Search count?" -> GET /V1.0/ProjectNoteAttachments/query/count
+- "Create a count?" -> POST /V1.0/ProjectNoteAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/ProjectNotes/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/ProjectNotes/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/ProjectNotes/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/ProjectNotes/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/ProjectNotes/query
+- "Create a query?" -> POST /V1.0/ProjectNotes/query
+- "Get ProjectNote details?" -> GET /V1.0/ProjectNotes/{id}
+- "Search count?" -> GET /V1.0/ProjectNotes/query/count
+- "Create a count?" -> POST /V1.0/ProjectNotes/query/count
+- "List all entityInformation?" -> GET /V1.0/ProjectNotes/entityInformation
+- "List all fields?" -> GET /V1.0/ProjectNotes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ProjectNotes/entityInformation/userDefinedFields
+- "List all Notes?" -> GET /V1.0/Projects/{parentId}/Notes
+- "Create a Note?" -> POST /V1.0/Projects/{parentId}/Notes
+- "Get Note details?" -> GET /V1.0/Projects/{parentId}/Notes/{id}
+- "List all entityInformation?" -> GET /V1.0/Projects/{parentId}/Notes/entityInformation
+- "List all fields?" -> GET /V1.0/Projects/{parentId}/Notes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Projects/{parentId}/Notes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Projects/query
+- "Create a query?" -> POST /V1.0/Projects/query
+- "Get Project details?" -> GET /V1.0/Projects/{id}
+- "Search count?" -> GET /V1.0/Projects/query/count
+- "Create a count?" -> POST /V1.0/Projects/query/count
+- "Create a Project?" -> POST /V1.0/Projects
+- "List all entityInformation?" -> GET /V1.0/Projects/entityInformation
+- "List all fields?" -> GET /V1.0/Projects/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Projects/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/PurchaseApprovals/query
+- "Create a query?" -> POST /V1.0/PurchaseApprovals/query
+- "Get PurchaseApproval details?" -> GET /V1.0/PurchaseApprovals/{id}
+- "Search count?" -> GET /V1.0/PurchaseApprovals/query/count
+- "Create a count?" -> POST /V1.0/PurchaseApprovals/query/count
+- "List all entityInformation?" -> GET /V1.0/PurchaseApprovals/entityInformation
+- "List all fields?" -> GET /V1.0/PurchaseApprovals/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PurchaseApprovals/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/PurchaseOrderItemReceiving/query
+- "Create a query?" -> POST /V1.0/PurchaseOrderItemReceiving/query
+- "Get PurchaseOrderItemReceiving details?" -> GET /V1.0/PurchaseOrderItemReceiving/{id}
+- "Search count?" -> GET /V1.0/PurchaseOrderItemReceiving/query/count
+- "Create a count?" -> POST /V1.0/PurchaseOrderItemReceiving/query/count
+- "List all entityInformation?" -> GET /V1.0/PurchaseOrderItemReceiving/entityInformation
+- "List all fields?" -> GET /V1.0/PurchaseOrderItemReceiving/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PurchaseOrderItemReceiving/entityInformation/userDefinedFields
+- "List all Receiving?" -> GET /V1.0/PurchaseOrderItems/{parentId}/Receiving
+- "Create a Receiving?" -> POST /V1.0/PurchaseOrderItems/{parentId}/Receiving
+- "Get Receiving details?" -> GET /V1.0/PurchaseOrderItems/{parentId}/Receiving/{id}
+- "List all entityInformation?" -> GET /V1.0/PurchaseOrderItems/{parentId}/Receiving/entityInformation
+- "List all fields?" -> GET /V1.0/PurchaseOrderItems/{parentId}/Receiving/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PurchaseOrderItems/{parentId}/Receiving/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/PurchaseOrderItems/query
+- "Create a query?" -> POST /V1.0/PurchaseOrderItems/query
+- "Get PurchaseOrderItem details?" -> GET /V1.0/PurchaseOrderItems/{id}
+- "Search count?" -> GET /V1.0/PurchaseOrderItems/query/count
+- "Create a count?" -> POST /V1.0/PurchaseOrderItems/query/count
+- "List all entityInformation?" -> GET /V1.0/PurchaseOrderItems/entityInformation
+- "List all fields?" -> GET /V1.0/PurchaseOrderItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PurchaseOrderItems/entityInformation/userDefinedFields
+- "List all Items?" -> GET /V1.0/PurchaseOrders/{parentId}/Items
+- "Create a Item?" -> POST /V1.0/PurchaseOrders/{parentId}/Items
+- "Get Item details?" -> GET /V1.0/PurchaseOrders/{parentId}/Items/{id}
+- "List all entityInformation?" -> GET /V1.0/PurchaseOrders/{parentId}/Items/entityInformation
+- "List all fields?" -> GET /V1.0/PurchaseOrders/{parentId}/Items/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PurchaseOrders/{parentId}/Items/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/PurchaseOrders/query
+- "Create a query?" -> POST /V1.0/PurchaseOrders/query
+- "Get PurchaseOrder details?" -> GET /V1.0/PurchaseOrders/{id}
+- "Search count?" -> GET /V1.0/PurchaseOrders/query/count
+- "Create a count?" -> POST /V1.0/PurchaseOrders/query/count
+- "Create a PurchaseOrder?" -> POST /V1.0/PurchaseOrders
+- "List all entityInformation?" -> GET /V1.0/PurchaseOrders/entityInformation
+- "List all fields?" -> GET /V1.0/PurchaseOrders/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/PurchaseOrders/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/QuoteItems/query
+- "Create a query?" -> POST /V1.0/QuoteItems/query
+- "Get QuoteItem details?" -> GET /V1.0/QuoteItems/{id}
+- "Search count?" -> GET /V1.0/QuoteItems/query/count
+- "Create a count?" -> POST /V1.0/QuoteItems/query/count
+- "List all entityInformation?" -> GET /V1.0/QuoteItems/entityInformation
+- "List all fields?" -> GET /V1.0/QuoteItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/QuoteItems/entityInformation/userDefinedFields
+- "List all Items?" -> GET /V1.0/Quotes/{parentId}/Items
+- "Create a Item?" -> POST /V1.0/Quotes/{parentId}/Items
+- "Get Item details?" -> GET /V1.0/Quotes/{parentId}/Items/{id}
+- "Delete a Item?" -> DELETE /V1.0/Quotes/{parentId}/Items/{id}
+- "List all entityInformation?" -> GET /V1.0/Quotes/{parentId}/Items/entityInformation
+- "List all fields?" -> GET /V1.0/Quotes/{parentId}/Items/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Quotes/{parentId}/Items/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/QuoteLocations/query
+- "Create a query?" -> POST /V1.0/QuoteLocations/query
+- "Get QuoteLocation details?" -> GET /V1.0/QuoteLocations/{id}
+- "Search count?" -> GET /V1.0/QuoteLocations/query/count
+- "Create a count?" -> POST /V1.0/QuoteLocations/query/count
+- "Create a QuoteLocation?" -> POST /V1.0/QuoteLocations
+- "List all entityInformation?" -> GET /V1.0/QuoteLocations/entityInformation
+- "List all fields?" -> GET /V1.0/QuoteLocations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/QuoteLocations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Quotes/query
+- "Create a query?" -> POST /V1.0/Quotes/query
+- "Get Quote details?" -> GET /V1.0/Quotes/{id}
+- "Search count?" -> GET /V1.0/Quotes/query/count
+- "Create a count?" -> POST /V1.0/Quotes/query/count
+- "Create a Quote?" -> POST /V1.0/Quotes
+- "List all entityInformation?" -> GET /V1.0/Quotes/entityInformation
+- "List all fields?" -> GET /V1.0/Quotes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Quotes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/QuoteTemplates/query
+- "Create a query?" -> POST /V1.0/QuoteTemplates/query
+- "Get QuoteTemplate details?" -> GET /V1.0/QuoteTemplates/{id}
+- "Search count?" -> GET /V1.0/QuoteTemplates/query/count
+- "Create a count?" -> POST /V1.0/QuoteTemplates/query/count
+- "List all entityInformation?" -> GET /V1.0/QuoteTemplates/entityInformation
+- "List all fields?" -> GET /V1.0/QuoteTemplates/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/QuoteTemplates/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/ResourceAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/ResourceAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/ResourceAttachments/query
+- "Create a query?" -> POST /V1.0/ResourceAttachments/query
+- "Get ResourceAttachment details?" -> GET /V1.0/ResourceAttachments/{id}
+- "Search count?" -> GET /V1.0/ResourceAttachments/query/count
+- "Create a count?" -> POST /V1.0/ResourceAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/Resources/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/Resources/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/Resources/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/Resources/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/ResourceDailyAvailabilities/query
+- "Create a query?" -> POST /V1.0/ResourceDailyAvailabilities/query
+- "Get ResourceDailyAvailability details?" -> GET /V1.0/ResourceDailyAvailabilities/{id}
+- "Search count?" -> GET /V1.0/ResourceDailyAvailabilities/query/count
+- "Create a count?" -> POST /V1.0/ResourceDailyAvailabilities/query/count
+- "List all entityInformation?" -> GET /V1.0/ResourceDailyAvailabilities/entityInformation
+- "List all fields?" -> GET /V1.0/ResourceDailyAvailabilities/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ResourceDailyAvailabilities/entityInformation/userDefinedFields
+- "List all DailyAvailabilities?" -> GET /V1.0/Resources/{parentId}/DailyAvailabilities
+- "Get DailyAvailability details?" -> GET /V1.0/Resources/{parentId}/DailyAvailabilities/{id}
+- "List all entityInformation?" -> GET /V1.0/Resources/{parentId}/DailyAvailabilities/entityInformation
+- "List all fields?" -> GET /V1.0/Resources/{parentId}/DailyAvailabilities/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Resources/{parentId}/DailyAvailabilities/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ResourceRoleDepartments/query
+- "Create a query?" -> POST /V1.0/ResourceRoleDepartments/query
+- "Get ResourceRoleDepartment details?" -> GET /V1.0/ResourceRoleDepartments/{id}
+- "Search count?" -> GET /V1.0/ResourceRoleDepartments/query/count
+- "Create a count?" -> POST /V1.0/ResourceRoleDepartments/query/count
+- "List all entityInformation?" -> GET /V1.0/ResourceRoleDepartments/entityInformation
+- "List all fields?" -> GET /V1.0/ResourceRoleDepartments/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ResourceRoleDepartments/entityInformation/userDefinedFields
+- "List all RoleDepartments?" -> GET /V1.0/Resources/{parentId}/RoleDepartments
+- "Create a RoleDepartment?" -> POST /V1.0/Resources/{parentId}/RoleDepartments
+- "Get RoleDepartment details?" -> GET /V1.0/Resources/{parentId}/RoleDepartments/{id}
+- "List all entityInformation?" -> GET /V1.0/Resources/{parentId}/RoleDepartments/entityInformation
+- "List all fields?" -> GET /V1.0/Resources/{parentId}/RoleDepartments/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Resources/{parentId}/RoleDepartments/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ResourceRoleQueues/query
+- "Create a query?" -> POST /V1.0/ResourceRoleQueues/query
+- "Get ResourceRoleQueue details?" -> GET /V1.0/ResourceRoleQueues/{id}
+- "Search count?" -> GET /V1.0/ResourceRoleQueues/query/count
+- "Create a count?" -> POST /V1.0/ResourceRoleQueues/query/count
+- "List all entityInformation?" -> GET /V1.0/ResourceRoleQueues/entityInformation
+- "List all fields?" -> GET /V1.0/ResourceRoleQueues/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ResourceRoleQueues/entityInformation/userDefinedFields
+- "List all RoleQueues?" -> GET /V1.0/Resources/{parentId}/RoleQueues
+- "Create a RoleQueue?" -> POST /V1.0/Resources/{parentId}/RoleQueues
+- "Get RoleQueue details?" -> GET /V1.0/Resources/{parentId}/RoleQueues/{id}
+- "List all entityInformation?" -> GET /V1.0/Resources/{parentId}/RoleQueues/entityInformation
+- "List all fields?" -> GET /V1.0/Resources/{parentId}/RoleQueues/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Resources/{parentId}/RoleQueues/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ResourceRoles/query
+- "Create a query?" -> POST /V1.0/ResourceRoles/query
+- "Get ResourceRole details?" -> GET /V1.0/ResourceRoles/{id}
+- "Search count?" -> GET /V1.0/ResourceRoles/query/count
+- "Create a count?" -> POST /V1.0/ResourceRoles/query/count
+- "List all entityInformation?" -> GET /V1.0/ResourceRoles/entityInformation
+- "List all fields?" -> GET /V1.0/ResourceRoles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ResourceRoles/entityInformation/userDefinedFields
+- "List all Roles?" -> GET /V1.0/Resources/{parentId}/Roles
+- "Get Role details?" -> GET /V1.0/Resources/{parentId}/Roles/{id}
+- "List all entityInformation?" -> GET /V1.0/Resources/{parentId}/Roles/entityInformation
+- "List all fields?" -> GET /V1.0/Resources/{parentId}/Roles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Resources/{parentId}/Roles/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Resources/query
+- "Create a query?" -> POST /V1.0/Resources/query
+- "Get Resource details?" -> GET /V1.0/Resources/{id}
+- "Search count?" -> GET /V1.0/Resources/query/count
+- "Create a count?" -> POST /V1.0/Resources/query/count
+- "List all entityInformation?" -> GET /V1.0/Resources/entityInformation
+- "List all fields?" -> GET /V1.0/Resources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Resources/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ResourceServiceDeskRoles/query
+- "Create a query?" -> POST /V1.0/ResourceServiceDeskRoles/query
+- "Get ResourceServiceDeskRole details?" -> GET /V1.0/ResourceServiceDeskRoles/{id}
+- "Search count?" -> GET /V1.0/ResourceServiceDeskRoles/query/count
+- "Create a count?" -> POST /V1.0/ResourceServiceDeskRoles/query/count
+- "List all entityInformation?" -> GET /V1.0/ResourceServiceDeskRoles/entityInformation
+- "List all fields?" -> GET /V1.0/ResourceServiceDeskRoles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ResourceServiceDeskRoles/entityInformation/userDefinedFields
+- "List all ServiceDeskRoles?" -> GET /V1.0/Resources/{parentId}/ServiceDeskRoles
+- "Create a ServiceDeskRole?" -> POST /V1.0/Resources/{parentId}/ServiceDeskRoles
+- "Get ServiceDeskRole details?" -> GET /V1.0/Resources/{parentId}/ServiceDeskRoles/{id}
+- "List all entityInformation?" -> GET /V1.0/Resources/{parentId}/ServiceDeskRoles/entityInformation
+- "List all fields?" -> GET /V1.0/Resources/{parentId}/ServiceDeskRoles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Resources/{parentId}/ServiceDeskRoles/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ResourceSkills/query
+- "Create a query?" -> POST /V1.0/ResourceSkills/query
+- "Get ResourceSkill details?" -> GET /V1.0/ResourceSkills/{id}
+- "Search count?" -> GET /V1.0/ResourceSkills/query/count
+- "Create a count?" -> POST /V1.0/ResourceSkills/query/count
+- "List all entityInformation?" -> GET /V1.0/ResourceSkills/entityInformation
+- "List all fields?" -> GET /V1.0/ResourceSkills/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ResourceSkills/entityInformation/userDefinedFields
+- "List all Skills?" -> GET /V1.0/Resources/{parentId}/Skills
+- "Get Skill details?" -> GET /V1.0/Resources/{parentId}/Skills/{id}
+- "List all entityInformation?" -> GET /V1.0/Resources/{parentId}/Skills/entityInformation
+- "List all fields?" -> GET /V1.0/Resources/{parentId}/Skills/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Resources/{parentId}/Skills/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/ResourceTimeOffAdditional/entityInformation
+- "List all fields?" -> GET /V1.0/ResourceTimeOffAdditional/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ResourceTimeOffAdditional/entityInformation/userDefinedFields
+- "List all TimeOffAdditional?" -> GET /V1.0/Resources/{parentId}/TimeOffAdditional
+- "List all entityInformation?" -> GET /V1.0/Resources/{parentId}/TimeOffAdditional/entityInformation
+- "List all fields?" -> GET /V1.0/Resources/{parentId}/TimeOffAdditional/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Resources/{parentId}/TimeOffAdditional/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ResourceTimeOffApprovers/query
+- "Create a query?" -> POST /V1.0/ResourceTimeOffApprovers/query
+- "Get ResourceTimeOffApprover details?" -> GET /V1.0/ResourceTimeOffApprovers/{id}
+- "Search count?" -> GET /V1.0/ResourceTimeOffApprovers/query/count
+- "Create a count?" -> POST /V1.0/ResourceTimeOffApprovers/query/count
+- "List all entityInformation?" -> GET /V1.0/ResourceTimeOffApprovers/entityInformation
+- "List all fields?" -> GET /V1.0/ResourceTimeOffApprovers/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ResourceTimeOffApprovers/entityInformation/userDefinedFields
+- "List all TimeOffApprovers?" -> GET /V1.0/Resources/{parentId}/TimeOffApprovers
+- "Get TimeOffApprover details?" -> GET /V1.0/Resources/{parentId}/TimeOffApprovers/{id}
+- "List all entityInformation?" -> GET /V1.0/Resources/{parentId}/TimeOffApprovers/entityInformation
+- "List all fields?" -> GET /V1.0/Resources/{parentId}/TimeOffApprovers/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Resources/{parentId}/TimeOffApprovers/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/ResourceTimeOffBalances/entityInformation
+- "List all fields?" -> GET /V1.0/ResourceTimeOffBalances/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ResourceTimeOffBalances/entityInformation/userDefinedFields
+- "List all TimeOffBalances?" -> GET /V1.0/Resources/{parentId}/TimeOffBalances
+- "Get TimeOffBalance details?" -> GET /V1.0/Resources/{parentId}/TimeOffBalances/{year}
+- "List all entityInformation?" -> GET /V1.0/Resources/{parentId}/TimeOffBalances/entityInformation
+- "List all fields?" -> GET /V1.0/Resources/{parentId}/TimeOffBalances/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Resources/{parentId}/TimeOffBalances/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Roles/query
+- "Create a query?" -> POST /V1.0/Roles/query
+- "Get Role details?" -> GET /V1.0/Roles/{id}
+- "Search count?" -> GET /V1.0/Roles/query/count
+- "Create a count?" -> POST /V1.0/Roles/query/count
+- "Create a Role?" -> POST /V1.0/Roles
+- "List all entityInformation?" -> GET /V1.0/Roles/entityInformation
+- "List all fields?" -> GET /V1.0/Roles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Roles/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/SalesOrderAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/SalesOrderAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/SalesOrderAttachments/query
+- "Create a query?" -> POST /V1.0/SalesOrderAttachments/query
+- "Get SalesOrderAttachment details?" -> GET /V1.0/SalesOrderAttachments/{id}
+- "Search count?" -> GET /V1.0/SalesOrderAttachments/query/count
+- "Create a count?" -> POST /V1.0/SalesOrderAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/SalesOrders/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/SalesOrders/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/SalesOrders/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/SalesOrders/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/SalesOrders/query
+- "Create a query?" -> POST /V1.0/SalesOrders/query
+- "Get SalesOrder details?" -> GET /V1.0/SalesOrders/{id}
+- "Search count?" -> GET /V1.0/SalesOrders/query/count
+- "Create a count?" -> POST /V1.0/SalesOrders/query/count
+- "List all entityInformation?" -> GET /V1.0/SalesOrders/entityInformation
+- "List all fields?" -> GET /V1.0/SalesOrders/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/SalesOrders/entityInformation/userDefinedFields
+- "List all SalesOrders?" -> GET /V1.0/Opportunities/{parentId}/SalesOrders
+- "Get SalesOrder details?" -> GET /V1.0/Opportunities/{parentId}/SalesOrders/{id}
+- "List all entityInformation?" -> GET /V1.0/Opportunities/{parentId}/SalesOrders/entityInformation
+- "List all fields?" -> GET /V1.0/Opportunities/{parentId}/SalesOrders/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Opportunities/{parentId}/SalesOrders/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ServiceBundles/query
+- "Create a query?" -> POST /V1.0/ServiceBundles/query
+- "Get ServiceBundle details?" -> GET /V1.0/ServiceBundles/{id}
+- "Delete a ServiceBundle?" -> DELETE /V1.0/ServiceBundles/{id}
+- "Search count?" -> GET /V1.0/ServiceBundles/query/count
+- "Create a count?" -> POST /V1.0/ServiceBundles/query/count
+- "Create a ServiceBundle?" -> POST /V1.0/ServiceBundles
+- "List all entityInformation?" -> GET /V1.0/ServiceBundles/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceBundles/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceBundles/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ServiceBundleServices/query
+- "Create a query?" -> POST /V1.0/ServiceBundleServices/query
+- "Get ServiceBundleService details?" -> GET /V1.0/ServiceBundleServices/{id}
+- "Search count?" -> GET /V1.0/ServiceBundleServices/query/count
+- "Create a count?" -> POST /V1.0/ServiceBundleServices/query/count
+- "List all entityInformation?" -> GET /V1.0/ServiceBundleServices/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceBundleServices/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceBundleServices/entityInformation/userDefinedFields
+- "List all Services?" -> GET /V1.0/ServiceBundles/{parentId}/Services
+- "Create a Service?" -> POST /V1.0/ServiceBundles/{parentId}/Services
+- "Get Service details?" -> GET /V1.0/ServiceBundles/{parentId}/Services/{id}
+- "Delete a Service?" -> DELETE /V1.0/ServiceBundles/{parentId}/Services/{id}
+- "List all entityInformation?" -> GET /V1.0/ServiceBundles/{parentId}/Services/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceBundles/{parentId}/Services/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceBundles/{parentId}/Services/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ServiceCalls/query
+- "Create a query?" -> POST /V1.0/ServiceCalls/query
+- "Get ServiceCall details?" -> GET /V1.0/ServiceCalls/{id}
+- "Delete a ServiceCall?" -> DELETE /V1.0/ServiceCalls/{id}
+- "Search count?" -> GET /V1.0/ServiceCalls/query/count
+- "Create a count?" -> POST /V1.0/ServiceCalls/query/count
+- "Create a ServiceCall?" -> POST /V1.0/ServiceCalls
+- "List all entityInformation?" -> GET /V1.0/ServiceCalls/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceCalls/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceCalls/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ServiceCallTaskResources/query
+- "Create a query?" -> POST /V1.0/ServiceCallTaskResources/query
+- "Get ServiceCallTaskResource details?" -> GET /V1.0/ServiceCallTaskResources/{id}
+- "Search count?" -> GET /V1.0/ServiceCallTaskResources/query/count
+- "Create a count?" -> POST /V1.0/ServiceCallTaskResources/query/count
+- "List all entityInformation?" -> GET /V1.0/ServiceCallTaskResources/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceCallTaskResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceCallTaskResources/entityInformation/userDefinedFields
+- "List all Resources?" -> GET /V1.0/ServiceCallTasks/{parentId}/Resources
+- "Create a Resource?" -> POST /V1.0/ServiceCallTasks/{parentId}/Resources
+- "Get Resource details?" -> GET /V1.0/ServiceCallTasks/{parentId}/Resources/{id}
+- "Delete a Resource?" -> DELETE /V1.0/ServiceCallTasks/{parentId}/Resources/{id}
+- "List all entityInformation?" -> GET /V1.0/ServiceCallTasks/{parentId}/Resources/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceCallTasks/{parentId}/Resources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceCallTasks/{parentId}/Resources/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ServiceCallTasks/query
+- "Create a query?" -> POST /V1.0/ServiceCallTasks/query
+- "Get ServiceCallTask details?" -> GET /V1.0/ServiceCallTasks/{id}
+- "Search count?" -> GET /V1.0/ServiceCallTasks/query/count
+- "Create a count?" -> POST /V1.0/ServiceCallTasks/query/count
+- "List all entityInformation?" -> GET /V1.0/ServiceCallTasks/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceCallTasks/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceCallTasks/entityInformation/userDefinedFields
+- "List all Tasks?" -> GET /V1.0/ServiceCalls/{parentId}/Tasks
+- "Create a Task?" -> POST /V1.0/ServiceCalls/{parentId}/Tasks
+- "Get Task details?" -> GET /V1.0/ServiceCalls/{parentId}/Tasks/{id}
+- "Delete a Task?" -> DELETE /V1.0/ServiceCalls/{parentId}/Tasks/{id}
+- "List all entityInformation?" -> GET /V1.0/ServiceCalls/{parentId}/Tasks/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceCalls/{parentId}/Tasks/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceCalls/{parentId}/Tasks/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ServiceCallTicketResources/query
+- "Create a query?" -> POST /V1.0/ServiceCallTicketResources/query
+- "Get ServiceCallTicketResource details?" -> GET /V1.0/ServiceCallTicketResources/{id}
+- "Search count?" -> GET /V1.0/ServiceCallTicketResources/query/count
+- "Create a count?" -> POST /V1.0/ServiceCallTicketResources/query/count
+- "List all entityInformation?" -> GET /V1.0/ServiceCallTicketResources/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceCallTicketResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceCallTicketResources/entityInformation/userDefinedFields
+- "List all Resources?" -> GET /V1.0/ServiceCallTickets/{parentId}/Resources
+- "Create a Resource?" -> POST /V1.0/ServiceCallTickets/{parentId}/Resources
+- "Get Resource details?" -> GET /V1.0/ServiceCallTickets/{parentId}/Resources/{id}
+- "Delete a Resource?" -> DELETE /V1.0/ServiceCallTickets/{parentId}/Resources/{id}
+- "List all entityInformation?" -> GET /V1.0/ServiceCallTickets/{parentId}/Resources/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceCallTickets/{parentId}/Resources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceCallTickets/{parentId}/Resources/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ServiceCallTickets/query
+- "Create a query?" -> POST /V1.0/ServiceCallTickets/query
+- "Get ServiceCallTicket details?" -> GET /V1.0/ServiceCallTickets/{id}
+- "Search count?" -> GET /V1.0/ServiceCallTickets/query/count
+- "Create a count?" -> POST /V1.0/ServiceCallTickets/query/count
+- "List all entityInformation?" -> GET /V1.0/ServiceCallTickets/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceCallTickets/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceCallTickets/entityInformation/userDefinedFields
+- "List all Tickets?" -> GET /V1.0/ServiceCalls/{parentId}/Tickets
+- "Create a Ticket?" -> POST /V1.0/ServiceCalls/{parentId}/Tickets
+- "Get Ticket details?" -> GET /V1.0/ServiceCalls/{parentId}/Tickets/{id}
+- "Delete a Ticket?" -> DELETE /V1.0/ServiceCalls/{parentId}/Tickets/{id}
+- "List all entityInformation?" -> GET /V1.0/ServiceCalls/{parentId}/Tickets/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceCalls/{parentId}/Tickets/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceCalls/{parentId}/Tickets/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ServiceLevelAgreementResults/query
+- "Create a query?" -> POST /V1.0/ServiceLevelAgreementResults/query
+- "Get ServiceLevelAgreementResult details?" -> GET /V1.0/ServiceLevelAgreementResults/{id}
+- "Search count?" -> GET /V1.0/ServiceLevelAgreementResults/query/count
+- "Create a count?" -> POST /V1.0/ServiceLevelAgreementResults/query/count
+- "List all entityInformation?" -> GET /V1.0/ServiceLevelAgreementResults/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceLevelAgreementResults/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceLevelAgreementResults/entityInformation/userDefinedFields
+- "List all Results?" -> GET /V1.0/ServiceLevelAgreements/{parentId}/Results
+- "Get Result details?" -> GET /V1.0/ServiceLevelAgreements/{parentId}/Results/{id}
+- "List all entityInformation?" -> GET /V1.0/ServiceLevelAgreements/{parentId}/Results/entityInformation
+- "List all fields?" -> GET /V1.0/ServiceLevelAgreements/{parentId}/Results/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ServiceLevelAgreements/{parentId}/Results/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Services/query
+- "Create a query?" -> POST /V1.0/Services/query
+- "Get Service details?" -> GET /V1.0/Services/{id}
+- "Search count?" -> GET /V1.0/Services/query/count
+- "Create a count?" -> POST /V1.0/Services/query/count
+- "Create a Service?" -> POST /V1.0/Services
+- "List all entityInformation?" -> GET /V1.0/Services/entityInformation
+- "List all fields?" -> GET /V1.0/Services/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Services/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/ShippingTypes/query
+- "Create a query?" -> POST /V1.0/ShippingTypes/query
+- "Get ShippingType details?" -> GET /V1.0/ShippingTypes/{id}
+- "Search count?" -> GET /V1.0/ShippingTypes/query/count
+- "Create a count?" -> POST /V1.0/ShippingTypes/query/count
+- "List all entityInformation?" -> GET /V1.0/ShippingTypes/entityInformation
+- "List all fields?" -> GET /V1.0/ShippingTypes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/ShippingTypes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Skills/query
+- "Create a query?" -> POST /V1.0/Skills/query
+- "Get Skill details?" -> GET /V1.0/Skills/{id}
+- "Search count?" -> GET /V1.0/Skills/query/count
+- "Create a count?" -> POST /V1.0/Skills/query/count
+- "List all entityInformation?" -> GET /V1.0/Skills/entityInformation
+- "List all fields?" -> GET /V1.0/Skills/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Skills/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/SubscriptionPeriods/query
+- "Create a query?" -> POST /V1.0/SubscriptionPeriods/query
+- "Get SubscriptionPeriod details?" -> GET /V1.0/SubscriptionPeriods/{id}
+- "Search count?" -> GET /V1.0/SubscriptionPeriods/query/count
+- "Create a count?" -> POST /V1.0/SubscriptionPeriods/query/count
+- "List all entityInformation?" -> GET /V1.0/SubscriptionPeriods/entityInformation
+- "List all fields?" -> GET /V1.0/SubscriptionPeriods/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/SubscriptionPeriods/entityInformation/userDefinedFields
+- "List all Periods?" -> GET /V1.0/Subscriptions/{parentId}/Periods
+- "Get Period details?" -> GET /V1.0/Subscriptions/{parentId}/Periods/{id}
+- "List all entityInformation?" -> GET /V1.0/Subscriptions/{parentId}/Periods/entityInformation
+- "List all fields?" -> GET /V1.0/Subscriptions/{parentId}/Periods/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Subscriptions/{parentId}/Periods/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Subscriptions/query
+- "Create a query?" -> POST /V1.0/Subscriptions/query
+- "Get Subscription details?" -> GET /V1.0/Subscriptions/{id}
+- "Delete a Subscription?" -> DELETE /V1.0/Subscriptions/{id}
+- "Search count?" -> GET /V1.0/Subscriptions/query/count
+- "Create a count?" -> POST /V1.0/Subscriptions/query/count
+- "Create a Subscription?" -> POST /V1.0/Subscriptions
+- "List all entityInformation?" -> GET /V1.0/Subscriptions/entityInformation
+- "List all fields?" -> GET /V1.0/Subscriptions/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Subscriptions/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/SurveyResults/query
+- "Create a query?" -> POST /V1.0/SurveyResults/query
+- "Get SurveyResult details?" -> GET /V1.0/SurveyResults/{id}
+- "Search count?" -> GET /V1.0/SurveyResults/query/count
+- "Create a count?" -> POST /V1.0/SurveyResults/query/count
+- "List all entityInformation?" -> GET /V1.0/SurveyResults/entityInformation
+- "List all fields?" -> GET /V1.0/SurveyResults/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/SurveyResults/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Surveys/query
+- "Create a query?" -> POST /V1.0/Surveys/query
+- "Get Survey details?" -> GET /V1.0/Surveys/{id}
+- "Search count?" -> GET /V1.0/Surveys/query/count
+- "Create a count?" -> POST /V1.0/Surveys/query/count
+- "List all entityInformation?" -> GET /V1.0/Surveys/entityInformation
+- "List all fields?" -> GET /V1.0/Surveys/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Surveys/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TagAliases/query
+- "Create a query?" -> POST /V1.0/TagAliases/query
+- "Get TagAliase details?" -> GET /V1.0/TagAliases/{id}
+- "Search count?" -> GET /V1.0/TagAliases/query/count
+- "Create a count?" -> POST /V1.0/TagAliases/query/count
+- "List all entityInformation?" -> GET /V1.0/TagAliases/entityInformation
+- "List all fields?" -> GET /V1.0/TagAliases/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TagAliases/entityInformation/userDefinedFields
+- "List all Aliases?" -> GET /V1.0/Tags/{parentId}/Aliases
+- "Create a Aliase?" -> POST /V1.0/Tags/{parentId}/Aliases
+- "Get Aliase details?" -> GET /V1.0/Tags/{parentId}/Aliases/{id}
+- "Delete a Aliase?" -> DELETE /V1.0/Tags/{parentId}/Aliases/{id}
+- "List all entityInformation?" -> GET /V1.0/Tags/{parentId}/Aliases/entityInformation
+- "List all fields?" -> GET /V1.0/Tags/{parentId}/Aliases/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tags/{parentId}/Aliases/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TagGroups/query
+- "Create a query?" -> POST /V1.0/TagGroups/query
+- "Get TagGroup details?" -> GET /V1.0/TagGroups/{id}
+- "Delete a TagGroup?" -> DELETE /V1.0/TagGroups/{id}
+- "Search count?" -> GET /V1.0/TagGroups/query/count
+- "Create a count?" -> POST /V1.0/TagGroups/query/count
+- "Create a TagGroup?" -> POST /V1.0/TagGroups
+- "List all entityInformation?" -> GET /V1.0/TagGroups/entityInformation
+- "List all fields?" -> GET /V1.0/TagGroups/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TagGroups/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Tags/query
+- "Create a query?" -> POST /V1.0/Tags/query
+- "Get Tag details?" -> GET /V1.0/Tags/{id}
+- "Delete a Tag?" -> DELETE /V1.0/Tags/{id}
+- "Search count?" -> GET /V1.0/Tags/query/count
+- "Create a count?" -> POST /V1.0/Tags/query/count
+- "Create a Tag?" -> POST /V1.0/Tags
+- "List all entityInformation?" -> GET /V1.0/Tags/entityInformation
+- "List all fields?" -> GET /V1.0/Tags/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tags/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/TaskAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/TaskAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/TaskAttachments/query
+- "Create a query?" -> POST /V1.0/TaskAttachments/query
+- "Get TaskAttachment details?" -> GET /V1.0/TaskAttachments/{id}
+- "Search count?" -> GET /V1.0/TaskAttachments/query/count
+- "Create a count?" -> POST /V1.0/TaskAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/Tasks/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/Tasks/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/Tasks/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/Tasks/{parentId}/Attachments/{id}
+- "List all entityInformation?" -> GET /V1.0/TaskNoteAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/TaskNoteAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/TaskNoteAttachments/query
+- "Create a query?" -> POST /V1.0/TaskNoteAttachments/query
+- "Get TaskNoteAttachment details?" -> GET /V1.0/TaskNoteAttachments/{id}
+- "Search count?" -> GET /V1.0/TaskNoteAttachments/query/count
+- "Create a count?" -> POST /V1.0/TaskNoteAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/TaskNotes/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/TaskNotes/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/TaskNotes/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/TaskNotes/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/TaskNotes/query
+- "Create a query?" -> POST /V1.0/TaskNotes/query
+- "Get TaskNote details?" -> GET /V1.0/TaskNotes/{id}
+- "Search count?" -> GET /V1.0/TaskNotes/query/count
+- "Create a count?" -> POST /V1.0/TaskNotes/query/count
+- "Create a TaskNote?" -> POST /V1.0/TaskNotes
+- "List all entityInformation?" -> GET /V1.0/TaskNotes/entityInformation
+- "List all fields?" -> GET /V1.0/TaskNotes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TaskNotes/entityInformation/userDefinedFields
+- "List all Notes?" -> GET /V1.0/Tasks/{parentId}/Notes
+- "Create a Note?" -> POST /V1.0/Tasks/{parentId}/Notes
+- "Get Note details?" -> GET /V1.0/Tasks/{parentId}/Notes/{id}
+- "List all entityInformation?" -> GET /V1.0/Tasks/{parentId}/Notes/entityInformation
+- "List all fields?" -> GET /V1.0/Tasks/{parentId}/Notes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tasks/{parentId}/Notes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TaskPredecessors/query
+- "Create a query?" -> POST /V1.0/TaskPredecessors/query
+- "Get TaskPredecessor details?" -> GET /V1.0/TaskPredecessors/{id}
+- "Search count?" -> GET /V1.0/TaskPredecessors/query/count
+- "Create a count?" -> POST /V1.0/TaskPredecessors/query/count
+- "List all entityInformation?" -> GET /V1.0/TaskPredecessors/entityInformation
+- "List all fields?" -> GET /V1.0/TaskPredecessors/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TaskPredecessors/entityInformation/userDefinedFields
+- "List all Predecessors?" -> GET /V1.0/Tasks/{parentId}/Predecessors
+- "Create a Predecessor?" -> POST /V1.0/Tasks/{parentId}/Predecessors
+- "Get Predecessor details?" -> GET /V1.0/Tasks/{parentId}/Predecessors/{id}
+- "Delete a Predecessor?" -> DELETE /V1.0/Tasks/{parentId}/Predecessors/{id}
+- "List all entityInformation?" -> GET /V1.0/Tasks/{parentId}/Predecessors/entityInformation
+- "List all fields?" -> GET /V1.0/Tasks/{parentId}/Predecessors/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tasks/{parentId}/Predecessors/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Tasks/query
+- "Create a query?" -> POST /V1.0/Tasks/query
+- "Get Task details?" -> GET /V1.0/Tasks/{id}
+- "Search count?" -> GET /V1.0/Tasks/query/count
+- "Create a count?" -> POST /V1.0/Tasks/query/count
+- "List all entityInformation?" -> GET /V1.0/Tasks/entityInformation
+- "List all fields?" -> GET /V1.0/Tasks/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tasks/entityInformation/userDefinedFields
+- "List all Tasks?" -> GET /V1.0/Projects/{parentId}/Tasks
+- "Create a Task?" -> POST /V1.0/Projects/{parentId}/Tasks
+- "Get Task details?" -> GET /V1.0/Projects/{parentId}/Tasks/{id}
+- "List all entityInformation?" -> GET /V1.0/Projects/{parentId}/Tasks/entityInformation
+- "List all fields?" -> GET /V1.0/Projects/{parentId}/Tasks/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Projects/{parentId}/Tasks/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TaskSecondaryResources/query
+- "Create a query?" -> POST /V1.0/TaskSecondaryResources/query
+- "Get TaskSecondaryResource details?" -> GET /V1.0/TaskSecondaryResources/{id}
+- "Search count?" -> GET /V1.0/TaskSecondaryResources/query/count
+- "Create a count?" -> POST /V1.0/TaskSecondaryResources/query/count
+- "List all entityInformation?" -> GET /V1.0/TaskSecondaryResources/entityInformation
+- "List all fields?" -> GET /V1.0/TaskSecondaryResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TaskSecondaryResources/entityInformation/userDefinedFields
+- "List all SecondaryResources?" -> GET /V1.0/Tasks/{parentId}/SecondaryResources
+- "Create a SecondaryResource?" -> POST /V1.0/Tasks/{parentId}/SecondaryResources
+- "Get SecondaryResource details?" -> GET /V1.0/Tasks/{parentId}/SecondaryResources/{id}
+- "Delete a SecondaryResource?" -> DELETE /V1.0/Tasks/{parentId}/SecondaryResources/{id}
+- "List all entityInformation?" -> GET /V1.0/Tasks/{parentId}/SecondaryResources/entityInformation
+- "List all fields?" -> GET /V1.0/Tasks/{parentId}/SecondaryResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tasks/{parentId}/SecondaryResources/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TaxCategories/query
+- "Create a query?" -> POST /V1.0/TaxCategories/query
+- "Get TaxCategory details?" -> GET /V1.0/TaxCategories/{id}
+- "Search count?" -> GET /V1.0/TaxCategories/query/count
+- "Create a count?" -> POST /V1.0/TaxCategories/query/count
+- "Create a TaxCategory?" -> POST /V1.0/TaxCategories
+- "List all entityInformation?" -> GET /V1.0/TaxCategories/entityInformation
+- "List all fields?" -> GET /V1.0/TaxCategories/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TaxCategories/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Taxes/query
+- "Create a query?" -> POST /V1.0/Taxes/query
+- "Get Taxe details?" -> GET /V1.0/Taxes/{id}
+- "Search count?" -> GET /V1.0/Taxes/query/count
+- "Create a count?" -> POST /V1.0/Taxes/query/count
+- "Create a Taxe?" -> POST /V1.0/Taxes
+- "List all entityInformation?" -> GET /V1.0/Taxes/entityInformation
+- "List all fields?" -> GET /V1.0/Taxes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Taxes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TaxRegions/query
+- "Create a query?" -> POST /V1.0/TaxRegions/query
+- "Get TaxRegion details?" -> GET /V1.0/TaxRegions/{id}
+- "Search count?" -> GET /V1.0/TaxRegions/query/count
+- "Create a count?" -> POST /V1.0/TaxRegions/query/count
+- "Create a TaxRegion?" -> POST /V1.0/TaxRegions
+- "List all entityInformation?" -> GET /V1.0/TaxRegions/entityInformation
+- "List all fields?" -> GET /V1.0/TaxRegions/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TaxRegions/entityInformation/userDefinedFields
+- "List all ThresholdInformation?" -> GET /V1.0/ThresholdInformation
+- "Search query?" -> GET /V1.0/TicketAdditionalConfigurationItems/query
+- "Create a query?" -> POST /V1.0/TicketAdditionalConfigurationItems/query
+- "Get TicketAdditionalConfigurationItem details?" -> GET /V1.0/TicketAdditionalConfigurationItems/{id}
+- "Search count?" -> GET /V1.0/TicketAdditionalConfigurationItems/query/count
+- "Create a count?" -> POST /V1.0/TicketAdditionalConfigurationItems/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketAdditionalConfigurationItems/entityInformation
+- "List all fields?" -> GET /V1.0/TicketAdditionalConfigurationItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketAdditionalConfigurationItems/entityInformation/userDefinedFields
+- "List all AdditionalConfigurationItems?" -> GET /V1.0/Tickets/{parentId}/AdditionalConfigurationItems
+- "Create a AdditionalConfigurationItem?" -> POST /V1.0/Tickets/{parentId}/AdditionalConfigurationItems
+- "Get AdditionalConfigurationItem details?" -> GET /V1.0/Tickets/{parentId}/AdditionalConfigurationItems/{id}
+- "Delete a AdditionalConfigurationItem?" -> DELETE /V1.0/Tickets/{parentId}/AdditionalConfigurationItems/{id}
+- "List all entityInformation?" -> GET /V1.0/Tickets/{parentId}/AdditionalConfigurationItems/entityInformation
+- "List all fields?" -> GET /V1.0/Tickets/{parentId}/AdditionalConfigurationItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tickets/{parentId}/AdditionalConfigurationItems/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketAdditionalContacts/query
+- "Create a query?" -> POST /V1.0/TicketAdditionalContacts/query
+- "Get TicketAdditionalContact details?" -> GET /V1.0/TicketAdditionalContacts/{id}
+- "Search count?" -> GET /V1.0/TicketAdditionalContacts/query/count
+- "Create a count?" -> POST /V1.0/TicketAdditionalContacts/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketAdditionalContacts/entityInformation
+- "List all fields?" -> GET /V1.0/TicketAdditionalContacts/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketAdditionalContacts/entityInformation/userDefinedFields
+- "List all AdditionalContacts?" -> GET /V1.0/Tickets/{parentId}/AdditionalContacts
+- "Create a AdditionalContact?" -> POST /V1.0/Tickets/{parentId}/AdditionalContacts
+- "Get AdditionalContact details?" -> GET /V1.0/Tickets/{parentId}/AdditionalContacts/{id}
+- "Delete a AdditionalContact?" -> DELETE /V1.0/Tickets/{parentId}/AdditionalContacts/{id}
+- "List all entityInformation?" -> GET /V1.0/Tickets/{parentId}/AdditionalContacts/entityInformation
+- "List all fields?" -> GET /V1.0/Tickets/{parentId}/AdditionalContacts/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tickets/{parentId}/AdditionalContacts/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/TicketAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/TicketAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/TicketAttachments/query
+- "Create a query?" -> POST /V1.0/TicketAttachments/query
+- "Get TicketAttachment details?" -> GET /V1.0/TicketAttachments/{id}
+- "Search count?" -> GET /V1.0/TicketAttachments/query/count
+- "Create a count?" -> POST /V1.0/TicketAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/Tickets/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/Tickets/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/Tickets/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/Tickets/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/TicketCategories/query
+- "Create a query?" -> POST /V1.0/TicketCategories/query
+- "Get TicketCategory details?" -> GET /V1.0/TicketCategories/{id}
+- "Search count?" -> GET /V1.0/TicketCategories/query/count
+- "Create a count?" -> POST /V1.0/TicketCategories/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketCategories/entityInformation
+- "List all fields?" -> GET /V1.0/TicketCategories/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketCategories/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketCategoryFieldDefaults/query
+- "Create a query?" -> POST /V1.0/TicketCategoryFieldDefaults/query
+- "Get TicketCategoryFieldDefault details?" -> GET /V1.0/TicketCategoryFieldDefaults/{id}
+- "Search count?" -> GET /V1.0/TicketCategoryFieldDefaults/query/count
+- "Create a count?" -> POST /V1.0/TicketCategoryFieldDefaults/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketCategoryFieldDefaults/entityInformation
+- "List all fields?" -> GET /V1.0/TicketCategoryFieldDefaults/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketCategoryFieldDefaults/entityInformation/userDefinedFields
+- "List all FieldDefaults?" -> GET /V1.0/TicketCategories/{parentId}/FieldDefaults
+- "Get FieldDefault details?" -> GET /V1.0/TicketCategories/{parentId}/FieldDefaults/{id}
+- "List all entityInformation?" -> GET /V1.0/TicketCategories/{parentId}/FieldDefaults/entityInformation
+- "List all fields?" -> GET /V1.0/TicketCategories/{parentId}/FieldDefaults/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketCategories/{parentId}/FieldDefaults/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketChangeRequestApprovals/query
+- "Create a query?" -> POST /V1.0/TicketChangeRequestApprovals/query
+- "Get TicketChangeRequestApproval details?" -> GET /V1.0/TicketChangeRequestApprovals/{id}
+- "Search count?" -> GET /V1.0/TicketChangeRequestApprovals/query/count
+- "Create a count?" -> POST /V1.0/TicketChangeRequestApprovals/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketChangeRequestApprovals/entityInformation
+- "List all fields?" -> GET /V1.0/TicketChangeRequestApprovals/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketChangeRequestApprovals/entityInformation/userDefinedFields
+- "List all ChangeRequestApprovals?" -> GET /V1.0/Tickets/{parentId}/ChangeRequestApprovals
+- "Create a ChangeRequestApproval?" -> POST /V1.0/Tickets/{parentId}/ChangeRequestApprovals
+- "Get ChangeRequestApproval details?" -> GET /V1.0/Tickets/{parentId}/ChangeRequestApprovals/{id}
+- "Delete a ChangeRequestApproval?" -> DELETE /V1.0/Tickets/{parentId}/ChangeRequestApprovals/{id}
+- "List all entityInformation?" -> GET /V1.0/Tickets/{parentId}/ChangeRequestApprovals/entityInformation
+- "List all fields?" -> GET /V1.0/Tickets/{parentId}/ChangeRequestApprovals/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tickets/{parentId}/ChangeRequestApprovals/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketCharges/query
+- "Create a query?" -> POST /V1.0/TicketCharges/query
+- "Get TicketCharge details?" -> GET /V1.0/TicketCharges/{id}
+- "Search count?" -> GET /V1.0/TicketCharges/query/count
+- "Create a count?" -> POST /V1.0/TicketCharges/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketCharges/entityInformation
+- "List all fields?" -> GET /V1.0/TicketCharges/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketCharges/entityInformation/userDefinedFields
+- "List all Charges?" -> GET /V1.0/Tickets/{parentId}/Charges
+- "Create a Charge?" -> POST /V1.0/Tickets/{parentId}/Charges
+- "Get Charge details?" -> GET /V1.0/Tickets/{parentId}/Charges/{id}
+- "Delete a Charge?" -> DELETE /V1.0/Tickets/{parentId}/Charges/{id}
+- "List all entityInformation?" -> GET /V1.0/Tickets/{parentId}/Charges/entityInformation
+- "List all fields?" -> GET /V1.0/Tickets/{parentId}/Charges/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tickets/{parentId}/Charges/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketChecklistItems/query
+- "Create a query?" -> POST /V1.0/TicketChecklistItems/query
+- "Get TicketChecklistItem details?" -> GET /V1.0/TicketChecklistItems/{id}
+- "Search count?" -> GET /V1.0/TicketChecklistItems/query/count
+- "Create a count?" -> POST /V1.0/TicketChecklistItems/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketChecklistItems/entityInformation
+- "List all fields?" -> GET /V1.0/TicketChecklistItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketChecklistItems/entityInformation/userDefinedFields
+- "List all ChecklistItems?" -> GET /V1.0/Tickets/{parentId}/ChecklistItems
+- "Create a ChecklistItem?" -> POST /V1.0/Tickets/{parentId}/ChecklistItems
+- "Get ChecklistItem details?" -> GET /V1.0/Tickets/{parentId}/ChecklistItems/{id}
+- "Delete a ChecklistItem?" -> DELETE /V1.0/Tickets/{parentId}/ChecklistItems/{id}
+- "List all entityInformation?" -> GET /V1.0/Tickets/{parentId}/ChecklistItems/entityInformation
+- "List all fields?" -> GET /V1.0/Tickets/{parentId}/ChecklistItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tickets/{parentId}/ChecklistItems/entityInformation/userDefinedFields
+- "Create a TicketChecklistLibrary?" -> POST /V1.0/TicketChecklistLibraries
+- "List all entityInformation?" -> GET /V1.0/TicketChecklistLibraries/entityInformation
+- "List all fields?" -> GET /V1.0/TicketChecklistLibraries/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketChecklistLibraries/entityInformation/userDefinedFields
+- "Create a ChecklistLibrary?" -> POST /V1.0/Tickets/{parentId}/ChecklistLibraries
+- "List all entityInformation?" -> GET /V1.0/Tickets/{parentId}/ChecklistLibraries/entityInformation
+- "List all fields?" -> GET /V1.0/Tickets/{parentId}/ChecklistLibraries/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tickets/{parentId}/ChecklistLibraries/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketHistory/query
+- "Create a query?" -> POST /V1.0/TicketHistory/query
+- "Get TicketHistory details?" -> GET /V1.0/TicketHistory/{id}
+- "Search count?" -> GET /V1.0/TicketHistory/query/count
+- "Create a count?" -> POST /V1.0/TicketHistory/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketHistory/entityInformation
+- "List all fields?" -> GET /V1.0/TicketHistory/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketHistory/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/TicketNoteAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/TicketNoteAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/TicketNoteAttachments/query
+- "Create a query?" -> POST /V1.0/TicketNoteAttachments/query
+- "Get TicketNoteAttachment details?" -> GET /V1.0/TicketNoteAttachments/{id}
+- "Search count?" -> GET /V1.0/TicketNoteAttachments/query/count
+- "Create a count?" -> POST /V1.0/TicketNoteAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/TicketNotes/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/TicketNotes/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/TicketNotes/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/TicketNotes/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/TicketNotes/query
+- "Create a query?" -> POST /V1.0/TicketNotes/query
+- "Get TicketNote details?" -> GET /V1.0/TicketNotes/{id}
+- "Search count?" -> GET /V1.0/TicketNotes/query/count
+- "Create a count?" -> POST /V1.0/TicketNotes/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketNotes/entityInformation
+- "List all fields?" -> GET /V1.0/TicketNotes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketNotes/entityInformation/userDefinedFields
+- "List all Notes?" -> GET /V1.0/Tickets/{parentId}/Notes
+- "Create a Note?" -> POST /V1.0/Tickets/{parentId}/Notes
+- "Get Note details?" -> GET /V1.0/Tickets/{parentId}/Notes/{id}
+- "List all entityInformation?" -> GET /V1.0/Tickets/{parentId}/Notes/entityInformation
+- "List all fields?" -> GET /V1.0/Tickets/{parentId}/Notes/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tickets/{parentId}/Notes/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketNoteWebhookExcludedResources/query
+- "Create a query?" -> POST /V1.0/TicketNoteWebhookExcludedResources/query
+- "Get TicketNoteWebhookExcludedResource details?" -> GET /V1.0/TicketNoteWebhookExcludedResources/{id}
+- "Search count?" -> GET /V1.0/TicketNoteWebhookExcludedResources/query/count
+- "Create a count?" -> POST /V1.0/TicketNoteWebhookExcludedResources/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketNoteWebhookExcludedResources/entityInformation
+- "List all fields?" -> GET /V1.0/TicketNoteWebhookExcludedResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketNoteWebhookExcludedResources/entityInformation/userDefinedFields
+- "List all ExcludedResources?" -> GET /V1.0/TicketNoteWebhooks/{parentId}/ExcludedResources
+- "Create a ExcludedResource?" -> POST /V1.0/TicketNoteWebhooks/{parentId}/ExcludedResources
+- "Get ExcludedResource details?" -> GET /V1.0/TicketNoteWebhooks/{parentId}/ExcludedResources/{id}
+- "Delete a ExcludedResource?" -> DELETE /V1.0/TicketNoteWebhooks/{parentId}/ExcludedResources/{id}
+- "List all entityInformation?" -> GET /V1.0/TicketNoteWebhooks/{parentId}/ExcludedResources/entityInformation
+- "List all fields?" -> GET /V1.0/TicketNoteWebhooks/{parentId}/ExcludedResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketNoteWebhooks/{parentId}/ExcludedResources/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketNoteWebhookFields/query
+- "Create a query?" -> POST /V1.0/TicketNoteWebhookFields/query
+- "Get TicketNoteWebhookField details?" -> GET /V1.0/TicketNoteWebhookFields/{id}
+- "Search count?" -> GET /V1.0/TicketNoteWebhookFields/query/count
+- "Create a count?" -> POST /V1.0/TicketNoteWebhookFields/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketNoteWebhookFields/entityInformation
+- "List all fields?" -> GET /V1.0/TicketNoteWebhookFields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketNoteWebhookFields/entityInformation/userDefinedFields
+- "List all Fields?" -> GET /V1.0/TicketNoteWebhooks/{parentId}/Fields
+- "Create a Field?" -> POST /V1.0/TicketNoteWebhooks/{parentId}/Fields
+- "Get Field details?" -> GET /V1.0/TicketNoteWebhooks/{parentId}/Fields/{id}
+- "Delete a Field?" -> DELETE /V1.0/TicketNoteWebhooks/{parentId}/Fields/{id}
+- "List all entityInformation?" -> GET /V1.0/TicketNoteWebhooks/{parentId}/Fields/entityInformation
+- "List all fields?" -> GET /V1.0/TicketNoteWebhooks/{parentId}/Fields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketNoteWebhooks/{parentId}/Fields/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketNoteWebhooks/query
+- "Create a query?" -> POST /V1.0/TicketNoteWebhooks/query
+- "Get TicketNoteWebhook details?" -> GET /V1.0/TicketNoteWebhooks/{id}
+- "Delete a TicketNoteWebhook?" -> DELETE /V1.0/TicketNoteWebhooks/{id}
+- "Search count?" -> GET /V1.0/TicketNoteWebhooks/query/count
+- "Create a count?" -> POST /V1.0/TicketNoteWebhooks/query/count
+- "Create a TicketNoteWebhook?" -> POST /V1.0/TicketNoteWebhooks
+- "List all entityInformation?" -> GET /V1.0/TicketNoteWebhooks/entityInformation
+- "List all fields?" -> GET /V1.0/TicketNoteWebhooks/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketNoteWebhooks/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketRmaCredits/query
+- "Create a query?" -> POST /V1.0/TicketRmaCredits/query
+- "Get TicketRmaCredit details?" -> GET /V1.0/TicketRmaCredits/{id}
+- "Search count?" -> GET /V1.0/TicketRmaCredits/query/count
+- "Create a count?" -> POST /V1.0/TicketRmaCredits/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketRmaCredits/entityInformation
+- "List all fields?" -> GET /V1.0/TicketRmaCredits/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketRmaCredits/entityInformation/userDefinedFields
+- "List all RmaCredits?" -> GET /V1.0/Tickets/{parentId}/RmaCredits
+- "Create a RmaCredit?" -> POST /V1.0/Tickets/{parentId}/RmaCredits
+- "Get RmaCredit details?" -> GET /V1.0/Tickets/{parentId}/RmaCredits/{id}
+- "Delete a RmaCredit?" -> DELETE /V1.0/Tickets/{parentId}/RmaCredits/{id}
+- "List all entityInformation?" -> GET /V1.0/Tickets/{parentId}/RmaCredits/entityInformation
+- "List all fields?" -> GET /V1.0/Tickets/{parentId}/RmaCredits/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tickets/{parentId}/RmaCredits/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/Tickets/query
+- "Create a query?" -> POST /V1.0/Tickets/query
+- "Get Ticket details?" -> GET /V1.0/Tickets/{id}
+- "Search count?" -> GET /V1.0/Tickets/query/count
+- "Create a count?" -> POST /V1.0/Tickets/query/count
+- "Create a Ticket?" -> POST /V1.0/Tickets
+- "List all entityInformation?" -> GET /V1.0/Tickets/entityInformation
+- "List all fields?" -> GET /V1.0/Tickets/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tickets/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketSecondaryResources/query
+- "Create a query?" -> POST /V1.0/TicketSecondaryResources/query
+- "Get TicketSecondaryResource details?" -> GET /V1.0/TicketSecondaryResources/{id}
+- "Search count?" -> GET /V1.0/TicketSecondaryResources/query/count
+- "Create a count?" -> POST /V1.0/TicketSecondaryResources/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketSecondaryResources/entityInformation
+- "List all fields?" -> GET /V1.0/TicketSecondaryResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketSecondaryResources/entityInformation/userDefinedFields
+- "List all SecondaryResources?" -> GET /V1.0/Tickets/{parentId}/SecondaryResources
+- "Create a SecondaryResource?" -> POST /V1.0/Tickets/{parentId}/SecondaryResources
+- "Get SecondaryResource details?" -> GET /V1.0/Tickets/{parentId}/SecondaryResources/{id}
+- "Delete a SecondaryResource?" -> DELETE /V1.0/Tickets/{parentId}/SecondaryResources/{id}
+- "List all entityInformation?" -> GET /V1.0/Tickets/{parentId}/SecondaryResources/entityInformation
+- "List all fields?" -> GET /V1.0/Tickets/{parentId}/SecondaryResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tickets/{parentId}/SecondaryResources/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketTagAssociations/query
+- "Create a query?" -> POST /V1.0/TicketTagAssociations/query
+- "Get TicketTagAssociation details?" -> GET /V1.0/TicketTagAssociations/{id}
+- "Search count?" -> GET /V1.0/TicketTagAssociations/query/count
+- "Create a count?" -> POST /V1.0/TicketTagAssociations/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketTagAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/TicketTagAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketTagAssociations/entityInformation/userDefinedFields
+- "List all TagAssociations?" -> GET /V1.0/Tickets/{parentId}/TagAssociations
+- "Create a TagAssociation?" -> POST /V1.0/Tickets/{parentId}/TagAssociations
+- "Get TagAssociation details?" -> GET /V1.0/Tickets/{parentId}/TagAssociations/{id}
+- "Delete a TagAssociation?" -> DELETE /V1.0/Tickets/{parentId}/TagAssociations/{id}
+- "List all entityInformation?" -> GET /V1.0/Tickets/{parentId}/TagAssociations/entityInformation
+- "List all fields?" -> GET /V1.0/Tickets/{parentId}/TagAssociations/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Tickets/{parentId}/TagAssociations/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketWebhookExcludedResources/query
+- "Create a query?" -> POST /V1.0/TicketWebhookExcludedResources/query
+- "Get TicketWebhookExcludedResource details?" -> GET /V1.0/TicketWebhookExcludedResources/{id}
+- "Search count?" -> GET /V1.0/TicketWebhookExcludedResources/query/count
+- "Create a count?" -> POST /V1.0/TicketWebhookExcludedResources/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketWebhookExcludedResources/entityInformation
+- "List all fields?" -> GET /V1.0/TicketWebhookExcludedResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketWebhookExcludedResources/entityInformation/userDefinedFields
+- "List all ExcludedResources?" -> GET /V1.0/TicketWebhooks/{parentId}/ExcludedResources
+- "Create a ExcludedResource?" -> POST /V1.0/TicketWebhooks/{parentId}/ExcludedResources
+- "Get ExcludedResource details?" -> GET /V1.0/TicketWebhooks/{parentId}/ExcludedResources/{id}
+- "Delete a ExcludedResource?" -> DELETE /V1.0/TicketWebhooks/{parentId}/ExcludedResources/{id}
+- "List all entityInformation?" -> GET /V1.0/TicketWebhooks/{parentId}/ExcludedResources/entityInformation
+- "List all fields?" -> GET /V1.0/TicketWebhooks/{parentId}/ExcludedResources/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketWebhooks/{parentId}/ExcludedResources/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketWebhookFields/query
+- "Create a query?" -> POST /V1.0/TicketWebhookFields/query
+- "Get TicketWebhookField details?" -> GET /V1.0/TicketWebhookFields/{id}
+- "Search count?" -> GET /V1.0/TicketWebhookFields/query/count
+- "Create a count?" -> POST /V1.0/TicketWebhookFields/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketWebhookFields/entityInformation
+- "List all fields?" -> GET /V1.0/TicketWebhookFields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketWebhookFields/entityInformation/userDefinedFields
+- "List all Fields?" -> GET /V1.0/TicketWebhooks/{parentId}/Fields
+- "Create a Field?" -> POST /V1.0/TicketWebhooks/{parentId}/Fields
+- "Get Field details?" -> GET /V1.0/TicketWebhooks/{parentId}/Fields/{id}
+- "Delete a Field?" -> DELETE /V1.0/TicketWebhooks/{parentId}/Fields/{id}
+- "List all entityInformation?" -> GET /V1.0/TicketWebhooks/{parentId}/Fields/entityInformation
+- "List all fields?" -> GET /V1.0/TicketWebhooks/{parentId}/Fields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketWebhooks/{parentId}/Fields/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketWebhooks/query
+- "Create a query?" -> POST /V1.0/TicketWebhooks/query
+- "Get TicketWebhook details?" -> GET /V1.0/TicketWebhooks/{id}
+- "Delete a TicketWebhook?" -> DELETE /V1.0/TicketWebhooks/{id}
+- "Search count?" -> GET /V1.0/TicketWebhooks/query/count
+- "Create a count?" -> POST /V1.0/TicketWebhooks/query/count
+- "Create a TicketWebhook?" -> POST /V1.0/TicketWebhooks
+- "List all entityInformation?" -> GET /V1.0/TicketWebhooks/entityInformation
+- "List all fields?" -> GET /V1.0/TicketWebhooks/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketWebhooks/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TicketWebhookUdfFields/query
+- "Create a query?" -> POST /V1.0/TicketWebhookUdfFields/query
+- "Get TicketWebhookUdfField details?" -> GET /V1.0/TicketWebhookUdfFields/{id}
+- "Search count?" -> GET /V1.0/TicketWebhookUdfFields/query/count
+- "Create a count?" -> POST /V1.0/TicketWebhookUdfFields/query/count
+- "List all entityInformation?" -> GET /V1.0/TicketWebhookUdfFields/entityInformation
+- "List all fields?" -> GET /V1.0/TicketWebhookUdfFields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketWebhookUdfFields/entityInformation/userDefinedFields
+- "List all UdfFields?" -> GET /V1.0/TicketWebhooks/{parentId}/UdfFields
+- "Create a UdfField?" -> POST /V1.0/TicketWebhooks/{parentId}/UdfFields
+- "Get UdfField details?" -> GET /V1.0/TicketWebhooks/{parentId}/UdfFields/{id}
+- "Delete a UdfField?" -> DELETE /V1.0/TicketWebhooks/{parentId}/UdfFields/{id}
+- "List all entityInformation?" -> GET /V1.0/TicketWebhooks/{parentId}/UdfFields/entityInformation
+- "List all fields?" -> GET /V1.0/TicketWebhooks/{parentId}/UdfFields/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TicketWebhooks/{parentId}/UdfFields/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/TimeEntries/query
+- "Create a query?" -> POST /V1.0/TimeEntries/query
+- "Get TimeEntry details?" -> GET /V1.0/TimeEntries/{id}
+- "Delete a TimeEntry?" -> DELETE /V1.0/TimeEntries/{id}
+- "Search count?" -> GET /V1.0/TimeEntries/query/count
+- "Create a count?" -> POST /V1.0/TimeEntries/query/count
+- "Create a TimeEntry?" -> POST /V1.0/TimeEntries
+- "List all entityInformation?" -> GET /V1.0/TimeEntries/entityInformation
+- "List all fields?" -> GET /V1.0/TimeEntries/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TimeEntries/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/TimeEntryAttachments/entityInformation
+- "List all fields?" -> GET /V1.0/TimeEntryAttachments/entityInformation/fields
+- "Search query?" -> GET /V1.0/TimeEntryAttachments/query
+- "Create a query?" -> POST /V1.0/TimeEntryAttachments/query
+- "Get TimeEntryAttachment details?" -> GET /V1.0/TimeEntryAttachments/{id}
+- "Search count?" -> GET /V1.0/TimeEntryAttachments/query/count
+- "Create a count?" -> POST /V1.0/TimeEntryAttachments/query/count
+- "List all Attachments?" -> GET /V1.0/TimeEntries/{parentId}/Attachments
+- "Create a Attachment?" -> POST /V1.0/TimeEntries/{parentId}/Attachments
+- "Get Attachment details?" -> GET /V1.0/TimeEntries/{parentId}/Attachments/{id}
+- "Delete a Attachment?" -> DELETE /V1.0/TimeEntries/{parentId}/Attachments/{id}
+- "Search query?" -> GET /V1.0/TimeOffRequests/query
+- "Create a query?" -> POST /V1.0/TimeOffRequests/query
+- "Get TimeOffRequest details?" -> GET /V1.0/TimeOffRequests/{id}
+- "Search count?" -> GET /V1.0/TimeOffRequests/query/count
+- "Create a count?" -> POST /V1.0/TimeOffRequests/query/count
+- "List all entityInformation?" -> GET /V1.0/TimeOffRequests/entityInformation
+- "List all fields?" -> GET /V1.0/TimeOffRequests/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TimeOffRequests/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/TimeOffRequestsApprove/entityInformation
+- "List all fields?" -> GET /V1.0/TimeOffRequestsApprove/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TimeOffRequestsApprove/entityInformation/userDefinedFields
+- "List all Approve?" -> GET /V1.0/TimeOffRequests/{parentId}/Approve
+- "List all entityInformation?" -> GET /V1.0/TimeOffRequests/{parentId}/Approve/entityInformation
+- "List all fields?" -> GET /V1.0/TimeOffRequests/{parentId}/Approve/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TimeOffRequests/{parentId}/Approve/entityInformation/userDefinedFields
+- "List all TimeOffRequests?" -> GET /V1.0/Resources/{parentId}/TimeOffRequests
+- "Create a TimeOffRequest?" -> POST /V1.0/Resources/{parentId}/TimeOffRequests
+- "Get TimeOffRequest details?" -> GET /V1.0/Resources/{parentId}/TimeOffRequests/{id}
+- "List all entityInformation?" -> GET /V1.0/Resources/{parentId}/TimeOffRequests/entityInformation
+- "List all fields?" -> GET /V1.0/Resources/{parentId}/TimeOffRequests/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/Resources/{parentId}/TimeOffRequests/entityInformation/userDefinedFields
+- "List all entityInformation?" -> GET /V1.0/TimeOffRequestsReject/entityInformation
+- "List all fields?" -> GET /V1.0/TimeOffRequestsReject/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TimeOffRequestsReject/entityInformation/userDefinedFields
+- "Create a Reject?" -> POST /V1.0/TimeOffRequests/{parentId}/Reject
+- "List all entityInformation?" -> GET /V1.0/TimeOffRequests/{parentId}/Reject/entityInformation
+- "List all fields?" -> GET /V1.0/TimeOffRequests/{parentId}/Reject/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/TimeOffRequests/{parentId}/Reject/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/UserDefinedFieldDefinitions/query
+- "Create a query?" -> POST /V1.0/UserDefinedFieldDefinitions/query
+- "Get UserDefinedFieldDefinition details?" -> GET /V1.0/UserDefinedFieldDefinitions/{id}
+- "Search count?" -> GET /V1.0/UserDefinedFieldDefinitions/query/count
+- "Create a count?" -> POST /V1.0/UserDefinedFieldDefinitions/query/count
+- "Create a UserDefinedFieldDefinition?" -> POST /V1.0/UserDefinedFieldDefinitions
+- "List all entityInformation?" -> GET /V1.0/UserDefinedFieldDefinitions/entityInformation
+- "List all fields?" -> GET /V1.0/UserDefinedFieldDefinitions/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/UserDefinedFieldDefinitions/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/UserDefinedFieldListItems/query
+- "Create a query?" -> POST /V1.0/UserDefinedFieldListItems/query
+- "Get UserDefinedFieldListItem details?" -> GET /V1.0/UserDefinedFieldListItems/{id}
+- "Search count?" -> GET /V1.0/UserDefinedFieldListItems/query/count
+- "Create a count?" -> POST /V1.0/UserDefinedFieldListItems/query/count
+- "List all entityInformation?" -> GET /V1.0/UserDefinedFieldListItems/entityInformation
+- "List all fields?" -> GET /V1.0/UserDefinedFieldListItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/UserDefinedFieldListItems/entityInformation/userDefinedFields
+- "List all ListItems?" -> GET /V1.0/UserDefinedFields/{parentId}/ListItems
+- "Create a ListItem?" -> POST /V1.0/UserDefinedFields/{parentId}/ListItems
+- "Get ListItem details?" -> GET /V1.0/UserDefinedFields/{parentId}/ListItems/{id}
+- "List all entityInformation?" -> GET /V1.0/UserDefinedFields/{parentId}/ListItems/entityInformation
+- "List all fields?" -> GET /V1.0/UserDefinedFields/{parentId}/ListItems/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/UserDefinedFields/{parentId}/ListItems/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/WebhookEventErrorLogs/query
+- "Create a query?" -> POST /V1.0/WebhookEventErrorLogs/query
+- "Get WebhookEventErrorLog details?" -> GET /V1.0/WebhookEventErrorLogs/{id}
+- "Delete a WebhookEventErrorLog?" -> DELETE /V1.0/WebhookEventErrorLogs/{id}
+- "Search count?" -> GET /V1.0/WebhookEventErrorLogs/query/count
+- "Create a count?" -> POST /V1.0/WebhookEventErrorLogs/query/count
+- "List all entityInformation?" -> GET /V1.0/WebhookEventErrorLogs/entityInformation
+- "List all fields?" -> GET /V1.0/WebhookEventErrorLogs/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/WebhookEventErrorLogs/entityInformation/userDefinedFields
+- "Search query?" -> GET /V1.0/WorkTypeModifiers/query
+- "Create a query?" -> POST /V1.0/WorkTypeModifiers/query
+- "Get WorkTypeModifier details?" -> GET /V1.0/WorkTypeModifiers/{id}
+- "Search count?" -> GET /V1.0/WorkTypeModifiers/query/count
+- "Create a count?" -> POST /V1.0/WorkTypeModifiers/query/count
+- "List all entityInformation?" -> GET /V1.0/WorkTypeModifiers/entityInformation
+- "List all fields?" -> GET /V1.0/WorkTypeModifiers/entityInformation/fields
+- "List all userDefinedFields?" -> GET /V1.0/WorkTypeModifiers/entityInformation/userDefinedFields
+- "List all ZoneInformation?" -> GET /V1.0/ZoneInformation
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

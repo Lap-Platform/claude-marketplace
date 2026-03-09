@@ -10,719 +10,846 @@
 
 @group api
 @endpoint GET /api/v1/app
-@optional {exclude_apps_with_no_endpoints: bool=False, exclude_apps_with_disabled_endpoints: bool=False, limit: int(uint64), iterator: str, order: str}
+@desc List Applications
+@optional {exclude_apps_with_no_endpoints: bool=False # Exclude applications that have no endpoints. Default is false., exclude_apps_with_disabled_endpoints: bool=False # Exclude applications that have only disabled endpoints. Default is false., limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, order: str # The sorting order of the returned items}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/app
-@required {name: str}
-@optional {get_if_exists: bool=False, idempotency-key: str, idempotency-key: str, metadata: map={}, rateLimit: int(uint16), throttleRate: int(uint16), uid: str}
+@desc Create Application
+@required {name: str # Application name for human consumption.}
+@optional {get_if_exists: bool=False # Get an existing application, or create a new one if doesn't exist. It's two separate functions in the libs., idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, metadata: map={}, rateLimit: int(uint16) # Deprecated, use `throttleRate` instead., throttleRate: int(uint16) # Maximum messages per second to send to this application.  Outgoing messages will be throttled to this rate., uid: str # Optional unique identifier for the application.}
 @returns(200) {createdAt: str(date-time), id: str, metadata: map, name: str, rateLimit: int(uint16)?, throttleRate: int(uint16)?, uid: str?, updatedAt: str(date-time)}
 @returns(201) {createdAt: str(date-time), id: str, metadata: map, name: str, rateLimit: int(uint16)?, throttleRate: int(uint16)?, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}
-@required {app_id: str}
+@desc Get Application
+@required {app_id: str # The Application's ID or UID.}
 @returns(200) {createdAt: str(date-time), id: str, metadata: map, name: str, rateLimit: int(uint16)?, throttleRate: int(uint16)?, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /api/v1/app/{app_id}
-@required {app_id: str, name: str}
-@optional {metadata: map={}, rateLimit: int(uint16), throttleRate: int(uint16), uid: str}
+@desc Update Application
+@required {app_id: str # The Application's ID or UID., name: str # Application name for human consumption.}
+@optional {metadata: map={}, rateLimit: int(uint16) # Deprecated, use `throttleRate` instead., throttleRate: int(uint16) # Maximum messages per second to send to this application.  Outgoing messages will be throttled to this rate., uid: str # Optional unique identifier for the application.}
 @returns(200) {createdAt: str(date-time), id: str, metadata: map, name: str, rateLimit: int(uint16)?, throttleRate: int(uint16)?, uid: str?, updatedAt: str(date-time)}
 @returns(201) {createdAt: str(date-time), id: str, metadata: map, name: str, rateLimit: int(uint16)?, throttleRate: int(uint16)?, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint DELETE /api/v1/app/{app_id}
-@required {app_id: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Delete Application
+@required {app_id: str # The Application's ID or UID.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PATCH /api/v1/app/{app_id}
-@required {app_id: str}
-@optional {metadata: map, name: str, rateLimit: int(uint16), uid: str}
+@desc Patch Application
+@required {app_id: str # The Application's ID or UID.}
+@optional {metadata: map, name: str, rateLimit: int(uint16), uid: str # The Application's UID.}
 @returns(200) {createdAt: str(date-time), id: str, metadata: map, name: str, rateLimit: int(uint16)?, throttleRate: int(uint16)?, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/attempt/endpoint/{endpoint_id}
-@required {app_id: str, endpoint_id: str}
-@optional {limit: int(uint64), iterator: str, status: int, status_code_class: int, channel: str, tag: str, before: str(date-time), after: str(date-time), with_content: bool=True, with_msg: bool=False, event_types: [str]}
+@desc List Attempts By Endpoint
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, status: int # Filter response based on the status of the attempt: Success (0), Pending (1), Failed (2), or Sending (3), status_code_class: int # Filter response based on the HTTP status code, channel: str # Filter response based on the channel, tag: str # Filter response based on the tag, before: str(date-time) # Only include items created before a certain date, after: str(date-time) # Only include items created after a certain date, with_content: bool=True # When `true` attempt content is included in the response, with_msg: bool=False # When `true`, the message information is included in the response, event_types: [str] # Filter response based on the event type}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/attempt/msg/{msg_id}
-@required {app_id: str, msg_id: str}
-@optional {limit: int(uint64), iterator: str, status: int, status_code_class: int, channel: str, tag: str, endpoint_id: str, before: str(date-time), after: str(date-time), with_content: bool=True, event_types: [str]}
+@desc List Attempts By Msg
+@required {app_id: str # The Application's ID or UID., msg_id: str # The Message's ID or UID.}
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, status: int # Filter response based on the status of the attempt: Success (0), Pending (1), Failed (2), or Sending (3), status_code_class: int # Filter response based on the HTTP status code, channel: str # Filter response based on the channel, tag: str # Filter response based on the tag, endpoint_id: str # Filter the attempts based on the attempted endpoint, before: str(date-time) # Only include items created before a certain date, after: str(date-time) # Only include items created after a certain date, with_content: bool=True # When `true` attempt content is included in the response, event_types: [str] # Filter response based on the event type}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/endpoint
-@required {app_id: str}
-@optional {limit: int(uint64), iterator: str, order: str}
+@desc List Endpoints
+@required {app_id: str # The Application's ID or UID.}
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, order: str # The sorting order of the returned items}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/app/{app_id}/endpoint
-@required {app_id: str, url: str(uri)}
-@optional {idempotency-key: str, idempotency-key: str, channels: [str], description: str=, disabled: bool=False, filterTypes: [str], headers: map, metadata: map={}, rateLimit: int(uint16), secret: str, throttleRate: int(uint16), uid: str}
+@desc Create Endpoint
+@required {app_id: str # The Application's ID or UID., url: str(uri)}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, channels: [str] # List of message channels this endpoint listens to (omit for all)., description: str=, disabled: bool=False, filterTypes: [str], headers: map, metadata: map={}, rateLimit: int(uint16) # Deprecated, use `throttleRate` instead., secret: str # The endpoint's verification secret.  Format: `base64` encoded random bytes optionally prefixed with `whsec_`. It is recommended to not set this and let the server generate the secret., throttleRate: int(uint16) # Maximum messages per second to send to this endpoint.  Outgoing messages will be throttled to this rate., uid: str # Optional unique identifier for the endpoint.}
 @returns(201) {channels: [str]?, createdAt: str(date-time), description: str, disabled: bool, filterTypes: [str]?, id: str, metadata: map, rateLimit: int(uint16)?, throttleRate: int(uint16)?, uid: str?, updatedAt: str(date-time), url: str(uri), version: int(int32)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/endpoint/{endpoint_id}
-@required {app_id: str, endpoint_id: str}
+@desc Get Endpoint
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
 @returns(200) {channels: [str]?, createdAt: str(date-time), description: str, disabled: bool, filterTypes: [str]?, id: str, metadata: map, rateLimit: int(uint16)?, throttleRate: int(uint16)?, uid: str?, updatedAt: str(date-time), url: str(uri), version: int(int32)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /api/v1/app/{app_id}/endpoint/{endpoint_id}
-@required {app_id: str, endpoint_id: str, url: str(uri)}
-@optional {channels: [str], description: str=, disabled: bool=False, filterTypes: [str], metadata: map={}, rateLimit: int(uint16), throttleRate: int(uint16), uid: str}
+@desc Update Endpoint
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID., url: str(uri)}
+@optional {channels: [str] # List of message channels this endpoint listens to (omit for all)., description: str=, disabled: bool=False, filterTypes: [str], metadata: map={}, rateLimit: int(uint16) # Deprecated, use `throttleRate` instead., throttleRate: int(uint16) # Maximum messages per second to send to this endpoint.  Outgoing messages will be throttled to this rate., uid: str # Optional unique identifier for the endpoint.}
 @returns(200) {channels: [str]?, createdAt: str(date-time), description: str, disabled: bool, filterTypes: [str]?, id: str, metadata: map, rateLimit: int(uint16)?, throttleRate: int(uint16)?, uid: str?, updatedAt: str(date-time), url: str(uri), version: int(int32)}
 @returns(201) {channels: [str]?, createdAt: str(date-time), description: str, disabled: bool, filterTypes: [str]?, id: str, metadata: map, rateLimit: int(uint16)?, throttleRate: int(uint16)?, uid: str?, updatedAt: str(date-time), url: str(uri), version: int(int32)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint DELETE /api/v1/app/{app_id}/endpoint/{endpoint_id}
-@required {app_id: str, endpoint_id: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Delete Endpoint
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PATCH /api/v1/app/{app_id}/endpoint/{endpoint_id}
-@required {app_id: str, endpoint_id: str}
-@optional {channels: [str], description: str, disabled: bool, filterTypes: [str], metadata: map, rateLimit: int(uint16), url: str(uri), throttleRate: int(uint16), uid: str}
+@desc Patch Endpoint
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
+@optional {channels: [str], description: str, disabled: bool, filterTypes: [str], metadata: map, rateLimit: int(uint16) # Deprecated, use `throttleRate` instead., url: str(uri), throttleRate: int(uint16) # Maximum messages per second to send to this endpoint.  Outgoing messages will be throttled to this rate., uid: str # The Endpoint's UID.}
 @returns(200) {channels: [str]?, createdAt: str(date-time), description: str, disabled: bool, filterTypes: [str]?, id: str, metadata: map, rateLimit: int(uint16)?, throttleRate: int(uint16)?, uid: str?, updatedAt: str(date-time), url: str(uri), version: int(int32)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/bulk-replay
-@required {app_id: str, endpoint_id: str, since: str(date-time)}
-@optional {idempotency-key: str, idempotency-key: str, channel: str, eventTypes: [str], status: int(0/1/2/3), statusCodeClass: int(0/100/200/300/400/500), tag: str, until: str(date-time)}
+@desc Bulk Replay Messages
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID., since: str(date-time)}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, channel: str, eventTypes: [str], status: int(0/1/2/3) # The sending status of the message:  - Success = 0 - Pending = 1 - Fail = 2 - Sending = 3, statusCodeClass: int(0/100/200/300/400/500) # The different classes of HTTP status codes:  - CodeNone = 0 - Code1xx = 100 - Code2xx = 200 - Code3xx = 300 - Code4xx = 400 - Code5xx = 500, tag: str, until: str(date-time)}
 @returns(202) {id: str, status: str, task: str, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/endpoint/{endpoint_id}/headers
-@required {app_id: str, endpoint_id: str}
-@returns(200) {headers: map, sensitive: [str]}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Get Endpoint Headers
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
+@returns(200) {headers: map, sensitive: [str]} # The value of the headers is returned in the `headers` field.  Sensitive headers that have been redacted are returned in the sensitive field.
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /api/v1/app/{app_id}/endpoint/{endpoint_id}/headers
-@required {app_id: str, endpoint_id: str, headers: map}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Update Endpoint Headers
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID., headers: map}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PATCH /api/v1/app/{app_id}/endpoint/{endpoint_id}/headers
-@required {app_id: str, endpoint_id: str, headers: map}
-@optional {deleteHeaders: [str]=[]}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Patch Endpoint Headers
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID., headers: map}
+@optional {deleteHeaders: [str]=[] # A list of headers be be removed}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/endpoint/{endpoint_id}/msg
-@required {app_id: str, endpoint_id: str}
-@optional {limit: int(uint64), iterator: str, channel: str, tag: str, status: int, before: str(date-time), after: str(date-time), with_content: bool=True, event_types: [str]}
+@desc List Attempted Messages
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, channel: str # Filter response based on the channel, tag: str # Filter response based on the message tags, status: int # Filter response based on the status of the attempt: Success (0), Pending (1), Failed (2), or Sending (3), before: str(date-time) # Only include items created before a certain date, after: str(date-time) # Only include items created after a certain date, with_content: bool=True # When `true` message payloads are included in the response, event_types: [str] # Filter response based on the event type}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/recover
-@required {app_id: str, endpoint_id: str, since: str(date-time)}
-@optional {idempotency-key: str, idempotency-key: str, until: str(date-time)}
+@desc Recover Failed Webhooks
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID., since: str(date-time)}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, until: str(date-time)}
 @returns(202) {id: str, status: str, task: str, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/replay-missing
-@required {app_id: str, endpoint_id: str, since: str(date-time)}
-@optional {idempotency-key: str, idempotency-key: str, until: str(date-time)}
+@desc Replay Missing Webhooks
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID., since: str(date-time)}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, until: str(date-time)}
 @returns(202) {id: str, status: str, task: str, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/endpoint/{endpoint_id}/secret
-@required {app_id: str, endpoint_id: str}
+@desc Get Endpoint Secret
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
 @returns(200) {key: str}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/secret/rotate
-@required {app_id: str, endpoint_id: str}
-@optional {idempotency-key: str, idempotency-key: str, key: str=None}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Rotate Endpoint Secret
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, key: str=None # The endpoint's verification secret.  Format: `base64` encoded random bytes optionally prefixed with `whsec_`. It is recommended to not set this and let the server generate the secret.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/send-example
-@required {app_id: str, endpoint_id: str, eventType: str}
-@optional {idempotency-key: str, idempotency-key: str, exampleIndex: int(uint)=0}
+@desc Send Event Type Example Message
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID., eventType: str # The event type's name}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, exampleIndex: int(uint)=0 # If the event type schema contains an array of examples, chooses which one to send.  Defaults to the first example. Ignored if the schema doesn't contain an array of examples.}
 @returns(202) {channels: [str]?, deliverAt: str(date-time)?, eventId: str?, eventType: str, id: str, payload: map, tags: [str]?, timestamp: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/endpoint/{endpoint_id}/stats
-@required {app_id: str, endpoint_id: str}
-@optional {since: str(date-time), until: str(date-time)}
+@desc Endpoint Stats
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
+@optional {since: str(date-time) # Filter the range to data starting from this date., until: str(date-time) # Filter the range to data ending by this date.}
 @returns(200) {fail: int(int64), pending: int(int64), sending: int(int64), success: int(int64)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/endpoint/{endpoint_id}/transformation
-@required {app_id: str, endpoint_id: str}
+@desc Get Endpoint Transformation
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
 @returns(200) {code: str?, enabled: bool, updatedAt: str(date-time)?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PATCH /api/v1/app/{app_id}/endpoint/{endpoint_id}/transformation
-@required {app_id: str, endpoint_id: str}
+@desc Patch Endpoint Transformation
+@required {app_id: str # The Application's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
 @optional {code: str, enabled: bool}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/integration
-@required {app_id: str}
-@optional {limit: int(uint64), iterator: str, order: str}
+@desc List Integrations
+@required {app_id: str # The Application's ID or UID.}
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, order: str # The sorting order of the returned items}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/app/{app_id}/integration
-@required {app_id: str, name: str}
-@optional {idempotency-key: str, idempotency-key: str, featureFlags: [str]}
+@desc Create Integration
+@required {app_id: str # The Application's ID or UID., name: str}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, featureFlags: [str] # The set of feature flags the integration will have access to.}
 @returns(201) {createdAt: str(date-time), featureFlags: [str], id: str, name: str, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/integration/{integ_id}
-@required {app_id: str, integ_id: str}
+@desc Get Integration
+@required {app_id: str # The Application's ID or UID., integ_id: str # The Integration's ID.}
 @returns(200) {createdAt: str(date-time), featureFlags: [str], id: str, name: str, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /api/v1/app/{app_id}/integration/{integ_id}
-@required {app_id: str, integ_id: str, name: str}
-@optional {featureFlags: [str]}
+@desc Update Integration
+@required {app_id: str # The Application's ID or UID., integ_id: str # The Integration's ID., name: str}
+@optional {featureFlags: [str] # The set of feature flags the integration will have access to.}
 @returns(200) {createdAt: str(date-time), featureFlags: [str], id: str, name: str, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint DELETE /api/v1/app/{app_id}/integration/{integ_id}
-@required {app_id: str, integ_id: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Delete Integration
+@required {app_id: str # The Application's ID or UID., integ_id: str # The Integration's ID.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/integration/{integ_id}/key
-@required {app_id: str, integ_id: str}
+@desc Get Integration Key
+@required {app_id: str # The Application's ID or UID., integ_id: str # The Integration's ID.}
 @returns(200) {key: str}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/app/{app_id}/integration/{integ_id}/key/rotate
-@required {app_id: str, integ_id: str}
-@optional {idempotency-key: str, idempotency-key: str}
+@desc Rotate Integration Key
+@required {app_id: str # The Application's ID or UID., integ_id: str # The Integration's ID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key}
 @returns(200) {key: str}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/msg
-@required {app_id: str}
-@optional {limit: int(uint64), iterator: str, channel: str, before: str(date-time), after: str(date-time), with_content: bool=True, tag: str, event_types: [str]}
+@desc List Messages
+@required {app_id: str # The Application's ID or UID.}
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, channel: str # Filter response based on the channel., before: str(date-time) # Only include items created before a certain date., after: str(date-time) # Only include items created after a certain date., with_content: bool=True # When `true` message payloads are included in the response., tag: str # Filter messages matching the provided tag., event_types: [str] # Filter response based on the event type}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/app/{app_id}/msg
-@required {app_id: str, eventType: str, payload: map}
-@optional {with_content: bool=True, idempotency-key: str, idempotency-key: str, application: map{metadata: map, name!: str, rateLimit: int(uint16), throttleRate: int(uint16), uid: str}, channels: [str], deliverAt: str(date-time), eventId: str, payloadRetentionHours: int(int64)=None, payloadRetentionPeriod: int(int64)=90, tags: [str], transformationsParams: map}
+@desc Create Message
+@required {app_id: str # The Application's ID or UID., eventType: str # The event type's name, payload: map # JSON payload to send as the request body of the webhook.  We also support sending non-JSON payloads. Please contact us for more information.}
+@optional {with_content: bool=True # When `true`, message payloads are included in the response., idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, application: map{metadata: map, name!: str, rateLimit: int(uint16), throttleRate: int(uint16), uid: str}, channels: [str] # List of free-form identifiers that endpoints can filter by, deliverAt: str(date-time) # The date and time at which the message will be delivered.  Note that this time is best-effort-only. Must be at least one minute and no more than 24 hours in the future., eventId: str # Optional unique identifier for the message, payloadRetentionHours: int(int64)=None # Optional number of hours to retain the message payload. Note that this is mutually exclusive with `payloadRetentionPeriod`., payloadRetentionPeriod: int(int64)=90 # Optional number of days to retain the message payload. Defaults to 90. Note that this is mutually exclusive with `payloadRetentionHours`., tags: [str] # List of free-form tags that can be filtered by when listing messages, transformationsParams: map # Extra parameters to pass to Transformations (for future use)}
 @returns(202) {channels: [str]?, deliverAt: str(date-time)?, eventId: str?, eventType: str, id: str, payload: map, tags: [str]?, timestamp: str(date-time)}
-@errors {400, 401, 403, 404, 409, 413, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 413: Payload too large, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/app/{app_id}/msg/expunge-all-contents
-@required {app_id: str}
-@optional {idempotency-key: str, idempotency-key: str}
+@desc Expunge all message contents
+@required {app_id: str # The Application's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key}
 @returns(202) {id: str, status: str, task: str, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/msg/{msg_id}
-@required {app_id: str, msg_id: str}
-@optional {with_content: bool=True}
+@desc Get Message
+@required {app_id: str # The Application's ID or UID., msg_id: str # The Message's ID or UID.}
+@optional {with_content: bool=True # When `true` message payloads are included in the response.}
 @returns(200) {channels: [str]?, deliverAt: str(date-time)?, eventId: str?, eventType: str, id: str, payload: map, tags: [str]?, timestamp: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/msg/{msg_id}/attempt/{attempt_id}
-@required {app_id: str, msg_id: str, attempt_id: str}
+@desc Get Attempt
+@required {app_id: str # The Application's ID or UID., msg_id: str # The Message's ID or UID., attempt_id: str # The MessageAttempt's ID.}
 @returns(200) {endpointId: str, id: str, msg: map{channels: [str]?, deliverAt: str(date-time)?, eventId: str?, eventType: str, id: str, payload: map, tags: [str]?, timestamp: str(date-time)}, msgId: str, response: str, responseDurationMs: int(int64), responseStatusCode: int(int16), status: int, statusText: str, timestamp: str(date-time), triggerType: int, url: str(uri)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint DELETE /api/v1/app/{app_id}/msg/{msg_id}/attempt/{attempt_id}/content
-@required {app_id: str, msg_id: str, attempt_id: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Delete attempt response body
+@required {app_id: str # The Application's ID or UID., msg_id: str # The Message's ID or UID., attempt_id: str # The MessageAttempt's ID.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint DELETE /api/v1/app/{app_id}/msg/{msg_id}/content
-@required {app_id: str, msg_id: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Delete message payload
+@required {app_id: str # The Application's ID or UID., msg_id: str # The Message's ID or UID.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/msg/{msg_id}/endpoint
-@required {app_id: str, msg_id: str}
-@optional {limit: int(uint64), iterator: str}
+@desc List Attempted Destinations
+@required {app_id: str # The Application's ID or UID., msg_id: str # The Message's ID or UID.}
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/app/{app_id}/msg/{msg_id}/endpoint/{endpoint_id}/resend
-@required {app_id: str, msg_id: str, endpoint_id: str}
-@optional {idempotency-key: str, idempotency-key: str}
+@desc Resend Webhook
+@required {app_id: str # The Application's ID or UID., msg_id: str # The Message's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key}
 @returns(202)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/poller/{sink_id}
-@required {app_id: str, sink_id: str}
-@optional {limit: int(uint64), iterator: str, event_type: str, channel: str, after: str(date-time)}
+@desc Poller Poll
+@required {app_id: str # The Application's ID or UID., sink_id: str # The Endpoint's ID or UID.}
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, event_type: str # Filters messages sent with this event type (optional)., channel: str # Filters messages sent with this channel (optional)., after: str(date-time)}
 @returns(200) {data: [map], done: bool, iterator: str}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/app/{app_id}/poller/{sink_id}/consumer/{consumer_id}
-@required {app_id: str, sink_id: str, consumer_id: str}
-@optional {limit: int(uint64), iterator: str}
+@desc Poller Consumer Poll
+@required {app_id: str # The Application's ID or UID., sink_id: str # The Endpoint's ID or UID., consumer_id: str}
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation}
 @returns(200) {data: [map], done: bool, iterator: str}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/app/{app_id}/poller/{sink_id}/consumer/{consumer_id}/seek
-@required {app_id: str, sink_id: str, consumer_id: str, after: str(date-time)}
-@optional {idempotency-key: str, idempotency-key: str}
+@desc Poller Consumer Seek
+@required {app_id: str # The Application's ID or UID., sink_id: str # The Endpoint's ID or UID., consumer_id: str, after: str(date-time)}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key}
 @returns(200) {iterator: str}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/auth/app-portal-access/{app_id}
-@required {app_id: str}
-@optional {idempotency-key: str, idempotency-key: str, application: map{metadata: map, name!: str, rateLimit: int(uint16), throttleRate: int(uint16), uid: str}, capabilities: [str], expiry: int(uint64)=604800, featureFlags: [str], readOnly: bool, sessionId: str}
+@desc Get Consumer App Portal Access
+@required {app_id: str # The Application's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, application: map{metadata: map, name!: str, rateLimit: int(uint16), throttleRate: int(uint16), uid: str}, capabilities: [str] # Custom capabilities attached to the token, You can combine as many capabilities as necessary.  The `ViewBase` capability is always required  - `ViewBase`: Basic read only permissions, does not allow the user to see the endpoint secret.  - `ViewEndpointSecret`: Allows user to view the endpoint secret.  - `ManageEndpointSecret`: Allows user to rotate and view the endpoint secret.  - `ManageTransformations`: Allows user to modify the endpoint transformations.  - `CreateAttempts`: Allows user to replay missing messages and send example messages.  - `ManageEndpoint`: Allows user to read/modify any field or configuration of an endpoint (including secrets)  By default, the token will get all capabilities if the capabilities are not explicitly specified., expiry: int(uint64)=604800 # How long the token will be valid for, in seconds.  Valid values are between 1 hour and 7 days. The default is 7 days., featureFlags: [str] # The set of feature flags the created token will have access to., readOnly: bool # Whether the app portal should be in read-only mode., sessionId: str # An optional session ID to attach to the token.  When expiring tokens with "Expire All", you can include the session ID to only expire tokens that were created with that session ID.}
 @returns(200) {token: str, url: str(uri)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/auth/app/{app_id}/expire-all
-@required {app_id: str}
-@optional {idempotency-key: str, idempotency-key: str, expiry: int(int64), sessionIds: [str]}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Expire All
+@required {app_id: str # The Application's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, expiry: int(int64) # How many seconds until the old key is expired., sessionIds: [str] # An optional list of session ids.  If any session ids are specified, only Application tokens created with that session id will be expired.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/auth/logout
-@optional {idempotency-key: str, idempotency-key: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Logout
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/auth/stream-logout
-@optional {idempotency-key: str, idempotency-key: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Stream Logout
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/auth/stream-portal-access/{stream_id}
-@required {stream_id: str}
-@optional {idempotency-key: str, idempotency-key: str, expiry: int(uint64)=604800, featureFlags: [str], sessionId: str}
+@desc Get Stream Portal Access
+@required {stream_id: str # The Stream's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, expiry: int(uint64)=604800 # How long the token will be valid for, in seconds.  Valid values are between 1 hour and 7 days. The default is 7 days., featureFlags: [str] # The set of feature flags the created token will have access to., sessionId: str # An optional session ID to attach to the token.  When expiring tokens with "Expire All", you can include the session ID to only expire tokens that were created with that session ID.}
 @returns(200) {token: str, url: str(uri)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/auth/stream/{stream_id}/expire-all
-@required {stream_id: str}
-@optional {idempotency-key: str, idempotency-key: str, expiry: int(int64), sessionIds: [str]}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Stream Expire All
+@required {stream_id: str # The Stream's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, expiry: int(int64) # How many seconds until the old key is expired., sessionIds: [str] # An optional list of session ids.  If any session ids are specified, only Stream tokens created with that session id will be expired.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/auth/stream/{stream_id}/sink/{sink_id}/poller/token
-@required {stream_id: str, sink_id: str}
+@desc Get Poller Token
+@required {stream_id: str # The Stream's ID or UID., sink_id: str # The StreamSink's ID or UID.}
 @returns(200) {createdAt: str(date-time), expiresAt: str(date-time)?, id: str, name: str?, scopes: [str]?, token: str}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/auth/stream/{stream_id}/sink/{sink_id}/poller/token/rotate
-@required {stream_id: str, sink_id: str}
-@optional {idempotency-key: str, idempotency-key: str, expiry: int(int64), oldTokenExpiry: int(int64)=300}
+@desc Rotate Poller Token
+@required {stream_id: str # The Stream's ID or UID., sink_id: str # The StreamSink's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, expiry: int(int64) # How long the token will be valid for, in seconds. Can be up to 31,536,000 seconds (1 year)., oldTokenExpiry: int(int64)=300 # Updates the previous token's expiration, in seconds.  If set to 0, the old token will immediately be revoked. Must be between 0 and 86,400 seconds (1 day).  Defaults to 300 seconds (5 minutes).}
 @returns(201) {createdAt: str(date-time), expiresAt: str(date-time)?, id: str, name: str?, scopes: [str]?, token: str}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/background-task
-@optional {status: str, task: str, limit: int(uint64), iterator: str, order: str}
+@desc List Background Tasks
+@optional {status: str # Filter the response based on the status., task: str # Filter the response based on the type., limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, order: str # The sorting order of the returned items}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/background-task/{task_id}
-@required {task_id: str}
+@desc Get Background Task
+@required {task_id: str # The QueueBackgroundTask's ID.}
 @returns(200) {data: map, id: str, status: str, task: str, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/connector
-@optional {limit: int(uint64), iterator: str, order: str, product_type: str}
+@desc List Connectors
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, order: str # The sorting order of the returned items, product_type: str}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/connector
+@desc Create Connector
 @required {name: str, transformation: str}
-@optional {idempotency-key: str, idempotency-key: str, allowedEventTypes: [str], description: str=, featureFlags: [str]=None, instructions: str=, kind: str(Custom/AgenticCommerceProtocol/CloseCRM/CustomerIO/Discord/Hubspot/Inngest/Loops/Otel/Resend/Salesforce/Segment/Sendgrid/Slack/Teams/TriggerDev/Windmill/Zapier), logo: str(uri), productType: str(Dispatch/Stream), uid: str}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, allowedEventTypes: [str], description: str=, featureFlags: [str]=None, instructions: str=, kind: str(Custom/AgenticCommerceProtocol/CloseCRM/CustomerIO/Discord/Hubspot/Inngest/Loops/Otel/Resend/Salesforce/Segment/Sendgrid/Slack/Teams/TriggerDev/Windmill/Zapier), logo: str(uri), productType: str(Dispatch/Stream), uid: str # The Connector's UID.}
 @returns(201) {allowedEventTypes: [str]?, createdAt: str(date-time), description: str, featureFlags: [str]?, id: str, instructions: str, kind: str, logo: str(uri)?, name: str, orgId: str, productType: str, transformation: str, transformationUpdatedAt: str(date-time), uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/connector/{connector_id}
-@required {connector_id: str}
+@desc Get Connector
+@required {connector_id: str # The Connector's ID or UID.}
 @returns(200) {allowedEventTypes: [str]?, createdAt: str(date-time), description: str, featureFlags: [str]?, id: str, instructions: str, kind: str, logo: str(uri)?, name: str, orgId: str, productType: str, transformation: str, transformationUpdatedAt: str(date-time), uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /api/v1/connector/{connector_id}
-@required {connector_id: str, transformation: str}
+@desc Update Connector
+@required {connector_id: str # The Connector's ID or UID., transformation: str}
 @optional {allowedEventTypes: [str], description: str=, featureFlags: [str]=None, instructions: str=, kind: str(Custom/AgenticCommerceProtocol/CloseCRM/CustomerIO/Discord/Hubspot/Inngest/Loops/Otel/Resend/Salesforce/Segment/Sendgrid/Slack/Teams/TriggerDev/Windmill/Zapier), logo: str(uri), name: str=}
 @returns(200) {allowedEventTypes: [str]?, createdAt: str(date-time), description: str, featureFlags: [str]?, id: str, instructions: str, kind: str, logo: str(uri)?, name: str, orgId: str, productType: str, transformation: str, transformationUpdatedAt: str(date-time), uid: str?, updatedAt: str(date-time)}
 @returns(201) {allowedEventTypes: [str]?, createdAt: str(date-time), description: str, featureFlags: [str]?, id: str, instructions: str, kind: str, logo: str(uri)?, name: str, orgId: str, productType: str, transformation: str, transformationUpdatedAt: str(date-time), uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint DELETE /api/v1/connector/{connector_id}
-@required {connector_id: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Delete Connector
+@required {connector_id: str # The Connector's ID or UID.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PATCH /api/v1/connector/{connector_id}
-@required {connector_id: str}
+@desc Patch Connector
+@required {connector_id: str # The Connector's ID or UID.}
 @optional {allowedEventTypes: [str], description: str, featureFlags: [str], instructions: str, kind: str(Custom/AgenticCommerceProtocol/CloseCRM/CustomerIO/Discord/Hubspot/Inngest/Loops/Otel/Resend/Salesforce/Segment/Sendgrid/Slack/Teams/TriggerDev/Windmill/Zapier), logo: str(uri), name: str, transformation: str}
 @returns(200) {allowedEventTypes: [str]?, createdAt: str(date-time), description: str, featureFlags: [str]?, id: str, instructions: str, kind: str, logo: str(uri)?, name: str, orgId: str, productType: str, transformation: str, transformationUpdatedAt: str(date-time), uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/environment/export
-@optional {idempotency-key: str, idempotency-key: str}
+@desc Export Environment Configuration
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key}
 @returns(200) {connectors: [map], createdAt: str(date-time), eventTypes: [map], settings: map?, version: int(int)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/environment/import
-@optional {idempotency-key: str, idempotency-key: str, connectors: [map{allowedEventTypes: [str], description: str, featureFlags: [str], instructions: str, kind: str, logo: str(uri), name!: str, productType: str, transformation!: str, uid: str}], eventTypes: [map{archived: bool, deprecated: bool, description!: str, featureFlag: str, featureFlags: [str], groupName: str, name!: str, schemas: map}], settings: map}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Import Environment Configuration
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, connectors: [map{allowedEventTypes: [str], description: str, featureFlags: [str], instructions: str, kind: str, logo: str(uri), name!: str, productType: str, transformation!: str, uid: str}], eventTypes: [map{archived: bool, deprecated: bool, description!: str, featureFlag: str, featureFlags: [str], groupName: str, name!: str, schemas: map}], settings: map}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/event-type
-@optional {limit: int(uint64), iterator: str, order: str, include_archived: bool=False, with_content: bool=False}
+@desc List Event Types
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, order: str # The sorting order of the returned items, include_archived: bool=False # When `true` archived (deleted but not expunged) items are included in the response., with_content: bool=False # When `true` the full item (including the schema) is included in the response.}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/event-type
-@required {description: str, name: str}
-@optional {idempotency-key: str, idempotency-key: str, archived: bool=False, deprecated: bool=False, featureFlag: str=None, featureFlags: [str]=None, groupName: str, schemas: map}
+@desc Create Event Type
+@required {description: str, name: str # The event type's name}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, archived: bool=False, deprecated: bool=False, featureFlag: str=None # Deprecated, use `featureFlags` instead., featureFlags: [str]=None, groupName: str # The event type group's name, schemas: map # The schema for the event type for a specific version as a JSON schema.}
 @returns(201) {archived: bool, createdAt: str(date-time), deprecated: bool, description: str, featureFlag: str?, featureFlags: [str]?, groupName: str?, name: str, schemas: map?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/event-type/import/openapi
-@optional {idempotency-key: str, idempotency-key: str, dryRun: bool=False, replaceAll: bool=False, spec: map, specRaw: str}
+@desc Event Type Import From Openapi
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, dryRun: bool=False # If `true`, return the event types that would be modified without actually modifying them., replaceAll: bool=False # If `true`, all existing event types that are not in the spec will be archived., spec: map # A pre-parsed JSON spec., specRaw: str # A string, parsed by the server as YAML or JSON.}
 @returns(200) {data: map{modified: [str], to_modify: [map]?}}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/event-type/{event_type_name}
-@required {event_type_name: str}
+@desc Get Event Type
+@required {event_type_name: str # The event type's name}
 @returns(200) {archived: bool, createdAt: str(date-time), deprecated: bool, description: str, featureFlag: str?, featureFlags: [str]?, groupName: str?, name: str, schemas: map?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /api/v1/event-type/{event_type_name}
-@required {event_type_name: str, description: str}
-@optional {archived: bool=False, deprecated: bool=False, featureFlag: str=None, featureFlags: [str], groupName: str=None, schemas: map}
+@desc Update Event Type
+@required {event_type_name: str # The event type's name, description: str}
+@optional {archived: bool=False, deprecated: bool=False, featureFlag: str=None # Deprecated, use `featureFlags` instead., featureFlags: [str], groupName: str=None # The event type group's name, schemas: map # The schema for the event type for a specific version as a JSON schema.}
 @returns(200) {archived: bool, createdAt: str(date-time), deprecated: bool, description: str, featureFlag: str?, featureFlags: [str]?, groupName: str?, name: str, schemas: map?, updatedAt: str(date-time)}
 @returns(201) {archived: bool, createdAt: str(date-time), deprecated: bool, description: str, featureFlag: str?, featureFlags: [str]?, groupName: str?, name: str, schemas: map?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint DELETE /api/v1/event-type/{event_type_name}
-@required {event_type_name: str}
-@optional {expunge: bool=False}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Delete Event Type
+@required {event_type_name: str # The event type's name}
+@optional {expunge: bool=False # By default event types are archived when "deleted". Passing this to `true` deletes them entirely.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PATCH /api/v1/event-type/{event_type_name}
-@required {event_type_name: str}
-@optional {archived: bool, deprecated: bool, description: str, featureFlag: str, featureFlags: [str], groupName: str, schemas: map}
+@desc Patch Event Type
+@required {event_type_name: str # The event type's name}
+@optional {archived: bool, deprecated: bool, description: str, featureFlag: str # Deprecated, use `featureFlags` instead., featureFlags: [str], groupName: str # The event type group's name, schemas: map}
 @returns(200) {archived: bool, createdAt: str(date-time), deprecated: bool, description: str, featureFlag: str?, featureFlags: [str]?, groupName: str?, name: str, schemas: map?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/health
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Health
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/operational-webhook/endpoint
-@optional {limit: int(uint64), iterator: str, order: str}
+@desc List Operational Webhook Endpoints
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, order: str # The sorting order of the returned items}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/operational-webhook/endpoint
+@desc Create Operational Webhook Endpoint
 @required {url: str(uri)}
-@optional {idempotency-key: str, idempotency-key: str, description: str=, disabled: bool=False, filterTypes: [str], metadata: map={}, rateLimit: int(uint16), secret: str, uid: str}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, description: str=, disabled: bool=False, filterTypes: [str], metadata: map={}, rateLimit: int(uint16), secret: str # The endpoint's verification secret.  Format: `base64` encoded random bytes optionally prefixed with `whsec_`. It is recommended to not set this and let the server generate the secret., uid: str # Optional unique identifier for the endpoint.}
 @returns(201) {createdAt: str(date-time), description: str, disabled: bool, filterTypes: [str]?, id: str, metadata: map, rateLimit: int(uint16)?, uid: str?, updatedAt: str(date-time), url: str(uri)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/operational-webhook/endpoint/{endpoint_id}
-@required {endpoint_id: str}
+@desc Get Operational Webhook Endpoint
+@required {endpoint_id: str # The Endpoint's ID or UID.}
 @returns(200) {createdAt: str(date-time), description: str, disabled: bool, filterTypes: [str]?, id: str, metadata: map, rateLimit: int(uint16)?, uid: str?, updatedAt: str(date-time), url: str(uri)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /api/v1/operational-webhook/endpoint/{endpoint_id}
-@required {endpoint_id: str, url: str(uri)}
-@optional {description: str=, disabled: bool=False, filterTypes: [str], metadata: map={}, rateLimit: int(uint16), uid: str}
+@desc Update Operational Webhook Endpoint
+@required {endpoint_id: str # The Endpoint's ID or UID., url: str(uri)}
+@optional {description: str=, disabled: bool=False, filterTypes: [str], metadata: map={}, rateLimit: int(uint16), uid: str # Optional unique identifier for the endpoint.}
 @returns(200) {createdAt: str(date-time), description: str, disabled: bool, filterTypes: [str]?, id: str, metadata: map, rateLimit: int(uint16)?, uid: str?, updatedAt: str(date-time), url: str(uri)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint DELETE /api/v1/operational-webhook/endpoint/{endpoint_id}
-@required {endpoint_id: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Delete Operational Webhook Endpoint
+@required {endpoint_id: str # The Endpoint's ID or UID.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/operational-webhook/endpoint/{endpoint_id}/headers
-@required {endpoint_id: str}
+@desc Get Operational Webhook Endpoint Headers
+@required {endpoint_id: str # The Endpoint's ID or UID.}
 @returns(200) {headers: map, sensitive: [str]}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /api/v1/operational-webhook/endpoint/{endpoint_id}/headers
-@required {endpoint_id: str, headers: map}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Update Operational Webhook Endpoint Headers
+@required {endpoint_id: str # The Endpoint's ID or UID., headers: map}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/operational-webhook/endpoint/{endpoint_id}/secret
-@required {endpoint_id: str}
+@desc Get Operational Webhook Endpoint Secret
+@required {endpoint_id: str # The Endpoint's ID or UID.}
 @returns(200) {key: str}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/operational-webhook/endpoint/{endpoint_id}/secret/rotate
-@required {endpoint_id: str}
-@optional {idempotency-key: str, idempotency-key: str, key: str=None}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Rotate Operational Webhook Endpoint Secret
+@required {endpoint_id: str # The Endpoint's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, key: str=None # The endpoint's verification secret.  Format: `base64` encoded random bytes optionally prefixed with `whsec_`. It is recommended to not set this and let the server generate the secret.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/stats/usage/app
+@desc Aggregate App Stats
 @required {since: str(date-time), until: str(date-time)}
-@optional {idempotency-key: str, idempotency-key: str, appIds: [str]}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, appIds: [str] # Specific app IDs or UIDs to aggregate stats for.  Note that if none of the given IDs or UIDs are resolved, a 422 response will be given.}
 @returns(202) {id: str, status: str, task: str, unresolvedAppIds: [str], updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /api/v1/stats/usage/event-types
+@desc Aggregate Event Types
 @returns(202) {id: str, status: str, task: str, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/stream
-@optional {limit: int(uint64), iterator: str, order: str}
+@desc List Streams
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, order: str # The sorting order of the returned items}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/stream
-@required {name: str}
-@optional {idempotency-key: str, idempotency-key: str, metadata: map={}, uid: str}
+@desc Create Stream
+@required {name: str # The stream's name.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, metadata: map={}, uid: str # An optional unique identifier for the stream.}
 @returns(201) {createdAt: str(date-time), id: str, metadata: map, name: str?, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/stream/event-type
-@optional {limit: int(uint64), iterator: str, order: str, include_archived: bool=False}
+@desc List Stream Event Types
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, order: str # The sorting order of the returned items, include_archived: bool=False # Include archived (deleted but not expunged) items in the response.}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/stream/event-type
-@required {name: str}
-@optional {idempotency-key: str, idempotency-key: str, archived: bool=False, deprecated: bool=False, description: str, featureFlags: [str]=None}
+@desc Create Stream Event Type
+@required {name: str # The event type's name}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, archived: bool=False, deprecated: bool=False, description: str, featureFlags: [str]=None}
 @returns(201) {archived: bool, createdAt: str(date-time), deprecated: bool, description: str?, featureFlags: [str]?, name: str, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/stream/event-type/{name}
-@required {name: str}
+@desc Get Stream Event Type
+@required {name: str # The event type's name}
 @returns(200) {archived: bool, createdAt: str(date-time), deprecated: bool, description: str?, featureFlags: [str]?, name: str, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /api/v1/stream/event-type/{name}
-@required {name: str, name: str}
+@desc Update Stream Event Type
+@required {name: str # The event type's name, name: str # The event type's name}
 @optional {archived: bool=False, deprecated: bool=False, description: str, featureFlags: [str]=None}
 @returns(200) {archived: bool, createdAt: str(date-time), deprecated: bool, description: str?, featureFlags: [str]?, name: str, updatedAt: str(date-time)}
 @returns(201) {archived: bool, createdAt: str(date-time), deprecated: bool, description: str?, featureFlags: [str]?, name: str, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint DELETE /api/v1/stream/event-type/{name}
-@required {name: str}
-@optional {expunge: bool=False}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Delete Stream Event Type
+@required {name: str # The event type's name}
+@optional {expunge: bool=False # By default, event types are archived when "deleted". With this flag, they are deleted entirely.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PATCH /api/v1/stream/event-type/{name}
-@required {name: str}
-@optional {archived: bool, deprecated: bool, description: str, featureFlags: [str], name: str}
+@desc Patch Stream Event Type
+@required {name: str # The event type's name}
+@optional {archived: bool, deprecated: bool, description: str, featureFlags: [str], name: str # The event type's name}
 @returns(200) {archived: bool, createdAt: str(date-time), deprecated: bool, description: str?, featureFlags: [str]?, name: str, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/stream/{stream_id}
+@desc Get Stream
 @returns(200) {createdAt: str(date-time), id: str, metadata: map, name: str?, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /api/v1/stream/{stream_id}
-@required {stream_id: str, name: str}
-@optional {metadata: map={}, uid: str}
+@desc Update Stream
+@required {stream_id: str # The Stream's ID or UID., name: str # The stream's name.}
+@optional {metadata: map={}, uid: str # An optional unique identifier for the stream.}
 @returns(200) {createdAt: str(date-time), id: str, metadata: map, name: str?, uid: str?, updatedAt: str(date-time)}
 @returns(201) {createdAt: str(date-time), id: str, metadata: map, name: str?, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint DELETE /api/v1/stream/{stream_id}
-@required {stream_id: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Delete Stream
+@required {stream_id: str # The Stream's ID or UID.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PATCH /api/v1/stream/{stream_id}
-@required {stream_id: str}
-@optional {description: str, metadata: map, uid: str}
+@desc Patch Stream
+@required {stream_id: str # The Stream's ID or UID.}
+@optional {description: str # The Stream's description., metadata: map, uid: str # An optional unique identifier for the stream.}
 @returns(200) {createdAt: str(date-time), id: str, metadata: map, name: str?, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/stream/{stream_id}/events
-@required {stream_id: str, events: [map{eventType!: str, payload!: str}]}
-@optional {idempotency-key: str, idempotency-key: str, stream: map{metadata: map, name!: str, uid: str}}
+@desc Create Events
+@required {stream_id: str # The Stream's ID or UID., events: [map{eventType!: str, payload!: str}]}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, stream: map{metadata: map, name!: str, uid: str}}
 @returns(202)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/stream/{stream_id}/sink
-@required {stream_id: str}
-@optional {limit: int(uint64), iterator: str, order: str}
+@desc List Sinks
+@required {stream_id: str # The Stream's ID or UID.}
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, order: str # The sorting order of the returned items}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/stream/{stream_id}/sink
-@required {stream_id: str}
-@optional {idempotency-key: str, idempotency-key: str, batchSize: int(uint16)=100, eventTypes: [str]=[], maxWaitSecs: int(uint16)=0, metadata: map={}, status: str(enabled/disabled), uid: str}
+@desc Create Sink
+@required {stream_id: str # The Stream's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, batchSize: int(uint16)=100 # How many events will be batched in a request to the Sink., eventTypes: [str]=[] # A list of event types that filter which events are dispatched to the Sink. An empty list (or null) will not filter out any events., maxWaitSecs: int(uint16)=0 # How long to wait before a batch of events is sent, if the `batchSize` is not reached.  For example, with a `batchSize` of 100 and `maxWaitSecs` of 10, we will send a request after 10 seconds or 100 events, whichever comes first.  Note that we will never send an empty batch of events to the Sink., metadata: map={}, status: str(enabled/disabled), uid: str # An optional unique identifier for the sink.}
 @returns(201) {batchSize: int(int32), createdAt: str(date-time), currentIterator: str, eventTypes: [str], failureReason: str?, id: str, maxWaitSecs: int(int32), metadata: map, nextRetryAt: str(date-time)?, status: str, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/stream/{stream_id}/sink/{sink_id}
-@required {stream_id: str, sink_id: str}
+@desc Get Sink
+@required {stream_id: str # The Stream's ID or UID., sink_id: str # The StreamSink's ID or UID.}
 @returns(200) {batchSize: int(int32), createdAt: str(date-time), currentIterator: str, eventTypes: [str], failureReason: str?, id: str, maxWaitSecs: int(int32), metadata: map, nextRetryAt: str(date-time)?, status: str, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /api/v1/stream/{stream_id}/sink/{sink_id}
-@required {stream_id: str, sink_id: str}
-@optional {batchSize: int(uint16)=100, eventTypes: [str]=[], maxWaitSecs: int(uint16)=0, metadata: map={}, status: str(enabled/disabled), uid: str}
+@desc Update Sink
+@required {stream_id: str # The Stream's ID or UID., sink_id: str # The StreamSink's ID or UID.}
+@optional {batchSize: int(uint16)=100 # How many events will be batched in a request to the Sink., eventTypes: [str]=[] # A list of event types that filter which events are dispatched to the Sink. An empty list (or null) will not filter out any events., maxWaitSecs: int(uint16)=0 # How long to wait before a batch of events is sent, if the `batchSize` is not reached.  For example, with a `batchSize` of 100 and `maxWaitSecs` of 10, we will send a request after 10 seconds or 100 events, whichever comes first.  Note that we will never send an empty batch of events to the Sink., metadata: map={}, status: str(enabled/disabled), uid: str # An optional unique identifier for the sink.}
 @returns(200) {batchSize: int(int32), createdAt: str(date-time), currentIterator: str, eventTypes: [str], failureReason: str?, id: str, maxWaitSecs: int(int32), metadata: map, nextRetryAt: str(date-time)?, status: str, uid: str?, updatedAt: str(date-time)}
 @returns(201) {batchSize: int(int32), createdAt: str(date-time), currentIterator: str, eventTypes: [str], failureReason: str?, id: str, maxWaitSecs: int(int32), metadata: map, nextRetryAt: str(date-time)?, status: str, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint DELETE /api/v1/stream/{stream_id}/sink/{sink_id}
-@required {stream_id: str, sink_id: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Delete Sink
+@required {stream_id: str # The Stream's ID or UID., sink_id: str # The StreamSink's ID or UID.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PATCH /api/v1/stream/{stream_id}/sink/{sink_id}
-@required {stream_id: str, sink_id: str}
-@optional {batchSize: int(uint16)=None, eventTypes: [str], maxWaitSecs: int(uint16)=None, metadata: map, status: str(enabled/disabled), uid: str}
+@desc Patch Sink
+@required {stream_id: str # The Stream's ID or UID., sink_id: str # The StreamSink's ID or UID.}
+@optional {batchSize: int(uint16)=None, eventTypes: [str], maxWaitSecs: int(uint16)=None, metadata: map, status: str(enabled/disabled), uid: str # The StreamSink's UID.}
 @returns(200) {batchSize: int(int32), createdAt: str(date-time), currentIterator: str, eventTypes: [str], failureReason: str?, id: str, maxWaitSecs: int(int32), metadata: map, nextRetryAt: str(date-time)?, status: str, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/stream/{stream_id}/sink/{sink_id}/events
-@required {stream_id: str, sink_id: str}
-@optional {limit: int(uint64), iterator: str, after: str(date-time)}
+@desc Poller Sink Stream Events
+@required {stream_id: str # The Stream's ID or UID., sink_id: str # The StreamSink's ID or UID.}
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, after: str(date-time)}
 @returns(200) {data: [map], done: bool, iterator: str}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/stream/{stream_id}/sink/{sink_id}/headers
-@required {stream_id: str, sink_id: str}
-@returns(200) {headers: map, sensitive: [str]}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Get Sink Headers
+@required {stream_id: str # The Stream's ID or UID., sink_id: str # The StreamSink's ID or UID.}
+@returns(200) {headers: map, sensitive: [str]} # The value of the headers is returned in the `headers` field.  Sensitive headers that have been redacted are returned in the sensitive field.
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PATCH /api/v1/stream/{stream_id}/sink/{sink_id}/headers
-@required {stream_id: str, sink_id: str, headers: map}
-@returns(200) {headers: map, sensitive: [str]}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Patch Sink Headers
+@required {stream_id: str # The Stream's ID or UID., sink_id: str # The StreamSink's ID or UID., headers: map}
+@returns(200) {headers: map, sensitive: [str]} # The value of the headers is returned in the `headers` field.  Sensitive headers that have been redacted are returned in the sensitive field.
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/stream/{stream_id}/sink/{sink_id}/secret
-@required {stream_id: str, sink_id: str}
+@desc Get Sink Secret
+@required {stream_id: str # The Stream's ID or UID., sink_id: str # The StreamSink's ID or UID.}
 @returns(200) {key: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /api/v1/stream/{stream_id}/sink/{sink_id}/secret/rotate
-@required {stream_id: str, sink_id: str}
-@optional {idempotency-key: str, idempotency-key: str, key: str=None}
+@desc Rotate Sink Secret
+@required {stream_id: str # The Stream's ID or UID., sink_id: str # The StreamSink's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, key: str=None # The endpoint's verification secret.  Format: `base64` encoded random bytes optionally prefixed with `whsec_`. It is recommended to not set this and let the server generate the secret.}
 @returns(200)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /api/v1/stream/{stream_id}/sink/{sink_id}/transformation
-@required {stream_id: str, sink_id: str}
+@desc Get Sink Transformation
+@required {stream_id: str # The Stream's ID or UID., sink_id: str # The StreamSink's ID or UID.}
 @returns(200) {code: str?, enabled: bool}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PATCH /api/v1/stream/{stream_id}/sink/{sink_id}/transformation
-@required {stream_id: str, sink_id: str}
+@desc Set Sink Transformation
+@required {stream_id: str # The Stream's ID or UID., sink_id: str # The StreamSink's ID or UID.}
 @optional {code: str}
 @returns(200)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endgroup
 
 @group ingest
 @endpoint GET /ingest/api/v1/source
-@optional {limit: int(uint64), iterator: str, order: str}
+@desc List Ingest Sources
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, order: str # The sorting order of the returned items}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /ingest/api/v1/source
+@desc Create Ingest Source
 @required {name: str}
-@optional {idempotency-key: str, idempotency-key: str, metadata: map={}, uid: str}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, metadata: map={}, uid: str # The Source's UID.}
 @returns(201) {createdAt: str(date-time), id: str, ingestUrl: str(uri)?, metadata: map, name: str, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /ingest/api/v1/source/{source_id}
-@required {source_id: str}
+@desc Get Ingest Source
+@required {source_id: str # The Source's ID or UID.}
 @returns(200) {createdAt: str(date-time), id: str, ingestUrl: str(uri)?, metadata: map, name: str, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /ingest/api/v1/source/{source_id}
-@required {source_id: str, name: str}
-@optional {metadata: map={}, uid: str}
+@desc Update Source
+@required {source_id: str # The Source's ID or UID., name: str}
+@optional {metadata: map={}, uid: str # The Source's UID.}
 @returns(200) {createdAt: str(date-time), id: str, ingestUrl: str(uri)?, metadata: map, name: str, uid: str?, updatedAt: str(date-time)}
 @returns(201) {createdAt: str(date-time), id: str, ingestUrl: str(uri)?, metadata: map, name: str, uid: str?, updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint DELETE /ingest/api/v1/source/{source_id}
-@required {source_id: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Delete Ingest Source
+@required {source_id: str # The Source's ID or UID.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /ingest/api/v1/source/{source_id}/dashboard
-@required {source_id: str}
-@optional {idempotency-key: str, idempotency-key: str, expiry: int(uint64), readOnly: bool}
+@desc Ingest Source Consumer Portal
+@required {source_id: str # The Source's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, expiry: int(uint64) # How long the token will be valid for, in seconds.  Valid values are between 1 hour and 7 days. The default is 7 days., readOnly: bool # Whether the app portal should be in read-only mode.}
 @returns(200) {token: str, url: str(uri)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /ingest/api/v1/source/{source_id}/endpoint
-@required {source_id: str}
-@optional {limit: int(uint64), iterator: str, order: str}
+@desc List Ingest Endpoints
+@required {source_id: str # The Source's ID or UID.}
+@optional {limit: int(uint64) # Limit the number of returned items, iterator: str # The iterator returned from a prior invocation, order: str # The sorting order of the returned items}
 @returns(200) {data: [map], done: bool, iterator: str?, prevIterator: str?}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /ingest/api/v1/source/{source_id}/endpoint
-@required {source_id: str, url: str(uri)}
-@optional {idempotency-key: str, idempotency-key: str, description: str=, disabled: bool=False, metadata: map={}, rateLimit: int(uint16), secret: str, uid: str}
+@desc Create Ingest Endpoint
+@required {source_id: str # The Source's ID or UID., url: str(uri)}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, description: str=, disabled: bool=False, metadata: map={}, rateLimit: int(uint16), secret: str # The endpoint's verification secret.  Format: `base64` encoded random bytes optionally prefixed with `whsec_`. It is recommended to not set this and let the server generate the secret., uid: str # Optional unique identifier for the endpoint.}
 @returns(201) {createdAt: str(date-time), description: str, disabled: bool, id: str, metadata: map, rateLimit: int(uint16)?, uid: str?, updatedAt: str(date-time), url: str(uri)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}
-@required {source_id: str, endpoint_id: str}
+@desc Get Ingest Endpoint
+@required {source_id: str # The Source's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
 @returns(200) {createdAt: str(date-time), description: str, disabled: bool, id: str, metadata: map, rateLimit: int(uint16)?, uid: str?, updatedAt: str(date-time), url: str(uri)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}
-@required {source_id: str, endpoint_id: str, url: str(uri)}
-@optional {description: str=, disabled: bool=False, metadata: map={}, rateLimit: int(uint16), uid: str}
+@desc Update Ingest Endpoint
+@required {source_id: str # The Source's ID or UID., endpoint_id: str # The Endpoint's ID or UID., url: str(uri)}
+@optional {description: str=, disabled: bool=False, metadata: map={}, rateLimit: int(uint16), uid: str # Optional unique identifier for the endpoint.}
 @returns(200) {createdAt: str(date-time), description: str, disabled: bool, id: str, metadata: map, rateLimit: int(uint16)?, uid: str?, updatedAt: str(date-time), url: str(uri)}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint DELETE /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}
-@required {source_id: str, endpoint_id: str}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Delete Ingest Endpoint
+@required {source_id: str # The Source's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/headers
-@required {source_id: str, endpoint_id: str}
+@desc Get Ingest Endpoint Headers
+@required {source_id: str # The Source's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
 @returns(200) {headers: map, sensitive: [str]}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PUT /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/headers
-@required {source_id: str, endpoint_id: str, headers: map}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Update Ingest Endpoint Headers
+@required {source_id: str # The Source's ID or UID., endpoint_id: str # The Endpoint's ID or UID., headers: map}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret
-@required {source_id: str, endpoint_id: str}
+@desc Get Ingest Endpoint Secret
+@required {source_id: str # The Source's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
 @returns(200) {key: str}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret/rotate
-@required {source_id: str, endpoint_id: str}
-@optional {idempotency-key: str, idempotency-key: str, key: str=None}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@desc Rotate Ingest Endpoint Secret
+@required {source_id: str # The Source's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key, key: str=None # The endpoint's verification secret.  Format: `base64` encoded random bytes optionally prefixed with `whsec_`. It is recommended to not set this and let the server generate the secret.}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint GET /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/transformation
-@required {source_id: str, endpoint_id: str}
+@desc Get Ingest Endpoint Transformation
+@required {source_id: str # The Source's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
 @returns(200) {code: str?, enabled: bool}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint PATCH /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/transformation
-@required {source_id: str, endpoint_id: str}
+@desc Patch Ingest Endpoint Transformation
+@required {source_id: str # The Source's ID or UID., endpoint_id: str # The Endpoint's ID or UID.}
 @optional {code: str, enabled: bool}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429}
+@returns(204) no content
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endpoint POST /ingest/api/v1/source/{source_id}/token/rotate
-@required {source_id: str}
-@optional {idempotency-key: str, idempotency-key: str}
+@desc Rotate Ingest Token
+@required {source_id: str # The Source's ID or UID.}
+@optional {idempotency-key: str # The request's idempotency key, idempotency-key: str # The request's idempotency key}
 @returns(200) {ingestUrl: str}
-@errors {400, 401, 403, 404, 409, 422, 429}
+@errors {400: Bad request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 422: Validation Error, 429: Too Many Requests}
 
 @endgroup
 

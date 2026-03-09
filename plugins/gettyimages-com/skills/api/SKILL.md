@@ -175,91 +175,79 @@ Not specified.
 | GET | /v3/videos/{id}/same-series | Retrieve creative videos from the same series |
 | GET | /v3/videos/{id}/similar | Retrieve similar videos |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Search for creative stock photos of sunsets?" -> GET /v3/search/images/creative
-- "Find editorial news images from last week?" -> GET /v3/search/images/editorial
-- "Generate an AI image from a text prompt?" -> POST /v3/ai/image-generations
-- "Check the status of my AI image generation?" -> GET /v3/ai/image-generations/{generationRequestId}
-- "Download a specific stock image?" -> POST /v3/downloads/images/{id}
-- "Find videos similar to one I already have?" -> GET /v3/videos/{id}/similar
-- "Create a board and add assets to it?" -> POST /v3/boards + PUT /v3/boards/{board_id}/assets
-- "Remove the background from a generated image?" -> POST /v3/ai/image-generations/background-removal
-- "Search for images using a reference photo?" -> GET /v3/search/images/creative/by-image
-- "What products are available on my account?" -> GET /v3/products
-- "View my recent download history?" -> GET /v3/downloads
-- "Who am I authenticated as?" -> GET /v3/customers/current
-- "Find all images by a specific artist?" -> GET /v3/artists/images
-- "Report asset usage for compliance tracking?" -> PUT /v3/usage-batches/{id}
-- "Get details and licensing info for a video clip?" -> GET /v3/videos/{id}
-
-## Response Tips
-
-- **Search endpoints** (`/search/*`): Always paginated via `page`/`page_size` with `result_count` for total. Check `auto_corrections.phrase` for spell-fix signals and `related_searches` for query refinement. Facets (`specific_people`, `events`, `locations`, `artists`, `entertainment`) are only populated when `include_facets=true`.
-- **AI generation endpoints** (`/ai/*`): Return 202 Accepted with a `generation_request_id` for async polling. The GET status endpoint also returns 202 while processing and 200 when results are ready. Watch for 410 Gone on expired generations.
-- **Download endpoints** (`/downloads/*`): May return 303 redirect to the actual file URL instead of the file body. The `auto_download` flag controls this behavior.
-- **Board endpoints** (`/boards/*`): PUT for assets returns both `assets_added` and `assets_not_added` arrays -- always check the latter for partial failures. Board GET includes a `permissions` map governing what the current user can do.
-- **Batch lookups** (`/images`, `/videos`, `/events` with `ids`): Return both a found array and a `*_not_found` array. Always check the not-found list rather than assuming all IDs resolved.
-- **Asset detail endpoints** (`/images/{id}`, `/videos/{id}`): Deeply nested objects for `allowed_use`, `keywords`, `display_sizes`, and `download_sizes`. Use the `fields` parameter to limit payload size.
-
-## Anomaly Flags
-
-- **429 Too Many Requests**: Nearly every AI endpoint returns 429. Surface rate limit warnings proactively and suggest backing off before retries. Track request cadence across generation, variation, and refinement calls.
-- **410 Gone on AI generations**: Generated images expire. If a download or variation returns 410, alert the user that the generation has been purged and must be re-created.
-- **409 Conflict on AI endpoints**: Signals a state conflict (e.g., generation still processing, duplicate request, or revoked product). Surface the specific generation_request_id so the user can investigate.
-- **402 Payment Required on asset-licensing**: Insufficient credits. Proactively surface `credits_used` from successful licensing calls and warn when the operation requires `use_team_credits`.
-- **`auto_corrections` in search results**: When the API silently corrects a search phrase, surface the original vs. corrected term so the user knows their exact query was not used.
-- **`assets_not_added` / `*_not_found` arrays**: Partial failures on batch operations should always be surfaced, not silently ignored.
-- **`product_revoked_date` in generation history**: If non-null, the product tied to a generation has been revoked. Alert the user that re-downloads may fail.
-- **503 on `/customers/current`**: Service degradation. Surface this as a system health issue rather than an auth problem.
-
-## Playbook
-
-### 1. Generate an AI Image and Download It
-
-1. Call `POST /v3/ai/image-generations` with your `prompt`, `aspect_ratio`, `media_type`, and `mood`.
-2. Note the returned `generation_request_id`.
-3. Poll `GET /v3/ai/image-generations/{generationRequestId}` until the response status changes from 202 to 200 and `results` is populated.
-4. Pick a result by `index`. Call `GET /v3/ai/image-generations/{generationRequestId}/images/{index}/download-sizes` to see available sizes.
-5. Initiate download with `PUT /v3/ai/image-generations/{generationRequestId}/images/{index}/download`, specifying `size_name` and `product_id`.
-6. Poll `GET /v3/ai/image-generations/{generationRequestId}/images/{index}/download` until 200 returns a `url`.
-7. Fetch the file from the returned URL.
-
-### 2. Search, Preview, and License a Stock Image
-
-1. Search with `GET /v3/search/images/creative` using `phrase`, desired `orientations`, `page_size`, and any filters (color, mood, ethnicity).
-2. Review `result_count` and iterate pages if needed. Check `auto_corrections` for query rewrites.
-3. For a candidate, call `GET /v3/images/{id}` with `fields` including `display_sizes` and `download_sizes` to inspect resolution options.
-4. Download via `POST /v3/downloads/images/{id}` with the desired `file_type`, `height`, and `product_id`.
-5. If extended licensing is needed, call `POST /v3/asset-licensing/{assetId}` with the required `extended_licenses` array.
-
-### 3. Curate a Board with Comments
-
-1. Create a board: `POST /v3/boards` with a `name` and optional `description`.
-2. Note the returned board `id`.
-3. Add assets in bulk: `PUT /v3/boards/{board_id}/assets` with an array of asset IDs in the body. Check `assets_not_added` for failures.
-4. Add a comment on a specific asset: `POST /v3/boards/{board_id}/assets/{asset_id}/comments` with `Text`.
-5. Add a board-level comment: `POST /v3/boards/{board_id}/comments` with `text`.
-6. Retrieve all comments for review: `GET /v3/boards/{board_id}/comments`.
-
-### 4. Iterate on an AI-Generated Image
-
-1. Generate an initial image via `POST /v3/ai/image-generations` and poll until results are ready.
-2. Create a variation: `POST /v3/ai/image-generations/{generationRequestId}/images/{index}/variations`.
-3. Refine with inpainting: `POST /v3/ai/image-generations/refine` providing a `mask_url` and updated `prompt`.
-4. Extend the canvas: `POST /v3/ai/image-generations/extend` with directional percentages (`left_percentage`, `right_percentage`, etc.).
-5. Replace the background: `POST /v3/ai/image-generations/background-replacement` with a new `prompt` or `background_color`.
-6. Each step returns a new `generation_request_id` -- poll each one before proceeding to the next refinement.
-
-### 5. Track Downloads and Report Usage
-
-1. Pull recent downloads: `GET /v3/downloads` with `date_from`/`date_to` and `company_downloads=true` for team-wide history.
-2. For a specific asset, check its download history: `GET /v3/images/{id}/downloadhistory` or `GET /v3/videos/{id}/downloadhistory`.
-3. Cross-reference with purchased assets: `GET /v3/purchased-assets` with date filters.
-4. Report usage to Getty for compliance: `PUT /v3/usage-batches/{id}` with an array of `asset_usages` including `asset_id`, `quantity`, and `usage_date`.
-5. Check `invalid_assets` in the response to catch any IDs that failed validation.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all images?" -> GET /v3/affiliates/search/images
+- "List all videos?" -> GET /v3/affiliates/search/videos
+- "Create a image-generation?" -> POST /v3/ai/image-generations
+- "Get image-generation details?" -> GET /v3/ai/image-generations/{generationRequestId}
+- "Create a variation?" -> POST /v3/ai/image-generations/{generationRequestId}/images/{index}/variations
+- "Create a file-registration?" -> POST /v3/ai/file-registrations
+- "List all file-registrations?" -> GET /v3/ai/file-registrations
+- "Get file-registration details?" -> GET /v3/ai/file-registrations/{fileRegistrationId}
+- "Delete a file-registration?" -> DELETE /v3/ai/file-registrations/{fileRegistrationId}
+- "Create a refine?" -> POST /v3/ai/image-generations/refine
+- "Create a extend?" -> POST /v3/ai/image-generations/extend
+- "Create a background-removal?" -> POST /v3/ai/image-generations/background-removal
+- "Create a object-removal?" -> POST /v3/ai/image-generations/object-removal
+- "Create a background-replacement?" -> POST /v3/ai/image-generations/background-replacement
+- "Create a influence-color-by-image?" -> POST /v3/ai/image-generations/influence-color-by-image
+- "Create a influence-composition-by-image?" -> POST /v3/ai/image-generations/influence-composition-by-image
+- "Create a background-generation?" -> POST /v3/ai/image-generations/background-generations
+- "List all generation-history?" -> GET /v3/ai/generation-history
+- "Get generation-history details?" -> GET /v3/ai/generation-history/{generationRequestId}
+- "List all download-sizes?" -> GET /v3/ai/image-generations/{generationRequestId}/images/{index}/download-sizes
+- "List all download?" -> GET /v3/ai/image-generations/{generationRequestId}/images/{index}/download
+- "Create a redownload?" -> POST /v3/ai/redownloads
+- "Create a enhance-prompt?" -> POST /v3/ai/enhance-prompt
+- "List all images?" -> GET /v3/artists/images
+- "List all videos?" -> GET /v3/artists/videos
+- "Delete a change-set?" -> DELETE /v3/asset-changes/change-sets/{change-set-id}
+- "List all channels?" -> GET /v3/asset-changes/channels
+- "List all boards?" -> GET /v3/boards
+- "Create a board?" -> POST /v3/boards
+- "Get board details?" -> GET /v3/boards/{board_id}
+- "Delete a board?" -> DELETE /v3/boards/{board_id}
+- "Update a board?" -> PUT /v3/boards/{board_id}
+- "Update a asset?" -> PUT /v3/boards/{board_id}/assets/{asset_id}
+- "Delete a asset?" -> DELETE /v3/boards/{board_id}/assets/{asset_id}
+- "Create a comment?" -> POST /v3/boards/{board_id}/assets/{asset_id}/comments
+- "Delete a comment?" -> DELETE /v3/boards/{board_id}/assets/{asset_id}/comments/{comment_id}
+- "List all comments?" -> GET /v3/boards/{board_id}/comments
+- "Create a comment?" -> POST /v3/boards/{board_id}/comments
+- "Delete a comment?" -> DELETE /v3/boards/{board_id}/comments/{comment_id}
+- "List all collections?" -> GET /v3/collections
+- "List all countries?" -> GET /v3/countries
+- "List all current?" -> GET /v3/customers/current
+- "List all downloads?" -> GET /v3/downloads
+- "List all events?" -> GET /v3/events
+- "Get event details?" -> GET /v3/events/{id}
+- "List all search?" -> GET /v3/image-match/search
+- "List all images?" -> GET /v3/images
+- "Get image details?" -> GET /v3/images/{id}
+- "List all downloadhistory?" -> GET /v3/images/{id}/downloadhistory
+- "List all same-series?" -> GET /v3/images/{id}/same-series
+- "List all similar?" -> GET /v3/images/{id}/similar
+- "Get order details?" -> GET /v3/orders/{id}
+- "List all products?" -> GET /v3/products
+- "List all purchased-assets?" -> GET /v3/purchased-assets
+- "List all events?" -> GET /v3/search/events
+- "List all creative?" -> GET /v3/search/images/creative
+- "List all by-image?" -> GET /v3/search/images/creative/by-image
+- "List all editorial?" -> GET /v3/search/images/editorial
+- "List all creative?" -> GET /v3/search/videos/creative
+- "List all by-image?" -> GET /v3/search/videos/creative/by-image
+- "List all editorial?" -> GET /v3/search/videos/editorial
+- "Update a upload?" -> PUT /v3/search/by-image/uploads/{file-name}
+- "List all images?" -> GET /v3/search/images
+- "Update a usage-batche?" -> PUT /v3/usage-batches/{id}
+- "List all videos?" -> GET /v3/videos
+- "Get video details?" -> GET /v3/videos/{id}
+- "List all downloadhistory?" -> GET /v3/videos/{id}/downloadhistory
+- "List all same-series?" -> GET /v3/videos/{id}/same-series
+- "List all similar?" -> GET /v3/videos/{id}/similar
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

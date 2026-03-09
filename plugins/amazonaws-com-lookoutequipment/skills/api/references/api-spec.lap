@@ -8,203 +8,252 @@
 @toc root(49)
 
 @endpoint POST /
+@desc Creates a container for a collection of data being ingested for analysis. The dataset contains the metadata describing where the data is and what the data actually looks like. For example, it contains the location of the data source, the data schema, and other information. A dataset also contains any tags associated with the ingested data.
 @required {DatasetName: str, ClientToken: str}
 @optional {DatasetSchema: DatasetSchema, ServerSideKmsKeyId: str, Tags: [Tag]}
 @returns(200) {DatasetName: str?, DatasetArn: str?, Status: str?}
 
 @endpoint POST /
+@desc Creates a scheduled inference. Scheduling an inference is setting up a continuous real-time inference plan to analyze new measurement data. When setting up the schedule, you provide an S3 bucket location for the input data, assign it a delimiter between separate entries in the data, set an offset delay if desired, and set the frequency of inferencing. You must also provide an S3 bucket location for the output data.
 @required {ModelName: str, InferenceSchedulerName: str, DataUploadFrequency: str, DataInputConfiguration: InferenceInputConfiguration, DataOutputConfiguration: InferenceOutputConfiguration, RoleArn: str, ClientToken: str}
 @optional {DataDelayOffsetInMinutes: int(i64), ServerSideKmsKeyId: str, Tags: [Tag]}
 @returns(200) {InferenceSchedulerArn: str?, InferenceSchedulerName: str?, Status: str?, ModelQuality: str?}
 
 @endpoint POST /
+@desc Creates a label for an event.
 @required {LabelGroupName: str, StartTime: str(timestamp), EndTime: str(timestamp), Rating: str, ClientToken: str}
 @optional {FaultCode: str, Notes: str, Equipment: str}
 @returns(200) {LabelId: str?}
 
 @endpoint POST /
+@desc Creates a group of labels.
 @required {LabelGroupName: str, ClientToken: str}
 @optional {FaultCodes: [str], Tags: [Tag]}
 @returns(200) {LabelGroupName: str?, LabelGroupArn: str?}
 
 @endpoint POST /
+@desc Creates a machine learning model for data inference.  A machine-learning (ML) model is a mathematical model that finds patterns in your data. In Amazon Lookout for Equipment, the model learns the patterns of normal behavior and detects abnormal behavior that could be potential equipment failure (or maintenance events). The models are made by analyzing normal data and abnormalities in machine behavior that have already occurred. Your model is trained using a portion of the data from your dataset and uses that data to learn patterns of normal behavior and abnormal patterns that lead to equipment failure. Another portion of the data is used to evaluate the model's accuracy.
 @required {ModelName: str, DatasetName: str, ClientToken: str}
 @optional {DatasetSchema: DatasetSchema, LabelsInputConfiguration: LabelsInputConfiguration, TrainingDataStartTime: str(timestamp), TrainingDataEndTime: str(timestamp), EvaluationDataStartTime: str(timestamp), EvaluationDataEndTime: str(timestamp), RoleArn: str, DataPreProcessingConfiguration: DataPreProcessingConfiguration, ServerSideKmsKeyId: str, Tags: [Tag], OffCondition: str, ModelDiagnosticsOutputConfiguration: ModelDiagnosticsOutputConfiguration}
 @returns(200) {ModelArn: str?, Status: str?}
 
 @endpoint POST /
+@desc Creates a retraining scheduler on the specified model.
 @required {ModelName: str, RetrainingFrequency: str, LookbackWindow: str, ClientToken: str}
 @optional {RetrainingStartDate: str(timestamp), PromoteMode: str}
 @returns(200) {ModelName: str?, ModelArn: str?, Status: str?}
 
 @endpoint POST /
+@desc Deletes a dataset and associated artifacts. The operation will check to see if any inference scheduler or data ingestion job is currently using the dataset, and if there isn't, the dataset, its metadata, and any associated data stored in S3 will be deleted. This does not affect any models that used this dataset for training and evaluation, but does prevent it from being used in the future.
 @required {DatasetName: str}
 
 @endpoint POST /
+@desc Deletes an inference scheduler that has been set up. Prior inference results will not be deleted.
 @required {InferenceSchedulerName: str}
 
 @endpoint POST /
+@desc Deletes a label.
 @required {LabelGroupName: str, LabelId: str}
 
 @endpoint POST /
+@desc Deletes a group of labels.
 @required {LabelGroupName: str}
 
 @endpoint POST /
+@desc Deletes a machine learning model currently available for Amazon Lookout for Equipment. This will prevent it from being used with an inference scheduler, even one that is already set up.
 @required {ModelName: str}
 
 @endpoint POST /
+@desc Deletes the resource policy attached to the resource.
 @required {ResourceArn: str}
 
 @endpoint POST /
+@desc Deletes a retraining scheduler from a model. The retraining scheduler must be in the STOPPED status.
 @required {ModelName: str}
 
 @endpoint POST /
+@desc Provides information on a specific data ingestion job such as creation time, dataset ARN, and status.
 @required {JobId: str}
 @returns(200) {JobId: str?, DatasetArn: str?, IngestionInputConfiguration: IngestionInputConfiguration?{S3InputConfiguration: IngestionS3InputConfiguration{Bucket: str, Prefix: str?, KeyPattern: str?}}, RoleArn: str?, CreatedAt: str(timestamp)?, Status: str?, FailedReason: str?, DataQualitySummary: DataQualitySummary?{InsufficientSensorData: InsufficientSensorData{MissingCompleteSensorData: MissingCompleteSensorData{AffectedSensorCount: int}, SensorsWithShortDateRange: SensorsWithShortDateRange{AffectedSensorCount: int}}, MissingSensorData: MissingSensorData{AffectedSensorCount: int, TotalNumberOfMissingValues: int}, InvalidSensorData: InvalidSensorData{AffectedSensorCount: int, TotalNumberOfInvalidValues: int}, UnsupportedTimestamps: UnsupportedTimestamps{TotalNumberOfUnsupportedTimestamps: int}, DuplicateTimestamps: DuplicateTimestamps{TotalNumberOfDuplicateTimestamps: int}}, IngestedFilesSummary: IngestedFilesSummary?{TotalNumberOfFiles: int, IngestedNumberOfFiles: int, DiscardedFiles: [S3Object]?}, StatusDetail: str?, IngestedDataSize: int(i64)?, DataStartTime: str(timestamp)?, DataEndTime: str(timestamp)?, SourceDatasetArn: str?}
 
 @endpoint POST /
+@desc Provides a JSON description of the data in each time series dataset, including names, column names, and data types.
 @required {DatasetName: str}
 @returns(200) {DatasetName: str?, DatasetArn: str?, CreatedAt: str(timestamp)?, LastUpdatedAt: str(timestamp)?, Status: str?, Schema: str?, ServerSideKmsKeyId: str?, IngestionInputConfiguration: IngestionInputConfiguration?{S3InputConfiguration: IngestionS3InputConfiguration{Bucket: str, Prefix: str?, KeyPattern: str?}}, DataQualitySummary: DataQualitySummary?{InsufficientSensorData: InsufficientSensorData{MissingCompleteSensorData: MissingCompleteSensorData{AffectedSensorCount: int}, SensorsWithShortDateRange: SensorsWithShortDateRange{AffectedSensorCount: int}}, MissingSensorData: MissingSensorData{AffectedSensorCount: int, TotalNumberOfMissingValues: int}, InvalidSensorData: InvalidSensorData{AffectedSensorCount: int, TotalNumberOfInvalidValues: int}, UnsupportedTimestamps: UnsupportedTimestamps{TotalNumberOfUnsupportedTimestamps: int}, DuplicateTimestamps: DuplicateTimestamps{TotalNumberOfDuplicateTimestamps: int}}, IngestedFilesSummary: IngestedFilesSummary?{TotalNumberOfFiles: int, IngestedNumberOfFiles: int, DiscardedFiles: [S3Object]?}, RoleArn: str?, DataStartTime: str(timestamp)?, DataEndTime: str(timestamp)?, SourceDatasetArn: str?}
 
 @endpoint POST /
+@desc Specifies information about the inference scheduler being used, including name, model, status, and associated metadata
 @required {InferenceSchedulerName: str}
 @returns(200) {ModelArn: str?, ModelName: str?, InferenceSchedulerName: str?, InferenceSchedulerArn: str?, Status: str?, DataDelayOffsetInMinutes: int(i64)?, DataUploadFrequency: str?, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, DataInputConfiguration: InferenceInputConfiguration?{S3InputConfiguration: InferenceS3InputConfiguration?{Bucket: str, Prefix: str?}, InputTimeZoneOffset: str?, InferenceInputNameConfiguration: InferenceInputNameConfiguration?{TimestampFormat: str?, ComponentTimestampDelimiter: str?}}, DataOutputConfiguration: InferenceOutputConfiguration?{S3OutputConfiguration: InferenceS3OutputConfiguration{Bucket: str, Prefix: str?}, KmsKeyId: str?}, RoleArn: str?, ServerSideKmsKeyId: str?, LatestInferenceResult: str?}
 
 @endpoint POST /
+@desc Returns the name of the label.
 @required {LabelGroupName: str, LabelId: str}
 @returns(200) {LabelGroupName: str?, LabelGroupArn: str?, LabelId: str?, StartTime: str(timestamp)?, EndTime: str(timestamp)?, Rating: str?, FaultCode: str?, Notes: str?, Equipment: str?, CreatedAt: str(timestamp)?}
 
 @endpoint POST /
+@desc Returns information about the label group.
 @required {LabelGroupName: str}
 @returns(200) {LabelGroupName: str?, LabelGroupArn: str?, FaultCodes: [str]?, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?}
 
 @endpoint POST /
+@desc Provides a JSON containing the overall information about a specific machine learning model, including model name and ARN, dataset, training and evaluation information, status, and so on.
 @required {ModelName: str}
 @returns(200) {ModelName: str?, ModelArn: str?, DatasetName: str?, DatasetArn: str?, Schema: str?, LabelsInputConfiguration: LabelsInputConfiguration?{S3InputConfiguration: LabelsS3InputConfiguration?{Bucket: str, Prefix: str?}, LabelGroupName: str?}, TrainingDataStartTime: str(timestamp)?, TrainingDataEndTime: str(timestamp)?, EvaluationDataStartTime: str(timestamp)?, EvaluationDataEndTime: str(timestamp)?, RoleArn: str?, DataPreProcessingConfiguration: DataPreProcessingConfiguration?{TargetSamplingRate: str?}, Status: str?, TrainingExecutionStartTime: str(timestamp)?, TrainingExecutionEndTime: str(timestamp)?, FailedReason: str?, ModelMetrics: str?, LastUpdatedTime: str(timestamp)?, CreatedAt: str(timestamp)?, ServerSideKmsKeyId: str?, OffCondition: str?, SourceModelVersionArn: str?, ImportJobStartTime: str(timestamp)?, ImportJobEndTime: str(timestamp)?, ActiveModelVersion: int(i64)?, ActiveModelVersionArn: str?, ModelVersionActivatedAt: str(timestamp)?, PreviousActiveModelVersion: int(i64)?, PreviousActiveModelVersionArn: str?, PreviousModelVersionActivatedAt: str(timestamp)?, PriorModelMetrics: str?, LatestScheduledRetrainingFailedReason: str?, LatestScheduledRetrainingStatus: str?, LatestScheduledRetrainingModelVersion: int(i64)?, LatestScheduledRetrainingStartTime: str(timestamp)?, LatestScheduledRetrainingAvailableDataInDays: int?, NextScheduledRetrainingStartDate: str(timestamp)?, AccumulatedInferenceDataStartTime: str(timestamp)?, AccumulatedInferenceDataEndTime: str(timestamp)?, RetrainingSchedulerStatus: str?, ModelDiagnosticsOutputConfiguration: ModelDiagnosticsOutputConfiguration?{S3OutputConfiguration: ModelDiagnosticsS3OutputConfiguration{Bucket: str, Prefix: str?}, KmsKeyId: str?}, ModelQuality: str?}
 
 @endpoint POST /
+@desc Retrieves information about a specific machine learning model version.
 @required {ModelName: str, ModelVersion: int(i64)}
 @returns(200) {ModelName: str?, ModelArn: str?, ModelVersion: int(i64)?, ModelVersionArn: str?, Status: str?, SourceType: str?, DatasetName: str?, DatasetArn: str?, Schema: str?, LabelsInputConfiguration: LabelsInputConfiguration?{S3InputConfiguration: LabelsS3InputConfiguration?{Bucket: str, Prefix: str?}, LabelGroupName: str?}, TrainingDataStartTime: str(timestamp)?, TrainingDataEndTime: str(timestamp)?, EvaluationDataStartTime: str(timestamp)?, EvaluationDataEndTime: str(timestamp)?, RoleArn: str?, DataPreProcessingConfiguration: DataPreProcessingConfiguration?{TargetSamplingRate: str?}, TrainingExecutionStartTime: str(timestamp)?, TrainingExecutionEndTime: str(timestamp)?, FailedReason: str?, ModelMetrics: str?, LastUpdatedTime: str(timestamp)?, CreatedAt: str(timestamp)?, ServerSideKmsKeyId: str?, OffCondition: str?, SourceModelVersionArn: str?, ImportJobStartTime: str(timestamp)?, ImportJobEndTime: str(timestamp)?, ImportedDataSizeInBytes: int(i64)?, PriorModelMetrics: str?, RetrainingAvailableDataInDays: int?, AutoPromotionResult: str?, AutoPromotionResultReason: str?, ModelDiagnosticsOutputConfiguration: ModelDiagnosticsOutputConfiguration?{S3OutputConfiguration: ModelDiagnosticsS3OutputConfiguration{Bucket: str, Prefix: str?}, KmsKeyId: str?}, ModelDiagnosticsResultsObject: S3Object?{Bucket: str, Key: str}, ModelQuality: str?}
 
 @endpoint POST /
+@desc Provides the details of a resource policy attached to a resource.
 @required {ResourceArn: str}
 @returns(200) {PolicyRevisionId: str?, ResourcePolicy: str?, CreationTime: str(timestamp)?, LastModifiedTime: str(timestamp)?}
 
 @endpoint POST /
+@desc Provides a description of the retraining scheduler, including information such as the model name and retraining parameters.
 @required {ModelName: str}
 @returns(200) {ModelName: str?, ModelArn: str?, RetrainingStartDate: str(timestamp)?, RetrainingFrequency: str?, LookbackWindow: str?, Status: str?, PromoteMode: str?, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?}
 
 @endpoint POST /
+@desc Imports a dataset.
 @required {SourceDatasetArn: str, ClientToken: str}
 @optional {DatasetName: str, ServerSideKmsKeyId: str, Tags: [Tag]}
 @returns(200) {DatasetName: str?, DatasetArn: str?, Status: str?, JobId: str?}
 
 @endpoint POST /
+@desc Imports a model that has been trained successfully.
 @required {SourceModelVersionArn: str, DatasetName: str, ClientToken: str}
 @optional {ModelName: str, LabelsInputConfiguration: LabelsInputConfiguration, RoleArn: str, ServerSideKmsKeyId: str, Tags: [Tag], InferenceDataImportStrategy: str}
 @returns(200) {ModelName: str?, ModelArn: str?, ModelVersionArn: str?, ModelVersion: int(i64)?, Status: str?}
 
 @endpoint POST /
+@desc Provides a list of all data ingestion jobs, including dataset name and ARN, S3 location of the input data, status, and so on.
 @optional {DatasetName: str, NextToken: str, MaxResults: int, Status: str}
 @returns(200) {NextToken: str?, DataIngestionJobSummaries: [DataIngestionJobSummary]?}
 
 @endpoint POST /
+@desc Lists all datasets currently available in your account, filtering on the dataset name.
 @optional {NextToken: str, MaxResults: int, DatasetNameBeginsWith: str}
 @returns(200) {NextToken: str?, DatasetSummaries: [DatasetSummary]?}
 
 @endpoint POST /
+@desc Lists all inference events that have been found for the specified inference scheduler.
 @required {InferenceSchedulerName: str, IntervalStartTime: str(timestamp), IntervalEndTime: str(timestamp)}
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {NextToken: str?, InferenceEventSummaries: [InferenceEventSummary]?}
 
 @endpoint POST /
+@desc Lists all inference executions that have been performed by the specified inference scheduler.
 @required {InferenceSchedulerName: str}
 @optional {NextToken: str, MaxResults: int, DataStartTimeAfter: str(timestamp), DataEndTimeBefore: str(timestamp), Status: str}
 @returns(200) {NextToken: str?, InferenceExecutionSummaries: [InferenceExecutionSummary]?}
 
 @endpoint POST /
+@desc Retrieves a list of all inference schedulers currently available for your account.
 @optional {NextToken: str, MaxResults: int, InferenceSchedulerNameBeginsWith: str, ModelName: str, Status: str}
 @returns(200) {NextToken: str?, InferenceSchedulerSummaries: [InferenceSchedulerSummary]?}
 
 @endpoint POST /
+@desc Returns a list of the label groups.
 @optional {LabelGroupNameBeginsWith: str, NextToken: str, MaxResults: int}
 @returns(200) {NextToken: str?, LabelGroupSummaries: [LabelGroupSummary]?}
 
 @endpoint POST /
+@desc Provides a list of labels.
 @required {LabelGroupName: str}
 @optional {IntervalStartTime: str(timestamp), IntervalEndTime: str(timestamp), FaultCode: str, Equipment: str, NextToken: str, MaxResults: int}
 @returns(200) {NextToken: str?, LabelSummaries: [LabelSummary]?}
 
 @endpoint POST /
+@desc Generates a list of all model versions for a given model, including the model version, model version ARN, and status. To list a subset of versions, use the MaxModelVersion and MinModelVersion fields.
 @required {ModelName: str}
 @optional {NextToken: str, MaxResults: int, Status: str, SourceType: str, CreatedAtEndTime: str(timestamp), CreatedAtStartTime: str(timestamp), MaxModelVersion: int(i64), MinModelVersion: int(i64)}
 @returns(200) {NextToken: str?, ModelVersionSummaries: [ModelVersionSummary]?}
 
 @endpoint POST /
+@desc Generates a list of all models in the account, including model name and ARN, dataset, and status.
 @optional {NextToken: str, MaxResults: int, Status: str, ModelNameBeginsWith: str, DatasetNameBeginsWith: str}
 @returns(200) {NextToken: str?, ModelSummaries: [ModelSummary]?}
 
 @endpoint POST /
+@desc Lists all retraining schedulers in your account, filtering by model name prefix and status.
 @optional {ModelNameBeginsWith: str, Status: str, NextToken: str, MaxResults: int}
 @returns(200) {RetrainingSchedulerSummaries: [RetrainingSchedulerSummary]?, NextToken: str?}
 
 @endpoint POST /
+@desc Lists statistics about the data collected for each of the sensors that have been successfully ingested in the particular dataset. Can also be used to retreive Sensor Statistics for a previous ingestion job.
 @required {DatasetName: str}
 @optional {IngestionJobId: str, MaxResults: int, NextToken: str}
 @returns(200) {SensorStatisticsSummaries: [SensorStatisticsSummary]?, NextToken: str?}
 
 @endpoint POST /
+@desc Lists all the tags for a specified resource, including key and value.
 @required {ResourceArn: str}
 @returns(200) {Tags: [Tag]?}
 
 @endpoint POST /
+@desc Creates a resource control policy for a given resource.
 @required {ResourceArn: str, ResourcePolicy: str, ClientToken: str}
 @optional {PolicyRevisionId: str}
 @returns(200) {ResourceArn: str?, PolicyRevisionId: str?}
 
 @endpoint POST /
+@desc Starts a data ingestion job. Amazon Lookout for Equipment returns the job status.
 @required {DatasetName: str, IngestionInputConfiguration: IngestionInputConfiguration, RoleArn: str, ClientToken: str}
 @returns(200) {JobId: str?, Status: str?}
 
 @endpoint POST /
+@desc Starts an inference scheduler.
 @required {InferenceSchedulerName: str}
 @returns(200) {ModelArn: str?, ModelName: str?, InferenceSchedulerName: str?, InferenceSchedulerArn: str?, Status: str?}
 
 @endpoint POST /
+@desc Starts a retraining scheduler.
 @required {ModelName: str}
 @returns(200) {ModelName: str?, ModelArn: str?, Status: str?}
 
 @endpoint POST /
+@desc Stops an inference scheduler.
 @required {InferenceSchedulerName: str}
 @returns(200) {ModelArn: str?, ModelName: str?, InferenceSchedulerName: str?, InferenceSchedulerArn: str?, Status: str?}
 
 @endpoint POST /
+@desc Stops a retraining scheduler.
 @required {ModelName: str}
 @returns(200) {ModelName: str?, ModelArn: str?, Status: str?}
 
 @endpoint POST /
+@desc Associates a given tag to a resource in your account. A tag is a key-value pair which can be added to an Amazon Lookout for Equipment resource as metadata. Tags can be used for organizing your resources as well as helping you to search and filter by tag. Multiple tags can be added to a resource, either when you create it, or later. Up to 50 tags can be associated with each resource.
 @required {ResourceArn: str, Tags: [Tag]}
 
 @endpoint POST /
+@desc Removes a specific tag from a given resource. The tag is specified by its key.
 @required {ResourceArn: str, TagKeys: [str]}
 
 @endpoint POST /
+@desc Sets the active model version for a given machine learning model.
 @required {ModelName: str, ModelVersion: int(i64)}
 @returns(200) {ModelName: str?, ModelArn: str?, CurrentActiveVersion: int(i64)?, PreviousActiveVersion: int(i64)?, CurrentActiveVersionArn: str?, PreviousActiveVersionArn: str?}
 
 @endpoint POST /
+@desc Updates an inference scheduler.
 @required {InferenceSchedulerName: str}
 @optional {DataDelayOffsetInMinutes: int(i64), DataUploadFrequency: str, DataInputConfiguration: InferenceInputConfiguration, DataOutputConfiguration: InferenceOutputConfiguration, RoleArn: str}
 
 @endpoint POST /
+@desc Updates the label group.
 @required {LabelGroupName: str}
 @optional {FaultCodes: [str]}
 
 @endpoint POST /
+@desc Updates a model in the account.
 @required {ModelName: str}
 @optional {LabelsInputConfiguration: LabelsInputConfiguration, RoleArn: str, ModelDiagnosticsOutputConfiguration: ModelDiagnosticsOutputConfiguration}
 
 @endpoint POST /
+@desc Updates a retraining scheduler.
 @required {ModelName: str}
 @optional {RetrainingStartDate: str(timestamp), RetrainingFrequency: str, LookbackWindow: str, PromoteMode: str}
 

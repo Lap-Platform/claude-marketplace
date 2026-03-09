@@ -12,7 +12,7 @@ API version: v1.22.2
 OAuth2
 
 ## Base URL
-https://api.ebay.com{basePath}
+https://api.ebay.com/sell/marketing/v1
 
 ## Setup
 1. Configure auth: OAuth2

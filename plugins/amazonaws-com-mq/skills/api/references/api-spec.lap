@@ -9,6 +9,7 @@
 
 @group brokers
 @endpoint POST /v1/brokers
+@desc Creates a broker. Note: This API is asynchronous. To create a broker, you must either use the AmazonMQFullAccess IAM policy or include the following EC2 permissions in your IAM policy. ec2:CreateNetworkInterface This permission is required to allow Amazon MQ to create an elastic network interface (ENI) on behalf of your account. ec2:CreateNetworkInterfacePermission This permission is required to attach the ENI to the broker instance. ec2:DeleteNetworkInterface ec2:DeleteNetworkInterfacePermission ec2:DetachNetworkInterface ec2:DescribeInternetGateways ec2:DescribeNetworkInterfaces ec2:DescribeNetworkInterfacePermissions ec2:DescribeRouteTables ec2:DescribeSecurityGroups ec2:DescribeSubnets ec2:DescribeVpcs For more information, see Create an IAM User and Get Your Amazon Web Services Credentials and Never Modify or Delete the Amazon MQ Elastic Network Interface in the Amazon MQ Developer Guide.
 @required {BrokerName: str, DeploymentMode: str, EngineType: str, HostInstanceType: str, PubliclyAccessible: bool, Users: [User]}
 @optional {AuthenticationStrategy: str, AutoMinorVersionUpgrade: bool, Configuration: ConfigurationId, CreatorRequestId: str, EncryptionOptions: EncryptionOptions, EngineVersion: str, LdapServerMetadata: LdapServerMetadataInput, Logs: Logs, MaintenanceWindowStartTime: WeeklyStartTime, SecurityGroups: [str], StorageType: str, SubnetIds: [str], Tags: map<str,str>, DataReplicationMode: str, DataReplicationPrimaryBrokerArn: str}
 @returns(200) {BrokerArn: str?, BrokerId: str?}
@@ -17,6 +18,7 @@
 
 @group configurations
 @endpoint POST /v1/configurations
+@desc Creates a new configuration for the specified configuration name. Amazon MQ uses the default configuration (the engine type and version).
 @required {EngineType: str, Name: str}
 @optional {AuthenticationStrategy: str, EngineVersion: str, Tags: map<str,str>}
 @returns(200) {Arn: str?, AuthenticationStrategy: str?, Created: str(timestamp)?, Id: str?, LatestRevision: ConfigurationRevision?{Created: str(timestamp), Description: str?, Revision: int}, Name: str?}
@@ -25,6 +27,7 @@
 
 @group tags
 @endpoint POST /v1/tags/{resource-arn}
+@desc Add a tag to a resource.
 @required {ResourceArn: str}
 @optional {Tags: map<str,str>}
 
@@ -32,10 +35,12 @@
 
 @group brokers
 @endpoint POST /v1/brokers/{broker-id}/users/{username}
+@desc Creates an ActiveMQ user. Do not add personally identifiable information (PII) or other confidential or sensitive information in broker usernames. Broker usernames are accessible to other Amazon Web Services services, including CloudWatch Logs. Broker usernames are not intended to be used for private or sensitive data.
 @required {BrokerId: str, Username: str, Password: str}
 @optional {ConsoleAccess: bool, Groups: [str], ReplicationUser: bool}
 
 @endpoint DELETE /v1/brokers/{broker-id}
+@desc Deletes a broker. Note: This API is asynchronous.
 @required {BrokerId: str}
 @returns(200) {BrokerId: str?}
 
@@ -43,15 +48,18 @@
 
 @group tags
 @endpoint DELETE /v1/tags/{resource-arn}
+@desc Removes a tag from a resource.
 @required {ResourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group brokers
 @endpoint DELETE /v1/brokers/{broker-id}/users/{username}
+@desc Deletes an ActiveMQ user.
 @required {BrokerId: str, Username: str}
 
 @endpoint GET /v1/brokers/{broker-id}
+@desc Returns information about the specified broker.
 @required {BrokerId: str}
 @returns(200) {ActionsRequired: [ActionRequired]?, AuthenticationStrategy: str?, AutoMinorVersionUpgrade: bool?, BrokerArn: str?, BrokerId: str?, BrokerInstances: [BrokerInstance]?, BrokerName: str?, BrokerState: str?, Configurations: Configurations?{Current: ConfigurationId?{Id: str, Revision: int?}, History: [ConfigurationId]?, Pending: ConfigurationId?{Id: str, Revision: int?}}, Created: str(timestamp)?, DeploymentMode: str?, EncryptionOptions: EncryptionOptions?{KmsKeyId: str?, UseAwsOwnedKey: bool}, EngineType: str?, EngineVersion: str?, HostInstanceType: str?, LdapServerMetadata: LdapServerMetadataOutput?{Hosts: [str], RoleBase: str, RoleName: str?, RoleSearchMatching: str, RoleSearchSubtree: bool?, ServiceAccountUsername: str, UserBase: str, UserRoleName: str?, UserSearchMatching: str, UserSearchSubtree: bool?}, Logs: LogsSummary?{Audit: bool?, AuditLogGroup: str?, General: bool, GeneralLogGroup: str, Pending: PendingLogs?{Audit: bool?, General: bool?}}, MaintenanceWindowStartTime: WeeklyStartTime?{DayOfWeek: str, TimeOfDay: str, TimeZone: str?}, PendingAuthenticationStrategy: str?, PendingEngineVersion: str?, PendingHostInstanceType: str?, PendingLdapServerMetadata: LdapServerMetadataOutput?{Hosts: [str], RoleBase: str, RoleName: str?, RoleSearchMatching: str, RoleSearchSubtree: bool?, ServiceAccountUsername: str, UserBase: str, UserRoleName: str?, UserSearchMatching: str, UserSearchSubtree: bool?}, PendingSecurityGroups: [str]?, PubliclyAccessible: bool?, SecurityGroups: [str]?, StorageType: str?, SubnetIds: [str]?, Tags: map<str,str>?, Users: [UserSummary]?, DataReplicationMetadata: DataReplicationMetadataOutput?{DataReplicationCounterpart: DataReplicationCounterpart?{BrokerId: str, Region: str}, DataReplicationRole: str}, DataReplicationMode: str?, PendingDataReplicationMetadata: DataReplicationMetadataOutput?{DataReplicationCounterpart: DataReplicationCounterpart?{BrokerId: str, Region: str}, DataReplicationRole: str}, PendingDataReplicationMode: str?}
 
@@ -59,6 +67,7 @@
 
 @group broker-engine-types
 @endpoint GET /v1/broker-engine-types
+@desc Describe available engine types and versions.
 @optional {engineType: str, maxResults: int, nextToken: str}
 @returns(200) {BrokerEngineTypes: [BrokerEngineType]?, MaxResults: int?, NextToken: str?}
 
@@ -66,6 +75,7 @@
 
 @group broker-instance-options
 @endpoint GET /v1/broker-instance-options
+@desc Describe available broker instance options.
 @optional {engineType: str, hostInstanceType: str, maxResults: int, nextToken: str, storageType: str}
 @returns(200) {BrokerInstanceOptions: [BrokerInstanceOption]?, MaxResults: int?, NextToken: str?}
 
@@ -73,10 +83,12 @@
 
 @group configurations
 @endpoint GET /v1/configurations/{configuration-id}
+@desc Returns information about the specified configuration.
 @required {ConfigurationId: str}
 @returns(200) {Arn: str?, AuthenticationStrategy: str?, Created: str(timestamp)?, Description: str?, EngineType: str?, EngineVersion: str?, Id: str?, LatestRevision: ConfigurationRevision?{Created: str(timestamp), Description: str?, Revision: int}, Name: str?, Tags: map<str,str>?}
 
 @endpoint GET /v1/configurations/{configuration-id}/revisions/{configuration-revision}
+@desc Returns the specified configuration revision for the specified configuration.
 @required {ConfigurationId: str, ConfigurationRevision: str}
 @returns(200) {ConfigurationId: str?, Created: str(timestamp)?, Data: str?, Description: str?}
 
@@ -84,10 +96,12 @@
 
 @group brokers
 @endpoint GET /v1/brokers/{broker-id}/users/{username}
+@desc Returns information about an ActiveMQ user.
 @required {BrokerId: str, Username: str}
 @returns(200) {BrokerId: str?, ConsoleAccess: bool?, Groups: [str]?, Pending: UserPendingChanges?{ConsoleAccess: bool?, Groups: [str]?, PendingChange: str}, Username: str?, ReplicationUser: bool?}
 
 @endpoint GET /v1/brokers
+@desc Returns a list of all brokers.
 @optional {maxResults: int, nextToken: str}
 @returns(200) {BrokerSummaries: [BrokerSummary]?, NextToken: str?}
 
@@ -95,11 +109,13 @@
 
 @group configurations
 @endpoint GET /v1/configurations/{configuration-id}/revisions
+@desc Returns a list of all revisions for the specified configuration.
 @required {ConfigurationId: str}
 @optional {maxResults: int, nextToken: str}
 @returns(200) {ConfigurationId: str?, MaxResults: int?, NextToken: str?, Revisions: [ConfigurationRevision]?}
 
 @endpoint GET /v1/configurations
+@desc Returns a list of all configurations.
 @optional {maxResults: int, nextToken: str}
 @returns(200) {Configurations: [Configuration]?, MaxResults: int?, NextToken: str?}
 
@@ -107,6 +123,7 @@
 
 @group tags
 @endpoint GET /v1/tags/{resource-arn}
+@desc Lists tags for a resource.
 @required {ResourceArn: str}
 @returns(200) {Tags: map<str,str>?}
 
@@ -114,18 +131,22 @@
 
 @group brokers
 @endpoint GET /v1/brokers/{broker-id}/users
+@desc Returns a list of all ActiveMQ users.
 @required {BrokerId: str}
 @optional {maxResults: int, nextToken: str}
 @returns(200) {BrokerId: str?, MaxResults: int?, NextToken: str?, Users: [UserSummary]?}
 
 @endpoint POST /v1/brokers/{broker-id}/promote
+@desc Promotes a data replication replica broker to the primary broker role.
 @required {BrokerId: str, Mode: str}
 @returns(200) {BrokerId: str?}
 
 @endpoint POST /v1/brokers/{broker-id}/reboot
+@desc Reboots a broker. Note: This API is asynchronous.
 @required {BrokerId: str}
 
 @endpoint PUT /v1/brokers/{broker-id}
+@desc Adds a pending configuration change to a broker.
 @required {BrokerId: str}
 @optional {AuthenticationStrategy: str, AutoMinorVersionUpgrade: bool, Configuration: ConfigurationId, EngineVersion: str, HostInstanceType: str, LdapServerMetadata: LdapServerMetadataInput, Logs: Logs, MaintenanceWindowStartTime: WeeklyStartTime, SecurityGroups: [str], DataReplicationMode: str}
 @returns(200) {AuthenticationStrategy: str?, AutoMinorVersionUpgrade: bool?, BrokerId: str?, Configuration: ConfigurationId?{Id: str, Revision: int?}, EngineVersion: str?, HostInstanceType: str?, LdapServerMetadata: LdapServerMetadataOutput?{Hosts: [str], RoleBase: str, RoleName: str?, RoleSearchMatching: str, RoleSearchSubtree: bool?, ServiceAccountUsername: str, UserBase: str, UserRoleName: str?, UserSearchMatching: str, UserSearchSubtree: bool?}, Logs: Logs?{Audit: bool?, General: bool?}, MaintenanceWindowStartTime: WeeklyStartTime?{DayOfWeek: str, TimeOfDay: str, TimeZone: str?}, SecurityGroups: [str]?, DataReplicationMetadata: DataReplicationMetadataOutput?{DataReplicationCounterpart: DataReplicationCounterpart?{BrokerId: str, Region: str}, DataReplicationRole: str}, DataReplicationMode: str?, PendingDataReplicationMetadata: DataReplicationMetadataOutput?{DataReplicationCounterpart: DataReplicationCounterpart?{BrokerId: str, Region: str}, DataReplicationRole: str}, PendingDataReplicationMode: str?}
@@ -134,6 +155,7 @@
 
 @group configurations
 @endpoint PUT /v1/configurations/{configuration-id}
+@desc Updates the specified configuration.
 @required {ConfigurationId: str, Data: str}
 @optional {Description: str}
 @returns(200) {Arn: str?, Created: str(timestamp)?, Id: str?, LatestRevision: ConfigurationRevision?{Created: str(timestamp), Description: str?, Revision: int}, Name: str?, Warnings: [SanitizationWarning]?}
@@ -142,6 +164,7 @@
 
 @group brokers
 @endpoint PUT /v1/brokers/{broker-id}/users/{username}
+@desc Updates the information for an ActiveMQ user.
 @required {BrokerId: str, Username: str}
 @optional {ConsoleAccess: bool, Groups: [str], Password: str, ReplicationUser: bool}
 

@@ -724,106 +724,511 @@ https://api.digitalocean.com
 | PUT | /v2/gen-ai/workspaces/{workspace_uuid}/agents |  |
 | GET | /v2/gen-ai/workspaces/{workspace_uuid}/evaluation_test_cases |  |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What droplets do I have?" -> GET /v2/droplets
-- "How do I create a new droplet?" -> POST /v2/droplets
-- "What is my account balance?" -> GET /v2/customers/my/balance
-- "Show me my billing history" -> GET /v2/customers/my/billing_history
-- "What databases are running?" -> GET /v2/databases
-- "How do I add a domain?" -> POST /v2/domains
-- "What DNS records exist for my domain?" -> GET /v2/domains/{domain_name}/records
-- "How do I deploy an app?" -> POST /v2/apps
-- "What Kubernetes clusters do I have?" -> GET /v2/kubernetes/clusters
-- "How do I get my kubeconfig?" -> GET /v2/kubernetes/clusters/{cluster_id}/kubeconfig
-- "What firewall rules are configured?" -> GET /v2/firewalls/{firewall_id}
-- "How do I check CPU metrics for a droplet?" -> GET /v2/monitoring/metrics/droplet/cpu
-- "What container images are in my registry?" -> GET /v2/registry/{registry_name}/repositoriesV2
-- "How do I create a VPC?" -> POST /v2/vpcs
-- "What AI agents have I deployed?" -> GET /v2/gen-ai/agents
-
-## Response Tips
-
-- **List endpoints** (droplets, databases, domains, apps): Paginated via `page` and `per_page` query params; results nested under a plural key (e.g., `{"droplets": [...]}`), with a `meta.total` count and `links.pages` for next/prev.
-- **Single resource** (GET by ID/UUID): Object nested under singular key (e.g., `{"droplet": {...}}`); includes `id`, `status`, timestamps, and embedded related objects (e.g., `region`, `image`, `size`).
-- **Action endpoints** (POST actions, resize, migrate): Return an `action` object with `id`, `status` (in-progress/completed/errored), and `type`; poll the action ID to track completion.
-- **Delete endpoints**: Return `204 No Content` on success with empty body; a `404` means the resource was already gone.
-- **Monitoring metrics**: Return Prometheus-style time series with `data.result[]` containing `metric` labels and `values` arrays of `[timestamp, value]` pairs.
-- **Billing/invoices**: Amounts are strings representing USD values; `billing_history` entries have a `type` field distinguishing charges, credits, and payments.
-- **Gen-AI endpoints**: UUIDs are used throughout; nested relationships (agents -> knowledge_bases -> data_sources) require chained lookups.
-
-## Anomaly Flags
-
-- **Rate limiting**: Surface `ratelimit-remaining` and `ratelimit-reset` headers when remaining drops below 20% of the limit (default 5000/hr).
-- **Action failures**: Flag any action response where `status` is `errored` -- include the `type` and resource ID for quick diagnosis.
-- **Droplet status anomalies**: Alert when a droplet status is `off`, `archive`, or `new` for longer than expected after a create/power-on action.
-- **Database cluster warnings**: Surface when `status` is `migrating`, `forking`, or `maintenance` as these indicate reduced availability.
-- **Kubernetes upgrade available**: When `GET .../upgrades` returns non-empty, proactively mention available versions.
-- **Registry garbage collection needed**: If repository digest counts are growing significantly, suggest running garbage collection.
-- **Deprecated floating IPs**: The `floating_ips` group is legacy; flag usage and recommend migrating to `reserved_ips`.
-- **Billing spikes**: When `balance.month_to_date_usage` exceeds the previous month's total, surface a cost alert.
-- **Destroy with associated resources**: When deleting droplets or K8s clusters, flag the `destroy_with_associated_resources` endpoints to prevent orphaned volumes, snapshots, or load balancers.
-- **SSL certificate expiry**: Surface certificates approaching expiry from the certificates list.
-
-## Playbook
-
-### 1. Provision a Droplet with Networking and Firewall
-
-1. List available regions: `GET /v2/regions`
-2. List available sizes: `GET /v2/sizes`
-3. List available images: `GET /v2/images`
-4. Create a VPC in the target region: `POST /v2/vpcs`
-5. Create the droplet inside the VPC: `POST /v2/droplets` (include `vpc_uuid`, `region`, `size`, `image`, and `ssh_keys`)
-6. Create a firewall with inbound/outbound rules: `POST /v2/firewalls`
-7. Attach the droplet to the firewall: `POST /v2/firewalls/{firewall_id}/droplets`
-8. Optionally assign a reserved IP: `POST /v2/reserved_ips` then `POST /v2/reserved_ips/{reserved_ip}/actions` to assign
-
-### 2. Deploy and Monitor an App Platform Application
-
-1. Check available regions: `GET /v2/apps/regions`
-2. Validate the app spec: `POST /v2/apps/propose`
-3. Create the app: `POST /v2/apps`
-4. Monitor deployment: `GET /v2/apps/{app_id}/deployments` (poll until `phase` is `ACTIVE`)
-5. View logs if deployment fails: `GET /v2/apps/{app_id}/deployments/{deployment_id}/logs`
-6. Check app health: `GET /v2/apps/{app_id}/health`
-7. Set up alerts: `GET /v2/apps/{app_id}/alerts` then `POST /v2/apps/{app_id}/alerts/{alert_id}/destinations`
-8. If issues arise, rollback: `POST /v2/apps/{app_id}/rollback/validate` then `POST /v2/apps/{app_id}/rollback`
-
-### 3. Set Up a Managed Database with Replicas and Users
-
-1. Check available database engines and versions: `GET /v2/databases/options`
-2. Create the database cluster: `POST /v2/databases`
-3. Poll cluster status until `online`: `GET /v2/databases/{database_cluster_uuid}`
-4. Configure firewall trusted sources: `PUT /v2/databases/{database_cluster_uuid}/firewall`
-5. Create application databases: `POST /v2/databases/{database_cluster_uuid}/dbs`
-6. Create users with appropriate roles: `POST /v2/databases/{database_cluster_uuid}/users`
-7. Add a read replica: `POST /v2/databases/{database_cluster_uuid}/replicas`
-8. Set maintenance window: `PUT /v2/databases/{database_cluster_uuid}/maintenance`
-9. Optionally configure connection pools (PostgreSQL): `POST /v2/databases/{database_cluster_uuid}/pools`
-
-### 4. Set Up Domain with DNS Records and Uptime Monitoring
-
-1. Add the domain: `POST /v2/domains`
-2. Create A record pointing to your droplet/load balancer IP: `POST /v2/domains/{domain_name}/records`
-3. Add any CNAME, MX, or TXT records needed: `POST /v2/domains/{domain_name}/records` (repeat)
-4. Create an uptime check for the domain: `POST /v2/uptime/checks`
-5. Configure an alert for downtime: `POST /v2/uptime/checks/{check_id}/alerts`
-6. Verify check state: `GET /v2/uptime/checks/{check_id}/state`
-
-### 5. Build and Deploy a Gen-AI Agent with Knowledge Base
-
-1. Create a workspace: `POST /v2/gen-ai/workspaces`
-2. Create a knowledge base: `POST /v2/gen-ai/knowledge_bases`
-3. Get presigned URLs for file uploads: `POST /v2/gen-ai/knowledge_bases/data_sources/file_upload_presigned_urls`
-4. Add data sources to the knowledge base: `POST /v2/gen-ai/knowledge_bases/{knowledge_base_uuid}/data_sources`
-5. Trigger an indexing job: `POST /v2/gen-ai/indexing_jobs`
-6. Poll indexing status until complete: `GET /v2/gen-ai/indexing_jobs/{uuid}`
-7. Create the agent: `POST /v2/gen-ai/agents`
-8. Attach the knowledge base to the agent: `POST /v2/gen-ai/agents/{agent_uuid}/knowledge_bases`
-9. Generate an API key for the agent: `POST /v2/gen-ai/agents/{agent_uuid}/api_keys`
-10. Set deployment visibility: `PUT /v2/gen-ai/agents/{uuid}/deployment_visibility`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all 1-clicks?" -> GET /v2/1-clicks
+- "Create a kubernete?" -> POST /v2/1-clicks/kubernetes
+- "List all account?" -> GET /v2/account
+- "List all keys?" -> GET /v2/account/keys
+- "Create a key?" -> POST /v2/account/keys
+- "Get key details?" -> GET /v2/account/keys/{ssh_key_identifier}
+- "Update a key?" -> PUT /v2/account/keys/{ssh_key_identifier}
+- "Delete a key?" -> DELETE /v2/account/keys/{ssh_key_identifier}
+- "List all actions?" -> GET /v2/actions
+- "Get action details?" -> GET /v2/actions/{action_id}
+- "List all apps?" -> GET /v2/add-ons/apps
+- "List all metadata?" -> GET /v2/add-ons/apps/{app_slug}/metadata
+- "List all saas?" -> GET /v2/add-ons/saas
+- "Create a saa?" -> POST /v2/add-ons/saas
+- "Get saa details?" -> GET /v2/add-ons/saas/{resource_uuid}
+- "Delete a saa?" -> DELETE /v2/add-ons/saas/{resource_uuid}
+- "Partially update a saa?" -> PATCH /v2/add-ons/saas/{resource_uuid}
+- "List all apps?" -> GET /v2/apps
+- "Create a app?" -> POST /v2/apps
+- "Delete a app?" -> DELETE /v2/apps/{id}
+- "Get app details?" -> GET /v2/apps/{id}
+- "Update a app?" -> PUT /v2/apps/{id}
+- "Create a restart?" -> POST /v2/apps/{app_id}/restart
+- "List all logs?" -> GET /v2/apps/{app_id}/components/{component_name}/logs
+- "List all exec?" -> GET /v2/apps/{app_id}/components/{component_name}/exec
+- "List all instances?" -> GET /v2/apps/{app_id}/instances
+- "List all deployments?" -> GET /v2/apps/{app_id}/deployments
+- "Create a deployment?" -> POST /v2/apps/{app_id}/deployments
+- "Get deployment details?" -> GET /v2/apps/{app_id}/deployments/{deployment_id}
+- "Create a cancel?" -> POST /v2/apps/{app_id}/deployments/{deployment_id}/cancel
+- "List all logs?" -> GET /v2/apps/{app_id}/deployments/{deployment_id}/components/{component_name}/logs
+- "List all logs?" -> GET /v2/apps/{app_id}/deployments/{deployment_id}/logs
+- "List all exec?" -> GET /v2/apps/{app_id}/deployments/{deployment_id}/components/{component_name}/exec
+- "List all logs?" -> GET /v2/apps/{app_id}/logs
+- "List all job-invocations?" -> GET /v2/apps/{app_id}/job-invocations
+- "Get job-invocation details?" -> GET /v2/apps/{app_id}/job-invocations/{job_invocation_id}
+- "Create a cancel?" -> POST /v2/apps/{app_id}/job-invocations/{job_invocation_id}/cancel
+- "List all logs?" -> GET /v2/apps/{app_id}/jobs/{job_name}/invocations/{job_invocation_id}/logs
+- "List all instance_sizes?" -> GET /v2/apps/tiers/instance_sizes
+- "Get instance_size details?" -> GET /v2/apps/tiers/instance_sizes/{slug}
+- "List all regions?" -> GET /v2/apps/regions
+- "Create a propose?" -> POST /v2/apps/propose
+- "List all alerts?" -> GET /v2/apps/{app_id}/alerts
+- "Create a destination?" -> POST /v2/apps/{app_id}/alerts/{alert_id}/destinations
+- "Create a rollback?" -> POST /v2/apps/{app_id}/rollback
+- "Create a validate?" -> POST /v2/apps/{app_id}/rollback/validate
+- "Create a commit?" -> POST /v2/apps/{app_id}/rollback/commit
+- "Create a revert?" -> POST /v2/apps/{app_id}/rollback/revert
+- "List all bandwidth_daily?" -> GET /v2/apps/{app_id}/metrics/bandwidth_daily
+- "Create a bandwidth_daily?" -> POST /v2/apps/metrics/bandwidth_daily
+- "List all health?" -> GET /v2/apps/{app_id}/health
+- "List all endpoints?" -> GET /v2/cdn/endpoints
+- "Create a endpoint?" -> POST /v2/cdn/endpoints
+- "Get endpoint details?" -> GET /v2/cdn/endpoints/{cdn_id}
+- "Update a endpoint?" -> PUT /v2/cdn/endpoints/{cdn_id}
+- "Delete a endpoint?" -> DELETE /v2/cdn/endpoints/{cdn_id}
+- "List all certificates?" -> GET /v2/certificates
+- "Create a certificate?" -> POST /v2/certificates
+- "Get certificate details?" -> GET /v2/certificates/{certificate_id}
+- "Delete a certificate?" -> DELETE /v2/certificates/{certificate_id}
+- "List all balance?" -> GET /v2/customers/my/balance
+- "List all billing_history?" -> GET /v2/customers/my/billing_history
+- "List all invoices?" -> GET /v2/customers/my/invoices
+- "Get invoice details?" -> GET /v2/customers/my/invoices/{invoice_uuid}
+- "List all csv?" -> GET /v2/customers/my/invoices/{invoice_uuid}/csv
+- "List all pdf?" -> GET /v2/customers/my/invoices/{invoice_uuid}/pdf
+- "List all summary?" -> GET /v2/customers/my/invoices/{invoice_uuid}/summary
+- "Get insight details?" -> GET /v2/billing/{account_urn}/insights/{start_date}/{end_date}
+- "List all options?" -> GET /v2/databases/options
+- "List all databases?" -> GET /v2/databases
+- "Create a database?" -> POST /v2/databases
+- "Get database details?" -> GET /v2/databases/{database_cluster_uuid}
+- "Delete a database?" -> DELETE /v2/databases/{database_cluster_uuid}
+- "List all config?" -> GET /v2/databases/{database_cluster_uuid}/config
+- "List all ca?" -> GET /v2/databases/{database_cluster_uuid}/ca
+- "List all online-migration?" -> GET /v2/databases/{database_cluster_uuid}/online-migration
+- "Delete a online-migration?" -> DELETE /v2/databases/{database_cluster_uuid}/online-migration/{migration_id}
+- "List all firewall?" -> GET /v2/databases/{database_cluster_uuid}/firewall
+- "List all backups?" -> GET /v2/databases/{database_cluster_uuid}/backups
+- "List all replicas?" -> GET /v2/databases/{database_cluster_uuid}/replicas
+- "Create a replica?" -> POST /v2/databases/{database_cluster_uuid}/replicas
+- "List all events?" -> GET /v2/databases/{database_cluster_uuid}/events
+- "Get replica details?" -> GET /v2/databases/{database_cluster_uuid}/replicas/{replica_name}
+- "Delete a replica?" -> DELETE /v2/databases/{database_cluster_uuid}/replicas/{replica_name}
+- "List all users?" -> GET /v2/databases/{database_cluster_uuid}/users
+- "Create a user?" -> POST /v2/databases/{database_cluster_uuid}/users
+- "Get user details?" -> GET /v2/databases/{database_cluster_uuid}/users/{username}
+- "Delete a user?" -> DELETE /v2/databases/{database_cluster_uuid}/users/{username}
+- "Update a user?" -> PUT /v2/databases/{database_cluster_uuid}/users/{username}
+- "Create a reset_auth?" -> POST /v2/databases/{database_cluster_uuid}/users/{username}/reset_auth
+- "List all dbs?" -> GET /v2/databases/{database_cluster_uuid}/dbs
+- "Create a db?" -> POST /v2/databases/{database_cluster_uuid}/dbs
+- "Get db details?" -> GET /v2/databases/{database_cluster_uuid}/dbs/{database_name}
+- "Delete a db?" -> DELETE /v2/databases/{database_cluster_uuid}/dbs/{database_name}
+- "List all pools?" -> GET /v2/databases/{database_cluster_uuid}/pools
+- "Create a pool?" -> POST /v2/databases/{database_cluster_uuid}/pools
+- "Get pool details?" -> GET /v2/databases/{database_cluster_uuid}/pools/{pool_name}
+- "Update a pool?" -> PUT /v2/databases/{database_cluster_uuid}/pools/{pool_name}
+- "Delete a pool?" -> DELETE /v2/databases/{database_cluster_uuid}/pools/{pool_name}
+- "List all eviction_policy?" -> GET /v2/databases/{database_cluster_uuid}/eviction_policy
+- "List all sql_mode?" -> GET /v2/databases/{database_cluster_uuid}/sql_mode
+- "List all autoscale?" -> GET /v2/databases/{database_cluster_uuid}/autoscale
+- "List all topics?" -> GET /v2/databases/{database_cluster_uuid}/topics
+- "Create a topic?" -> POST /v2/databases/{database_cluster_uuid}/topics
+- "Get topic details?" -> GET /v2/databases/{database_cluster_uuid}/topics/{topic_name}
+- "Update a topic?" -> PUT /v2/databases/{database_cluster_uuid}/topics/{topic_name}
+- "Delete a topic?" -> DELETE /v2/databases/{database_cluster_uuid}/topics/{topic_name}
+- "List all logsink?" -> GET /v2/databases/{database_cluster_uuid}/logsink
+- "Create a logsink?" -> POST /v2/databases/{database_cluster_uuid}/logsink
+- "Get logsink details?" -> GET /v2/databases/{database_cluster_uuid}/logsink/{logsink_id}
+- "Update a logsink?" -> PUT /v2/databases/{database_cluster_uuid}/logsink/{logsink_id}
+- "Delete a logsink?" -> DELETE /v2/databases/{database_cluster_uuid}/logsink/{logsink_id}
+- "List all schema-registry?" -> GET /v2/databases/{database_cluster_uuid}/schema-registry
+- "Create a schema-registry?" -> POST /v2/databases/{database_cluster_uuid}/schema-registry
+- "Get schema-registry details?" -> GET /v2/databases/{database_cluster_uuid}/schema-registry/{subject_name}
+- "Delete a schema-registry?" -> DELETE /v2/databases/{database_cluster_uuid}/schema-registry/{subject_name}
+- "Get version details?" -> GET /v2/databases/{database_cluster_uuid}/schema-registry/{subject_name}/versions/{version}
+- "List all config?" -> GET /v2/databases/{database_cluster_uuid}/schema-registry/config
+- "Get config details?" -> GET /v2/databases/{database_cluster_uuid}/schema-registry/config/{subject_name}
+- "Update a config?" -> PUT /v2/databases/{database_cluster_uuid}/schema-registry/config/{subject_name}
+- "List all credentials?" -> GET /v2/databases/metrics/credentials
+- "List all indexes?" -> GET /v2/databases/{database_cluster_uuid}/indexes
+- "Delete a indexe?" -> DELETE /v2/databases/{database_cluster_uuid}/indexes/{index_name}
+- "List all domains?" -> GET /v2/domains
+- "Create a domain?" -> POST /v2/domains
+- "Get domain details?" -> GET /v2/domains/{domain_name}
+- "Delete a domain?" -> DELETE /v2/domains/{domain_name}
+- "List all records?" -> GET /v2/domains/{domain_name}/records
+- "Create a record?" -> POST /v2/domains/{domain_name}/records
+- "Get record details?" -> GET /v2/domains/{domain_name}/records/{domain_record_id}
+- "Partially update a record?" -> PATCH /v2/domains/{domain_name}/records/{domain_record_id}
+- "Update a record?" -> PUT /v2/domains/{domain_name}/records/{domain_record_id}
+- "Delete a record?" -> DELETE /v2/domains/{domain_name}/records/{domain_record_id}
+- "List all droplets?" -> GET /v2/droplets
+- "Create a droplet?" -> POST /v2/droplets
+- "Get droplet details?" -> GET /v2/droplets/{droplet_id}
+- "Delete a droplet?" -> DELETE /v2/droplets/{droplet_id}
+- "List all backups?" -> GET /v2/droplets/{droplet_id}/backups
+- "List all policy?" -> GET /v2/droplets/{droplet_id}/backups/policy
+- "List all policies?" -> GET /v2/droplets/backups/policies
+- "List all supported_policies?" -> GET /v2/droplets/backups/supported_policies
+- "List all snapshots?" -> GET /v2/droplets/{droplet_id}/snapshots
+- "List all actions?" -> GET /v2/droplets/{droplet_id}/actions
+- "Create a action?" -> POST /v2/droplets/{droplet_id}/actions
+- "Create a action?" -> POST /v2/droplets/actions
+- "Get action details?" -> GET /v2/droplets/{droplet_id}/actions/{action_id}
+- "List all kernels?" -> GET /v2/droplets/{droplet_id}/kernels
+- "List all firewalls?" -> GET /v2/droplets/{droplet_id}/firewalls
+- "List all neighbors?" -> GET /v2/droplets/{droplet_id}/neighbors
+- "List all destroy_with_associated_resources?" -> GET /v2/droplets/{droplet_id}/destroy_with_associated_resources
+- "List all status?" -> GET /v2/droplets/{droplet_id}/destroy_with_associated_resources/status
+- "Create a retry?" -> POST /v2/droplets/{droplet_id}/destroy_with_associated_resources/retry
+- "List all autoscale?" -> GET /v2/droplets/autoscale
+- "Create a autoscale?" -> POST /v2/droplets/autoscale
+- "Get autoscale details?" -> GET /v2/droplets/autoscale/{autoscale_pool_id}
+- "Update a autoscale?" -> PUT /v2/droplets/autoscale/{autoscale_pool_id}
+- "Delete a autoscale?" -> DELETE /v2/droplets/autoscale/{autoscale_pool_id}
+- "List all members?" -> GET /v2/droplets/autoscale/{autoscale_pool_id}/members
+- "List all history?" -> GET /v2/droplets/autoscale/{autoscale_pool_id}/history
+- "List all firewalls?" -> GET /v2/firewalls
+- "Create a firewall?" -> POST /v2/firewalls
+- "Get firewall details?" -> GET /v2/firewalls/{firewall_id}
+- "Update a firewall?" -> PUT /v2/firewalls/{firewall_id}
+- "Delete a firewall?" -> DELETE /v2/firewalls/{firewall_id}
+- "Create a droplet?" -> POST /v2/firewalls/{firewall_id}/droplets
+- "Create a tag?" -> POST /v2/firewalls/{firewall_id}/tags
+- "Create a rule?" -> POST /v2/firewalls/{firewall_id}/rules
+- "List all floating_ips?" -> GET /v2/floating_ips
+- "Create a floating_ip?" -> POST /v2/floating_ips
+- "Get floating_ip details?" -> GET /v2/floating_ips/{floating_ip}
+- "Delete a floating_ip?" -> DELETE /v2/floating_ips/{floating_ip}
+- "List all actions?" -> GET /v2/floating_ips/{floating_ip}/actions
+- "Create a action?" -> POST /v2/floating_ips/{floating_ip}/actions
+- "Get action details?" -> GET /v2/floating_ips/{floating_ip}/actions/{action_id}
+- "List all namespaces?" -> GET /v2/functions/namespaces
+- "Create a namespace?" -> POST /v2/functions/namespaces
+- "Get namespace details?" -> GET /v2/functions/namespaces/{namespace_id}
+- "Delete a namespace?" -> DELETE /v2/functions/namespaces/{namespace_id}
+- "List all triggers?" -> GET /v2/functions/namespaces/{namespace_id}/triggers
+- "Create a trigger?" -> POST /v2/functions/namespaces/{namespace_id}/triggers
+- "Get trigger details?" -> GET /v2/functions/namespaces/{namespace_id}/triggers/{trigger_name}
+- "Update a trigger?" -> PUT /v2/functions/namespaces/{namespace_id}/triggers/{trigger_name}
+- "Delete a trigger?" -> DELETE /v2/functions/namespaces/{namespace_id}/triggers/{trigger_name}
+- "List all images?" -> GET /v2/images
+- "Create a image?" -> POST /v2/images
+- "Get image details?" -> GET /v2/images/{image_id}
+- "Update a image?" -> PUT /v2/images/{image_id}
+- "Delete a image?" -> DELETE /v2/images/{image_id}
+- "List all actions?" -> GET /v2/images/{image_id}/actions
+- "Create a action?" -> POST /v2/images/{image_id}/actions
+- "Get action details?" -> GET /v2/images/{image_id}/actions/{action_id}
+- "List all clusters?" -> GET /v2/kubernetes/clusters
+- "Create a cluster?" -> POST /v2/kubernetes/clusters
+- "Get cluster details?" -> GET /v2/kubernetes/clusters/{cluster_id}
+- "Update a cluster?" -> PUT /v2/kubernetes/clusters/{cluster_id}
+- "Delete a cluster?" -> DELETE /v2/kubernetes/clusters/{cluster_id}
+- "List all destroy_with_associated_resources?" -> GET /v2/kubernetes/clusters/{cluster_id}/destroy_with_associated_resources
+- "List all kubeconfig?" -> GET /v2/kubernetes/clusters/{cluster_id}/kubeconfig
+- "List all credentials?" -> GET /v2/kubernetes/clusters/{cluster_id}/credentials
+- "List all upgrades?" -> GET /v2/kubernetes/clusters/{cluster_id}/upgrades
+- "Create a upgrade?" -> POST /v2/kubernetes/clusters/{cluster_id}/upgrade
+- "List all node_pools?" -> GET /v2/kubernetes/clusters/{cluster_id}/node_pools
+- "Create a node_pool?" -> POST /v2/kubernetes/clusters/{cluster_id}/node_pools
+- "Get node_pool details?" -> GET /v2/kubernetes/clusters/{cluster_id}/node_pools/{node_pool_id}
+- "Update a node_pool?" -> PUT /v2/kubernetes/clusters/{cluster_id}/node_pools/{node_pool_id}
+- "Delete a node_pool?" -> DELETE /v2/kubernetes/clusters/{cluster_id}/node_pools/{node_pool_id}
+- "Delete a node?" -> DELETE /v2/kubernetes/clusters/{cluster_id}/node_pools/{node_pool_id}/nodes/{node_id}
+- "Create a recycle?" -> POST /v2/kubernetes/clusters/{cluster_id}/node_pools/{node_pool_id}/recycle
+- "List all user?" -> GET /v2/kubernetes/clusters/{cluster_id}/user
+- "List all options?" -> GET /v2/kubernetes/options
+- "Create a clusterlint?" -> POST /v2/kubernetes/clusters/{cluster_id}/clusterlint
+- "List all clusterlint?" -> GET /v2/kubernetes/clusters/{cluster_id}/clusterlint
+- "Create a registry?" -> POST /v2/kubernetes/registry
+- "Create a registry?" -> POST /v2/kubernetes/registries
+- "List all status_messages?" -> GET /v2/kubernetes/clusters/{cluster_id}/status_messages
+- "Create a load_balancer?" -> POST /v2/load_balancers
+- "List all load_balancers?" -> GET /v2/load_balancers
+- "Get load_balancer details?" -> GET /v2/load_balancers/{lb_id}
+- "Update a load_balancer?" -> PUT /v2/load_balancers/{lb_id}
+- "Delete a load_balancer?" -> DELETE /v2/load_balancers/{lb_id}
+- "Create a droplet?" -> POST /v2/load_balancers/{lb_id}/droplets
+- "Create a forwarding_rule?" -> POST /v2/load_balancers/{lb_id}/forwarding_rules
+- "List all alerts?" -> GET /v2/monitoring/alerts
+- "Create a alert?" -> POST /v2/monitoring/alerts
+- "Get alert details?" -> GET /v2/monitoring/alerts/{alert_uuid}
+- "Update a alert?" -> PUT /v2/monitoring/alerts/{alert_uuid}
+- "Delete a alert?" -> DELETE /v2/monitoring/alerts/{alert_uuid}
+- "List all bandwidth?" -> GET /v2/monitoring/metrics/droplet/bandwidth
+- "List all cpu?" -> GET /v2/monitoring/metrics/droplet/cpu
+- "List all filesystem_free?" -> GET /v2/monitoring/metrics/droplet/filesystem_free
+- "List all filesystem_size?" -> GET /v2/monitoring/metrics/droplet/filesystem_size
+- "List all load_1?" -> GET /v2/monitoring/metrics/droplet/load_1
+- "List all load_5?" -> GET /v2/monitoring/metrics/droplet/load_5
+- "List all load_15?" -> GET /v2/monitoring/metrics/droplet/load_15
+- "List all memory_cached?" -> GET /v2/monitoring/metrics/droplet/memory_cached
+- "List all memory_free?" -> GET /v2/monitoring/metrics/droplet/memory_free
+- "List all memory_total?" -> GET /v2/monitoring/metrics/droplet/memory_total
+- "List all memory_available?" -> GET /v2/monitoring/metrics/droplet/memory_available
+- "List all memory_percentage?" -> GET /v2/monitoring/metrics/apps/memory_percentage
+- "List all cpu_percentage?" -> GET /v2/monitoring/metrics/apps/cpu_percentage
+- "List all restart_count?" -> GET /v2/monitoring/metrics/apps/restart_count
+- "List all frontend_connections_current?" -> GET /v2/monitoring/metrics/load_balancer/frontend_connections_current
+- "List all frontend_connections_limit?" -> GET /v2/monitoring/metrics/load_balancer/frontend_connections_limit
+- "List all frontend_cpu_utilization?" -> GET /v2/monitoring/metrics/load_balancer/frontend_cpu_utilization
+- "List all frontend_firewall_dropped_bytes?" -> GET /v2/monitoring/metrics/load_balancer/frontend_firewall_dropped_bytes
+- "List all frontend_firewall_dropped_packets?" -> GET /v2/monitoring/metrics/load_balancer/frontend_firewall_dropped_packets
+- "List all frontend_http_responses?" -> GET /v2/monitoring/metrics/load_balancer/frontend_http_responses
+- "List all frontend_http_requests_per_second?" -> GET /v2/monitoring/metrics/load_balancer/frontend_http_requests_per_second
+- "List all frontend_network_throughput_http?" -> GET /v2/monitoring/metrics/load_balancer/frontend_network_throughput_http
+- "List all frontend_network_throughput_udp?" -> GET /v2/monitoring/metrics/load_balancer/frontend_network_throughput_udp
+- "List all frontend_network_throughput_tcp?" -> GET /v2/monitoring/metrics/load_balancer/frontend_network_throughput_tcp
+- "List all frontend_nlb_tcp_network_throughput?" -> GET /v2/monitoring/metrics/load_balancer/frontend_nlb_tcp_network_throughput
+- "List all frontend_nlb_udp_network_throughput?" -> GET /v2/monitoring/metrics/load_balancer/frontend_nlb_udp_network_throughput
+- "List all frontend_tls_connections_current?" -> GET /v2/monitoring/metrics/load_balancer/frontend_tls_connections_current
+- "List all frontend_tls_connections_limit?" -> GET /v2/monitoring/metrics/load_balancer/frontend_tls_connections_limit
+- "List all frontend_tls_connections_exceeding_rate_limit?" -> GET /v2/monitoring/metrics/load_balancer/frontend_tls_connections_exceeding_rate_limit
+- "List all droplets_http_session_duration_avg?" -> GET /v2/monitoring/metrics/load_balancer/droplets_http_session_duration_avg
+- "List all droplets_http_session_duration_50p?" -> GET /v2/monitoring/metrics/load_balancer/droplets_http_session_duration_50p
+- "List all droplets_http_session_duration_95p?" -> GET /v2/monitoring/metrics/load_balancer/droplets_http_session_duration_95p
+- "List all droplets_http_response_time_avg?" -> GET /v2/monitoring/metrics/load_balancer/droplets_http_response_time_avg
+- "List all droplets_http_response_time_50p?" -> GET /v2/monitoring/metrics/load_balancer/droplets_http_response_time_50p
+- "List all droplets_http_response_time_95p?" -> GET /v2/monitoring/metrics/load_balancer/droplets_http_response_time_95p
+- "List all droplets_http_response_time_99p?" -> GET /v2/monitoring/metrics/load_balancer/droplets_http_response_time_99p
+- "List all droplets_queue_size?" -> GET /v2/monitoring/metrics/load_balancer/droplets_queue_size
+- "List all droplets_http_responses?" -> GET /v2/monitoring/metrics/load_balancer/droplets_http_responses
+- "List all droplets_connections?" -> GET /v2/monitoring/metrics/load_balancer/droplets_connections
+- "List all droplets_health_checks?" -> GET /v2/monitoring/metrics/load_balancer/droplets_health_checks
+- "List all droplets_downtime?" -> GET /v2/monitoring/metrics/load_balancer/droplets_downtime
+- "List all current_instances?" -> GET /v2/monitoring/metrics/droplet_autoscale/current_instances
+- "List all target_instances?" -> GET /v2/monitoring/metrics/droplet_autoscale/target_instances
+- "List all current_cpu_utilization?" -> GET /v2/monitoring/metrics/droplet_autoscale/current_cpu_utilization
+- "List all target_cpu_utilization?" -> GET /v2/monitoring/metrics/droplet_autoscale/target_cpu_utilization
+- "List all current_memory_utilization?" -> GET /v2/monitoring/metrics/droplet_autoscale/current_memory_utilization
+- "List all target_memory_utilization?" -> GET /v2/monitoring/metrics/droplet_autoscale/target_memory_utilization
+- "Create a destination?" -> POST /v2/monitoring/sinks/destinations
+- "List all destinations?" -> GET /v2/monitoring/sinks/destinations
+- "Get destination details?" -> GET /v2/monitoring/sinks/destinations/{destination_uuid}
+- "Delete a destination?" -> DELETE /v2/monitoring/sinks/destinations/{destination_uuid}
+- "Create a sink?" -> POST /v2/monitoring/sinks
+- "List all sinks?" -> GET /v2/monitoring/sinks
+- "Get sink details?" -> GET /v2/monitoring/sinks/{sink_uuid}
+- "Delete a sink?" -> DELETE /v2/monitoring/sinks/{sink_uuid}
+- "Create a nf?" -> POST /v2/nfs
+- "List all nfs?" -> GET /v2/nfs
+- "Get nf details?" -> GET /v2/nfs/{nfs_id}
+- "Delete a nf?" -> DELETE /v2/nfs/{nfs_id}
+- "Create a action?" -> POST /v2/nfs/{nfs_id}/actions
+- "List all snapshots?" -> GET /v2/nfs/snapshots
+- "Get snapshot details?" -> GET /v2/nfs/snapshots/{nfs_snapshot_id}
+- "Delete a snapshot?" -> DELETE /v2/nfs/snapshots/{nfs_snapshot_id}
+- "List all attachments?" -> GET /v2/partner_network_connect/attachments
+- "Create a attachment?" -> POST /v2/partner_network_connect/attachments
+- "Get attachment details?" -> GET /v2/partner_network_connect/attachments/{pa_id}
+- "Partially update a attachment?" -> PATCH /v2/partner_network_connect/attachments/{pa_id}
+- "Delete a attachment?" -> DELETE /v2/partner_network_connect/attachments/{pa_id}
+- "List all bgp_auth_key?" -> GET /v2/partner_network_connect/attachments/{pa_id}/bgp_auth_key
+- "List all remote_routes?" -> GET /v2/partner_network_connect/attachments/{pa_id}/remote_routes
+- "List all service_key?" -> GET /v2/partner_network_connect/attachments/{pa_id}/service_key
+- "Create a service_key?" -> POST /v2/partner_network_connect/attachments/{pa_id}/service_key
+- "List all projects?" -> GET /v2/projects
+- "Create a project?" -> POST /v2/projects
+- "List all default?" -> GET /v2/projects/default
+- "Get project details?" -> GET /v2/projects/{project_id}
+- "Update a project?" -> PUT /v2/projects/{project_id}
+- "Partially update a project?" -> PATCH /v2/projects/{project_id}
+- "Delete a project?" -> DELETE /v2/projects/{project_id}
+- "List all resources?" -> GET /v2/projects/{project_id}/resources
+- "Create a resource?" -> POST /v2/projects/{project_id}/resources
+- "List all resources?" -> GET /v2/projects/default/resources
+- "Create a resource?" -> POST /v2/projects/default/resources
+- "List all regions?" -> GET /v2/regions
+- "List all registries?" -> GET /v2/registries
+- "Create a registry?" -> POST /v2/registries
+- "Get registry details?" -> GET /v2/registries/{registry_name}
+- "Delete a registry?" -> DELETE /v2/registries/{registry_name}
+- "List all docker-credentials?" -> GET /v2/registries/{registry_name}/docker-credentials
+- "List all subscription?" -> GET /v2/registries/subscription
+- "Create a subscription?" -> POST /v2/registries/subscription
+- "List all options?" -> GET /v2/registries/options
+- "List all garbage-collection?" -> GET /v2/registries/{registry_name}/garbage-collection
+- "Create a garbage-collection?" -> POST /v2/registries/{registry_name}/garbage-collection
+- "List all garbage-collections?" -> GET /v2/registries/{registry_name}/garbage-collections
+- "Update a garbage-collection?" -> PUT /v2/registries/{registry_name}/garbage-collection/{garbage_collection_uuid}
+- "List all repositoriesV2?" -> GET /v2/registries/{registry_name}/repositoriesV2
+- "Delete a repository?" -> DELETE /v2/registries/{registry_name}/repositories/{repository_name}
+- "List all tags?" -> GET /v2/registries/{registry_name}/repositories/{repository_name}/tags
+- "Delete a tag?" -> DELETE /v2/registries/{registry_name}/repositories/{repository_name}/tags/{repository_tag}
+- "List all digests?" -> GET /v2/registries/{registry_name}/repositories/{repository_name}/digests
+- "Delete a digest?" -> DELETE /v2/registries/{registry_name}/repositories/{repository_name}/digests/{manifest_digest}
+- "Create a validate-name?" -> POST /v2/registries/validate-name
+- "List all registry?" -> GET /v2/registry
+- "Create a registry?" -> POST /v2/registry
+- "List all subscription?" -> GET /v2/registry/subscription
+- "Create a subscription?" -> POST /v2/registry/subscription
+- "List all docker-credentials?" -> GET /v2/registry/docker-credentials
+- "Create a validate-name?" -> POST /v2/registry/validate-name
+- "List all repositories?" -> GET /v2/registry/{registry_name}/repositories
+- "List all repositoriesV2?" -> GET /v2/registry/{registry_name}/repositoriesV2
+- "List all tags?" -> GET /v2/registry/{registry_name}/repositories/{repository_name}/tags
+- "Delete a tag?" -> DELETE /v2/registry/{registry_name}/repositories/{repository_name}/tags/{repository_tag}
+- "List all digests?" -> GET /v2/registry/{registry_name}/repositories/{repository_name}/digests
+- "Delete a digest?" -> DELETE /v2/registry/{registry_name}/repositories/{repository_name}/digests/{manifest_digest}
+- "Create a garbage-collection?" -> POST /v2/registry/{registry_name}/garbage-collection
+- "List all garbage-collection?" -> GET /v2/registry/{registry_name}/garbage-collection
+- "List all garbage-collections?" -> GET /v2/registry/{registry_name}/garbage-collections
+- "Update a garbage-collection?" -> PUT /v2/registry/{registry_name}/garbage-collection/{garbage_collection_uuid}
+- "List all options?" -> GET /v2/registry/options
+- "List all droplet_neighbors_ids?" -> GET /v2/reports/droplet_neighbors_ids
+- "List all reserved_ips?" -> GET /v2/reserved_ips
+- "Create a reserved_ip?" -> POST /v2/reserved_ips
+- "Get reserved_ip details?" -> GET /v2/reserved_ips/{reserved_ip}
+- "Delete a reserved_ip?" -> DELETE /v2/reserved_ips/{reserved_ip}
+- "List all actions?" -> GET /v2/reserved_ips/{reserved_ip}/actions
+- "Create a action?" -> POST /v2/reserved_ips/{reserved_ip}/actions
+- "Get action details?" -> GET /v2/reserved_ips/{reserved_ip}/actions/{action_id}
+- "List all reserved_ipv6?" -> GET /v2/reserved_ipv6
+- "Create a reserved_ipv6?" -> POST /v2/reserved_ipv6
+- "Get reserved_ipv6 details?" -> GET /v2/reserved_ipv6/{reserved_ipv6}
+- "Delete a reserved_ipv6?" -> DELETE /v2/reserved_ipv6/{reserved_ipv6}
+- "Create a action?" -> POST /v2/reserved_ipv6/{reserved_ipv6}/actions
+- "Create a byoip_prefixe?" -> POST /v2/byoip_prefixes
+- "List all byoip_prefixes?" -> GET /v2/byoip_prefixes
+- "Get byoip_prefixe details?" -> GET /v2/byoip_prefixes/{byoip_prefix_uuid}
+- "Delete a byoip_prefixe?" -> DELETE /v2/byoip_prefixes/{byoip_prefix_uuid}
+- "Partially update a byoip_prefixe?" -> PATCH /v2/byoip_prefixes/{byoip_prefix_uuid}
+- "List all ips?" -> GET /v2/byoip_prefixes/{byoip_prefix_uuid}/ips
+- "List all sizes?" -> GET /v2/sizes
+- "List all snapshots?" -> GET /v2/snapshots
+- "Get snapshot details?" -> GET /v2/snapshots/{snapshot_id}
+- "Delete a snapshot?" -> DELETE /v2/snapshots/{snapshot_id}
+- "List all keys?" -> GET /v2/spaces/keys
+- "Create a key?" -> POST /v2/spaces/keys
+- "Get key details?" -> GET /v2/spaces/keys/{access_key}
+- "Delete a key?" -> DELETE /v2/spaces/keys/{access_key}
+- "Update a key?" -> PUT /v2/spaces/keys/{access_key}
+- "Partially update a key?" -> PATCH /v2/spaces/keys/{access_key}
+- "List all tags?" -> GET /v2/tags
+- "Create a tag?" -> POST /v2/tags
+- "Get tag details?" -> GET /v2/tags/{tag_id}
+- "Delete a tag?" -> DELETE /v2/tags/{tag_id}
+- "Create a resource?" -> POST /v2/tags/{tag_id}/resources
+- "List all volumes?" -> GET /v2/volumes
+- "Create a volume?" -> POST /v2/volumes
+- "Create a action?" -> POST /v2/volumes/actions
+- "Get snapshot details?" -> GET /v2/volumes/snapshots/{snapshot_id}
+- "Delete a snapshot?" -> DELETE /v2/volumes/snapshots/{snapshot_id}
+- "Get volume details?" -> GET /v2/volumes/{volume_id}
+- "Delete a volume?" -> DELETE /v2/volumes/{volume_id}
+- "List all actions?" -> GET /v2/volumes/{volume_id}/actions
+- "Create a action?" -> POST /v2/volumes/{volume_id}/actions
+- "Get action details?" -> GET /v2/volumes/{volume_id}/actions/{action_id}
+- "List all snapshots?" -> GET /v2/volumes/{volume_id}/snapshots
+- "Create a snapshot?" -> POST /v2/volumes/{volume_id}/snapshots
+- "List all vpcs?" -> GET /v2/vpcs
+- "Create a vpc?" -> POST /v2/vpcs
+- "Get vpc details?" -> GET /v2/vpcs/{vpc_id}
+- "Update a vpc?" -> PUT /v2/vpcs/{vpc_id}
+- "Partially update a vpc?" -> PATCH /v2/vpcs/{vpc_id}
+- "Delete a vpc?" -> DELETE /v2/vpcs/{vpc_id}
+- "List all members?" -> GET /v2/vpcs/{vpc_id}/members
+- "List all peerings?" -> GET /v2/vpcs/{vpc_id}/peerings
+- "Create a peering?" -> POST /v2/vpcs/{vpc_id}/peerings
+- "Partially update a peering?" -> PATCH /v2/vpcs/{vpc_id}/peerings/{vpc_peering_id}
+- "List all vpc_peerings?" -> GET /v2/vpc_peerings
+- "Create a vpc_peering?" -> POST /v2/vpc_peerings
+- "Get vpc_peering details?" -> GET /v2/vpc_peerings/{vpc_peering_id}
+- "Partially update a vpc_peering?" -> PATCH /v2/vpc_peerings/{vpc_peering_id}
+- "Delete a vpc_peering?" -> DELETE /v2/vpc_peerings/{vpc_peering_id}
+- "List all vpc_nat_gateways?" -> GET /v2/vpc_nat_gateways
+- "Create a vpc_nat_gateway?" -> POST /v2/vpc_nat_gateways
+- "Get vpc_nat_gateway details?" -> GET /v2/vpc_nat_gateways/{id}
+- "Update a vpc_nat_gateway?" -> PUT /v2/vpc_nat_gateways/{id}
+- "Delete a vpc_nat_gateway?" -> DELETE /v2/vpc_nat_gateways/{id}
+- "List all checks?" -> GET /v2/uptime/checks
+- "Create a check?" -> POST /v2/uptime/checks
+- "Get check details?" -> GET /v2/uptime/checks/{check_id}
+- "Update a check?" -> PUT /v2/uptime/checks/{check_id}
+- "Delete a check?" -> DELETE /v2/uptime/checks/{check_id}
+- "List all state?" -> GET /v2/uptime/checks/{check_id}/state
+- "List all alerts?" -> GET /v2/uptime/checks/{check_id}/alerts
+- "Create a alert?" -> POST /v2/uptime/checks/{check_id}/alerts
+- "Get alert details?" -> GET /v2/uptime/checks/{check_id}/alerts/{alert_id}
+- "Update a alert?" -> PUT /v2/uptime/checks/{check_id}/alerts/{alert_id}
+- "Delete a alert?" -> DELETE /v2/uptime/checks/{check_id}/alerts/{alert_id}
+- "List all agents?" -> GET /v2/gen-ai/agents
+- "Create a agent?" -> POST /v2/gen-ai/agents
+- "List all api_keys?" -> GET /v2/gen-ai/agents/{agent_uuid}/api_keys
+- "Create a api_key?" -> POST /v2/gen-ai/agents/{agent_uuid}/api_keys
+- "Update a api_key?" -> PUT /v2/gen-ai/agents/{agent_uuid}/api_keys/{api_key_uuid}
+- "Delete a api_key?" -> DELETE /v2/gen-ai/agents/{agent_uuid}/api_keys/{api_key_uuid}
+- "Create a function?" -> POST /v2/gen-ai/agents/{agent_uuid}/functions
+- "Update a function?" -> PUT /v2/gen-ai/agents/{agent_uuid}/functions/{function_uuid}
+- "Delete a function?" -> DELETE /v2/gen-ai/agents/{agent_uuid}/functions/{function_uuid}
+- "Create a knowledge_base?" -> POST /v2/gen-ai/agents/{agent_uuid}/knowledge_bases
+- "Delete a knowledge_base?" -> DELETE /v2/gen-ai/agents/{agent_uuid}/knowledge_bases/{knowledge_base_uuid}
+- "Update a child_agent?" -> PUT /v2/gen-ai/agents/{parent_agent_uuid}/child_agents/{child_agent_uuid}
+- "Delete a child_agent?" -> DELETE /v2/gen-ai/agents/{parent_agent_uuid}/child_agents/{child_agent_uuid}
+- "Get agent details?" -> GET /v2/gen-ai/agents/{uuid}
+- "Update a agent?" -> PUT /v2/gen-ai/agents/{uuid}
+- "Delete a agent?" -> DELETE /v2/gen-ai/agents/{uuid}
+- "List all child_agents?" -> GET /v2/gen-ai/agents/{uuid}/child_agents
+- "List all usage?" -> GET /v2/gen-ai/agents/{uuid}/usage
+- "List all versions?" -> GET /v2/gen-ai/agents/{uuid}/versions
+- "List all keys?" -> GET /v2/gen-ai/anthropic/keys
+- "Create a key?" -> POST /v2/gen-ai/anthropic/keys
+- "Get key details?" -> GET /v2/gen-ai/anthropic/keys/{api_key_uuid}
+- "Update a key?" -> PUT /v2/gen-ai/anthropic/keys/{api_key_uuid}
+- "Delete a key?" -> DELETE /v2/gen-ai/anthropic/keys/{api_key_uuid}
+- "List all agents?" -> GET /v2/gen-ai/anthropic/keys/{uuid}/agents
+- "Create a evaluation_dataset?" -> POST /v2/gen-ai/evaluation_datasets
+- "Create a file_upload_presigned_url?" -> POST /v2/gen-ai/evaluation_datasets/file_upload_presigned_urls
+- "List all evaluation_metrics?" -> GET /v2/gen-ai/evaluation_metrics
+- "Create a evaluation_run?" -> POST /v2/gen-ai/evaluation_runs
+- "Get evaluation_run details?" -> GET /v2/gen-ai/evaluation_runs/{evaluation_run_uuid}
+- "List all results?" -> GET /v2/gen-ai/evaluation_runs/{evaluation_run_uuid}/results
+- "Get result details?" -> GET /v2/gen-ai/evaluation_runs/{evaluation_run_uuid}/results/{prompt_id}
+- "List all evaluation_test_cases?" -> GET /v2/gen-ai/evaluation_test_cases
+- "Create a evaluation_test_case?" -> POST /v2/gen-ai/evaluation_test_cases
+- "List all evaluation_runs?" -> GET /v2/gen-ai/evaluation_test_cases/{evaluation_test_case_uuid}/evaluation_runs
+- "Get evaluation_test_case details?" -> GET /v2/gen-ai/evaluation_test_cases/{test_case_uuid}
+- "Update a evaluation_test_case?" -> PUT /v2/gen-ai/evaluation_test_cases/{test_case_uuid}
+- "List all indexing_jobs?" -> GET /v2/gen-ai/indexing_jobs
+- "Create a indexing_job?" -> POST /v2/gen-ai/indexing_jobs
+- "List all data_sources?" -> GET /v2/gen-ai/indexing_jobs/{indexing_job_uuid}/data_sources
+- "List all details_signed_url?" -> GET /v2/gen-ai/indexing_jobs/{indexing_job_uuid}/details_signed_url
+- "Get indexing_job details?" -> GET /v2/gen-ai/indexing_jobs/{uuid}
+- "List all knowledge_bases?" -> GET /v2/gen-ai/knowledge_bases
+- "Create a knowledge_base?" -> POST /v2/gen-ai/knowledge_bases
+- "Create a file_upload_presigned_url?" -> POST /v2/gen-ai/knowledge_bases/data_sources/file_upload_presigned_urls
+- "List all data_sources?" -> GET /v2/gen-ai/knowledge_bases/{knowledge_base_uuid}/data_sources
+- "Create a data_source?" -> POST /v2/gen-ai/knowledge_bases/{knowledge_base_uuid}/data_sources
+- "Update a data_source?" -> PUT /v2/gen-ai/knowledge_bases/{knowledge_base_uuid}/data_sources/{data_source_uuid}
+- "Delete a data_source?" -> DELETE /v2/gen-ai/knowledge_bases/{knowledge_base_uuid}/data_sources/{data_source_uuid}
+- "List all indexing_jobs?" -> GET /v2/gen-ai/knowledge_bases/{knowledge_base_uuid}/indexing_jobs
+- "Get knowledge_base details?" -> GET /v2/gen-ai/knowledge_bases/{uuid}
+- "Update a knowledge_base?" -> PUT /v2/gen-ai/knowledge_bases/{uuid}
+- "Delete a knowledge_base?" -> DELETE /v2/gen-ai/knowledge_bases/{uuid}
+- "List all models?" -> GET /v2/gen-ai/models
+- "List all api_keys?" -> GET /v2/gen-ai/models/api_keys
+- "Create a api_key?" -> POST /v2/gen-ai/models/api_keys
+- "Update a api_key?" -> PUT /v2/gen-ai/models/api_keys/{api_key_uuid}
+- "Delete a api_key?" -> DELETE /v2/gen-ai/models/api_keys/{api_key_uuid}
+- "Create a token?" -> POST /v2/gen-ai/oauth2/dropbox/tokens
+- "List all url?" -> GET /v2/gen-ai/oauth2/url
+- "List all keys?" -> GET /v2/gen-ai/openai/keys
+- "Create a key?" -> POST /v2/gen-ai/openai/keys
+- "Get key details?" -> GET /v2/gen-ai/openai/keys/{api_key_uuid}
+- "Update a key?" -> PUT /v2/gen-ai/openai/keys/{api_key_uuid}
+- "Delete a key?" -> DELETE /v2/gen-ai/openai/keys/{api_key_uuid}
+- "List all agents?" -> GET /v2/gen-ai/openai/keys/{uuid}/agents
+- "List all regions?" -> GET /v2/gen-ai/regions
+- "Create a scheduled-indexing?" -> POST /v2/gen-ai/scheduled-indexing
+- "Get knowledge-base details?" -> GET /v2/gen-ai/scheduled-indexing/knowledge-base/{knowledge_base_uuid}
+- "Delete a scheduled-indexing?" -> DELETE /v2/gen-ai/scheduled-indexing/{uuid}
+- "List all workspaces?" -> GET /v2/gen-ai/workspaces
+- "Create a workspace?" -> POST /v2/gen-ai/workspaces
+- "Get workspace details?" -> GET /v2/gen-ai/workspaces/{workspace_uuid}
+- "Update a workspace?" -> PUT /v2/gen-ai/workspaces/{workspace_uuid}
+- "Delete a workspace?" -> DELETE /v2/gen-ai/workspaces/{workspace_uuid}
+- "List all agents?" -> GET /v2/gen-ai/workspaces/{workspace_uuid}/agents
+- "List all evaluation_test_cases?" -> GET /v2/gen-ai/workspaces/{workspace_uuid}/evaluation_test_cases
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -114,89 +114,91 @@ https://app.billbee.io
 | DELETE | /api/v1/webhooks/{id} | Deletes an existing WebHook registration. |
 | GET | /api/v1/webhooks/filters | Returns a list of all known filters you can use to register webhooks |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How many API calls have I made today?" -> GET /api/v1/apiusage
-- "Show me detailed API usage breakdown" -> GET /api/v1/apiusage/detail
-- "List all my orders from last week" -> GET /api/v1/orders
-- "Find an order by its external reference number" -> GET /api/v1/orders/findbyextref/{extRef}
-- "What is the current stock level for all products?" -> GET /api/v1/products/stocks
-- "Update the stock quantity for a product" -> POST /api/v1/products/updatestock
-- "Create a shipping label for an order" -> POST /api/v1/shipment/shipwithlabel
-- "Generate an invoice PDF for order 12345" -> POST /api/v1/orders/CreateInvoice/{id}
-- "What orders does customer 99 have?" -> GET /api/v1/customers/{id}/orders
-- "Add a tag to an existing order" -> POST /api/v1/orders/{id}/tags
-- "Change the state of an order to shipped" -> PUT /api/v1/orders/{id}/orderstate
-- "Search across orders, products, and customers" -> POST /api/v1/search
-- "Which shipping providers are available?" -> GET /api/v1/shipment/shippingproviders
-- "List all available payment types" -> GET /api/v1/enums/paymenttypes
-- "What fields can I patch on a product?" -> GET /api/v1/products/PatchableFields
-
-## Response Tips
-
-- **Orders/Customers/Products (list endpoints):** Paginated via `page` and `pageSize` params. Response wraps items in a data array with paging metadata. Always check if more pages exist before assuming complete results.
-- **Enum endpoints (`/enums/*`):** Return flat arrays of id/name pairs. Cache these locally -- they rarely change.
-- **Stock endpoints:** `reservedamount` returns reserved (not available) quantity. Subtract from total stock for sellable count. `lookupBy` controls whether `id` is a Billbee ID, SKU, or EAN.
-- **Shipment/Invoice creation:** Returns the created resource. For PDF variants (`includePdf`, `includeInvoicePdf`), the response embeds base64-encoded PDF data.
-- **Search (`POST /search`):** Accepts a model with search term and type filters. Results are grouped by entity type (orders, products, customers).
-- **Events:** Filter by `typeId` to narrow to specific event categories. Date range filtering is essential for high-volume accounts.
-
-## Anomaly Flags
-
-- **API usage approaching limits:** After any write operation, proactively call `GET /api/v1/apiusage` and warn if daily quota is above 80%.
-- **Empty paginated results with page > 1:** Likely means the client overshot. Surface a warning that total results may have changed between requests.
-- **Order state mismatches:** If `PUT /orders/{id}/orderstate` returns 200 but a subsequent GET shows the old state, flag a potential rule conflict in Billbee's automation.
-- **Stock going negative:** After `updatestock` or `updatestockmultiple`, if returned stock value is below zero, alert immediately -- this indicates overselling risk.
-- **Shipment ping failures:** If `GET /shipment/ping` returns non-200, surface that the shipping subsystem may be degraded before attempting label creation.
-- **Deprecated or unknown enum values:** If an order or product contains a payment type, carrier, or state ID not present in the corresponding `/enums/*` response, flag it as potentially deprecated or custom.
-- **Bulk operation partial failures:** When using `createmultiple`, `updatestockmultiple`, or `shipmentmultiple`, inspect each item in the response array individually -- partial success is possible.
-
-## Playbook
-
-### 1. Fulfill an Order End-to-End
-
-1. Retrieve the order: `GET /api/v1/orders/{id}`
-2. Verify stock for each line item: `GET /api/v1/products/{id}` (use `lookupBy` if referencing by SKU)
-3. Update order state to processing: `PUT /api/v1/orders/{id}/orderstate`
-4. Create a shipping label: `POST /api/v1/shipment/shipwithlabel`
-5. Add shipment to the order: `POST /api/v1/orders/{id}/shipment`
-6. Generate the invoice: `POST /api/v1/orders/CreateInvoice/{id}` with `includeInvoicePdf: true`
-7. Send confirmation message: `POST /api/v1/orders/{id}/send-message`
-
-### 2. Bulk Stock Update from External System
-
-1. Fetch current stock snapshot: `GET /api/v1/products/stocks`
-2. Prepare delta models comparing external quantities to Billbee quantities
-3. Push updates in batch: `POST /api/v1/products/updatestockmultiple`
-4. Verify critical items: `GET /api/v1/products/reservedamount` for high-velocity SKUs
-5. Check API usage after bulk operation: `GET /api/v1/apiusage`
-
-### 3. Set Up Webhook Monitoring
-
-1. List available webhook event filters: `GET /api/v1/webhooks/filters`
-2. Register a new webhook: `POST /api/v1/webhooks` with target URL, secret, and selected filters
-3. Verify registration: `GET /api/v1/webhooks/{id}`
-4. Test by triggering a relevant event (e.g., create a test order)
-5. To decommission: `DELETE /api/v1/webhooks/{id}` (use `DELETE /api/v1/webhooks` without ID to remove all)
-
-### 4. Customer Lookup and Order History
-
-1. Search for the customer: `POST /api/v1/search` with customer name or email
-2. Retrieve full customer record: `GET /api/v1/customers/{id}`
-3. Pull their order history: `GET /api/v1/customers/{id}/orders` (paginate through all pages)
-4. List their addresses: `GET /api/v1/customers/{id}/addresses`
-5. Update address if needed: `PUT /api/v1/customers/addresses/{id}`
-
-### 5. Product Catalog Management
-
-1. List all products: `GET /api/v1/products` (paginate with `page` and `pageSize`)
-2. Check which fields are editable: `GET /api/v1/products/PatchableFields`
-3. Update product details: `PATCH /api/v1/products/{id}` with only changed fields
-4. Manage product images: `GET /api/v1/products/{productId}/images`, then `PUT` to add or `DELETE` to remove
-5. Review custom fields: `GET /api/v1/products/custom-fields` for any extended attributes
-6. Bulk delete unused images: `POST /api/v1/products/images/delete` with array of image IDs
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all apiusage?" -> GET /api/v1/apiusage
+- "List all detail?" -> GET /api/v1/apiusage/detail
+- "List all cloudstorages?" -> GET /api/v1/cloudstorages
+- "List all customer-addresses?" -> GET /api/v1/customer-addresses
+- "Create a customer-address?" -> POST /api/v1/customer-addresses
+- "Get customer-address details?" -> GET /api/v1/customer-addresses/{id}
+- "Update a customer-address?" -> PUT /api/v1/customer-addresses/{id}
+- "List all customers?" -> GET /api/v1/customers
+- "Create a customer?" -> POST /api/v1/customers
+- "Get customer details?" -> GET /api/v1/customers/{id}
+- "Update a customer?" -> PUT /api/v1/customers/{id}
+- "List all orders?" -> GET /api/v1/customers/{id}/orders
+- "List all addresses?" -> GET /api/v1/customers/{id}/addresses
+- "Create a address?" -> POST /api/v1/customers/{id}/addresses
+- "Get address details?" -> GET /api/v1/customers/addresses/{id}
+- "Update a address?" -> PUT /api/v1/customers/addresses/{id}
+- "Partially update a address?" -> PATCH /api/v1/customers/addresses/{id}
+- "List all paymenttypes?" -> GET /api/v1/enums/paymenttypes
+- "List all shippingcarriers?" -> GET /api/v1/enums/shippingcarriers
+- "List all accountsyncstate?" -> GET /api/v1/enums/accountsyncstate
+- "List all shopaccounttype?" -> GET /api/v1/enums/shopaccounttype
+- "List all shipmenttypes?" -> GET /api/v1/enums/shipmenttypes
+- "List all orderstates?" -> GET /api/v1/enums/orderstates
+- "List all events?" -> GET /api/v1/events
+- "Create a createmultiple?" -> POST /api/v1/orders/createmultiple
+- "List all orders?" -> GET /api/v1/orders
+- "Create a order?" -> POST /api/v1/orders
+- "Create a tag?" -> POST /api/v1/orders/{id}/tags
+- "Create a tag?" -> POST /api/v1/orders/tags
+- "Get order details?" -> GET /api/v1/orders/{id}
+- "Partially update a order?" -> PATCH /api/v1/orders/{id}
+- "Get findbyextref details?" -> GET /api/v1/orders/findbyextref/{extRef}
+- "Create a shipment?" -> POST /api/v1/orders/{id}/shipment
+- "List all invoices?" -> GET /api/v1/orders/invoices
+- "Get find details?" -> GET /api/v1/orders/find/{id}/{partner}
+- "List all PatchableFields?" -> GET /api/v1/orders/PatchableFields
+- "Create a send-message?" -> POST /api/v1/orders/{id}/send-message
+- "Create a trigger-event?" -> POST /api/v1/orders/{id}/trigger-event
+- "Create a parse-placeholder?" -> POST /api/v1/orders/{id}/parse-placeholders
+- "Create a message?" -> POST /api/v1/orders/{id}/message
+- "List all layouts?" -> GET /api/v1/layouts
+- "Create a search?" -> POST /api/v1/search
+- "List all products?" -> GET /api/v1/products
+- "Create a product?" -> POST /api/v1/products
+- "Get product details?" -> GET /api/v1/products/{id}
+- "Delete a product?" -> DELETE /api/v1/products/{id}
+- "Partially update a product?" -> PATCH /api/v1/products/{id}
+- "List all stocks?" -> GET /api/v1/products/stocks
+- "List all PatchableFields?" -> GET /api/v1/products/PatchableFields
+- "List all category?" -> GET /api/v1/products/category
+- "Create a updatestock?" -> POST /api/v1/products/updatestock
+- "Create a stockmultiple?" -> POST /api/v1/products/stockmultiple
+- "Create a updatestockmultiple?" -> POST /api/v1/products/updatestockmultiple
+- "List all reservedamount?" -> GET /api/v1/products/reservedamount
+- "Create a updatestockcode?" -> POST /api/v1/products/updatestockcode
+- "List all custom-fields?" -> GET /api/v1/products/custom-fields
+- "Get custom-field details?" -> GET /api/v1/products/custom-fields/{id}
+- "List all images?" -> GET /api/v1/products/{productId}/images
+- "Get image details?" -> GET /api/v1/products/{productId}/images/{imageId}
+- "Update a image?" -> PUT /api/v1/products/{productId}/images/{imageId}
+- "Delete a image?" -> DELETE /api/v1/products/{productId}/images/{imageId}
+- "Get image details?" -> GET /api/v1/products/images/{imageId}
+- "Delete a image?" -> DELETE /api/v1/products/images/{imageId}
+- "Create a delete?" -> POST /api/v1/products/images/delete
+- "Create a createaccount?" -> POST /api/v1/automaticprovision/createaccount
+- "List all termsinfo?" -> GET /api/v1/automaticprovision/termsinfo
+- "Create a shipmentmultiple?" -> POST /api/v1/shipment/shipmentmultiple
+- "Create a shipment?" -> POST /api/v1/shipment/shipment
+- "List all shippingproviders?" -> GET /api/v1/shipment/shippingproviders
+- "Create a shipwithlabel?" -> POST /api/v1/shipment/shipwithlabel
+- "Create a shipwithlabelmultiple?" -> POST /api/v1/shipment/shipwithlabelmultiple
+- "List all shippingcarriers?" -> GET /api/v1/shipment/shippingcarriers
+- "List all ping?" -> GET /api/v1/shipment/ping
+- "List all shipments?" -> GET /api/v1/shipment/shipments
+- "List all shopaccounts?" -> GET /api/v1/shopaccounts
+- "List all webhooks?" -> GET /api/v1/webhooks
+- "Create a webhook?" -> POST /api/v1/webhooks
+- "Get webhook details?" -> GET /api/v1/webhooks/{id}
+- "Update a webhook?" -> PUT /api/v1/webhooks/{id}
+- "Delete a webhook?" -> DELETE /api/v1/webhooks/{id}
+- "List all filters?" -> GET /api/v1/webhooks/filters
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

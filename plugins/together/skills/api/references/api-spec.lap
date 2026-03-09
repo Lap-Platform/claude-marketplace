@@ -10,501 +10,592 @@
 
 @group deployments
 @endpoint GET /deployments
-@returns(200) {data: [map], object: any}
-@errors {500}
+@desc Get the list of deployments
+@returns(200) {data: [map], object: any} # List of deployments
+@errors {500: Internal server error}
 
 @endpoint POST /deployments
-@required {gpu_type: str(h100-80gb/a100-80gb), image: str, name: str}
-@optional {args: [str], autoscaling: map, command: [str], cpu: num, description: str, environment_variables: [map{name!: str, value: str, value_from_secret: str}], gpu_count: int, health_check_path: str, max_replicas: int, memory: num, min_replicas: int, port: int, storage: int, termination_grace_period_seconds: int, volumes: [map{mount_path!: str, name!: str, version: int}]}
-@returns(200) {args: [str], autoscaling: map, command: [str], cpu: num, created_at: str, description: str, desired_replicas: int, environment_variables: [map], gpu_count: int, gpu_type: str, health_check_path: str, id: str, image: str, max_replicas: int, memory: num, min_replicas: int, name: str, object: any, port: int, ready_replicas: int, replica_events: map, status: any, storage: int, updated_at: str, volumes: [map]}
-@errors {400, 500}
+@desc Create a new deployment
+@required {gpu_type: str(h100-80gb/a100-80gb) # GPUType specifies the GPU hardware to use (e.g., "h100-80gb")., image: str # Image is the container image to deploy from registry.together.ai., name: str # Name is the unique identifier for your deployment. Must contain only alphanumeric characters, underscores, or hyphens (1-100 characters)}
+@optional {args: [str] # Args overrides the container's CMD. Provide as an array of arguments (e.g., ["python", "app.py"]), autoscaling: map # Autoscaling configuration as key-value pairs. Example: {"metric": "QueueBacklogPerWorker", "target": "10"} to scale based on queue backlog, command: [str] # Command overrides the container's ENTRYPOINT. Provide as an array (e.g., ["/bin/sh", "-c"]), cpu: num # CPU is the number of CPU cores to allocate per container instance (e.g., 0.1 = 100 milli cores), description: str # Description is an optional human-readable description of your deployment, environment_variables: [map{name!: str, value: str, value_from_secret: str}] # EnvironmentVariables is a list of environment variables to set in the container. Each must have a name and either a value or value_from_secret, gpu_count: int # GPUCount is the number of GPUs to allocate per container instance. Defaults to 0 if not specified, health_check_path: str # HealthCheckPath is the HTTP path for health checks (e.g., "/health"). If set, the platform will check this endpoint to determine container health, max_replicas: int # MaxReplicas is the maximum number of container instances that can be scaled up to. If not set, will be set to MinReplicas, memory: num # Memory is the amount of RAM to allocate per container instance in GiB (e.g., 0.5 = 512MiB), min_replicas: int # MinReplicas is the minimum number of container instances to run. Defaults to 1 if not specified, port: int # Port is the container port your application listens on (e.g., 8080 for web servers). Required if your application serves traffic, storage: int # Storage is the amount of ephemeral disk storage to allocate per container instance (e.g., 10 = 10GiB), termination_grace_period_seconds: int # TerminationGracePeriodSeconds is the time in seconds to wait for graceful shutdown before forcefully terminating the replica, volumes: [map{mount_path!: str, name!: str, version: int}] # Volumes is a list of volume mounts to attach to the container. Each mount must reference an existing volume by name}
+@returns(200) {args: [str], autoscaling: map, command: [str], cpu: num, created_at: str, description: str, desired_replicas: int, environment_variables: [map], gpu_count: int, gpu_type: str, health_check_path: str, id: str, image: str, max_replicas: int, memory: num, min_replicas: int, name: str, object: any, port: int, ready_replicas: int, replica_events: map, status: any, storage: int, updated_at: str, volumes: [map]} # Deployment created successfully
+@errors {400: Invalid request, 500: Internal server error}
 
 @endpoint DELETE /deployments/{id}
+@desc Delete a deployment
 @required {id: str}
-@returns(200)
-@errors {404, 500}
+@returns(200) Deployment deleted successfully
+@errors {404: Deployment not found, 500: Internal server error}
 
 @endpoint GET /deployments/{id}
+@desc Get a deployment by ID or name
 @required {id: str}
-@returns(200) {args: [str], autoscaling: map, command: [str], cpu: num, created_at: str, description: str, desired_replicas: int, environment_variables: [map], gpu_count: int, gpu_type: str, health_check_path: str, id: str, image: str, max_replicas: int, memory: num, min_replicas: int, name: str, object: any, port: int, ready_replicas: int, replica_events: map, status: any, storage: int, updated_at: str, volumes: [map]}
-@errors {404, 500}
+@returns(200) {args: [str], autoscaling: map, command: [str], cpu: num, created_at: str, description: str, desired_replicas: int, environment_variables: [map], gpu_count: int, gpu_type: str, health_check_path: str, id: str, image: str, max_replicas: int, memory: num, min_replicas: int, name: str, object: any, port: int, ready_replicas: int, replica_events: map, status: any, storage: int, updated_at: str, volumes: [map]} # Deployment details
+@errors {404: Deployment not found, 500: Internal server error}
 
 @endpoint PATCH /deployments/{id}
+@desc Update a deployment
 @required {id: str}
-@optional {args: [str], autoscaling: map, command: [str], cpu: num, description: str, environment_variables: [map{name!: str, value: str, value_from_secret: str}], gpu_count: int, gpu_type: str(h100-80gb/ a100-80gb), health_check_path: str, image: str, max_replicas: int, memory: num, min_replicas: int, name: str, port: int, storage: int, termination_grace_period_seconds: int, volumes: [map{mount_path!: str, name!: str, version: int}]}
-@returns(200) {args: [str], autoscaling: map, command: [str], cpu: num, created_at: str, description: str, desired_replicas: int, environment_variables: [map], gpu_count: int, gpu_type: str, health_check_path: str, id: str, image: str, max_replicas: int, memory: num, min_replicas: int, name: str, object: any, port: int, ready_replicas: int, replica_events: map, status: any, storage: int, updated_at: str, volumes: [map]}
-@errors {400, 404, 500}
+@optional {args: [str] # Args overrides the container's CMD. Provide as an array of arguments (e.g., ["python", "app.py"]), autoscaling: map # Autoscaling configuration as key-value pairs. Example: {"metric": "QueueBacklogPerWorker", "target": "10"} to scale based on queue backlog, command: [str] # Command overrides the container's ENTRYPOINT. Provide as an array (e.g., ["/bin/sh", "-c"]), cpu: num # CPU is the number of CPU cores to allocate per container instance (e.g., 0.1 = 100 milli cores), description: str # Description is an optional human-readable description of your deployment, environment_variables: [map{name!: str, value: str, value_from_secret: str}] # EnvironmentVariables is a list of environment variables to set in the container. This will replace all existing environment variables, gpu_count: int # GPUCount is the number of GPUs to allocate per container instance, gpu_type: str(h100-80gb/a100-80gb) # GPUType specifies the GPU hardware to use (e.g., "h100-80gb"), health_check_path: str # HealthCheckPath is the HTTP path for health checks (e.g., "/health"). Set to empty string to disable health checks, image: str # Image is the container image to deploy from registry.together.ai., max_replicas: int # MaxReplicas is the maximum number of replicas that can be scaled up to., memory: num # Memory is the amount of RAM to allocate per container instance in GiB (e.g., 0.5 = 512MiB), min_replicas: int # MinReplicas is the minimum number of replicas to run, name: str # Name is the new unique identifier for your deployment. Must contain only alphanumeric characters, underscores, or hyphens (1-100 characters), port: int # Port is the container port your application listens on (e.g., 8080 for web servers), storage: int # Storage is the amount of ephemeral disk storage to allocate per container instance (e.g., 10 = 10GiB), termination_grace_period_seconds: int # TerminationGracePeriodSeconds is the time in seconds to wait for graceful shutdown before forcefully terminating the replica, volumes: [map{mount_path!: str, name!: str, version: int}] # Volumes is a list of volume mounts to attach to the container. This will replace all existing volumes}
+@returns(200) {args: [str], autoscaling: map, command: [str], cpu: num, created_at: str, description: str, desired_replicas: int, environment_variables: [map], gpu_count: int, gpu_type: str, health_check_path: str, id: str, image: str, max_replicas: int, memory: num, min_replicas: int, name: str, object: any, port: int, ready_replicas: int, replica_events: map, status: any, storage: int, updated_at: str, volumes: [map]} # Deployment updated successfully
+@errors {400: Invalid request, 404: Deployment not found, 500: Internal server error}
 
 @endpoint GET /deployments/{id}/logs
+@desc Get logs for a deployment
 @required {id: str}
 @optional {replica_id: str}
-@returns(200) {lines: [str]}
-@errors {404, 500}
+@returns(200) {lines: [str]} # Deployment logs
+@errors {404: Deployment not found, 500: Internal server error}
 
 @endpoint GET /deployments/secrets
-@returns(200) {data: [map], object: any}
-@errors {500}
+@desc Get the list of project secrets
+@returns(200) {data: [map], object: any} # List of secrets
+@errors {500: Internal server error}
 
 @endpoint POST /deployments/secrets
-@required {name: str, value: str}
-@optional {description: str, project_id: str}
-@returns(200) {created_at: str, created_by: str, description: str, id: str, last_updated_by: str, name: str, object: any, updated_at: str}
-@errors {400, 500}
+@desc Create a new secret
+@required {name: str # Name is the unique identifier for the secret. Can contain alphanumeric characters, underscores, hyphens, forward slashes, and periods (1-100 characters), value: str # Value is the sensitive data to store securely (e.g., API keys, passwords, tokens). This value will be encrypted at rest}
+@optional {description: str # Description is an optional human-readable description of the secret's purpose (max 500 characters), project_id: str # ProjectID is ignored - the project is automatically determined from your authentication}
+@returns(200) {created_at: str, created_by: str, description: str, id: str, last_updated_by: str, name: str, object: any, updated_at: str} # Secret created successfully
+@errors {400: Invalid request, 500: Internal server error}
 
 @endpoint DELETE /deployments/secrets/{id}
+@desc Delete a secret
 @required {id: str}
-@returns(200)
-@errors {404, 500}
+@returns(200) Secret deleted successfully
+@errors {404: Secret not found, 500: Internal server error}
 
 @endpoint GET /deployments/secrets/{id}
+@desc Get a secret by ID or name
 @required {id: str}
-@returns(200) {created_at: str, created_by: str, description: str, id: str, last_updated_by: str, name: str, object: any, updated_at: str}
-@errors {404, 500}
+@returns(200) {created_at: str, created_by: str, description: str, id: str, last_updated_by: str, name: str, object: any, updated_at: str} # Secret details
+@errors {404: Secret not found, 500: Internal server error}
 
 @endpoint PATCH /deployments/secrets/{id}
+@desc Update a secret
 @required {id: str}
-@optional {description: str, name: str, project_id: str, value: str}
-@returns(200) {created_at: str, created_by: str, description: str, id: str, last_updated_by: str, name: str, object: any, updated_at: str}
-@errors {400, 404, 500}
+@optional {description: str # Description is an optional human-readable description of the secret's purpose (max 500 characters), name: str # Name is the new unique identifier for the secret. Can contain alphanumeric characters, underscores, hyphens, forward slashes, and periods (1-100 characters), project_id: str # ProjectID is ignored - the project is automatically determined from your authentication, value: str # Value is the new sensitive data to store securely. Updating this will replace the existing secret value}
+@returns(200) {created_at: str, created_by: str, description: str, id: str, last_updated_by: str, name: str, object: any, updated_at: str} # Secret updated successfully
+@errors {400: Invalid request, 404: Secret not found, 500: Internal server error}
 
 @endpoint GET /deployments/storage/{filename}
+@desc Download a file
 @required {filename: str}
-@errors {307, 400, 404, 500}
+@errors {307: Redirect to signed download URL, 400: Invalid request, 404: File not found, 500: Internal error}
 
 @endpoint GET /deployments/storage/volumes
-@returns(200) {data: [map], object: any}
-@errors {500}
+@desc Get the list of project volumes
+@returns(200) {data: [map], object: any} # List of volumes
+@errors {500: Internal server error}
 
 @endpoint POST /deployments/storage/volumes
-@required {content: any, name: str, type: any}
-@returns(200) {content: map{files: [map], source_prefix: str, type: str}, created_at: str, current_version: int, id: str, mounted_by: [str], name: str, object: str, type: str, updated_at: str, version_history: map}
-@errors {400, 500}
+@desc Create a new volume
+@required {content: any # Content specifies the content configuration for this volume, name: str # Name is the unique identifier for the volume within the project, type: any # Type is the volume type (currently only "readOnly" is supported)}
+@returns(200) {content: map{files: [map], source_prefix: str, type: str}, created_at: str, current_version: int, id: str, mounted_by: [str], name: str, object: str, type: str, updated_at: str, version_history: map} # Volume created successfully
+@errors {400: Invalid request, 500: Internal server error}
 
 @endpoint DELETE /deployments/storage/volumes/{id}
+@desc Delete a volume
 @required {id: str}
-@returns(200)
-@errors {404, 500}
+@returns(200) Volume deleted successfully
+@errors {404: Volume not found, 500: Internal server error}
 
 @endpoint GET /deployments/storage/volumes/{id}
+@desc Get a volume by ID or name
 @required {id: str}
-@returns(200) {content: map{files: [map], source_prefix: str, type: str}, created_at: str, current_version: int, id: str, mounted_by: [str], name: str, object: str, type: str, updated_at: str, version_history: map}
-@errors {404, 500}
+@returns(200) {content: map{files: [map], source_prefix: str, type: str}, created_at: str, current_version: int, id: str, mounted_by: [str], name: str, object: str, type: str, updated_at: str, version_history: map} # Volume details
+@errors {404: Volume not found, 500: Internal server error}
 
 @endpoint PATCH /deployments/storage/volumes/{id}
+@desc Update a volume
 @required {id: str}
-@optional {content: any, name: str, type: any}
-@returns(200) {content: map{files: [map], source_prefix: str, type: str}, created_at: str, current_version: int, id: str, mounted_by: [str], name: str, object: str, type: str, updated_at: str, version_history: map}
-@errors {400, 404, 500}
+@optional {content: any # Content specifies the new content that will be preloaded to this volume, name: str # Name is the new unique identifier for the volume within the project, type: any # Type is the new volume type (currently only "readOnly" is supported)}
+@returns(200) {content: map{files: [map], source_prefix: str, type: str}, created_at: str, current_version: int, id: str, mounted_by: [str], name: str, object: str, type: str, updated_at: str, version_history: map} # Volume updated successfully
+@errors {400: Invalid request, 404: Volume not found, 500: Internal server error}
 
 @endgroup
 
 @group voices
 @endpoint GET /voices
-@returns(200) {data: [map]}
+@desc Fetch available voices for each model
+@returns(200) {data: [map]} # Success
 
 @endgroup
 
 @group videos
 @endpoint GET /videos/{id}
+@desc Fetch video metadata
 @required {id: str}
-@returns(200) {id: str, object: any, model: str, status: str, created_at: num, completed_at: num, size: str, seconds: str, error: map{code: str, message: str}, outputs: map{cost: int, video_url: str}}
-@errors {400, 404}
+@returns(200) {id: str, object: any, model: str, status: str, created_at: num, completed_at: num, size: str, seconds: str, error: map{code: str, message: str}, outputs: map{cost: int, video_url: str}} # Success
+@errors {400: Invalid request parameters., 404: Video ID not found.}
 
 @endpoint POST /videos
-@required {model: str}
-@optional {prompt: str, height: int, width: int, seconds: str, fps: int, steps: int, seed: int, guidance_scale: int, output_format: str(MP4/WEBM), output_quality: int, negative_prompt: str, frame_images: [map{input_image!: str, frame: any}], reference_images: [str]}
-@returns(200) {id: str, object: any, model: str, status: str, created_at: num, completed_at: num, size: str, seconds: str, error: map{code: str, message: str}, outputs: map{cost: int, video_url: str}}
+@desc Create video
+@required {model: str # The model to be used for the video creation request.}
+@optional {prompt: str # Text prompt that describes the video to generate., height: int, width: int, seconds: str # Clip duration in seconds., fps: int # Frames per second. Defaults to 24., steps: int # The number of denoising steps the model performs during video generation. More steps typically result in higher quality output but require longer processing time., seed: int # Seed to use in initializing the video generation.  Using the same seed allows deterministic video generation.  If not provided a random seed is generated for each request., guidance_scale: int # Controls how closely the video generation follows your prompt. Higher values make the model adhere more strictly to your text description, while lower values allow more creative freedom. guidence_scale affects both visual content and temporal consistency.Recommended range is 6.0-10.0 for most video models. Values above 12 may cause over-guidance artifacts or unnatural motion patterns., output_format: str(MP4/WEBM), output_quality: int # Compression quality. Defaults to 20., negative_prompt: str # Similar to prompt, but specifies what to avoid instead of what to include, frame_images: [map{input_image!: str, frame: any}] # Array of images to guide video generation, similar to keyframes., reference_images: [str] # Unlike frame_images which constrain specific timeline positions, reference images guide the general appearance that should appear consistently across the video.}
+@returns(200) {id: str, object: any, model: str, status: str, created_at: num, completed_at: num, size: str, seconds: str, error: map{code: str, message: str}, outputs: map{cost: int, video_url: str}} # Success
 
 @endgroup
 
 @group chat
 @endpoint POST /chat/completions
-@required {messages: [any], model: any}
-@optional {max_tokens: int, stop: [str], temperature: num(float), top_p: num(float), top_k: int(int32), context_length_exceeded_behavior: str(truncate/error)=error, repetition_penalty: num, stream: bool, logprobs: int, echo: bool, n: int, min_p: num(float), presence_penalty: num(float), frequency_penalty: num(float), logit_bias: map, seed: int, function_call: any, response_format: any, tools: [map{type: str, function: map{description: str, name: str, parameters: map}}], tool_choice: any, compliance: any, chat_template_kwargs: map, safety_model: str, reasoning_effort: str(low/medium/high), reasoning: map{enabled: bool}}
-@returns(200) {id: str, choices: [map], usage: map?{prompt_tokens: int, completion_tokens: int, total_tokens: int}, created: int, model: str, object: any, warnings: [map]}
-@errors {400, 401, 404, 429, 503, 504}
+@desc Create chat completion
+@required {messages: [any] # A list of messages comprising the conversation so far., model: any # The name of the model to query.<br> <br> [See all of Together AI's chat models](https://docs.together.ai/docs/serverless-models#chat-models)}
+@optional {max_tokens: int # The maximum number of tokens to generate., stop: [str] # A list of string sequences that will truncate (stop) inference text output. For example, "</s>" will stop generation as soon as the model generates the given token., temperature: num(float) # A decimal number from 0-1 that determines the degree of randomness in the response. A temperature less than 1 favors more correctness and is appropriate for question answering or summarization. A value closer to 1 introduces more randomness in the output., top_p: num(float) # A percentage (also called the nucleus parameter) that's used to dynamically adjust the number of choices for each predicted token based on the cumulative probabilities. It specifies a probability threshold below which all less likely tokens are filtered out. This technique helps maintain diversity and generate more fluent and natural-sounding text., top_k: int(int32) # An integer that's used to limit the number of choices for the next predicted word or token. It specifies the maximum number of tokens to consider at each step, based on their probability of occurrence. This technique helps to speed up the generation process and can improve the quality of the generated text by focusing on the most likely options., context_length_exceeded_behavior: str(truncate/error)=error # Defined the behavior of the API when max_tokens exceed the maximum context length of the model. When set to 'error', API will return 400 with appropriate error message. When set to 'truncate', override the max_tokens with maximum context length of the model., repetition_penalty: num # A number that controls the diversity of generated text by reducing the likelihood of repeated sequences. Higher values decrease repetition., stream: bool # If true, stream tokens as Server-Sent Events as the model generates them instead of waiting for the full model response. The stream terminates with `data: [DONE]`. If false, return a single JSON object containing the results., logprobs: int # An integer between 0 and 20 of the top k tokens to return log probabilities for at each generation step, instead of just the sampled token. Log probabilities help assess model confidence in token predictions., echo: bool # If true, the response will contain the prompt. Can be used with `logprobs` to return prompt logprobs., n: int # The number of completions to generate for each prompt., min_p: num(float) # A number between 0 and 1 that can be used as an alternative to top_p and top-k., presence_penalty: num(float) # A number between -2.0 and 2.0 where a positive value increases the likelihood of a model talking about new topics., frequency_penalty: num(float) # A number between -2.0 and 2.0 where a positive value decreases the likelihood of repeating tokens that have already been mentioned., logit_bias: map # Adjusts the likelihood of specific tokens appearing in the generated output., seed: int # Seed value for reproducibility., function_call: any, response_format: any # An object specifying the format that the model must output.  Setting to `{ "type": "json_schema", "json_schema": {...} }` enables Structured Outputs which ensures the model will match your supplied JSON schema. Learn more in the [Structured Outputs guide](https://docs.together.ai/docs/json-mode).  Setting to `{ "type": "json_object" }` enables the older JSON mode, which ensures the message the model generates is valid JSON. Using `json_schema` is preferred for models that support it., tools: [map{type: str, function: map{description: str, name: str, parameters: map}}] # A list of tools the model may call. Currently, only functions are supported as a tool. Use this to provide a list of functions the model may generate JSON inputs for., tool_choice: any # Controls which (if any) function is called by the model. By default uses `auto`, which lets the model pick between generating a message or calling a function., compliance: any, chat_template_kwargs: map # Additional configuration to pass to model engine., safety_model: str # The name of the moderation model used to validate tokens. Choose from the available moderation models found [here](https://docs.together.ai/docs/inference-models#moderation-models)., reasoning_effort: str(low/medium/high) # Controls the level of reasoning effort the model should apply when generating responses. Higher values may result in more thoughtful and detailed responses but may take longer to generate., reasoning: map{enabled: bool} # For models that support toggling reasoning functionality, this object can be used to control that functionality.}
+@returns(200) {id: str, choices: [map], usage: map?{prompt_tokens: int, completion_tokens: int, total_tokens: int}, created: int, model: str, object: any, warnings: [map]} # 200
+@errors {400: BadRequest, 401: Unauthorized, 404: NotFound, 429: RateLimit, 503: Overloaded, 504: Timeout}
 
 @endgroup
 
 @group completions
 @endpoint POST /completions
-@required {prompt: str, model: str}
-@optional {max_tokens: int, stop: [str], temperature: num(float), top_p: num(float), top_k: int(int32), repetition_penalty: num(float), stream: bool, logprobs: int, echo: bool, n: int, safety_model: str, min_p: num(float), presence_penalty: num(float), frequency_penalty: num(float), logit_bias: map, seed: int}
-@returns(200) {id: str, choices: [map], prompt: [map], usage: map?{prompt_tokens: int, completion_tokens: int, total_tokens: int}, created: int, model: str, object: any}
-@errors {400, 401, 404, 429, 503, 504}
+@desc Create completion
+@required {prompt: str # A string providing context for the model to complete., model: str # The name of the model to query.<br> <br> [See all of Together AI's chat models](https://docs.together.ai/docs/serverless-models#chat-models)}
+@optional {max_tokens: int # The maximum number of tokens to generate., stop: [str] # A list of string sequences that will truncate (stop) inference text output. For example, "</s>" will stop generation as soon as the model generates the given token., temperature: num(float) # A decimal number from 0-1 that determines the degree of randomness in the response. A temperature less than 1 favors more correctness and is appropriate for question answering or summarization. A value closer to 1 introduces more randomness in the output., top_p: num(float) # A percentage (also called the nucleus parameter) that's used to dynamically adjust the number of choices for each predicted token based on the cumulative probabilities. It specifies a probability threshold below which all less likely tokens are filtered out. This technique helps maintain diversity and generate more fluent and natural-sounding text., top_k: int(int32) # An integer that's used to limit the number of choices for the next predicted word or token. It specifies the maximum number of tokens to consider at each step, based on their probability of occurrence. This technique helps to speed up the generation process and can improve the quality of the generated text by focusing on the most likely options., repetition_penalty: num(float) # A number that controls the diversity of generated text by reducing the likelihood of repeated sequences. Higher values decrease repetition., stream: bool # If true, stream tokens as Server-Sent Events as the model generates them instead of waiting for the full model response. The stream terminates with `data: [DONE]`. If false, return a single JSON object containing the results., logprobs: int # An integer between 0 and 20 of the top k tokens to return log probabilities for at each generation step, instead of just the sampled token. Log probabilities help assess model confidence in token predictions., echo: bool # If true, the response will contain the prompt. Can be used with `logprobs` to return prompt logprobs., n: int # The number of completions to generate for each prompt., safety_model: str # The name of the moderation model used to validate tokens. Choose from the available moderation models found [here](https://docs.together.ai/docs/inference-models#moderation-models)., min_p: num(float) # A number between 0 and 1 that can be used as an alternative to top-p and top-k., presence_penalty: num(float) # A number between -2.0 and 2.0 where a positive value increases the likelihood of a model talking about new topics., frequency_penalty: num(float) # A number between -2.0 and 2.0 where a positive value decreases the likelihood of repeating tokens that have already been mentioned., logit_bias: map # Adjusts the likelihood of specific tokens appearing in the generated output., seed: int # Seed value for reproducibility.}
+@returns(200) {id: str, choices: [map], prompt: [map], usage: map?{prompt_tokens: int, completion_tokens: int, total_tokens: int}, created: int, model: str, object: any} # 200
+@errors {400: BadRequest, 401: Unauthorized, 404: NotFound, 429: RateLimit, 503: Overloaded, 504: Timeout}
 
 @endgroup
 
 @group embeddings
 @endpoint POST /embeddings
-@required {model: str, input: any}
-@returns(200) {object: any, model: str, data: [map]}
-@errors {400, 401, 404, 429, 503, 504}
+@desc Create embedding
+@required {model: str # The name of the embedding model to use.<br> <br> [See all of Together AI's embedding models](https://docs.together.ai/docs/serverless-models#embedding-models), input: any}
+@returns(200) {object: any, model: str, data: [map]} # 200
+@errors {400: BadRequest, 401: Unauthorized, 404: NotFound, 429: RateLimit, 503: Overloaded, 504: Timeout}
 
 @endgroup
 
 @group models
 @endpoint GET /models
+@desc List all models
 @optional {dedicated: bool}
-@returns(200)
-@errors {400, 401, 404, 429, 504}
+@returns(200) 200
+@errors {400: BadRequest, 401: Unauthorized, 404: NotFound, 429: RateLimit, 504: Timeout}
 
 @endpoint POST /models
-@required {model_name: str, model_source: str}
-@optional {model_type: str(model/adapter)=model, hf_token: str, description: str, base_model: str, lora_model: str}
-@returns(200) {data: map{job_id: str, model_name: str, model_id: str, model_source: str}, message: str}
+@desc Upload a custom model or adapter
+@required {model_name: str # The name to give to your uploaded model, model_source: str # The source location of the model (Hugging Face repo or S3 path)}
+@optional {model_type: str(model/adapter)=model # Whether the model is a full model or an adapter, hf_token: str # Hugging Face token (if uploading from Hugging Face), description: str # A description of your model, base_model: str # The base model to use for an adapter if setting it to run against a serverless pool.  Only used for model_type `adapter`., lora_model: str # The lora pool to use for an adapter if setting it to run against, say, a dedicated pool.  Only used for model_type `adapter`.}
+@returns(200) {data: map{job_id: str, model_name: str, model_id: str, model_source: str}, message: str} # Model / adapter upload job created successfully
 
 @endgroup
 
 @group jobs
 @endpoint GET /jobs/{jobId}
+@desc Get job status
 @required {jobId: str}
-@returns(200) {type: str, job_id: str, status: str, status_updates: [map], args: map{description: str, modelName: str, modelSource: str}, created_at: str(date-time), updated_at: str(date-time)}
+@returns(200) {type: str, job_id: str, status: str, status_updates: [map], args: map{description: str, modelName: str, modelSource: str}, created_at: str(date-time), updated_at: str(date-time)} # Job status retrieved successfully
 
 @endpoint GET /jobs
-@returns(200) {data: [map]}
+@desc List all jobs
+@returns(200) {data: [map]} # Jobs retrieved successfully
 
 @endgroup
 
 @group images
 @endpoint POST /images/generations
-@required {prompt: str, model: str}
-@optional {steps: int=20, image_url: str, seed: int, n: int=1, height: int=1024, width: int=1024, negative_prompt: str, response_format: str(base64/url), guidance_scale: num=3.5, output_format: str(jpeg/png)=jpeg, image_loras: [map{path!: str, scale!: num}], reference_images: [str], disable_safety_checker: bool}
-@returns(200) {id: str, model: str, object: any, data: [any]}
+@desc Create image
+@required {prompt: str # A description of the desired images. Maximum length varies by model., model: str # The model to use for image generation.<br> <br> [See all of Together AI's image models](https://docs.together.ai/docs/serverless-models#image-models)}
+@optional {steps: int=20 # Number of generation steps., image_url: str # URL of an image to use for image models that support it., seed: int # Seed used for generation. Can be used to reproduce image generations., n: int=1 # Number of image results to generate., height: int=1024 # Height of the image to generate in number of pixels., width: int=1024 # Width of the image to generate in number of pixels., negative_prompt: str # The prompt or prompts not to guide the image generation., response_format: str(base64/url) # Format of the image response. Can be either a base64 string or a URL., guidance_scale: num=3.5 # Adjusts the alignment of the generated image with the input prompt. Higher values (e.g., 8-10) make the output more faithful to the prompt, while lower values (e.g., 1-5) encourage more creative freedom., output_format: str(jpeg/png)=jpeg # The format of the image response. Can be either be `jpeg` or `png`. Defaults to `jpeg`., image_loras: [map{path!: str, scale!: num}] # An array of objects that define LoRAs (Low-Rank Adaptations) to influence the generated image., reference_images: [str] # An array of image URLs that guide the overall appearance and style of the generated image. These reference images influence the visual characteristics consistently across the generation., disable_safety_checker: bool # If true, disables the safety checker for image generation.}
+@returns(200) {id: str, model: str, object: any, data: [any]} # Image generated successfully
 
 @endgroup
 
 @group files
 @endpoint GET /files
-@returns(200) {data: [map]}
+@desc List all files
+@returns(200) {data: [map]} # List of files
 
 @endpoint GET /files/{id}
+@desc Retrieve file metadata
 @required {id: str}
-@returns(200) {id: str, object: any, created_at: int, filename: str, bytes: int, purpose: str, Processed: bool, FileType: str}
+@returns(200) {id: str, object: any, created_at: int, filename: str, bytes: int, purpose: str, Processed: bool, FileType: str} # File retrieved successfully
 
 @endpoint DELETE /files/{id}
+@desc Delete a file
 @required {id: str}
-@returns(200) {id: str, deleted: bool}
+@returns(200) {id: str, deleted: bool} # File deleted successfully
 
 @endpoint GET /files/{id}/content
+@desc Get file contents
 @required {id: str}
-@returns(200)
-@errors {500}
+@returns(200) File content retrieved successfully
+@errors {500: Internal Server Error}
 
 @endpoint POST /files/upload
-@returns(200) {id: str, object: any, created_at: int, filename: str, bytes: int, purpose: str, Processed: bool, FileType: str}
-@errors {500, 400, 401}
+@desc Upload a file
+@returns(200) {id: str, object: any, created_at: int, filename: str, bytes: int, purpose: str, Processed: bool, FileType: str} # File uploaded successfully
+@errors {500: Internal Server Error, 400: Bad Request, 401: Unauthorized}
 
 @endgroup
 
 @group fine-tunes
 @endpoint POST /fine-tunes
-@required {training_file: str, model: str}
-@optional {validation_file: str, n_epochs: int=1, n_checkpoints: int=1, n_evals: int=0, batch_size: any=max, learning_rate: num(float)=1e-05, lr_scheduler: map{lr_scheduler_type!: str, lr_scheduler_args: any}, warmup_ratio: num(float)=0.0, max_grad_norm: num(float)=1.0, weight_decay: num(float)=0.0, suffix: str, wandb_api_key: str, wandb_base_url: str, wandb_project_name: str, wandb_name: str, train_on_inputs: bool=auto, training_method: map, training_type: map, multimodal_params: map{train_vision: bool}, from_checkpoint: str, from_hf_model: str, hf_model_revision: str, hf_api_token: str, hf_output_repo_name: str}
-@returns(200) {id: str, status: str, created_at: str(date-time), updated_at: str(date-time), started_at: str(date-time), user_id: str, owner_address: str, total_price: int, token_count: int, events: [map], training_file: str, validation_file: str, model: str, model_output_name: str, suffix: str, n_epochs: int, n_evals: int, n_checkpoints: int, batch_size: int, training_type: any, training_method: any, learning_rate: num(float), lr_scheduler: map{lr_scheduler_type: str, lr_scheduler_args: any}, warmup_ratio: num(float), max_grad_norm: num(float), weight_decay: num(float), wandb_project_name: str, wandb_name: str, from_checkpoint: str, from_hf_model: str, hf_model_revision: str, progress: map{estimate_available: bool, seconds_remaining: int}}
+@desc Create job
+@required {training_file: str # File-ID of a training file uploaded to the Together API, model: str # Name of the base model to run fine-tune job on}
+@optional {validation_file: str # File-ID of a validation file uploaded to the Together API, n_epochs: int=1 # Number of complete passes through the training dataset (higher values may improve results but increase cost and risk of overfitting), n_checkpoints: int=1 # Number of intermediate model versions saved during training for evaluation, n_evals: int=0 # Number of evaluations to be run on a given validation set during training, batch_size: any=max # Number of training examples processed together (larger batches use more memory but may train faster). Defaults to "max". We use training optimizations like packing, so the effective batch size may be different than the value you set., learning_rate: num(float)=1e-05 # Controls how quickly the model adapts to new information (too high may cause instability, too low may slow convergence), lr_scheduler: map{lr_scheduler_type!: str, lr_scheduler_args: any}, warmup_ratio: num(float)=0.0 # The percent of steps at the start of training to linearly increase the learning rate., max_grad_norm: num(float)=1.0 # Max gradient norm to be used for gradient clipping. Set to 0 to disable., weight_decay: num(float)=0.0 # Weight decay. Regularization parameter for the optimizer., suffix: str # Suffix that will be added to your fine-tuned model name, wandb_api_key: str # Integration key for tracking experiments and model metrics on W&B platform, wandb_base_url: str # The base URL of a dedicated Weights & Biases instance., wandb_project_name: str # The Weights & Biases project for your run. If not specified, will use `together` as the project name., wandb_name: str # The Weights & Biases name for your run., train_on_inputs: bool=auto # Whether to mask the user messages in conversational data or prompts in instruction data., training_method: map # The training method to use. 'sft' for Supervised Fine-Tuning or 'dpo' for Direct Preference Optimization., training_type: map, multimodal_params: map{train_vision: bool}, from_checkpoint: str # The checkpoint identifier to continue training from a previous fine-tuning job. Format is `{$JOB_ID}` or `{$OUTPUT_MODEL_NAME}` or `{$JOB_ID}:{$STEP}` or `{$OUTPUT_MODEL_NAME}:{$STEP}`. The step value is optional; without it, the final checkpoint will be used., from_hf_model: str # The Hugging Face Hub repo to start training from. Should be as close as possible to the base model (specified by the `model` argument) in terms of architecture and size., hf_model_revision: str # The revision of the Hugging Face Hub model to continue training from. E.g., hf_model_revision=main (default, used if the argument is not provided) or hf_model_revision='607a30d783dfa663caf39e06633721c8d4cfcd7e' (specific commit)., hf_api_token: str # The API token for the Hugging Face Hub., hf_output_repo_name: str # The name of the Hugging Face repository to upload the fine-tuned model to.}
+@returns(200) {id: str, status: str, created_at: str(date-time), updated_at: str(date-time), started_at: str(date-time), user_id: str, owner_address: str, total_price: int, token_count: int, events: [map], training_file: str, validation_file: str, model: str, model_output_name: str, suffix: str, n_epochs: int, n_evals: int, n_checkpoints: int, batch_size: int, training_type: any, training_method: any, learning_rate: num(float), lr_scheduler: map{lr_scheduler_type: str, lr_scheduler_args: any}, warmup_ratio: num(float), max_grad_norm: num(float), weight_decay: num(float), wandb_project_name: str, wandb_name: str, from_checkpoint: str, from_hf_model: str, hf_model_revision: str, progress: map{estimate_available: bool, seconds_remaining: int}} # Fine-tuning job initiated successfully
 
 @endpoint GET /fine-tunes
-@returns(200) {data: [map]}
+@desc List all jobs
+@returns(200) {data: [map]} # List of fine-tune jobs
 
 @endpoint POST /fine-tunes/estimate-price
-@required {training_file: str}
-@optional {validation_file: str, model: str, n_epochs: int=1, n_evals: int=0, training_method: map, training_type: map, from_checkpoint: str}
-@returns(200) {estimated_total_price: num, allowed_to_proceed: bool, user_limit: num, estimated_train_token_count: num, estimated_eval_token_count: num}
-@errors {500}
+@desc Estimate price
+@required {training_file: str # File-ID of a training file uploaded to the Together API}
+@optional {validation_file: str # File-ID of a validation file uploaded to the Together API, model: str # Name of the base model to run fine-tune job on, n_epochs: int=1 # Number of complete passes through the training dataset (higher values may improve results but increase cost and risk of overfitting), n_evals: int=0 # Number of evaluations to be run on a given validation set during training, training_method: map # The training method to use. 'sft' for Supervised Fine-Tuning or 'dpo' for Direct Preference Optimization., training_type: map, from_checkpoint: str # The checkpoint identifier to continue training from a previous fine-tuning job. Format is `{$JOB_ID}` or `{$OUTPUT_MODEL_NAME}` or `{$JOB_ID}:{$STEP}` or `{$OUTPUT_MODEL_NAME}:{$STEP}`. The step value is optional; without it, the final checkpoint will be used.}
+@returns(200) {estimated_total_price: num, allowed_to_proceed: bool, user_limit: num, estimated_train_token_count: num, estimated_eval_token_count: num} # Price estimated successfully
+@errors {500: Internal Server Error}
 
 @endpoint GET /fine-tunes/{id}
+@desc List job
 @required {id: str}
-@returns(200) {id: str(uuid), training_file: str, validation_file: str, model: str, model_output_name: str, model_output_path: str, trainingfile_numlines: int, trainingfile_size: int, created_at: str(date-time), updated_at: str(date-time), started_at: str(date-time), n_epochs: int, n_checkpoints: int, n_evals: int, batch_size: any, learning_rate: num, lr_scheduler: map{lr_scheduler_type: str, lr_scheduler_args: any}, warmup_ratio: num, max_grad_norm: num(float), weight_decay: num(float), eval_steps: int, train_on_inputs: any, training_method: map, training_type: map, multimodal_params: map{train_vision: bool}, status: str, job_id: str, events: [map], token_count: int, param_count: int, total_price: int, epochs_completed: int, queue_depth: int, wandb_project_name: str, wandb_url: str, from_checkpoint: str, from_hf_model: str, hf_model_revision: str, progress: map{estimate_available: bool, seconds_remaining: int}}
+@returns(200) {id: str(uuid), training_file: str, validation_file: str, model: str, model_output_name: str, model_output_path: str, trainingfile_numlines: int, trainingfile_size: int, created_at: str(date-time), updated_at: str(date-time), started_at: str(date-time), n_epochs: int, n_checkpoints: int, n_evals: int, batch_size: any, learning_rate: num, lr_scheduler: map{lr_scheduler_type: str, lr_scheduler_args: any}, warmup_ratio: num, max_grad_norm: num(float), weight_decay: num(float), eval_steps: int, train_on_inputs: any, training_method: map, training_type: map, multimodal_params: map{train_vision: bool}, status: str, job_id: str, events: [map], token_count: int, param_count: int, total_price: int, epochs_completed: int, queue_depth: int, wandb_project_name: str, wandb_url: str, from_checkpoint: str, from_hf_model: str, hf_model_revision: str, progress: map{estimate_available: bool, seconds_remaining: int}} # Fine-tune job details retrieved successfully
 
 @endpoint DELETE /fine-tunes/{id}
+@desc Delete a fine-tune job
 @required {id: str}
 @optional {force: bool=False}
-@returns(200) {message: str}
-@errors {404, 500}
+@returns(200) {message: str} # Fine-tune job deleted successfully
+@errors {404: Fine-tune job not found, 500: Internal server error}
 
 @endpoint GET /fine-tunes/{id}/events
+@desc List job events
 @required {id: str}
-@returns(200) {data: [map]}
+@returns(200) {data: [map]} # List of fine-tune events
 
 @endpoint GET /fine-tunes/{id}/checkpoints
+@desc List checkpoints
 @required {id: str}
-@returns(200) {data: [map]}
+@returns(200) {data: [map]} # List of fine-tune checkpoints
 
 @endgroup
 
 @group finetune
 @endpoint GET /finetune/download
+@desc Download model
 @required {ft_id: str}
 @optional {checkpoint_step: int, checkpoint: str(merged/adapter/model_output_path)}
-@returns(200)
-@errors {400, 404}
+@returns(200) Successfully downloaded the fine-tuned model or checkpoint.
+@errors {400: Invalid request parameters., 404: Fine-tune ID not found.}
 
 @endgroup
 
 @group fine-tunes
 @endpoint POST /fine-tunes/{id}/cancel
+@desc Cancel job
 @required {id: str}
-@returns(200) {id: str, status: str, created_at: str(date-time), updated_at: str(date-time), started_at: str(date-time), user_id: str, owner_address: str, total_price: int, token_count: int, events: [map], training_file: str, validation_file: str, model: str, model_output_name: str, suffix: str, n_epochs: int, n_evals: int, n_checkpoints: int, batch_size: int, training_type: any, training_method: any, learning_rate: num(float), lr_scheduler: map{lr_scheduler_type: str, lr_scheduler_args: any}, warmup_ratio: num(float), max_grad_norm: num(float), weight_decay: num(float), wandb_project_name: str, wandb_name: str, from_checkpoint: str, from_hf_model: str, hf_model_revision: str, progress: map{estimate_available: bool, seconds_remaining: int}}
-@errors {400, 404}
+@returns(200) {id: str, status: str, created_at: str(date-time), updated_at: str(date-time), started_at: str(date-time), user_id: str, owner_address: str, total_price: int, token_count: int, events: [map], training_file: str, validation_file: str, model: str, model_output_name: str, suffix: str, n_epochs: int, n_evals: int, n_checkpoints: int, batch_size: int, training_type: any, training_method: any, learning_rate: num(float), lr_scheduler: map{lr_scheduler_type: str, lr_scheduler_args: any}, warmup_ratio: num(float), max_grad_norm: num(float), weight_decay: num(float), wandb_project_name: str, wandb_name: str, from_checkpoint: str, from_hf_model: str, hf_model_revision: str, progress: map{estimate_available: bool, seconds_remaining: int}} # Successfully cancelled the fine-tuning job.
+@errors {400: Invalid request parameters., 404: Fine-tune ID not found.}
 
 @endgroup
 
 @group rerank
 @endpoint POST /rerank
-@required {model: str, query: str, documents: any}
-@optional {top_n: int, return_documents: bool, rank_fields: [str]}
-@returns(200) {object: any, id: str, model: str, results: [map], usage: map?{prompt_tokens: int, completion_tokens: int, total_tokens: int}}
-@errors {400, 401, 404, 429, 503, 504}
+@desc Create a rerank request
+@required {model: str # The model to be used for the rerank request.<br> <br> [See all of Together AI's rerank models](https://docs.together.ai/docs/serverless-models#rerank-models), query: str # The search query to be used for ranking., documents: any # List of documents, which can be either strings or objects.}
+@optional {top_n: int # The number of top results to return., return_documents: bool # Whether to return supplied documents with the response., rank_fields: [str] # List of keys in the JSON Object document to rank by. Defaults to use all supplied keys for ranking.}
+@returns(200) {object: any, id: str, model: str, results: [map], usage: map?{prompt_tokens: int, completion_tokens: int, total_tokens: int}} # 200
+@errors {400: BadRequest, 401: Unauthorized, 404: NotFound, 429: RateLimit, 503: Overloaded, 504: Timeout}
 
 @endgroup
 
 @group audio
 @endpoint POST /audio/speech
-@required {model: any, input: str, voice: str}
-@optional {response_format: str(mp3/wav/raw)=wav, language: str(en/de/fr/es/hi/it/ja/ko/nl/pl/pt/ru/sv/tr/zh)=en, response_encoding: str(pcm_f32le/pcm_s16le/pcm_mulaw/pcm_alaw)=pcm_f32le, sample_rate: int=44100, stream: bool=False}
-@returns(200)
-@errors {400, 429}
+@desc Create audio generation request
+@required {model: any # The name of the model to query.<br> <br> [See all of Together AI's chat models](https://docs.together.ai/docs/serverless-models#audio-models) The current supported tts models are: - cartesia/sonic - hexgrad/Kokoro-82M - canopylabs/orpheus-3b-0.1-ft, input: str # Input text to generate the audio for, voice: str # The voice to use for generating the audio. The voices supported are different for each model. For eg - for canopylabs/orpheus-3b-0.1-ft, one of the voices supported is tara, for hexgrad/Kokoro-82M, one of the voices supported is af_alloy and for cartesia/sonic, one of the voices supported is "friendly sidekick". <br> <br> You can view the voices supported for each model using the /v1/voices endpoint sending the model name as the query parameter. [View all supported voices here](https://docs.together.ai/docs/text-to-speech#voices-available).}
+@optional {response_format: str(mp3/wav/raw)=wav # The format of audio output. Supported formats are mp3, wav, raw if streaming is false. If streaming is true, the only supported format is raw., language: str(en/de/fr/es/hi/it/ja/ko/nl/pl/pt/ru/sv/tr/zh)=en # Language of input text., response_encoding: str(pcm_f32le/pcm_s16le/pcm_mulaw/pcm_alaw)=pcm_f32le # Audio encoding of response, sample_rate: int=44100 # Sampling rate to use for the output audio. The default sampling rate for canopylabs/orpheus-3b-0.1-ft and hexgrad/Kokoro-82M is 24000 and for cartesia/sonic is 44100., stream: bool=False # If true, output is streamed for several characters at a time instead of waiting for the full response. The stream terminates with `data: [DONE]`. If false, return the encoded audio as octet stream}
+@returns(200) OK
+@errors {400: BadRequest, 429: RateLimit}
 
 @endpoint GET /audio/speech/websocket
+@desc Real-time text-to-speech via WebSocket
 @optional {model: str(hexgrad/Kokoro-82M/cartesia/sonic-english)=hexgrad/Kokoro-82M, voice: str, max_partial_length: int=250}
-@errors {101}
+@errors {101: Switching Protocols - WebSocket connection established successfully.  Error message format: ```json {   "type": "conversation.item.tts.failed",   "error": {     "message": "Error description",     "type": "invalid_request_error",     "param": null,     "code": "error_code"   } } ```}
 
 @endpoint POST /audio/transcriptions
-@returns(200)
-@errors {400, 401, 429}
+@desc Create audio transcription request
+@returns(200) OK
+@errors {400: BadRequest, 401: Unauthorized, 429: RateLimit}
 
 @endpoint POST /audio/translations
-@returns(200)
-@errors {400, 401, 429}
+@desc Create audio translation request
+@returns(200) OK
+@errors {400: BadRequest, 401: Unauthorized, 429: RateLimit}
 
 @endgroup
 
 @group compute
 @endpoint GET /compute/clusters
-@returns(200) {clusters: [map]}
+@desc List all GPU clusters.
+@returns(200) {clusters: [map]} # OK
 
 @endpoint POST /compute/clusters
-@required {region: str, gpu_type: str(H100_SXM/H200_SXM/RTX_6000_PCI/L40_PCIE/B200_SXM/H100_SXM_INF), num_gpus: int, cluster_name: str, driver_version: str(CUDA_12_5_555/CUDA_12_6_560/CUDA_12_6_565/CUDA_12_8_570), billing_type: str(RESERVED/ON_DEMAND)}
-@optional {cluster_type: str(KUBERNETES/SLURM), duration_days: int, shared_volume: map{volume_name!: str, size_tib!: int, region!: str}, volume_id: str}
-@returns(200) {cluster_id: str, cluster_type: any, region: str, gpu_type: any, cluster_name: str, duration_hours: int, driver_version: any, volumes: [map], status: any, control_plane_nodes: [map], gpu_worker_nodes: [map], kube_config: str, num_gpus: int}
+@desc Create GPU Cluster
+@required {region: str # Region to create the GPU cluster in. Usable regions can be found from `client.clusters.list_regions()`, gpu_type: str(H100_SXM/H200_SXM/RTX_6000_PCI/L40_PCIE/B200_SXM/H100_SXM_INF) # Type of GPU to use in the cluster, num_gpus: int # Number of GPUs to allocate in the cluster. This must be multiple of 8. For example, 8, 16 or 24, cluster_name: str # Name of the GPU cluster., driver_version: str(CUDA_12_5_555/CUDA_12_6_560/CUDA_12_6_565/CUDA_12_8_570) # NVIDIA driver version to use in the cluster., billing_type: str(RESERVED/ON_DEMAND) # RESERVED billing types allow you to specify the duration of the cluster reservation via the duration_days field. ON_DEMAND billing types will give you ownership of the cluster until you delete it.}
+@optional {cluster_type: str(KUBERNETES/SLURM) # Type of cluster to create., duration_days: int # Duration in days to keep the cluster running., shared_volume: map{volume_name!: str, size_tib!: int, region!: str}, volume_id: str # ID of an existing volume to use with the cluster creation.}
+@returns(200) {cluster_id: str, cluster_type: any, region: str, gpu_type: any, cluster_name: str, duration_hours: int, driver_version: any, volumes: [map], status: any, control_plane_nodes: [map], gpu_worker_nodes: [map], kube_config: str, num_gpus: int} # OK
 
 @endpoint GET /compute/clusters/{cluster_id}
+@desc Get GPU cluster by cluster ID
 @required {cluster_id: str}
-@returns(200) {cluster_id: str, cluster_type: any, region: str, gpu_type: any, cluster_name: str, duration_hours: int, driver_version: any, volumes: [map], status: any, control_plane_nodes: [map], gpu_worker_nodes: [map], kube_config: str, num_gpus: int}
+@returns(200) {cluster_id: str, cluster_type: any, region: str, gpu_type: any, cluster_name: str, duration_hours: int, driver_version: any, volumes: [map], status: any, control_plane_nodes: [map], gpu_worker_nodes: [map], kube_config: str, num_gpus: int} # OK
 
 @endpoint PUT /compute/clusters/{cluster_id}
+@desc Update a GPU Cluster.
 @required {cluster_id: str}
-@optional {cluster_type: any(KUBERNETES/SLURM), num_gpus: int}
-@returns(200) {cluster_id: str, cluster_type: any, region: str, gpu_type: any, cluster_name: str, duration_hours: int, driver_version: any, volumes: [map], status: any, control_plane_nodes: [map], gpu_worker_nodes: [map], kube_config: str, num_gpus: int}
+@optional {cluster_type: any(KUBERNETES/SLURM) # Type of cluster to update., num_gpus: int # Number of GPUs to allocate in the cluster. This must be multiple of 8. For example, 8, 16 or 24}
+@returns(200) {cluster_id: str, cluster_type: any, region: str, gpu_type: any, cluster_name: str, duration_hours: int, driver_version: any, volumes: [map], status: any, control_plane_nodes: [map], gpu_worker_nodes: [map], kube_config: str, num_gpus: int} # OK
 
 @endpoint DELETE /compute/clusters/{cluster_id}
+@desc Delete GPU cluster by cluster ID
 @required {cluster_id: str}
-@returns(200) {cluster_id: str}
+@returns(200) {cluster_id: str} # OK
 
 @endpoint GET /compute/regions
-@returns(200) {regions: [map]}
+@desc List regions and corresponding supported driver versions
+@returns(200) {regions: [map]} # OK
 
 @endpoint GET /compute/clusters/storage/volumes
-@returns(200) {volumes: [map]}
+@desc List all shared volumes.
+@returns(200) {volumes: [map]} # OK
 
 @endpoint PUT /compute/clusters/storage/volumes
-@optional {volume_id: str, size_tib: int}
-@returns(200) {volume_id: str, volume_name: str, size_tib: int, status: str}
+@desc Update a shared volume.
+@optional {volume_id: str # ID of the volume to update., size_tib: int # Size of the volume in whole tebibytes (TiB).}
+@returns(200) {volume_id: str, volume_name: str, size_tib: int, status: str} # OK
 
 @endpoint POST /compute/clusters/storage/volumes
-@required {volume_name: str, size_tib: int, region: str}
-@returns(200) {volume_id: str, volume_name: str, size_tib: int, status: str}
+@desc Create a shared volume.
+@required {volume_name: str # Customizable name of the volume to create., size_tib: int # Volume size in whole tebibytes (TiB)., region: str # Region name. Usable regions can be found from `client.clusters.list_regions()`}
+@returns(200) {volume_id: str, volume_name: str, size_tib: int, status: str} # OK
 
 @endpoint GET /compute/clusters/storage/volumes/{volume_id}
+@desc Get shared volume by volume Id.
 @required {volume_id: str}
-@returns(200) {volume_id: str, volume_name: str, size_tib: int, status: str}
+@returns(200) {volume_id: str, volume_name: str, size_tib: int, status: str} # OK
 
 @endpoint DELETE /compute/clusters/storage/volumes/{volume_id}
+@desc Delete shared volume by volume id.
 @required {volume_id: str}
-@returns(200) {success: bool}
+@returns(200) {success: bool} # OK
 
 @endgroup
 
 @group clusters
 @endpoint GET /clusters/availability-zones
-@returns(200) {avzones: [str]}
+@desc List all available availability zones.
+@returns(200) {avzones: [str]} # Success
 
 @endgroup
 
 @group endpoints
 @endpoint GET /endpoints
+@desc List all endpoints, can be filtered by type
 @optional {type: str(dedicated/serverless), usage_type: str(on-demand/reserved), mine: bool}
-@returns(200) {object: any, data: [map]}
-@errors {403, 500}
+@returns(200) {object: any, data: [map]} # 200
+@errors {403: Unauthorized, 500: Internal error}
 
 @endpoint POST /endpoints
-@required {model: str, hardware: str, autoscaling: map{min_replicas!: int(int32), max_replicas!: int(int32)}}
-@optional {display_name: str, disable_prompt_cache: bool=False, disable_speculative_decoding: bool=False, state: str(STARTED/STOPPED)=STARTED, inactive_timeout: int, availability_zone: str}
-@returns(200) {object: any, id: str, name: str, display_name: str, model: str, hardware: str, type: str, owner: str, state: str, autoscaling: map{min_replicas: int(int32), max_replicas: int(int32)}, created_at: str(date-time)}
-@errors {403, 500}
+@desc Create a dedicated endpoint, it will start automatically
+@required {model: str # The model to deploy on this endpoint, hardware: str # The hardware configuration to use for this endpoint, autoscaling: map{min_replicas!: int(int32), max_replicas!: int(int32)} # Configuration for automatic scaling of replicas based on demand.}
+@optional {display_name: str # A human-readable name for the endpoint, disable_prompt_cache: bool=False # This parameter is deprecated and no longer has any effect., disable_speculative_decoding: bool=False # Whether to disable speculative decoding for this endpoint, state: str(STARTED/STOPPED)=STARTED # The desired state of the endpoint, inactive_timeout: int # The number of minutes of inactivity after which the endpoint will be automatically stopped. Set to null, omit or set to 0 to disable automatic timeout., availability_zone: str # Create the endpoint in a specified availability zone (e.g., us-central-4b)}
+@returns(200) {object: any, id: str, name: str, display_name: str, model: str, hardware: str, type: str, owner: str, state: str, autoscaling: map{min_replicas: int(int32), max_replicas: int(int32)}, created_at: str(date-time)} # 200
+@errors {403: Unauthorized, 500: Internal error}
 
 @endpoint GET /endpoints/{endpointId}
+@desc Get endpoint by ID
 @required {endpointId: str}
-@returns(200) {object: any, id: str, name: str, display_name: str, model: str, hardware: str, type: str, owner: str, state: str, autoscaling: map{min_replicas: int(int32), max_replicas: int(int32)}, created_at: str(date-time)}
-@errors {403, 404, 500}
+@returns(200) {object: any, id: str, name: str, display_name: str, model: str, hardware: str, type: str, owner: str, state: str, autoscaling: map{min_replicas: int(int32), max_replicas: int(int32)}, created_at: str(date-time)} # 200
+@errors {403: Unauthorized, 404: Not Found, 500: Internal error}
 
 @endpoint PATCH /endpoints/{endpointId}
+@desc Update endpoint, this can also be used to start or stop a dedicated endpoint
 @required {endpointId: str}
-@optional {display_name: str, state: str(STARTED/STOPPED), autoscaling: map{min_replicas!: int(int32), max_replicas!: int(int32)}, inactive_timeout: int}
-@returns(200) {object: any, id: str, name: str, display_name: str, model: str, hardware: str, type: str, owner: str, state: str, autoscaling: map{min_replicas: int(int32), max_replicas: int(int32)}, created_at: str(date-time)}
-@errors {403, 404, 500}
+@optional {display_name: str # A human-readable name for the endpoint, state: str(STARTED/STOPPED) # The desired state of the endpoint, autoscaling: map{min_replicas!: int(int32), max_replicas!: int(int32)} # Configuration for automatic scaling of replicas based on demand., inactive_timeout: int # The number of minutes of inactivity after which the endpoint will be automatically stopped. Set to 0 to disable automatic timeout.}
+@returns(200) {object: any, id: str, name: str, display_name: str, model: str, hardware: str, type: str, owner: str, state: str, autoscaling: map{min_replicas: int(int32), max_replicas: int(int32)}, created_at: str(date-time)} # 200
+@errors {403: Unauthorized, 404: Not Found, 500: Internal error}
 
 @endpoint DELETE /endpoints/{endpointId}
+@desc Delete endpoint
 @required {endpointId: str}
-@returns(204)
-@errors {403, 404, 500}
+@returns(204) No Content - Endpoint successfully deleted
+@errors {403: Unauthorized, 404: Not Found, 500: Internal error}
 
 @endgroup
 
 @group hardware
 @endpoint GET /hardware
+@desc List available hardware configurations
 @optional {model: str}
-@returns(200) {object: any, data: [map]}
-@errors {403, 500}
+@returns(200) {object: any, data: [map]} # List of available hardware configurations
+@errors {403: Unauthorized, 500: Internal error}
 
 @endgroup
 
 @group tci
 @endpoint POST /tci/execute
-@required {code: str, language: any=python}
-@optional {files: [map{content!: str, encoding!: str, name!: str}], session_id: str}
-@returns(200)
+@desc Executes the given code snippet and returns the output. Without a session_id, a new session will be created to run the code. If you do pass in a valid session_id, the code will be run in that session. This is useful for running multiple code snippets in the same environment, because dependencies and similar things are persisted
+@required {code: str # Code snippet to execute., language: any=python # Programming language for the code to execute. Currently only supports Python, but more will be added.}
+@optional {files: [map{content!: str, encoding!: str, name!: str}] # Files to upload to the session. If present, files will be uploaded before executing the given code., session_id: str # Identifier of the current session. Used to make follow-up calls. Requests will return an error if the session does not belong to the caller or has expired.}
+@returns(200) Execute Response
 
 @endpoint GET /tci/sessions
-@returns(200)
+@desc Lists all your currently active sessions.
+@returns(200) List Response
 
 @endgroup
 
 @group batches
 @endpoint GET /batches
-@returns(200)
-@errors {401, 500}
+@desc List batch jobs
+@returns(200) OK
+@errors {401: Unauthorized, 500: Internal Server Error}
 
 @endpoint POST /batches
-@required {endpoint: str, input_file_id: str}
-@optional {completion_window: str, priority: int, model_id: str}
-@returns(201) {job: map{id: str(uuid), user_id: str, input_file_id: str, file_size_bytes: int(int64), status: str, job_deadline: str(date-time), created_at: str(date-time), endpoint: str, progress: num(float64), model_id: str, output_file_id: str, error_file_id: str, error: str, completed_at: str(date-time)}, warning: str}
-@errors {400, 401, 429, 500}
+@desc Create a batch job
+@required {endpoint: str # The endpoint to use for batch processing, input_file_id: str # ID of the uploaded input file containing batch requests}
+@optional {completion_window: str # Time window for batch completion (optional), priority: int # Priority for batch processing (optional), model_id: str # Model to use for processing batch requests}
+@returns(201) {job: map{id: str(uuid), user_id: str, input_file_id: str, file_size_bytes: int(int64), status: str, job_deadline: str(date-time), created_at: str(date-time), endpoint: str, progress: num(float64), model_id: str, output_file_id: str, error_file_id: str, error: str, completed_at: str(date-time)}, warning: str} # Job created (potentially with warnings)
+@errors {400: Bad Request, 401: Unauthorized, 429: Too Many Requests, 500: Internal Server Error}
 
 @endpoint GET /batches/{id}
+@desc Get a batch job
 @required {id: str}
-@returns(200) {id: str(uuid), user_id: str, input_file_id: str, file_size_bytes: int(int64), status: str, job_deadline: str(date-time), created_at: str(date-time), endpoint: str, progress: num(float64), model_id: str, output_file_id: str, error_file_id: str, error: str, completed_at: str(date-time)}
-@errors {400, 401, 403, 404, 500}
+@returns(200) {id: str(uuid), user_id: str, input_file_id: str, file_size_bytes: int(int64), status: str, job_deadline: str(date-time), created_at: str(date-time), endpoint: str, progress: num(float64), model_id: str, output_file_id: str, error_file_id: str, error: str, completed_at: str(date-time)} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /batches/{id}/cancel
+@desc Cancel a batch job
 @required {id: str}
-@returns(200) {id: str(uuid), user_id: str, input_file_id: str, file_size_bytes: int(int64), status: str, job_deadline: str(date-time), created_at: str(date-time), endpoint: str, progress: num(float64), model_id: str, output_file_id: str, error_file_id: str, error: str, completed_at: str(date-time)}
-@errors {400, 401, 403, 404, 500}
+@returns(200) {id: str(uuid), user_id: str, input_file_id: str, file_size_bytes: int(int64), status: str, job_deadline: str(date-time), created_at: str(date-time), endpoint: str, progress: num(float64), model_id: str, output_file_id: str, error_file_id: str, error: str, completed_at: str(date-time)} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group evaluation
 @endpoint POST /evaluation
-@required {type: str(classify/score/compare), parameters: any}
-@returns(200) {workflow_id: str, status: str}
-@errors {400, 500}
+@desc Create an evaluation job
+@required {type: str(classify/score/compare) # The type of evaluation to perform, parameters: any # Type-specific parameters for the evaluation}
+@returns(200) {workflow_id: str, status: str} # Evaluation job created successfully
+@errors {400: Invalid request format, 500: Failed to create evaluation job}
 
 @endpoint GET /evaluation
+@desc Get all evaluation jobs
 @optional {status: str, limit: int=10}
-@returns(200)
-@errors {400, 500}
+@returns(200) evaluation jobs retrieved successfully
+@errors {400: Invalid request format, 500: Error retrieving jobs from manager}
 
 @endpoint GET /evaluation/model-list
+@desc Get model list
 @optional {model_source: str=all}
-@returns(200) {model_list: [str]}
-@errors {400, 500}
+@returns(200) {model_list: [str]} # Model list retrieved successfully
+@errors {400: Invalid request format, 500: Error retrieving model list}
 
 @endpoint GET /evaluation/{id}
+@desc Get evaluation job details
 @required {id: str}
-@returns(200) {workflow_id: str, type: str, owner_id: str, status: str, status_updates: [map], parameters: map, created_at: str(date-time), updated_at: str(date-time), results: any?}
-@errors {404, 500}
+@returns(200) {workflow_id: str, type: str, owner_id: str, status: str, status_updates: [map], parameters: map, created_at: str(date-time), updated_at: str(date-time), results: any?} # Evaluation job details retrieved successfully
+@errors {404: Evaluation job not found, 500: Failed to get evaluation job}
 
 @endpoint GET /evaluation/{id}/status
+@desc Get evaluation job status and results
 @required {id: str}
-@returns(200) {status: str, results: any}
-@errors {404, 500}
+@returns(200) {status: str, results: any} # Evaluation job status and results retrieved successfully
+@errors {404: Evaluation job not found, 500: Failed to get evaluation job}
 
 @endgroup
 
 @group realtime
 @endpoint GET /realtime
-@required {model: str, input_audio_format: str=pcm_s16le_16000}
-@errors {101}
+@desc Real-time audio transcription via WebSocket
+@required {model: str, input_audio_format: str=pcm_s16le_16000 # Audio format specification. Currently supports 16-bit PCM at 16kHz sample rate.}
+@errors {101: Switching Protocols - WebSocket connection established successfully.  Error message format: ```json {   "type": "conversation.item.input_audio_transcription.failed",   "error": {     "message": "Error description",     "type": "invalid_request_error",     "param": null,     "code": "error_code"   } } ```}
 
 @endgroup
 
 @group queue
 @endpoint POST /queue/cancel
-@required {model: str, request_id: str}
-@returns(200) {status: str}
-@errors {400, 404, 409, 500}
+@desc Cancel a queued job
+@required {model: str # Model identifier the job was submitted to, request_id: str # The request ID returned from the submit endpoint}
+@returns(200) {status: str} # Successfully canceled
+@errors {400: Invalid request, 404: Request not found, 409: Job could not be canceled (already completed/failed), 500: Internal server error}
 
 @endpoint GET /queue/metrics
+@desc Get queue metrics
 @required {model: str}
-@returns(200) {messages_running: int, messages_waiting: int, total_jobs: int}
-@errors {400, 401, 500}
+@returns(200) {messages_running: int, messages_waiting: int, total_jobs: int} # Queue metrics
+@errors {400: Invalid request, 401: Unauthorized, 500: Internal server error}
 
 @endpoint GET /queue/status
+@desc Get job status
 @required {request_id: str, model: str}
-@returns(200) {claimed_at: str(date-time), created_at: str(date-time), done_at: str(date-time), info: map, inputs: map, model: str, outputs: map, priority: int, request_id: str, retries: int, status: str, warnings: [str]}
-@errors {400, 401, 404, 500}
+@returns(200) {claimed_at: str(date-time), created_at: str(date-time), done_at: str(date-time), info: map, inputs: map, model: str, outputs: map, priority: int, request_id: str, retries: int, status: str, warnings: [str]} # Status information
+@errors {400: Invalid request, 401: Unauthorized, 404: Request not found, 500: Internal server error}
 
 @endpoint POST /queue/submit
-@required {model: str, payload: map}
-@optional {info: map, priority: int=0}
-@returns(200) {error: map{code: str, message: str, param: str, type: str}, requestId: str}
-@errors {400, 401, 500}
+@desc Submit a queued job
+@required {model: str # Required model identifier, payload: map # Freeform model input. Passed unchanged to the model. Contents are model-specific.}
+@optional {info: map # Arbitrary JSON metadata stored with the job and returned in status responses. The model and system may add or update keys during processing., priority: int=0 # Job priority. Higher values are processed first (strict priority ordering). Jobs with equal priority are processed in submission order (FIFO).}
+@returns(200) {error: map{code: str, message: str, param: str, type: str}, requestId: str} # Successfully queued request
+@errors {400: Invalid request, 401: Unauthorized, 500: Internal server error}
 
 @endgroup
 
 @group rl
 @endpoint GET /rl/training-sessions
+@desc List training sessions
 @optional {status: str, limit: int(int32)=20, offset: int(int32)=0}
-@returns(200) {data: [map], meta: map{total: str(int64), limit: int(int32), offset: int(int32)}}
+@returns(200) {data: [map], meta: map{total: str(int64), limit: int(int32), offset: int(int32)}} # List of training sessions
 
 @endpoint POST /rl/training-sessions
-@required {base_model: str}
-@optional {checkpoint_id: str, lora_config: map{rank: int(int64), alpha: int(int64), dropout: num(float)}}
-@returns(200) {session_id: str, status: str, base_model: str, checkpoint_id: str, step: str(uint64), created_at: str(date-time), updated_at: str(date-time), lora_config: map{rank: int(int64), alpha: int(int64), dropout: num(float)}}
+@desc Create training session
+@required {base_model: str # Base model to use for the training session}
+@optional {checkpoint_id: str # Checkpoint ID to use for the training session, lora_config: map{rank: int(int64), alpha: int(int64), dropout: num(float)} # LoRA adapter configuration}
+@returns(200) {session_id: str, status: str, base_model: str, checkpoint_id: str, step: str(uint64), created_at: str(date-time), updated_at: str(date-time), lora_config: map{rank: int(int64), alpha: int(int64), dropout: num(float)}} # Training session details
 
 @endpoint GET /rl/training-sessions/{session_id}
+@desc Get training session
 @required {session_id: str}
-@returns(200) {session_id: str, status: str, base_model: str, checkpoint_id: str, step: str(uint64), created_at: str(date-time), updated_at: str(date-time), lora_config: map{rank: int(int64), alpha: int(int64), dropout: num(float)}}
+@returns(200) {session_id: str, status: str, base_model: str, checkpoint_id: str, step: str(uint64), created_at: str(date-time), updated_at: str(date-time), lora_config: map{rank: int(int64), alpha: int(int64), dropout: num(float)}} # Training session details
 
 @endpoint GET /rl/training-sessions/{session_id}/operations/forward-backward/{operation_id}
+@desc Get forward-backward operation
 @required {session_id: str, operation_id: str}
-@returns(200) {id: str, status: str, output: map{loss: num, metrics: map}, error: map{code: str, message: str}}
+@returns(200) {id: str, status: str, output: map{loss: num, metrics: map}, error: map{code: str, message: str}} # Forward-backward operation details
 
 @endpoint GET /rl/training-sessions/{session_id}/operations/optim-step/{operation_id}
+@desc Get optim-step operation
 @required {session_id: str, operation_id: str}
 @returns(200) {id: str, status: str, output: map{step: str(uint64)}, error: map{code: str, message: str}}
 
 @endpoint GET /rl/training-sessions/{session_id}/operations/sample/{operation_id}
+@desc Get sample operation
 @required {session_id: str, operation_id: str}
 @returns(200) {id: str, status: str, output: map{sequences: [map]}, error: map{code: str, message: str}}
 
 @endpoint POST /rl/training-sessions/{session_id}/operations/forward-backward
-@required {session_id: str, samples: [map{model_input!: map{chunks!: [map]}, loss_inputs!: map{target_tokens: map, loss_mask: map, grpo_inputs: map}}], loss: map{type!: str, cross_entropy_params: map, grpo_params: map{clip_low: num(float), clip_high: num(float), beta: num(float), agg_type: str}}}
+@desc Forward-backward pass
+@required {session_id: str, samples: [map{model_input!: map{chunks!: [map]}, loss_inputs!: map{target_tokens: map, loss_mask: map, grpo_inputs: map}}] # Batch of training samples to process, loss: map{type!: str, cross_entropy_params: map, grpo_params: map{clip_low: num(float), clip_high: num(float), beta: num(float), agg_type: str}}}
 @returns(200) {id: str, status: str, output: map{loss: num, metrics: map}, error: map{code: str, message: str}}
 
 @endpoint POST /rl/training-sessions/{session_id}/operations/optim-step
+@desc Optimizer step
 @required {session_id: str}
-@optional {learning_rate: num(float)=0.0001, adamw_params: map{beta1: num(float), beta2: num(float), eps: num(float), weight_decay: num(float)}}
-@returns(200) {id: str, status: str, output: map{step: str(uint64)}, error: map{code: str, message: str}}
+@optional {learning_rate: num(float)=0.0001 # Learning rate for this step., adamw_params: map{beta1: num(float), beta2: num(float), eps: num(float), weight_decay: num(float)} # AdamW optimizer parameters}
+@returns(200) {id: str, status: str, output: map{step: str(uint64)}, error: map{code: str, message: str}} # Optimizer step operation details
 
 @endpoint POST /rl/training-sessions/{session_id}/operations/sample
+@desc Sample
 @required {session_id: str, prompt: map{chunks!: [map{encoded_text: map}]}}
-@optional {sampling_params: map{max_tokens: int(int32), temperature: num(float), top_p: num(float), top_k: int(int32), stop: [str], seed: str(int64)}, num_samples: int(int64)=1}
+@optional {sampling_params: map{max_tokens: int(int32), temperature: num(float), top_p: num(float), top_k: int(int32), stop: [str], seed: str(int64)}, num_samples: int(int64)=1 # Number of completions to generate for this prompt}
 @returns(200) {id: str, status: str, output: map{sequences: [map]}, error: map{code: str, message: str}}
 
 @endpoint POST /rl/training-sessions/{session_id}/stop
+@desc Stop training session
 @required {session_id: str}
-@returns(200) {session_id: str, status: str, base_model: str, checkpoint_id: str, step: str(uint64), created_at: str(date-time), updated_at: str(date-time), lora_config: map{rank: int(int64), alpha: int(int64), dropout: num(float)}}
+@returns(200) {session_id: str, status: str, base_model: str, checkpoint_id: str, step: str(uint64), created_at: str(date-time), updated_at: str(date-time), lora_config: map{rank: int(int64), alpha: int(int64), dropout: num(float)}} # Training session details
 
 @endgroup
 

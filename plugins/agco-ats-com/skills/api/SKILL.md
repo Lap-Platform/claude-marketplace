@@ -313,89 +313,264 @@ https://secure.agco-ats.com
 | DELETE | /api/v2/Vouchers/{VoucherCode} | Delete a voucher |
 | GET | /api/v2/Vouchers/{VoucherCode}/VoucherHistory | Get a voucher's history. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I authenticate with the API?" -> POST /api/v2/Authentication
-- "Is the API server running?" -> GET /api/v2/Authentication/IsAlive
-- "How do I reset a forgotten password?" -> POST /api/v2/Authentication/RequestPasswordReset
-- "What users exist and how do I search by name or email?" -> GET /api/v2/Users
-- "What permissions does a specific user have?" -> GET /api/v2/Users/{id}/Permissions
-- "How do I assign roles to a user?" -> PUT /api/v2/Users/{id}/Roles
-- "How do I create a voucher and check its history?" -> POST /api/v2/Vouchers then GET /api/v2/Vouchers/{VoucherCode}/VoucherHistory
-- "What dealers are available in a specific country or brand?" -> GET /api/v2/Dealers
-- "How do I upload a file and retrieve its contents?" -> POST /api/v2/Files then GET /api/v2/Files/{ID}/FileContents
-- "How do I check the status of a content submission?" -> GET /api/v2/ContentSubmissions/{contentSubmissionID}/Status
-- "What packages are available in an update group?" -> GET /api/v2/Reporting/CurrentPackagesInUpdateGroup
-- "How do I subscribe a client to an update group?" -> POST /api/v2/UpdateGroupClientRelationships
-- "How do I manage translations for a specific string?" -> GET /api/v2/StringTranslations/{stringId}/{languageId} and PUT /api/v2/StringTranslations/{stringId}/{languageId}
-- "How do I activate a license?" -> POST /api/v2/LicenseActivations
-- "What is the deployment status of a bundle across clients?" -> GET /api/v2/Reporting/BundleStatusSummary
-
-## Response Tips
-
-- **List endpoints** (activities, users, packages, etc.): Paginated via `limit` and `offset` query params. Always check if more records exist by comparing result count to limit.
-- **Single resource GET** (by ID): Returns the full object on 200. A 404 means the ID does not exist or was soft-deleted -- retry with `isIncludeDeleted=true` or `includeDeleted=true` where supported.
-- **Create (POST)**: Returns 200 with the created object (including server-assigned ID). Capture the ID from the response for subsequent operations.
-- **Update (PUT) and Delete (DELETE)**: Return 204 with no body. A successful call means the operation completed -- do not parse the response body.
-- **Batch endpoints** (Attributes/Batch, StringDefinitions/Batch): Accept arrays and return 204. Failures may be partial -- if you get an error, retry individual items to isolate the problem.
-- **Reporting endpoints**: May return nested objects with summary statistics. Fields like `ReportResult` and `ReportValue` on RegisteredClients are filter params, not guaranteed response fields.
-- **Authentication**: POST /api/v2/Authentication returns a token/session object on 200. Store the API key for subsequent `code` query parameter auth.
-
-## Anomaly Flags
-
-- **204 on a GET request**: Should never happen outside `/Authentication/IsAlive`. If a data-fetching GET returns 204, the resource may have been deleted or the endpoint is misconfigured.
-- **Soft-deleted records hidden by default**: Many list endpoints exclude deleted items unless `includeDeleted=true` or `isIncludeDeleted=true` is passed. Surface this when a known ID returns 404.
-- **Typo in endpoint path**: `ResetPasword` (missing 's') is the actual path -- flag if a user tries `ResetPassword` and gets 404.
-- **Inconsistent casing in paths**: Some resources use PascalCase (`/Vouchers`, `/Bundles`), others use camelCase (`/jobRuns`, `/steps`). Surface mismatches proactively when constructing URLs.
-- **Large offset values**: No cursor-based pagination exists. Warn when offset exceeds several thousand -- performance may degrade.
-- **Batch operations silently succeeding**: PUT Batch endpoints return 204 with no details. Recommend a follow-up GET to verify changes applied correctly.
-- **OAuth flow state mismatch**: The OAuthCallback endpoint accepts an `error` parameter. Surface any OAuth errors immediately rather than silently proceeding.
-- **Missing required `EDTInstanceId`**: Aftermarket ECU and Engine endpoints require this alongside serial number. Flag if omitted.
-
-## Playbook
-
-### 1. Authenticate and Verify Access
-
-1. POST /api/v2/Authentication with `credentials` map containing username and password
-2. Store the returned API key/token
-3. GET /api/v2/Authentication/IsAlive to confirm the session is active (expect 204)
-4. GET /api/v2/Users/Current to verify identity and retrieve your user profile
-5. GET /api/v2/Users/Current/Permissions to confirm your permission scope
-
-### 2. Publish a Content Update to Clients
-
-1. POST /api/v2/ContentDefinitions to create a content definition (capture the returned ID)
-2. POST /api/v2/ContentDefinitions/{id}/Attributes/Batch to attach metadata attributes
-3. POST /api/v2/ContentSubmissions with `contentDefinitionID` referencing the definition
-4. GET /api/v2/ContentSubmissions/{id}/Status to monitor processing progress
-5. POST /api/v2/ContentReleases to create a release version once submission is complete
-6. Associate the release with packages and bundles as needed via POST /api/v2/Packages and PUT /api/v2/Bundles/{bundleID}/PackageTypetoBundles/Batch
-
-### 3. Set Up a Client with Update Group Subscriptions
-
-1. GET /api/v2/Clients to find the client by Tag, or GET /api/v2/Clients/{ID} if ID is known
-2. GET /api/v2/UpdateGroups to list available update groups
-3. POST /api/v2/UpdateGroupClientRelationships with `ClientID`, `UpdateGroupID`, and `Active: true`
-4. GET /api/v2/Clients/{ID}/UpdateGroupSubscriptions to verify the subscription is active
-5. GET /api/v2/UpdateSystem with `ClientID` and `Preview=true` to preview what updates the client would receive
-
-### 4. Manage Vouchers and Licensing
-
-1. POST /api/v2/Vouchers with voucher details (type, dealer code, expiration)
-2. GET /api/v2/Vouchers/{VoucherCode} to retrieve the created voucher
-3. POST /api/v2/LicenseActivations with `licenseActivationCreate` referencing the voucher
-4. PUT /api/v2/LicenseActivations/{ID}/Confirm to finalize the activation
-5. GET /api/v2/Vouchers/{VoucherCode}/VoucherHistory to audit all changes over time
-
-### 5. Configure Roles, Permissions, and Authorization
-
-1. GET /api/v2/Permissions to list all available permissions
-2. POST /api/v2/Roles to create a new role
-3. PUT /api/v2/Roles/{id}/Permissions with an array of permission changes to attach permissions to the role
-4. PUT /api/v2/Users/{id}/Roles with role changes to assign the role to a user
-5. GET /api/v2/Users/{id}/Permissions to verify the user now has the expected effective permissions
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all activities?" -> GET /api/v2/activities
+- "Create a activity?" -> POST /api/v2/activities
+- "Get activity details?" -> GET /api/v2/activities/{activityID}
+- "Update a activity?" -> PUT /api/v2/activities/{activityID}
+- "Delete a activity?" -> DELETE /api/v2/activities/{activityID}
+- "List all activityRuns?" -> GET /api/v2/activityRuns
+- "Get activityRun details?" -> GET /api/v2/activityRuns/{activityRunID}
+- "Update a activityRun?" -> PUT /api/v2/activityRuns/{activityRunID}
+- "List all status?" -> GET /api/v2/activityRuns/{activityRunID}/status
+- "List all Certificates?" -> GET /api/v2/AftermarketServices/Certificates
+- "Update a ECU?" -> PUT /api/v2/AftermarketServices/ECUs/{serialNumber}
+- "List all ProductionData?" -> GET /api/v2/AftermarketServices/Engines/{serialNumber}/ProductionData
+- "List all IQACodes?" -> GET /api/v2/AftermarketServices/Engines/{serialNumber}/IQACodes
+- "List all UserStatuses?" -> GET /api/v2/AftermarketServices/UserStatuses
+- "List all Hello?" -> GET /api/v2/AftermarketServices/Hello
+- "List all agents?" -> GET /api/v2/agents
+- "Create a agent?" -> POST /api/v2/agents
+- "Get agent details?" -> GET /api/v2/agents/{agentID}
+- "Update a agent?" -> PUT /api/v2/agents/{agentID}
+- "Delete a agent?" -> DELETE /api/v2/agents/{agentID}
+- "List all Current?" -> GET /api/v2/agents/Current
+- "List all ActivityRun?" -> GET /api/v2/agents/{agentID}/ActivityRun
+- "List all ActivityRun?" -> GET /api/v2/agents/Current/ActivityRun
+- "Create a Authentication?" -> POST /api/v2/Authentication
+- "List all IsAlive?" -> GET /api/v2/Authentication/IsAlive
+- "Create a RequestPasswordReset?" -> POST /api/v2/Authentication/RequestPasswordReset
+- "Create a ResetPasword?" -> POST /api/v2/Authentication/ResetPasword
+- "List all OAuthRedirect?" -> GET /api/v2/Authentication/OAuthRedirect
+- "List all OAuthCallback?" -> GET /api/v2/Authentication/OAuthCallback
+- "Create a OAuthUser?" -> POST /api/v2/Authentication/OAuthUser
+- "List all OAuthCertificate?" -> GET /api/v2/Authentication/OAuthCertificate
+- "List all AuthorizationCategories?" -> GET /api/v2/AuthorizationCategories
+- "Create a AuthorizationCategory?" -> POST /api/v2/AuthorizationCategories
+- "Update a AuthorizationCategory?" -> PUT /api/v2/AuthorizationCategories/{id}
+- "Delete a AuthorizationCategory?" -> DELETE /api/v2/AuthorizationCategories/{id}
+- "Delete a User?" -> DELETE /api/v2/AuthorizationCategories/{id}/Users/{userID}
+- "List all Users?" -> GET /api/v2/AuthorizationCategories/Users
+- "List all AuthorizationCodeDefinitions?" -> GET /api/v2/AuthorizationCodeDefinitions
+- "Create a AuthorizationCodeDefinition?" -> POST /api/v2/AuthorizationCodeDefinitions
+- "Get AuthorizationCodeDefinition details?" -> GET /api/v2/AuthorizationCodeDefinitions/{id}
+- "Update a AuthorizationCodeDefinition?" -> PUT /api/v2/AuthorizationCodeDefinitions/{id}
+- "Delete a AuthorizationCodeDefinition?" -> DELETE /api/v2/AuthorizationCodeDefinitions/{id}
+- "Delete a Category?" -> DELETE /api/v2/AuthorizationCodeDefinitions/{ID}/Categories/{categoryID}
+- "List all AuthorizationCodes?" -> GET /api/v2/AuthorizationCodes
+- "Create a AuthorizationCode?" -> POST /api/v2/AuthorizationCodes
+- "Get AuthorizationCode details?" -> GET /api/v2/AuthorizationCodes/{id}
+- "Update a AuthorizationCode?" -> PUT /api/v2/AuthorizationCodes/{id}
+- "Delete a AuthorizationCode?" -> DELETE /api/v2/AuthorizationCodes/{id}
+- "List all Validate?" -> GET /api/v2/AuthorizationCodes/{id}/Validate
+- "List all ContactInformation?" -> GET /api/v2/AuthorizationCodes/{id}/ContactInformation
+- "List all AuthorizationContactInformation?" -> GET /api/v2/AuthorizationContactInformation
+- "Create a AuthorizationContactInformation?" -> POST /api/v2/AuthorizationContactInformation
+- "List all Brands?" -> GET /api/v2/Brands
+- "List all Bundles?" -> GET /api/v2/Bundles
+- "Create a Bundle?" -> POST /api/v2/Bundles
+- "Get Bundle details?" -> GET /api/v2/Bundles/{ID}
+- "Update a Bundle?" -> PUT /api/v2/Bundles/{ID}
+- "Delete a Bundle?" -> DELETE /api/v2/Bundles/{ID}
+- "List all Clients?" -> GET /api/v2/Clients
+- "Get Client details?" -> GET /api/v2/Clients/{ID}
+- "Update a Client?" -> PUT /api/v2/Clients/{ID}
+- "List all UpdateGroupSubscriptions?" -> GET /api/v2/Clients/{ID}/UpdateGroupSubscriptions
+- "List all AvailableUpdateGroupSubscriptions?" -> GET /api/v2/Clients/{ID}/AvailableUpdateGroupSubscriptions
+- "List all ContentDefinitions?" -> GET /api/v2/ContentDefinitions
+- "Create a ContentDefinition?" -> POST /api/v2/ContentDefinitions
+- "Get ContentDefinition details?" -> GET /api/v2/ContentDefinitions/{contentDefinitionID}
+- "Update a ContentDefinition?" -> PUT /api/v2/ContentDefinitions/{contentDefinitionID}
+- "Delete a ContentDefinition?" -> DELETE /api/v2/ContentDefinitions/{contentDefinitionID}
+- "List all Attributes?" -> GET /api/v2/ContentDefinitions/{contentDefinitionID}/Attributes
+- "Create a Attribute?" -> POST /api/v2/ContentDefinitions/{contentDefinitionID}/Attributes
+- "Create a Batch?" -> POST /api/v2/ContentDefinitions/{contentDefinitionID}/Attributes/Batch
+- "Update a ContentDefinitionAttribute?" -> PUT /api/v2/ContentDefinitionAttributes/{contentDefinitionAttributeID}
+- "Delete a ContentDefinitionAttribute?" -> DELETE /api/v2/ContentDefinitionAttributes/{contentDefinitionAttributeID}
+- "List all ContentReleases?" -> GET /api/v2/ContentReleases
+- "Create a ContentRelease?" -> POST /api/v2/ContentReleases
+- "Get ContentRelease details?" -> GET /api/v2/ContentReleases/{ContentReleaseId}
+- "Update a ContentRelease?" -> PUT /api/v2/ContentReleases/{ContentReleaseId}
+- "Delete a ContentRelease?" -> DELETE /api/v2/ContentReleases/{ContentReleaseId}
+- "List all ContentSubmissions?" -> GET /api/v2/ContentSubmissions
+- "Create a ContentSubmission?" -> POST /api/v2/ContentSubmissions
+- "Get ContentSubmission details?" -> GET /api/v2/ContentSubmissions/{contentSubmissionID}
+- "Update a ContentSubmission?" -> PUT /api/v2/ContentSubmissions/{contentSubmissionID}
+- "Delete a ContentSubmission?" -> DELETE /api/v2/ContentSubmissions/{contentSubmissionID}
+- "List all Status?" -> GET /api/v2/ContentSubmissions/{contentSubmissionID}/Status
+- "List all Attributes?" -> GET /api/v2/ContentSubmissions/{contentSubmissionID}/Attributes
+- "Create a Attribute?" -> POST /api/v2/ContentSubmissions/{contentSubmissionID}/Attributes
+- "Create a Batch?" -> POST /api/v2/ContentSubmissions/{contentSubmissionID}/Attributes/Batch
+- "Update a ContentSubmissionAttribute?" -> PUT /api/v2/ContentSubmissionAttributes/{contentSubmissionAttributeID}
+- "Delete a ContentSubmissionAttribute?" -> DELETE /api/v2/ContentSubmissionAttributes/{contentSubmissionAttributeID}
+- "List all ContentSubmissionTypes?" -> GET /api/v2/ContentSubmissionTypes
+- "Create a ContentSubmissionType?" -> POST /api/v2/ContentSubmissionTypes
+- "Get ContentSubmissionType details?" -> GET /api/v2/ContentSubmissionTypes/{id}
+- "Update a ContentSubmissionType?" -> PUT /api/v2/ContentSubmissionTypes/{id}
+- "Delete a ContentSubmissionType?" -> DELETE /api/v2/ContentSubmissionTypes/{id}
+- "List all DealerByCountry?" -> GET /api/v2/DealerByCountry
+- "Get Dealer details?" -> GET /api/v2/Dealers/{DealerCode}
+- "List all Dealers?" -> GET /api/v2/Dealers
+- "List all Files?" -> GET /api/v2/Files
+- "Create a File?" -> POST /api/v2/Files
+- "Get File details?" -> GET /api/v2/Files/{ID}
+- "Update a File?" -> PUT /api/v2/Files/{ID}
+- "Delete a File?" -> DELETE /api/v2/Files/{ID}
+- "List all FileContents?" -> GET /api/v2/Files/{ID}/FileContents
+- "List all FileUploadIndexFields?" -> GET /api/v2/FileUploadIndexFields
+- "Create a Report?" -> POST /api/v2/FileUploads/Report
+- "List all FileUploadTypes?" -> GET /api/v2/FileUploadTypes
+- "List all GlobalImageCategories?" -> GET /api/v2/GlobalImageCategories
+- "Create a GlobalImageCategory?" -> POST /api/v2/GlobalImageCategories
+- "Get GlobalImageCategory details?" -> GET /api/v2/GlobalImageCategories/{ID}
+- "Search GlobalImages?" -> GET /api/v2/GlobalImages
+- "Create a GlobalImage?" -> POST /api/v2/GlobalImages
+- "Get GlobalImage details?" -> GET /api/v2/GlobalImages/{ID}
+- "Update a GlobalImage?" -> PUT /api/v2/GlobalImages/{ID}
+- "Delete a GlobalImage?" -> DELETE /api/v2/GlobalImages/{ID}
+- "List all ImageContents?" -> GET /api/v2/GlobalImages/{ID}/ImageContents
+- "List all jobRuns?" -> GET /api/v2/jobRuns
+- "Create a jobRun?" -> POST /api/v2/jobRuns
+- "Get jobRun details?" -> GET /api/v2/jobRuns/{jobRunID}
+- "Update a jobRun?" -> PUT /api/v2/jobRuns/{jobRunID}
+- "Delete a jobRun?" -> DELETE /api/v2/jobRuns/{jobRunID}
+- "List all jobs?" -> GET /api/v2/jobs
+- "Create a job?" -> POST /api/v2/jobs
+- "Get job details?" -> GET /api/v2/jobs/{jobID}
+- "Update a job?" -> PUT /api/v2/jobs/{jobID}
+- "Delete a job?" -> DELETE /api/v2/jobs/{jobID}
+- "List all Languages?" -> GET /api/v2/Languages
+- "Create a Language?" -> POST /api/v2/Languages
+- "Get Language details?" -> GET /api/v2/Languages/{LocaleID}
+- "Update a Language?" -> PUT /api/v2/Languages/{LocaleID}
+- "Delete a Language?" -> DELETE /api/v2/Languages/{LocaleID}
+- "Create a LicenseActivation?" -> POST /api/v2/LicenseActivations
+- "Update a LicenseActivation?" -> PUT /api/v2/LicenseActivations/{ID}
+- "Create a RegisterEDTLite?" -> POST /api/v2/LicenseActivations/RegisterEDTLite
+- "List all Licenses?" -> GET /api/v2/Licenses
+- "Get Licens details?" -> GET /api/v2/Licenses/{ID}
+- "List all Logs?" -> GET /api/v2/Logs
+- "Create a Log?" -> POST /api/v2/Logs
+- "Get Log details?" -> GET /api/v2/Logs/{ID}
+- "Create a Notification?" -> POST /api/v2/Notifications
+- "List all PackageReports?" -> GET /api/v2/Clients/{ClientID}/PackageReports
+- "List all Packages?" -> GET /api/v2/Packages
+- "Create a Package?" -> POST /api/v2/Packages
+- "Get Package details?" -> GET /api/v2/Packages/{ID}
+- "Update a Package?" -> PUT /api/v2/Packages/{ID}
+- "Delete a Package?" -> DELETE /api/v2/Packages/{ID}
+- "List all PackageTypes?" -> GET /api/v2/PackageTypes
+- "Create a PackageType?" -> POST /api/v2/PackageTypes
+- "Get PackageType details?" -> GET /api/v2/PackageTypes/{ID}
+- "Update a PackageType?" -> PUT /api/v2/PackageTypes/{ID}
+- "Delete a PackageType?" -> DELETE /api/v2/PackageTypes/{ID}
+- "Delete a User?" -> DELETE /api/v2/PackageTypes/{id}/Users/{userID}
+- "Create a Batch?" -> POST /api/v2/Bundles/{bundleID}/PackageTypetoBundles/Batch
+- "List all PackageTypetoBundles?" -> GET /api/v2/PackageTypetoBundles
+- "Create a PackageTypetoBundle?" -> POST /api/v2/PackageTypetoBundles
+- "List all Permissions?" -> GET /api/v2/Permissions
+- "Create a Permission?" -> POST /api/v2/Permissions
+- "Get Permission details?" -> GET /api/v2/Permissions/{id}
+- "Update a Permission?" -> PUT /api/v2/Permissions/{id}
+- "Delete a Permission?" -> DELETE /api/v2/Permissions/{id}
+- "List all PriorityPackages?" -> GET /api/v2/PriorityPackages
+- "Create a PriorityPackage?" -> POST /api/v2/PriorityPackages
+- "Get PriorityPackage details?" -> GET /api/v2/PriorityPackages/{ID}
+- "Delete a PriorityPackage?" -> DELETE /api/v2/PriorityPackages/{ID}
+- "List all Releases?" -> GET /api/v2/Releases
+- "Create a Release?" -> POST /api/v2/Releases
+- "Get Release details?" -> GET /api/v2/Releases/{ReleaseId}
+- "Update a Release?" -> PUT /api/v2/Releases/{releaseId}
+- "Delete a Bundle?" -> DELETE /api/v2/Releases/{ReleaseId}/Bundle/{BundleId}
+- "List all GetClient?" -> GET /api/v2/Reporting/GetClient
+- "List all ClientInfo?" -> GET /api/v2/Reporting/ClientInfo
+- "List all GetSubscriptions?" -> GET /api/v2/Reporting/GetSubscriptions
+- "List all RegisteredClients?" -> GET /api/v2/Reporting/RegisteredClients
+- "List all UpdateGroups?" -> GET /api/v2/Reporting/UpdateGroups
+- "List all PackageStatusSummary?" -> GET /api/v2/Reporting/PackageStatusSummary
+- "List all BundleStatusSummary?" -> GET /api/v2/Reporting/BundleStatusSummary
+- "List all BundlesInUpdateGroup?" -> GET /api/v2/Reporting/BundlesInUpdateGroup
+- "List all CurrentPackagesInUpdateGroup?" -> GET /api/v2/Reporting/CurrentPackagesInUpdateGroup
+- "List all UpdateMetrics?" -> GET /api/v2/Reporting/UpdateMetrics
+- "List all Roles?" -> GET /api/v2/Roles
+- "Create a Role?" -> POST /api/v2/Roles
+- "Get Role details?" -> GET /api/v2/Roles/{id}
+- "Update a Role?" -> PUT /api/v2/Roles/{id}
+- "Delete a Role?" -> DELETE /api/v2/Roles/{id}
+- "List all Permissions?" -> GET /api/v2/Roles/{id}/Permissions
+- "List all steps?" -> GET /api/v2/steps
+- "Create a step?" -> POST /api/v2/steps
+- "Get step details?" -> GET /api/v2/steps/{stepID}
+- "Update a step?" -> PUT /api/v2/steps/{stepID}
+- "List all StringDefinitions?" -> GET /api/v2/StringDefinitions
+- "Get StringDefinition details?" -> GET /api/v2/StringDefinitions/{ID}
+- "Create a Batch?" -> POST /api/v2/StringDefinitions/Batch
+- "List all StringTranslations?" -> GET /api/v2/StringTranslations
+- "Get StringTranslation details?" -> GET /api/v2/StringTranslations/{stringId}/{languageId}
+- "Update a StringTranslation?" -> PUT /api/v2/StringTranslations/{stringId}/{languageId}
+- "List all TranslationKeys?" -> GET /api/v2/TranslationKeys
+- "Create a TranslationKey?" -> POST /api/v2/TranslationKeys
+- "Get TranslationKey details?" -> GET /api/v2/TranslationKeys/{ID}
+- "Update a TranslationKey?" -> PUT /api/v2/TranslationKeys/{ID}
+- "List all TranslationRequests?" -> GET /api/v2/TranslationRequests
+- "Create a TranslationRequest?" -> POST /api/v2/TranslationRequests
+- "Get TranslationRequest details?" -> GET /api/v2/TranslationRequests/{Id}
+- "Update a TranslationRequest?" -> PUT /api/v2/TranslationRequests/{Id}
+- "List all TranslationSets?" -> GET /api/v2/TranslationSets
+- "Get TranslationSet details?" -> GET /api/v2/TranslationSets/{ID}
+- "Update a TranslationSet?" -> PUT /api/v2/TranslationSets/{ID}
+- "List all Strings?" -> GET /api/v2/TranslationSets/{ID}/Strings
+- "List all SourceStrings?" -> GET /api/v2/TranslationSets/{ID}/SourceStrings
+- "List all Statistics?" -> GET /api/v2/TranslationSets/{ID}/Statistics
+- "List all Attributes?" -> GET /api/v2/TranslationSets/{ID}/Attributes
+- "Create a Attribute?" -> POST /api/v2/TranslationSets/{ID}/Attributes
+- "Update a TranslationSetAttribute?" -> PUT /api/v2/TranslationSetAttributes/{ID}
+- "Delete a TranslationSetAttribute?" -> DELETE /api/v2/TranslationSetAttributes/{ID}
+- "Create a Batch?" -> POST /api/v2/TranslationSets/{ID}/Attributes/Batch
+- "List all UpdateGroupClientRelationships?" -> GET /api/v2/UpdateGroupClientRelationships
+- "Create a UpdateGroupClientRelationship?" -> POST /api/v2/UpdateGroupClientRelationships
+- "Get UpdateGroupClientRelationship details?" -> GET /api/v2/UpdateGroupClientRelationships/{RelationshipID}
+- "Update a UpdateGroupClientRelationship?" -> PUT /api/v2/UpdateGroupClientRelationships/{RelationshipID}
+- "List all UpdateGroups?" -> GET /api/v2/UpdateGroups
+- "Create a UpdateGroup?" -> POST /api/v2/UpdateGroups
+- "Get UpdateGroup details?" -> GET /api/v2/UpdateGroups/{ID}
+- "Update a UpdateGroup?" -> PUT /api/v2/UpdateGroups/{ID}
+- "Delete a UpdateGroup?" -> DELETE /api/v2/UpdateGroups/{ID}
+- "List all Bundles?" -> GET /api/v2/UpdateGroups/{ID}/Bundles
+- "Delete a User?" -> DELETE /api/v2/UpdateGroups/{id}/Users/{userID}
+- "List all UpdateGroupSubscriptions?" -> GET /api/v2/UpdateGroupSubscriptions
+- "Create a UpdateGroupSubscription?" -> POST /api/v2/UpdateGroupSubscriptions
+- "Get UpdateGroupSubscription details?" -> GET /api/v2/UpdateGroupSubscriptions/{UpdateGroupSubscriptionID}
+- "Update a UpdateGroupSubscription?" -> PUT /api/v2/UpdateGroupSubscriptions/{UpdateGroupSubscriptionID}
+- "Delete a UpdateGroupSubscription?" -> DELETE /api/v2/UpdateGroupSubscriptions/{UpdateGroupSubscriptionID}
+- "Create a Batch?" -> POST /api/v2/UpdateGroupSubscriptions/Batch
+- "List all UpdateSystem?" -> GET /api/v2/UpdateSystem
+- "List all CachedFiles?" -> GET /api/v2/Clients/{ClientID}/CachedFiles
+- "List all UserContentDefinitions?" -> GET /api/v2/UserContentDefinitions
+- "Create a UserContentDefinition?" -> POST /api/v2/UserContentDefinitions
+- "Get UserContentDefinition details?" -> GET /api/v2/UserContentDefinitions/{userContentDefinitionID}
+- "Delete a UserContentDefinition?" -> DELETE /api/v2/UserContentDefinitions/{userContentDefinitionID}
+- "List all Permissions?" -> GET /api/v2/Users/{id}/Permissions
+- "List all Permissions?" -> GET /api/v2/Users/Current/Permissions
+- "List all Roles?" -> GET /api/v2/Users/{id}/Roles
+- "List all Users?" -> GET /api/v2/Roles/{id}/Users
+- "List all Roles?" -> GET /api/v2/Users/Current/Roles
+- "List all Users?" -> GET /api/v2/Users
+- "Create a User?" -> POST /api/v2/Users
+- "Get User details?" -> GET /api/v2/Users/{id}
+- "Update a User?" -> PUT /api/v2/Users/{id}
+- "Delete a User?" -> DELETE /api/v2/Users/{id}
+- "List all Current?" -> GET /api/v2/Users/Current
+- "List all VoucherHistory?" -> GET /api/v2/VoucherHistory
+- "List all Vouchers?" -> GET /api/v2/Vouchers
+- "Create a Voucher?" -> POST /api/v2/Vouchers
+- "Get Voucher details?" -> GET /api/v2/Vouchers/{VoucherCode}
+- "Update a Voucher?" -> PUT /api/v2/Vouchers/{VoucherCode}
+- "Delete a Voucher?" -> DELETE /api/v2/Vouchers/{VoucherCode}
+- "List all VoucherHistory?" -> GET /api/v2/Vouchers/{VoucherCode}/VoucherHistory
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

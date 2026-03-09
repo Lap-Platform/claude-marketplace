@@ -80,91 +80,57 @@ https://management.azure.com
 | PUT | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/users/{name} | Creates a new user or updates an existing user's information on a Data Box Edge/Data Box Gateway device. |
 | DELETE | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/users/{name} | Deletes the user on a databox edge/gateway device. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What operations are available for Data Box Edge?" -> GET /providers/Microsoft.DataBoxEdge/operations
-- "List all Data Box Edge devices in my subscription?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices
-- "Show devices in a specific resource group?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices
-- "Get details of a specific device?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}
-- "Create or register a new Data Box Edge device?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}
-- "Are there any alerts on my device?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/alerts
-- "What is the update status of my device?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/updateSummary/default
-- "How do I trigger a firmware update on my device?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/installUpdates
-- "What shares are configured on my device?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/shares
-- "How do I check the network settings of a device?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/networkSettings/default
-- "What bandwidth schedules are set on my device?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/bandwidthSchedules
-- "How do I add a storage account credential to a device?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/storageAccountCredentials/{name}
-- "What is the status of a long-running job on my device?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/jobs/{name}
-- "How do I update the device admin password?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/securitySettings/default/update
-- "What roles are assigned on my device?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/roles
-
-## Response Tips
-
-- **Device listings** (GET .../dataBoxEdgeDevices): Returns a paginated `value` array with `nextLink` for continuation; use `$expand` to inline child resource details.
-- **Single resource GETs** (devices, alerts, shares, roles, users, triggers, bandwidth schedules, storage credentials): Return the resource object directly with `id`, `name`, `type`, and `properties` nested object containing all configuration.
-- **PUT/create operations**: Return 200 for synchronous completion or 202 with an `Azure-AsyncOperation` header for long-running operations; poll the operation URL or use the jobs endpoint.
-- **DELETE operations**: 200 means completed, 202 means accepted and still processing (check operationsStatus), 204 means the resource was already gone.
-- **POST actions** (downloadUpdates, installUpdates, scanForUpdates, refresh): Return 200 for immediate completion or 202 for async; no response body on 202 -- track via jobs or operationsStatus.
-- **Alerts**: Read-only collection; each alert has `properties.severity`, `properties.alertType`, and `properties.appearedAtDateTime` for triage.
-- **Error responses**: Follow Azure standard `{ "error": { "code": "...", "message": "..." } }` pattern across all endpoints.
-
-## Anomaly Flags
-
-- **202 Accepted without completion**: Surface when PUT, DELETE, or POST returns 202 -- the operation is still running. Prompt the user to poll `operationsStatus/{name}` or `jobs/{name}` for final status.
-- **Stale update summary**: If `updateSummary/default` shows `lastInstallOperationDateTime` significantly older than available updates, flag that updates may be pending or stalled.
-- **Active alerts on device**: After any device GET, proactively check alerts and surface any with severity "Critical" or "Warning".
-- **Delete returning 204**: Indicate the resource was already absent -- the user may have targeted the wrong device or name, or a prior delete already succeeded.
-- **Security settings returning 204 instead of 202**: The update may not have been applied; verify the security settings took effect.
-- **Rate limiting / throttling**: Azure ARM APIs enforce per-subscription rate limits; surface HTTP 429 responses and `Retry-After` headers immediately.
-- **Deprecated API version**: If any response includes `x-ms-deprecation` headers or the 2019-07-01 version returns warnings, flag that a newer API version should be used.
-- **Job stuck in running state**: If polling `jobs/{name}` returns a job with `status: Running` for an extended period, proactively alert the user.
-
-## Playbook
-
-### 1. Provision and Configure a New Device
-
-1. Create the device: PUT `.../dataBoxEdgeDevices/{deviceName}` with the `DataBoxEdgeDevice` body (location, SKU, tags).
-2. Upload activation certificate: POST `.../uploadCertificate` with the certificate parameters.
-3. Get extended information: POST `.../getExtendedInformation` to retrieve the activation key and encryption details.
-4. Configure bandwidth schedule: PUT `.../bandwidthSchedules/{name}` to set upload/download windows.
-5. Add storage account credentials: PUT `.../storageAccountCredentials/{name}` with the account key.
-6. Create shares: PUT `.../shares/{name}` referencing the storage credential.
-7. Configure users: PUT `.../users/{name}` to set up local user accounts for share access.
-
-### 2. Check for and Install Updates
-
-1. Scan for available updates: POST `.../scanForUpdates` (returns 202; poll `operationsStatus` until complete).
-2. Review update summary: GET `.../updateSummary/default` to see available update versions and sizes.
-3. Download updates: POST `.../downloadUpdates` (returns 202; monitor via `jobs/{name}`).
-4. Install updates: POST `.../installUpdates` (returns 202; monitor via `jobs/{name}`).
-5. Verify completion: GET `.../updateSummary/default` again to confirm the device is on the latest version.
-
-### 3. Investigate and Resolve Device Alerts
-
-1. List all alerts: GET `.../alerts` to retrieve the full alert collection.
-2. Inspect a specific alert: GET `.../alerts/{name}` to see detailed severity, type, and recommendations.
-3. Check device status: GET `.../dataBoxEdgeDevices/{deviceName}` to see overall device health.
-4. Review network settings: GET `.../networkSettings/default` if the alert is connectivity-related.
-5. Take corrective action (e.g., refresh a share via POST `.../shares/{name}/refresh`, or update security settings via POST `.../securitySettings/default/update`).
-
-### 4. Manage Shares and Storage Lifecycle
-
-1. List existing shares: GET `.../shares` to see all configured shares and their status.
-2. List storage account credentials: GET `.../storageAccountCredentials` to verify linked accounts.
-3. Create or update a share: PUT `.../shares/{name}` with the share configuration (access protocol, user mappings, storage account reference).
-4. Refresh share data: POST `.../shares/{name}/refresh` to force a sync with cloud storage (returns 202).
-5. Remove a share: DELETE `.../shares/{name}` (returns 200/202/204).
-6. Clean up unused credentials: DELETE `.../storageAccountCredentials/{name}` after removing all dependent shares.
-
-### 5. Set Up Roles and Triggers for Edge Compute
-
-1. List current roles: GET `.../roles` to see existing IoT and compute role assignments.
-2. Create a role: PUT `.../roles/{name}` with the role configuration (e.g., IoTRole with IoT Hub connection details).
-3. List triggers: GET `.../triggers` to review event-driven automation; use `$expand` for full details.
-4. Create a trigger: PUT `.../triggers/{name}` linking it to a role and share (e.g., file event trigger on share upload).
-5. Verify the setup: GET `.../roles/{name}` and GET `.../triggers/{name}` to confirm the configuration is active and healthy.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all operations?" -> GET /providers/Microsoft.DataBoxEdge/operations
+- "List all dataBoxEdgeDevices?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices
+- "List all dataBoxEdgeDevices?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices
+- "Get dataBoxEdgeDevice details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}
+- "Update a dataBoxEdgeDevice?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}
+- "Delete a dataBoxEdgeDevice?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}
+- "Partially update a dataBoxEdgeDevice?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}
+- "List all alerts?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/alerts
+- "Get alert details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/alerts/{name}
+- "List all bandwidthSchedules?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/bandwidthSchedules
+- "Get bandwidthSchedule details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/bandwidthSchedules/{name}
+- "Update a bandwidthSchedule?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/bandwidthSchedules/{name}
+- "Delete a bandwidthSchedule?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/bandwidthSchedules/{name}
+- "Create a downloadUpdate?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/downloadUpdates
+- "Create a getExtendedInformation?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/getExtendedInformation
+- "Create a installUpdate?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/installUpdates
+- "Get job details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/jobs/{name}
+- "List all default?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/networkSettings/default
+- "List all nodes?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/nodes
+- "Get operationsStatus details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/operationsStatus/{name}
+- "List all orders?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/orders
+- "List all default?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/orders/default
+- "List all roles?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/roles
+- "Get role details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/roles/{name}
+- "Update a role?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/roles/{name}
+- "Delete a role?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/roles/{name}
+- "Create a scanForUpdate?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/scanForUpdates
+- "Create a update?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/securitySettings/default/update
+- "List all shares?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/shares
+- "Get share details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/shares/{name}
+- "Update a share?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/shares/{name}
+- "Delete a share?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/shares/{name}
+- "Create a refresh?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/shares/{name}/refresh
+- "List all storageAccountCredentials?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/storageAccountCredentials
+- "Get storageAccountCredential details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/storageAccountCredentials/{name}
+- "Update a storageAccountCredential?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/storageAccountCredentials/{name}
+- "Delete a storageAccountCredential?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/storageAccountCredentials/{name}
+- "List all triggers?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/triggers
+- "Get trigger details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/triggers/{name}
+- "Update a trigger?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/triggers/{name}
+- "Delete a trigger?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/triggers/{name}
+- "List all default?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/updateSummary/default
+- "Create a uploadCertificate?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/uploadCertificate
+- "List all users?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/users
+- "Get user details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/users/{name}
+- "Update a user?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/users/{name}
+- "Delete a user?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataBoxEdge/dataBoxEdgeDevices/{deviceName}/users/{name}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

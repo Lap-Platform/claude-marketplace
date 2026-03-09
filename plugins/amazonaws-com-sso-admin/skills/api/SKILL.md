@@ -99,90 +99,10 @@ Not specified.
 | POST | / | Updates an existing permission set. |
 | POST | / | Updates the name of the trusted token issuer, or the path of a source attribute or destination attribute for a trusted token issuer configuration.  Updating this trusted token issuer configuration might cause users to lose access to any applications that are configured to use the trusted token issuer. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I grant a user access to an AWS account?" -> POST / (CreateAccountAssignment: PermissionSetArn + PrincipalId + TargetId)
-- "How do I revoke someone's account assignment?" -> POST / (DeleteAccountAssignment: same params as create)
-- "What permission sets exist in my SSO instance?" -> POST / (ListPermissionSets: InstanceArn, paginated)
-- "Which accounts has a permission set been provisioned to?" -> POST / (ListAccountsForProvisionedPermissionSet: InstanceArn + PermissionSetArn)
-- "What permissions does a specific user have across accounts?" -> POST / (ListAccountAssignmentsForPrincipal: InstanceArn + PrincipalId + PrincipalType)
-- "How do I create a new permission set with a session duration?" -> POST / (CreatePermissionSet: InstanceArn + Name, optional SessionDuration + RelayState)
-- "How do I attach an AWS managed policy to a permission set?" -> POST / (AttachManagedPolicyToPermissionSet: InstanceArn + ManagedPolicyArn + PermissionSetArn)
-- "How do I check if an account assignment finished successfully?" -> POST / (DescribeAccountAssignmentCreationStatus: InstanceArn + RequestId from create response)
-- "How do I apply permission set changes to accounts?" -> POST / (ProvisionPermissionSet: InstanceArn + PermissionSetArn + TargetType, optional TargetId)
-- "How do I set up ABAC for my SSO instance?" -> POST / (CreateInstanceAccessControlAttributeConfiguration: InstanceArn + AccessControlAttributes)
-- "What applications are configured in my SSO instance?" -> POST / (ListApplications: InstanceArn, paginated with Filter)
-- "How do I register a trusted token issuer for JWT exchange?" -> POST / (CreateTrustedTokenIssuer: InstanceArn + Name + OidcJwtConfiguration + Type)
-- "What inline policy is attached to a permission set?" -> POST / (GetInlinePolicyForPermissionSet: InstanceArn + PermissionSetArn)
-- "How do I set a permissions boundary on a permission set?" -> POST / (PutPermissionsBoundaryToPermissionSet: InstanceArn + PermissionSetArn + PermissionsBoundary)
-- "How do I tag an SSO resource?" -> POST / (TagResource: ResourceArn + Tags, optional InstanceArn)
-
-## Response Tips
-
-- **Assignment operations** (Create/DeleteAccountAssignment): Return an async `Status` field ("IN_PROGRESS", "SUCCEEDED", "FAILED") -- poll with the corresponding Describe operation using the `RequestId` until terminal state.
-- **List operations**: All paginated via `NextToken` + `MaxResults` (default varies, typically 100). Continue calling with returned `NextToken` until it is `null`/absent.
-- **Describe operations**: Return the full object or `null` for optional fields. Check for `FailureReason` on provisioning/assignment status responses.
-- **Put/Attach/Detach operations**: Return empty 200 on success. No response body to parse -- absence of error means success.
-- **Permission set provisioning**: The `ProvisionPermissionSet` response includes a `RequestId` -- use `DescribePermissionSetProvisioningStatus` to track progress.
-- **Application operations**: `DescribeApplication` returns nested `PortalOptions.SignInOptions` -- always null-check the intermediate object before accessing `ApplicationUrl`.
-
-## Anomaly Flags
-
-- **Assignment stuck in IN_PROGRESS**: If `DescribeAccountAssignmentCreationStatus` or deletion status returns IN_PROGRESS for more than 5 minutes, surface a warning -- AWS SSO assignments typically complete in seconds.
-- **FailureReason present**: Any Describe response with a non-null `FailureReason` should be surfaced immediately with the full reason string.
-- **Permission set not provisioned**: After updating a permission set (inline policy, managed policy, boundary), warn the user that changes are not effective until `ProvisionPermissionSet` is called.
-- **Pagination truncation risk**: If a List call returns `NextToken` but the caller does not paginate, flag that results are incomplete.
-- **Session duration out of range**: When creating or updating a permission set, `SessionDuration` must be ISO 8601 duration between PT1H and PT12H. Flag values outside this range before the API rejects them.
-- **Instance ABAC status mismatch**: `DescribeInstanceAccessControlAttributeConfiguration` may return `Status: "CREATION_FAILED"` with a `StatusReason`. Surface this if the user expects ABAC to be active.
-- **Deprecated or disabled application**: `DescribeApplication` returning `Status: "DISABLED"` should be flagged when the user tries to assign principals to it.
-
-## Playbook
-
-### 1. Grant a User Access to an AWS Account
-
-1. Call **ListInstances** to get the `InstanceArn` for your SSO setup.
-2. Call **ListPermissionSets** with the `InstanceArn` to find or identify the target `PermissionSetArn`.
-3. Obtain the `PrincipalId` (user/group ID from Identity Store) and the `AccountId` (target AWS account).
-4. Call **CreateAccountAssignment** with `InstanceArn`, `PermissionSetArn`, `PrincipalId`, `PrincipalType` ("USER" or "GROUP"), `TargetId` (AccountId), and `TargetType` ("AWS_ACCOUNT").
-5. Capture the `RequestId` from the response's `AccountAssignmentCreationStatus`.
-6. Poll **DescribeAccountAssignmentCreationStatus** with the `RequestId` until `Status` is "SUCCEEDED" or "FAILED".
-
-### 2. Create and Configure a Permission Set with Policies
-
-1. Call **CreatePermissionSet** with `InstanceArn`, `Name`, and optionally `Description`, `SessionDuration` (e.g., "PT4H"), and `RelayState`.
-2. Capture the `PermissionSetArn` from the response.
-3. Call **AttachManagedPolicyToPermissionSet** to attach AWS managed policies (e.g., `arn:aws:iam::aws:policy/ReadOnlyAccess`).
-4. Optionally call **PutInlinePolicyToPermissionSet** with a JSON policy document for custom permissions.
-5. Optionally call **PutPermissionsBoundaryToPermissionSet** to set a boundary.
-6. Call **ProvisionPermissionSet** with `TargetType: "ALL_PROVISIONED_ACCOUNTS"` to push changes to all assigned accounts.
-7. Poll **DescribePermissionSetProvisioningStatus** until `Status` is terminal.
-
-### 3. Audit All Assignments for a Specific User
-
-1. Call **ListInstances** to get the `InstanceArn`.
-2. Call **ListAccountAssignmentsForPrincipal** with `InstanceArn`, `PrincipalId`, and `PrincipalType: "USER"`. Paginate through all results.
-3. For each assignment, call **DescribePermissionSet** with the returned `PermissionSetArn` to get the permission set name and details.
-4. Call **ListManagedPoliciesInPermissionSet** and **GetInlinePolicyForPermissionSet** for each permission set to understand the effective permissions.
-5. Optionally call **ListApplicationAssignmentsForPrincipal** to also audit application-level access.
-
-### 4. Set Up ABAC (Attribute-Based Access Control)
-
-1. Call **DescribeInstance** to confirm the instance exists and note its `IdentityStoreId`.
-2. Call **CreateInstanceAccessControlAttributeConfiguration** with the `InstanceArn` and an `AccessControlAttributes` array mapping identity store attributes (e.g., department, costCenter) to access control.
-3. Call **DescribeInstanceAccessControlAttributeConfiguration** to verify `Status` is not "CREATION_FAILED".
-4. Update permission sets' inline policies to include `aws:PrincipalTag` conditions referencing the mapped attributes.
-5. Call **ProvisionPermissionSet** for each modified permission set to push updated policies.
-
-### 5. Register and Configure a Trusted Token Issuer
-
-1. Call **CreateTrustedTokenIssuer** with `InstanceArn`, a `Name`, `TrustedTokenIssuerType: "OIDC_JWT"`, and `TrustedTokenIssuerConfiguration` containing the OIDC issuer URL, JWKS retrieval option, claim attribute path, and identity store attribute path.
-2. Capture the `TrustedTokenIssuerArn` from the response.
-3. Call **DescribeTrustedTokenIssuer** to verify the configuration was applied correctly.
-4. Call **CreateApplication** with an `ApplicationProviderArn` and link it to the instance.
-5. Call **PutApplicationGrant** with `GrantType: "urn:ietf:params:oauth:grant-type:jwt-bearer"` and reference the trusted token issuer in `AuthorizedTokenIssuers`.
-6. Call **PutApplicationAssignmentConfiguration** to set whether assignment is required.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

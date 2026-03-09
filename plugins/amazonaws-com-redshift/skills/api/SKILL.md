@@ -159,93 +159,10 @@ Not specified.
 | POST | / | Rotates the encryption keys for a cluster. |
 | POST | / | Updates the status of a partner integration. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new Redshift cluster?" -> POST / (CreateCluster: ClusterIdentifier, NodeType, MasterUsername required)
-- "How do I list all my Redshift clusters?" -> POST / (DescribeClusters: optional ClusterIdentifier, paginated with MaxRecords/Marker)
-- "How do I take a manual snapshot of my cluster?" -> POST / (CreateClusterSnapshot: SnapshotIdentifier + ClusterIdentifier required)
-- "How do I restore a cluster from a snapshot?" -> POST / (RestoreFromClusterSnapshot: ClusterIdentifier required, plus SnapshotIdentifier or SnapshotArn)
-- "How do I resize my cluster to more nodes?" -> POST / (ResizeCluster: ClusterIdentifier required, specify NodeType/NumberOfNodes/ClusterType)
-- "How do I pause a cluster to save costs?" -> POST / (PauseCluster: ClusterIdentifier required)
-- "How do I get temporary database credentials?" -> POST / (GetClusterCredentials: DbUser required, returns DbPassword + Expiration)
-- "How do I share data with another AWS account?" -> POST / (AuthorizeDataShare: DataShareArn + ConsumerIdentifier required)
-- "How do I set up cross-region snapshot copy?" -> POST / (EnableSnapshotCopy: ClusterIdentifier + DestinationRegion required)
-- "How do I schedule my cluster to pause overnight?" -> POST / (CreateScheduledAction: ScheduledActionName, TargetAction with PauseCluster, Schedule, IamRole)
-- "How do I restore a single table from a snapshot?" -> POST / (RestoreTableFromClusterSnapshot: ClusterIdentifier, SnapshotIdentifier, SourceDatabaseName, SourceTableName, NewTableName)
-- "How do I check the progress of a cluster resize?" -> POST / (DescribeResize: ClusterIdentifier required, returns progress percentage and ETA)
-- "How do I enable audit logging for my cluster?" -> POST / (EnableLogging: ClusterIdentifier required, optional BucketName/S3KeyPrefix/LogExports)
-- "How do I set usage limits on my cluster?" -> POST / (CreateUsageLimit: ClusterIdentifier, FeatureType, LimitType, Amount required)
-- "How do I grant another account access to my snapshot?" -> POST / (AuthorizeSnapshotAccess: AccountWithRestoreAccess required, plus SnapshotIdentifier or SnapshotArn)
-
-## Response Tips
-
-- **Cluster operations** (Create/Modify/Delete/Restore/Pause/Resume/Reboot/Resize): Return a full `Cluster` object nested under a `Cluster` key; check `ClusterStatus` and `PendingModifiedValues` to determine if the change is still in progress. The `Endpoint.Address` and `Endpoint.Port` give you the connection string.
-- **Snapshot operations** (Create/Copy/Delete/Modify): Return a `Snapshot` object; check `Status` field (available, creating, failed). `EstimatedSecondsToCompletion` and `BackupProgressInMegaBytes` track in-progress snapshots. Batch operations return `Resources` (successes) and `Errors` (failures) arrays side by side.
-- **Describe/List endpoints**: All paginated endpoints use `Marker` (opaque string) and `MaxRecords` (default 100, max varies). When `Marker` is present in the response, more pages exist. Results are returned in arrays like `Clusters`, `Snapshots`, `ParameterGroups`.
-- **Credential endpoints** (GetClusterCredentials/GetClusterCredentialsWithIAM): Return `DbUser`, `DbPassword`, and `Expiration` timestamp. Credentials are temporary; `NextRefreshTime` (IAM variant only) indicates when to re-fetch.
-- **Data share operations**: Return a flat object with `DataShareArn`, `DataShareAssociations` array, and `AllowPubliclyAccessibleConsumers` flag. Check each association's status within the array.
-- **Scheduled actions**: Return `State` (ACTIVE/DISABLED) and `NextInvocations` array of timestamps. The `TargetAction` is a union type containing exactly one of `ResizeCluster`, `PauseCluster`, or `ResumeCluster`.
-- **Delete/void endpoints** (DeleteParameterGroup, DeleteSecurityGroup, DeleteTags, etc.): Return no body (no `@returns` in spec). A 200 status confirms success.
-
-## Anomaly Flags
-
-- **Cluster in unexpected state**: Surface when `ClusterStatus` is not `available` (e.g., `modifying`, `hardware-failure`, `incompatible-network`, `storage-full`) or when `ClusterAvailabilityStatus` is not `Available`.
-- **Pending modifications stuck**: Flag when `PendingModifiedValues` contains entries but `ModifyStatus` has not progressed, indicating a change may be blocked (e.g., waiting for a maintenance window).
-- **Snapshot retention expiring**: Alert when `ManualSnapshotRemainingDays` is low (< 7) on important snapshots, or when `ManualSnapshotRetentionPeriod` is set to -1 (indefinite) on many snapshots, risking storage cost creep.
-- **Credential expiration imminent**: Flag when `Expiration` on temporary credentials is within 5 minutes or already past.
-- **Resize stalled**: Surface when `DescribeResize` returns `DataTransferProgressPercent` that has not changed across consecutive calls, or when `EstimatedTimeToCompletionInSeconds` is exceptionally high.
-- **Batch operation partial failures**: When `BatchDeleteClusterSnapshots` or `BatchModifyClusterSnapshots` returns a non-empty `Errors` array alongside `Resources`, surface each `SnapshotErrorMessage` individually.
-- **Logging delivery failures**: Flag when `DescribeLoggingStatus` returns a `LastFailureTime` more recent than `LastSuccessfulDeliveryTime`, with the `LastFailureMessage` content.
-- **Usage limit breach**: Surface when `BreachAction` is set to `emit-metric` (silent) rather than `disable` or `log`, as overages may go unnoticed.
-- **Reserved node expiring**: Alert when a `ReservedNode` has `State` of `active` but `Duration` minus elapsed time is less than 30 days.
-- **Cross-region copy disabled unexpectedly**: Flag when `ClusterSnapshotCopyStatus` is absent on a cluster that previously had it, suggesting DR protection may have lapsed.
-
-## Playbook
-
-### 1. Provision a New Cluster with Snapshot Schedule
-
-1. Call **CreateClusterSubnetGroup** with your VPC subnet IDs to set up networking.
-2. Call **CreateClusterParameterGroup** with the desired `ParameterGroupFamily` (e.g., `redshift-1.0`), then **ModifyClusterParameterGroups** to set custom parameters (e.g., `enable_user_activity_logging`).
-3. Call **CreateCluster** with `ClusterIdentifier`, `NodeType`, `MasterUsername`, `ClusterSubnetGroupName`, `ClusterParameterGroupName`, `Encrypted: true`, and `KmsKeyId`.
-4. Poll **DescribeClusters** until `ClusterStatus` is `available`. Extract `Endpoint.Address` and `Endpoint.Port`.
-5. Call **CreateSnapshotSchedule** with a cron-style `ScheduleDefinitions` (e.g., `rate(12 hours)`).
-6. Call **ModifyClusterSnapshotSchedule** to associate the schedule with your cluster.
-7. Call **EnableLogging** with an S3 bucket to enable audit logs.
-
-### 2. Disaster Recovery: Cross-Region Snapshot Copy and Restore
-
-1. Call **CreateSnapshotCopyGrant** in the destination region with a KMS key for encrypted snapshots.
-2. Call **EnableSnapshotCopy** on the source cluster with `DestinationRegion`, `RetentionPeriod`, and `SnapshotCopyGrantName`.
-3. Verify with **DescribeClusters** that `ClusterSnapshotCopyStatus` shows the destination region.
-4. To recover: In the destination region, call **DescribeClusterSnapshots** with `SnapshotType: automated` to find the latest copy.
-5. Call **RestoreFromClusterSnapshot** with the copied snapshot's `SnapshotIdentifier` and desired `ClusterIdentifier`.
-6. Poll **DescribeClusters** until `RestoreStatus.Status` is `completed`.
-
-### 3. Cost Optimization: Scheduled Pause/Resume
-
-1. Create an IAM role with `redshift:PauseCluster` and `redshift:ResumeCluster` permissions. Note the ARN.
-2. Call **CreateScheduledAction** with `TargetAction: {PauseCluster: {ClusterIdentifier: "my-cluster"}}`, `Schedule: "cron(0 22 * * ? *)"` (pause at 10 PM), and `IamRole`.
-3. Call **CreateScheduledAction** again with `TargetAction: {ResumeCluster: {ClusterIdentifier: "my-cluster"}}`, `Schedule: "cron(0 7 * * ? *)"` (resume at 7 AM).
-4. Verify both actions with **DescribeScheduledActions** and check `NextInvocations` for correctness.
-5. Optionally call **CreateUsageLimit** with `FeatureType: spectrum` or `concurrency-scaling`, `LimitType: time`, and `BreachAction: disable` to cap additional costs.
-
-### 4. Cluster Resize with Reserved Node Exchange
-
-1. Call **DescribeReservedNodes** to inventory current reservations, noting `ReservedNodeId` and expiration.
-2. Call **GetReservedNodeExchangeConfigurationOptions** with `ActionType: resize-cluster` to find compatible target offerings.
-3. Call **ResizeCluster** with `ClusterIdentifier`, new `NodeType`, `NumberOfNodes`, `ReservedNodeId`, and `TargetReservedNodeOfferingId`.
-4. Monitor progress with **DescribeResize**, watching `DataTransferProgressPercent` and `ImportTablesInProgress`/`ImportTablesCompleted`.
-5. Verify with **DescribeReservedNodeExchangeStatus** that the exchange completed successfully.
-
-### 5. Sharing Data Across Accounts
-
-1. Producer account: call **DescribeDataShares** to get the `DataShareArn` for the share you want to grant.
-2. Call **AuthorizeDataShare** with the `DataShareArn` and consumer's `ConsumerIdentifier` (AWS account ID or namespace ARN).
-3. Consumer account: call **DescribeDataSharesForConsumer** to see the pending share, then call **AssociateDataShareConsumer** with the `DataShareArn` and `ConsumerArn`.
-4. Verify association by calling **DescribeDataShares** and checking `DataShareAssociations` for `Status: ACTIVE`.
-5. To revoke: Producer calls **DeauthorizeDataShare** with the `DataShareArn` and `ConsumerIdentifier`. Consumer can also call **DisassociateDataShareConsumer** or **RejectDataShare** to opt out.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

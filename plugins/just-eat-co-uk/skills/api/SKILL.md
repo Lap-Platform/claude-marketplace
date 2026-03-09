@@ -253,91 +253,69 @@ https://uk.api.just-eat.io
 | GET | /search/autocomplete/{tenant} | Get auto-completed search terms |
 | GET | /search/restaurants/{tenant} | Search restaurants |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I search for restaurants near me?" -> GET /search/restaurants/{tenant}
-- "What restaurants are available at this postcode?" -> GET /restaurants/bypostcode/{postcode}
-- "How do I place a new order?" -> POST /orders
-- "How do I accept an incoming order as a restaurant?" -> PUT /orders/{orderId}/accept
-- "How do I register a new consumer account?" -> POST /consumers/{tenant}
-- "Where is the driver right now?" -> PUT /orders/{orderId}/deliverystate/driverlocation
-- "How do I get the full menu for a restaurant?" -> GET /restaurants/{tenant}/{restaurantId}/menu
-- "How do I take a restaurant offline for an event?" -> POST /v1/{tenant}/restaurants/event/offline
-- "How do I respond to a customer claim?" -> POST /restaurants/{tenant}/{restaurantId}/customerclaims/{id}/restaurantresponse
-- "What are the delivery fees for a set of restaurants?" -> GET /delivery-fees/{tenant}
-- "How do I get estimated delivery time?" -> GET /delivery/estimate
-- "How do I update a restaurant's opening hours?" -> PUT /restaurants/{tenant}/{restaurantId}/servicetimes
-- "How do I handle a late order complaint from a customer?" -> POST /orders/{tenant}/{orderId}/consumerqueries/lateorder/restaurantresponse
-- "How do I set up delivery pool hours?" -> PUT /delivery/pools/{deliveryPoolId}/hours
-- "How do I check available fulfilment times for a checkout?" -> GET /checkout/{tenant}/{checkoutId}/fulfilment/availabletimes
-
-## Response Tips
-
-- **Checkout endpoints**: Response includes `isFulfillable` boolean and `issues` array -- always check both; a 200 with `isFulfillable: false` is a soft failure, not success.
-- **Order lifecycle endpoints** (accept, reject, cancel, complete): Most return bare 200/204 with no body; rely on status code alone. Watch for 409 Conflict indicating the order already transitioned state.
-- **Restaurant catalogue endpoints**: All paginated via `limit` (required) and `after` cursor (optional); loop until response returns fewer items than `limit`.
-- **Customer claims**: Nested `resolution` and `restaurantResponse` objects are nullable (`map?`); always nil-check before accessing inner fields like `justification.comments`.
-- **Delivery state updates**: Return 200 with no documented body; these are fire-and-forget status pushes. A 400 on `driverunassigned` means malformed location data.
-- **Search endpoints**: Results come in `restaurants` or `terms` arrays; 503 indicates the search service is temporarily down, not a client error.
-- **Consumer registration**: 201 returns `{type, token}` -- store the token immediately as it is the session credential. 409 means the email is already registered.
-- **Webhook-style event endpoints** (order-accepted, order-cancelled, driver-* events): All return bare 200; these are inbound notification receivers, not query APIs.
-
-## Anomaly Flags
-
-- **409 Conflict on order actions**: Surface immediately -- the order has already moved to a different state (e.g., already accepted, already cancelled). The agent should fetch current order state before retrying.
-- **429 Too Many Requests on checkout**: The checkout endpoints explicitly list 429. Alert the user and implement exponential backoff before retry.
-- **503 on search endpoints**: Search service degradation. Suggest the user retry after a short delay or fall back to `GET /restaurants/bypostcode/{postcode}`.
-- **400 on order placement**: The order body is deeply nested (Items contain Items contain Items). Surface the exact validation error -- it almost always means a missing required field in a nested object.
-- **301 redirect on menu GET**: `GET /restaurants/{tenant}/{restaurantId}/menu` can return 301. The agent should follow the redirect automatically and warn the user the menu endpoint has moved.
-- **`isFulfillable: false` in checkout response**: This is a silent failure. Proactively surface the `issues` array contents so the user understands why the order cannot proceed.
-- **Menu ingestion result `fail`**: When `POST /menu-ingestion-complete` arrives with `result: "fail"`, extract and surface the `fault.errors` array with codes and descriptions.
-- **Tenant mismatch**: Many endpoints take `{tenant}` as path param (uk/dk/es/ie/it/no/au/nz). Flag if the tenant value doesn't match one of the known enum values.
-
-## Playbook
-
-### 1. Place an Order End-to-End
-
-1. Search for restaurants: `GET /search/restaurants/{tenant}` with `searchTerm` and `latlong`
-2. Browse the menu: `GET /restaurants/{tenant}/{restaurantId}/catalogue` then drill into categories and items using the catalogue sub-endpoints
-3. Check delivery fees: `GET /delivery-fees/{tenant}` with the chosen `restaurantIds` and `deliveryTime`
-4. Get delivery estimate: `GET /delivery/estimate` with `restaurantReference`, `toLat`, `toLon`
-5. Create checkout: `GET /checkout/{tenant}/{checkoutId}` to verify fulfillability
-6. Check available times: `GET /checkout/{tenant}/{checkoutId}/fulfilment/availabletimes`
-7. Submit order: `POST /orders` with full order payload (Customer, Items, Payment, Fulfilment)
-8. Confirm: Verify 201 response and store the returned `OrderId`
-
-### 2. Handle an Incoming Order as a Restaurant
-
-1. Receive the order notification via `POST /acceptance-requested` webhook
-2. Review order details: check `Items`, `Fulfilment.DueDate`, `Customer` info
-3. Accept: `PUT /orders/{orderId}/accept` with optional `TimeAcceptedFor` if adjusting the due time
-4. Or reject: `PUT /orders/{orderId}/reject` with a `Message` explaining why
-5. When food is ready: `POST /orders/{orderId}/readyforcollection`
-6. When delivered: `POST /orders/{orderId}/complete`
-
-### 3. Manage a Customer Claim
-
-1. List claims: `GET /restaurants/{tenant}/{restaurantId}/customerclaims` with date range and pagination (`limit`, `offset`)
-2. Review claim detail: `GET /restaurants/{tenant}/{restaurantId}/customerclaims/{id}` -- check `issueType`, `affectedItems`, `totalClaimed`
-3. Respond: `POST /restaurants/{tenant}/{restaurantId}/customerclaims/{id}/restaurantresponse` with `decision` (Accepted/Rejected/PartiallyAccepted) and per-item decisions
-4. Add justification if rejecting: `PUT /restaurants/{tenant}/{restaurantId}/customerclaims/{id}/restaurantresponse/justification` with `reason` and optional `comments`
-
-### 4. Set Up and Manage Delivery Pools
-
-1. Create pool: `POST /delivery/pools` with a `name` and optional list of restaurant IDs
-2. Set operating hours: `PUT /delivery/pools/{deliveryPoolId}/hours` with per-day schedules (Monday through Sunday, each with `closed` flag and time slots)
-3. Add restaurants: `PUT /delivery/pools/{deliveryPoolId}/restaurants` to assign restaurants to the pool
-4. Set availability estimate: `PUT /delivery/pools/{deliveryPoolId}/availability/relative` with `bestGuess` time
-5. Monitor: `GET /delivery/pools/{deliveryPoolId}` to verify configuration; `GET /delivery/pools` to list all pools
-
-### 5. Take a Restaurant Offline and Back Online
-
-1. Create offline event: `POST /v1/{tenant}/restaurants/event/offline` with `restaurantIds`, `name`, `reason`, `startDate`, and optional `endDate` or `duration`
-2. Confirm: Store the returned `restaurantEventId` for later reference
-3. To bring back online early: `DELETE /v1/{tenant}/restaurants/{id}/event/offline` with `X-JE-Requester` and `X-JE-User-Role` headers
-4. Alternatively, use the status webhooks: `PUT /restaurant-offline-status` or `PUT /restaurant-online-status` to toggle state directly
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a attempteddelivery?" -> POST /{tenant}/orders/{orderId}/queries/attempteddelivery
+- "Create a redeliverorder?" -> POST /{tenant}/orders/{orderId}/queries/attempteddelivery/resolution/redeliverorder
+- "Get checkout details?" -> GET /checkout/{tenant}/{checkoutId}
+- "Partially update a checkout?" -> PATCH /checkout/{tenant}/{checkoutId}
+- "List all availabletimes?" -> GET /checkout/{tenant}/{checkoutId}/fulfilment/availabletimes
+- "Create a restaurantresponse?" -> POST /orders/{tenant}/{orderId}/consumerqueries/lateorder/restaurantresponse
+- "Create a restaurantresponse?" -> POST /orders/{tenant}/{orderId}/consumerqueries/lateordercompensation/restaurantresponse
+- "Create a late-order-compensation-query?" -> POST /late-order-compensation-query
+- "Create a late-order-query?" -> POST /late-order-query
+- "Get consumer details?" -> GET /consumers/{tenant}
+- "List all communication-preferences?" -> GET /consumers/{tenant}/me/communication-preferences
+- "Get communication-preference details?" -> GET /consumers/{tenant}/me/communication-preferences/{type}
+- "Update a communication-preference?" -> PUT /consumers/{tenant}/me/communication-preferences/{type}
+- "Delete a subscribedChannel?" -> DELETE /consumers/{tenant}/me/communication-preferences/{type}/subscribedChannels/{channel}
+- "Get delivery-fee details?" -> GET /delivery-fees/{tenant}
+- "List all pools?" -> GET /delivery/pools
+- "Create a pool?" -> POST /delivery/pools
+- "Get pool details?" -> GET /delivery/pools/{deliveryPoolId}
+- "Delete a pool?" -> DELETE /delivery/pools/{deliveryPoolId}
+- "Partially update a pool?" -> PATCH /delivery/pools/{deliveryPoolId}
+- "Update a pool?" -> PUT /delivery/pools/{deliveryPoolId}
+- "List all relative?" -> GET /delivery/pools/{deliveryPoolId}/availability/relative
+- "Create a complete?" -> POST /orders/{orderId}/complete
+- "Create a readyforcollection?" -> POST /orders/{orderId}/readyforcollection
+- "Create a acceptance-requested?" -> POST /acceptance-requested
+- "Create a order-accepted?" -> POST /order-accepted
+- "Create a order-cancelled?" -> POST /order-cancelled
+- "Create a order-rejected?" -> POST /order-rejected
+- "List all estimate?" -> GET /delivery/estimate
+- "Create a order?" -> POST /orders
+- "Create a order-ready-for-preparation-async?" -> POST /order-ready-for-preparation-async
+- "Create a order-ready-for-preparation-sync?" -> POST /order-ready-for-preparation-sync
+- "Create a send-to-pos-failed?" -> POST /send-to-pos-failed
+- "List all customerclaims?" -> GET /restaurants/{tenant}/{restaurantId}/customerclaims
+- "Get customerclaim details?" -> GET /restaurants/{tenant}/{restaurantId}/customerclaims/{id}
+- "Create a restaurantresponse?" -> POST /restaurants/{tenant}/{restaurantId}/customerclaims/{id}/restaurantresponse
+- "Create a offline?" -> POST /v1/{tenant}/restaurants/event/offline
+- "Create a compensation?" -> POST /orders/{tenant}/{orderId}/restaurantqueries/compensation
+- "Create a order-eligible-for-restaurant-compensation?" -> POST /order-eligible-for-restaurant-compensation
+- "List all catalogue?" -> GET /restaurants/{tenant}/{restaurantId}/catalogue
+- "List all availabilities?" -> GET /restaurants/{tenant}/{restaurantId}/catalogue/availabilities
+- "List all categories?" -> GET /restaurants/{tenant}/{restaurantId}/catalogue/categories
+- "List all items?" -> GET /restaurants/{tenant}/{restaurantId}/catalogue/categories/{categoryId}/items
+- "List all items?" -> GET /restaurants/{tenant}/{restaurantId}/catalogue/items
+- "List all dealgroups?" -> GET /restaurants/{tenant}/{restaurantId}/catalogue/items/{itemId}/dealgroups
+- "List all dealitemvariations?" -> GET /restaurants/{tenant}/{restaurantId}/catalogue/items/{itemId}/dealgroups/{dealGroupId}/dealitemvariations
+- "List all modifiergroups?" -> GET /restaurants/{tenant}/{restaurantId}/catalogue/items/{itemId}/modifiergroups
+- "List all variations?" -> GET /restaurants/{tenant}/{restaurantId}/catalogue/items/{itemId}/variations
+- "List all fees?" -> GET /restaurants/{tenant}/{restaurantId}/fees
+- "List all menu?" -> GET /restaurants/{tenant}/{restaurantId}/menu
+- "List all ordertimes?" -> GET /restaurants/{tenant}/{restaurantId}/ordertimes
+- "Update a ordertime?" -> PUT /restaurants/{tenant}/{restaurantId}/ordertimes/{dayOfWeek}/{serviceType}
+- "List all servicetimes?" -> GET /restaurants/{tenant}/{restaurantId}/servicetimes
+- "List all bylatlong?" -> GET /restaurants/bylatlong
+- "Get bypostcode details?" -> GET /restaurants/bypostcode/{postcode}
+- "Create a menu-ingestion-complete?" -> POST /menu-ingestion-complete
+- "Create a order-time-updated?" -> POST /order-time-updated
+- "Get autocomplete details?" -> GET /search/autocomplete/{tenant}
+- "Get restaurant details?" -> GET /search/restaurants/{tenant}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -67,85 +67,25 @@ https://accounts.twilio.com
 | GET | /v1/SafeList/Numbers | Check if a phone number or phone number 1k prefix exists in SafeList. |
 | DELETE | /v1/SafeList/Numbers | Remove a phone number or phone number 1k prefix from SafeList. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I rotate my Twilio auth token?" -> POST /v1/AuthTokens/Promote
-- "How do I create a secondary auth token?" -> POST /v1/AuthTokens/Secondary
-- "How do I delete my secondary auth token?" -> DELETE /v1/AuthTokens/Secondary
-- "How do I list all my AWS credentials?" -> GET /v1/Credentials/AWS
-- "How do I register new AWS credentials with Twilio?" -> POST /v1/Credentials/AWS
-- "How do I look up a specific AWS credential by SID?" -> GET /v1/Credentials/AWS/{Sid}
-- "How do I update an existing AWS credential?" -> POST /v1/Credentials/AWS/{Sid}
-- "How do I remove an AWS credential?" -> DELETE /v1/Credentials/AWS/{Sid}
-- "How do I list all public keys?" -> GET /v1/Credentials/PublicKeys
-- "How do I upload a new public key?" -> POST /v1/Credentials/PublicKeys
-- "How do I check which countries are allowed for messaging?" -> GET /v1/Messaging/GeoPermissions
-- "How do I update geo permissions for messaging?" -> PATCH /v1/Messaging/GeoPermissions
-- "How do I add a phone number to the safe list?" -> POST /v1/SafeList/Numbers
-- "How do I check if a number is on the safe list?" -> GET /v1/SafeList/Numbers
-- "How do I remove a number from the safe list?" -> DELETE /v1/SafeList/Numbers
-
-## Response Tips
-
-- **AuthTokens**: Promote returns the new primary token in `auth_token`; Secondary returns `secondary_auth_token`. Store these immediately as they may not be retrievable later.
-- **Credentials (AWS & PublicKeys)**: List endpoints return `credentials` array with a `meta` object for pagination. Use `meta.next_page_url` to fetch the next page; `null` means you are on the last page. Control page size with `PageSize` (max varies by account).
-- **Messaging GeoPermissions**: Both GET and PATCH return a `permissions` field typed as `any` -- expect a nested structure keyed by country code or region.
-- **SafeList**: GET and POST return a flat `{sid, phone_number}` object. DELETE returns 204 with no body.
-- **Consents & Contacts**: Bulk endpoints return `{items}` typed as `any` -- expect an array of per-record results with individual success/failure statuses.
-
-## Anomaly Flags
-
-- **Token rotation without secondary**: If a user calls POST /v1/AuthTokens/Promote without first creating a secondary token (POST /v1/AuthTokens/Secondary), warn that existing integrations using the old primary token will break immediately.
-- **204 on DELETE with no confirmation**: DELETE endpoints return empty bodies. Surface a confirmation before calling, since there is no undo.
-- **Pagination exhaustion**: If `meta.next_page_url` keeps returning results beyond an unexpectedly high count, flag that the credential list may be larger than expected and suggest auditing stale entries.
-- **Bulk endpoint partial failures**: Consents and Contacts bulk endpoints may return mixed success/failure in the `items` array. Always inspect individual item statuses rather than relying on the HTTP 201 alone.
-- **Stale credentials**: If a GET /v1/Credentials/AWS/{Sid} or PublicKeys/{Sid} returns a `date_updated` significantly older than `date_created`, flag the credential as potentially stale and recommend rotation.
-- **Geo permissions changes**: PATCH to GeoPermissions can silently restrict messaging to entire countries. Surface a warning before applying changes.
-
-## Playbook
-
-### 1. Rotate Auth Token Safely
-
-1. Create a secondary auth token: POST /v1/AuthTokens/Secondary
-2. Store the `secondary_auth_token` from the response
-3. Update all integrations and services to use the secondary token
-4. Verify integrations work with the new token
-5. Promote the secondary to primary: POST /v1/AuthTokens/Promote
-6. Store the new `auth_token` from the response
-
-### 2. Register and Manage AWS Credentials
-
-1. Create the credential: POST /v1/Credentials/AWS (provide AWS key details in the request body)
-2. Note the returned `sid` for future reference
-3. Verify it appears in the list: GET /v1/Credentials/AWS
-4. To update the friendly name or rotate keys: POST /v1/Credentials/AWS/{Sid}
-5. To decommission: DELETE /v1/Credentials/AWS/{Sid}
-
-### 3. Manage the Safe List for Phone Numbers
-
-1. Check if a number is already listed: GET /v1/SafeList/Numbers?PhoneNumber=+15551234567
-2. If not present, add it: POST /v1/SafeList/Numbers (include phone number in body)
-3. Confirm addition by checking the returned `sid`
-4. To remove later: DELETE /v1/SafeList/Numbers?PhoneNumber=+15551234567
-
-### 4. Audit and Clean Up Credentials
-
-1. List all AWS credentials: GET /v1/Credentials/AWS?PageSize=50
-2. Page through results using `meta.next_page_url` until null
-3. List all public keys: GET /v1/Credentials/PublicKeys?PageSize=50
-4. For each credential, check `date_updated` -- flag any not updated in over 90 days
-5. Review flagged credentials with your team
-6. Delete unused credentials: DELETE /v1/Credentials/AWS/{Sid} or DELETE /v1/Credentials/PublicKeys/{Sid}
-
-### 5. Configure Messaging Geo Permissions
-
-1. Review current permissions: GET /v1/Messaging/GeoPermissions
-2. Identify countries to enable or restrict
-3. Apply changes: PATCH /v1/Messaging/GeoPermissions (include updated permission structure)
-4. Verify the update: GET /v1/Messaging/GeoPermissions
-5. Optionally filter by country: GET /v1/Messaging/GeoPermissions?CountryCode=US
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a Promote?" -> POST /v1/AuthTokens/Promote
+- "Create a Bulk?" -> POST /v1/Consents/Bulk
+- "Create a Bulk?" -> POST /v1/Contacts/Bulk
+- "List all AWS?" -> GET /v1/Credentials/AWS
+- "Create a AWS?" -> POST /v1/Credentials/AWS
+- "Get AWS details?" -> GET /v1/Credentials/AWS/{Sid}
+- "Delete a AWS?" -> DELETE /v1/Credentials/AWS/{Sid}
+- "List all PublicKeys?" -> GET /v1/Credentials/PublicKeys
+- "Create a PublicKey?" -> POST /v1/Credentials/PublicKeys
+- "Get PublicKey details?" -> GET /v1/Credentials/PublicKeys/{Sid}
+- "Delete a PublicKey?" -> DELETE /v1/Credentials/PublicKeys/{Sid}
+- "List all GeoPermissions?" -> GET /v1/Messaging/GeoPermissions
+- "Create a Number?" -> POST /v1/SafeList/Numbers
+- "List all Numbers?" -> GET /v1/SafeList/Numbers
+- "Create a Secondary?" -> POST /v1/AuthTokens/Secondary
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

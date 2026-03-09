@@ -331,91 +331,280 @@ https://api.frontegg.com/identity
 | GET | /resources/applications/user-tenants/active/v1 | Get user active accounts (tenants) in applications |
 | PUT | /resources/applications/user-tenants/active/v1 | Switch users active account (tenant) in applications |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I authenticate with the API?" -> POST /resources/auth/v2/api-token
-- "How do I refresh an expired token?" -> POST /resources/auth/v2/api-token/token/refresh
-- "How do I sign up a new user?" -> POST /resources/users/v1/signUp
-- "How do I log in a user with email and password?" -> POST /resources/auth/v1/user
-- "How do I reset a user's password?" -> POST /resources/users/v1/passwords/reset
-- "How do I list all users in a tenant?" -> GET /resources/users/v3
-- "How do I create a role and assign permissions?" -> POST /resources/roles/v1 + PUT /resources/roles/v1/{roleId}/permissions
-- "How do I invite a user to a tenant?" -> POST /resources/tenants/invites/v1/user
-- "How do I enable MFA for a user?" -> POST /resources/users/v1/mfa/enroll + POST /resources/users/v1/mfa/enroll/verify
-- "How do I set up an approval workflow?" -> POST /resources/approval-flows/v1
-- "How do I configure password complexity rules?" -> POST /resources/configurations/v1/password
-- "How do I migrate users from Auth0?" -> POST /resources/migrations/v1/auth0
-- "How do I create a tenant API token for M2M auth?" -> POST /resources/tenants/api-tokens/v1
-- "How do I restrict login by IP address?" -> POST /resources/configurations/v1/restrictions/ip + POST /resources/configurations/v1/restrictions/ip/config
-- "How do I bulk invite users to a tenant?" -> POST /resources/users/bulk/v1/invite
-
-## Response Tips
-
-- **Auth endpoints** (`/auth/`): Always check `mfaRequired` -- if `true`, the flow is incomplete and you must proceed to an MFA verification endpoint using the returned `mfaToken`. The `accessToken` is only present when auth is fully complete.
-- **Token endpoints** (`/api-tokens/`, `/access-tokens/`): The `secret` field is only returned on creation (POST). Subsequent GET calls omit it. Store it immediately.
-- **User endpoints** (`/users/v3`, `/users/v1`): List responses use `_limit`/`_offset` pagination. Default limit is typically 50. Iterate until results returned < limit.
-- **Role and permission endpoints** (`/roles/`, `/permissions/`): Responses nest `permissions` as arrays of IDs or maps depending on endpoint version (v1 vs v2). The v2 roles endpoint supports `_sortBy` and `_filter` for server-side filtering.
-- **Bulk operations** (`/bulk/`): Return `202 Accepted` with a `migrationId` or `id`. Poll the corresponding status endpoint to track completion.
-- **Configuration endpoints** (`/configurations/`): POST creates (returns 201), PATCH updates (returns 200). A 409 on POST means the config already exists -- use PATCH instead.
-- **Approval flows**: Execution is async. After `POST /{id}/execute`, the response is 200 with no body. Watch for webhook callbacks or poll execution data.
-
-## Anomaly Flags
-
-- **409 Conflict on policy creation**: The policy already exists. Surface this and suggest using PATCH instead of POST for lockout-policy, mfa-policy, or password-history-policy.
-- **`isBreachedPassword: true`** in auth responses: The user's password appeared in a known breach database. Prompt immediate password change via `/passwords/change`.
-- **`mfaRequired: true` without `mfaDevices`**: User must enroll in MFA before they can complete login. Route to the appropriate enroll endpoint.
-- **`passwordExpiresIn` present and low**: Password rotation is active and the user's password is expiring soon. Surface the remaining time and suggest password change.
-- **`isLocked: true` on user objects**: The user account is locked (likely from failed login attempts). Suggest calling `POST /users/v1/{userId}/unlock`.
-- **`verified: false` on user objects**: The user has not completed email verification. May need to resend activation via `POST /users/v1/activate/reset`.
-- **`activatedForTenant: false`**: User exists but is not active for the current tenant context. May indicate a pending invitation.
-- **404 on GET policy endpoints**: The policy has never been created. Use POST to initialize it before attempting PATCH.
-- **Bulk operation still pending**: If polling `/bulk/v1/status/{id}` shows incomplete status, surface progress and warn about partial failures.
-
-## Playbook
-
-### 1. Authenticate and maintain a session
-
-1. Obtain tokens: `POST /resources/auth/v2/api-token` with `clientId` and `secret`
-2. Check if `mfaRequired` is `true` in the response
-3. If MFA required, complete the appropriate MFA flow (authenticator, SMS, or email code)
-4. Store `access_token` and `refresh_token`; note `expires_in` for scheduling refresh
-5. Before expiry, call `POST /resources/auth/v2/api-token/token/refresh` with the `refreshToken`
-6. On logout, call `POST /resources/auth/v1/logout`
-
-### 2. Onboard a new user with roles
-
-1. Create the user: `POST /resources/users/v1` with `frontegg-tenant-id`, `email`, and optional `roleIds`
-2. If `skipInviteEmail` was false, the user receives an activation email
-3. User activates via `POST /resources/users/v1/activate` with `userId` and `token` from email
-4. Assign additional roles if needed: `POST /resources/users/v1/{userId}/roles` with `roleIds`
-5. Verify the user profile: `GET /resources/users/v1/{id}` to confirm roles and activation status
-
-### 3. Set up MFA enforcement for a tenant
-
-1. Configure MFA methods: `POST /resources/configurations/v1/mfa` to enable authenticator app, SMS, or email
-2. Set MFA strategies: `POST /resources/configurations/v1/mfa/strategies` for each desired method
-3. Create the enforcement policy: `POST /resources/configurations/v1/mfa-policy` with `enforceMFAType: "Force"`
-4. Optionally allow "remember device": set `allowRememberMyDevice: true` and `mfaDeviceExpiration` in seconds
-5. Verify config: `GET /resources/configurations/v1/mfa-policy` to confirm the policy is active
-
-### 4. Migrate users from an external identity provider
-
-1. Configure the source connection (e.g., Auth0): `POST /resources/migrations/v1/auth0` with domain, clientId, and secret
-2. For manual/local migration, use `POST /resources/migrations/v1/local` for individual users or `POST /resources/migrations/v1/local/bulk` for batch
-3. Supply `passwordHash` and `passwordHashType` (bcrypt, scrypt, argon2, etc.) to preserve existing passwords
-4. Poll `GET /resources/migrations/v1/local/bulk/status/{migrationId}` until all users are processed
-5. Verify migrated users: `GET /resources/users/v3` filtered by tenant to confirm they appear correctly
-
-### 5. Configure security policies (IP restrictions + lockout + password)
-
-1. Set password complexity: `POST /resources/configurations/v1/password` with min length, required tests, and breach checking
-2. Enable password history: `POST /resources/configurations/v1/password-history-policy` with `enabled: true` and `historySize`
-3. Configure lockout: `POST /resources/configurations/v1/lockout-policy` with `enabled: true` and `maxAttempts`
-4. Set up IP restrictions: `POST /resources/configurations/v1/restrictions/ip/config` with strategy (ALLOW or BLOCK) and `isActive: true`
-5. Add specific IPs: `POST /resources/configurations/v1/restrictions/ip` for each IP rule
-6. Validate with: `POST /resources/configurations/v1/restrictions/ip/verify` to test the current config against the caller's IP
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a api-token?" -> POST /resources/auth/v2/api-token
+- "Create a refresh?" -> POST /resources/auth/v2/api-token/token/refresh
+- "Create a access-token?" -> POST /resources/tenants/access-tokens/v1
+- "List all access-tokens?" -> GET /resources/tenants/access-tokens/v1
+- "Delete a access-token?" -> DELETE /resources/tenants/access-tokens/v1/{id}
+- "Create a api-token?" -> POST /resources/tenants/api-tokens/v1
+- "List all api-tokens?" -> GET /resources/tenants/api-tokens/v1
+- "Delete a api-token?" -> DELETE /resources/tenants/api-tokens/v1/{id}
+- "Partially update a api-token?" -> PATCH /resources/tenants/api-tokens/v1/{id}
+- "Create a api-token?" -> POST /resources/tenants/api-tokens/v2
+- "List all user?" -> GET /resources/tenants/invites/v1/user
+- "Create a user?" -> POST /resources/tenants/invites/v1/user
+- "Create a verify?" -> POST /resources/tenants/invites/v1/verify
+- "List all configuration?" -> GET /resources/tenants/invites/v1/configuration
+- "Create a user?" -> POST /resources/tenants/invites/v2/user
+- "Create a invite?" -> POST /resources/tenants/invites/v1
+- "List all all?" -> GET /resources/tenants/invites/v1/all
+- "Delete a token?" -> DELETE /resources/tenants/invites/v1/token/{id}
+- "List all strategies?" -> GET /resources/configurations/v1/activation/strategies
+- "Create a strategy?" -> POST /resources/configurations/v1/activation/strategies
+- "List all strategies?" -> GET /resources/configurations/v1/invitation/strategies
+- "Create a strategy?" -> POST /resources/configurations/v1/invitation/strategies
+- "List all roles?" -> GET /resources/roles/v2
+- "Create a role?" -> POST /resources/roles/v2
+- "List all distinct-levels?" -> GET /resources/roles/v2/distinct-levels
+- "List all distinct-tenants?" -> GET /resources/roles/v2/distinct-tenants
+- "Create a approval-flow?" -> POST /resources/approval-flows/v1
+- "List all approval-flows?" -> GET /resources/approval-flows/v1
+- "Get approval-flow details?" -> GET /resources/approval-flows/v1/{id}
+- "Partially update a approval-flow?" -> PATCH /resources/approval-flows/v1/{id}
+- "Delete a approval-flow?" -> DELETE /resources/approval-flows/v1/{id}
+- "Create a approver-action?" -> POST /resources/approval-flows/v1/approver-action
+- "List all execution-data?" -> GET /resources/approval-flows/v1/execution-data
+- "Create a execute?" -> POST /resources/approval-flows/v1/{id}/execute
+- "Create a execute?" -> POST /resources/approval-flows/v1/step-up/execute
+- "Create a configuration?" -> POST /resources/configurations/v1
+- "List all configurations?" -> GET /resources/configurations/v1
+- "Create a captcha-policy?" -> POST /resources/configurations/v1/captcha-policy
+- "List all captcha-policy?" -> GET /resources/configurations/v1/captcha-policy
+- "List all jwt-template-targeting?" -> GET /resources/configurations/v1/jwt-template-targeting
+- "Create a jwt-template-targeting?" -> POST /resources/configurations/v1/jwt-template-targeting
+- "Partially update a jwt-template-targeting?" -> PATCH /resources/configurations/v1/jwt-template-targeting/{id}
+- "Delete a jwt-template-targeting?" -> DELETE /resources/configurations/v1/jwt-template-targeting/{id}
+- "Create a jwt-template?" -> POST /resources/jwt-templates/v1
+- "List all jwt-templates?" -> GET /resources/jwt-templates/v1
+- "Get jwt-template details?" -> GET /resources/jwt-templates/v1/{id}
+- "Update a jwt-template?" -> PUT /resources/jwt-templates/v1/{id}
+- "Delete a jwt-template?" -> DELETE /resources/jwt-templates/v1/{id}
+- "List all basic?" -> GET /resources/configurations/v1/basic
+- "Create a custom?" -> POST /resources/sso/custom/v1
+- "List all custom?" -> GET /resources/sso/custom/v1
+- "Partially update a custom?" -> PATCH /resources/sso/custom/v1/{id}
+- "Delete a custom?" -> DELETE /resources/sso/custom/v1/{id}
+- "Create a auth0?" -> POST /resources/migrations/v1/auth0
+- "Create a local?" -> POST /resources/migrations/v1/local
+- "Create a bulk?" -> POST /resources/migrations/v1/local/bulk
+- "Get status details?" -> GET /resources/migrations/v1/local/bulk/status/{migrationId}
+- "Create a bulk?" -> POST /resources/migrations/v2/local/bulk
+- "List all delegation?" -> GET /resources/configurations/v1/delegation
+- "Create a delegation?" -> POST /resources/configurations/v1/delegation
+- "Create a email-domain?" -> POST /resources/configurations/restrictions/v1/email-domain
+- "List all email-domain?" -> GET /resources/configurations/restrictions/v1/email-domain
+- "List all config?" -> GET /resources/configurations/restrictions/v1/email-domain/config
+- "Create a config?" -> POST /resources/configurations/restrictions/v1/email-domain/config
+- "Delete a email-domain?" -> DELETE /resources/configurations/restrictions/v1/email-domain/{id}
+- "Create a replace-bulk?" -> POST /resources/configurations/restrictions/v1/email-domain/replace-bulk
+- "Create a configuration?" -> POST /resources/mail/v1/configurations
+- "List all configurations?" -> GET /resources/mail/v1/configurations
+- "Create a configuration?" -> POST /resources/mail/v2/configurations
+- "Create a template?" -> POST /resources/mail/v1/configs/templates
+- "List all templates?" -> GET /resources/mail/v1/configs/templates
+- "Delete a template?" -> DELETE /resources/mail/v1/configs/templates/{templateId}
+- "List all default?" -> GET /resources/mail/v1/configs/{type}/default
+- "Create a user?" -> POST /resources/auth/v1/user
+- "Create a refresh?" -> POST /resources/auth/v1/user/token/refresh
+- "Create a logout?" -> POST /resources/auth/v1/logout
+- "Create a signUp?" -> POST /resources/users/v1/signUp
+- "Create a username?" -> POST /resources/users/v1/signUp/username
+- "Create a config?" -> POST /resources/configurations/v1/restrictions/ip/config
+- "List all config?" -> GET /resources/configurations/v1/restrictions/ip/config
+- "List all ip?" -> GET /resources/configurations/v1/restrictions/ip
+- "Create a ip?" -> POST /resources/configurations/v1/restrictions/ip
+- "Create a verify?" -> POST /resources/configurations/v1/restrictions/ip/verify
+- "Create a allow?" -> POST /resources/configurations/v1/restrictions/ip/verify/allow
+- "Delete a ip?" -> DELETE /resources/configurations/v1/restrictions/ip/{id}
+- "Create a lockout-policy?" -> POST /resources/configurations/v1/lockout-policy
+- "List all lockout-policy?" -> GET /resources/configurations/v1/lockout-policy
+- "List all active?" -> GET /resources/vendor-only/users/access-tokens/v1/active
+- "Get access-token details?" -> GET /resources/vendor-only/users/access-tokens/v1/{id}
+- "Get access-token details?" -> GET /resources/vendor-only/tenants/access-tokens/v1/{id}
+- "Create a recover?" -> POST /resources/auth/v1/user/mfa/recover
+- "Create a disable?" -> POST /resources/users/v1/mfa/disable
+- "Create a verify?" -> POST /resources/users/v1/mfa/authenticator/{deviceId}/disable/verify
+- "Create a disable?" -> POST /resources/users/v1/mfa/sms/{deviceId}/disable
+- "Create a verify?" -> POST /resources/users/v1/mfa/sms/{deviceId}/disable/verify
+- "Create a verify?" -> POST /resources/auth/v1/user/mfa/verify
+- "Create a emailcode?" -> POST /resources/auth/v1/user/mfa/emailcode
+- "Create a verify?" -> POST /resources/auth/v1/user/mfa/emailcode/verify
+- "Create a enroll?" -> POST /resources/auth/v1/user/mfa/authenticator/enroll
+- "Create a verify?" -> POST /resources/auth/v1/user/mfa/authenticator/enroll/verify
+- "Create a verify?" -> POST /resources/auth/v1/user/mfa/authenticator/{deviceId}/verify
+- "Create a enroll?" -> POST /resources/auth/v1/user/mfa/sms/enroll
+- "Create a verify?" -> POST /resources/auth/v1/user/mfa/sms/enroll/verify
+- "Create a verify?" -> POST /resources/auth/v1/user/mfa/sms/{deviceId}/verify
+- "Create a enroll?" -> POST /resources/auth/v1/user/mfa/webauthn/enroll
+- "Create a verify?" -> POST /resources/auth/v1/user/mfa/webauthn/enroll/verify
+- "Create a verify?" -> POST /resources/auth/v1/user/mfa/webauthn/{deviceId}/verify
+- "List all allow-remember-device?" -> GET /resources/configurations/v1/mfa-policy/allow-remember-device
+- "Create a enroll?" -> POST /resources/users/v1/mfa/enroll
+- "Create a enroll?" -> POST /resources/users/v1/mfa/authenticator/enroll
+- "Create a verify?" -> POST /resources/users/v1/mfa/enroll/verify
+- "Create a verify?" -> POST /resources/users/v1/mfa/authenticator/enroll/verify
+- "Create a enroll?" -> POST /resources/users/v1/mfa/sms/enroll
+- "Create a verify?" -> POST /resources/users/v1/mfa/sms/enroll/verify
+- "Create a mfa?" -> POST /resources/configurations/v1/mfa
+- "List all mfa?" -> GET /resources/configurations/v1/mfa
+- "Create a mfa-policy?" -> POST /resources/configurations/v1/mfa-policy
+- "List all mfa-policy?" -> GET /resources/configurations/v1/mfa-policy
+- "List all strategies?" -> GET /resources/configurations/v1/mfa/strategies
+- "Create a strategy?" -> POST /resources/configurations/v1/mfa/strategies
+- "Create a password?" -> POST /resources/configurations/v1/password
+- "List all password?" -> GET /resources/configurations/v1/password
+- "Create a password-history-policy?" -> POST /resources/configurations/v1/password-history-policy
+- "List all password-history-policy?" -> GET /resources/configurations/v1/password-history-policy
+- "Create a reset?" -> POST /resources/users/v1/passwords/reset
+- "Create a verify?" -> POST /resources/users/v1/passwords/reset/verify
+- "Create a change?" -> POST /resources/users/v1/passwords/change
+- "List all config?" -> GET /resources/users/v1/passwords/config
+- "Create a email?" -> POST /resources/users/v2/passwords/reset/email
+- "Create a sm?" -> POST /resources/users/v2/passwords/reset/sms
+- "Create a verify?" -> POST /resources/users/v2/passwords/reset/sms/verify
+- "List all password-rotation?" -> GET /resources/configurations/v1/password-rotation
+- "Create a password-rotation?" -> POST /resources/configurations/v1/password-rotation
+- "List all vendor?" -> GET /resources/configurations/v1/password-rotation/vendor
+- "Create a prelogin?" -> POST /resources/auth/v1/passwordless/smscode/prelogin
+- "Create a postlogin?" -> POST /resources/auth/v1/passwordless/smscode/postlogin
+- "Create a prelogin?" -> POST /resources/auth/v1/passwordless/magiclink/prelogin
+- "Create a postlogin?" -> POST /resources/auth/v1/passwordless/magiclink/postlogin
+- "Create a prelogin?" -> POST /resources/auth/v1/passwordless/code/prelogin
+- "Create a postlogin?" -> POST /resources/auth/v1/passwordless/code/postlogin
+- "List all permissions?" -> GET /resources/permissions/v1
+- "Create a permission?" -> POST /resources/permissions/v1
+- "Delete a permission?" -> DELETE /resources/permissions/v1/{permissionId}
+- "Partially update a permission?" -> PATCH /resources/permissions/v1/{permissionId}
+- "List all categories?" -> GET /resources/permissions/v1/categories
+- "Create a category?" -> POST /resources/permissions/v1/categories
+- "Partially update a category?" -> PATCH /resources/permissions/v1/categories/{categoryId}
+- "Delete a category?" -> DELETE /resources/permissions/v1/categories/{categoryId}
+- "Create a access-token?" -> POST /resources/users/access-tokens/v1
+- "List all access-tokens?" -> GET /resources/users/access-tokens/v1
+- "Delete a access-token?" -> DELETE /resources/users/access-tokens/v1/{id}
+- "Create a api-token?" -> POST /resources/users/api-tokens/v1
+- "List all api-tokens?" -> GET /resources/users/api-tokens/v1
+- "Delete a api-token?" -> DELETE /resources/users/api-tokens/v1/{id}
+- "List all roles?" -> GET /resources/roles/v1
+- "Create a role?" -> POST /resources/roles/v1
+- "Delete a role?" -> DELETE /resources/roles/v1/{roleId}
+- "Partially update a role?" -> PATCH /resources/roles/v1/{roleId}
+- "List all phone-numbers?" -> GET /resources/users/phone-numbers/v1
+- "Create a phone-number?" -> POST /resources/users/phone-numbers/v1
+- "Create a preverify?" -> POST /resources/users/phone-numbers/v1/preverify
+- "Create a verify?" -> POST /resources/users/phone-numbers/v1/verify
+- "Delete a phone-number?" -> DELETE /resources/users/phone-numbers/v1/{id}
+- "Create a verify?" -> POST /resources/users/phone-numbers/v1/{id}/delete/verify
+- "List all me?" -> GET /resources/users/phone-numbers/v1/me
+- "List all phone-numbers?" -> GET /resources/users/phone-numbers/v2
+- "Create a sm?" -> POST /resources/configurations/v1/sms
+- "List all sms?" -> GET /resources/configurations/v1/sms
+- "List all templates?" -> GET /resources/configurations/v1/sms/templates
+- "Get template details?" -> GET /resources/configurations/v1/sms/templates/{type}
+- "Delete a template?" -> DELETE /resources/configurations/v1/sms/templates/{type}
+- "List all default?" -> GET /resources/configurations/v1/sms/templates/{type}/default
+- "List all all?" -> GET /resources/configurations/v1/sms/templates/default/all
+- "List all vendor?" -> GET /resources/configurations/sessions/v1/vendor
+- "List all sessions?" -> GET /resources/configurations/sessions/v1
+- "Create a session?" -> POST /resources/configurations/sessions/v1
+- "List all user-emails-policy?" -> GET /resources/configurations/v1/user-emails-policy
+- "Create a user-emails-policy?" -> POST /resources/configurations/v1/user-emails-policy
+- "List all groups?" -> GET /resources/groups/v1
+- "Create a group?" -> POST /resources/groups/v1
+- "Create a bulkGet?" -> POST /resources/groups/v1/bulkGet
+- "Partially update a group?" -> PATCH /resources/groups/v1/{id}
+- "Delete a group?" -> DELETE /resources/groups/v1/{id}
+- "Get group details?" -> GET /resources/groups/v1/{id}
+- "List all config?" -> GET /resources/groups/v1/config
+- "Create a config?" -> POST /resources/groups/v1/config
+- "Create a role?" -> POST /resources/groups/v1/{groupId}/roles
+- "Create a user?" -> POST /resources/groups/v1/{groupId}/users
+- "List all groups?" -> GET /resources/groups/v2
+- "Create a disable?" -> POST /resources/tenants/users/v1/{userId}/disable
+- "Create a enable?" -> POST /resources/tenants/users/v1/{userId}/enable
+- "Update a temporary?" -> PUT /resources/users/temporary/v1/{userId}
+- "Delete a temporary?" -> DELETE /resources/users/temporary/v1/{userId}
+- "List all configuration?" -> GET /resources/users/temporary/v1/configuration
+- "List all emails?" -> GET /resources/users/emails/v1
+- "Create a email?" -> POST /resources/users/emails/v1
+- "Create a verify?" -> POST /resources/users/emails/v1/verify
+- "Delete a email?" -> DELETE /resources/users/emails/v1/{emailId}
+- "Delete a vendor?" -> DELETE /resources/users/emails/v1/vendor/{userId}/{emailId}
+- "Create a primary?" -> POST /resources/users/emails/v1/vendor/{userId}/primary
+- "Create a primary?" -> POST /resources/users/emails/v1/me/primary
+- "List all me?" -> GET /resources/users/emails/v1/me
+- "Create a reset?" -> POST /resources/users/v1/activate/reset
+- "Create a reset?" -> POST /resources/users/v1/invitation/reset
+- "Create a all?" -> POST /resources/users/v1/invitation/reset/all
+- "List all users?" -> GET /resources/users/v3
+- "List all roles?" -> GET /resources/users/v3/roles
+- "List all groups?" -> GET /resources/users/v3/groups
+- "Create a unlock?" -> POST /resources/users/v3/me/unlock
+- "Create a user?" -> POST /resources/users/v2
+- "List all me?" -> GET /resources/users/v2/me
+- "Create a user?" -> POST /resources/users/v1
+- "Delete a user?" -> DELETE /resources/users/v1/{userId}
+- "Update a user?" -> PUT /resources/users/v1/{userId}
+- "Create a role?" -> POST /resources/users/v1/{userId}/roles
+- "List all phrase?" -> GET /resources/users/v1/query/phrase
+- "List all usernames?" -> GET /resources/usernames/v1
+- "Create a username?" -> POST /resources/usernames/v1
+- "Delete a username?" -> DELETE /resources/usernames/v1/{username}
+- "List all me?" -> GET /resources/usernames/v1/me
+- "Create a me?" -> POST /resources/users/v1/email/me
+- "Create a verify?" -> POST /resources/users/v1/email/me/verify
+- "Create a activate?" -> POST /resources/users/v1/activate
+- "Create a code?" -> POST /resources/users/v1/activate/code
+- "List all strategy?" -> GET /resources/users/v1/activate/strategy
+- "Create a accept?" -> POST /resources/users/v1/invitation/accept
+- "Create a code?" -> POST /resources/users/v1/invitation/accept/code
+- "List all me?" -> GET /resources/users/v3/me
+- "List all tenants?" -> GET /resources/users/v2/me/tenants
+- "List all hierarchy?" -> GET /resources/users/v2/me/hierarchy
+- "List all authorization?" -> GET /resources/users/v1/me/authorization
+- "List all tenants?" -> GET /resources/users/v1/me/tenants
+- "List all user-sources?" -> GET /resources/user-sources/v1
+- "Get user-source details?" -> GET /resources/user-sources/v1/{id}
+- "Delete a user-source?" -> DELETE /resources/user-sources/v1/{id}
+- "Create a auth0?" -> POST /resources/user-sources/v1/external/auth0
+- "Create a cognito?" -> POST /resources/user-sources/v1/external/cognito
+- "Create a firebase?" -> POST /resources/user-sources/v1/external/firebase
+- "Create a custom-code?" -> POST /resources/user-sources/v1/external/custom-code
+- "Create a federation?" -> POST /resources/user-sources/v1/federation
+- "Update a auth0?" -> PUT /resources/user-sources/v1/external/auth0/{id}
+- "Update a cognito?" -> PUT /resources/user-sources/v1/external/cognito/{id}
+- "Update a firebase?" -> PUT /resources/user-sources/v1/external/firebase/{id}
+- "Update a custom-code?" -> PUT /resources/user-sources/v1/external/custom-code/{id}
+- "Update a federation?" -> PUT /resources/user-sources/v1/federation/{id}
+- "Create a assign?" -> POST /resources/user-sources/v1/assign
+- "Create a unassign?" -> POST /resources/user-sources/v1/unassign
+- "List all users?" -> GET /resources/user-sources/v1/{id}/users
+- "List all me?" -> GET /resources/users/sessions/v1/me
+- "Delete a me?" -> DELETE /resources/users/sessions/v1/me/{id}
+- "Get user details?" -> GET /resources/vendor-only/users/v1/{userId}
+- "Create a unenroll?" -> POST /resources/vendor-only/users/v1/{userId}/mfa/unenroll
+- "Create a verify?" -> POST /resources/vendor-only/users/v1/passwords/verify
+- "Create a user?" -> POST /resources/vendor-only/users/v1
+- "List all statuses?" -> GET /resources/tenants/users/v1/statuses
+- "Delete a vendor?" -> DELETE /resources/users/phone-numbers/v1/vendor/{userId}/{phoneId}
+- "Create a invite?" -> POST /resources/users/bulk/v1/invite
+- "Get status details?" -> GET /resources/users/bulk/v1/status/{id}
+- "List all email?" -> GET /resources/users/v1/email
+- "Get user details?" -> GET /resources/users/v1/{id}
+- "Create a verify?" -> POST /resources/users/v1/{userId}/verify
+- "Create a tenant?" -> POST /resources/users/v1/{userId}/tenant
+- "Create a generate-activation-token?" -> POST /resources/users/v1/{userId}/links/generate-activation-token
+- "Create a generate-password-reset-token?" -> POST /resources/users/v1/{userId}/links/generate-password-reset-token
+- "Create a unlock?" -> POST /resources/users/v1/{userId}/unlock
+- "Create a lock?" -> POST /resources/users/v1/{userId}/lock
+- "List all users?" -> GET /resources/applications/v1/{appId}/users
+- "List all apps?" -> GET /resources/applications/v1/{userId}/apps
+- "Create a application?" -> POST /resources/applications/v1
+- "List all active?" -> GET /resources/applications/user-tenants/active/v1
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -9,11 +9,13 @@
 
 @group applications
 @endpoint POST /applications
+@desc Creates an application. In AppConfig, an application is simply an organizational construct like a folder. This organizational construct has a relationship with some unit of executable code. For example, you could create an application called MyMobileApp to organize and manage configuration data for a mobile application installed by your users.
 @required {Name: str}
 @optional {Description: str, Tags: map<str,str>}
 @returns(200) {Id: str?, Name: str?, Description: str?}
 
 @endpoint POST /applications/{ApplicationId}/configurationprofiles
+@desc Creates a configuration profile, which is information that enables AppConfig to access the configuration source. Valid configuration sources include the following:   Configuration data in YAML, JSON, and other formats stored in the AppConfig hosted configuration store   Configuration data stored as objects in an Amazon Simple Storage Service (Amazon S3) bucket   Pipelines stored in CodePipeline   Secrets stored in Secrets Manager   Standard and secure string parameters stored in Amazon Web Services Systems Manager Parameter Store   Configuration data in SSM documents stored in the Systems Manager document store   A configuration profile includes the following information:   The URI location of the configuration data.   The Identity and Access Management (IAM) role that provides access to the configuration data.   A validator for the configuration data. Available validators include either a JSON Schema or an Amazon Web Services Lambda function.   For more information, see Create a Configuration and a Configuration Profile in the AppConfig User Guide.
 @required {ApplicationId: str, Name: str, LocationUri: str}
 @optional {Description: str, RetrievalRoleArn: str, Validators: [Validator], Tags: map<str,str>, Type: str, KmsKeyIdentifier: str}
 @returns(200) {ApplicationId: str?, Id: str?, Name: str?, Description: str?, LocationUri: str?, RetrievalRoleArn: str?, Validators: [Validator]?, Type: str?, KmsKeyArn: str?, KmsKeyIdentifier: str?}
@@ -22,6 +24,7 @@
 
 @group deploymentstrategies
 @endpoint POST /deploymentstrategies
+@desc Creates a deployment strategy that defines important criteria for rolling out your configuration to the designated targets. A deployment strategy includes the overall duration required, a percentage of targets to receive the deployment during each interval, an algorithm that defines how percentage grows, and bake time.
 @required {Name: str, DeploymentDurationInMinutes: int, GrowthFactor: num(f32)}
 @optional {Description: str, FinalBakeTimeInMinutes: int, GrowthType: str, ReplicateTo: str, Tags: map<str,str>}
 @returns(200) {Id: str?, Name: str?, Description: str?, DeploymentDurationInMinutes: int?, GrowthType: str?, GrowthFactor: num(f32)?, FinalBakeTimeInMinutes: int?, ReplicateTo: str?}
@@ -30,6 +33,7 @@
 
 @group applications
 @endpoint POST /applications/{ApplicationId}/environments
+@desc Creates an environment. For each application, you define one or more environments. An environment is a deployment group of AppConfig targets, such as applications in a Beta or Production environment. You can also define environments for application subcomponents such as the Web, Mobile and Back-end components for your application. You can configure Amazon CloudWatch alarms for each environment. The system monitors alarms during a configuration deployment. If an alarm is triggered, the system rolls back the configuration.
 @required {ApplicationId: str, Name: str}
 @optional {Description: str, Monitors: [Monitor], Tags: map<str,str>}
 @returns(200) {ApplicationId: str?, Id: str?, Name: str?, Description: str?, State: str?, Monitors: [Monitor]?}
@@ -38,6 +42,7 @@
 
 @group extensions
 @endpoint POST /extensions
+@desc Creates an AppConfig extension. An extension augments your ability to inject logic or behavior at different points during the AppConfig workflow of creating or deploying a configuration. You can create your own extensions or use the Amazon Web Services authored extensions provided by AppConfig. For an AppConfig extension that uses Lambda, you must create a Lambda function to perform any computation and processing defined in the extension. If you plan to create custom versions of the Amazon Web Services authored notification extensions, you only need to specify an Amazon Resource Name (ARN) in the Uri field for the new extension version.   For a custom EventBridge notification extension, enter the ARN of the EventBridge default events in the Uri field.   For a custom Amazon SNS notification extension, enter the ARN of an Amazon SNS topic in the Uri field.   For a custom Amazon SQS notification extension, enter the ARN of an Amazon SQS message queue in the Uri field.    For more information about extensions, see Extending workflows in the AppConfig User Guide.
 @required {Name: str, Actions: map<str,[Action]>}
 @optional {Latest-Version-Number: int, Description: str, Parameters: map<str,Parameter>, Tags: map<str,str>}
 @returns(200) {Id: str?, Name: str?, VersionNumber: int?, Arn: str?, Description: str?, Actions: map<str,[Action]>?, Parameters: map<str,Parameter>?}
@@ -46,6 +51,7 @@
 
 @group extensionassociations
 @endpoint POST /extensionassociations
+@desc When you create an extension or configure an Amazon Web Services authored extension, you associate the extension with an AppConfig application, environment, or configuration profile. For example, you can choose to run the AppConfig deployment events to Amazon SNS Amazon Web Services authored extension and receive notifications on an Amazon SNS topic anytime a configuration deployment is started for a specific application. Defining which extension to associate with an AppConfig resource is called an extension association. An extension association is a specified relationship between an extension and an AppConfig resource, such as an application or a configuration profile. For more information about extensions and associations, see Extending workflows in the AppConfig User Guide.
 @required {ExtensionIdentifier: str, ResourceIdentifier: str}
 @optional {ExtensionVersionNumber: int, Parameters: map<str,str>, Tags: map<str,str>}
 @returns(200) {Id: str?, ExtensionArn: str?, ResourceArn: str?, Arn: str?, Parameters: map<str,str>?, ExtensionVersionNumber: int?}
@@ -54,14 +60,17 @@
 
 @group applications
 @endpoint POST /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}/hostedconfigurationversions
+@desc Creates a new configuration in the AppConfig hosted configuration store. If you're creating a feature flag, we recommend you familiarize yourself with the JSON schema for feature flag data. For more information, see Type reference for AWS.AppConfig.FeatureFlags in the AppConfig User Guide.
 @required {ApplicationId: str, ConfigurationProfileId: str, Content-Type: str, Content: bytes}
 @optional {Description: str, Latest-Version-Number: int, VersionLabel: str}
 @returns(200) {ApplicationId: str?, ConfigurationProfileId: str?, VersionNumber: int?, Description: str?, Content: bytes?, ContentType: str?, VersionLabel: str?, KmsKeyArn: str?}
 
 @endpoint DELETE /applications/{ApplicationId}
+@desc Deletes an application.
 @required {ApplicationId: str}
 
 @endpoint DELETE /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}
+@desc Deletes a configuration profile. To prevent users from unintentionally deleting actively-used configuration profiles, enable deletion protection.
 @required {ApplicationId: str, ConfigurationProfileId: str}
 @optional {x-amzn-deletion-protection-check: str}
 
@@ -69,12 +78,14 @@
 
 @group deployementstrategies
 @endpoint DELETE /deployementstrategies/{DeploymentStrategyId}
+@desc Deletes a deployment strategy.
 @required {DeploymentStrategyId: str}
 
 @endgroup
 
 @group applications
 @endpoint DELETE /applications/{ApplicationId}/environments/{EnvironmentId}
+@desc Deletes an environment. To prevent users from unintentionally deleting actively-used environments, enable deletion protection.
 @required {EnvironmentId: str, ApplicationId: str}
 @optional {x-amzn-deletion-protection-check: str}
 
@@ -82,6 +93,7 @@
 
 @group extensions
 @endpoint DELETE /extensions/{ExtensionIdentifier}
+@desc Deletes an AppConfig extension. You must delete all associations to an extension before you delete the extension.
 @required {ExtensionIdentifier: str}
 @optional {version: int}
 
@@ -89,37 +101,44 @@
 
 @group extensionassociations
 @endpoint DELETE /extensionassociations/{ExtensionAssociationId}
+@desc Deletes an extension association. This action doesn't delete extensions defined in the association.
 @required {ExtensionAssociationId: str}
 
 @endgroup
 
 @group applications
 @endpoint DELETE /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}/hostedconfigurationversions/{VersionNumber}
+@desc Deletes a version of a configuration from the AppConfig hosted configuration store.
 @required {ApplicationId: str, ConfigurationProfileId: str, VersionNumber: int}
 
 @endgroup
 
 @group settings
 @endpoint GET /settings
+@desc Returns information about the status of the DeletionProtection parameter.
 @returns(200) {DeletionProtection: DeletionProtectionSettings?{Enabled: bool?, ProtectionPeriodInMinutes: int?}}
 
 @endgroup
 
 @group applications
 @endpoint GET /applications/{ApplicationId}
+@desc Retrieves information about an application.
 @required {ApplicationId: str}
 @returns(200) {Id: str?, Name: str?, Description: str?}
 
 @endpoint GET /applications/{Application}/environments/{Environment}/configurations/{Configuration}
+@desc (Deprecated) Retrieves the latest deployed configuration.  Note the following important information.   This API action is deprecated. Calls to receive configuration data should use the StartConfigurationSession and GetLatestConfiguration APIs instead.     GetConfiguration is a priced call. For more information, see Pricing.
 @required {Application: str, Environment: str, Configuration: str, client_id: str}
 @optional {client_configuration_version: str}
 @returns(200) {Content: bytes?, ConfigurationVersion: str?, ContentType: str?}
 
 @endpoint GET /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}
+@desc Retrieves information about a configuration profile.
 @required {ApplicationId: str, ConfigurationProfileId: str}
 @returns(200) {ApplicationId: str?, Id: str?, Name: str?, Description: str?, LocationUri: str?, RetrievalRoleArn: str?, Validators: [Validator]?, Type: str?, KmsKeyArn: str?, KmsKeyIdentifier: str?}
 
 @endpoint GET /applications/{ApplicationId}/environments/{EnvironmentId}/deployments/{DeploymentNumber}
+@desc Retrieves information about a configuration deployment.
 @required {ApplicationId: str, EnvironmentId: str, DeploymentNumber: int}
 @returns(200) {ApplicationId: str?, EnvironmentId: str?, DeploymentStrategyId: str?, ConfigurationProfileId: str?, DeploymentNumber: int?, ConfigurationName: str?, ConfigurationLocationUri: str?, ConfigurationVersion: str?, Description: str?, DeploymentDurationInMinutes: int?, GrowthType: str?, GrowthFactor: num(f32)?, FinalBakeTimeInMinutes: int?, State: str?, EventLog: [DeploymentEvent]?, PercentageComplete: num(f32)?, StartedAt: str(timestamp)?, CompletedAt: str(timestamp)?, AppliedExtensions: [AppliedExtension]?, KmsKeyArn: str?, KmsKeyIdentifier: str?, VersionLabel: str?}
 
@@ -127,6 +146,7 @@
 
 @group deploymentstrategies
 @endpoint GET /deploymentstrategies/{DeploymentStrategyId}
+@desc Retrieves information about a deployment strategy. A deployment strategy defines important criteria for rolling out your configuration to the designated targets. A deployment strategy includes the overall duration required, a percentage of targets to receive the deployment during each interval, an algorithm that defines how percentage grows, and bake time.
 @required {DeploymentStrategyId: str}
 @returns(200) {Id: str?, Name: str?, Description: str?, DeploymentDurationInMinutes: int?, GrowthType: str?, GrowthFactor: num(f32)?, FinalBakeTimeInMinutes: int?, ReplicateTo: str?}
 
@@ -134,6 +154,7 @@
 
 @group applications
 @endpoint GET /applications/{ApplicationId}/environments/{EnvironmentId}
+@desc Retrieves information about an environment. An environment is a deployment group of AppConfig applications, such as applications in a Production environment or in an EU_Region environment. Each configuration deployment targets an environment. You can enable one or more Amazon CloudWatch alarms for an environment. If an alarm is triggered during a deployment, AppConfig roles back the configuration.
 @required {ApplicationId: str, EnvironmentId: str}
 @returns(200) {ApplicationId: str?, Id: str?, Name: str?, Description: str?, State: str?, Monitors: [Monitor]?}
 
@@ -141,6 +162,7 @@
 
 @group extensions
 @endpoint GET /extensions/{ExtensionIdentifier}
+@desc Returns information about an AppConfig extension.
 @required {ExtensionIdentifier: str}
 @optional {version_number: int}
 @returns(200) {Id: str?, Name: str?, VersionNumber: int?, Arn: str?, Description: str?, Actions: map<str,[Action]>?, Parameters: map<str,Parameter>?}
@@ -149,6 +171,7 @@
 
 @group extensionassociations
 @endpoint GET /extensionassociations/{ExtensionAssociationId}
+@desc Returns information about an AppConfig extension association. For more information about extensions and associations, see Extending workflows in the AppConfig User Guide.
 @required {ExtensionAssociationId: str}
 @returns(200) {Id: str?, ExtensionArn: str?, ResourceArn: str?, Arn: str?, Parameters: map<str,str>?, ExtensionVersionNumber: int?}
 
@@ -156,14 +179,17 @@
 
 @group applications
 @endpoint GET /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}/hostedconfigurationversions/{VersionNumber}
+@desc Retrieves information about a specific configuration version.
 @required {ApplicationId: str, ConfigurationProfileId: str, VersionNumber: int}
 @returns(200) {ApplicationId: str?, ConfigurationProfileId: str?, VersionNumber: int?, Description: str?, Content: bytes?, ContentType: str?, VersionLabel: str?, KmsKeyArn: str?}
 
 @endpoint GET /applications
+@desc Lists all applications in your Amazon Web Services account.
 @optional {max_results: int, next_token: str}
 @returns(200) {Items: [Application]?, NextToken: str?}
 
 @endpoint GET /applications/{ApplicationId}/configurationprofiles
+@desc Lists the configuration profiles for an application.
 @required {ApplicationId: str}
 @optional {max_results: int, next_token: str, type: str}
 @returns(200) {Items: [ConfigurationProfileSummary]?, NextToken: str?}
@@ -172,6 +198,7 @@
 
 @group deploymentstrategies
 @endpoint GET /deploymentstrategies
+@desc Lists deployment strategies.
 @optional {max_results: int, next_token: str}
 @returns(200) {Items: [DeploymentStrategy]?, NextToken: str?}
 
@@ -179,11 +206,13 @@
 
 @group applications
 @endpoint GET /applications/{ApplicationId}/environments/{EnvironmentId}/deployments
+@desc Lists the deployments for an environment in descending deployment number order.
 @required {ApplicationId: str, EnvironmentId: str}
 @optional {max_results: int, next_token: str}
 @returns(200) {Items: [DeploymentSummary]?, NextToken: str?}
 
 @endpoint GET /applications/{ApplicationId}/environments
+@desc Lists the environments for an application.
 @required {ApplicationId: str}
 @optional {max_results: int, next_token: str}
 @returns(200) {Items: [Environment]?, NextToken: str?}
@@ -192,6 +221,7 @@
 
 @group extensionassociations
 @endpoint GET /extensionassociations
+@desc Lists all AppConfig extension associations in the account. For more information about extensions and associations, see Extending workflows in the AppConfig User Guide.
 @optional {resource_identifier: str, extension_identifier: str, extension_version_number: int, max_results: int, next_token: str}
 @returns(200) {Items: [ExtensionAssociationSummary]?, NextToken: str?}
 
@@ -199,6 +229,7 @@
 
 @group extensions
 @endpoint GET /extensions
+@desc Lists all custom and Amazon Web Services authored AppConfig extensions in the account. For more information about extensions, see Extending workflows in the AppConfig User Guide.
 @optional {max_results: int, next_token: str, name: str}
 @returns(200) {Items: [ExtensionSummary]?, NextToken: str?}
 
@@ -206,6 +237,7 @@
 
 @group applications
 @endpoint GET /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}/hostedconfigurationversions
+@desc Lists configurations stored in the AppConfig hosted configuration store by version.
 @required {ApplicationId: str, ConfigurationProfileId: str}
 @optional {max_results: int, next_token: str, version_label: str}
 @returns(200) {Items: [HostedConfigurationVersionSummary]?, NextToken: str?}
@@ -214,6 +246,7 @@
 
 @group tags
 @endpoint GET /tags/{ResourceArn}
+@desc Retrieves the list of key-value tags assigned to the resource.
 @required {ResourceArn: str}
 @returns(200) {Tags: map<str,str>?}
 
@@ -221,11 +254,13 @@
 
 @group applications
 @endpoint POST /applications/{ApplicationId}/environments/{EnvironmentId}/deployments
+@desc Starts a deployment.
 @required {ApplicationId: str, EnvironmentId: str, DeploymentStrategyId: str, ConfigurationProfileId: str, ConfigurationVersion: str}
 @optional {Description: str, Tags: map<str,str>, KmsKeyIdentifier: str, DynamicExtensionParameters: map<str,str>}
 @returns(200) {ApplicationId: str?, EnvironmentId: str?, DeploymentStrategyId: str?, ConfigurationProfileId: str?, DeploymentNumber: int?, ConfigurationName: str?, ConfigurationLocationUri: str?, ConfigurationVersion: str?, Description: str?, DeploymentDurationInMinutes: int?, GrowthType: str?, GrowthFactor: num(f32)?, FinalBakeTimeInMinutes: int?, State: str?, EventLog: [DeploymentEvent]?, PercentageComplete: num(f32)?, StartedAt: str(timestamp)?, CompletedAt: str(timestamp)?, AppliedExtensions: [AppliedExtension]?, KmsKeyArn: str?, KmsKeyIdentifier: str?, VersionLabel: str?}
 
 @endpoint DELETE /applications/{ApplicationId}/environments/{EnvironmentId}/deployments/{DeploymentNumber}
+@desc Stops a deployment. This API action works only on deployments that have a status of DEPLOYING. This action moves the deployment to a status of ROLLED_BACK.
 @required {ApplicationId: str, EnvironmentId: str, DeploymentNumber: int}
 @returns(200) {ApplicationId: str?, EnvironmentId: str?, DeploymentStrategyId: str?, ConfigurationProfileId: str?, DeploymentNumber: int?, ConfigurationName: str?, ConfigurationLocationUri: str?, ConfigurationVersion: str?, Description: str?, DeploymentDurationInMinutes: int?, GrowthType: str?, GrowthFactor: num(f32)?, FinalBakeTimeInMinutes: int?, State: str?, EventLog: [DeploymentEvent]?, PercentageComplete: num(f32)?, StartedAt: str(timestamp)?, CompletedAt: str(timestamp)?, AppliedExtensions: [AppliedExtension]?, KmsKeyArn: str?, KmsKeyIdentifier: str?, VersionLabel: str?}
 
@@ -233,15 +268,18 @@
 
 @group tags
 @endpoint POST /tags/{ResourceArn}
+@desc Assigns metadata to an AppConfig resource. Tags help organize and categorize your AppConfig resources. Each tag consists of a key and an optional value, both of which you define. You can specify a maximum of 50 tags for a resource.
 @required {ResourceArn: str, Tags: map<str,str>}
 
 @endpoint DELETE /tags/{ResourceArn}
+@desc Deletes a tag key and value from an AppConfig resource.
 @required {ResourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group settings
 @endpoint PATCH /settings
+@desc Updates the value of the DeletionProtection parameter.
 @optional {DeletionProtection: DeletionProtectionSettings}
 @returns(200) {DeletionProtection: DeletionProtectionSettings?{Enabled: bool?, ProtectionPeriodInMinutes: int?}}
 
@@ -249,11 +287,13 @@
 
 @group applications
 @endpoint PATCH /applications/{ApplicationId}
+@desc Updates an application.
 @required {ApplicationId: str}
 @optional {Name: str, Description: str}
 @returns(200) {Id: str?, Name: str?, Description: str?}
 
 @endpoint PATCH /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}
+@desc Updates a configuration profile.
 @required {ApplicationId: str, ConfigurationProfileId: str}
 @optional {Name: str, Description: str, RetrievalRoleArn: str, Validators: [Validator], KmsKeyIdentifier: str}
 @returns(200) {ApplicationId: str?, Id: str?, Name: str?, Description: str?, LocationUri: str?, RetrievalRoleArn: str?, Validators: [Validator]?, Type: str?, KmsKeyArn: str?, KmsKeyIdentifier: str?}
@@ -262,6 +302,7 @@
 
 @group deploymentstrategies
 @endpoint PATCH /deploymentstrategies/{DeploymentStrategyId}
+@desc Updates a deployment strategy.
 @required {DeploymentStrategyId: str}
 @optional {Description: str, DeploymentDurationInMinutes: int, FinalBakeTimeInMinutes: int, GrowthFactor: num(f32), GrowthType: str}
 @returns(200) {Id: str?, Name: str?, Description: str?, DeploymentDurationInMinutes: int?, GrowthType: str?, GrowthFactor: num(f32)?, FinalBakeTimeInMinutes: int?, ReplicateTo: str?}
@@ -270,6 +311,7 @@
 
 @group applications
 @endpoint PATCH /applications/{ApplicationId}/environments/{EnvironmentId}
+@desc Updates an environment.
 @required {ApplicationId: str, EnvironmentId: str}
 @optional {Name: str, Description: str, Monitors: [Monitor]}
 @returns(200) {ApplicationId: str?, Id: str?, Name: str?, Description: str?, State: str?, Monitors: [Monitor]?}
@@ -278,6 +320,7 @@
 
 @group extensions
 @endpoint PATCH /extensions/{ExtensionIdentifier}
+@desc Updates an AppConfig extension. For more information about extensions, see Extending workflows in the AppConfig User Guide.
 @required {ExtensionIdentifier: str}
 @optional {Description: str, Actions: map<str,[Action]>, Parameters: map<str,Parameter>, VersionNumber: int}
 @returns(200) {Id: str?, Name: str?, VersionNumber: int?, Arn: str?, Description: str?, Actions: map<str,[Action]>?, Parameters: map<str,Parameter>?}
@@ -286,6 +329,7 @@
 
 @group extensionassociations
 @endpoint PATCH /extensionassociations/{ExtensionAssociationId}
+@desc Updates an association. For more information about extensions and associations, see Extending workflows in the AppConfig User Guide.
 @required {ExtensionAssociationId: str}
 @optional {Parameters: map<str,str>}
 @returns(200) {Id: str?, ExtensionArn: str?, ResourceArn: str?, Arn: str?, Parameters: map<str,str>?, ExtensionVersionNumber: int?}
@@ -294,6 +338,7 @@
 
 @group applications
 @endpoint POST /applications/{ApplicationId}/configurationprofiles/{ConfigurationProfileId}/validators
+@desc Uses the validators in a configuration profile to validate a configuration.
 @required {ApplicationId: str, ConfigurationProfileId: str, configuration_version: str}
 
 @endgroup

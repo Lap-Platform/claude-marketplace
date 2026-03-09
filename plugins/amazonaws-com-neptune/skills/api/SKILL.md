@@ -95,94 +95,10 @@ Not specified.
 | POST | / | Starts an Amazon Neptune DB cluster that was stopped using the Amazon console, the Amazon CLI stop-db-cluster command, or the StopDBCluster API. |
 | POST | / | Stops an Amazon Neptune DB cluster. When you stop a DB cluster, Neptune retains the DB cluster's metadata, including its endpoints and DB parameter groups. Neptune also retains the transaction logs so you can do a point-in-time restore if necessary. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new Neptune cluster?" -> POST / (CreateDBCluster: DBClusterIdentifier + Engine required)
-- "How do I add a DB instance to my cluster?" -> POST / (CreateDBInstance: DBInstanceIdentifier + DBInstanceClass + Engine + DBClusterIdentifier required)
-- "What Neptune clusters do I have?" -> POST / (DescribeDBClusters: all params optional, paginated via Marker/MaxRecords)
-- "How do I take a snapshot of my cluster?" -> POST / (CreateDBClusterSnapshot: DBClusterSnapshotIdentifier + DBClusterIdentifier required)
-- "How do I restore a cluster from a snapshot?" -> POST / (RestoreDBClusterFromSnapshot: DBClusterIdentifier + SnapshotIdentifier + Engine required)
-- "How do I restore a cluster to a specific point in time?" -> POST / (RestoreDBClusterToPointInTime: DBClusterIdentifier + SourceDBClusterIdentifier required, set RestoreToTime or UseLatestRestorableTime)
-- "How do I delete a Neptune cluster safely?" -> POST / (DeleteDBCluster: DBClusterIdentifier required; set SkipFinalSnapshot=false and provide FinalDBSnapshotIdentifier)
-- "How do I set up event notifications for my cluster?" -> POST / (CreateEventSubscription: SubscriptionName + SnsTopicArn required)
-- "How do I enable IAM authentication on an existing cluster?" -> POST / (ModifyDBCluster: DBClusterIdentifier required, EnableIAMDatabaseAuthentication=true)
-- "How do I check pending maintenance for my resources?" -> POST / (DescribePendingMaintenanceActions: all params optional, filter by ResourceIdentifier)
-- "How do I create a global database for cross-region replication?" -> POST / (CreateGlobalCluster: GlobalClusterIdentifier required, optionally link SourceDBClusterIdentifier)
-- "What instance classes are available for Neptune?" -> POST / (DescribeOrderableDBInstanceOptions: Engine required)
-- "How do I trigger a failover on my cluster?" -> POST / (FailoverDBCluster: optional DBClusterIdentifier + TargetDBInstanceIdentifier)
-- "How do I copy a cluster snapshot to another region?" -> POST / (CopyDBClusterSnapshot: SourceDBClusterSnapshotIdentifier + TargetDBClusterSnapshotIdentifier required, use PreSignedUrl for cross-region)
-- "How do I stop and start a Neptune cluster?" -> POST / (StopDBCluster / StartDBCluster: DBClusterIdentifier required)
-
-## Response Tips
-
-- **Describe/List endpoints**: All return paginated results -- check `Marker` in the response; if non-null, pass it back as `Marker` in the next request. Use `MaxRecords` (default 100, max varies) to control page size.
-- **Cluster operations**: Responses wrap the cluster in a `DBCluster` object with deeply nested sub-objects (`PendingModifiedValues`, `ServerlessV2ScalingConfiguration`, `VpcSecurityGroups[]`). Always check `Status` for the cluster's current lifecycle state.
-- **Instance operations**: The `DBInstance` response nests `Endpoint` (with Address/Port/HostedZoneId), `DBSubnetGroup` (with Subnets[]), and `PendingModifiedValues`. Extract `Endpoint.Address` and `Endpoint.Port` for connection strings.
-- **Snapshot operations**: `PercentProgress` (int) indicates copy/create progress; `Status` transitions through `creating` -> `available`. `StorageEncrypted` and `KmsKeyId` confirm encryption state.
-- **Global cluster operations**: `GlobalClusterMembers[]` contains the member clusters with their ARNs and `IsWriter` flag to identify the primary.
-- **Event subscriptions**: Check `Status` field (e.g., `active`, `creating`, `deleting`) and `Enabled` (bool) separately -- a subscription can exist but be disabled.
-- **Parameter groups**: Modify/Reset return only the group name as confirmation, not the full parameter list. Re-describe to verify changes.
-
-## Anomaly Flags
-
-- **DeletionProtection is false**: Surface when describing clusters or instances where `DeletionProtection` is `false` -- the resource can be accidentally deleted.
-- **StorageEncrypted is false**: Flag unencrypted clusters and snapshots, especially in production contexts.
-- **PendingModifiedValues is non-empty**: A cluster or instance has unapplied changes waiting for the next maintenance window or restart. Surface the specific pending fields.
-- **PendingMaintenanceActions detected**: When `DescribePendingMaintenanceActions` returns results, alert the user with action descriptions and deadlines (`AutoAppliedAfterDate`, `ForcedApplyDate`).
-- **IAMDatabaseAuthenticationEnabled is false**: Flag clusters using only password auth when IAM auth could strengthen security posture.
-- **PubliclyAccessible is true on DB instances**: Warn when instances are exposed to the public internet.
-- **BackupRetentionPeriod is 1 (default minimum)**: Low retention means limited point-in-time restore window. Recommend increasing for production workloads.
-- **Snapshot shared publicly**: When `DescribeDBClusterSnapshotAttributes` returns `AttributeName=restore` with `all` in values, the snapshot is public.
-- **AutoMinorVersionUpgrade is false**: Instance will miss security patches from automatic minor version upgrades.
-- **ServerlessV2ScalingConfiguration bounds**: If `MinCapacity` equals `MaxCapacity`, the cluster cannot scale -- effectively fixed capacity running as serverless.
-
-## Playbook
-
-### 1. Provision a New Neptune Cluster with Instances
-
-1. **Create a DB subnet group**: POST / CreateDBSubnetGroup with `DBSubnetGroupName`, `DBSubnetGroupDescription`, and `SubnetIds` spanning at least 2 AZs.
-2. **Create a cluster parameter group** (optional): POST / CreateDBClusterParameterGroup with `DBParameterGroupFamily=neptune1.x` and custom description.
-3. **Create the cluster**: POST / CreateDBCluster with `DBClusterIdentifier`, `Engine=neptune`, `DBSubnetGroupName`, `StorageEncrypted=true`, `DeletionProtection=true`, and `EnableCloudwatchLogsExports=["audit"]`.
-4. **Wait for cluster status `available`**: POST / DescribeDBClusters filtering by `DBClusterIdentifier` until `Status=available`.
-5. **Add a writer instance**: POST / CreateDBInstance with `DBClusterIdentifier`, `DBInstanceIdentifier`, `DBInstanceClass=db.r5.large`, `Engine=neptune`.
-6. **Add a reader instance**: Repeat step 5 with a different `DBInstanceIdentifier` and optionally set `PromotionTier` to control failover priority.
-7. **Verify endpoints**: Extract `Endpoint` (writer) and `ReaderEndpoint` from the DescribeDBClusters response.
-
-### 2. Snapshot and Restore for Disaster Recovery
-
-1. **Create a manual snapshot**: POST / CreateDBClusterSnapshot with `DBClusterIdentifier` and `DBClusterSnapshotIdentifier`.
-2. **Monitor progress**: POST / DescribeDBClusterSnapshots until `Status=available` and `PercentProgress=100`.
-3. **Copy snapshot cross-region** (optional): POST / CopyDBClusterSnapshot with source/target identifiers and `KmsKeyId` for the destination region.
-4. **Restore from snapshot**: POST / RestoreDBClusterFromSnapshot with a new `DBClusterIdentifier`, the `SnapshotIdentifier`, and `Engine=neptune`.
-5. **Add instances to restored cluster**: POST / CreateDBInstance targeting the new cluster identifier.
-6. **Update application connection strings** to point to the restored cluster's endpoint.
-
-### 3. Set Up Global Database for Cross-Region Reads
-
-1. **Create the global cluster**: POST / CreateGlobalCluster with `GlobalClusterIdentifier` and `SourceDBClusterIdentifier` pointing to the existing primary cluster.
-2. **Verify global cluster status**: POST / DescribeGlobalClusters, confirm `Status=available` and the primary appears in `GlobalClusterMembers` with `IsWriter=true`.
-3. **Create a secondary cluster** in the target region: POST / CreateDBCluster with `GlobalClusterIdentifier` set, `Engine=neptune`, and target region's subnet group.
-4. **Add reader instances** to the secondary cluster in the target region.
-5. **Test failover readiness**: POST / FailoverGlobalCluster with `GlobalClusterIdentifier` and `TargetDbClusterIdentifier` pointing to the secondary (only when ready to promote).
-
-### 4. Enable Monitoring and Event Notifications
-
-1. **Create an SNS topic** (outside Neptune API) for notifications.
-2. **Create event subscription**: POST / CreateEventSubscription with `SubscriptionName`, `SnsTopicArn`, `SourceType=db-cluster`, and relevant `EventCategories` (e.g., `["failover", "maintenance"]`).
-3. **Add source identifiers**: POST / AddSourceIdentifierToSubscription to attach specific cluster identifiers to the subscription.
-4. **Enable CloudWatch logs on the cluster**: POST / ModifyDBCluster with `CloudwatchLogsExportConfiguration` setting `EnableLogTypes=["audit", "slowquery"]`.
-5. **Verify**: POST / DescribeEventSubscriptions to confirm `Status=active` and `Enabled=true`.
-
-### 5. Safe Cluster Teardown
-
-1. **List instances in the cluster**: POST / DescribeDBInstances, filter by `DBClusterIdentifier`.
-2. **Delete all reader instances first**: POST / DeleteDBInstance for each reader (set `SkipFinalSnapshot=true` since the cluster snapshot covers data).
-3. **Delete the writer instance**: POST / DeleteDBInstance for the last remaining instance.
-4. **Create a final snapshot**: POST / DeleteDBCluster with `SkipFinalSnapshot=false` and `FinalDBSnapshotIdentifier` to capture data before deletion.
-5. **Clean up parameter groups and subnet groups**: POST / DeleteDBClusterParameterGroup, DeleteDBParameterGroup, DeleteDBSubnetGroup.
-6. **Remove from global cluster first** (if applicable): POST / RemoveFromGlobalCluster before deleting the cluster.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

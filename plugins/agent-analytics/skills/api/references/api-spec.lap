@@ -10,235 +10,269 @@
 
 @group track
 @endpoint POST /track
-@required {token: str, event: str}
-@optional {properties: map, user_id: str, session_id: str, timestamp: num}
-@returns(202) {ok: bool, queued: bool}
-@errors {400, 401, 429}
+@desc Track a single event
+@required {token: str # Project token (`aat_*`), event: str # Event name (max 256 chars)}
+@optional {properties: map # Arbitrary key-value properties (max 8KB JSON). The tracker auto-populates `path`, `url`, `hostname`, `title`, `referrer`, `screen`, `browser`, `browser_version`, `os`, `device`, `language`, and `utm_*` params., user_id: str # Anonymous user identifier (max 256 chars). The tracker auto-generates one via localStorage., session_id: str # Session identifier (max 256 chars). The tracker auto-generates one via sessionStorage with 30-min inactivity timeout., timestamp: num # Unix timestamp in milliseconds. Defaults to `Date.now()`. Must be within 30 days ago to 5 minutes in the future.}
+@returns(202) {ok: bool, queued: bool} # Event queued
+@errors {400: Validation error (missing fields, invalid event name, properties too large), 401: Invalid or missing token, 429: Rate limited}
 
 @endpoint POST /track/batch
-@required {events: [map{token!: str, event!: str, properties: map, user_id: str, session_id: str, timestamp: num}]}
-@returns(202) {ok: bool, queued: bool, count: int}
-@errors {400, 401, 429}
+@desc Track multiple events
+@required {events: [map{token!: str, event!: str, properties: map, user_id: str, session_id: str, timestamp: num}] # Array of events (max 100 per batch)}
+@returns(202) {ok: bool, queued: bool, count: int} # Events queued
+@errors {400: Validation error (empty array, exceeds 100 events, invalid event), 401: Invalid or missing token, 429: Rate limited}
 
 @endgroup
 
 @group stats
 @endpoint GET /stats
-@required {project: str}
-@optional {since: str, groupBy: str(hour/day/week/month)=day}
-@returns(200) {project: str, period: map{from: str, to: str, groupBy: str}, totals: map{unique_users: int, total_events: int}, timeSeries: [map], events: [map], sessions: map{total_sessions: int, bounce_rate: num, avg_duration: int, pages_per_session: num, sessions_per_user: num}}
-@errors {400, 401}
+@desc Aggregated stats overview
+@required {project: str # Project name}
+@optional {since: str # Start date. Accepts ISO 8601 (`2025-01-01`) or shorthand (`7d`, `30d`). Defaults to 7 days ago., groupBy: str(hour/day/week/month)=day # Time series granularity}
+@returns(200) {project: str, period: map{from: str, to: str, groupBy: str}, totals: map{unique_users: int, total_events: int}, timeSeries: [map], events: [map], sessions: map{total_sessions: int, bounce_rate: num, avg_duration: int, pages_per_session: num, sessions_per_user: num}} # Stats overview
+@errors {400: Missing project parameter, 401: Missing or invalid API key}
 
 @endgroup
 
 @group events
 @endpoint GET /events
-@required {project: str}
-@optional {event: str, session_id: str, since: str, limit: int=100}
-@returns(200) {project: str, events: [map]}
-@errors {401}
+@desc Raw event log
+@required {project: str # Project name}
+@optional {event: str # Filter by event name, session_id: str # Filter by session ID, since: str # Start date. Accepts ISO 8601 (`2025-01-01`) or shorthand (`7d`, `30d`). Defaults to 7 days ago., limit: int=100 # Max results to return (1-1000, default 100)}
+@returns(200) {project: str, events: [map]} # Event list
+@errors {401: Missing or invalid API key}
 
 @endgroup
 
 @group query
 @endpoint POST /query
-@required {project: str}
-@optional {metrics: [str]=event_count, group_by: [str]=, filters: [map{field: str, op: str, value: any}], date_from: str, date_to: str, order_by: str(event_count/unique_users/date/event), order: str(asc/desc)=desc, limit: int=100}
-@returns(200) {project: str, period: map{from: str, to: str}, metrics: [str], group_by: [str], rows: [map], count: int}
-@errors {400, 401}
+@desc Flexible analytics query
+@required {project: str # Project name}
+@optional {metrics: [str]=event_count # Metrics to compute, group_by: [str]= # Fields to group results by, filters: [map{field: str, op: str, value: any}], date_from: str # Start date (ISO 8601 or `Nd` shorthand). Defaults to 7 days ago., date_to: str # End date (ISO 8601). Defaults to today., order_by: str(event_count/unique_users/date/event) # Field to sort by, order: str(asc/desc)=desc, limit: int=100}
+@returns(200) {project: str, period: map{from: str, to: str}, metrics: [str], group_by: [str], rows: [map], count: int} # Query results
+@errors {400: Invalid query (bad metric, group_by, filter, or missing project), 401: Missing or invalid API key}
+@example_request {"project":"my-site","metrics":["event_count","unique_users"],"group_by":["date"],"filters":[{"field":"event","op":"eq","value":"page_view"}],"date_from":"2025-01-01"}
 
 @endgroup
 
 @group properties
 @endpoint GET /properties
-@required {project: str}
-@optional {since: str}
-@returns(200) {project: str, events: [map], property_keys: [str]}
-@errors {401}
+@desc Discover event names and property keys
+@required {project: str # Project name}
+@optional {since: str # Start date. Accepts ISO 8601 (`2025-01-01`) or shorthand (`7d`, `30d`). Defaults to 7 days ago.}
+@returns(200) {project: str, events: [map], property_keys: [str]} # Event names and property keys
+@errors {401: Missing or invalid API key}
 
 @endpoint GET /properties/received
-@required {project: str}
-@optional {since: str, sample: int=5000}
-@returns(200) {project: str, sample_size: int, since: str, properties: [map]}
-@errors {401}
+@desc Property keys by event name
+@required {project: str # Project name}
+@optional {since: str # Start date. Accepts ISO 8601 (`2025-01-01`) or shorthand (`7d`, `30d`). Defaults to 7 days ago., sample: int=5000 # Number of recent events to sample (100-10000, default 5000)}
+@returns(200) {project: str, sample_size: int, since: str, properties: [map]} # Property-to-event mapping
+@errors {401: Missing or invalid API key}
 
 @endgroup
 
 @group sessions
 @endpoint GET /sessions
-@required {project: str}
-@optional {since: str, limit: int=100, user_id: str, is_bounce: int(0/1)}
-@returns(200) {project: str, sessions: [map]}
-@errors {401}
+@desc List sessions
+@required {project: str # Project name}
+@optional {since: str # Start date. Accepts ISO 8601 (`2025-01-01`) or shorthand (`7d`, `30d`). Defaults to 7 days ago., limit: int=100 # Max results to return (1-1000, default 100), user_id: str # Filter by user ID, is_bounce: int(0/1) # Filter by bounce status (0 or 1)}
+@returns(200) {project: str, sessions: [map]} # Session list
+@errors {401: Missing or invalid API key}
 
 @endgroup
 
 @group breakdown
 @endpoint GET /breakdown
-@required {project: str, property: str}
-@optional {event: str, since: str, limit: int=20}
-@returns(200) {project: str, property: str, event: str?, values: [map], total_events: int, total_with_property: int}
-@errors {400, 401}
+@desc Top property values
+@required {project: str # Project name, property: str # Property key to break down by (alphanumeric + underscores, max 128 chars). Use `country` for visitor geography.}
+@optional {event: str # Filter to a specific event name, since: str # Start date. Accepts ISO 8601 (`2025-01-01`) or shorthand (`7d`, `30d`). Defaults to 7 days ago., limit: int=20 # Max values to return (1-1000, default 20)}
+@returns(200) {project: str, property: str, event: str?, values: [map], total_events: int, total_with_property: int} # Property breakdown
+@errors {400: Missing property parameter or invalid property key, 401: Missing or invalid API key}
 
 @endgroup
 
 @group insights
 @endpoint GET /insights
-@required {project: str}
-@optional {period: str(1d/7d/14d/30d/90d)=7d}
-@returns(200) {project: str, current_period: map{from: str, to: str}, previous_period: map{from: str, to: str}, metrics: map{total_events: map{current: num, previous: num, change: num, change_pct: int?}, unique_users: map{current: num, previous: num, change: num, change_pct: int?}, total_sessions: map{current: num, previous: num, change: num, change_pct: int?}, bounce_rate: map{current: num, previous: num, change: num, change_pct: int?}, avg_duration: map{current: num, previous: num, change: num, change_pct: int?}}, trend: str}
-@errors {400, 401}
+@desc Period-over-period comparison
+@required {project: str # Project name}
+@optional {period: str(1d/7d/14d/30d/90d)=7d # Comparison period}
+@returns(200) {project: str, current_period: map{from: str, to: str}, previous_period: map{from: str, to: str}, metrics: map{total_events: map{current: num, previous: num, change: num, change_pct: int?}, unique_users: map{current: num, previous: num, change: num, change_pct: int?}, total_sessions: map{current: num, previous: num, change: num, change_pct: int?}, bounce_rate: map{current: num, previous: num, change: num, change_pct: int?}, avg_duration: map{current: num, previous: num, change: num, change_pct: int?}}, trend: str} # Insights with trend
+@errors {400: Invalid period, 401: Missing or invalid API key}
 
 @endgroup
 
 @group pages
 @endpoint GET /pages
-@required {project: str}
-@optional {type: str(entry/exit/both)=entry, since: str, limit: int=20}
-@returns(200) {project: str, entry_pages: [map], exit_pages: [map]}
-@errors {400, 401}
+@desc Entry/exit page stats
+@required {project: str # Project name}
+@optional {type: str(entry/exit/both)=entry # Page type to query, since: str # Start date. Accepts ISO 8601 (`2025-01-01`) or shorthand (`7d`, `30d`). Defaults to 7 days ago., limit: int=20 # Max pages to return (1-1000, default 20)}
+@returns(200) {project: str, entry_pages: [map], exit_pages: [map]} # Page stats
+@errors {400: Invalid page type, 401: Missing or invalid API key}
 
 @endgroup
 
 @group sessions
 @endpoint GET /sessions/distribution
-@required {project: str}
-@optional {since: str}
-@returns(200) {project: str, distribution: [map], median_bucket: str?, engaged_pct: num}
-@errors {401}
+@desc Session duration histogram
+@required {project: str # Project name}
+@optional {since: str # Start date. Accepts ISO 8601 (`2025-01-01`) or shorthand (`7d`, `30d`). Defaults to 7 days ago.}
+@returns(200) {project: str, distribution: [map], median_bucket: str?, engaged_pct: num} # Session duration distribution
+@errors {401: Missing or invalid API key}
 
 @endgroup
 
 @group heatmap
 @endpoint GET /heatmap
-@required {project: str}
-@optional {since: str}
-@returns(200) {project: str, heatmap: [map], peak: map?, busiest_day: str?, busiest_hour: int?}
-@errors {401}
+@desc Day-of-week x hour traffic grid
+@required {project: str # Project name}
+@optional {since: str # Start date. Accepts ISO 8601 (`2025-01-01`) or shorthand (`7d`, `30d`). Defaults to 7 days ago.}
+@returns(200) {project: str, heatmap: [map], peak: map?, busiest_day: str?, busiest_hour: int?} # Heatmap grid
+@errors {401: Missing or invalid API key}
 
 @endgroup
 
 @group funnel
 @endpoint POST /funnel
-@required {project: str, steps: [map{event!: str, filters: [map]}]}
-@optional {conversion_window_hours: num=168, since: str=30d, count_by: str(user_id/session_id)=user_id, breakdown: str, breakdown_limit: num=10}
-@returns(200) {steps: [map], overall_conversion_rate: num, breakdowns: [map]}
-@errors {400, 401, 404}
+@desc Funnel analysis
+@required {project: str # Project name, steps: [map{event!: str, filters: [map]}] # Funnel steps (2-8). Each step has an event name and optional property filters.}
+@optional {conversion_window_hours: num=168 # Max hours from step 1 entry to final step (1-8760, default 168 = 7 days), since: str=30d # Lookback period (ISO date or shorthand like '30d'). Default: 30d, count_by: str(user_id/session_id)=user_id # Count by unique users or sessions, breakdown: str # Optional property key to segment funnel by (e.g. 'variant', 'country'). Extracted from step 1 events only., breakdown_limit: num=10 # Max breakdown groups, ordered by step 1 users descending (1-50, default 10)}
+@returns(200) {steps: [map], overall_conversion_rate: num, breakdowns: [map]} # Funnel analysis results
+@errors {400: Validation error (invalid steps, filters, window, or count_by), 401: Missing or invalid API key, 404: Project not found}
+@example_request {"project":"my-site","steps":[{"event":"page_view"},{"event":"signup"},{"event":"purchase"}]}
 
 @endgroup
 
 @group retention
 @endpoint GET /retention
-@required {project: str}
-@optional {period: str(day/week/month)=week, cohorts: int=8, event: str, returning_event: str, since: str}
-@returns(200) {period: str, cohorts: [map], average_rates: [num], users_analyzed: int}
-@errors {400, 401, 404}
+@desc Cohort retention analysis
+@required {project: str # Project name}
+@optional {period: str(day/week/month)=week # Cohort grouping period, cohorts: int=8 # Number of cohort periods (max: day=30, week=12, month=12), event: str # First-seen event filter (e.g. `signup`). Switches to event-based retention., returning_event: str # What counts as "returned" (defaults to same as `event`), since: str # Start date. Accepts ISO 8601 (`2025-01-01`) or shorthand (`7d`, `30d`). Defaults to 7 days ago.}
+@returns(200) {period: str, cohorts: [map], average_rates: [num], users_analyzed: int} # Cohort retention data
+@errors {400: Invalid period or cohorts value, 401: Missing or invalid API key, 404: Project not found}
 
 @endgroup
 
 @group stream
 @endpoint GET /stream
-@optional {project: str, events: str, filter: str}
-@returns(200)
-@errors {401, 404, 429}
+@desc Live event stream (SSE)
+@optional {project: str # Project name. Defaults to first project., events: str # Comma-separated event name filter. Omit for all events., filter: str # Property filter as `key:value` pairs separated by `;`. Multiple filters use AND logic.}
+@returns(200) SSE event stream
+@errors {401: Missing or invalid API key, 404: Project not found, 429: Too many concurrent streams (max 10 per account)}
 
 @endgroup
 
 @group live
 @endpoint GET /live
-@optional {project: str, window: int=60}
-@returns(200) {project: str, window_seconds: int, timestamp: num, active_visitors: int, active_sessions: int, events_per_minute: int, top_pages: [map], top_events: [map], recent_events: [map]}
-@errors {401, 404}
+@desc Live snapshot (real-time)
+@optional {project: str # Project name. Defaults to first project., window: int=60 # Time window in seconds (10-300, default 60)}
+@returns(200) {project: str, window_seconds: int, timestamp: num, active_visitors: int, active_sessions: int, events_per_minute: int, top_pages: [map], top_events: [map], recent_events: [map]} # Live snapshot
+@errors {401: Missing or invalid API key, 404: Project not found}
 
 @endgroup
 
 @group projects
 @endpoint GET /projects
-@returns(200) {projects: [map], has_api_key: bool, project_limit: int, tier: str}
-@errors {401}
+@desc List all projects
+@returns(200) {projects: [map], has_api_key: bool, project_limit: int, tier: str} # Project list
+@errors {401: Missing or invalid API key}
 
 @endpoint POST /projects
-@required {name: str}
-@optional {allowed_origins: str=*}
-@returns(200) {id: str, name: str, project_token: str, existing: bool}
-@returns(201) {id: str, name: str, project_token: str, allowed_origins: str, snippet: str, api_example: str}
-@errors {400, 401, 403, 409}
+@desc Create a new project
+@required {name: str # Project name (alphanumeric, hyphens, underscores, dots; max 64 chars)}
+@optional {allowed_origins: str=* # Allowed origins for CORS. Use `*` for any origin.}
+@returns(200) {id: str, name: str, project_token: str, existing: bool} # Project already exists (returned existing project)
+@returns(201) {id: str, name: str, project_token: str, allowed_origins: str, snippet: str, api_example: str} # Project created
+@errors {400: Missing name or invalid project name, 401: Missing or invalid API key, 403: Project limit reached for your tier, 409: Duplicate origin}
 
 @endpoint GET /projects/{id}
+@desc Get project details
 @required {id: str}
-@returns(200) {id: str, name: str, project_token: str, allowed_origins: str, usage_today: map}
-@errors {401, 403, 404}
+@returns(200) {id: str, name: str, project_token: str, allowed_origins: str, usage_today: map} # Project details
+@errors {401: Missing or invalid API key, 403: Not your project, 404: Project not found}
 
 @endpoint PATCH /projects/{id}
+@desc Update a project
 @required {id: str}
-@optional {name: str, allowed_origins: str}
-@returns(200) {id: str, name: str, project_token: str, allowed_origins: str}
-@errors {400, 401, 409}
+@optional {name: str # New project name, allowed_origins: str # New allowed origins}
+@returns(200) {id: str, name: str, project_token: str, allowed_origins: str} # Updated project
+@errors {400: Invalid name or no fields to update, 401: Missing or invalid API key, 409: Name locked (events recorded) or duplicate name/origin}
 
 @endpoint DELETE /projects/{id}
+@desc Delete a project
 @required {id: str}
-@returns(200) {ok: bool, deleted: str}
-@errors {401, 403, 404}
+@returns(200) {ok: bool, deleted: str} # Project deleted
+@errors {401: Missing or invalid API key, 403: Not your project, 404: Project not found}
 
 @endgroup
 
 @group account
 @endpoint GET /account
-@returns(200) {id: str, email: str, github_login: str?, tier: str, created_at: str, projects_count: int, projects_limit: int, tier_limits: map{max_projects: int, max_events_lifetime: int, retention_days: int, rate_limit_rpm: int}, monthly_spend_cap_dollars: num?}
-@errors {401}
+@desc Get account info
+@returns(200) {id: str, email: str, github_login: str?, tier: str, created_at: str, projects_count: int, projects_limit: int, tier_limits: map{max_projects: int, max_events_lifetime: int, retention_days: int, rate_limit_rpm: int}, monthly_spend_cap_dollars: num?} # Account info
+@errors {401: Missing or invalid API key}
 
 @endpoint POST /account/revoke-key
-@returns(200) {ok: bool, api_key: str}
-@errors {401}
+@desc Revoke and regenerate API key
+@returns(200) {ok: bool, api_key: str} # New API key
+@errors {401: Missing or invalid API key}
 
 @endgroup
 
 @group experiments
 @endpoint GET /experiments/config
-@required {token: str}
-@returns(200) {experiments: [map]}
-@errors {400}
+@desc Get experiment config for tracker.js
+@required {token: str # Project token (`aat_*`)}
+@returns(200) {experiments: [map]} # Active experiments for this project
+@errors {400: Missing token}
 
 @endpoint POST /experiments
-@required {project: str, name: str, variants: [str], goal_event: str}
-@optional {weights: [int]}
-@returns(201) {id: str, project_id: str, account_id: str, name: str, variants: [map], goal_event: str, status: str, winner: str?, created_at: str, updated_at: str, completed_at: str?}
-@errors {400, 401, 403, 404, 409}
+@desc Create an A/B experiment
+@required {project: str # Project name, name: str # Experiment name (alphanumeric, hyphens, underscores; max 64 chars), variants: [str] # 2-4 variant keys, goal_event: str # Event name to measure conversion (max 256 chars)}
+@optional {weights: [int] # Optional traffic weights per variant (must sum to 100). Defaults to equal split.}
+@returns(201) {id: str, project_id: str, account_id: str, name: str, variants: [map], goal_event: str, status: str, winner: str?, created_at: str, updated_at: str, completed_at: str?} # Experiment created
+@errors {400: Validation error (missing fields, invalid variants, duplicate name), 401: Missing or invalid API key, 403: Pro tier required, 404: Project not found, 409: Experiment name already exists in this project}
 
 @endpoint GET /experiments
-@required {project: str}
-@returns(200) {experiments: [map]}
-@errors {400, 401, 404}
+@desc List experiments
+@required {project: str # Project name}
+@returns(200) {experiments: [map]} # Experiment list
+@errors {400: Missing project parameter, 401: Missing or invalid API key, 404: Project not found}
 
 @endpoint GET /experiments/{id}
-@required {id: str}
-@returns(200)
-@errors {401, 403, 404}
+@desc Get experiment with live results
+@required {id: str # Experiment ID (`exp_*`)}
+@returns(200) Experiment with results
+@errors {401: Missing or invalid API key, 403: Not your experiment, 404: Experiment not found}
 
 @endpoint PATCH /experiments/{id}
-@required {id: str, status: str(active/paused/completed)}
-@optional {winner: str}
-@returns(200) {id: str, project_id: str, account_id: str, name: str, variants: [map], goal_event: str, status: str, winner: str?, created_at: str, updated_at: str, completed_at: str?}
-@errors {400, 401, 403, 404}
+@desc Update experiment status
+@required {id: str # Experiment ID (`exp_*`), status: str(active/paused/completed) # New status}
+@optional {winner: str # Variant key to declare as winner (only when completing)}
+@returns(200) {id: str, project_id: str, account_id: str, name: str, variants: [map], goal_event: str, status: str, winner: str?, created_at: str, updated_at: str, completed_at: str?} # Updated experiment
+@errors {400: Invalid status transition or missing status, 401: Missing or invalid API key, 403: Not your experiment, 404: Experiment not found}
 
 @endpoint DELETE /experiments/{id}
-@required {id: str}
-@returns(200) {ok: bool, deleted: str}
-@errors {401, 403, 404}
+@desc Delete an experiment
+@required {id: str # Experiment ID (`exp_*`)}
+@returns(200) {ok: bool, deleted: str} # Experiment deleted
+@errors {401: Missing or invalid API key, 403: Not your experiment, 404: Experiment not found}
 
 @endgroup
 
 @group health
 @endpoint GET /health
-@returns(200) {status: str, service: str}
-@errors {404}
+@desc Health check
+@returns(200) {status: str, service: str} # Healthy
+@errors {404: Not found}
 
 @endgroup
 
 @group tracker.js
 @endpoint GET /tracker.js
-@returns(200)
-@errors {404}
+@desc JavaScript tracker script
+@returns(200) JavaScript file
+@errors {404: Not found}
 
 @endgroup
 

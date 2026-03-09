@@ -408,93 +408,256 @@ https://api.vercel.com
 | POST | /v8/certs | Issue a new cert |
 | PUT | /v8/certs | Upload a cert |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I deploy my project to Vercel?" -> POST /v13/deployments
-- "What is the status of my deployment?" -> GET /v13/deployments/{idOrUrl}
-- "How do I cancel a running build?" -> PATCH /v12/deployments/{id}/cancel
-- "What domains are assigned to my project?" -> GET /v9/projects/{idOrName}/domains
-- "How do I add a custom domain to my project?" -> POST /v10/projects/{idOrName}/domains
-- "How do I set environment variables for my project?" -> POST /v10/projects/{idOrName}/env
-- "Is this domain name available to purchase?" -> GET /v1/registrar/domains/{domain}/availability
-- "How do I list all my projects?" -> GET /v10/projects
-- "How do I create a feature flag?" -> PUT /v1/projects/{projectIdOrName}/feature-flags/flags
-- "How do I rollback to a previous deployment?" -> POST /v1/projects/{projectId}/rollback/{deploymentId}
-- "What are the build logs for my deployment?" -> GET /v3/deployments/{idOrUrl}/events
-- "How do I add a team member?" -> POST /v2/teams/{teamId}/members
-- "How do I create an edge config store?" -> POST /v1/edge-config
-- "How do I set up a log drain for monitoring?" -> POST /v1/log-drains
-- "How do I invalidate cached content by tag?" -> POST /v1/edge-cache/invalidate-by-tags
-
-## Response Tips
-
-- **Projects/Deployments**: Responses are deeply nested; key fields like `readyState`, `status`, and `alias` are top-level but build details, creator info, and git metadata are nested maps. Always check `readyState` (not `status`) for current deployment state.
-- **List endpoints** (projects, domains, teams, deployments): Use `pagination.next` as the `since`/`from`/`next` param for cursor-based pagination; `pagination.count` gives total in current page, not total overall.
-- **Error responses**: All endpoints share 400/401/403 patterns. A 429 means rate limit hit. 402 indicates a plan/billing limitation. 409 typically signals a conflict (duplicate domain, concurrent edit).
-- **Edge Config**: Items are patched as arrays of operations, not full replacements. Check the `status` field in the response for confirmation. Schema endpoints return 412 on validation mismatch.
-- **Registrar/Domains**: Price endpoints return `purchasePrice`, `renewalPrice`, and `transferPrice` as `any` type (can be number or string depending on currency context). Always pass `expectedPrice` when buying to prevent price drift.
-- **Sandboxes**: The `sandbox` object is always wrapped in a `{sandbox: ...}` envelope. Check `status` field for lifecycle state. Commands return `exitCode: null` while still running.
-- **Feature Flags**: Support optimistic concurrency via `ifMatch` header (ETag). A 304 means no change since your last fetch. A 412 means your version is stale.
-
-## Anomaly Flags
-
-- **429 on any endpoint**: Rate limit hit. Surface the `Retry-After` header and pause further calls. Registrar endpoints (domain availability, pricing) are especially rate-limited.
-- **402 Payment Required**: The operation requires a plan upgrade or billing method. Surface this immediately as it blocks the workflow entirely. Common on deployments, edge config creation, domain purchases, and sandbox creation.
-- **409 Conflict**: Indicates concurrent modification or duplicate resource. On domain operations, this often means the domain is already assigned elsewhere. On edge config, it means a write conflict.
-- **`readyState: "ERROR"` or `errorMessage` present**: Deployment failed. Surface `errorCode`, `errorMessage`, `errorStep`, and `errorLink` together for actionable debugging.
-- **`aliasWarning` is non-null**: Alias assignment had issues (e.g., domain not verified, CNAME conflict). Surface `aliasWarning.message` and `aliasWarning.action`.
-- **`checksConclusion: "failed"`**: Deployment checks failed. Follow up with GET /v1/deployments/{id}/checks to identify which check and why.
-- **`misconfigured: true`** on domain config: DNS is not pointing correctly. Surface `recommendedCNAME` or `recommendedIPv4` so the user can fix it.
-- **`usageStatus.kind` not normal**: Project may be throttled or over quota. Surface `exceededAllowanceUntil` timestamp.
-- **`leakedAt` on tokens**: A token was detected as leaked. Alert immediately and recommend rotation.
-- **`firewallEnabled: false` on security config**: Firewall is off for the project. Proactively suggest enabling if security is a concern.
-- **Sandbox `status: "stopped"` or `abortedAt` set**: Sandbox is no longer running. Commands will fail with 410.
-
-## Playbook
-
-### 1. Deploy a Project and Verify It Is Live
-
-1. Create the deployment: POST /v13/deployments with `name` (project name), `files` or `gitSource`, and optional `target` (e.g., `"production"`).
-2. Note the `id` and `readyState` from the response. If `readyState` is `"BUILDING"` or `"QUEUED"`, poll.
-3. Poll deployment status: GET /v13/deployments/{id} until `readyState` is `"READY"` or `"ERROR"`.
-4. If `"ERROR"`, read `errorMessage`, `errorCode`, and `errorStep` to diagnose.
-5. If `"READY"`, confirm the live URL from the `url` field. Check `alias` array for assigned domains.
-6. Optionally verify checks passed: GET /v1/deployments/{id}/checks and confirm all conclusions are `"succeeded"`.
-
-### 2. Add and Verify a Custom Domain
-
-1. Add the domain to the project: POST /v10/projects/{idOrName}/domains with `name` set to the domain (e.g., `"app.example.com"`).
-2. Check the response `verified` field. If `false`, read the `verification` array for required DNS records.
-3. Configure DNS at your registrar using the provided CNAME or A records.
-4. Trigger verification: POST /v9/projects/{idOrName}/domains/{domain}/verify.
-5. Confirm `verified: true` in the response. If still false, check config: GET /v6/domains/{domain}/config and review `misconfigured` and `recommendedCNAME`.
-
-### 3. Set Up Environment Variables Across Environments
-
-1. List existing env vars: GET /v10/projects/{idOrName}/env to avoid duplicates.
-2. Create new variables: POST /v10/projects/{idOrName}/env with a body array of `{key, value, target, type}`. Set `target` to `["production", "preview", "development"]` as needed and `type` to `"encrypted"` for secrets.
-3. To update a single variable: PATCH /v9/projects/{idOrName}/env/{id} with the new `value` or `target`.
-4. To bulk-manage shared env vars across projects: use POST /v1/env with `projectId` array.
-5. Redeploy to pick up changes if the project doesn't auto-deploy: POST /v13/deployments.
-
-### 4. Purchase a Domain and Connect It
-
-1. Check availability: GET /v1/registrar/domains/{domain}/availability. Confirm `available: true`.
-2. Get pricing: GET /v1/registrar/domains/{domain}/price with desired `years`.
-3. Purchase: POST /v1/registrar/domains/{domain}/buy with `expectedPrice` matching the price response, `contactInformation` (full address required), `years`, and `autoRenew`.
-4. Track order: GET /v1/registrar/orders/{orderId} until `status` is complete.
-5. Add to project: POST /v7/domains (registers in Vercel DNS), then POST /v10/projects/{idOrName}/domains with the domain name.
-6. Verification is automatic when using Vercel nameservers. Confirm via GET /v6/domains/{domain}/config.
-
-### 5. Set Up a Rolling Release with Manual Approval
-
-1. Configure rolling release: PATCH /v1/projects/{idOrName}/rolling-release/config with stages defining `targetPercentage`, `requireApproval: true`, and `duration` for each stage.
-2. Deploy normally: POST /v13/deployments with `target: "production"`. The rolling release activates automatically.
-3. Monitor progress: GET /v1/projects/{idOrName}/rolling-release to see `activeStage`, canary vs. current deployment, and state.
-4. When `activeStage.requireApproval` is true and the stage is ready, approve advancement: POST /v1/projects/{idOrName}/rolling-release/approve-stage with `nextStageIndex` and `canaryDeploymentId`.
-5. After all stages pass, complete the rollout: POST /v1/projects/{idOrName}/rolling-release/complete with `canaryDeploymentId`. The canary becomes the production deployment.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get access-group details?" -> GET /v1/access-groups/{idOrName}
+- "Delete a access-group?" -> DELETE /v1/access-groups/{idOrName}
+- "Search members?" -> GET /v1/access-groups/{idOrName}/members
+- "Search access-groups?" -> GET /v1/access-groups
+- "Create a access-group?" -> POST /v1/access-groups
+- "List all projects?" -> GET /v1/access-groups/{idOrName}/projects
+- "Create a project?" -> POST /v1/access-groups/{accessGroupIdOrName}/projects
+- "Get project details?" -> GET /v1/access-groups/{accessGroupIdOrName}/projects/{projectId}
+- "Partially update a project?" -> PATCH /v1/access-groups/{accessGroupIdOrName}/projects/{projectId}
+- "Delete a project?" -> DELETE /v1/access-groups/{accessGroupIdOrName}/projects/{projectId}
+- "Create a event?" -> POST /v8/artifacts/events
+- "List all status?" -> GET /v8/artifacts/status
+- "Update a artifact?" -> PUT /v8/artifacts/{hash}
+- "Get artifact details?" -> GET /v8/artifacts/{hash}
+- "Create a artifact?" -> POST /v8/artifacts
+- "List all charges?" -> GET /v1/billing/charges
+- "List all contract-commitments?" -> GET /v1/billing/contract-commitments
+- "Search bulk-redirects?" -> GET /v1/bulk-redirects
+- "Create a restore?" -> POST /v1/bulk-redirects/restore
+- "List all versions?" -> GET /v1/bulk-redirects/versions
+- "Create a version?" -> POST /v1/bulk-redirects/versions
+- "List all checks?" -> GET /v2/projects/{projectIdOrName}/checks
+- "Create a check?" -> POST /v2/projects/{projectIdOrName}/checks
+- "Get check details?" -> GET /v2/projects/{projectIdOrName}/checks/{checkId}
+- "Partially update a check?" -> PATCH /v2/projects/{projectIdOrName}/checks/{checkId}
+- "Delete a check?" -> DELETE /v2/projects/{projectIdOrName}/checks/{checkId}
+- "List all runs?" -> GET /v2/projects/{projectIdOrName}/checks/{checkId}/runs
+- "List all check-runs?" -> GET /v2/deployments/{deploymentId}/check-runs
+- "Create a check-run?" -> POST /v2/deployments/{deploymentId}/check-runs
+- "Get check-run details?" -> GET /v2/deployments/{deploymentId}/check-runs/{checkRunId}
+- "Partially update a check-run?" -> PATCH /v2/deployments/{deploymentId}/check-runs/{checkRunId}
+- "Create a check?" -> POST /v1/deployments/{deploymentId}/checks
+- "List all checks?" -> GET /v1/deployments/{deploymentId}/checks
+- "Get check details?" -> GET /v1/deployments/{deploymentId}/checks/{checkId}
+- "Partially update a check?" -> PATCH /v1/deployments/{deploymentId}/checks/{checkId}
+- "Create a rerequest?" -> POST /v1/deployments/{deploymentId}/checks/{checkId}/rerequest
+- "Search networks?" -> GET /v1/connect/networks
+- "Create a network?" -> POST /v1/connect/networks
+- "Delete a network?" -> DELETE /v1/connect/networks/{networkId}
+- "Partially update a network?" -> PATCH /v1/connect/networks/{networkId}
+- "Get network details?" -> GET /v1/connect/networks/{networkId}
+- "List all events?" -> GET /v3/deployments/{idOrUrl}/events
+- "Partially update a action?" -> PATCH /v1/deployments/{deploymentId}/integrations/{integrationConfigurationId}/resources/{resourceId}/actions/{action}
+- "Get deployment details?" -> GET /v13/deployments/{idOrUrl}
+- "Create a deployment?" -> POST /v13/deployments
+- "List all records?" -> GET /v4/domains/{domain}/records
+- "Create a record?" -> POST /v2/domains/{domain}/records
+- "Partially update a record?" -> PATCH /v1/domains/records/{recordId}
+- "Delete a record?" -> DELETE /v2/domains/{domain}/records/{recordId}
+- "List all supported?" -> GET /v1/registrar/tlds/supported
+- "Get tld details?" -> GET /v1/registrar/tlds/{tld}
+- "List all price?" -> GET /v1/registrar/tlds/{tld}/price
+- "List all availability?" -> GET /v1/registrar/domains/{domain}/availability
+- "List all price?" -> GET /v1/registrar/domains/{domain}/price
+- "Create a availability?" -> POST /v1/registrar/domains/availability
+- "List all auth-code?" -> GET /v1/registrar/domains/{domain}/auth-code
+- "Create a buy?" -> POST /v1/registrar/domains/{domain}/buy
+- "Create a buy?" -> POST /v1/registrar/domains/buy
+- "Create a transfer?" -> POST /v1/registrar/domains/{domain}/transfer
+- "List all transfer?" -> GET /v1/registrar/domains/{domain}/transfer
+- "Create a renew?" -> POST /v1/registrar/domains/{domain}/renew
+- "List all schema?" -> GET /v1/registrar/domains/{domain}/contact-info/schema
+- "Get order details?" -> GET /v1/registrar/orders/{orderId}
+- "List all config?" -> GET /v6/domains/{domain}/config
+- "Get domain details?" -> GET /v5/domains/{domain}
+- "List all domains?" -> GET /v5/domains
+- "Create a domain?" -> POST /v7/domains
+- "Partially update a domain?" -> PATCH /v3/domains/{domain}
+- "Delete a domain?" -> DELETE /v6/domains/{domain}
+- "Get log-drain details?" -> GET /v1/log-drains/{id}
+- "Delete a log-drain?" -> DELETE /v1/log-drains/{id}
+- "List all log-drains?" -> GET /v1/log-drains
+- "Create a log-drain?" -> POST /v1/log-drains
+- "Create a drain?" -> POST /v1/drains
+- "List all drains?" -> GET /v1/drains
+- "Delete a drain?" -> DELETE /v1/drains/{id}
+- "Get drain details?" -> GET /v1/drains/{id}
+- "Partially update a drain?" -> PATCH /v1/drains/{id}
+- "Create a test?" -> POST /v1/drains/test
+- "Create a invalidate-by-tag?" -> POST /v1/edge-cache/invalidate-by-tags
+- "Create a dangerously-delete-by-tag?" -> POST /v1/edge-cache/dangerously-delete-by-tags
+- "Create a invalidate-by-src-image?" -> POST /v1/edge-cache/invalidate-by-src-images
+- "Create a dangerously-delete-by-src-image?" -> POST /v1/edge-cache/dangerously-delete-by-src-images
+- "List all edge-config?" -> GET /v1/edge-config
+- "Create a edge-config?" -> POST /v1/edge-config
+- "Get edge-config details?" -> GET /v1/edge-config/{edgeConfigId}
+- "Update a edge-config?" -> PUT /v1/edge-config/{edgeConfigId}
+- "Delete a edge-config?" -> DELETE /v1/edge-config/{edgeConfigId}
+- "List all items?" -> GET /v1/edge-config/{edgeConfigId}/items
+- "List all schema?" -> GET /v1/edge-config/{edgeConfigId}/schema
+- "Create a schema?" -> POST /v1/edge-config/{edgeConfigId}/schema
+- "Get item details?" -> GET /v1/edge-config/{edgeConfigId}/item/{edgeConfigItemKey}
+- "List all tokens?" -> GET /v1/edge-config/{edgeConfigId}/tokens
+- "Get token details?" -> GET /v1/edge-config/{edgeConfigId}/token/{token}
+- "Create a token?" -> POST /v1/edge-config/{edgeConfigId}/token
+- "Get backup details?" -> GET /v1/edge-config/{edgeConfigId}/backups/{edgeConfigBackupVersionId}
+- "List all backups?" -> GET /v1/edge-config/{edgeConfigId}/backups
+- "Create a env?" -> POST /v1/env
+- "Search env?" -> GET /v1/env
+- "Get env details?" -> GET /v1/env/{id}
+- "Partially update a unlink?" -> PATCH /v1/env/{id}/unlink/{projectId}
+- "List all events?" -> GET /v3/events
+- "List all types?" -> GET /v1/events/types
+- "Search flags?" -> GET /v1/projects/{projectIdOrName}/feature-flags/flags
+- "Get flag details?" -> GET /v1/projects/{projectIdOrName}/feature-flags/flags/{flagIdOrSlug}
+- "Partially update a flag?" -> PATCH /v1/projects/{projectIdOrName}/feature-flags/flags/{flagIdOrSlug}
+- "Delete a flag?" -> DELETE /v1/projects/{projectIdOrName}/feature-flags/flags/{flagIdOrSlug}
+- "List all versions?" -> GET /v1/projects/{projectIdOrName}/feature-flags/flags/{flagIdOrSlug}/versions
+- "List all settings?" -> GET /v1/projects/{projectIdOrName}/feature-flags/settings
+- "List all settings?" -> GET /v1/teams/{teamId}/feature-flags/settings
+- "Search flags?" -> GET /v1/teams/{teamId}/feature-flags/flags
+- "List all segments?" -> GET /v1/projects/{projectIdOrName}/feature-flags/segments
+- "Get segment details?" -> GET /v1/projects/{projectIdOrName}/feature-flags/segments/{segmentIdOrSlug}
+- "Delete a segment?" -> DELETE /v1/projects/{projectIdOrName}/feature-flags/segments/{segmentIdOrSlug}
+- "Partially update a segment?" -> PATCH /v1/projects/{projectIdOrName}/feature-flags/segments/{segmentIdOrSlug}
+- "List all feature-flags?" -> GET /v1/deployments/{deploymentId}/feature-flags
+- "List all sdk-keys?" -> GET /v1/projects/{projectIdOrName}/feature-flags/sdk-keys
+- "Delete a sdk-key?" -> DELETE /v1/projects/{projectIdOrName}/feature-flags/sdk-keys/{hashKey}
+- "List all git-namespaces?" -> GET /v1/integrations/git-namespaces
+- "Search search-repo?" -> GET /v1/integrations/search-repo
+- "List all plans?" -> GET /v1/integrations/integration/{integrationIdOrSlug}/products/{productIdOrSlug}/plans
+- "Create a connection?" -> POST /v1/integrations/installations/{integrationConfigurationId}/resources/{resourceId}/connections
+- "Partially update a installation?" -> PATCH /v1/installations/{integrationConfigurationId}
+- "List all account?" -> GET /v1/installations/{integrationConfigurationId}/account
+- "Get member details?" -> GET /v1/installations/{integrationConfigurationId}/member/{memberId}
+- "Create a event?" -> POST /v1/installations/{integrationConfigurationId}/events
+- "List all resources?" -> GET /v1/installations/{integrationConfigurationId}/resources
+- "Get resource details?" -> GET /v1/installations/{integrationConfigurationId}/resources/{resourceId}
+- "Delete a resource?" -> DELETE /v1/installations/{integrationConfigurationId}/resources/{resourceId}
+- "Update a resource?" -> PUT /v1/installations/{integrationConfigurationId}/resources/{resourceId}
+- "Partially update a resource?" -> PATCH /v1/installations/{integrationConfigurationId}/resources/{resourceId}
+- "Create a billing?" -> POST /v1/installations/{integrationConfigurationId}/billing
+- "Create a invoice?" -> POST /v1/installations/{integrationConfigurationId}/billing/invoices
+- "Create a finalize?" -> POST /v1/installations/{integrationConfigurationId}/billing/finalize
+- "Get invoice details?" -> GET /v1/installations/{integrationConfigurationId}/billing/invoices/{invoiceId}
+- "Create a action?" -> POST /v1/installations/{integrationConfigurationId}/billing/invoices/{invoiceId}/actions
+- "Create a balance?" -> POST /v1/installations/{integrationConfigurationId}/billing/balance
+- "List all configurations?" -> GET /v1/integrations/configurations
+- "Get configuration details?" -> GET /v1/integrations/configuration/{id}
+- "Delete a configuration?" -> DELETE /v1/integrations/configuration/{id}
+- "List all products?" -> GET /v1/integrations/configuration/{id}/products
+- "Create a token?" -> POST /v1/integrations/sso/token
+- "List all log-drains?" -> GET /v2/integrations/log-drains
+- "Create a log-drain?" -> POST /v2/integrations/log-drains
+- "Delete a log-drain?" -> DELETE /v1/integrations/log-drains/{id}
+- "List all runtime-logs?" -> GET /v1/projects/{projectId}/deployments/{deploymentId}/runtime-logs
+- "Create a item?" -> POST /v1/installations/{integrationConfigurationId}/resources/{resourceId}/experimentation/items
+- "Partially update a item?" -> PATCH /v1/installations/{integrationConfigurationId}/resources/{resourceId}/experimentation/items/{itemId}
+- "Delete a item?" -> DELETE /v1/installations/{integrationConfigurationId}/resources/{resourceId}/experimentation/items/{itemId}
+- "List all edge-config?" -> GET /v1/installations/{integrationConfigurationId}/resources/{resourceId}/experimentation/edge-config
+- "Search members?" -> GET /v1/projects/{idOrName}/members
+- "Create a member?" -> POST /v1/projects/{idOrName}/members
+- "Delete a member?" -> DELETE /v1/projects/{idOrName}/members/{uid}
+- "Search projects?" -> GET /v10/projects
+- "Create a project?" -> POST /v11/projects
+- "Get project details?" -> GET /v9/projects/{idOrName}
+- "Partially update a project?" -> PATCH /v9/projects/{idOrName}
+- "Delete a project?" -> DELETE /v9/projects/{idOrName}
+- "Create a custom-environment?" -> POST /v9/projects/{idOrName}/custom-environments
+- "List all custom-environments?" -> GET /v9/projects/{idOrName}/custom-environments
+- "Get custom-environment details?" -> GET /v9/projects/{idOrName}/custom-environments/{environmentSlugOrId}
+- "Partially update a custom-environment?" -> PATCH /v9/projects/{idOrName}/custom-environments/{environmentSlugOrId}
+- "Delete a custom-environment?" -> DELETE /v9/projects/{idOrName}/custom-environments/{environmentSlugOrId}
+- "List all domains?" -> GET /v9/projects/{idOrName}/domains
+- "Get domain details?" -> GET /v9/projects/{idOrName}/domains/{domain}
+- "Partially update a domain?" -> PATCH /v9/projects/{idOrName}/domains/{domain}
+- "Delete a domain?" -> DELETE /v9/projects/{idOrName}/domains/{domain}
+- "Create a domain?" -> POST /v10/projects/{idOrName}/domains
+- "Create a move?" -> POST /v1/projects/{idOrName}/domains/{domain}/move
+- "Create a verify?" -> POST /v9/projects/{idOrName}/domains/{domain}/verify
+- "List all env?" -> GET /v10/projects/{idOrName}/env
+- "Create a env?" -> POST /v10/projects/{idOrName}/env
+- "Get env details?" -> GET /v1/projects/{idOrName}/env/{id}
+- "Delete a env?" -> DELETE /v9/projects/{idOrName}/env/{id}
+- "Partially update a env?" -> PATCH /v9/projects/{idOrName}/env/{id}
+- "List all billing?" -> GET /v1/projects/{idOrName}/rolling-release/billing
+- "List all config?" -> GET /v1/projects/{idOrName}/rolling-release/config
+- "List all rolling-release?" -> GET /v1/projects/{idOrName}/rolling-release
+- "Create a approve-stage?" -> POST /v1/projects/{idOrName}/rolling-release/approve-stage
+- "Create a complete?" -> POST /v1/projects/{idOrName}/rolling-release/complete
+- "Create a transfer-request?" -> POST /projects/{idOrName}/transfer-request
+- "Update a transfer-request?" -> PUT /projects/transfer-request/{code}
+- "List all aliases?" -> GET /v1/projects/{projectId}/promote/aliases
+- "Create a pause?" -> POST /v1/projects/{projectId}/pause
+- "Create a unpause?" -> POST /v1/projects/{projectId}/unpause
+- "List all sandboxes?" -> GET /v1/sandboxes
+- "Create a sandboxe?" -> POST /v1/sandboxes
+- "List all snapshots?" -> GET /v1/sandboxes/snapshots
+- "Get sandboxe details?" -> GET /v1/sandboxes/{sandboxId}
+- "List all cmd?" -> GET /v1/sandboxes/{sandboxId}/cmd
+- "Create a cmd?" -> POST /v1/sandboxes/{sandboxId}/cmd
+- "Create a kill?" -> POST /v1/sandboxes/{sandboxId}/{cmdId}/kill
+- "Create a stop?" -> POST /v1/sandboxes/{sandboxId}/stop
+- "Create a extend-timeout?" -> POST /v1/sandboxes/{sandboxId}/extend-timeout
+- "Create a network-policy?" -> POST /v1/sandboxes/{sandboxId}/network-policy
+- "Get cmd details?" -> GET /v1/sandboxes/{sandboxId}/cmd/{cmdId}
+- "List all logs?" -> GET /v1/sandboxes/{sandboxId}/cmd/{cmdId}/logs
+- "Create a read?" -> POST /v1/sandboxes/{sandboxId}/fs/read
+- "Create a mkdir?" -> POST /v1/sandboxes/{sandboxId}/fs/mkdir
+- "Create a write?" -> POST /v1/sandboxes/{sandboxId}/fs/write
+- "Get snapshot details?" -> GET /v1/sandboxes/snapshots/{snapshotId}
+- "Delete a snapshot?" -> DELETE /v1/sandboxes/snapshots/{snapshotId}
+- "Create a snapshot?" -> POST /v1/sandboxes/{sandboxId}/snapshot
+- "Create a attack-mode?" -> POST /v1/security/attack-mode
+- "Get config details?" -> GET /v1/security/firewall/config/{configVersion}
+- "List all attack-status?" -> GET /v1/security/firewall/attack-status
+- "List all bypass?" -> GET /v1/security/firewall/bypass
+- "Create a bypass?" -> POST /v1/security/firewall/bypass
+- "List all events?" -> GET /v1/security/firewall/events
+- "Create a direct?" -> POST /v1/storage/stores/integration/direct
+- "Search members?" -> GET /v3/teams/{teamId}/members
+- "Create a member?" -> POST /v2/teams/{teamId}/members
+- "Create a request?" -> POST /v1/teams/{teamId}/request
+- "Get request details?" -> GET /v1/teams/{teamId}/request/{userId}
+- "Create a join?" -> POST /v1/teams/{teamId}/members/teams/join
+- "Partially update a member?" -> PATCH /v1/teams/{teamId}/members/{uid}
+- "Delete a member?" -> DELETE /v1/teams/{teamId}/members/{uid}
+- "Get team details?" -> GET /v2/teams/{teamId}
+- "Partially update a team?" -> PATCH /v2/teams/{teamId}
+- "List all teams?" -> GET /v2/teams
+- "Create a team?" -> POST /v1/teams
+- "Create a dsync-role?" -> POST /v1/teams/{teamId}/dsync-roles
+- "Delete a team?" -> DELETE /v1/teams/{teamId}
+- "Delete a invite?" -> DELETE /v1/teams/{teamId}/invites/{inviteId}
+- "Create a file?" -> POST /v2/files
+- "List all tokens?" -> GET /v5/user/tokens
+- "Create a token?" -> POST /v3/user/tokens
+- "Get token details?" -> GET /v5/user/tokens/{tokenId}
+- "Delete a token?" -> DELETE /v3/user/tokens/{tokenId}
+- "List all user?" -> GET /v2/user
+- "Create a webhook?" -> POST /v1/webhooks
+- "List all webhooks?" -> GET /v1/webhooks
+- "Get webhook details?" -> GET /v1/webhooks/{id}
+- "Delete a webhook?" -> DELETE /v1/webhooks/{id}
+- "List all aliases?" -> GET /v2/deployments/{id}/aliases
+- "Create a aliase?" -> POST /v2/deployments/{id}/aliases
+- "List all aliases?" -> GET /v4/aliases
+- "Get aliase details?" -> GET /v4/aliases/{idOrAlias}
+- "Delete a aliase?" -> DELETE /v2/aliases/{aliasId}
+- "Get cert details?" -> GET /v8/certs/{id}
+- "Delete a cert?" -> DELETE /v8/certs/{id}
+- "Create a cert?" -> POST /v8/certs
+- "List all files?" -> GET /v6/deployments/{id}/files
+- "Get file details?" -> GET /v8/deployments/{id}/files/{fileId}
+- "List all deployments?" -> GET /v6/deployments
+- "Delete a deployment?" -> DELETE /v13/deployments/{id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -57,81 +57,36 @@ https://api.botify.com/v1
 | GET | /projects/{username}/{project_slug}/filters/{identifier} | Retrieves a specific saved filter's name, ID and filter value |
 | POST | /projects/{username}/{project_slug}/urls/aggs | Project Query aggregator |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What analyses exist for my project?" -> GET /analyses/{username}/{project_slug}
-- "Show me details for a specific analysis" -> GET /analyses/{username}/{project_slug}/{analysis_slug}
-- "How did my last crawl perform?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/crawl_statistics
-- "How did crawl speed change over time?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/crawl_statistics/time
-- "Which URLs were crawled or not crawled?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/crawl_statistics/urls/{list_type}
-- "What are my orphan URLs from Google Analytics?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/features/ganalytics/orphan_urls/{medium}/{source}
-- "Which pages lost PageRank since last crawl?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/features/pagerank/lost
-- "What does my sitemap report look like?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/features/sitemaps/report
-- "Find URLs matching specific filters in an analysis" -> POST /analyses/{username}/{project_slug}/{analysis_slug}/urls
-- "Get aggregate metrics for URLs in an analysis" -> POST /analyses/{username}/{project_slug}/{analysis_slug}/urls/aggs
-- "What fields are available for URL queries?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/urls/datamodel
-- "Export filtered URL data for offline analysis" -> POST /analyses/{username}/{project_slug}/{analysis_slug}/urls/export
-- "Check the status of my URL export" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/urls/export/{url_export_id}
-- "List all my projects" -> GET /projects/{username}
-- "Compare URL metrics across multiple analyses" -> POST /projects/{username}/{project_slug}/urls/aggs
-
-## Response Tips
-
-- **Analysis listings** (`GET /analyses/...`): Paginated with `page` and `size` params; default page size varies -- always check `count` or total in response to know if more pages exist.
-- **Crawl statistics**: Nested time-series data; `frequency` is required for `/time` endpoint (e.g., daily, hourly) -- omitting it will error.
-- **URL queries** (`POST .../urls`, `.../urls/aggs`): Request bodies use `UrlsQuery` or `UrlsAggsQueries` maps -- consult the datamodel endpoint first to discover valid field names and filter operators.
-- **Exports** (`POST .../urls/export`): Returns 201 (accepted, async job); poll the GET export status endpoint until completion before downloading.
-- **Feature endpoints** (sitemaps, top_domains, links, pagerank): Return precomputed reports -- no query body needed, but results are analysis-snapshot specific.
-- **Projects**: Paginated list; `filters` sub-resource returns saved filter configurations, not URL results.
-
-## Anomaly Flags
-
-- **Export stuck**: If `GET .../urls/export/{id}` returns the same incomplete status across multiple polls, surface a warning -- the export job may have failed silently.
-- **Empty crawl statistics**: If `/crawl_statistics` returns zero URLs crawled, flag that the analysis may still be in progress or the crawl configuration is misconfigured.
-- **PageRank lost spike**: If `/features/pagerank/lost` returns a significantly higher count than previous analyses, proactively alert -- this may indicate broken internal links or removed pages.
-- **Sitemap out-of-config URLs**: If `/features/sitemaps/samples/out_of_config` returns results, flag URLs present in sitemaps but outside the crawl scope -- these are likely configuration gaps.
-- **Orphan URL count**: If the orphan URLs endpoint returns a large paginated set, surface this as a potential SEO issue -- these pages get traffic but have no internal links.
-- **Pagination exhaustion**: If a response returns a full page of results (size == count returned), warn that there are likely more pages -- the caller should paginate to get complete data.
-
-## Playbook
-
-### 1. Audit a New Crawl Analysis
-
-1. `GET /projects/{username}` to list projects and find the target `project_slug`
-2. `GET /analyses/{username}/{project_slug}` to list analyses and identify the latest `analysis_slug`
-3. `GET /analyses/{username}/{project_slug}/{analysis_slug}` to review analysis summary
-4. `GET /analyses/{username}/{project_slug}/{analysis_slug}/crawl_statistics` for crawl health overview
-5. `GET /analyses/{username}/{project_slug}/{analysis_slug}/features/sitemaps/report` to check sitemap coverage
-6. `GET /analyses/{username}/{project_slug}/{analysis_slug}/features/pagerank/lost` to spot link equity losses
-
-### 2. Export Filtered URL Data
-
-1. `GET /analyses/{username}/{project_slug}/{analysis_slug}/urls/datamodel` to discover available fields and filter operators
-2. `POST /analyses/{username}/{project_slug}/{analysis_slug}/urls` with a `UrlsQuery` body to preview matching URLs and refine filters
-3. `POST /analyses/{username}/{project_slug}/{analysis_slug}/urls/export` with the same `UrlsQuery` to start an async export (returns 201)
-4. `GET /analyses/{username}/{project_slug}/{analysis_slug}/urls/export/{url_export_id}` to poll until the export is ready
-5. Download the completed export file from the returned URL
-
-### 3. Investigate Orphan Pages
-
-1. `GET /analyses/{username}/{project_slug}/{analysis_slug}/features/ganalytics/orphan_urls/{medium}/{source}` with medium=`organic` and source=`google` to find pages with search traffic but no internal links
-2. `POST /analyses/{username}/{project_slug}/{analysis_slug}/urls` with a filter for the orphan URLs to inspect their metadata (status codes, depth, etc.)
-3. `GET /analyses/{username}/{project_slug}/{analysis_slug}/features/links/percentiles` to understand the internal link distribution and set a baseline
-4. Use the results to prioritize which orphan pages to link from existing content
-
-### 4. Compare Metrics Across Analyses
-
-1. `GET /analyses/{username}/{project_slug}` to list all available analyses with their slugs and dates
-2. `POST /projects/{username}/{project_slug}/urls/aggs` with `nb_analyses` set to the number of analyses to compare, and `UrlsAggsQueries` defining the metrics to aggregate
-3. Compare the returned aggregate values across time periods to spot trends (e.g., crawled URL count, average load time, indexable page ratio)
-
-### 5. Validate URL Rewriting Rules
-
-1. `GET /projects/{username}/{project_slug}/filters` to review existing saved filters
-2. `POST /projects/{username}/{project_slug}/features/url_rewriting/rules_validator` with your proposed rewriting rules in the request body
-3. Check the 201 response for validation results -- fix any flagged rule conflicts or syntax errors before applying to the project configuration
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get analysis details?" -> GET /analyses/{username}/{project_slug}
+- "Get analysis details?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}
+- "List all crawl_statistics?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/crawl_statistics
+- "List all time?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/crawl_statistics/time
+- "Get url details?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/crawl_statistics/urls/{list_type}
+- "Get orphan_url details?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/features/ganalytics/orphan_urls/{medium}/{source}
+- "List all percentiles?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/features/links/percentiles
+- "List all lost?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/features/pagerank/lost
+- "List all report?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/features/sitemaps/report
+- "List all out_of_config?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/features/sitemaps/samples/out_of_config
+- "List all sitemap_only?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/features/sitemaps/samples/sitemap_only
+- "List all domains?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/features/top_domains/domains
+- "List all subdomains?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/features/top_domains/subdomains
+- "Create a url?" -> POST /analyses/{username}/{project_slug}/{analysis_slug}/urls
+- "Create a agg?" -> POST /analyses/{username}/{project_slug}/{analysis_slug}/urls/aggs
+- "List all datamodel?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/urls/datamodel
+- "Create a export?" -> POST /analyses/{username}/{project_slug}/{analysis_slug}/urls/export
+- "List all export?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/urls/export
+- "Get export details?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/urls/export/{url_export_id}
+- "Create a suggested_filter?" -> POST /analyses/{username}/{project_slug}/{analysis_slug}/urls/suggested_filters
+- "Get url details?" -> GET /analyses/{username}/{project_slug}/{analysis_slug}/urls/{url}
+- "Get project details?" -> GET /projects/{username}
+- "Create a rules_validator?" -> POST /projects/{username}/{project_slug}/features/url_rewriting/rules_validator
+- "List all filters?" -> GET /projects/{username}/{project_slug}/filters
+- "Get filter details?" -> GET /projects/{username}/{project_slug}/filters/{identifier}
+- "Create a agg?" -> POST /projects/{username}/{project_slug}/urls/aggs
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

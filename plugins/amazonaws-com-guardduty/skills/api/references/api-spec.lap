@@ -9,25 +9,31 @@
 
 @group detector
 @endpoint POST /detector/{detectorId}/administrator
+@desc Accepts the invitation to be a member account and get monitored by a GuardDuty administrator account that sent the invitation.
 @required {DetectorId: str, AdministratorId: str, InvitationId: str}
 
 @endpoint POST /detector/{detectorId}/master
+@desc Accepts the invitation to be monitored by a GuardDuty administrator account.
 @required {DetectorId: str, MasterId: str, InvitationId: str}
 
 @endpoint POST /detector/{detectorId}/findings/archive
+@desc Archives GuardDuty findings that are specified by the list of finding IDs.  Only the administrator account can archive findings. Member accounts don't have permission to archive findings from their accounts.
 @required {DetectorId: str, FindingIds: [str]}
 
 @endpoint POST /detector
+@desc Creates a single GuardDuty detector. A detector is a resource that represents the GuardDuty service. To start using GuardDuty, you must create a detector in each Region where you enable the service. You can have only one detector per account per Region. All data sources are enabled in a new detector by default.   When you don't specify any features, with an exception to RUNTIME_MONITORING, all the optional features are enabled by default.   When you specify some of the features, any feature that is not specified in the API call gets enabled by default, with an exception to RUNTIME_MONITORING.    Specifying both EKS Runtime Monitoring (EKS_RUNTIME_MONITORING) and Runtime Monitoring (RUNTIME_MONITORING) will cause an error. You can add only one of these two features because Runtime Monitoring already includes the threat detection for Amazon EKS resources. For more information, see Runtime Monitoring. There might be regional differences because some data sources might not be available in all the Amazon Web Services Regions where GuardDuty is presently supported. For more information, see Regions and endpoints.
 @required {Enable: bool}
 @optional {ClientToken: str, FindingPublishingFrequency: str, DataSources: DataSourceConfigurations, Tags: map<str,str>, Features: [DetectorFeatureConfiguration]}
 @returns(200) {DetectorId: str?, UnprocessedDataSources: UnprocessedDataSourcesResult?{MalwareProtection: MalwareProtectionConfigurationResult?{ScanEc2InstanceWithFindings: ScanEc2InstanceWithFindingsResult?{EbsVolumes: EbsVolumesResult?}, ServiceRole: str?}}}
 
 @endpoint POST /detector/{detectorId}/filter
+@desc Creates a filter using the specified finding criteria. The maximum number of saved filters per Amazon Web Services account per Region is 100. For more information, see Quotas for GuardDuty.
 @required {DetectorId: str, Name: str, FindingCriteria: FindingCriteria}
 @optional {Description: str, Action: str, Rank: int, ClientToken: str, Tags: map<str,str>}
 @returns(200) {Name: str}
 
 @endpoint POST /detector/{detectorId}/ipset
+@desc Creates a new IPSet, which is called a trusted IP list in the console user interface. An IPSet is a list of IP addresses that are trusted for secure communication with Amazon Web Services infrastructure and applications. GuardDuty doesn't generate findings for IP addresses that are included in IPSets. Only users from the administrator account can use this operation.
 @required {DetectorId: str, Name: str, Format: str, Location: str, Activate: bool}
 @optional {ClientToken: str, Tags: map<str,str>}
 @returns(200) {IpSetId: str}
@@ -36,6 +42,7 @@
 
 @group malware-protection-plan
 @endpoint POST /malware-protection-plan
+@desc Creates a new Malware Protection plan for the protected resource. When you create a Malware Protection plan, the Amazon Web Services service terms for GuardDuty Malware Protection apply. For more information, see Amazon Web Services service terms for GuardDuty Malware Protection.
 @required {Role: str, ProtectedResource: CreateProtectedResource}
 @optional {ClientToken: str, Actions: MalwareProtectionPlanActions, Tags: map<str,str>}
 @returns(200) {MalwareProtectionPlanId: str?}
@@ -44,19 +51,23 @@
 
 @group detector
 @endpoint POST /detector/{detectorId}/member
+@desc Creates member accounts of the current Amazon Web Services account by specifying a list of Amazon Web Services account IDs. This step is a prerequisite for managing the associated member accounts either by invitation or through an organization. As a delegated administrator, using CreateMembers will enable GuardDuty in the added member accounts, with the exception of the organization delegated administrator account. A delegated administrator must enable GuardDuty prior to being added as a member. When you use CreateMembers as an Organizations delegated administrator, GuardDuty applies your organization's auto-enable settings to the member accounts in this request, irrespective of the accounts being new or existing members. For more information about the existing auto-enable settings for your organization, see DescribeOrganizationConfiguration. If you disassociate a member account that was added by invitation, the member account details obtained from this API, including the associated email addresses, will be retained. This is done so that the delegated administrator can invoke the InviteMembers API without the need to invoke the CreateMembers API again. To remove the details associated with a member account, the delegated administrator must invoke the DeleteMembers API.  When the member accounts added through Organizations are later disassociated, you (administrator) can't invite them by calling the InviteMembers API. You can create an association with these member accounts again only by calling the CreateMembers API.
 @required {DetectorId: str, AccountDetails: [AccountDetail]}
 @returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
 
 @endpoint POST /detector/{detectorId}/publishingDestination
+@desc Creates a publishing destination to export findings to. The resource to export findings to must exist before you use this operation.
 @required {DetectorId: str, DestinationType: str, DestinationProperties: DestinationProperties}
 @optional {ClientToken: str}
 @returns(200) {DestinationId: str}
 
 @endpoint POST /detector/{detectorId}/findings/create
+@desc Generates sample findings of types specified by the list of finding types. If 'NULL' is specified for findingTypes, the API generates sample findings of all supported finding types.
 @required {DetectorId: str}
 @optional {FindingTypes: [str]}
 
 @endpoint POST /detector/{detectorId}/threatintelset
+@desc Creates a new ThreatIntelSet. ThreatIntelSets consist of known malicious IP addresses. GuardDuty generates findings based on ThreatIntelSets. Only users of the administrator account can use this operation.
 @required {DetectorId: str, Name: str, Format: str, Location: str, Activate: bool}
 @optional {ClientToken: str, Tags: map<str,str>}
 @returns(200) {ThreatIntelSetId: str}
@@ -65,6 +76,7 @@
 
 @group invitation
 @endpoint POST /invitation/decline
+@desc Declines invitations sent to the current member account by Amazon Web Services accounts specified by their account IDs.
 @required {AccountIds: [str]}
 @returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
 
@@ -72,18 +84,22 @@
 
 @group detector
 @endpoint DELETE /detector/{detectorId}
+@desc Deletes an Amazon GuardDuty detector that is specified by the detector ID.
 @required {DetectorId: str}
 
 @endpoint DELETE /detector/{detectorId}/filter/{filterName}
+@desc Deletes the filter specified by the filter name.
 @required {DetectorId: str, FilterName: str}
 
 @endpoint DELETE /detector/{detectorId}/ipset/{ipSetId}
+@desc Deletes the IPSet specified by the ipSetId. IPSets are called trusted IP lists in the console user interface.
 @required {DetectorId: str, IpSetId: str}
 
 @endgroup
 
 @group invitation
 @endpoint POST /invitation/delete
+@desc Deletes invitations sent to the current member account by Amazon Web Services accounts specified by their account IDs.
 @required {AccountIds: [str]}
 @returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
 
@@ -91,32 +107,39 @@
 
 @group malware-protection-plan
 @endpoint DELETE /malware-protection-plan/{malwareProtectionPlanId}
+@desc Deletes the Malware Protection plan ID associated with the Malware Protection plan resource. Use this API only when you no longer want to protect the resource associated with this Malware Protection plan ID.
 @required {MalwareProtectionPlanId: str}
 
 @endgroup
 
 @group detector
 @endpoint POST /detector/{detectorId}/member/delete
+@desc Deletes GuardDuty member accounts (to the current GuardDuty administrator account) specified by the account IDs. With autoEnableOrganizationMembers configuration for your organization set to ALL, you'll receive an error if you attempt to disable GuardDuty for a member account in your organization.
 @required {DetectorId: str, AccountIds: [str]}
 @returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
 
 @endpoint DELETE /detector/{detectorId}/publishingDestination/{destinationId}
+@desc Deletes the publishing definition with the specified destinationId.
 @required {DetectorId: str, DestinationId: str}
 
 @endpoint DELETE /detector/{detectorId}/threatintelset/{threatIntelSetId}
+@desc Deletes the ThreatIntelSet specified by the ThreatIntelSet ID.
 @required {DetectorId: str, ThreatIntelSetId: str}
 
 @endpoint POST /detector/{detectorId}/malware-scans
+@desc Returns a list of malware scans. Each member account can view the malware scans for their own accounts. An administrator can view the malware scans for all the member accounts. There might be regional differences because some data sources might not be available in all the Amazon Web Services Regions where GuardDuty is presently supported. For more information, see Regions and endpoints.
 @required {DetectorId: str}
 @optional {NextToken: str, MaxResults: int, FilterCriteria: FilterCriteria, SortCriteria: SortCriteria}
 @returns(200) {Scans: [Scan], NextToken: str?}
 
 @endpoint GET /detector/{detectorId}/admin
+@desc Returns information about the account selected as the delegated administrator for GuardDuty. There might be regional differences because some data sources might not be available in all the Amazon Web Services Regions where GuardDuty is presently supported. For more information, see Regions and endpoints.
 @required {DetectorId: str}
 @optional {maxResults: int, nextToken: str}
 @returns(200) {AutoEnable: bool?, MemberAccountLimitReached: bool, DataSources: OrganizationDataSourceConfigurationsResult?{S3Logs: OrganizationS3LogsConfigurationResult{AutoEnable: bool}, Kubernetes: OrganizationKubernetesConfigurationResult?{AuditLogs: OrganizationKubernetesAuditLogsConfigurationResult{AutoEnable: bool}}, MalwareProtection: OrganizationMalwareProtectionConfigurationResult?{ScanEc2InstanceWithFindings: OrganizationScanEc2InstanceWithFindingsResult?{EbsVolumes: OrganizationEbsVolumesResult?}}}, Features: [OrganizationFeatureConfigurationResult]?, NextToken: str?, AutoEnableOrganizationMembers: str?}
 
 @endpoint GET /detector/{detectorId}/publishingDestination/{destinationId}
+@desc Returns information about the publishing destination specified by the provided destinationId.
 @required {DetectorId: str, DestinationId: str}
 @returns(200) {DestinationId: str, DestinationType: str, Status: str, PublishingFailureStartTimestamp: int(i64), DestinationProperties: DestinationProperties{DestinationArn: str?, KmsKeyArn: str?}}
 
@@ -124,18 +147,22 @@
 
 @group admin
 @endpoint POST /admin/disable
+@desc Removes the existing GuardDuty delegated administrator of the organization. Only the organization's management account can run this API operation.
 @required {AdminAccountId: str}
 
 @endgroup
 
 @group detector
 @endpoint POST /detector/{detectorId}/administrator/disassociate
+@desc Disassociates the current GuardDuty member account from its administrator account. When you disassociate an invited member from a GuardDuty delegated administrator, the member account details obtained from the CreateMembers API, including the associated email addresses, are retained. This is done so that the delegated administrator can invoke the InviteMembers API without the need to invoke the CreateMembers API again. To remove the details associated with a member account, the delegated administrator must invoke the DeleteMembers API.  With autoEnableOrganizationMembers configuration for your organization set to ALL, you'll receive an error if you attempt to disable GuardDuty in a member account.
 @required {DetectorId: str}
 
 @endpoint POST /detector/{detectorId}/master/disassociate
+@desc Disassociates the current GuardDuty member account from its administrator account. When you disassociate an invited member from a GuardDuty delegated administrator, the member account details obtained from the CreateMembers API, including the associated email addresses, are retained. This is done so that the delegated administrator can invoke the InviteMembers API without the need to invoke the CreateMembers API again. To remove the details associated with a member account, the delegated administrator must invoke the DeleteMembers API.
 @required {DetectorId: str}
 
 @endpoint POST /detector/{detectorId}/member/disassociate
+@desc Disassociates GuardDuty member accounts (from the current administrator account) specified by the account IDs. When you disassociate an invited member from a GuardDuty delegated administrator, the member account details obtained from the CreateMembers API, including the associated email addresses, are retained. This is done so that the delegated administrator can invoke the InviteMembers API without the need to invoke the CreateMembers API again. To remove the details associated with a member account, the delegated administrator must invoke the DeleteMembers API.  With autoEnableOrganizationMembers configuration for your organization set to ALL, you'll receive an error if you attempt to disassociate a member account before removing them from your organization. If you disassociate a member account that was added by invitation, the member account details obtained from this API, including the associated email addresses, will be retained. This is done so that the delegated administrator can invoke the InviteMembers API without the need to invoke the CreateMembers API again. To remove the details associated with a member account, the delegated administrator must invoke the DeleteMembers API.  When the member accounts added through Organizations are later disassociated, you (administrator) can't invite them by calling the InviteMembers API. You can create an association with these member accounts again only by calling the CreateMembers API.
 @required {DetectorId: str, AccountIds: [str]}
 @returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
 
@@ -143,39 +170,47 @@
 
 @group admin
 @endpoint POST /admin/enable
+@desc Designates an Amazon Web Services account within the organization as your GuardDuty delegated administrator. Only the organization's management account can run this API operation.
 @required {AdminAccountId: str}
 
 @endgroup
 
 @group detector
 @endpoint GET /detector/{detectorId}/administrator
+@desc Provides the details of the GuardDuty administrator account associated with the current GuardDuty member account.  If the organization's management account or a delegated administrator runs this API, it will return success (HTTP 200) but no content.
 @required {DetectorId: str}
 @returns(200) {Administrator: Administrator{AccountId: str?, InvitationId: str?, RelationshipStatus: str?, InvitedAt: str?}}
 
 @endpoint POST /detector/{detectorId}/coverage/statistics
+@desc Retrieves aggregated statistics for your account. If you are a GuardDuty administrator, you can retrieve the statistics for all the resources associated with the active member accounts in your organization who have enabled Runtime Monitoring and have the GuardDuty security agent running on their resources.
 @required {DetectorId: str, StatisticsType: [str]}
 @optional {FilterCriteria: CoverageFilterCriteria}
-@returns(200) {CoverageStatistics: CoverageStatistics?{CountByResourceType: map<str,int(i64)>?, CountByCoverageStatus: map<str,int(i64)>?}}
+@returns(200) {CoverageStatistics: CoverageStatistics?{CountByResourceType: map<str, int(i64)>?: any, CountByCoverageStatus: map<str, int(i64)>?: any}}
 
 @endpoint GET /detector/{detectorId}
+@desc Retrieves an Amazon GuardDuty detector specified by the detectorId. There might be regional differences because some data sources might not be available in all the Amazon Web Services Regions where GuardDuty is presently supported. For more information, see Regions and endpoints.
 @required {DetectorId: str}
 @returns(200) {CreatedAt: str?, FindingPublishingFrequency: str?, ServiceRole: str, Status: str, UpdatedAt: str?, DataSources: DataSourceConfigurationsResult?{CloudTrail: CloudTrailConfigurationResult{Status: str}, DNSLogs: DNSLogsConfigurationResult{Status: str}, FlowLogs: FlowLogsConfigurationResult{Status: str}, S3Logs: S3LogsConfigurationResult{Status: str}, Kubernetes: KubernetesConfigurationResult?{AuditLogs: KubernetesAuditLogsConfigurationResult{Status: str}}, MalwareProtection: MalwareProtectionConfigurationResult?{ScanEc2InstanceWithFindings: ScanEc2InstanceWithFindingsResult?{EbsVolumes: EbsVolumesResult?}, ServiceRole: str?}}, Tags: map<str,str>?, Features: [DetectorFeatureConfigurationResult]?}
 
 @endpoint GET /detector/{detectorId}/filter/{filterName}
+@desc Returns the details of the filter specified by the filter name.
 @required {DetectorId: str, FilterName: str}
-@returns(200) {Name: str, Description: str?, Action: str, Rank: int?, FindingCriteria: FindingCriteria{Criterion: map<str,Condition>?}, Tags: map<str,str>?}
+@returns(200) {Name: str, Description: str?, Action: str, Rank: int?, FindingCriteria: FindingCriteria{Criterion: map<str, Condition>?: any}, Tags: map<str,str>?}
 
 @endpoint POST /detector/{detectorId}/findings/get
+@desc Describes Amazon GuardDuty findings specified by finding IDs.
 @required {DetectorId: str, FindingIds: [str]}
 @optional {SortCriteria: SortCriteria}
 @returns(200) {Findings: [Finding]}
 
 @endpoint POST /detector/{detectorId}/findings/statistics
+@desc Lists Amazon GuardDuty findings statistics for the specified detector ID. There might be regional differences because some flags might not be available in all the Regions where GuardDuty is currently supported. For more information, see Regions and endpoints.
 @required {DetectorId: str, FindingStatisticTypes: [str]}
 @optional {FindingCriteria: FindingCriteria}
-@returns(200) {FindingStatistics: FindingStatistics{CountBySeverity: map<str,int>?}}
+@returns(200) {FindingStatistics: FindingStatistics{CountBySeverity: map<str, int>?: any}}
 
 @endpoint GET /detector/{detectorId}/ipset/{ipSetId}
+@desc Retrieves the IPSet specified by the ipSetId.
 @required {DetectorId: str, IpSetId: str}
 @returns(200) {Name: str, Format: str, Location: str, Status: str, Tags: map<str,str>?}
 
@@ -183,12 +218,14 @@
 
 @group invitation
 @endpoint GET /invitation/count
+@desc Returns the count of all GuardDuty membership invitations that were sent to the current member account except the currently accepted invitation.
 @returns(200) {InvitationsCount: int?}
 
 @endgroup
 
 @group malware-protection-plan
 @endpoint GET /malware-protection-plan/{malwareProtectionPlanId}
+@desc Retrieves the Malware Protection plan details associated with a Malware Protection plan ID.
 @required {MalwareProtectionPlanId: str}
 @returns(200) {Arn: str?, Role: str?, ProtectedResource: CreateProtectedResource?{S3Bucket: CreateS3BucketResource?{BucketName: str?, ObjectPrefixes: [str]?}}, Actions: MalwareProtectionPlanActions?{Tagging: MalwareProtectionPlanTaggingAction?{Status: str?}}, CreatedAt: str(timestamp)?, Status: str?, StatusReasons: [MalwareProtectionPlanStatusReason]?, Tags: map<str,str>?}
 
@@ -196,18 +233,22 @@
 
 @group detector
 @endpoint GET /detector/{detectorId}/malware-scan-settings
+@desc Returns the details of the malware scan settings. There might be regional differences because some data sources might not be available in all the Amazon Web Services Regions where GuardDuty is presently supported. For more information, see Regions and endpoints.
 @required {DetectorId: str}
-@returns(200) {ScanResourceCriteria: ScanResourceCriteria?{Include: map<str,ScanCondition>?, Exclude: map<str,ScanCondition>?}, EbsSnapshotPreservation: str?}
+@returns(200) {ScanResourceCriteria: ScanResourceCriteria?{Include: map<str, ScanCondition>?: any, Exclude: map<str, ScanCondition>?: any}, EbsSnapshotPreservation: str?}
 
 @endpoint GET /detector/{detectorId}/master
+@desc Provides the details for the GuardDuty administrator account associated with the current GuardDuty member account.
 @required {DetectorId: str}
 @returns(200) {Master: Master{AccountId: str?, InvitationId: str?, RelationshipStatus: str?, InvitedAt: str?}}
 
 @endpoint POST /detector/{detectorId}/member/detector/get
+@desc Describes which data sources are enabled for the member account's detector. There might be regional differences because some data sources might not be available in all the Amazon Web Services Regions where GuardDuty is presently supported. For more information, see Regions and endpoints.
 @required {DetectorId: str, AccountIds: [str]}
 @returns(200) {MemberDataSourceConfigurations: [MemberDataSourceConfiguration], UnprocessedAccounts: [UnprocessedAccount]}
 
 @endpoint POST /detector/{detectorId}/member/get
+@desc Retrieves GuardDuty member accounts (of the current GuardDuty administrator account) specified by the account IDs.
 @required {DetectorId: str, AccountIds: [str]}
 @returns(200) {Members: [Member], UnprocessedAccounts: [UnprocessedAccount]}
 
@@ -215,50 +256,60 @@
 
 @group organization
 @endpoint GET /organization/statistics
+@desc Retrieves how many active member accounts have each feature enabled within GuardDuty. Only a delegated GuardDuty administrator of an organization can run this API. When you create a new organization, it might take up to 24 hours to generate the statistics for the entire organization.
 @returns(200) {OrganizationDetails: OrganizationDetails?{UpdatedAt: str(timestamp)?, OrganizationStatistics: OrganizationStatistics?{TotalAccountsCount: int?, MemberAccountsCount: int?, ActiveAccountsCount: int?, EnabledAccountsCount: int?, CountByFeature: [OrganizationFeatureStatistics]?}}}
 
 @endgroup
 
 @group detector
 @endpoint POST /detector/{detectorId}/freeTrial/daysRemaining
+@desc Provides the number of days left for each data source used in the free trial period.
 @required {DetectorId: str}
 @optional {AccountIds: [str]}
 @returns(200) {Accounts: [AccountFreeTrialInfo]?, UnprocessedAccounts: [UnprocessedAccount]?}
 
 @endpoint GET /detector/{detectorId}/threatintelset/{threatIntelSetId}
+@desc Retrieves the ThreatIntelSet that is specified by the ThreatIntelSet ID.
 @required {DetectorId: str, ThreatIntelSetId: str}
 @returns(200) {Name: str, Format: str, Location: str, Status: str, Tags: map<str,str>?}
 
 @endpoint POST /detector/{detectorId}/usage/statistics
+@desc Lists Amazon GuardDuty usage statistics over the last 30 days for the specified detector ID. For newly enabled detectors or data sources, the cost returned will include only the usage so far under 30 days. This may differ from the cost metrics in the console, which project usage over 30 days to provide a monthly cost estimate. For more information, see Understanding How Usage Costs are Calculated.
 @required {DetectorId: str, UsageStatisticType: str, UsageCriteria: UsageCriteria}
 @optional {Unit: str, MaxResults: int, NextToken: str}
 @returns(200) {UsageStatistics: UsageStatistics?{SumByAccount: [UsageAccountResult]?, TopAccountsByFeature: [UsageTopAccountsResult]?, SumByDataSource: [UsageDataSourceResult]?, SumByResource: [UsageResourceResult]?, TopResources: [UsageResourceResult]?, SumByFeature: [UsageFeatureResult]?}, NextToken: str?}
 
 @endpoint POST /detector/{detectorId}/member/invite
+@desc Invites Amazon Web Services accounts to become members of an organization administered by the Amazon Web Services account that invokes this API. If you are using Amazon Web Services Organizations to manage your GuardDuty environment, this step is not needed. For more information, see Managing accounts with organizations. To invite Amazon Web Services accounts, the first step is to ensure that GuardDuty has been enabled in the potential member accounts. You can now invoke this API to add accounts by invitation. The invited accounts can either accept or decline the invitation from their GuardDuty accounts. Each invited Amazon Web Services account can choose to accept the invitation from only one Amazon Web Services account. For more information, see Managing GuardDuty accounts by invitation. After the invite has been accepted and you choose to disassociate a member account (by using DisassociateMembers) from your account, the details of the member account obtained by invoking CreateMembers, including the associated email addresses, will be retained. This is done so that you can invoke InviteMembers without the need to invoke CreateMembers again. To remove the details associated with a member account, you must also invoke DeleteMembers.  If you disassociate a member account that was added by invitation, the member account details obtained from this API, including the associated email addresses, will be retained. This is done so that the delegated administrator can invoke the InviteMembers API without the need to invoke the CreateMembers API again. To remove the details associated with a member account, the delegated administrator must invoke the DeleteMembers API.  When the member accounts added through Organizations are later disassociated, you (administrator) can't invite them by calling the InviteMembers API. You can create an association with these member accounts again only by calling the CreateMembers API.
 @required {DetectorId: str, AccountIds: [str]}
 @optional {DisableEmailNotification: bool, Message: str}
 @returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
 
 @endpoint POST /detector/{detectorId}/coverage
+@desc Lists coverage details for your GuardDuty account. If you're a GuardDuty administrator, you can retrieve all resources associated with the active member accounts in your organization. Make sure the accounts have Runtime Monitoring enabled and GuardDuty agent running on their resources.
 @required {DetectorId: str}
 @optional {NextToken: str, MaxResults: int, FilterCriteria: CoverageFilterCriteria, SortCriteria: CoverageSortCriteria}
 @returns(200) {Resources: [CoverageResource], NextToken: str?}
 
 @endpoint GET /detector
+@desc Lists detectorIds of all the existing Amazon GuardDuty detector resources.
 @optional {maxResults: int, nextToken: str}
 @returns(200) {DetectorIds: [str], NextToken: str?}
 
 @endpoint GET /detector/{detectorId}/filter
+@desc Returns a paginated list of the current filters.
 @required {DetectorId: str}
 @optional {maxResults: int, nextToken: str}
 @returns(200) {FilterNames: [str], NextToken: str?}
 
 @endpoint POST /detector/{detectorId}/findings
+@desc Lists GuardDuty findings for the specified detector ID. There might be regional differences because some flags might not be available in all the Regions where GuardDuty is currently supported. For more information, see Regions and endpoints.
 @required {DetectorId: str}
 @optional {FindingCriteria: FindingCriteria, SortCriteria: SortCriteria, MaxResults: int, NextToken: str}
 @returns(200) {FindingIds: [str], NextToken: str?}
 
 @endpoint GET /detector/{detectorId}/ipset
+@desc Lists the IPSets of the GuardDuty service specified by the detector ID. If you use this operation from a member account, the IPSets returned are the IPSets from the associated administrator account.
 @required {DetectorId: str}
 @optional {maxResults: int, nextToken: str}
 @returns(200) {IpSetIds: [str], NextToken: str?}
@@ -267,6 +318,7 @@
 
 @group invitation
 @endpoint GET /invitation
+@desc Lists all GuardDuty membership invitations that were sent to the current Amazon Web Services account.
 @optional {maxResults: int, nextToken: str}
 @returns(200) {Invitations: [Invitation]?, NextToken: str?}
 
@@ -274,6 +326,7 @@
 
 @group malware-protection-plan
 @endpoint GET /malware-protection-plan
+@desc Lists the Malware Protection plan IDs associated with the protected resources in your Amazon Web Services account.
 @optional {nextToken: str}
 @returns(200) {MalwareProtectionPlans: [MalwareProtectionPlanSummary]?, NextToken: str?}
 
@@ -281,6 +334,7 @@
 
 @group detector
 @endpoint GET /detector/{detectorId}/member
+@desc Lists details about all member accounts for the current GuardDuty administrator account.
 @required {DetectorId: str}
 @optional {maxResults: int, nextToken: str, onlyAssociated: str}
 @returns(200) {Members: [Member]?, NextToken: str?}
@@ -289,6 +343,7 @@
 
 @group admin
 @endpoint GET /admin
+@desc Lists the accounts designated as GuardDuty delegated administrators. Only the organization's management account can run this API operation.
 @optional {maxResults: int, nextToken: str}
 @returns(200) {AdminAccounts: [AdminAccount]?, NextToken: str?}
 
@@ -296,6 +351,7 @@
 
 @group detector
 @endpoint GET /detector/{detectorId}/publishingDestination
+@desc Returns a list of publishing destinations associated with the specified detectorId.
 @required {DetectorId: str}
 @optional {maxResults: int, nextToken: str}
 @returns(200) {Destinations: [Destination], NextToken: str?}
@@ -304,6 +360,7 @@
 
 @group tags
 @endpoint GET /tags/{resourceArn}
+@desc Lists tags for a resource. Tagging is currently supported for detectors, finding filters, IP sets, threat intel sets, and publishing destination, with a limit of 50 tags per resource. When invoked, this operation returns all assigned tags for a given resource.
 @required {ResourceArn: str}
 @returns(200) {Tags: map<str,str>?}
 
@@ -311,6 +368,7 @@
 
 @group detector
 @endpoint GET /detector/{detectorId}/threatintelset
+@desc Lists the ThreatIntelSets of the GuardDuty service specified by the detector ID. If you use this operation from a member account, the ThreatIntelSets associated with the administrator account are returned.
 @required {DetectorId: str}
 @optional {maxResults: int, nextToken: str}
 @returns(200) {ThreatIntelSetIds: [str], NextToken: str?}
@@ -319,6 +377,7 @@
 
 @group malware-scan
 @endpoint POST /malware-scan/start
+@desc Initiates the malware scan. Invoking this API will automatically create the Service-linked role in the corresponding account. When the malware scan starts, you can use the associated scan ID to track the status of the scan. For more information, see DescribeMalwareScans.
 @required {ResourceArn: str}
 @returns(200) {ScanId: str?}
 
@@ -326,10 +385,12 @@
 
 @group detector
 @endpoint POST /detector/{detectorId}/member/start
+@desc Turns on GuardDuty monitoring of the specified member accounts. Use this operation to restart monitoring of accounts that you stopped monitoring with the StopMonitoringMembers operation.
 @required {DetectorId: str, AccountIds: [str]}
 @returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
 
 @endpoint POST /detector/{detectorId}/member/stop
+@desc Stops GuardDuty monitoring for the specified member accounts. Use the StartMonitoringMembers operation to restart monitoring for those accounts. With autoEnableOrganizationMembers configuration for your organization set to ALL, you'll receive an error if you attempt to stop monitoring the member accounts in your organization.
 @required {DetectorId: str, AccountIds: [str]}
 @returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
 
@@ -337,37 +398,44 @@
 
 @group tags
 @endpoint POST /tags/{resourceArn}
+@desc Adds tags to a resource.
 @required {ResourceArn: str, Tags: map<str,str>}
 
 @endgroup
 
 @group detector
 @endpoint POST /detector/{detectorId}/findings/unarchive
+@desc Unarchives GuardDuty findings specified by the findingIds.
 @required {DetectorId: str, FindingIds: [str]}
 
 @endgroup
 
 @group tags
 @endpoint DELETE /tags/{resourceArn}
+@desc Removes tags from a resource.
 @required {ResourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group detector
 @endpoint POST /detector/{detectorId}
+@desc Updates the GuardDuty detector specified by the detector ID. Specifying both EKS Runtime Monitoring (EKS_RUNTIME_MONITORING) and Runtime Monitoring (RUNTIME_MONITORING) will cause an error. You can add only one of these two features because Runtime Monitoring already includes the threat detection for Amazon EKS resources. For more information, see Runtime Monitoring. There might be regional differences because some data sources might not be available in all the Amazon Web Services Regions where GuardDuty is presently supported. For more information, see Regions and endpoints.
 @required {DetectorId: str}
 @optional {Enable: bool, FindingPublishingFrequency: str, DataSources: DataSourceConfigurations, Features: [DetectorFeatureConfiguration]}
 
 @endpoint POST /detector/{detectorId}/filter/{filterName}
+@desc Updates the filter specified by the filter name.
 @required {DetectorId: str, FilterName: str}
 @optional {Description: str, Action: str, Rank: int, FindingCriteria: FindingCriteria}
 @returns(200) {Name: str}
 
 @endpoint POST /detector/{detectorId}/findings/feedback
+@desc Marks the specified GuardDuty findings as useful or not useful.
 @required {DetectorId: str, FindingIds: [str], Feedback: str}
 @optional {Comments: str}
 
 @endpoint POST /detector/{detectorId}/ipset/{ipSetId}
+@desc Updates the IPSet specified by the IPSet ID.
 @required {DetectorId: str, IpSetId: str}
 @optional {Name: str, Location: str, Activate: bool}
 
@@ -375,6 +443,7 @@
 
 @group malware-protection-plan
 @endpoint PATCH /malware-protection-plan/{malwareProtectionPlanId}
+@desc Updates an existing Malware Protection plan resource.
 @required {MalwareProtectionPlanId: str}
 @optional {Role: str, Actions: MalwareProtectionPlanActions, ProtectedResource: UpdateProtectedResource}
 
@@ -382,23 +451,28 @@
 
 @group detector
 @endpoint POST /detector/{detectorId}/malware-scan-settings
+@desc Updates the malware scan settings. There might be regional differences because some data sources might not be available in all the Amazon Web Services Regions where GuardDuty is presently supported. For more information, see Regions and endpoints.
 @required {DetectorId: str}
 @optional {ScanResourceCriteria: ScanResourceCriteria, EbsSnapshotPreservation: str}
 
 @endpoint POST /detector/{detectorId}/member/detector/update
+@desc Contains information on member accounts to be updated. Specifying both EKS Runtime Monitoring (EKS_RUNTIME_MONITORING) and Runtime Monitoring (RUNTIME_MONITORING) will cause an error. You can add only one of these two features because Runtime Monitoring already includes the threat detection for Amazon EKS resources. For more information, see Runtime Monitoring. There might be regional differences because some data sources might not be available in all the Amazon Web Services Regions where GuardDuty is presently supported. For more information, see Regions and endpoints.
 @required {DetectorId: str, AccountIds: [str]}
 @optional {DataSources: DataSourceConfigurations, Features: [MemberFeaturesConfiguration]}
 @returns(200) {UnprocessedAccounts: [UnprocessedAccount]}
 
 @endpoint POST /detector/{detectorId}/admin
+@desc Configures the delegated administrator account with the provided values. You must provide a value for either autoEnableOrganizationMembers or autoEnable, but not both.  Specifying both EKS Runtime Monitoring (EKS_RUNTIME_MONITORING) and Runtime Monitoring (RUNTIME_MONITORING) will cause an error. You can add only one of these two features because Runtime Monitoring already includes the threat detection for Amazon EKS resources. For more information, see Runtime Monitoring. There might be regional differences because some data sources might not be available in all the Amazon Web Services Regions where GuardDuty is presently supported. For more information, see Regions and endpoints.
 @required {DetectorId: str}
 @optional {AutoEnable: bool, DataSources: OrganizationDataSourceConfigurations, Features: [OrganizationFeatureConfiguration], AutoEnableOrganizationMembers: str}
 
 @endpoint POST /detector/{detectorId}/publishingDestination/{destinationId}
+@desc Updates information about the publishing destination specified by the destinationId.
 @required {DetectorId: str, DestinationId: str}
 @optional {DestinationProperties: DestinationProperties}
 
 @endpoint POST /detector/{detectorId}/threatintelset/{threatIntelSetId}
+@desc Updates the ThreatIntelSet specified by the ThreatIntelSet ID.
 @required {DetectorId: str, ThreatIntelSetId: str}
 @optional {Name: str, Location: str, Activate: bool}
 

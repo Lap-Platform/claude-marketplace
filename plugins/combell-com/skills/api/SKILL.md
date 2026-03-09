@@ -150,90 +150,68 @@ ApiKey (inferred from docs)
 | GET | /windowshostings | Overview of windows hostings |
 | GET | /windowshostings/{domainName} | Windows hosting detail |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What hosting accounts do I have?" -> GET /v2/accounts
-- "Show me the DNS records for example.com" -> GET /v2/dns/{domainName}/records
-- "Add an A record pointing to 1.2.3.4 for my domain" -> POST /v2/dns/{domainName}/records
-- "What PHP version is my Linux hosting running?" -> GET /v2/linuxhostings/{domainName}
-- "How much disk space is my hosting using?" -> GET /v2/linuxhostings/{domainName}
-- "Register a new domain" -> POST /v2/domains/registrations
-- "Transfer my domain from another registrar" -> POST /v2/domains/transfers
-- "Create a new mailbox for info@example.com" -> POST /v2/mailboxes
-- "Set up auto-reply on my mailbox while I'm on vacation" -> PUT /v2/mailboxes/{mailboxName}/autoreply
-- "Create a MySQL database for my WordPress site" -> POST /v2/mysqldatabases
-- "Enable Let's Encrypt SSL for my site" -> PUT /v2/linuxhostings/{domainName}/sslsettings/{hostname}/letsencrypt
-- "Add a cron job to my hosting" -> POST /v2/linuxhostings/{domainName}/scheduledtasks
-- "Is my provisioning job finished yet?" -> GET /v2/provisioningjobs/{jobId}
-- "Set up a catch-all email for my domain" -> POST /v2/mailzones/{domainName}/catchall
-- "Download my SSL certificate as PFX" -> GET /v2/sslcertificates/{sha1Fingerprint}/download
-
-## Response Tips
-
-- **Accounts, domains, hostings, databases, mailboxes, SSH, SSL lists**: Paginated via `skip`/`take` query params; response is an array -- check total count headers if available.
-- **DNS records**: Filterable by `type`, `record_name`, and `service`; each record has a unique `id` (string) needed for updates and deletes.
-- **Provisioning jobs**: Returns 200 with `status` and `completion.estimate` while pending, 201 with `resource_links` when done -- poll until status changes.
-- **SSL certificate requests**: May return 303 (redirect to completed cert) or 410 (gone/expired) instead of 200 -- handle these status codes explicitly.
-- **Mailbox details**: `auto_reply` and `auto_forward` are nested objects; check the `enabled` boolean before reading sub-fields.
-- **Mailzone config**: Contains `aliases`, `catch_all`, `anti_spam`, and `smtp_domains` as separate nested structures -- each managed by its own sub-endpoint.
-- **Linux hosting details**: `sites` is an array of subsites; `mysql_database_names` lists linked databases but not full details -- follow up with the mysqldatabases endpoint.
-- **All write operations**: 201/202 means accepted/created (often asynchronous); 204 means success with no body -- do not try to parse a response.
-
-## Anomaly Flags
-
-- **Provisioning job stuck**: If `GET /provisioningjobs/{jobId}` returns status other than a completion state and `completion.estimate` is in the past, surface a warning that the job may be stalled.
-- **SSL certificate expiring soon**: When `GET /sslcertificates/{sha1Fingerprint}` shows `expires_after` within 30 days, alert the user to renew or request a new certificate.
-- **Domain not set to auto-renew**: If `GET /domains/{domainName}` returns `will_renew: false` and expiration is within 60 days, warn about potential domain loss.
-- **Disk usage high**: When `GET /linuxhostings/{domainName}` shows `actual_size` or `webspace_usage` above 85% of `max_size` or `max_webspace_size`, flag the capacity risk.
-- **Database near capacity**: When `GET /mysqldatabases/{databaseName}` shows `actual_size` approaching `max_size`, alert before writes start failing.
-- **SSL request returned 410**: The certificate request has expired or been revoked -- surface this immediately as it requires a new request.
-- **FTP or SSH disabled unexpectedly**: If `GET /linuxhostings/{domainName}` returns `ftp_enabled: false` or SSH appears off while the user expects access, flag the misconfiguration.
-
-## Playbook
-
-### Set Up a New Linux Hosting Site with SSL
-
-1. `GET /v2/servicepacks` -- list available service packs, pick one.
-2. `POST /v2/accounts` -- create an account with the chosen `servicepack_id` and set an FTP password.
-3. `GET /v2/provisioningjobs/{jobId}` -- poll the provisioning job until it completes (201 with `resource_links`).
-4. `GET /v2/linuxhostings/{domainName}` -- confirm the hosting is active and note the IP.
-5. `POST /v2/dns/{domainName}/records` -- add an A record pointing to the hosting IP.
-6. `PUT /v2/linuxhostings/{domainName}/sslsettings/{hostname}/letsencrypt` -- enable Let's Encrypt with `enabled: true`.
-7. `PUT /v2/linuxhostings/{domainName}/sslsettings/{hostname}/autoredirect` -- enable HTTP-to-HTTPS redirect.
-
-### Configure Email for a Domain
-
-1. `GET /v2/mailzones/{domainName}` -- check existing mail zone settings and available accounts.
-2. `POST /v2/mailboxes` -- create mailboxes (e.g., info@, support@) with passwords.
-3. `POST /v2/mailzones/{domainName}/aliases` -- set up aliases (e.g., sales@ -> info@).
-4. `POST /v2/mailzones/{domainName}/catchall` -- optionally add a catch-all address.
-5. `PUT /v2/mailzones/{domainName}/antispam` -- configure anti-spam to `advanced` or `basic`.
-
-### Register a Domain and Point It to Existing Hosting
-
-1. `POST /v2/domains/registrations` -- register the domain with registrant details and preferred nameservers.
-2. `GET /v2/provisioningjobs/{jobId}` -- wait for registration to complete.
-3. `GET /v2/linuxhostings/{domainName}` -- get the hosting IP from an existing site.
-4. `POST /v2/dns/{domainName}/records` -- add A record pointing to the hosting IP.
-5. `POST /v2/linuxhostings/{existingDomain}/sites/{siteName}/hostheaders` -- add the new domain as a host header on the existing site.
-
-### Set Up a MySQL Database with Application User
-
-1. `POST /v2/mysqldatabases` -- create the database linked to an `account_id`, set the admin password.
-2. `GET /v2/provisioningjobs/{jobId}` -- wait for the database to be provisioned.
-3. `GET /v2/mysqldatabases/{databaseName}` -- confirm creation and note the `hostname`.
-4. `POST /v2/mysqldatabases/{databaseName}/users` -- create an application-specific user with a strong password.
-5. Use the `hostname`, `database_name`, `user_name`, and `password` in your application config.
-
-### Transfer a Domain and Migrate DNS
-
-1. `GET /v2/dns/{domainName}/records` -- export all DNS records from the current provider (done outside this API).
-2. `POST /v2/domains/transfers` -- initiate transfer with the `auth_code` from the current registrar.
-3. `GET /v2/provisioningjobs/{jobId}` -- poll until the transfer completes.
-4. `POST /v2/dns/{domainName}/records` -- recreate each DNS record (A, CNAME, MX, TXT, etc.) one by one.
-5. `PUT /v2/domains/{domainName}/renew` -- set `will_renew: true` to ensure the domain auto-renews under the new account.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all accounts?" -> GET /accounts
+- "Create a account?" -> POST /accounts
+- "Get account details?" -> GET /accounts/{accountId}
+- "List all records?" -> GET /dns/{domainName}/records
+- "Create a record?" -> POST /dns/{domainName}/records
+- "Get record details?" -> GET /dns/{domainName}/records/{recordId}
+- "Update a record?" -> PUT /dns/{domainName}/records/{recordId}
+- "Delete a record?" -> DELETE /dns/{domainName}/records/{recordId}
+- "List all domains?" -> GET /domains
+- "Get domain details?" -> GET /domains/{domainName}
+- "Create a registration?" -> POST /domains/registrations
+- "Create a transfer?" -> POST /domains/transfers
+- "List all linuxhostings?" -> GET /linuxhostings
+- "Get linuxhosting details?" -> GET /linuxhostings/{domainName}
+- "List all availableversions?" -> GET /linuxhostings/{domainName}/phpsettings/availableversions
+- "Create a subsite?" -> POST /linuxhostings/{domainName}/subsites
+- "Delete a subsite?" -> DELETE /linuxhostings/{domainName}/subsites/{siteName}
+- "Create a hostheader?" -> POST /linuxhostings/{domainName}/sites/{siteName}/hostheaders
+- "List all scheduledtasks?" -> GET /linuxhostings/{domainName}/scheduledtasks
+- "Create a scheduledtask?" -> POST /linuxhostings/{domainName}/scheduledtasks
+- "Get scheduledtask details?" -> GET /linuxhostings/{domainName}/scheduledtasks/{scheduledTaskId}
+- "Update a scheduledtask?" -> PUT /linuxhostings/{domainName}/scheduledtasks/{scheduledTaskId}
+- "Delete a scheduledtask?" -> DELETE /linuxhostings/{domainName}/scheduledtasks/{scheduledTaskId}
+- "List all keys?" -> GET /linuxhostings/{domainName}/ssh/keys
+- "Create a key?" -> POST /linuxhostings/{domainName}/ssh/keys
+- "Delete a key?" -> DELETE /linuxhostings/{domainName}/ssh/keys/{fingerprint}
+- "List all mailboxes?" -> GET /mailboxes
+- "Create a mailboxe?" -> POST /mailboxes
+- "Get mailboxe details?" -> GET /mailboxes/{mailboxName}
+- "Delete a mailboxe?" -> DELETE /mailboxes/{mailboxName}
+- "Get mailzone details?" -> GET /mailzones/{domainName}
+- "Create a catchall?" -> POST /mailzones/{domainName}/catchall
+- "Delete a catchall?" -> DELETE /mailzones/{domainName}/catchall/{emailAddress}
+- "Create a aliase?" -> POST /mailzones/{domainName}/aliases
+- "Update a aliase?" -> PUT /mailzones/{domainName}/aliases/{emailAddress}
+- "Delete a aliase?" -> DELETE /mailzones/{domainName}/aliases/{emailAddress}
+- "Create a smtpdomain?" -> POST /mailzones/{domainName}/smtpdomains
+- "Update a smtpdomain?" -> PUT /mailzones/{domainName}/smtpdomains/{hostname}
+- "Delete a smtpdomain?" -> DELETE /mailzones/{domainName}/smtpdomains/{hostname}
+- "List all mysqldatabases?" -> GET /mysqldatabases
+- "Create a mysqldatabase?" -> POST /mysqldatabases
+- "Get mysqldatabase details?" -> GET /mysqldatabases/{databaseName}
+- "Delete a mysqldatabase?" -> DELETE /mysqldatabases/{databaseName}
+- "List all users?" -> GET /mysqldatabases/{databaseName}/users
+- "Create a user?" -> POST /mysqldatabases/{databaseName}/users
+- "Delete a user?" -> DELETE /mysqldatabases/{databaseName}/users/{userName}
+- "Get provisioningjob details?" -> GET /provisioningjobs/{jobId}
+- "List all servicepacks?" -> GET /servicepacks
+- "List all ssh?" -> GET /ssh
+- "List all sslcertificaterequests?" -> GET /sslcertificaterequests
+- "Create a sslcertificaterequest?" -> POST /sslcertificaterequests
+- "Get sslcertificaterequest details?" -> GET /sslcertificaterequests/{id}
+- "Update a sslcertificaterequest?" -> PUT /sslcertificaterequests/{id}
+- "List all sslcertificates?" -> GET /sslcertificates
+- "Get sslcertificate details?" -> GET /sslcertificates/{sha1Fingerprint}
+- "List all download?" -> GET /sslcertificates/{sha1Fingerprint}/download
+- "List all windowshostings?" -> GET /windowshostings
+- "Get windowshosting details?" -> GET /windowshostings/{domainName}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

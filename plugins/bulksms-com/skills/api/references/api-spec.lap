@@ -9,87 +9,102 @@
 
 @group webhooks
 @endpoint POST /webhooks
-@required {body: map}
-@returns(200)
-@errors {400}
+@desc Create a webhook
+@required {body: map # Contains the property values for your new webhook}
+@returns(200) Contains the webhook you created
+@errors {400: The url given for the webhook is not callable}
 
 @endpoint GET /webhooks
-@returns(200)
+@desc List webhooks
+@returns(200) Array of Webhooks
 
 @endpoint GET /webhooks/{id}
-@returns(200)
-@errors {400, 404}
+@desc Read a webhook
+@returns(200) The properties of a specific webhook
+@errors {400: The url given for the webhook is not callable, 404: A webhook with the given id does not exit}
 
 @endpoint POST /webhooks/{id}
-@required {body: map}
-@returns(200)
-@errors {404}
+@desc Update a webhook
+@required {body: map # Contains the new property values for the webhook}
+@returns(200) The properties of the updated webhook
+@errors {404: A webhook with the given id does not exit}
 
 @endpoint DELETE /webhooks/{id}
-@returns(200)
-@errors {404}
+@desc Delete a webhook
+@returns(200) The webhook was deleted successfully
+@errors {404: A webhook with the given id does not exit}
 
 @endgroup
 
 @group profile
 @endpoint GET /profile
-@returns(200)
+@desc Get profile
+@returns(200) A Profile object
 
 @endgroup
 
 @group messages
 @endpoint POST /messages
-@required {body: [map]}
-@optional {deduplication-id: any, auto-unicode: any, schedule-date: any, schedule-description: any}
-@returns(201)
-@errors {400, 403}
+@desc Send Messages
+@required {body: [map] # Contains details of the message (or messages) that you want to send.  One `SubmissionEntry` can produce many messages, and your request may contain multiple such entries.}
+@optional {deduplication-id: any # Safeguards against the possibility of sending the same messages more than once.  If a communication failure occurs during a submission, you cannot be sure that the submission was processed; therefore you would have to submit it again. When you post the retry, you must use the `deduplication-id` of the original post. The BulkSMS system uses this ID to check that the request was not previously processed. (If it was previously processed, the submission will succeed, and the behaviour will be indistinguishable to you from a non-duplicated submission). The ID expires after about 12 hours., auto-unicode: any # Specifies how to deal with message text that contains characters not present in the GSM 03.38 character set.  Messages that contain only GSM 03.38 characters are not affected by this setting.  If the value is `true` then a message containing non-GSM 03.38 characters will be transmitted as a Unicode SMS (which is most likely more costly).   Please note: when `auto-unicode` is `true` and the value of the `encoding` property is specified as `UNICODE`, the message will always be sent as `UNICODE`.  If the value is `false` and the `encoding` property is `TEXT` then non-GSM 03.38 characters will be replaced by the `?` character.  When using this setting on the API, you should take case to ensure that your message is _clean_.    Invisible unicode and unexpected characters could unintentionally convert an message to `UNICODE`.  A common mistake is to use the backtick character (\`) which is unicode and will turn your `TEXT` message into a `UNICODE` message., schedule-date: any # Allows you to send a message in the future.  An example value is `2019-02-18T13:00:00+02:00`.  It encodes to `2019-02-18T13%3A00%3A00%2B02%3A00`. Credits are deducted from your account immediately. Once submitted, scheduled messages cannot be changed or cancelled. The date can be a maximum of two years in the future. If the value is in the past, the message will be sent immediately. The date format requires you to supply an offset from UTC. You can decide to use the offset of your timezone, or maybe the zone of the recipient's location is more appropriate. If the destination is a group, the group members are determined at the time that you submit the message; not the time the message is scheduled to be sent., schedule-description: any # A note that is stored together with a scheduled submission, which could be used to more easily identify the scheduled submission at a later date.  The value of this field is ignored if the `schedule-date` is not provided. A value that is longer than 256 characters is truncated.}
+@returns(201) An array of the messages that were created from the request
+@errors {400: Bad Request. The content or structure of your submission, or a parameter, was found to be invalid., 403: Forbidden.  Inspect the body of the response for further details - for example, you may have insufficient credits remaining}
 
 @endpoint GET /messages
-@optional {limit: any, filter: any, sortOrder: any}
-@returns(200)
-@errors {400}
+@desc Retrieve Messages
+@optional {limit: any # The maximum number of messages that are returned.  The default is 1000. The value of `limit` is not a guarantee that a specific number of messages will be in the response, even if there are more messages available.  Consider the case where you have 150 messages and you specify `limit=50`.  It is possible that only 49 messages will be returned.  The  way to make sure that there are no more messages is to submit a new call using the `id` filter field with the `<` operator (described below)., filter: any # See the message filtering for more information., sortOrder: any # The default value is DESCENDING  If the `sortOrder` is DESCENDING, the newest messages be first in the result.  ASCENDING places the oldest messages on top of the response.}
+@returns(200) Contains the requested array of messages
+@errors {400: Bad Request. The content or structure of your submission, or a parameter, was found to be invalid.}
 
 @endpoint GET /messages/send
-@required {to: any, body: any}
-@optional {deduplication-id: any}
-@returns(201)
-@errors {400, 403}
+@desc Send message by simple GET or POST
+@required {to: any # The phone number of the recipient., body: any # The text you want to send.}
+@optional {deduplication-id: any # Refer to the `deduplication-id` parameter.}
+@returns(201) An array of messages
+@errors {400: Bad Request. The content or structure of your submission, or a parameter, was found to be invalid., 403: Forbidden.  Inspect the body of the response for further details - for example, you may have insufficient credits remaining}
 
 @endpoint GET /messages/{id}/relatedReceivedMessages
-@required {id: any}
-@returns(200)
-@errors {400}
+@desc List Related Messages
+@required {id: any # The `id` of the sent message}
+@returns(200) An array of related messages.  If the `id` is not a sent message, the array will be empty.
+@errors {400: Bad Request. The content or structure of your submission, or a parameter, was found to be invalid.}
 
 @endpoint GET /messages/{id}
-@required {id: any}
-@returns(200)
-@errors {404, 400}
+@desc Show Message
+@required {id: any # The `id` of the message you want to retrieve}
+@returns(200) The message detail
+@errors {404: A [not-found error](errors/#not-found) if the message cannot be found., 400: Bad Request. The content or structure of your submission, or a parameter, was found to be invalid.}
 
 @endgroup
 
 @group blocked-numbers
 @endpoint POST /blocked-numbers
-@required {body: [str]}
-@returns(200)
+@desc Create a blocked number
+@required {body: [str] # Maximum size: `1000` items}
+@returns(200) Empty body upon success
 
 @endpoint GET /blocked-numbers
-@optional {min-id: any, limit: any}
-@returns(200)
+@desc List blocked numbers
+@optional {min-id: any # Records with an `id` that is greater or equal to min-id will be returned. The default value is `0`.  You can add 1 to an id that you previously retrieved, to return subsequent records., limit: any # The maximum number of records to return. The default value is `10000`. The value cannot be greater than 10000.}
+@returns(200) A list of BlockedNumber objects
 
 @endgroup
 
 @group credit
 @endpoint POST /credit/transfer
-@required {body: map}
-@returns(200)
-@errors {403, 400}
+@desc Transfer credits to another account
+@required {body: map # Contains details of the transfer request.}
+@returns(200) An empty body when the credits were transferred OK.
+@errors {403: When there are not enough credits in your account or the credit transfer facility is not activated., 400: When the request fails validation checks.}
 
 @endgroup
 
 @group rmm
 @endpoint POST /rmm/pre-sign-attachment
-@required {body: map}
-@returns(200)
+@desc Upload an attachment via a signed URL
+@required {body: map # Describes the file to upload}
+@returns(200) A PreSignInfo object
 
 @endgroup
 

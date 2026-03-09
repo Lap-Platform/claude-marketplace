@@ -10,347 +10,411 @@
 
 @group audit
 @endpoint POST /audit
+@desc Generate an audit
 @optional {additionalOptions: map{daysAbandonedWorkflow: int, categories: [str]}}
-@returns(200) {Credentials Risk Report: map, Database Risk Report: map, Filesystem Risk Report: map, Nodes Risk Report: map, Instance Risk Report: map}
-@errors {401, 500}
+@returns(200) {Credentials Risk Report: map, Database Risk Report: map, Filesystem Risk Report: map, Nodes Risk Report: map, Instance Risk Report: map} # Operation successful.
+@errors {401: Unauthorized, 500: Internal server error.}
 
 @endgroup
 
 @group credentials
 @endpoint GET /credentials
-@optional {limit: num=100, cursor: str}
-@returns(200) {data: [any], nextCursor: str?}
-@errors {401}
+@desc List credentials
+@optional {limit: num=100 # The maximum number of items to return., cursor: str # Paginate by setting the cursor parameter to the nextCursor attribute returned by the previous request's response. Default value fetches the first "page" of the collection. See pagination for more detail.}
+@returns(200) {data: [any], nextCursor: str?} # Operation successful.
+@errors {401: Unauthorized}
 
 @endpoint POST /credentials
+@desc Create a credential
 @required {name: str, type: str, data: map}
-@optional {id: str, isResolvable: bool, createdAt: str(date-time), updatedAt: str(date-time)}
-@returns(200) {id: str, name: str, type: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {400, 401, 415}
+@optional {id: str, isResolvable: bool # Whether this credential has resolvable fields, createdAt: str(date-time), updatedAt: str(date-time)}
+@returns(200) {id: str, name: str, type: str, createdAt: str(date-time), updatedAt: str(date-time)} # Operation successful.
+@errors {400: Bad request - invalid credential type or data., 401: Unauthorized, 415: Unsupported media type.}
 
 @endpoint PATCH /credentials/{id}
-@required {id: str}
-@optional {name: str, type: str, data: map, isGlobal: bool, isResolvable: bool, isPartialData: bool=False}
-@returns(200) {id: str, name: str, type: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {400, 401, 404}
+@desc Update credential by ID
+@required {id: str # The credential ID that needs to be updated}
+@optional {name: str # The name of the credential, type: str # The credential type. If changing type, data must also be provided., data: map # The credential data. Required when changing credential type., isGlobal: bool # Whether this credential is available globally, isResolvable: bool # Whether this credential has resolvable fields, isPartialData: bool=False # If true, unredacts and merges existing credential data with the provided data. If false, replaces the entire data object.}
+@returns(200) {id: str, name: str, type: str, createdAt: str(date-time), updatedAt: str(date-time)} # Operation successful.
+@errors {400: Bad request - invalid credential type or data., 401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint DELETE /credentials/{id}
-@required {id: str}
-@returns(200) {id: str, name: str, type: str, data: map, isResolvable: bool, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {401, 404}
+@desc Delete credential by ID
+@required {id: str # The credential ID that needs to be deleted}
+@returns(200) {id: str, name: str, type: str, data: map, isResolvable: bool, createdAt: str(date-time), updatedAt: str(date-time)} # Operation successful.
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint GET /credentials/schema/{credentialTypeName}
-@required {credentialTypeName: str}
-@returns(200)
-@errors {401, 404}
+@desc Show credential data schema
+@required {credentialTypeName: str # The credential type name that you want to get the schema for}
+@returns(200) Operation successful.
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint PUT /credentials/{id}/transfer
-@required {id: str, destinationProjectId: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Transfer a credential to another project.
+@required {id: str # The ID of the credential., destinationProjectId: str # The ID of the project to transfer the credential to.}
+@returns(200) Operation successful.
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found.}
 
 @endgroup
 
 @group executions
 @endpoint GET /executions
-@optional {includeData: bool, status: str(canceled/error/running/success/waiting), workflowId: str, projectId: str, limit: num=100, cursor: str}
-@returns(200) {data: [map], nextCursor: str?}
-@errors {401, 404}
+@desc Retrieve all executions
+@optional {includeData: bool # Whether or not to include the execution's detailed data., status: str(canceled/error/running/success/waiting) # Status to filter the executions by., workflowId: str # Workflow to filter the executions by., projectId: str, limit: num=100 # The maximum number of items to return., cursor: str # Paginate by setting the cursor parameter to the nextCursor attribute returned by the previous request's response. Default value fetches the first "page" of the collection. See pagination for more detail.}
+@returns(200) {data: [map], nextCursor: str?} # Operation successful.
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint GET /executions/{id}
-@required {id: num}
-@optional {includeData: bool}
-@returns(200) {id: num, data: map, finished: bool, mode: str, retryOf: num?, retrySuccessId: num?, startedAt: str(date-time), stoppedAt: str(date-time)?, workflowId: num, waitTill: str(date-time)?, customData: map, status: str}
-@errors {401, 404}
+@desc Retrieve an execution
+@required {id: num # The ID of the execution.}
+@optional {includeData: bool # Whether or not to include the execution's detailed data.}
+@returns(200) {id: num, data: map, finished: bool, mode: str, retryOf: num?, retrySuccessId: num?, startedAt: str(date-time), stoppedAt: str(date-time)?, workflowId: num, waitTill: str(date-time)?, customData: map, status: str} # Operation successful.
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint DELETE /executions/{id}
-@required {id: num}
-@returns(200) {id: num, data: map, finished: bool, mode: str, retryOf: num?, retrySuccessId: num?, startedAt: str(date-time), stoppedAt: str(date-time)?, workflowId: num, waitTill: str(date-time)?, customData: map, status: str}
-@errors {401, 404}
+@desc Delete an execution
+@required {id: num # The ID of the execution.}
+@returns(200) {id: num, data: map, finished: bool, mode: str, retryOf: num?, retrySuccessId: num?, startedAt: str(date-time), stoppedAt: str(date-time)?, workflowId: num, waitTill: str(date-time)?, customData: map, status: str} # Operation successful.
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint POST /executions/{id}/retry
-@required {id: num}
-@optional {loadWorkflow: bool}
-@returns(200) {id: num, data: map, finished: bool, mode: str, retryOf: num?, retrySuccessId: num?, startedAt: str(date-time), stoppedAt: str(date-time)?, workflowId: num, waitTill: str(date-time)?, customData: map, status: str}
-@errors {401, 404, 409}
+@desc Retry an execution
+@required {id: num # The ID of the execution.}
+@optional {loadWorkflow: bool # Whether to load the currently saved workflow to execute instead of the one saved at the time of the execution. If set to true, it will retry with the latest version of the workflow.}
+@returns(200) {id: num, data: map, finished: bool, mode: str, retryOf: num?, retrySuccessId: num?, startedAt: str(date-time), stoppedAt: str(date-time)?, workflowId: num, waitTill: str(date-time)?, customData: map, status: str} # Operation successful.
+@errors {401: Unauthorized, 404: The specified resource was not found., 409: Conflict}
 
 @endpoint POST /executions/{id}/stop
-@required {id: num}
-@returns(200) {id: num, data: map, finished: bool, mode: str, retryOf: num?, retrySuccessId: num?, startedAt: str(date-time), stoppedAt: str(date-time)?, workflowId: num, waitTill: str(date-time)?, customData: map, status: str}
-@errors {401, 404}
+@desc Stop an execution
+@required {id: num # The ID of the execution.}
+@returns(200) {id: num, data: map, finished: bool, mode: str, retryOf: num?, retrySuccessId: num?, startedAt: str(date-time), stoppedAt: str(date-time)?, workflowId: num, waitTill: str(date-time)?, customData: map, status: str} # Operation successful.
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint POST /executions/stop
-@required {status: [str]}
-@optional {workflowId: str, startedAfter: str(date-time), startedBefore: str(date-time)}
-@returns(200) {stopped: num}
-@errors {400, 401}
+@desc Stop multiple executions
+@required {status: [str] # Array of execution statuses to stop. Must include at least one status.}
+@optional {workflowId: str # Optional workflow ID to filter executions. If not provided, will stop executions across all accessible workflows., startedAfter: str(date-time) # Only stop executions that started after this time., startedBefore: str(date-time) # Only stop executions that started before this time.}
+@returns(200) {stopped: num} # Operation successful.
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized}
 
 @endpoint GET /executions/{id}/tags
-@required {id: num}
-@returns(200)
-@errors {401, 404}
+@desc Get execution tags
+@required {id: num # The ID of the execution.}
+@returns(200) List of annotation tags
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint PUT /executions/{id}/tags
-@required {id: num}
-@returns(200)
-@errors {400, 401, 404}
+@desc Update tags of an execution
+@required {id: num # The ID of the execution.}
+@returns(200) List of tags after updating
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found.}
 
 @endgroup
 
 @group tags
 @endpoint POST /tags
+@desc Create a tag
 @required {name: str}
 @optional {id: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@returns(201) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {400, 401, 409}
+@returns(201) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time)} # A tag object
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 409: Conflict}
 
 @endpoint GET /tags
-@optional {limit: num=100, cursor: str}
-@returns(200) {data: [map], nextCursor: str?}
-@errors {401}
+@desc Retrieve all tags
+@optional {limit: num=100 # The maximum number of items to return., cursor: str # Paginate by setting the cursor parameter to the nextCursor attribute returned by the previous request's response. Default value fetches the first "page" of the collection. See pagination for more detail.}
+@returns(200) {data: [map], nextCursor: str?} # Operation successful.
+@errors {401: Unauthorized}
 
 @endpoint GET /tags/{id}
-@required {id: str}
-@returns(200) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {401, 404}
+@desc Retrieves a tag
+@required {id: str # The ID of the tag.}
+@returns(200) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time)} # Operation successful.
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint DELETE /tags/{id}
-@required {id: str}
-@returns(200) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {401, 403, 404}
+@desc Delete a tag
+@required {id: str # The ID of the tag.}
+@returns(200) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time)} # Operation successful.
+@errors {401: Unauthorized, 403: Forbidden, 404: The specified resource was not found.}
 
 @endpoint PUT /tags/{id}
-@required {id: str, name: str}
+@desc Update a tag
+@required {id: str # The ID of the tag., name: str}
 @optional {id: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@returns(200) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {400, 401, 404, 409}
+@returns(200) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time)} # Tag object
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found., 409: Conflict}
 
 @endgroup
 
 @group workflows
 @endpoint POST /workflows
+@desc Create a workflow
 @required {name: str, nodes: [map{id: str, name: str, webhookId: str, disabled: bool, notesInFlow: bool, notes: str, type: str, typeVersion: num, executeOnce: bool, alwaysOutputData: bool, retryOnFail: bool, maxTries: num, waitBetweenTries: num, continueOnFail: bool, onError: str, position: [num], parameters: map, credentials: map, createdAt: str(date-time), updatedAt: str(date-time)}], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}}
 @optional {id: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), staticData: any, tags: [map{id: str, name!: str, createdAt: str(date-time), updatedAt: str(date-time)}], shared: [map{role: str, workflowId: str, projectId: str, project: map{id: str, name: str, type: str}, createdAt: str(date-time), updatedAt: str(date-time)}], activeVersion: map{versionId: str, workflowId: str, nodes: [map{id: str, name: str, webhookId: str, disabled: bool, notesInFlow: bool, notes: str, type: str, typeVersion: num, executeOnce: bool, alwaysOutputData: bool, retryOnFail: bool, maxTries: num, waitBetweenTries: num, continueOnFail: bool, onError: str, position: [num], parameters: map, credentials: map, createdAt: str(date-time), updatedAt: str(date-time)}], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
-@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
-@errors {400, 401}
+@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}} # A workflow object
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized}
 
 @endpoint GET /workflows
-@optional {active: bool, tags: str, name: str, projectId: str, excludePinnedData: bool, limit: num=100, cursor: str}
-@returns(200) {data: [map], nextCursor: str?}
-@errors {401}
+@desc Retrieve all workflows
+@optional {active: bool, tags: str, name: str, projectId: str, excludePinnedData: bool # Set this to avoid retrieving pinned data, limit: num=100 # The maximum number of items to return., cursor: str # Paginate by setting the cursor parameter to the nextCursor attribute returned by the previous request's response. Default value fetches the first "page" of the collection. See pagination for more detail.}
+@returns(200) {data: [map], nextCursor: str?} # Operation successful.
+@errors {401: Unauthorized}
 
 @endpoint GET /workflows/{id}
-@required {id: str}
-@optional {excludePinnedData: bool}
-@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
-@errors {401, 404}
+@desc Retrieve a workflow
+@required {id: str # The ID of the workflow.}
+@optional {excludePinnedData: bool # Set this to avoid retrieving pinned data}
+@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}} # Operation successful.
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint DELETE /workflows/{id}
-@required {id: str}
-@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
-@errors {401, 404}
+@desc Delete a workflow
+@required {id: str # The ID of the workflow.}
+@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}} # Operation successful.
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint PUT /workflows/{id}
-@required {id: str, name: str, nodes: [map{id: str, name: str, webhookId: str, disabled: bool, notesInFlow: bool, notes: str, type: str, typeVersion: num, executeOnce: bool, alwaysOutputData: bool, retryOnFail: bool, maxTries: num, waitBetweenTries: num, continueOnFail: bool, onError: str, position: [num], parameters: map, credentials: map, createdAt: str(date-time), updatedAt: str(date-time)}], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}}
+@desc Update a workflow
+@required {id: str # The ID of the workflow., name: str, nodes: [map{id: str, name: str, webhookId: str, disabled: bool, notesInFlow: bool, notes: str, type: str, typeVersion: num, executeOnce: bool, alwaysOutputData: bool, retryOnFail: bool, maxTries: num, waitBetweenTries: num, continueOnFail: bool, onError: str, position: [num], parameters: map, credentials: map, createdAt: str(date-time), updatedAt: str(date-time)}], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}}
 @optional {id: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), staticData: any, tags: [map{id: str, name!: str, createdAt: str(date-time), updatedAt: str(date-time)}], shared: [map{role: str, workflowId: str, projectId: str, project: map{id: str, name: str, type: str}, createdAt: str(date-time), updatedAt: str(date-time)}], activeVersion: map{versionId: str, workflowId: str, nodes: [map{id: str, name: str, webhookId: str, disabled: bool, notesInFlow: bool, notes: str, type: str, typeVersion: num, executeOnce: bool, alwaysOutputData: bool, retryOnFail: bool, maxTries: num, waitBetweenTries: num, continueOnFail: bool, onError: str, position: [num], parameters: map, credentials: map, createdAt: str(date-time), updatedAt: str(date-time)}], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
-@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
-@errors {400, 401, 404}
+@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}} # Workflow object
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint GET /workflows/{id}/{versionId}
-@required {id: str, versionId: str}
-@returns(200) {versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, name: str?, description: str?, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {401, 404}
+@desc Retrieves a specific version of a workflow
+@required {id: str # The ID of the workflow., versionId: str # The version ID to retrieve}
+@returns(200) {versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, name: str?, description: str?, createdAt: str(date-time), updatedAt: str(date-time)} # Operation successful.
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint POST /workflows/{id}/activate
-@required {id: str}
-@optional {versionId: str, name: str, description: str}
-@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
-@errors {400, 401, 404}
+@desc Publish a workflow
+@required {id: str # The ID of the workflow.}
+@optional {versionId: str # The specific version ID to activate or publish. If not provided, the latest version is used., name: str # Optional name for the workflow version during activation., description: str # Optional description for the workflow version during activation.}
+@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}} # Workflow object
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint POST /workflows/{id}/deactivate
-@required {id: str}
-@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}}
-@errors {401, 404}
+@desc Deactivate a workflow
+@required {id: str # The ID of the workflow.}
+@returns(200) {id: str, name: str, active: bool, createdAt: str(date-time), updatedAt: str(date-time), nodes: [map], connections: map, settings: map{saveExecutionProgress: bool, saveManualExecutions: bool, saveDataErrorExecution: str, saveDataSuccessExecution: str, executionTimeout: num, errorWorkflow: str, timezone: str, executionOrder: str, callerPolicy: str, callerIds: str, timeSavedPerExecution: num, availableInMCP: bool}, staticData: any, tags: [map], shared: [map], activeVersion: map?{versionId: str, workflowId: str, nodes: [map], connections: map, authors: str, createdAt: str(date-time), updatedAt: str(date-time)}} # Workflow object
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint PUT /workflows/{id}/transfer
-@required {id: str, destinationProjectId: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Transfer a workflow to another project
+@required {id: str # The ID of the workflow., destinationProjectId: str # The ID of the project to transfer the workflow to.}
+@returns(200) Operation successful.
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint GET /workflows/{id}/tags
-@required {id: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get workflow tags
+@required {id: str # The ID of the workflow.}
+@returns(200) List of tags
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint PUT /workflows/{id}/tags
-@required {id: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Update tags of a workflow
+@required {id: str # The ID of the workflow.}
+@returns(200) List of tags after add the tag
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found.}
 
 @endgroup
 
 @group users
 @endpoint GET /users
-@optional {limit: num=100, cursor: str, includeRole: bool=False, projectId: str}
-@returns(200) {data: [map], nextCursor: str?}
-@errors {401}
+@desc Retrieve all users
+@optional {limit: num=100 # The maximum number of items to return., cursor: str # Paginate by setting the cursor parameter to the nextCursor attribute returned by the previous request's response. Default value fetches the first "page" of the collection. See pagination for more detail., includeRole: bool=False # Whether to include the user's role or not., projectId: str}
+@returns(200) {data: [map], nextCursor: str?} # Operation successful.
+@errors {401: Unauthorized}
 
 @endpoint POST /users
-@returns(200) {user: map{id: str, email: str, inviteAcceptUrl: str, emailSent: bool}, error: str}
-@errors {401, 403}
+@desc Create multiple users
+@returns(200) {user: map{id: str, email: str, inviteAcceptUrl: str, emailSent: bool}, error: str} # Operation successful.
+@errors {401: Unauthorized, 403: Forbidden}
 
 @endpoint GET /users/{id}
-@required {id: str(identifier)}
-@optional {includeRole: bool=False}
-@returns(200) {id: str, email: str(email), firstName: str, lastName: str, isPending: bool, createdAt: str(date-time), updatedAt: str(date-time), role: str}
-@errors {401}
+@desc Get user by ID/Email
+@required {id: str(identifier) # The ID or email of the user.}
+@optional {includeRole: bool=False # Whether to include the user's role or not.}
+@returns(200) {id: str, email: str(email), firstName: str, lastName: str, isPending: bool, createdAt: str(date-time), updatedAt: str(date-time), role: str} # Operation successful.
+@errors {401: Unauthorized}
 
 @endpoint DELETE /users/{id}
-@required {id: str(identifier)}
-@returns(204)
-@errors {401, 403, 404}
+@desc Delete a user
+@required {id: str(identifier) # The ID or email of the user.}
+@returns(204) Operation successful.
+@errors {401: Unauthorized, 403: Forbidden, 404: The specified resource was not found.}
 
 @endpoint PATCH /users/{id}/role
-@required {id: str(identifier), newRoleName: str}
-@returns(200)
-@errors {401, 403, 404}
+@desc Change a user's global role
+@required {id: str(identifier) # The ID or email of the user., newRoleName: str}
+@returns(200) Operation successful.
+@errors {401: Unauthorized, 403: Forbidden, 404: The specified resource was not found.}
 
 @endgroup
 
 @group source-control
 @endpoint POST /source-control/pull
-@optional {force: bool, autoPublish: str(none/all/published)=none, variables: map}
-@returns(200) {variables: map{added: [str], changed: [str]}, credentials: [map], workflows: [map], tags: map{tags: [map], mappings: [map]}}
-@errors {400, 409}
+@desc Pull changes from the remote repository
+@optional {force: bool, autoPublish: str(none/all/published)=none # Controls automatic workflow publishing after import: - `none`: Keep workflows in their local published state (default) - `all`: Publish all imported workflows - `published`: Publish only workflows that were published locally before import, variables: map}
+@returns(200) {variables: map{added: [str], changed: [str]}, credentials: [map], workflows: [map], tags: map{tags: [map], mappings: [map]}} # Import result
+@errors {400: The request is invalid or provides malformed data., 409: Conflict}
 
 @endgroup
 
 @group variables
 @endpoint POST /variables
+@desc Create a variable
 @required {key: str, value: str}
 @optional {id: str, type: str, projectId: str}
-@returns(201)
-@errors {400, 401}
+@returns(201) Operation successful.
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized}
 
 @endpoint GET /variables
-@optional {limit: num=100, cursor: str, projectId: str, state: str}
-@returns(200) {data: [map], nextCursor: str?}
-@errors {401}
+@desc Retrieve variables
+@optional {limit: num=100 # The maximum number of items to return., cursor: str # Paginate by setting the cursor parameter to the nextCursor attribute returned by the previous request's response. Default value fetches the first "page" of the collection. See pagination for more detail., projectId: str, state: str}
+@returns(200) {data: [map], nextCursor: str?} # Operation successful.
+@errors {401: Unauthorized}
 
 @endpoint DELETE /variables/{id}
-@required {id: str}
-@returns(204)
-@errors {401, 404}
+@desc Delete a variable
+@required {id: str # The ID of the variable.}
+@returns(204) Operation successful.
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint PUT /variables/{id}
-@required {id: str, key: str, value: str}
+@desc Update a variable
+@required {id: str # The ID of the variable., key: str, value: str}
 @optional {id: str, type: str, projectId: str}
-@returns(204)
-@errors {400, 401, 403, 404}
+@returns(204) Operation successful.
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 403: Forbidden, 404: The specified resource was not found.}
 
 @endgroup
 
 @group data-tables
 @endpoint GET /data-tables
-@optional {limit: num=100, cursor: str, filter: str(jsonString), sortBy: str}
-@returns(200) {data: [map], nextCursor: str?}
-@errors {400, 401}
+@desc List all data tables
+@optional {limit: num=100 # The maximum number of items to return., cursor: str # Paginate by setting the cursor parameter to the nextCursor attribute returned by the previous request's response. Default value fetches the first "page" of the collection. See pagination for more detail., filter: str(jsonString) # JSON string of filter conditions, sortBy: str # Sort format: field:asc or field:desc}
+@returns(200) {data: [map], nextCursor: str?} # Successfully retrieved data tables
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized}
 
 @endpoint POST /data-tables
-@required {name: str, columns: [map{name!: str, type!: str}]}
-@returns(201) {id: str, name: str, columns: [map], projectId: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {400, 401, 409}
+@desc Create a new data table
+@required {name: str # Name of the data table, columns: [map{name!: str, type!: str}] # Column definitions for the table}
+@returns(201) {id: str, name: str, columns: [map], projectId: str, createdAt: str(date-time), updatedAt: str(date-time)} # Data table created successfully
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 409: Conflict}
+@example_request {"name":"customers","columns":[{"name":"email","type":"string"},{"name":"status","type":"string"},{"name":"age","type":"number"}]}
 
 @endpoint GET /data-tables/{dataTableId}
-@required {dataTableId: str(nanoid)}
-@returns(200) {id: str, name: str, columns: [map], projectId: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {401, 404}
+@desc Get a data table
+@required {dataTableId: str(nanoid) # The ID of the data table}
+@returns(200) {id: str, name: str, columns: [map], projectId: str, createdAt: str(date-time), updatedAt: str(date-time)} # Successfully retrieved data table
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint PATCH /data-tables/{dataTableId}
-@required {dataTableId: str(nanoid), name: str}
-@returns(200) {id: str, name: str, columns: [map], projectId: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {400, 401, 404, 409}
+@desc Update a data table
+@required {dataTableId: str(nanoid) # The ID of the data table, name: str # New name for the data table}
+@returns(200) {id: str, name: str, columns: [map], projectId: str, createdAt: str(date-time), updatedAt: str(date-time)} # Data table updated successfully
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found., 409: Conflict}
+@example_request {"name":"updated-customers"}
 
 @endpoint DELETE /data-tables/{dataTableId}
-@required {dataTableId: str(nanoid)}
-@returns(204)
-@errors {401, 404}
+@desc Delete a data table
+@required {dataTableId: str(nanoid) # The ID of the data table}
+@returns(204) Data table deleted successfully
+@errors {401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint GET /data-tables/{dataTableId}/rows
-@required {dataTableId: str(nanoid)}
-@optional {limit: num=100, cursor: str, filter: str(jsonString), sortBy: str, search: str}
-@returns(200) {data: [map], nextCursor: str?}
-@errors {400, 401, 404}
+@desc Retrieve rows from a data table
+@required {dataTableId: str(nanoid) # The ID of the data table}
+@optional {limit: num=100 # The maximum number of items to return., cursor: str # Paginate by setting the cursor parameter to the nextCursor attribute returned by the previous request's response. Default value fetches the first "page" of the collection. See pagination for more detail., filter: str(jsonString) # JSON string of filter conditions, sortBy: str # Sort format: columnName:asc or columnName:desc, search: str # Search text across all string columns}
+@returns(200) {data: [map], nextCursor: str?} # Successfully retrieved rows
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found.}
 
 @endpoint POST /data-tables/{dataTableId}/rows
-@required {dataTableId: str(nanoid), data: [map]}
-@optional {returnType: str(count/id/all)=count}
-@returns(200)
-@errors {400, 401, 404}
+@desc Insert rows into a data table
+@required {dataTableId: str(nanoid) # The ID of the data table, data: [map] # Array of rows to insert. Each row is an object with column names as keys.}
+@optional {returnType: str(count/id/all)=count # - count: Return only the number of rows inserted - id: Return an array of inserted row IDs - all: Return the full row data for all inserted rows}
+@returns(200) Rows inserted successfully
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found.}
+@example_request {"data":[{"name":"John Doe","email":"john@example.com","age":30},{"name":"Jane Smith","email":"jane@example.com","age":25}],"returnType":"all"}
 
 @endpoint PATCH /data-tables/{dataTableId}/rows/update
-@required {dataTableId: str(nanoid), filter: map{type: str, filters!: [map{columnName!: str, condition!: str, value!: any}]}, data: map}
-@optional {returnData: bool=False, dryRun: bool=False}
-@returns(200)
-@errors {400, 401, 404}
+@desc Update rows in a data table
+@required {dataTableId: str(nanoid) # The ID of the data table, filter: map{type: str, filters!: [map{columnName!: str, condition!: str, value!: any}]} # Filter conditions to match rows for update, data: map # Column values to update}
+@optional {returnData: bool=False # If true, return the updated rows; if false, return true on success, dryRun: bool=False # If true, preview changes without persisting them}
+@returns(200) Rows updated successfully
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found.}
+@example_request {"filter":{"type":"and","filters":[{"columnName":"status","condition":"eq","value":"pending"}]},"data":{"status":"completed","updatedBy":"admin"},"returnData":false,"dryRun":false}
 
 @endpoint POST /data-tables/{dataTableId}/rows/upsert
-@required {dataTableId: str(nanoid), filter: map{type: str, filters!: [map{columnName!: str, condition!: str, value!: any}]}, data: map}
-@optional {returnData: bool=False, dryRun: bool=False}
-@returns(200)
-@errors {400, 401, 404}
+@desc Upsert a row in a data table
+@required {dataTableId: str(nanoid) # The ID of the data table, filter: map{type: str, filters!: [map{columnName!: str, condition!: str, value!: any}]} # Filter conditions to match existing row. If no row matches, a new row is inserted., data: map # Column values for the row}
+@optional {returnData: bool=False # If true, return the upserted row; if false, return true on success, dryRun: bool=False # If true, preview changes without persisting them}
+@returns(200) Row upserted successfully
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found.}
+@example_request {"filter":{"type":"and","filters":[{"columnName":"email","condition":"eq","value":"user@example.com"}]},"data":{"email":"user@example.com","name":"Updated Name","status":"active"},"returnData":true,"dryRun":false}
 
 @endpoint DELETE /data-tables/{dataTableId}/rows/delete
-@required {dataTableId: str(nanoid), filter: str(jsonString)}
-@optional {returnData: bool=False, dryRun: bool=False}
-@returns(200)
-@errors {400, 401, 404}
+@desc Delete rows from a data table
+@required {dataTableId: str(nanoid) # The ID of the data table, filter: str(jsonString) # JSON string of filter conditions. Required to prevent accidental deletion of all data.}
+@optional {returnData: bool=False # If true, return the deleted rows; if false, return true on success, dryRun: bool=False # If true, preview which rows would be deleted without actually deleting them}
+@returns(200) Rows deleted successfully
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 404: The specified resource was not found.}
 
 @endgroup
 
 @group projects
 @endpoint POST /projects
+@desc Create a project
 @required {name: str}
 @optional {id: str, type: str}
-@returns(201)
-@errors {400, 401}
+@returns(201) Operation successful.
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized}
 
 @endpoint GET /projects
-@optional {limit: num=100, cursor: str}
-@returns(200) {data: [map], nextCursor: str?}
-@errors {401}
+@desc Retrieve projects
+@optional {limit: num=100 # The maximum number of items to return., cursor: str # Paginate by setting the cursor parameter to the nextCursor attribute returned by the previous request's response. Default value fetches the first "page" of the collection. See pagination for more detail.}
+@returns(200) {data: [map], nextCursor: str?} # Operation successful.
+@errors {401: Unauthorized}
 
 @endpoint DELETE /projects/{projectId}
-@required {projectId: str}
-@returns(204)
-@errors {401, 403, 404}
+@desc Delete a project
+@required {projectId: str # The ID of the project.}
+@returns(204) Operation successful.
+@errors {401: Unauthorized, 403: Forbidden, 404: The specified resource was not found.}
 
 @endpoint PUT /projects/{projectId}
-@required {projectId: str, name: str}
+@desc Update a project
+@required {projectId: str # The ID of the project., name: str}
 @optional {id: str, type: str}
-@returns(204)
-@errors {400, 401, 403, 404}
+@returns(204) Operation successful.
+@errors {400: The request is invalid or provides malformed data., 401: Unauthorized, 403: Forbidden, 404: The specified resource was not found.}
 
 @endpoint GET /projects/{projectId}/users
-@required {projectId: str}
-@optional {limit: num=100, cursor: str}
-@returns(200) {data: [map], nextCursor: str?}
-@errors {401, 403, 404}
+@desc List project members
+@required {projectId: str # The ID of the project.}
+@optional {limit: num=100 # The maximum number of items to return., cursor: str # Paginate by setting the cursor parameter to the nextCursor attribute returned by the previous request's response. Default value fetches the first "page" of the collection. See pagination for more detail.}
+@returns(200) {data: [map], nextCursor: str?} # Operation successful.
+@errors {401: Unauthorized, 403: Forbidden, 404: The specified resource was not found.}
 
 @endpoint POST /projects/{projectId}/users
-@required {projectId: str, relations: [map{userId!: str, role!: str}]}
-@returns(201)
-@errors {401, 403, 404}
+@desc Add one or more users to a project
+@required {projectId: str # The ID of the project., relations: [map{userId!: str, role!: str}] # A list of userIds and roles to add to the project.}
+@returns(201) Operation successful.
+@errors {401: Unauthorized, 403: Forbidden, 404: The specified resource was not found.}
 
 @endpoint DELETE /projects/{projectId}/users/{userId}
-@required {projectId: str, userId: str}
-@returns(204)
-@errors {401, 403, 404}
+@desc Delete a user from a project
+@required {projectId: str # The ID of the project., userId: str # The ID of the user.}
+@returns(204) Operation successful.
+@errors {401: Unauthorized, 403: Forbidden, 404: The specified resource was not found.}
 
 @endpoint PATCH /projects/{projectId}/users/{userId}
-@required {projectId: str, userId: str, role: str}
-@returns(204)
-@errors {401, 403, 404}
+@desc Change a user's role in a project
+@required {projectId: str # The ID of the project., userId: str # The ID of the user., role: str # The role assigned to the user in the project.}
+@returns(204) Operation successful.
+@errors {401: Unauthorized, 403: Forbidden, 404: The specified resource was not found.}
 
 @endgroup
 

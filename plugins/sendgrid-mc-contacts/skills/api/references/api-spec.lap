@@ -8,74 +8,89 @@
 @toc marketing(15)
 
 @endpoint PUT /v3/marketing/contacts
-@required {contacts: [map{address_line_1: str, address_line_2: str, alternate_emails: [str], city: str, country: str, email: str, phone_number_id: str, external_id: str, anonymous_id: str, first_name: str, last_name: str, postal_code: str, state_province_region: str, custom_fields: map{w1: str}}]}
-@optional {list_ids: [str(uuid)]}
+@desc Add or Update a Contact
+@required {contacts: [map{address_line_1: str, address_line_2: str, alternate_emails: [str], city: str, country: str, email: str, phone_number_id: str, external_id: str, anonymous_id: str, first_name: str, last_name: str, postal_code: str, state_province_region: str, custom_fields: map{w1: str}}] # One or more contacts objects that you intend to upsert. Each contact needs to include at least one of `email`, `phone_number_id`, `external_id`, or `anonymous_id` as an identifier.}
+@optional {list_ids: [str(uuid)] # An array of List ID strings that this contact will be added to.}
 @returns(202) {job_id: str}
 @errors {400, 401, 403, 404, 500}
 
 @endpoint DELETE /v3/marketing/contacts
-@optional {delete_all_contacts: str, ids: str}
+@desc Delete Contacts
+@optional {delete_all_contacts: str # Must be set to `"true"` to delete all contacts., ids: str # A comma-separated list of contact IDs.}
 @returns(202) {job_id: map}
 @errors {400, 401, 403, 404, 500}
 
 @endpoint GET /v3/marketing/contacts
+@desc Get Sample Contacts
 @returns(200) {result: [map], _metadata: map{self: str}, contact_count: int}
 @errors {400, 401, 403, 404, 500}
 
 @endpoint GET /v3/marketing/contacts/{id}
+@desc Get a Contact by ID
 @returns(200) {id: str, first_name: str, last_name: str, unique_name: str, email: str, phone_number_id: str, external_id: str, anonymous_id: str, alternate_emails: [str], address_line_1: str, address_line_2: str, city: str, state_province_region: str, country: str, postal_code: str, phone_number: str, whatsapp: str, line: str, facebook: str, list_ids: [str], segment_ids: [str], custom_fields: map, created_at: str, updated_at: str, _metadata: map{self: str}}
 @errors {401, 403, 404, 500}
 
 @endpoint POST /v3/marketing/contacts/batch
+@desc Get Batched Contacts by IDs
 @required {ids: [str]}
 @returns(200) {result: [map]}
 @errors {401, 403, 404, 500}
 
 @endpoint DELETE /v3/marketing/contacts/{contact_id}/identifiers
-@required {contact_id: str, identifier_type: str(EMAIL/PHONENUMBERID/EXTERNALID/ANONYMOUSID), identifier_value: str}
+@desc Delete a Contact Identifier
+@required {contact_id: str # Must be set to the `contact_id` of the contact you want to remove the identifier from., identifier_type: str(EMAIL/PHONENUMBERID/EXTERNALID/ANONYMOUSID), identifier_value: str # The value of the identifier you want to remove from the contact.}
 @returns(202) {job_id: map}
 @errors {400, 401, 403, 404, 500}
 
 @endpoint GET /v3/marketing/contacts/count
+@desc Get Total Contact Count
 @returns(200) {contact_count: int, billable_count: int, billable_breakdown: map{total: int, breakdown: map}}
 @errors {401, 403, 404, 500}
 
 @endpoint POST /v3/marketing/contacts/exports
-@optional {list_ids: [str(uuid)], segment_ids: [str], notifications: map{email: bool}, file_type: str(csv/json), max_file_size: int=5000}
+@desc Export Contacts
+@optional {list_ids: [str(uuid)] # IDs of the contact lists you want to export., segment_ids: [str] # IDs of the contact segments you want to export., notifications: map{email: bool}, file_type: str(csv/json), max_file_size: int=5000 # The maximum size of an export file in MB. Note that when this option is specified, multiple output files may be returned from the export.}
 @returns(202) {_metadata: map{prev: str(uri), self: str(uri), next: str(uri), count: num}, id: str}
 @errors {400, 401, 403, 404, 500}
 
 @endpoint GET /v3/marketing/contacts/exports
+@desc Get All Existing Exports
 @returns(200) {result: [map], _metadata: map{prev: str, self: str, next: str}}
 @errors {400, 401, 403, 404, 500}
 
 @endpoint GET /v3/marketing/contacts/exports/{id}
+@desc Export Contacts Status
 @returns(200) {id: str, status: str, created_at: str, updated_at: str, completed_at: str, expires_at: str, urls: [str], message: str, _metadata: map{prev: str(uri), self: str(uri), next: str(uri), count: num}, contact_count: int}
 @errors {400, 401, 403, 404, 500}
 
 @endpoint PUT /v3/marketing/contacts/imports
-@required {file_type: str, field_mappings: [str]}
-@optional {list_ids: [str]}
+@desc Import Contacts
+@required {file_type: str, field_mappings: [str] # Import file header to reserved/custom field mapping.}
+@optional {list_ids: [str] # All contacts will be added to each of the specified lists.}
 @returns(200) {job_id: str, upload_uri: str, upload_headers: [map]}
 @errors {400, 401, 403, 404, 500}
 
 @endpoint GET /v3/marketing/contacts/imports/{id}
+@desc Import Contacts Status
 @returns(200) {id: str, status: str, job_type: str, results: map{requested_count: num, created_count: num, updated_count: num, deleted_count: num, errored_count: num, errors_url: str}, started_at: str, finished_at: str}
 @errors {400, 401, 403, 404, 500}
 
 @endpoint POST /v3/marketing/contacts/search
-@required {query: str}
+@desc Search Contacts
+@required {query: str # An SGQL search string or other pattern.}
 @returns(200) {result: [map], _metadata: map{self: str}, contact_count: num}
 @errors {400, 401, 403, 404, 408, 500}
 
 @endpoint POST /v3/marketing/contacts/search/emails
-@required {emails: [str]}
-@optional {phone_number_id: str, external_id: str, anonymous_id: str}
+@desc Get Contacts by Emails
+@required {emails: [str] # One or more primary and/or alternate email addresses to search for in your Marketing Campaigns contacts.}
+@optional {phone_number_id: str # The contact's Phone Number ID. This is required to be a valid phone number., external_id: str # The contact's External ID., anonymous_id: str # The contact's Anonymous ID.}
 @returns(200) {result: map}
 @errors {400, 401, 403, 404, 500}
 
 @endpoint POST /v3/marketing/contacts/search/identifiers/{identifier_type}
-@required {identifiers: [str]}
+@desc Get Contacts by Identifiers
+@required {identifiers: [str] # One or more more identifier values of the given identifier type to search for in your Marketing Campaigns contacts.}
 @returns(200) {result: map}
 @errors {400, 401, 403, 404, 500}
 

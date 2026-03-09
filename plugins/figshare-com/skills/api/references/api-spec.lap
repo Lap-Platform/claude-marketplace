@@ -10,771 +10,922 @@
 
 @group token
 @endpoint GET /token
-@optional {access_token: any}
-@returns(200)
-@errors {400, 403}
+@desc Get OAuth token information
+@optional {access_token: any # OAuth access token}
+@returns(200) OK. Token information
+@errors {400: Bad Request, 403: Forbidden}
 
 @endpoint POST /token
-@optional {body: map}
-@returns(200)
-@errors {400}
+@desc Create OAuth token
+@optional {body: map # Create OAuth Token Parameters}
+@returns(200) OK. Token created successfully <a href='http://tools.ietf.org/html/rfc6749#section-5.1' target='_blank'>RFC 6749 Section 5.1</a>.
+@errors {400: Bad Request <a href='http://tools.ietf.org/html/rfc6749#section-5.2' target='_blank'>RFC 6749 Section 5.2</a>.}
 
 @endgroup
 
 @group articles
 @endpoint GET /articles
-@optional {X-Cursor: any, page: any, page_size: any, limit: any, offset: any, order: any, order_direction: any, institution: any, published_since: any, modified_since: any, group: any, resource_doi: any, item_type: any, doi: any, handle: any}
-@returns(200)
-@errors {400, 422, 500}
+@desc Public Articles
+@optional {X-Cursor: any # Unique hash used for bypassing the item retrieval limit of 9,000 entities. When using this parameter, please note that the offset parameter will not be available, but the limit parameter will still work as expected., page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit, order: any # The field by which to order. Default varies by endpoint/resource., order_direction: any, institution: any # only return articles from this institution, published_since: any # Filter by article publishing date. Will only return articles published after the date. date(ISO 8601) YYYY-MM-DD or date-time(ISO 8601) YYYY-MM-DDTHH:mm:ssZ, modified_since: any # Filter by article modified date. Will only return articles modified after the date. date(ISO 8601) YYYY-MM-DD or date-time(ISO 8601) YYYY-MM-DDTHH:mm:ssZ, group: any # only return articles from this group, resource_doi: any # Deprecated by related materials. Only return articles with this resource_doi, item_type: any # Only return articles with the respective type. Mapping for item_type is: 1 - Figure, 2 - Media, 3 - Dataset, 5 - Poster, 6 - Journal contribution, 7 - Presentation, 8 - Thesis, 9 - Software, 11 - Online resource, 12 - Preprint, 13 - Book, 14 - Conference contribution, 15 - Chapter, 16 - Peer review, 17 - Educational resource, 18 - Report, 19 - Standard, 20 - Composition, 21 - Funding, 22 - Physical object, 23 - Data management plan, 24 - Workflow, 25 - Monograph, 26 - Performance, 27 - Event, 28 - Service, 29 - Model, doi: any # only return articles with this doi, handle: any # only return articles with this handle}
+@returns(200) OK. An array of articles
+@errors {400: Bad Request, 422: Unprocessable Entity. Syntax is correct but one of the parameters isn't correctly processed, 500: Internal Server Error}
 
 @endpoint POST /articles/search
-@optional {X-Cursor: any, search: map}
-@returns(200)
-@errors {400, 422, 500}
+@desc Public Articles Search
+@optional {X-Cursor: any # Unique hash used for bypassing the item retrieval limit of 9,000 entities. When using this parameter, please note that the offset parameter will not be available, but the limit parameter will still work as expected., search: map # Search Parameters}
+@returns(200) OK. An array of articles
+@errors {400: Bad Request, 422: Unprocessable Entity. Syntax is correct but one of the parameters isn't correctly processed, 500: Internal Server Error}
 
 @endpoint GET /articles/{article_id}
-@required {article_id: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc View article details
+@required {article_id: any # Article Unique identifier}
+@returns(200) OK. Article representation
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /articles/{article_id}/versions
-@required {article_id: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc List article versions
+@required {article_id: any # Article Unique identifier}
+@returns(200) OK. Article version representations
+@errors {400: Bad Request. Article ID must be an integer and bigger than 0., 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /articles/{article_id}/versions/{version_id}
-@required {article_id: any, version_id: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Article details for version
+@required {article_id: any # Article Unique identifier, version_id: any # Article Version Number}
+@returns(200) OK. Article representation
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /articles/{article_id}/versions/{version_id}/files
-@required {article_id: any, version_id: any}
-@optional {page: any, page_size: any, limit: any, offset: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Article version file details
+@required {article_id: any # Article Unique identifier, version_id: any # Article Version Unique identifier}
+@optional {page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit}
+@returns(200) OK. List of article version files
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /articles/{article_id}/download
-@required {article_id: any}
-@optional {folder_path: any}
-@returns(200)
-@errors {500}
+@desc Public Article Download
+@required {article_id: any # Article unique identifier}
+@optional {folder_path: any # Folder path to download. If not provided, all files from the article will be downloaded}
+@returns(200) OK
+@errors {500: Internal Server Error}
 
 @endpoint GET /articles/{article_id}/versions/{version_id}/download
-@required {article_id: any, version_id: any}
-@optional {folder_path: any}
-@returns(200)
-@errors {500}
+@desc Public Article Version Download
+@required {article_id: any # Article unique identifier, version_id: any # Version Number}
+@optional {folder_path: any # Folder path to download. If not provided, all files from the article will be downloaded}
+@returns(200) OK
+@errors {500: Internal Server Error}
 
 @endpoint GET /articles/{article_id}/versions/{version_id}/embargo
-@required {article_id: any, version_id: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Public Article Embargo for article version
+@required {article_id: any # Article Unique identifier, version_id: any # Version Number}
+@returns(200) OK. Embargo representation
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /articles/{article_id}/versions/{version_id}/confidentiality
-@required {article_id: any, version_id: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Public Article Confidentiality for article version
+@required {article_id: any # Article Unique identifier, version_id: any # Version Number}
+@returns(200) OK. Confidentiality representation
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /articles/{article_id}/files
-@required {article_id: any}
-@optional {page: any, page_size: any, limit: any, offset: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc List article files
+@required {article_id: any # Article Unique identifier}
+@optional {page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit}
+@returns(200) OK. List of article files
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /articles/{article_id}/files/{file_id}
-@required {article_id: any, file_id: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Article file details
+@required {article_id: any # Article Unique identifier, file_id: any # File Unique identifier}
+@returns(200) OK. File representation
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group account
 @endpoint POST /account/articles/search
-@required {search: map}
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Articles search
+@required {search: map # Search Parameters}
+@returns(200) OK. An array of articles
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/articles
-@optional {page: any, page_size: any, limit: any, offset: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Articles
+@optional {page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit}
+@returns(200) OK. An array of articles belonging to the account
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint POST /account/articles
-@required {Article: map}
-@returns(201)
-@errors {400, 403, 500}
+@desc Create new Article
+@required {Article: map # Article description}
+@returns(201) Created
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/articles/{article_id}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Article details
+@returns(200) OK. Article representation
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/articles/{article_id}
-@required {Article: map}
-@returns(205)
-@errors {403, 404, 500}
+@desc Update article
+@required {Article: map # Full article representation}
+@returns(205) Reset Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PATCH /account/articles/{article_id}
-@required {Article: map}
-@returns(205)
-@errors {403, 404, 500}
+@desc Partially update article
+@required {Article: map # Subset of article fields to update}
+@returns(205) Reset Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/articles/{article_id}
-@returns(204)
-@errors {403, 404, 500}
+@desc Delete article
+@returns(204) No Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/articles/{article_id}/embargo
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Article Embargo Details
+@returns(200) OK. Embargo for article
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/articles/{article_id}/embargo
-@required {Embargo: map}
-@returns(205)
-@errors {400, 403, 404, 500}
+@desc Update Article Embargo
+@required {Embargo: map # Embargo description}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/articles/{article_id}/embargo
-@returns(204)
-@errors {403, 404, 500}
+@desc Delete Article Embargo
+@returns(204) No Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/articles/{article_id}/resource
-@required {article_id: any, Resource: map}
-@returns(205)
-@errors {400, 403, 404, 422}
+@desc Private Article Resource
+@required {article_id: any # Article unique identifier, Resource: map # Resource data}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 422: Unprocessable Entity}
 
 @endpoint POST /account/articles/{article_id}/publish
-@required {article_id: any}
-@returns(201)
-@errors {400, 403, 404, 500}
+@desc Private Article Publish
+@required {article_id: any # Article unique identifier}
+@returns(201) Created
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/articles/{article_id}/unpublish
-@required {article_id: any, reason: map}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Public Article Unpublish
+@required {article_id: any # Article unique identifier, reason: map # Article unpublish data}
+@returns(204) No Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/articles/{article_id}/reserve_doi
-@required {article_id: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Private Article Reserve DOI
+@required {article_id: any # Article unique identifier}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/articles/{article_id}/reserve_handle
-@required {article_id: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Private Article Reserve Handle
+@required {article_id: any # Article unique identifier}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/articles/{article_id}/download
-@required {article_id: any}
-@optional {folder_path: any}
-@returns(200)
-@errors {403, 500}
+@desc Private Article Download
+@required {article_id: any # Article unique identifier}
+@optional {folder_path: any # Folder path to download. If not provided, all files from the article will be downloaded}
+@returns(200) OK
+@errors {403: Insufficient permissions, 500: Internal Server Error}
 
 @endpoint PUT /account/articles/{article_id}/versions/{version_id}
-@required {article_id: any, version_id: any, Article: map}
-@returns(205)
-@errors {403, 404, 500}
+@desc Update article version
+@required {article_id: any # Article unique identifier, version_id: any # Article version identifier, Article: map # Article description}
+@returns(205) Reset Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PATCH /account/articles/{article_id}/versions/{version_id}
-@required {article_id: any, version_id: any, Article: map}
-@returns(205)
-@errors {403, 404, 500}
+@desc Partially update article version
+@required {article_id: any # Article unique identifier, version_id: any # Article version identifier, Article: map # Subset of article version fields to update}
+@returns(205) Reset Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/articles/{article_id}/versions/{version_id}/update_thumb
-@required {article_id: any, version_id: any, FileId: map}
-@returns(205)
-@errors {422, 403, 404}
+@desc Update article version thumbnail
+@required {article_id: any # Article unique identifier, version_id: any # Article version identifier, FileId: map # File ID}
+@returns(205) Reset Content
+@errors {422: Unprocessable Entity, 403: Forbidden, 404: Not Found}
 
 @endpoint GET /account/articles/{article_id}/authors
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc List article authors
+@returns(200) OK. Authors list for article
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/articles/{article_id}/authors
-@required {Authors: map}
-@returns(205)
-@errors {400, 403, 404, 500}
+@desc Add article authors
+@required {Authors: map # Authors description}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/articles/{article_id}/authors
-@required {Authors: map}
-@returns(205)
-@errors {400, 403, 404, 500}
+@desc Replace article authors
+@required {Authors: map # Authors description}
+@returns(205) Reset Content
+@errors {400: Bad Request. Article ID must be an integer and bigger than 0. Author with ID Not Found., 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/articles/{article_id}/authors/{author_id}
-@required {article_id: any, author_id: any}
-@returns(204)
-@errors {403, 404, 500}
+@desc Delete article author
+@required {article_id: any # Article unique identifier, author_id: any # Article Author unique identifier}
+@returns(204) No Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/articles/{article_id}/categories
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc List article categories
+@returns(200) OK. Article categories
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/articles/{article_id}/categories
+@desc Add article categories
 @required {categories: map}
-@returns(205)
-@errors {400, 403, 404, 500}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/articles/{article_id}/categories
+@desc Replace article categories
 @required {categories: map}
-@returns(205)
-@errors {400, 403, 404, 500}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/articles/{article_id}/categories/{category_id}
-@required {article_id: any, category_id: any}
-@returns(204)
-@errors {403, 404, 500}
+@desc Delete article category
+@required {article_id: any # Article unique identifier, category_id: any # Category unique identifier}
+@returns(204) No Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/articles/{article_id}/confidentiality
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Article confidentiality details
+@returns(200) OK. Article categories
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/articles/{article_id}/confidentiality
+@desc Update article confidentiality
 @required {reason: map}
-@returns(205)
-@errors {400, 403, 404, 500}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/articles/{article_id}/confidentiality
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Delete article confidentiality
+@returns(204) No Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/articles/{article_id}/private_links
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc List private links
+@returns(200) OK. Article private links
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/articles/{article_id}/private_links
+@desc Create private link
 @optional {private_link: map}
-@returns(201)
-@errors {400, 403, 404, 422, 500}
+@returns(201) Created
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 422: Unprocessable Entity, 500: Internal Server Error}
 
 @endpoint PUT /account/articles/{article_id}/private_links/{link_id}
+@desc Update private link
 @optional {private_link: map}
-@returns(205)
-@errors {400, 403, 404, 422, 500}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 422: Unprocessable Entity, 500: Internal Server Error}
 
 @endpoint DELETE /account/articles/{article_id}/private_links/{link_id}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Disable private link
+@returns(204) No Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/articles/{article_id}/files
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc List article files
+@returns(200) OK. Article files list
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/articles/{article_id}/files
+@desc Initiate Upload
 @required {File: map}
-@returns(201)
-@errors {400, 403, 404, 422, 500}
+@returns(201) Created
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 422: Unprocessable Entity. Parameters missing or incorrect, 500: Internal Server Error}
 
 @endpoint GET /account/articles/{article_id}/files/{file_id}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Single File
+@returns(200) OK. Article private file
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/articles/{article_id}/files/{file_id}
-@returns(202)
-@errors {400, 403, 404, 500}
+@desc Complete Upload
+@returns(202) Accepted
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/articles/{article_id}/files/{file_id}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc File Delete
+@returns(204) No Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/articles/export
-@optional {group_id: any}
-@returns(200)
-@errors {400, 500}
+@desc Account Article Report
+@optional {group_id: any # A group ID to filter by}
+@returns(200) OK. An array of account report entries
+@errors {400: Bad Request, 500: Internal Server Error}
 
 @endpoint POST /account/articles/export
-@returns(200)
-@errors {429, 500}
+@desc Initiate a new Report
+@returns(200) OK. AccountReport created.
+@errors {429: Too Many Requests, 500: Internal Server Error}
 
 @endgroup
 
 @group collections
 @endpoint GET /collections
-@optional {X-Cursor: any, page: any, page_size: any, limit: any, offset: any, order: any, order_direction: any, institution: any, published_since: any, modified_since: any, group: any, resource_doi: any, doi: any, handle: any}
-@returns(200)
-@errors {400, 422, 500}
+@desc Public Collections
+@optional {X-Cursor: any # Unique hash used for bypassing the item retrieval limit of 9,000 entities. When using this parameter, please note that the offset parameter will not be available, but the limit parameter will still work as expected., page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit, order: any # The field by which to order. Default varies by endpoint/resource., order_direction: any, institution: any # only return collections from this institution, published_since: any # Filter by collection publishing date. Will only return collections published after the date. date(ISO 8601) YYYY-MM-DD, modified_since: any # Filter by collection modified date. Will only return collections modified after the date. date(ISO 8601) YYYY-MM-DD, group: any # only return collections from this group, resource_doi: any # only return collections with this resource_doi, doi: any # only return collections with this doi, handle: any # only return collections with this handle}
+@returns(200) OK. An array of collections
+@errors {400: Bad Request, 422: Bad Request, 500: Internal Server Error}
 
 @endpoint POST /collections/search
-@optional {X-Cursor: any, search: map}
-@returns(200)
-@errors {400, 422, 500}
+@desc Public Collections Search
+@optional {X-Cursor: any # Unique hash used for bypassing the item retrieval limit of 9,000 entities. When using this parameter, please note that the offset parameter will not be available, but the limit parameter will still work as expected., search: map # Search Parameters}
+@returns(200) OK. An array of collections
+@errors {400: Bad Request, 422: Bad Request, 500: Internal Server Error}
 
 @endpoint GET /collections/{collection_id}
-@required {collection_id: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Collection details
+@required {collection_id: any # Collection Unique identifier}
+@returns(200) OK. Collection representation
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /collections/{collection_id}/versions
-@required {collection_id: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Collection Versions list
+@required {collection_id: any # Collection Unique identifier}
+@returns(200) OK. An array of versions
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /collections/{collection_id}/versions/{version_id}
-@required {collection_id: any, version_id: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Collection Version details
+@required {collection_id: any # Collection Unique identifier, version_id: any # Version Number}
+@returns(200) OK. Collection for that version
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /collections/{collection_id}/articles
-@required {collection_id: any}
-@optional {page: any, page_size: any, limit: any, offset: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Public Collection Articles
+@required {collection_id: any # Collection Unique identifier}
+@optional {page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit}
+@returns(200) OK. An array of articles belonging to the collection
+@errors {400: Bad Request, 404: Not Found, 422: Bad Request, 500: Internal Server Error}
 
 @endgroup
 
 @group account
 @endpoint GET /account/collections
-@optional {page: any, page_size: any, limit: any, offset: any, order: any, order_direction: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Collections List
+@optional {page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit, order: any # The field by which to order. Default varies by endpoint/resource., order_direction: any}
+@returns(200) OK. An array of collections
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint POST /account/collections
-@required {Collection: map}
-@returns(201)
-@errors {400, 403, 500}
+@desc Create collection
+@required {Collection: map # Collection description}
+@returns(201) Created
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/collections/{collection_id}
-@returns(200)
-@errors {400, 404, 500}
+@desc Collection details
+@returns(200) OK. Collection representation
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/collections/{collection_id}
-@required {Collection: map}
-@returns(205)
-@errors {400, 403, 404, 500}
+@desc Update collection
+@required {Collection: map # Collection description}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PATCH /account/collections/{collection_id}
-@required {Collection: map}
-@returns(205)
-@errors {400, 403, 404, 500}
+@desc Partially update collection
+@required {Collection: map # Subset of collection fields to update}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/collections/{collection_id}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Delete collection
+@returns(204) No Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/collections/search
-@required {search: map}
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Collections Search
+@required {search: map # Search Parameters}
+@returns(200) OK. An array of collections
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint POST /account/collections/{collection_id}/reserve_doi
-@required {collection_id: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Collection Reserve DOI
+@required {collection_id: any # Collection Unique identifier}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint POST /account/collections/{collection_id}/reserve_handle
-@required {collection_id: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Collection Reserve Handle
+@required {collection_id: any # Collection Unique identifier}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint POST /account/collections/{collection_id}/resource
-@required {collection_id: any, Resource: map}
-@returns(205)
-@errors {422, 403, 404}
+@desc Private Collection Resource
+@required {collection_id: any # Collection unique identifier, Resource: map # Resource data}
+@returns(205) Reset Content
+@errors {422: Unprocessable Entity, 403: Forbidden, 404: Not Found}
 
 @endpoint POST /account/collections/{collection_id}/publish
-@required {collection_id: any}
-@returns(201)
-@errors {400, 403, 500}
+@desc Private Collection Publish
+@required {collection_id: any # Collection Unique identifier}
+@returns(201) Created
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/collections/{collection_id}/authors
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc List collection authors
+@returns(200) OK. Embargo for article
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/collections/{collection_id}/authors
-@required {Authors: map}
-@returns(201)
-@errors {400, 403, 404, 500}
+@desc Add collection authors
+@required {Authors: map # List of authors}
+@returns(201) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/collections/{collection_id}/authors
-@required {Authors: map}
-@returns(205)
-@errors {400, 403, 404, 500}
+@desc Replace collection authors
+@required {Authors: map # List of authors}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/collections/{collection_id}/authors/{author_id}
-@required {collection_id: any, author_id: any}
-@returns(204)
-@errors {403, 404, 500}
+@desc Delete collection author
+@required {collection_id: any # Collection unique identifier, author_id: any # Collection Author unique identifier}
+@returns(204) No Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/collections/{collection_id}/categories
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc List collection categories
+@returns(200) OK. Categories list
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/collections/{collection_id}/categories
-@required {categories: map}
-@returns(201)
-@errors {400, 403, 404, 500}
+@desc Add collection categories
+@required {categories: map # Categories list}
+@returns(201) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/collections/{collection_id}/categories
-@required {categories: map}
-@returns(205)
-@errors {400, 403, 404, 500}
+@desc Replace collection categories
+@required {categories: map # Categories list}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/collections/{collection_id}/categories/{category_id}
-@required {collection_id: any, category_id: any}
-@returns(204)
-@errors {403, 404, 500}
+@desc Delete collection category
+@required {collection_id: any # Collection unique identifier, category_id: any # Collection category unique identifier}
+@returns(204) No Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/collections/{collection_id}/articles
-@optional {page: any, page_size: any, limit: any, offset: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc List collection articles
+@optional {page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit}
+@returns(200) OK. Articles List
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/collections/{collection_id}/articles
-@required {articles: map}
-@returns(201)
-@errors {400, 403, 404, 500}
+@desc Add collection articles
+@required {articles: map # Articles list}
+@returns(201) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/collections/{collection_id}/articles
-@required {articles: map}
-@returns(205)
-@errors {400, 403, 404, 500}
+@desc Replace collection articles
+@required {articles: map # Articles List}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/collections/{collection_id}/articles/{article_id}
-@required {collection_id: any, article_id: any}
-@returns(204)
-@errors {403, 404, 500}
+@desc Delete collection article
+@required {collection_id: any # Collection unique identifier, article_id: any # Collection article unique identifier}
+@returns(204) No Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/collections/{collection_id}/private_links
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc List collection private links
+@returns(200) OK. Collection private links
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/collections/{collection_id}/private_links
+@desc Create collection private link
 @optional {private_link: map}
-@returns(201)
-@errors {400, 403, 404, 500}
+@returns(201) Created
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/collections/{collection_id}/private_links/{link_id}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc View collection private link
+@returns(200) OK. Collection private link
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/collections/{collection_id}/private_links/{link_id}
+@desc Update collection private link
 @optional {private_link: map}
-@returns(205)
-@errors {400, 403, 404, 422, 500}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 422: Unprocessable Entity, 500: Internal Server Error}
 
 @endpoint DELETE /account/collections/{collection_id}/private_links/{link_id}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Disable private link
+@returns(204) No Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group item_types
 @endpoint GET /item_types
-@optional {group_id: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Item Types
+@optional {group_id: any # Identifier of the group for which the item types are requested}
+@returns(200) OK. An array of item types
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group projects
 @endpoint GET /projects
-@optional {X-Cursor: any, page: any, page_size: any, limit: any, offset: any, order: any, order_direction: any, institution: any, published_since: any, group: any}
-@returns(200)
-@errors {400, 422, 500}
+@desc Public Projects
+@optional {X-Cursor: any # Unique hash used for bypassing the item retrieval limit of 9,000 entities. When using this parameter, please note that the offset parameter will not be available, but the limit parameter will still work as expected., page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit, order: any # The field by which to order. Default varies by endpoint/resource., order_direction: any, institution: any # only return collections from this institution, published_since: any # Filter by article publishing date. Will only return articles published after the date. date(ISO 8601) YYYY-MM-DD, group: any # only return collections from this group}
+@returns(200) OK. An array of projects
+@errors {400: Bad Request, 422: Bad Request, 500: Internal Server Error}
 
 @endpoint POST /projects/search
-@optional {X-Cursor: any, search: map}
-@returns(200)
-@errors {400, 422, 500}
+@desc Public Projects Search
+@optional {X-Cursor: any # Unique hash used for bypassing the item retrieval limit of 9,000 entities. When using this parameter, please note that the offset parameter will not be available, but the limit parameter will still work as expected., search: map # Search Parameters}
+@returns(200) OK. An array of projects
+@errors {400: Bad Request, 422: Bad Request, 500: Internal Server Error}
 
 @endpoint GET /projects/{project_id}
-@required {project_id: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Public Project
+@required {project_id: any # Project Unique identifier}
+@returns(200) OK. Project representation
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /projects/{project_id}/articles
-@required {project_id: any}
-@optional {page: any, page_size: any, limit: any, offset: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Public Project Articles
+@required {project_id: any # Project Unique identifier}
+@optional {page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit}
+@returns(200) OK. Project articles list
+@errors {400: Bad Request, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group account
 @endpoint POST /account/projects/search
-@optional {search: map}
-@returns(200)
-@errors {400, 422, 500}
+@desc Private Projects search
+@optional {search: map # Search Parameters}
+@returns(200) OK. An array of projects
+@errors {400: Bad Request, 422: Bad Request, 500: Internal Server Error}
 
 @endpoint GET /account/projects
-@optional {page: any, page_size: any, limit: any, offset: any, order: any, order_direction: any, storage: any, roles: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Projects
+@optional {page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit, order: any # The field by which to order., order_direction: any, storage: any # only return collections from this institution, roles: any # Any combination of owner, collaborator, viewer separated by comma. Examples: "owner" or "owner,collaborator".}
+@returns(200) OK. An array of projects
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint POST /account/projects
-@required {Project: map}
-@returns(201)
-@errors {400, 403, 500}
+@desc Create project
+@required {Project: map # Project  description}
+@returns(201) Created
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/projects/{project_id}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc View project details
+@returns(200) OK. Project representation
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/projects/{project_id}
-@required {Project: map}
-@returns(205)
-@errors {403, 404, 500}
+@desc Update project
+@required {Project: map # Project description}
+@returns(205) Reset Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PATCH /account/projects/{project_id}
-@optional {Project: map}
-@returns(205)
-@errors {403, 404, 500}
+@desc Partially update project
+@optional {Project: map # Fields to update}
+@returns(205) Reset Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/projects/{project_id}
-@returns(204)
-@errors {403, 404, 500}
+@desc Delete project
+@returns(204) No Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/projects/{project_id}/publish
-@required {project_id: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Private Project Publish
+@required {project_id: any # Project unique identifier}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/projects/{project_id}/notes
-@optional {page: any, page_size: any, limit: any, offset: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc List project notes
+@optional {page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit}
+@returns(200) OK. List of project notes
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/projects/{project_id}/notes
-@required {Note: map}
-@returns(201)
-@errors {400, 403, 404, 500}
+@desc Create project note
+@required {Note: map # Note message}
+@returns(201) Created
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/projects/{project_id}/notes/{note_id}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Project note details
+@returns(200) OK. Note representation
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/projects/{project_id}/notes/{note_id}
-@required {Note: map}
-@returns(205)
-@errors {400, 403, 404, 500}
+@desc Update project note
+@required {Note: map # Note message}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/projects/{project_id}/notes/{note_id}
-@returns(204)
-@errors {403, 404, 500}
+@desc Delete project note
+@returns(204) No Content
+@errors {403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/projects/{project_id}/leave
-@required {project_id: any}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Private Project Leave
+@required {project_id: any # Project unique identifier}
+@returns(204) No Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/projects/{project_id}/collaborators
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc List project collaborators
+@returns(200) OK. List of Collaborators
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/projects/{project_id}/collaborators
-@required {Collaborator: map}
-@returns(201)
-@errors {400, 403, 404, 500}
+@desc Invite project collaborators
+@required {Collaborator: map # viewer or collaborator role. User user_id or email of user}
+@returns(201) Created
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/projects/{project_id}/collaborators/{user_id}
-@required {project_id: any, user_id: any}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Remove project collaborator
+@required {project_id: any # Project unique identifier, user_id: any # User unique identifier}
+@returns(204) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/projects/{project_id}/articles
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc List project articles
+@returns(200) OK. List of articles
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/projects/{project_id}/articles
-@required {Article: map}
-@returns(201)
-@errors {400, 403, 404, 500}
+@desc Create project article
+@required {Article: map # Article description}
+@returns(201) Created
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/projects/{project_id}/articles/{article_id}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Project article details
+@returns(200) OK. Article representation
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint DELETE /account/projects/{project_id}/articles/{article_id}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Delete project article
+@returns(204) No Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/projects/{project_id}/articles/{article_id}/files
-@required {project_id: any, article_id: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Project article list files
+@required {project_id: any # Project unique identifier, article_id: any # Project Article unique identifier}
+@returns(200) OK. List of files
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/projects/{project_id}/articles/{article_id}/files/{file_id}
-@required {project_id: any, article_id: any, file_id: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Project article file details
+@required {project_id: any # Project unique identifier, article_id: any # Project Article unique identifier, file_id: any # File unique identifier}
+@returns(200) OK. File representation
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group institutions
 @endpoint GET /institutions/{institution_string_id}/articles/filter-by
+@desc Public Institution Articles
 @required {institution_string_id: any, resource_id: any, filename: any}
-@returns(200)
-@errors {500}
+@returns(200) OK. An array of articles
+@errors {500: Internal Server Error}
 
 @endgroup
 
 @group account
 @endpoint POST /account/authors/search
-@optional {search: map}
-@returns(200)
-@errors {400, 403, 500}
+@desc Search Authors
+@optional {search: map # Search Parameters}
+@returns(200) OK. An array of authors
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/authors/{author_id}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Author details
+@returns(200) OK. Article representation
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/funding/search
-@optional {search: map}
-@returns(200)
-@errors {400, 403, 500}
+@desc Search Funding
+@optional {search: map # Search Parameters}
+@returns(200) OK. An array of funding information
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account
-@returns(200)
-@errors {403, 500}
+@desc Private Account information
+@returns(200) OK. Account representation
+@errors {403: Forbidden, 500: Internal Server Error}
 
 @endgroup
 
 @group categories
 @endpoint GET /categories
-@returns(200)
-@errors {500}
+@desc Public Categories
+@returns(200) OK. An array of categories
+@errors {500: Internal Server Error}
 
 @endgroup
 
 @group licenses
 @endpoint GET /licenses
-@returns(200)
-@errors {500}
+@desc Public Licenses
+@returns(200) OK. An array of licenses
+@errors {500: Internal Server Error}
 
 @endgroup
 
 @group account
 @endpoint GET /account/licenses
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Account Licenses
+@returns(200) OK. An array of personal licenses
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/institution
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Account Institutions
+@returns(200) OK. An array of institutions
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/institution/embargo_options
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Account Institution embargo options
+@returns(200) OK. An array of embargo options
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/institution/articles
-@optional {page: any, page_size: any, limit: any, offset: any, order: any, order_direction: any, published_since: any, modified_since: any, status: any, resource_doi: any, item_type: any, group: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Institution Articles
+@optional {page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit, order: any # The field by which to order. Default varies by endpoint/resource., order_direction: any, published_since: any # Filter by article publishing date. Will only return articles published after the date. date(ISO 8601) YYYY-MM-DD or date-time(ISO 8601) YYYY-MM-DDTHH:mm:ssZ, modified_since: any # Filter by article modified date. Will only return articles modified after the date. date(ISO 8601) YYYY-MM-DD or date-time(ISO 8601) YYYY-MM-DDTHH:mm:ssZ, status: any # only return collections with this status, resource_doi: any # only return collections with this resource_doi, item_type: any # Only return articles with the respective type. Mapping for item_type is: 1 - Figure, 2 - Media, 3 - Dataset, 5 - Poster, 6 - Journal contribution, 7 - Presentation, 8 - Thesis, 9 - Software, 11 - Online resource, 12 - Preprint, 13 - Book, 14 - Conference contribution, 15 - Chapter, 16 - Peer review, 17 - Educational resource, 18 - Report, 19 - Standard, 20 - Composition, 21 - Funding, 22 - Physical object, 23 - Data management plan, 24 - Workflow, 25 - Monograph, 26 - Performance, 27 - Event, 28 - Service, 29 - Model, group: any # only return articles from this group}
+@returns(200) OK. An array of articles belonging to the institution
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/institution/custom_fields
-@optional {group_id: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc Private account institution group custom fields
+@optional {group_id: any # Group_id}
+@returns(200) OK. An array of custom fields
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint POST /account/institution/custom_fields/{custom_field_id}/items/upload
-@required {custom_field_id: any}
-@optional {external_file: any}
-@returns(200)
-@errors {400, 403, 409, 500}
+@desc Custom fields values files upload
+@required {custom_field_id: any # Custom field identifier}
+@optional {external_file: any # CSV file to be uploaded}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 409: Conflict, 500: Internal Server Error}
 
 @endpoint GET /account/categories
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Account Categories
+@returns(200) OK. An array of categories
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/institution/groups
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Account Institution Groups
+@returns(200) OK. An array of Groups
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/institution/groups/{group_id}/embargo_options
-@required {group_id: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Account Institution Group Embargo Options
+@required {group_id: any # Group identifier}
+@returns(200) OK. An array of embargo options
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/institution/roles
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Account Institution Roles
+@returns(200) OK. An array of Roles
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/institution/accounts
-@optional {page: any, page_size: any, limit: any, offset: any, is_active: any, institution_user_id: any, email: any, id_lte: any, id_gte: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Account Institution Accounts
+@optional {page: any # Page number. Used for pagination with page_size, page_size: any # The number of results included on a page. Used for pagination with page, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit, is_active: any # Filter by active status, institution_user_id: any # Filter by institution_user_id, email: any # Filter by email, id_lte: any # Retrieve accounts with an ID lower or equal to the specified value, id_gte: any # Retrieve accounts with an ID greater or equal to the specified value}
+@returns(200) OK. An array of Accounts
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint POST /account/institution/accounts
-@required {Account: map}
-@returns(201)
-@errors {400, 403, 500}
+@desc Create new Institution Account
+@required {Account: map # Account description}
+@returns(201) Created
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/institution/accounts/{account_id}
-@required {account_id: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Private Institution Account information
+@required {account_id: any # Account identifier the user is associated to}
+@returns(200) OK. Account
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint PUT /account/institution/accounts/{account_id}
-@required {account_id: any, Account: map}
-@returns(205)
-@errors {400, 403, 404, 500}
+@desc Update Institution Account
+@required {account_id: any # Account identifier the user is associated to, Account: map # Account description}
+@returns(205) Reset Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/institution/roles/{account_id}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc List Institution Account Group Roles
+@returns(200) OK. Account Group Roles
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/institution/roles/{account_id}
-@required {Account: map}
-@returns(201)
-@errors {400, 403, 500}
+@desc Add Institution Account Group Roles
+@required {Account: map # Account description}
+@returns(201) Created
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint DELETE /account/institution/roles/{account_id}/{group_id}/{role_id}
-@required {account_id: any, group_id: any, role_id: any}
-@returns(204)
-@errors {400, 403, 404, 500}
+@desc Delete Institution Account Group Role
+@required {account_id: any # Account identifier for which to remove the role, group_id: any # Group identifier for which to remove the role, role_id: any # Role identifier}
+@returns(204) No Content
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/institution/accounts/search
-@required {search: map}
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Account Institution Accounts Search
+@required {search: map # Search Parameters}
+@returns(200) OK. An array of Accounts
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endpoint GET /account/institution/users/{account_id}
-@required {account_id: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Private Account Institution User
+@required {account_id: any # Account identifier the user is associated to}
+@returns(200) OK. User representation
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/institution/reviews
-@optional {group_id: any, article_id: any, status: any, limit: any, offset: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Institution Curation Reviews
+@optional {group_id: any # Filter by the group ID, article_id: any # Retrieve the reviews for this article, status: any # Filter by the status of the review, limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit}
+@returns(200) OK. A list of curation reviews.
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/institution/review/{curation_id}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Institution Curation Review
+@returns(200) OK. A curation review.
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint GET /account/institution/review/{curation_id}/comments
-@optional {limit: any, offset: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Institution Curation Review Comments
+@optional {limit: any # Number of results included on a page. Used for pagination with query, offset: any # Where to start the listing (the offset of the first result). Used for pagination with limit}
+@returns(200) OK. A curation review's comments.
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/institution/review/{curation_id}/comments
-@required {CurationComment: map}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc POST Institution Curation Review Comment
+@required {CurationComment: map # The content/value of the comment.}
+@returns(200) OK.
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 
 @group institution
 @endpoint POST /institution/hrfeed/upload
-@optional {hrfeed: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc Private Institution HRfeed Upload
+@optional {hrfeed: any # You can find an example in the Hr Feed section}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 500: Internal Server Error}
 
 @endgroup
 
 @group file
 @endpoint GET /file/download/{file_id}
+@desc Public File Download
 @required {file_id: any}
-@returns(200)
-@errors {500}
+@returns(200) OK
+@errors {500: Internal Server Error}
 
 @endgroup
 
 @group account
 @endpoint PUT /account/profile
-@required {User profile data: map}
-@optional {user_id: any, institution_user_id: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Update public profile
+@required {User profile data: map: any}
+@optional {user_id: any # User ID, institution_user_id: any # Institutional user ID}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endpoint POST /account/profile/{user_id}/picture
-@required {user_id: any, profile_picture: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Update public profile picture
+@required {user_id: any # User ID, profile_picture: any # User profile picture}
+@returns(200) OK
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found, 500: Internal Server Error}
 
 @endgroup
 

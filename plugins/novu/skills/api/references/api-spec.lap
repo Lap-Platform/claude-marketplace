@@ -10,548 +10,643 @@
 
 @group environments
 @endpoint POST /v1/environments
-@required {name: str, color: str}
-@optional {parentId: str}
-@returns(201) {data: map{_id: str, name: str, _organizationId: str, identifier: str, type: str?, apiKeys: [map], _parentId: str, slug: str}}
-@errors {400, 401, 402, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Create an environment
+@required {name: str # Name of the environment to be created, color: str # Hex color code for the environment}
+@optional {parentId: str # MongoDB ObjectId of the parent environment (optional)}
+@returns(201) {data: map{_id: str, name: str, _organizationId: str, identifier: str, type: str?, apiKeys: [map], _parentId: str, slug: str}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 402: Payment Required, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v1/environments
-@returns(200) {data: [map]}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc List all environments
+@returns(200) {data: [map]} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PUT /v1/environments/{environmentId}
-@required {environmentId: str}
+@desc Update an environment
+@required {environmentId: str # The unique identifier of the environment}
 @optional {name: str, identifier: str, parentId: str, color: str, dns: map{inboundParseDomain: str}, bridge: map{url: str}}
-@returns(200) {data: map{_id: str, name: str, _organizationId: str, identifier: str, type: str?, apiKeys: [map], _parentId: str, slug: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: map{_id: str, name: str, _organizationId: str, identifier: str, type: str?, apiKeys: [map], _parentId: str, slug: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v1/environments/{environmentId}
-@required {environmentId: str}
+@desc Delete an environment
+@required {environmentId: str # The unique identifier of the environment}
 @returns(200)
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endgroup
 
 @group events
 @endpoint POST /v1/events/trigger
-@required {name: str, to: any}
-@optional {payload: map, overrides: any, transactionId: str, actor: any, tenant: any, context: map}
-@returns(201) {data: map{acknowledged: bool, status: str, error: [str], transactionId: str, jobData: map}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Trigger event
+@required {name: str # The trigger identifier of the workflow you wish to send. This identifier can be found on the workflow page., to: any # The recipients list of people who will receive the notification. Maximum number of recipients can be 100.}
+@optional {payload: map # The payload object is used to pass additional custom information that could be      used to render the workflow, or perform routing rules based on it.        This data will also be available when fetching the notifications feed from the API to display certain parts of the UI., overrides: any # This could be used to override provider specific configurations, transactionId: str # A unique identifier for deduplication. If the same **transactionId** is sent again,        the trigger is ignored. Useful to prevent duplicate notifications. The retention period depends on your billing tier., actor: any # It is used to display the Avatar of the provided actor's subscriber id or actor object.     If a new actor object is provided, we will create a new subscriber in our system, tenant: any # It is used to specify a tenant context during trigger event.     Existing tenants will be updated with the provided details., context: map}
+@returns(201) {data: map{acknowledged: bool, status: str, error: [str], transactionId: str, jobData: map}} # Created
+@errors {400: Payload validation failed - returned when payload does not match the workflow schema, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v1/events/trigger/bulk
+@desc Bulk trigger event
 @required {events: [map{name!: str, payload: map, overrides: any, to!: any, transactionId: str, actor: any, tenant: any, context: map}]}
-@returns(201) {data: [map]}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(201) {data: [map]} # Created
+@errors {400: Payload validation failed - returned when any event payload does not match the workflow schema, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v1/events/trigger/broadcast
-@required {name: str, payload: map}
-@optional {overrides: any, transactionId: str, actor: any, tenant: any, context: map}
-@returns(200) {data: map{acknowledged: bool, status: str, error: [str], transactionId: str, jobData: map}}
-@returns(201) {acknowledged: bool, status: str, error: [str], transactionId: str, jobData: map}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Broadcast event to all
+@required {name: str # The trigger identifier associated for the template you wish to send. This identifier can be found on the template page., payload: map # The payload object is used to pass additional information that      could be used to render the template, or perform routing rules based on it.        For In-App channel, payload data are also available in <Inbox />}
+@optional {overrides: any # This could be used to override provider specific configurations, transactionId: str # A unique identifier for this transaction, we will generated a UUID if not provided., actor: any # It is used to display the Avatar of the provided actor's subscriber id or actor object.     If a new actor object is provided, we will create a new subscriber in our system, tenant: any # It is used to specify a tenant context during trigger event.     If a new tenant object is provided, we will create a new tenant., context: map}
+@returns(200) {data: map{acknowledged: bool, status: str, error: [str], transactionId: str, jobData: map}} # OK
+@returns(201) {acknowledged: bool, status: str, error: [str], transactionId: str, jobData: map} # Broadcast request has been registered successfully
+@errors {400: Payload validation failed - returned when payload does not match the workflow schema, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v1/events/trigger/{transactionId}
+@desc Cancel triggered event
 @required {transactionId: str}
 @returns(200)
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endgroup
 
 @group notifications
 @endpoint GET /v1/notifications
-@optional {channels: [str], templates: [str], emails: [str], search: str, subscriberIds: [str], severity: [str], page: num=0, limit: num=10, transactionId: str, topicKey: str, subscriptionId: str, contextKeys: [str], after: str, before: str}
+@desc List all events
+@optional {channels: [str] # Array of channel types, templates: [str] # Array of template IDs or a single template ID, emails: [str] # Array of email addresses or a single email address, search: str # Search term (deprecated), subscriberIds: [str] # Array of subscriber IDs or a single subscriber ID, severity: [str] # Array of severity levels or a single severity level, page: num=0 # Page number for pagination, limit: num=10 # Limit for pagination, transactionId: str # The transaction ID to filter by, topicKey: str # Topic Key for filtering notifications by topic, subscriptionId: str # Subscription ID for filtering notifications by subscription, contextKeys: [str] # Filter by exact context keys, order insensitive (format: "type:id"), after: str # Date filter for records after this timestamp. Defaults to earliest date allowed by subscription plan, before: str # Date filter for records before this timestamp. Defaults to current time of request (now)}
 @returns(200) {hasMore: bool, data: [map], pageSize: num, page: num}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v1/notifications/{notificationId}
+@desc Retrieve an event
 @required {notificationId: str}
-@returns(200) {data: map{_id: str, _environmentId: str, _organizationId: str, _subscriberId: str, transactionId: str, _templateId: str, _digestedNotificationId: str, createdAt: str, updatedAt: str, channels: [str], subscriber: any, template: any, jobs: [map], payload: map, tags: [str], controls: map, to: map, topics: [map], severity: str, critical: bool, contextKeys: [str]}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: map{_id: str, _environmentId: str, _organizationId: str, _subscriberId: str, transactionId: str, _templateId: str, _digestedNotificationId: str, createdAt: str, updatedAt: str, channels: [str], subscriber: any, template: any, jobs: [map], payload: map, tags: [str], controls: map, to: map, topics: [map], severity: str, critical: bool, contextKeys: [str]}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endgroup
 
 @group integrations
 @endpoint GET /v1/integrations
-@returns(200)
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc List all integrations
+@returns(200) The list of integrations belonging to the organization that are successfully returned.
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v1/integrations
-@required {providerId: str, channel: str(in_app/email/sms/chat/push)}
-@optional {name: str, identifier: str, _environmentId: str(uuid), credentials: any, active: bool, check: bool, conditions: [map{isNegated!: bool, type!: str, value!: str, children!: [map{field!: str, value!: str, operator!: str, on!: str}]}], configurations: map}
-@returns(201) {data: map{_id: str, _environmentId: str, _organizationId: str, name: str, identifier: str, providerId: str, channel: str, credentials: any, configurations: any, active: bool, deleted: bool, deletedAt: str, deletedBy: str, primary: bool, conditions: [map]}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Create an integration
+@required {providerId: str # The provider ID for the integration, channel: str(in_app/email/sms/chat/push) # The channel type for the integration}
+@optional {name: str # The name of the integration, identifier: str # The unique identifier for the integration, _environmentId: str(uuid) # The ID of the associated environment, credentials: any # The credentials for the integration, active: bool # If the integration is active, the validation on the credentials field will run, check: bool # Flag to check the integration status, conditions: [map{isNegated!: bool, type!: str, value!: str, children!: [map{field!: str, value!: str, operator!: str, on!: str}]}] # Conditions for the integration, configurations: map # Configurations for the integration}
+@returns(201) {data: map{_id: str, _environmentId: str, _organizationId: str, name: str, identifier: str, providerId: str, channel: str, credentials: any, configurations: any, active: bool, deleted: bool, deletedAt: str, deletedBy: str, primary: bool, conditions: [map]}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v1/integrations/active
-@returns(200)
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc List active integrations
+@returns(200) The list of active integrations belonging to the organization that are successfully returned.
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PUT /v1/integrations/{integrationId}
+@desc Update an integration
 @required {integrationId: str}
-@optional {name: str, identifier: str, _environmentId: str, active: bool, credentials: map{apiKey: str, user: str, secretKey: str, domain: str, password: str, host: str, port: str, secure: bool, region: str, accountSid: str, messageProfileId: str, token: str, from: str, senderName: str, projectName: str, applicationId: str, clientId: str, requireTls: bool, ignoreTls: bool, tlsOptions: map, baseUrl: str, webhookUrl: str, redirectUrl: str, hmac: bool, serviceAccount: str, ipPoolName: str, apiKeyRequestHeader: str, secretKeyRequestHeader: str, idPath: str, datePath: str, apiToken: str, authenticateByToken: bool, authenticationTokenKey: str, instanceId: str, alertUid: str, title: str, imageUrl: str, state: str, externalLink: str, channelId: str, phoneNumberIdentification: str, accessKey: str, appSid: str, senderId: str, tenantId: str, AppIOBaseUrl: str}, check: bool, conditions: [map{isNegated!: bool, type!: str, value!: str, children!: [map{field!: str, value!: str, operator!: str, on!: str}]}], configurations: map}
-@returns(200) {data: map{_id: str, _environmentId: str, _organizationId: str, name: str, identifier: str, providerId: str, channel: str, credentials: any, configurations: any, active: bool, deleted: bool, deletedAt: str, deletedBy: str, primary: bool, conditions: [map]}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@optional {name: str, identifier: str, _environmentId: str, active: bool # If the integration is active the validation on the credentials field will run, credentials: map{apiKey: str, user: str, secretKey: str, domain: str, password: str, host: str, port: str, secure: bool, region: str, accountSid: str, messageProfileId: str, token: str, from: str, senderName: str, projectName: str, applicationId: str, clientId: str, requireTls: bool, ignoreTls: bool, tlsOptions: map, baseUrl: str, webhookUrl: str, redirectUrl: str, hmac: bool, serviceAccount: str, ipPoolName: str, apiKeyRequestHeader: str, secretKeyRequestHeader: str, idPath: str, datePath: str, apiToken: str, authenticateByToken: bool, authenticationTokenKey: str, instanceId: str, alertUid: str, title: str, imageUrl: str, state: str, externalLink: str, channelId: str, phoneNumberIdentification: str, accessKey: str, appSid: str, senderId: str, tenantId: str, AppIOBaseUrl: str}, check: bool, conditions: [map{isNegated!: bool, type!: str, value!: str, children!: [map{field!: str, value!: str, operator!: str, on!: str}]}], configurations: map # Configurations for the integration}
+@returns(200) {data: map{_id: str, _environmentId: str, _organizationId: str, name: str, identifier: str, providerId: str, channel: str, credentials: any, configurations: any, active: bool, deleted: bool, deletedAt: str, deletedBy: str, primary: bool, conditions: [map]}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: The integration with the integrationId provided does not exist in the database., 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v1/integrations/{integrationId}
+@desc Delete an integration
 @required {integrationId: str}
-@returns(200) {data: [map]}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: [map]} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v1/integrations/{integrationId}/auto-configure
+@desc Auto-configure an integration for inbound webhooks
 @required {integrationId: str}
-@returns(200) {data: map{success: bool, message: str, integration: map}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: map{success: bool, message: str, integration: map}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: The integration with the integrationId provided does not exist in the database., 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v1/integrations/{integrationId}/set-primary
+@desc Update integration as primary
 @required {integrationId: str}
-@returns(200) {data: map{_id: str, _environmentId: str, _organizationId: str, name: str, identifier: str, providerId: str, channel: str, credentials: any, configurations: any, active: bool, deleted: bool, deletedAt: str, deletedBy: str, primary: bool, conditions: [map]}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: map{_id: str, _environmentId: str, _organizationId: str, name: str, identifier: str, providerId: str, channel: str, credentials: any, configurations: any, active: bool, deleted: bool, deletedAt: str, deletedBy: str, primary: bool, conditions: [map]}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: The integration with the integrationId provided does not exist in the database., 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v1/integrations/chat/oauth
-@required {integrationIdentifier: str}
-@optional {subscriberId: str, connectionIdentifier: str, context: map, scope: [str]}
-@returns(201) {data: map{url: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Generate chat OAuth URL
+@required {integrationIdentifier: str # Integration identifier}
+@optional {subscriberId: str # The subscriber ID to link the channel connection to. For Slack: Required for incoming webhook endpoints, optional for workspace connections. For MS Teams: Optional. Admin consent is tenant-wide and can be associated with a subscriber for organizational purposes., connectionIdentifier: str # Identifier of the channel connection that will be created. It is generated automatically if not provided., context: map, scope: [str] # **Slack only**: OAuth scopes to request during authorization. These define the permissions your Slack integration will have. If not specified, default scopes will be used: chat:write, chat:write.public, channels:read, groups:read, users:read, users:read.email. **MS Teams**: This parameter is ignored. MS Teams uses admin consent with pre-configured permissions in Azure AD. Note: The generated OAuth URL expires after 5 minutes.}
+@returns(201) {data: map{url: str}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endgroup
 
 @group contexts
 @endpoint POST /v2/contexts
-@required {type: str, id: str}
-@optional {data: map}
-@returns(201) {data: map{type: str, id: str, data: map, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Create a context
+@required {type: str # Context type (e.g., tenant, app, workspace). Must be lowercase alphanumeric with optional separators., id: str # Unique identifier for this context. Must be lowercase alphanumeric with optional separators.}
+@optional {data: map # Optional custom data to associate with this context.}
+@returns(201) {data: map{type: str, id: str, data: map, createdAt: str, updatedAt: str}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/contexts
-@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, id: str, search: str}
-@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc List all contexts
+@optional {after: str # Cursor for pagination indicating the starting point after which to fetch results., before: str # Cursor for pagination indicating the ending point before which to fetch results., limit: num # Limit the number of items to return, orderDirection: str(ASC/DESC) # Direction of sorting, orderBy: str # Field to order by, includeCursor: bool # Include cursor item in response, id: str # Filter contexts by id, search: str # Search contexts by type or id (supports partial matching across both fields)}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PATCH /v2/contexts/{type}/{id}
-@required {id: str, type: str, data: map}
-@returns(200) {data: map{type: str, id: str, data: map, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Update a context
+@required {id: str # Context ID, type: str # Context type, data: map # Custom data to associate with this context. Replaces existing data.}
+@returns(200) {data: map{type: str, id: str, data: map, createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/contexts/{type}/{id}
-@required {id: str, type: str}
-@returns(200) {data: map{type: str, id: str, data: map, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Retrieve a context
+@required {id: str # Context ID, type: str # Context type}
+@returns(200) {data: map{type: str, id: str, data: map, createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v2/contexts/{type}/{id}
-@required {id: str, type: str}
+@desc Delete a context
+@required {id: str # Context ID, type: str # Context type}
 @returns(204)
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endgroup
 
 @group subscribers
 @endpoint POST /v1/subscribers/bulk
-@required {subscribers: [map{firstName: str, lastName: str, email: str, phone: str, avatar: str, locale: str, timezone: str, data: map, subscriberId!: str}]}
-@returns(201) {data: map{updated: [map], created: [map], failed: [map]}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Bulk create subscribers
+@required {subscribers: [map{firstName: str, lastName: str, email: str, phone: str, avatar: str, locale: str, timezone: str, data: map, subscriberId!: str}] # An array of subscribers to be created in bulk.}
+@returns(201) {data: map{updated: [map], created: [map], failed: [map]}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PUT /v1/subscribers/{subscriberId}/credentials
-@required {subscriberId: str, providerId: str(slack/discord/msteams/mattermost/ryver/zulip/grafana-on-call/getstream/rocket-chat/whatsapp-business/chat-webhook/novu-slack/fcm/apns/expo/one-signal/pushpad/push-webhook/pusher-beams/appio), credentials: any}
-@optional {integrationIdentifier: str}
-@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Update provider credentials
+@required {subscriberId: str, providerId: str(slack/discord/msteams/mattermost/ryver/zulip/grafana-on-call/getstream/rocket-chat/whatsapp-business/chat-webhook/novu-slack/fcm/apns/expo/one-signal/pushpad/push-webhook/pusher-beams/appio) # The provider identifier for the credentials, credentials: any # Credentials payload for the specified provider}
+@optional {integrationIdentifier: str # The integration identifier}
+@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PATCH /v1/subscribers/{subscriberId}/credentials
-@required {subscriberId: str, providerId: str(slack/discord/msteams/mattermost/ryver/zulip/grafana-on-call/getstream/rocket-chat/whatsapp-business/chat-webhook/novu-slack/fcm/apns/expo/one-signal/pushpad/push-webhook/pusher-beams/appio), credentials: any}
-@optional {integrationIdentifier: str}
-@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Upsert provider credentials
+@required {subscriberId: str, providerId: str(slack/discord/msteams/mattermost/ryver/zulip/grafana-on-call/getstream/rocket-chat/whatsapp-business/chat-webhook/novu-slack/fcm/apns/expo/one-signal/pushpad/push-webhook/pusher-beams/appio) # The provider identifier for the credentials, credentials: any # Credentials payload for the specified provider}
+@optional {integrationIdentifier: str # The integration identifier}
+@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v1/subscribers/{subscriberId}/credentials/{providerId}
+@desc Delete provider credentials
 @required {subscriberId: str, providerId: str}
 @returns(204)
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PATCH /v1/subscribers/{subscriberId}/online-status
+@desc Update subscriber online status
 @required {subscriberId: str, isOnline: bool}
-@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v1/subscribers/{subscriberId}/notifications/feed
+@desc Retrieve subscriber notifications
 @required {subscriberId: str}
-@optional {page: num, limit: num=10, read: bool, seen: bool, payload: str}
-@returns(200) {data: map{totalCount: num, hasMore: bool, data: [map], pageSize: num, page: num}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@optional {page: num, limit: num=10, read: bool, seen: bool, payload: str # Base64 encoded string of the partial payload JSON object}
+@returns(200) {data: map{totalCount: num, hasMore: bool, data: [map], pageSize: num, page: num}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v1/subscribers/{subscriberId}/notifications/unseen
+@desc Retrieve unseen notifications count
 @required {subscriberId: str}
-@optional {seen: bool=False, limit: num=100}
-@returns(200) {data: map{count: num}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@optional {seen: bool=False # Indicates whether to count seen notifications., limit: num=100 # The maximum number of notifications to return.}
+@returns(200) {data: map{count: num}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v1/subscribers/{subscriberId}/messages/mark-as
+@desc Update notifications state
 @required {subscriberId: str, messageId: any, markAs: str(read/seen/unread/unseen)}
-@returns(201) {data: [map]}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(201) {data: [map]} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v1/subscribers/{subscriberId}/messages/mark-all
-@required {subscriberId: str, markAs: str(read/seen/unread/unseen)}
-@optional {feedIdentifier: any}
+@desc Update all notifications state
+@required {subscriberId: str, markAs: str(read/seen/unread/unseen) # Mark all subscriber messages as read, unread, seen or unseen}
+@optional {feedIdentifier: any # Optional feed identifier or array of feed identifiers}
 @returns(201)
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v1/subscribers/{subscriberId}/messages/{messageId}/actions/{type}
-@required {messageId: str, type: any, subscriberId: str, status: str(pending/done)}
-@optional {payload: map}
-@returns(201) {data: map{_id: str, _templateId: str?, _environmentId: str, _messageTemplateId: str?, _organizationId: str, _notificationId: str, _subscriberId: str, subscriber: any, template: any, templateIdentifier: str, createdAt: str, deliveredAt: [str], lastSeenDate: str, lastReadDate: str, content: any?, transactionId: str, subject: str, channel: str, read: bool, seen: bool, snoozedUntil: str, email: str, phone: str, directWebhookUrl: str, providerId: str, deviceTokens: [str], title: str, cta: any, _feedId: str?, status: str, errorId: str, errorText: str, payload: map, overrides: map, contextKeys: [str]}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Update notification action status
+@required {messageId: str, type: any, subscriberId: str, status: str(pending/done) # Message action status}
+@optional {payload: map # Message action payload}
+@returns(201) {data: map{_id: str, _templateId: str?, _environmentId: str, _messageTemplateId: str?, _organizationId: str, _notificationId: str, _subscriberId: str, subscriber: any, template: any, templateIdentifier: str, createdAt: str, deliveredAt: [str], lastSeenDate: str, lastReadDate: str, content: any?, transactionId: str, subject: str, channel: str, read: bool, seen: bool, snoozedUntil: str, email: str, phone: str, directWebhookUrl: str, providerId: str, deviceTokens: [str], title: str, cta: any, _feedId: str?, status: str, errorId: str, errorText: str, payload: map, overrides: map, contextKeys: [str]}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/subscribers
-@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, email: str, name: str, phone: str, subscriberId: str}
-@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Search subscribers
+@optional {after: str # Cursor for pagination indicating the starting point after which to fetch results., before: str # Cursor for pagination indicating the ending point before which to fetch results., limit: num # Limit the number of items to return, orderDirection: str(ASC/DESC) # Direction of sorting, orderBy: str # Field to order by, includeCursor: bool # Include cursor item in response, email: str # Email address of the subscriber to filter results., name: str # Name of the subscriber to filter results., phone: str # Phone number of the subscriber to filter results., subscriberId: str # Unique identifier of the subscriber to filter results.}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v2/subscribers
-@required {subscriberId: str}
-@optional {failIfExists: bool, firstName: str, lastName: str, email: str, phone: str, avatar: str, locale: str, timezone: str, data: map}
-@returns(201) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Create a subscriber
+@required {subscriberId: str # Unique identifier of the subscriber}
+@optional {failIfExists: bool # If true, the request will fail if a subscriber with the same subscriberId already exists, firstName: str # First name of the subscriber, lastName: str # Last name of the subscriber, email: str # Email address of the subscriber, phone: str # Phone number of the subscriber, avatar: str # Avatar URL or identifier, locale: str # Locale of the subscriber, timezone: str # Timezone of the subscriber, data: map # Additional custom data associated with the subscriber}
+@returns(201) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Subscriber already exists (when query param failIfExists=true), 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/subscribers/{subscriberId}
+@desc Retrieve a subscriber
 @required {subscriberId: str}
-@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PATCH /v2/subscribers/{subscriberId}
+@desc Update a subscriber
 @required {subscriberId: str}
-@optional {firstName: str, lastName: str, email: str, phone: str, avatar: str, locale: str, timezone: str, data: map}
-@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@optional {firstName: str # First name of the subscriber, lastName: str # Last name of the subscriber, email: str # Email address of the subscriber, phone: str # Phone number of the subscriber, avatar: str # Avatar URL or identifier, locale: str # Locale of the subscriber, timezone: str # Timezone of the subscriber, data: map # Additional custom data associated with the subscriber}
+@returns(200) {data: map{_id: str, firstName: str?, lastName: str?, email: str?, phone: str?, avatar: str?, locale: str?, channels: [map], topics: [str], isOnline: bool?, lastOnlineAt: str?, __v: num, data: map?, timezone: str?, subscriberId: str, _organizationId: str, _environmentId: str, deleted: bool, createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v2/subscribers/{subscriberId}
+@desc Delete a subscriber
 @required {subscriberId: str}
-@returns(200) {data: map{acknowledged: bool, status: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: map{acknowledged: bool, status: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/subscribers/{subscriberId}/preferences
+@desc Retrieve subscriber preferences
 @required {subscriberId: str}
-@optional {criticality: str(critical/nonCritical/all)=nonCritical, contextKeys: [str]}
-@returns(200) {data: map{global: any, workflows: [map]}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@optional {criticality: str(critical/nonCritical/all)=nonCritical, contextKeys: [str] # Context keys for filtering preferences (e.g., ["tenant:acme"])}
+@returns(200) {data: map{global: any, workflows: [map]}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PATCH /v2/subscribers/{subscriberId}/preferences
+@desc Update subscriber preferences
 @required {subscriberId: str}
-@optional {channels: any, workflowId: str, schedule: any, context: map}
-@returns(200) {data: map{global: any, workflows: [map]}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@optional {channels: any # Channel-specific preference settings, workflowId: str # Workflow internal _id, identifier or slug. If provided, update workflow specific preferences, otherwise update global preferences, schedule: any # Subscriber schedule, context: map}
+@returns(200) {data: map{global: any, workflows: [map]}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PATCH /v2/subscribers/{subscriberId}/preferences/bulk
-@required {subscriberId: str, preferences: [map{channels!: any, workflowId!: str}]}
+@desc Bulk update subscriber preferences
+@required {subscriberId: str, preferences: [map{channels!: any, workflowId!: str}] # Array of workflow preferences to update (maximum 100 items)}
 @optional {context: map}
-@returns(200) {data: [map]}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: [map]} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/subscribers/{subscriberId}/subscriptions
-@required {subscriberId: str}
-@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, key: str, contextKeys: [str]}
-@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Retrieve subscriber subscriptions
+@required {subscriberId: str # The identifier of the subscriber}
+@optional {after: str # Cursor for pagination indicating the starting point after which to fetch results., before: str # Cursor for pagination indicating the ending point before which to fetch results., limit: num # Limit the number of items to return (max 100), orderDirection: str(ASC/DESC) # Direction of sorting, orderBy: str # Field to order by, includeCursor: bool # Include cursor item in response, key: str # Filter by topic key, contextKeys: [str] # Filter by exact context keys, order insensitive (format: "type:id")}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endgroup
 
 @group layouts
 @endpoint POST /v2/layouts
-@required {layoutId: str, name: str}
-@optional {isTranslationEnabled: bool=False, __source: str=dashboard}
-@returns(201) {data: map{_id: str, layoutId: str, slug: str, name: str, isDefault: bool, isTranslationEnabled: bool, updatedAt: str, updatedBy: any?, createdAt: str, origin: str, type: str, variables: map?, controls: any}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Create a layout
+@required {layoutId: str # Unique identifier for the layout, name: str # Name of the layout}
+@optional {isTranslationEnabled: bool=False # Enable or disable translations for this layout, __source: str=dashboard # Source of layout creation}
+@returns(201) {data: map{_id: str, layoutId: str, slug: str, name: str, isDefault: bool, isTranslationEnabled: bool, updatedAt: str, updatedBy: any?, createdAt: str, origin: str, type: str, variables: map?, controls: any}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/layouts
-@optional {limit: num, offset: num, orderDirection: str, orderBy: str, query: str}
-@returns(200) {data: map{layouts: [map], totalCount: num}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc List all layouts
+@optional {limit: num # Number of items to return per page, offset: num # Number of items to skip before starting to return results, orderDirection: str # Direction of sorting, orderBy: str # Field to sort the results by, query: str # Search query to filter layouts}
+@returns(200) {data: map{layouts: [map], totalCount: num}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PUT /v2/layouts/{layoutId}
-@required {layoutId: str, name: str}
-@optional {isTranslationEnabled: bool=False, controlValues: any}
-@returns(200) {data: map{_id: str, layoutId: str, slug: str, name: str, isDefault: bool, isTranslationEnabled: bool, updatedAt: str, updatedBy: any?, createdAt: str, origin: str, type: str, variables: map?, controls: any}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Update a layout
+@required {layoutId: str, name: str # Name of the layout}
+@optional {isTranslationEnabled: bool=False # Enable or disable translations for this layout, controlValues: any # Control values for the layout}
+@returns(200) {data: map{_id: str, layoutId: str, slug: str, name: str, isDefault: bool, isTranslationEnabled: bool, updatedAt: str, updatedBy: any?, createdAt: str, origin: str, type: str, variables: map?, controls: any}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/layouts/{layoutId}
+@desc Retrieve a layout
 @required {layoutId: str}
-@returns(200) {data: map{_id: str, layoutId: str, slug: str, name: str, isDefault: bool, isTranslationEnabled: bool, updatedAt: str, updatedBy: any?, createdAt: str, origin: str, type: str, variables: map?, controls: any}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: map{_id: str, layoutId: str, slug: str, name: str, isDefault: bool, isTranslationEnabled: bool, updatedAt: str, updatedBy: any?, createdAt: str, origin: str, type: str, variables: map?, controls: any}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v2/layouts/{layoutId}
-@required {layoutId: str}
+@desc Delete a layout
+@required {layoutId: str # The unique identifier of the layout}
 @returns(204)
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v2/layouts/{layoutId}/duplicate
-@required {layoutId: str, name: str}
-@optional {isTranslationEnabled: bool=False}
-@returns(201) {data: map{_id: str, layoutId: str, slug: str, name: str, isDefault: bool, isTranslationEnabled: bool, updatedAt: str, updatedBy: any?, createdAt: str, origin: str, type: str, variables: map?, controls: any}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Duplicate a layout
+@required {layoutId: str, name: str # Name of the layout}
+@optional {isTranslationEnabled: bool=False # Enable or disable translations for this layout}
+@returns(201) {data: map{_id: str, layoutId: str, slug: str, name: str, isDefault: bool, isTranslationEnabled: bool, updatedAt: str, updatedBy: any?, createdAt: str, origin: str, type: str, variables: map?, controls: any}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v2/layouts/{layoutId}/preview
+@desc Generate layout preview
 @required {layoutId: str}
-@optional {controlValues: map, previewPayload: any}
-@returns(201) {data: map{previewPayloadExample: any, schema: map?, result: any}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@optional {controlValues: map # Optional control values for layout preview, previewPayload: any # Optional payload for layout preview}
+@returns(201) {data: map{previewPayloadExample: any, schema: map?, result: any}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/layouts/{layoutId}/usage
+@desc Get layout usage
 @required {layoutId: str}
-@returns(200) {data: map{workflows: [map]}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: map{workflows: [map]}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endgroup
 
 @group messages
 @endpoint GET /v1/messages
-@optional {channel: str, subscriberId: str, transactionId: [str], contextKeys: [str], page: num=0, limit: num=10}
+@desc List all messages
+@optional {channel: str, subscriberId: str, transactionId: [str], contextKeys: [str] # Filter by exact context keys, order insensitive (format: "type:id"), page: num=0, limit: num=10}
 @returns(200) {totalCount: num, hasMore: bool, data: [map], pageSize: num, page: num}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v1/messages/{messageId}
+@desc Delete a message
 @required {messageId: str}
-@returns(200) {data: map{acknowledged: bool, status: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: map{acknowledged: bool, status: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v1/messages/transaction/{transactionId}
+@desc Delete messages by transactionId
 @required {transactionId: str}
-@optional {channel: str(in_app/email/sms/chat/push)}
+@optional {channel: str(in_app/email/sms/chat/push) # The channel of the message to be deleted}
 @returns(204)
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endgroup
 
 @group topics
 @endpoint GET /v1/topics/{topicKey}/subscribers/{externalSubscriberId}
-@required {externalSubscriberId: str, topicKey: str}
+@desc Check topic subscriber
+@required {externalSubscriberId: str # The external subscriber id, topicKey: str # The topic key}
 @returns(200) {_organizationId: str, _environmentId: str, _subscriberId: str, _topicId: str, topicKey: str, externalSubscriberId: str}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/topics
-@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, key: str, name: str}
-@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc List all topics
+@optional {after: str # Cursor for pagination indicating the starting point after which to fetch results., before: str # Cursor for pagination indicating the ending point before which to fetch results., limit: num # Limit the number of items to return (max 100), orderDirection: str(ASC/DESC) # Direction of sorting, orderBy: str # Field to order by, includeCursor: bool # Include cursor item in response, key: str # Key of the topic to filter results., name: str # Name of the topic to filter results.}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v2/topics
-@required {key: str}
-@optional {failIfExists: bool, name: str}
-@returns(200) {data: map{_id: str, key: str, name: str, createdAt: str, updatedAt: str}}
-@returns(201) {data: map{_id: str, key: str, name: str, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Create a topic
+@required {key: str # The unique key identifier for the topic. The key must contain only alphanumeric characters (a-z, A-Z, 0-9), hyphens (-), underscores (_), colons (:), or be a valid email address.}
+@optional {failIfExists: bool # If true, the request will fail if a topic with the same key already exists, name: str # The display name for the topic}
+@returns(200) {data: map{_id: str, key: str, name: str, createdAt: str, updatedAt: str}} # OK
+@returns(201) {data: map{_id: str, key: str, name: str, createdAt: str, updatedAt: str}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Topic already exists (when query param failIfExists=true), 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/topics/{topicKey}
-@required {topicKey: str}
-@returns(200) {data: map{_id: str, key: str, name: str, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Retrieve a topic
+@required {topicKey: str # The key identifier of the topic}
+@returns(200) {data: map{_id: str, key: str, name: str, createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PATCH /v2/topics/{topicKey}
-@required {topicKey: str, name: str}
-@returns(200) {data: map{_id: str, key: str, name: str, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Update a topic
+@required {topicKey: str # The key identifier of the topic, name: str # The display name for the topic}
+@returns(200) {data: map{_id: str, key: str, name: str, createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v2/topics/{topicKey}
-@required {topicKey: str}
-@returns(200) {data: map{acknowledged: bool}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Delete a topic
+@required {topicKey: str # The key identifier of the topic}
+@returns(200) {data: map{acknowledged: bool}} # Topic deleted successfully
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/topics/{topicKey}/subscriptions
-@required {topicKey: str}
-@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, subscriberId: str, contextKeys: [str]}
-@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc List topic subscriptions
+@required {topicKey: str # The key identifier of the topic}
+@optional {after: str # Cursor for pagination indicating the starting point after which to fetch results., before: str # Cursor for pagination indicating the ending point before which to fetch results., limit: num # Limit the number of items to return (max 100), orderDirection: str(ASC/DESC) # Direction of sorting, orderBy: str # Field to order by, includeCursor: bool # Include cursor item in response, subscriberId: str # Filter by subscriber ID, contextKeys: [str] # Filter by exact context keys, order insensitive (format: "type:id")}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v2/topics/{topicKey}/subscriptions
-@required {topicKey: str}
-@optional {subscriberIds: [str], subscriptions: [any], name: str, context: map, preferences: [any]}
-@returns(201) {data: map{data: [map], meta: any, errors: [map]}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Create topic subscriptions
+@required {topicKey: str # The key identifier of the topic}
+@optional {subscriberIds: [str] # List of subscriber IDs to subscribe to the topic (max: 100). @deprecated Use the "subscriptions" property instead., subscriptions: [any] # List of subscriptions to subscribe to the topic (max: 100). Can be either a string array of subscriber IDs or an array of objects with identifier and subscriberId, name: str # The name of the topic, context: map, preferences: [any] # The preferences of the topic. Can be a simple workflow ID string, workflow preference object, or group filter object}
+@returns(201) {data: map{data: [map], meta: any, errors: [map]}} # Subscriptions created successfully
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v2/topics/{topicKey}/subscriptions
-@required {topicKey: str}
-@optional {subscriberIds: [str], subscriptions: [any]}
-@returns(200) {data: [map], meta: any, errors: [map]}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Delete topic subscriptions
+@required {topicKey: str # The key identifier of the topic}
+@optional {subscriberIds: [str] # List of subscriber identifiers to unsubscribe from the topic (max: 100). @deprecated Use the "subscriptions" property instead., subscriptions: [any] # List of subscriptions to unsubscribe from the topic (max: 100). Can be either a string array of subscriber IDs or an array of objects with identifier and/or subscriberId. If only subscriberId is provided, all subscriptions for that subscriber within the topic will be deleted.}
+@returns(200) {data: [map], meta: any, errors: [map]} # Subscriptions deleted successfully
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/topics/{topicKey}/subscriptions/{identifier}
-@required {topicKey: str, identifier: str}
-@returns(200) {data: map{id: str, identifier: str, name: str, preferences: [map], contextKeys: [str]}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Retrieve a topic subscription
+@required {topicKey: str # The key identifier of the topic, identifier: str # The unique identifier of the subscription}
+@returns(200) {data: map{id: str, identifier: str, name: str, preferences: [map], contextKeys: [str]}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PATCH /v2/topics/{topicKey}/subscriptions/{identifier}
-@required {topicKey: str, identifier: str}
-@optional {name: str, preferences: [any]}
-@returns(200) {data: map{_id: str, identifier: str, name: str, topic: any, subscriber: any?, preferences: [map], contextKeys: [str], createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Update a topic subscription
+@required {topicKey: str # The key identifier of the topic, identifier: str # The unique identifier of the subscription}
+@optional {name: str # The name of the subscription, preferences: [any] # The preferences of the topic. Can be a simple workflow ID string, workflow preference object, or group filter object}
+@returns(200) {data: map{_id: str, identifier: str, name: str, topic: any, subscriber: any?, preferences: [map], contextKeys: [str], createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endgroup
 
 @group workflows
 @endpoint POST /v2/workflows
-@required {name: str, workflowId: str, steps: [any]}
-@optional {description: str, tags: [str], active: bool=False, validatePayload: bool, payloadSchema: map, isTranslationEnabled: bool=False, __source: str(template_store/editor/notification_directory/onboarding_digest_demo/onboarding_in_app/empty_state/dropdown/onboarding_get_started/bridge/dashboard/ai)=editor, preferences: any, severity: str(high/medium/low/none)}
-@returns(201) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Create a workflow
+@required {name: str # Name of the workflow, workflowId: str # Unique identifier for the workflow, steps: [any] # Steps of the workflow}
+@optional {description: str # Description of the workflow, tags: [str] # Tags associated with the workflow, active: bool=False # Whether the workflow is active, validatePayload: bool # Enable or disable payload schema validation, payloadSchema: map # The payload JSON Schema for the workflow, isTranslationEnabled: bool=False # Enable or disable translations for this workflow, __source: str(template_store/editor/notification_directory/onboarding_digest_demo/onboarding_in_app/empty_state/dropdown/onboarding_get_started/bridge/dashboard/ai)=editor # Source of workflow creation, preferences: any # Workflow preferences, severity: str(high/medium/low/none) # Severity of the workflow}
+@returns(201) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/workflows
-@optional {limit: num, offset: num, orderDirection: str, orderBy: str, query: str, tags: [str], status: [str]}
-@returns(200) {data: map{workflows: [map], totalCount: num}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc List all workflows
+@optional {limit: num # Number of items to return per page, offset: num # Number of items to skip before starting to return results, orderDirection: str # Direction of sorting, orderBy: str # Field to sort the results by, query: str # Search query to filter workflows, tags: [str] # Filter workflows by tags, status: [str] # Filter workflows by status}
+@returns(200) {data: map{workflows: [map], totalCount: num}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PUT /v2/workflows/{workflowId}/sync
-@required {workflowId: str, targetEnvironmentId: str}
-@returns(200) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Sync a workflow
+@required {workflowId: str, targetEnvironmentId: str # Target environment identifier to sync the workflow to}
+@returns(200) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PUT /v2/workflows/{workflowId}
-@required {workflowId: str, name: str, steps: [any], preferences: any, origin: str(novu-cloud/novu-cloud-v1/external)}
-@optional {description: str, tags: [str], active: bool=False, validatePayload: bool, payloadSchema: map, isTranslationEnabled: bool=False, workflowId: str, severity: str(high/medium/low/none)}
-@returns(200) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Update a workflow
+@required {workflowId: str, name: str # Name of the workflow, steps: [any] # Steps of the workflow, preferences: any # Workflow preferences, origin: str(novu-cloud/novu-cloud-v1/external) # Origin of the layout}
+@optional {description: str # Description of the workflow, tags: [str] # Tags associated with the workflow, active: bool=False # Whether the workflow is active, validatePayload: bool # Enable or disable payload schema validation, payloadSchema: map # The payload JSON Schema for the workflow, isTranslationEnabled: bool=False # Enable or disable translations for this workflow, workflowId: str # Workflow ID (allowed only for code-first workflows), severity: str(high/medium/low/none) # Severity of the workflow}
+@returns(200) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/workflows/{workflowId}
+@desc Retrieve a workflow
 @required {workflowId: str}
 @optional {environmentId: str}
-@returns(200) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v2/workflows/{workflowId}
+@desc Delete a workflow
 @required {workflowId: str}
 @returns(204)
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PATCH /v2/workflows/{workflowId}
+@desc Update a workflow
 @required {workflowId: str}
-@optional {active: bool, name: str, description: str, tags: [str], payloadSchema: map, validatePayload: bool, isTranslationEnabled: bool}
-@returns(200) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@optional {active: bool # Activate or deactivate the workflow, name: str # New name for the workflow, description: str # Updated description of the workflow, tags: [str] # Tags associated with the workflow, payloadSchema: map # The payload JSON Schema for the workflow, validatePayload: bool # Enable or disable payload schema validation, isTranslationEnabled: bool # Enable or disable translations for this workflow}
+@returns(200) {data: map{name: str, description: str, tags: [str], active: bool, validatePayload: bool, payloadSchema: map?, isTranslationEnabled: bool, _id: str, workflowId: str, slug: str, updatedAt: str, createdAt: str, updatedBy: any?, lastPublishedAt: str?, lastPublishedBy: any?, steps: [any], origin: str, preferences: any, status: str, issues: map, lastTriggeredAt: str?, payloadExample: map?, severity: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v2/workflows/{workflowId}/steps/{stepId}
+@desc Retrieve workflow step
 @required {workflowId: str, stepId: str}
-@returns(200) {data: map{controls: any, controlValues: map, variables: map, stepId: str, _id: str, name: str, slug: str, type: str, origin: str, workflowId: str, workflowDatabaseId: str, issues: any}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@returns(200) {data: map{controls: any, controlValues: map, variables: map, stepId: str, _id: str, name: str, slug: str, type: str, origin: str, workflowId: str, workflowDatabaseId: str, issues: any}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endgroup
 
 @group environments
 @endpoint GET /v2/environments/{environmentId}/tags
-@required {environmentId: str}
-@returns(200) {data: [map]}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc List environment tags
+@required {environmentId: str # Environment internal ID (MongoDB ObjectId) or identifier}
+@returns(200) {data: [map]} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v2/environments/{targetEnvironmentId}/publish
-@required {targetEnvironmentId: str}
-@optional {sourceEnvironmentId: str, dryRun: bool=False, resources: [map{resourceType!: str, resourceId!: str}]}
-@returns(200) {data: map{results: [map], summary: any}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Publish resources to target environment
+@required {targetEnvironmentId: str # Target environment ID (MongoDB ObjectId) to publish resources to}
+@optional {sourceEnvironmentId: str # Source environment ID to sync from. Defaults to the Development environment if not provided., dryRun: bool=False # Perform a dry run without making actual changes, resources: [map{resourceType!: str, resourceId!: str}] # Array of specific resources to publish. If not provided, all resources will be published.}
+@returns(200) {data: map{results: [map], summary: any}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v2/environments/{targetEnvironmentId}/diff
-@required {targetEnvironmentId: str}
-@optional {sourceEnvironmentId: str}
-@returns(200) {data: map{sourceEnvironmentId: str, targetEnvironmentId: str, resources: [map], summary: any}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Compare resources between environments
+@required {targetEnvironmentId: str # Target environment ID (MongoDB ObjectId) to compare against}
+@optional {sourceEnvironmentId: str # Source environment ID to compare from. Defaults to the Development environment if not provided.}
+@returns(200) {data: map{sourceEnvironmentId: str, targetEnvironmentId: str, resources: [map], summary: any}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endgroup
 
 @group channel-connections
 @endpoint GET /v1/channel-connections
-@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, subscriberId: str, channel: str(in_app/email/sms/chat/push), providerId: str, integrationIdentifier: str, contextKeys: [str]}
-@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc List all channel connections
+@optional {after: str # Cursor for pagination indicating the starting point after which to fetch results., before: str # Cursor for pagination indicating the ending point before which to fetch results., limit: num # Limit the number of items to return (max 100), orderDirection: str(ASC/DESC) # Direction of sorting, orderBy: str # Field to order by, includeCursor: bool # Include cursor item in response, subscriberId: str # The subscriber ID to filter results by, channel: str(in_app/email/sms/chat/push) # Filter by channel type (email, sms, push, chat, etc.)., providerId: str # Filter by provider identifier (e.g., sendgrid, twilio, slack, etc.)., integrationIdentifier: str # Filter by integration identifier., contextKeys: [str] # Filter by exact context keys, order insensitive (format: "type:id")}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v1/channel-connections
-@required {integrationIdentifier: str, workspace: map{id!: str, name: str}, auth: map{accessToken!: str}}
-@optional {identifier: str, subscriberId: str, context: map}
-@returns(201) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, subscriberId: str?, contextKeys: [str], workspace: map{id: str, name: str}, auth: map{accessToken: str}, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Create a channel connection
+@required {integrationIdentifier: str # The identifier of the integration to use for this channel connection., workspace: map{id!: str, name: str}, auth: map{accessToken!: str}}
+@optional {identifier: str # The unique identifier for the channel connection. If not provided, one will be generated automatically., subscriberId: str # The subscriber ID to link the channel connection to, context: map}
+@returns(201) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, subscriberId: str?, contextKeys: [str], workspace: map{id: str, name: str}, auth: map{accessToken: str}, createdAt: str, updatedAt: str}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v1/channel-connections/{identifier}
-@required {identifier: str}
-@returns(200) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, subscriberId: str?, contextKeys: [str], workspace: map{id: str, name: str}, auth: map{accessToken: str}, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Retrieve a channel connection
+@required {identifier: str # The unique identifier of the channel connection}
+@returns(200) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, subscriberId: str?, contextKeys: [str], workspace: map{id: str, name: str}, auth: map{accessToken: str}, createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PATCH /v1/channel-connections/{identifier}
-@required {identifier: str, workspace: map{id!: str, name: str}, auth: map{accessToken!: str}}
-@returns(200) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, subscriberId: str?, contextKeys: [str], workspace: map{id: str, name: str}, auth: map{accessToken: str}, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Update a channel connection
+@required {identifier: str # The unique identifier of the channel connection, workspace: map{id!: str, name: str}, auth: map{accessToken!: str}}
+@returns(200) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, subscriberId: str?, contextKeys: [str], workspace: map{id: str, name: str}, auth: map{accessToken: str}, createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v1/channel-connections/{identifier}
-@required {identifier: str}
+@desc Delete a channel connection
+@required {identifier: str # The unique identifier of the channel connection}
 @returns(204)
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endgroup
 
 @group channel-endpoints
 @endpoint GET /v1/channel-endpoints
-@optional {after: str, before: str, limit: num, orderDirection: str(ASC/DESC), orderBy: str, includeCursor: bool, subscriberId: str, contextKeys: [str], channel: str(in_app/email/sms/chat/push), providerId: str, integrationIdentifier: str, connectionIdentifier: str}
-@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc List all channel endpoints
+@optional {after: str # Cursor for pagination indicating the starting point after which to fetch results., before: str # Cursor for pagination indicating the ending point before which to fetch results., limit: num # Limit the number of items to return (max 100), orderDirection: str(ASC/DESC) # Direction of sorting, orderBy: str # Field to order by, includeCursor: bool # Include cursor item in response, subscriberId: str # The subscriber ID to filter results by, contextKeys: [str] # Filter by exact context keys, order insensitive (format: "type:id"), channel: str(in_app/email/sms/chat/push) # Channel type to filter results., providerId: str # Filter by provider identifier (e.g., sendgrid, twilio, slack, etc.)., integrationIdentifier: str # Integration identifier to filter results., connectionIdentifier: str # Connection identifier to filter results.}
+@returns(200) {data: map{data: [map], next: str?, previous: str?, totalCount: num, totalCountCapped: bool}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint POST /v1/channel-endpoints
-@returns(201) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, connectionIdentifier: str?, subscriberId: str?, contextKeys: [str], type: str, endpoint: any, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Create a channel endpoint
+@returns(201) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, connectionIdentifier: str?, subscriberId: str?, contextKeys: [str], type: str, endpoint: any, createdAt: str, updatedAt: str}} # Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint GET /v1/channel-endpoints/{identifier}
-@required {identifier: str}
-@returns(200) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, connectionIdentifier: str?, subscriberId: str?, contextKeys: [str], type: str, endpoint: any, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Retrieve a channel endpoint
+@required {identifier: str # The unique identifier of the channel endpoint}
+@returns(200) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, connectionIdentifier: str?, subscriberId: str?, contextKeys: [str], type: str, endpoint: any, createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint PATCH /v1/channel-endpoints/{identifier}
-@required {identifier: str, endpoint: any}
-@returns(200) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, connectionIdentifier: str?, subscriberId: str?, contextKeys: [str], type: str, endpoint: any, createdAt: str, updatedAt: str}}
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@desc Update a channel endpoint
+@required {identifier: str # The unique identifier of the channel endpoint, endpoint: any # Updated endpoint data. The structure must match the existing channel endpoint type.}
+@returns(200) {data: map{identifier: str, channel: str?, providerId: str?, integrationIdentifier: str?, connectionIdentifier: str?, subscriberId: str?, contextKeys: [str], type: str, endpoint: any, createdAt: str, updatedAt: str}} # OK
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endpoint DELETE /v1/channel-endpoints/{identifier}
-@required {identifier: str}
+@desc Delete a channel endpoint
+@required {identifier: str # The unique identifier of the channel endpoint}
 @returns(204)
-@errors {400, 401, 403, 404, 405, 409, 413, 414, 415, 422, 429, 500, 503}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 405: Method Not Allowed, 409: Conflict, 413: Payload Too Large, 414: URI Too Long, 415: Unsupported Media Type, 422: Unprocessable Entity, 429: The client has sent too many requests in a given amount of time., 500: Internal Server Error, 503: The server is currently unable to handle the request due to a temporary overload or scheduled maintenance, which will likely be alleviated after some delay.}
 
 @endgroup
 
 @group translations
 @endpoint POST /v2/translations/upload
-@returns(200) {totalFiles: num, successfulUploads: num, failedUploads: num, errors: [str]}
+@desc Upload translation files
+@returns(200) {totalFiles: num, successfulUploads: num, failedUploads: num, errors: [str]} # Upload results
 
 @endpoint POST /v2/translations
-@required {resourceId: str, resourceType: str(workflow/layout), locale: str, content: map}
-@returns(200) {resourceId: str, resourceType: str, locale: str, content: map, createdAt: str, updatedAt: str}
+@desc Create a translation
+@required {resourceId: str # The resource ID to associate translation with. Accepts identifier or slug format, resourceType: str(workflow/layout) # The resource type to associate translation with, locale: str # Locale code (e.g., en_US, es_ES), content: map # Translation content as JSON object}
+@returns(200) {resourceId: str, resourceType: str, locale: str, content: map, createdAt: str, updatedAt: str} # Translation created or updated successfully
 
 @endpoint GET /v2/translations/master-json
-@optional {locale: str}
-@returns(200) {workflows: map, layouts: map}
+@desc Retrieve master translations JSON
+@optional {locale: str # Locale to export. If not provided, exports organization default locale}
+@returns(200) {workflows: map, layouts: map} # Master translations JSON retrieved successfully
 
 @endpoint POST /v2/translations/master-json
-@required {locale: str, masterJson: map}
-@returns(200) {success: bool, message: str, successful: [str], failed: [str]}
+@desc Import master translations JSON
+@required {locale: str # The locale for which translations are being imported, masterJson: map # Master JSON object containing all translations organized by workflow identifier}
+@returns(200) {success: bool, message: str, successful: [str], failed: [str]} # Master translations imported successfully
 
 @endpoint POST /v2/translations/master-json/upload
-@returns(200) {success: bool, message: str, successful: [str], failed: [str]}
+@desc Upload master translations JSON file
+@returns(200) {success: bool, message: str, successful: [str], failed: [str]} # Master translations uploaded successfully
 
 @endpoint GET /v2/translations/group/{resourceType}/{resourceId}
-@required {resourceType: str(workflow/layout), resourceId: str}
-@returns(200) {resourceId: str, resourceType: str, resourceName: str, locales: [str], outdatedLocales: [str], createdAt: str, updatedAt: str}
-@errors {404}
+@desc Retrieve a translation group
+@required {resourceType: str(workflow/layout) # Resource type, resourceId: str # Resource ID}
+@returns(200) {resourceId: str, resourceType: str, resourceName: str, locales: [str], outdatedLocales: [str], createdAt: str, updatedAt: str} # Translation group details
+@errors {404: Translation group not found}
 
 @endpoint GET /v2/translations/{resourceType}/{resourceId}/{locale}
-@required {resourceType: str(workflow/layout), resourceId: str, locale: str}
-@returns(200) {resourceId: str, resourceType: str, locale: str, content: map, createdAt: str, updatedAt: str}
-@errors {404}
+@desc Retrieve a translation
+@required {resourceType: str(workflow/layout) # Resource type, resourceId: str # Resource ID, locale: str # Locale code}
+@returns(200) {resourceId: str, resourceType: str, locale: str, content: map, createdAt: str, updatedAt: str} # Translation found
+@errors {404: Translation not found}
 
 @endpoint DELETE /v2/translations/{resourceType}/{resourceId}/{locale}
-@required {resourceType: str(workflow/layout), resourceId: str, locale: str}
-@returns(204)
-@errors {404}
+@desc Delete a translation
+@required {resourceType: str(workflow/layout) # Resource type, resourceId: str # Resource ID, locale: str # Locale code}
+@returns(204) Translation deleted successfully
+@errors {404: Translation not found}
 
 @endpoint DELETE /v2/translations/{resourceType}/{resourceId}
-@required {resourceType: str(workflow/layout), resourceId: str}
-@returns(204)
-@errors {404}
+@desc Delete a translation group
+@required {resourceType: str(workflow/layout) # Resource type, resourceId: str # Resource ID}
+@returns(204) Translation group deleted successfully
+@errors {404: Translation group not found}
 
 @endgroup
 
 @group inbound-webhooks
 @endpoint POST /v2/inbound-webhooks/delivery-providers/{environmentId}/{integrationId}
-@required {environmentId: str, integrationId: str}
-@returns(200)
+@desc Track activity and engagement events
+@required {environmentId: str # The environment identifier, integrationId: str # The integration identifier for the delivery provider}
+@returns(200) Successfully processed webhook events
 
 @endgroup
 

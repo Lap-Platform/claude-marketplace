@@ -8,117 +8,144 @@
 @toc root(27)
 
 @endpoint POST /
+@desc Creates an HTTP namespace. Service instances registered using an HTTP namespace can be discovered using a DiscoverInstances request but can't be discovered using DNS. For the current quota on the number of namespaces that you can create using the same Amazon Web Services account, see Cloud Map quotas in the Cloud Map Developer Guide.
 @required {Name: str}
 @optional {CreatorRequestId: str, Description: str, Tags: [Tag]}
 @returns(200) {OperationId: str?}
 
 @endpoint POST /
+@desc Creates a private namespace based on DNS, which is visible only inside a specified Amazon VPC. The namespace defines your service naming scheme. For example, if you name your namespace example.com and name your service backend, the resulting DNS name for the service is backend.example.com. Service instances that are registered using a private DNS namespace can be discovered using either a DiscoverInstances request or using DNS. For the current quota on the number of namespaces that you can create using the same Amazon Web Services account, see Cloud Map quotas in the Cloud Map Developer Guide.
 @required {Name: str, Vpc: str}
 @optional {CreatorRequestId: str, Description: str, Tags: [Tag], Properties: PrivateDnsNamespaceProperties}
 @returns(200) {OperationId: str?}
 
 @endpoint POST /
+@desc Creates a public namespace based on DNS, which is visible on the internet. The namespace defines your service naming scheme. For example, if you name your namespace example.com and name your service backend, the resulting DNS name for the service is backend.example.com. You can discover instances that were registered with a public DNS namespace by using either a DiscoverInstances request or using DNS. For the current quota on the number of namespaces that you can create using the same Amazon Web Services account, see Cloud Map quotas in the Cloud Map Developer Guide.  The CreatePublicDnsNamespace API operation is not supported in the Amazon Web Services GovCloud (US) Regions.
 @required {Name: str}
 @optional {CreatorRequestId: str, Description: str, Tags: [Tag], Properties: PublicDnsNamespaceProperties}
 @returns(200) {OperationId: str?}
 
 @endpoint POST /
+@desc Creates a service. This action defines the configuration for the following entities:   For public and private DNS namespaces, one of the following combinations of DNS records in Amazon Route 53:    A     AAAA     A and AAAA     SRV     CNAME      Optionally, a health check   After you create the service, you can submit a RegisterInstance request, and Cloud Map uses the values in the configuration to create the specified entities. For the current quota on the number of instances that you can register using the same namespace and using the same service, see Cloud Map quotas in the Cloud Map Developer Guide.
 @required {Name: str}
 @optional {NamespaceId: str, CreatorRequestId: str, Description: str, DnsConfig: DnsConfig, HealthCheckConfig: HealthCheckConfig, HealthCheckCustomConfig: HealthCheckCustomConfig, Tags: [Tag], Type: str}
 @returns(200) {Service: Service?{Id: str?, Arn: str?, Name: str?, NamespaceId: str?, Description: str?, InstanceCount: int?, DnsConfig: DnsConfig?{NamespaceId: str?, RoutingPolicy: str?, DnsRecords: [DnsRecord]}, Type: str?, HealthCheckConfig: HealthCheckConfig?{Type: str, ResourcePath: str?, FailureThreshold: int?}, HealthCheckCustomConfig: HealthCheckCustomConfig?{FailureThreshold: int?}, CreateDate: str(timestamp)?, CreatorRequestId: str?}}
 
 @endpoint POST /
+@desc Deletes a namespace from the current account. If the namespace still contains one or more services, the request fails.
 @required {Id: str}
 @returns(200) {OperationId: str?}
 
 @endpoint POST /
+@desc Deletes a specified service. If the service still contains one or more registered instances, the request fails.
 @required {Id: str}
 
 @endpoint POST /
+@desc Deletes the Amazon Route 53 DNS records and health check, if any, that Cloud Map created for the specified instance.
 @required {ServiceId: str, InstanceId: str}
 @returns(200) {OperationId: str?}
 
 @endpoint POST /
+@desc Discovers registered instances for a specified namespace and service. You can use DiscoverInstances to discover instances for any type of namespace. DiscoverInstances returns a randomized list of instances allowing customers to distribute traffic evenly across instances. For public and private DNS namespaces, you can also use DNS queries to discover instances.
 @required {NamespaceName: str, ServiceName: str}
 @optional {MaxResults: int, QueryParameters: map<str,str>, OptionalParameters: map<str,str>, HealthStatus: str}
 @returns(200) {Instances: [HttpInstanceSummary]?, InstancesRevision: int(i64)?}
 
 @endpoint POST /
+@desc Discovers the increasing revision associated with an instance.
 @required {NamespaceName: str, ServiceName: str}
 @returns(200) {InstancesRevision: int(i64)?}
 
 @endpoint POST /
+@desc Gets information about a specified instance.
 @required {ServiceId: str, InstanceId: str}
-@returns(200) {Instance: Instance?{Id: str, CreatorRequestId: str?, Attributes: map<str,str>?}}
+@returns(200) {Instance: Instance?{Id: str, CreatorRequestId: str?, Attributes: map<str, str>?: any}}
 
 @endpoint POST /
+@desc Gets the current health status (Healthy, Unhealthy, or Unknown) of one or more instances that are associated with a specified service.  There's a brief delay between when you register an instance and when the health status for the instance is available.
 @required {ServiceId: str}
 @optional {Instances: [str], MaxResults: int, NextToken: str}
 @returns(200) {Status: map<str,str>?, NextToken: str?}
 
 @endpoint POST /
+@desc Gets information about a namespace.
 @required {Id: str}
 @returns(200) {Namespace: Namespace?{Id: str?, Arn: str?, Name: str?, Type: str?, Description: str?, ServiceCount: int?, Properties: NamespaceProperties?{DnsProperties: DnsProperties?{HostedZoneId: str?, SOA: SOA?}, HttpProperties: HttpProperties?{HttpName: str?}}, CreateDate: str(timestamp)?, CreatorRequestId: str?}}
 
 @endpoint POST /
+@desc Gets information about any operation that returns an operation ID in the response, such as a CreateHttpNamespace request.  To get a list of operations that match specified criteria, see ListOperations.
 @required {OperationId: str}
-@returns(200) {Operation: Operation?{Id: str?, Type: str?, Status: str?, ErrorMessage: str?, ErrorCode: str?, CreateDate: str(timestamp)?, UpdateDate: str(timestamp)?, Targets: map<str,str>?}}
+@returns(200) {Operation: Operation?{Id: str?, Type: str?, Status: str?, ErrorMessage: str?, ErrorCode: str?, CreateDate: str(timestamp)?, UpdateDate: str(timestamp)?, Targets: map<str, str>?: any}}
 
 @endpoint POST /
+@desc Gets the settings for a specified service.
 @required {Id: str}
 @returns(200) {Service: Service?{Id: str?, Arn: str?, Name: str?, NamespaceId: str?, Description: str?, InstanceCount: int?, DnsConfig: DnsConfig?{NamespaceId: str?, RoutingPolicy: str?, DnsRecords: [DnsRecord]}, Type: str?, HealthCheckConfig: HealthCheckConfig?{Type: str, ResourcePath: str?, FailureThreshold: int?}, HealthCheckCustomConfig: HealthCheckCustomConfig?{FailureThreshold: int?}, CreateDate: str(timestamp)?, CreatorRequestId: str?}}
 
 @endpoint POST /
+@desc Lists summary information about the instances that you registered by using a specified service.
 @required {ServiceId: str}
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {Instances: [InstanceSummary]?, NextToken: str?}
 
 @endpoint POST /
+@desc Lists summary information about the namespaces that were created by the current Amazon Web Services account.
 @optional {NextToken: str, MaxResults: int, Filters: [NamespaceFilter]}
 @returns(200) {Namespaces: [NamespaceSummary]?, NextToken: str?}
 
 @endpoint POST /
+@desc Lists operations that match the criteria that you specify.
 @optional {NextToken: str, MaxResults: int, Filters: [OperationFilter]}
 @returns(200) {Operations: [OperationSummary]?, NextToken: str?}
 
 @endpoint POST /
+@desc Lists summary information for all the services that are associated with one or more namespaces.
 @optional {NextToken: str, MaxResults: int, Filters: [ServiceFilter]}
 @returns(200) {Services: [ServiceSummary]?, NextToken: str?}
 
 @endpoint POST /
+@desc Lists tags for the specified resource.
 @required {ResourceARN: str}
 @returns(200) {Tags: [Tag]?}
 
 @endpoint POST /
+@desc Creates or updates one or more records and, optionally, creates a health check based on the settings in a specified service. When you submit a RegisterInstance request, the following occurs:   For each DNS record that you define in the service that's specified by ServiceId, a record is created or updated in the hosted zone that's associated with the corresponding namespace.   If the service includes HealthCheckConfig, a health check is created based on the settings in the health check configuration.   The health check, if any, is associated with each of the new or updated records.    One RegisterInstance request must complete before you can submit another request and specify the same service ID and instance ID.  For more information, see CreateService. When Cloud Map receives a DNS query for the specified DNS name, it returns the applicable value:    If the health check is healthy: returns all the records    If the health check is unhealthy: returns the applicable value for the last healthy instance    If you didn't specify a health check configuration: returns all the records   For the current quota on the number of instances that you can register using the same namespace and using the same service, see Cloud Map quotas in the Cloud Map Developer Guide.
 @required {ServiceId: str, InstanceId: str, Attributes: map<str,str>}
 @optional {CreatorRequestId: str}
 @returns(200) {OperationId: str?}
 
 @endpoint POST /
+@desc Adds one or more tags to the specified resource.
 @required {ResourceARN: str, Tags: [Tag]}
 
 @endpoint POST /
+@desc Removes one or more tags from the specified resource.
 @required {ResourceARN: str, TagKeys: [str]}
 
 @endpoint POST /
+@desc Updates an HTTP namespace.
 @required {Id: str, Namespace: HttpNamespaceChange}
 @optional {UpdaterRequestId: str}
 @returns(200) {OperationId: str?}
 
 @endpoint POST /
+@desc Submits a request to change the health status of a custom health check to healthy or unhealthy. You can use UpdateInstanceCustomHealthStatus to change the status only for custom health checks, which you define using HealthCheckCustomConfig when you create a service. You can't use it to change the status for Route 53 health checks, which you define using HealthCheckConfig. For more information, see HealthCheckCustomConfig.
 @required {ServiceId: str, InstanceId: str, Status: str}
 
 @endpoint POST /
+@desc Updates a private DNS namespace.
 @required {Id: str, Namespace: PrivateDnsNamespaceChange}
 @optional {UpdaterRequestId: str}
 @returns(200) {OperationId: str?}
 
 @endpoint POST /
+@desc Updates a public DNS namespace.
 @required {Id: str, Namespace: PublicDnsNamespaceChange}
 @optional {UpdaterRequestId: str}
 @returns(200) {OperationId: str?}
 
 @endpoint POST /
+@desc Submits a request to perform the following operations:   Update the TTL setting for existing DnsRecords configurations   Add, update, or delete HealthCheckConfig for a specified service  You can't add, update, or delete a HealthCheckCustomConfig configuration.    For public and private DNS namespaces, note the following:   If you omit any existing DnsRecords or HealthCheckConfig configurations from an UpdateService request, the configurations are deleted from the service.   If you omit an existing HealthCheckCustomConfig configuration from an UpdateService request, the configuration isn't deleted from the service.   When you update settings for a service, Cloud Map also updates the corresponding settings in all the records and health checks that were created by using the specified service.
 @required {Id: str, Service: ServiceChange}
 @returns(200) {OperationId: str?}
 

@@ -4,68 +4,75 @@
 @base /api/v1/premium
 @version v1
 @auth ApiKey Authorization in header
-@common_fields {key: str}
+@common_fields {key: str # Your unique API key. You can either specify it in this parameter, or set it in `X-API-Key` header.}
 @endpoints 7
 @toc point(1), find_places(1), find_places_prefix(1), nearest_place(1), map(1), time_machine(1), air_quality(1)
 
 @group point
 @endpoint GET /point
-@optional {place_id: str, lat: str, lon: str, sections: str=current,hourly, timezone: str, language: str=en, units: str=auto}
-@returns(200)
-@errors {400, 403, 402, 429, 422}
+@desc Returns weather data for a single point (geographic name or GPS)
+@optional {place_id: str # Identifier of a place. To obtain the `place_id` for the location you want, please use endpoints `/find_places_prefix` (search by prefix) or `/find_places` (search by full name)., lat: str # Latitude in format 12N, 12.3N, 12.3, or 13S, 13.2S, -13.4, lon: str # Longitude in format 12E, 12.3E, 12.3, or 13W, 13.2W, -13.4, sections: str=current,hourly # Sections to be included in the response. You can specify more section by separating the values with a comma. The available values are:  * ``current``: Current weather situation * ``daily``: Forecasts for each whole day, without the daily parts * ``daily-parts``: Forecasts for each whole day, morning, afternoon and evening     * Important: forecast for the morning, afternoon and evening is available only for the first       7 days in the forecast * ``hourly``: Forecasts with hourly resolution * ``minutely``: Precipitation forecast with 1 minute resolution * ``alerts``: The weather alerts * ``all``: All sections, timezone: str # Timezone to be used for the date fields. If not specified, local timezone of the forecast location will be used. The format is according to the tzinfo database, so values like `Europe/Prague` or `UTC` can be used. Alternatively you may use the value ``auto`` in which case the local timezone of the location is used. The full list of valid timezone strings can be found [here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List)., language: str=en # The language of text summaries and place names (variable names are never translated). Available languages are:     * ``en``: English    * ``es``: Spanish    * ``fr``: French    * ``de``: German    * ``pl``: Polish    * ``pt``: Portuguese    * ``cs``: Czech, units: str=auto # Unit system to be used. The available values are:  * `auto`: Select the system automatically, based on the forecast location. * `metric`: Metric (SI) units (`°C`, `mm/h`, `m/s`, `cm`, `km`, `hPa`). * `us`: Imperial units (`°F`, `in/h`, `mph`, `in`, `mi`, `Hg`). * `uk`: Same as ``metric``, except that visibility is in `miles` and wind speeds are in `mph`. * `ca`: Same as ``metric``, except that wind speeds are in `km/h` and pressure is in `kPa`.}
+@returns(200) Successful Response
+@errors {400: Error in passed parameter., 403: API key not not specified or invalid., 402: Maximum requests per day limit exceeded., 429: Maximum requests per minute limit exceeded., 422: Validation Error}
 
 @endgroup
 
 @group find_places
 @endpoint GET /find_places
-@required {text: str}
-@optional {language: str=en}
-@returns(200)
-@errors {400, 403, 402, 429, 422}
+@desc Search for places. Complete words required.
+@required {text: str # Place name or ZIP code}
+@optional {language: str=en # The language of text summaries and place names (variable names are never translated). Available languages are:     * ``en``: English    * ``es``: Spanish    * ``fr``: French    * ``de``: German    * ``pl``: Polish    * ``pt``: Portuguese    * ``cs``: Czech}
+@returns(200) Successful Response
+@errors {400: Error in passed parameter., 403: API key not not specified or invalid., 402: Maximum requests per day limit exceeded., 429: Maximum requests per minute limit exceeded., 422: Validation Error}
 
 @endgroup
 
 @group find_places_prefix
 @endpoint GET /find_places_prefix
-@required {text: str}
-@optional {language: str=en}
-@returns(200)
-@errors {400, 403, 402, 429, 422}
+@desc Prefix search for places. Useful for autocomplete forms.
+@required {text: str # Place name or ZIP code}
+@optional {language: str=en # The language of text summaries and place names (variable names are never translated). Available languages are:     * ``en``: English    * ``es``: Spanish    * ``fr``: French    * ``de``: German    * ``pl``: Polish    * ``pt``: Portuguese    * ``cs``: Czech}
+@returns(200) Successful Response
+@errors {400: Error in passed parameter., 403: API key not not specified or invalid., 402: Maximum requests per day limit exceeded., 429: Maximum requests per minute limit exceeded., 422: Validation Error}
 
 @endgroup
 
 @group nearest_place
 @endpoint GET /nearest_place
-@required {lat: str, lon: str}
-@optional {language: str=en}
-@returns(200) {name: str, place_id: str, adm_area1: any, adm_area2: any, country: any, lat: str, lon: str, timezone: any, type: str}
-@errors {400, 403, 402, 429, 422}
+@desc Returns the nearest named location for a given GPS coordinates.
+@required {lat: str # Latitude in format 12N, 12.3N, 12.3, or 13S, 13.2S, -13.4, lon: str # Longitude in format 12E, 12.3E, 12.3, or 13W, 13.2W, -13.4}
+@optional {language: str=en # The language of text summaries and place names (variable names are never translated). Available languages are:     * ``en``: English    * ``es``: Spanish    * ``fr``: French    * ``de``: German    * ``pl``: Polish    * ``pt``: Portuguese    * ``cs``: Czech}
+@returns(200) {name: str, place_id: str, adm_area1: any, adm_area2: any, country: any, lat: str, lon: str, timezone: any, type: str} # Successful Response
+@errors {400: Error in passed parameter., 403: API key not not specified or invalid., 402: Maximum requests per day limit exceeded., 429: Maximum requests per minute limit exceeded., 422: Validation Error}
 
 @endgroup
 
 @group map
 @endpoint GET /map
-@required {variable: str, datetime: str}
-@optional {tile_x: int, tile_y: int, tile_zoom: int, min_lat: str, min_lon: str, max_lat: str, max_lon: str}
-@returns(200)
-@errors {400, 403, 402, 429, 422}
+@desc Returns PNG weather map for given area and variable
+@required {variable: str # Name of the variable for your map. Available values are:  * `temperature`: Temperature 2 metres above ground * `feels_like_temperature`: Feels like temperature * `clouds`: Percentage of sky covered by clouds * `precipitation`: Total precipitation amount accumulated since last hour * `wind_speed`: Wind speed 10 metres above the ground * `wind_gust`: Wind gust speed * `pressure`: Atmospheric pressure at mean sea level * `humidity`: Relative humidity * `wave_height`: Wave height * `wave_period`: Wave period * `sea_temperature`: Sea temperature (available only for +-24 hours) * `air_quality`: Air quality index * `ozone_surface`: Ozone at surface level * `ozone_total`: Total column ozone * `no2`: Nitrogen dioxide at surface level * `pm2.5`: Particulate matter d < 2.5 µm (PM2.5), datetime: str # There are two ways to specify date and time for your map:  1. Datetime in `YYYY-MM-DDTHH:MM` format and `UTC` timezone, e.g. `2021-08-24T12:00` 2. Offset from current time in `[+-]<minutes|hours|days>` format, e.g. `+10minutes`, `-2hours` or `+1days`}
+@optional {tile_x: int # The X coordinate of Google Maps tile, tile_y: int # The Y coordinate of Google Maps tile, tile_zoom: int # The zoom level of Google Maps tile, min_lat: str # Minimal latitude in format 12N, 12.3N, 12.3, or 13S, 13.2S, -13.2, min_lon: str # Minimal longitude in format 12E, 12.3E, 12.3, or 13W, 13.2W, -13.2, max_lat: str # Maximal latitude in format 12N, 12.3N, 12.3, or 13S, 13.2S, -13.2., max_lon: str # Maximal longitude in format 12E, 12.3E, 12.3, or 13W, 13.2W, -13.2}
+@returns(200) Successful Response
+@errors {400: Error in passed parameter., 403: API key not not specified or invalid., 402: Maximum requests per day limit exceeded., 429: Maximum requests per minute limit exceeded., 422: Validation Error}
 
 @endgroup
 
 @group time_machine
 @endpoint GET /time_machine
-@required {date: str(date)}
-@optional {place_id: str, lat: str, lon: str, timezone: str, units: str=auto, language: str=en}
-@returns(200) {lat: str, lon: str, elevation: int, timezone: str, units: str, data: [map], daily: map{temperature: num, temperature_min: num, temperature_max: num, feels_like: num, feels_like_min: num, feels_like_max: num, wind_chill: num, wind_chill_min: num, wind_chill_max: num, soil_temperature: num, soil_temperature_min: num, soil_temperature_max: num, dew_point: num, dew_point_min: num, dew_point_max: num, surface_temperature: num, surface_temperature_min: num, surface_temperature_max: num, wind: map{speed: num, gusts: num, dir: str(binary), angle: num}, cloud_cover: map{total: num, low: num, middle: num, high: num}, pressure: num, precipitation: map{total: num, type: str(binary)}, humidity: num}, statistics: map{temperature: map{avg: num, avg_min: num, avg_max: num, record_min: num, record_max: num}, wind: map{avg_speed: num, avg_angle: num, avg_dir: str(binary), max_speed: num, max_gust: num}, precipitation: map{avg: num, probability: int}}}
-@errors {400, 403, 402, 429, 422}
+@desc Returns weather data for a single location and given day in the past
+@required {date: str(date) # The day of the data in the past. Specify in `YYYY-MM-DD` format, e.g. `2021-08-24`.}
+@optional {place_id: str # Identifier of a place. To obtain the `place_id` for the location you want, please use endpoints `/find_places_prefix` (search by prefix) or `/find_places` (search by full name)., lat: str # Latitude in format 12N, 12.3N, 12.3, or 13S, 13.2S, -13.4, lon: str # Longitude in format 12E, 12.3E, 12.3, or 13W, 13.2W, -13.4, timezone: str # Timezone to be used for the date fields. If not specified, local timezone of the location will be used. The format is according to the tzinfo database, so values like `Europe/Prague` or `UTC` can be used. Alternatively you may use the value ``auto`` in which case the local timezone of the location is used. The full list of valid timezone strings can be found [here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List)., units: str=auto # Unit system to be used. The available values are:  * `auto`: Select the system automatically, based on the forecast location. * `metric`: Metric (SI) units (`°C`, `mm/h`, `m/s`, `cm`, `km`, `hPa`). * `us`: Imperial units (`°F`, `in/h`, `mph`, `in`, `mi`, `Hg`). * `uk`: Same as ``metric``, except that visibility is in `miles` and wind speeds are in `mph`. * `ca`: Same as ``metric``, except that wind speeds are in `km/h` and pressure is in `kPa`., language: str=en # The language of weather summaries (variable names are never translated). Available languages are:     * ``en``: English    * ``es``: Spanish    * ``fr``: French    * ``de``: German    * ``pl``: Polish    * ``pt``: Portuguese    * ``cs``: Czech}
+@returns(200) {lat: str, lon: str, elevation: int, timezone: str, units: str, data: [map], daily: map{temperature: num, temperature_min: num, temperature_max: num, feels_like: num, feels_like_min: num, feels_like_max: num, wind_chill: num, wind_chill_min: num, wind_chill_max: num, soil_temperature: num, soil_temperature_min: num, soil_temperature_max: num, dew_point: num, dew_point_min: num, dew_point_max: num, surface_temperature: num, surface_temperature_min: num, surface_temperature_max: num, wind: map{speed: num, gusts: num, dir: str(binary), angle: num}, cloud_cover: map{total: num, low: num, middle: num, high: num}, pressure: num, precipitation: map{total: num, type: str(binary)}, humidity: num}, statistics: map{temperature: map{avg: num, avg_min: num, avg_max: num, record_min: num, record_max: num}, wind: map{avg_speed: num, avg_angle: num, avg_dir: str(binary), max_speed: num, max_gust: num}, precipitation: map{avg: num, probability: int}}} # Successful Response
+@errors {400: Error in passed parameter., 403: API key not not specified or invalid., 402: Maximum requests per day limit exceeded., 429: Maximum requests per minute limit exceeded., 422: Validation Error}
 
 @endgroup
 
 @group air_quality
 @endpoint GET /air_quality
-@optional {place_id: str, lat: str, lon: str, timezone: str}
-@returns(200) {lat: str, lon: str, elevation: int, timezone: str, data: [map]}
-@errors {400, 403, 402, 429, 422}
+@desc Returns air quality data for a single point (geographic name or GPS)
+@optional {place_id: str # Identifier of a place. To obtain the `place_id` for the location you want, please use endpoints `/find_places_prefix` (search by prefix) or `/find_places` (search by full name)., lat: str # Latitude in format 12N, 12.3N, 12.3, or 13S, 13.2S, -13.4, lon: str # Longitude in format 12E, 12.3E, 12.3, or 13W, 13.2W, -13.4, timezone: str # Timezone to be used for the date fields. If not specified, local timezone of the forecast location will be used. The format is according to the tzinfo database, so values like `Europe/Prague` or `UTC` can be used. Alternatively you may use the value ``auto`` in which case the local timezone of the location is used. The full list of valid timezone strings can be found [here](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List).}
+@returns(200) {lat: str, lon: str, elevation: int, timezone: str, data: [map]} # Successful Response
+@errors {400: Error in passed parameter., 403: API key not not specified or invalid., 402: Maximum requests per day limit exceeded., 429: Maximum requests per minute limit exceeded., 422: Validation Error}
 
 @endgroup
 

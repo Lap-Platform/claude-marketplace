@@ -55,82 +55,23 @@ https://localhost/app_pkgm/v1
 | GET | /onboarded_app_packages/{appDId}/package_content | Fetch the onboarded application package content identified by appPkgId or appDId. |
 | PUT | /onboarded_app_packages/{appDId}/package_content | Uploads the content of application package. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I onboard a new app package?" -> POST /app_packages
-- "List all available app packages" -> GET /app_packages
-- "Get details for a specific app package" -> GET /app_packages/{appPkgId}
-- "How do I delete an app package?" -> DELETE /app_packages/{appPkgId}
-- "How do I disable an app package?" -> PATCH /app_packages/{appPkgId}
-- "How do I re-enable a disabled app package?" -> PATCH /app_packages/{appPkgId}
-- "Download the package content for an app" -> GET /app_packages/{appPkgId}/package_content
-- "Upload package content to an app package" -> PUT /app_packages/{appPkgId}/package_content
-- "Retrieve the app descriptor (AppD) for a package" -> GET /app_packages/{appPkgId}/appd
-- "Subscribe to notifications when packages are onboarded or deleted" -> POST /subscriptions
-- "List all my notification subscriptions" -> GET /subscriptions
-- "Unsubscribe from package notifications" -> DELETE /subscriptions/{subscriptionId}
-- "Get the AppD for an already-onboarded package by appDId" -> GET /onboarded_app_packages/{appDId}/appd
-- "Send a custom notification about a package lifecycle event" -> POST /user_defined_notification
-- "Filter app packages by provider or name" -> GET /app_packages (use `filter` query param)
-
-## Response Tips
-
-- **App packages (GET list/detail):** Response includes `onboardingState`, `operationalState`, and `usageState` enums -- always check these before acting on a package. The `_links` object contains HATEOAS URIs for `appD` and `appPkgContent`.
-- **Package content (GET):** May return 200 (full content) or 206 (partial/range response) -- handle both; a 416 means your Range header was unsatisfiable.
-- **Subscriptions:** The `subscriptionType` field uses specific enum values (`AppPackageOnBoarding`, `AppPacakgeOperationChange`, `AppPackageDeletion`) -- note the typos are in the spec itself, match them exactly.
-- **DELETE operations:** Return 204 with no body -- treat any non-204 as failure.
-- **POST creates:** Return 201 with the created resource; inspect `_links.self.href` for the canonical URL of the new resource.
-- **Errors:** All endpoints share a common error set (400/401/403/404/406/429); 409 appears only on PATCH and PUT when there is a state conflict.
-
-## Anomaly Flags
-
-- **429 Too Many Requests:** All endpoints can return 429. Surface rate-limit headers proactively and recommend backoff before retrying.
-- **409 Conflict on PATCH/PUT:** Indicates the package is in a state that prevents the requested change (e.g., trying to upload content to an already-onboarded package, or enabling a package mid-deletion). Surface the current `operationalState`/`onboardingState` to explain why.
-- **Subscription typos in spec:** The enum values contain known misspellings (`subsctiptionType`, `AppPacakgeOperationChange`, `AppPacakgeEnabled`, `AppPacakgeDisabled`). Flag if the server rejects a corrected spelling -- the typo may be required.
-- **206 Partial Content without Range request:** If a GET on package_content returns 206 unexpectedly, the package may be large. Alert the user they may need to handle chunked downloads.
-- **operationalState DISABLED:** When listing packages, proactively flag any that are DISABLED, as they may require attention or re-enablement.
-- **onboardingState not terminal:** If a package remains in a non-final onboarding state across multiple polls, surface it as potentially stuck.
-
-## Playbook
-
-### Onboard and Upload a New App Package
-
-1. POST /app_packages with `appPkgName`, `appPkgPath`, `appPkgVersion`, and `checksum` (algorithm + hash)
-2. Note the returned `appPkgId` from the 201 response
-3. PUT /app_packages/{appPkgId}/package_content to upload the actual package binary
-4. GET /app_packages/{appPkgId} to confirm `onboardingState` has progressed
-5. PATCH /app_packages/{appPkgId} with `operationState: "ENABLED"` to activate it
-
-### Subscribe to Package Lifecycle Events
-
-1. POST /subscriptions with `callbackUri` (your webhook URL) and `subsctiptionType` set to the desired event type
-2. Optionally include `appPkgFilter` to scope notifications to specific packages
-3. Note the returned `subscriptionId` for future management
-4. GET /subscriptions/{subscriptionId} to verify the subscription is active
-5. When done, DELETE /subscriptions/{subscriptionId} to clean up
-
-### Disable and Remove an App Package
-
-1. GET /app_packages/{appPkgId} to check current `usageState` -- must not be IN_USE
-2. PATCH /app_packages/{appPkgId} with `operationState: "DISABLED"` to prevent new usage
-3. Wait for any active sessions to drain (poll GET /app_packages/{appPkgId} and check `usageState`)
-4. DELETE /app_packages/{appPkgId} -- returns 204 on success
-
-### Retrieve App Descriptor via Two Paths
-
-1. If you have the `appPkgId` (pre-onboarding or any state): GET /app_packages/{appPkgId}/appd
-2. If you have the `appDId` (post-onboarding): GET /onboarded_app_packages/{appDId}/appd
-3. Use `filter`, `fields`, or `exclude_fields` query params to narrow the returned descriptor content
-
-### Audit All Packages and Their States
-
-1. GET /app_packages with no filters to retrieve the full list
-2. For each package, inspect `onboardingState`, `operationalState`, and `usageState`
-3. Flag any packages where `operationalState` is DISABLED or `onboardingState` is not ONBOARDED
-4. For packages needing attention, GET /app_packages/{appPkgId} for full details including `softwareImages` and `checksum`
-5. Optionally use `filter` param on subsequent calls to narrow results to specific states
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a app_package?" -> POST /app_packages
+- "List all app_packages?" -> GET /app_packages
+- "Get app_package details?" -> GET /app_packages/{appPkgId}
+- "Delete a app_package?" -> DELETE /app_packages/{appPkgId}
+- "Partially update a app_package?" -> PATCH /app_packages/{appPkgId}
+- "Create a subscription?" -> POST /subscriptions
+- "List all subscriptions?" -> GET /subscriptions
+- "Get subscription details?" -> GET /subscriptions/{subscriptionId}
+- "Delete a subscription?" -> DELETE /subscriptions/{subscriptionId}
+- "Create a user_defined_notification?" -> POST /user_defined_notification
+- "List all appd?" -> GET /app_packages/{appPkgId}/appd
+- "List all appd?" -> GET /onboarded_app_packages/{appDId}/appd
+- "List all package_content?" -> GET /app_packages/{appPkgId}/package_content
+- "List all package_content?" -> GET /onboarded_app_packages/{appDId}/package_content
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

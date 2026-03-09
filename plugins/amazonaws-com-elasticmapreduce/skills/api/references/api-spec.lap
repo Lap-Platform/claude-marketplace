@@ -8,222 +8,278 @@
 @toc root(56)
 
 @endpoint POST /
+@desc Adds an instance fleet to a running cluster.  The instance fleet configuration is available only in Amazon EMR releases 4.8.0 and later, excluding 5.0.x.
 @required {ClusterId: str, InstanceFleet: InstanceFleetConfig}
 @returns(200) {ClusterId: str?, InstanceFleetId: str?, ClusterArn: str?}
 
 @endpoint POST /
+@desc Adds one or more instance groups to a running cluster.
 @required {InstanceGroups: [InstanceGroupConfig], JobFlowId: str}
 @returns(200) {JobFlowId: str?, InstanceGroupIds: [str]?, ClusterArn: str?}
 
 @endpoint POST /
+@desc AddJobFlowSteps adds new steps to a running cluster. A maximum of 256 steps are allowed in each job flow. If your cluster is long-running (such as a Hive data warehouse) or complex, you may require more than 256 steps to process your data. You can bypass the 256-step limitation in various ways, including using SSH to connect to the master node and submitting queries directly to the software running on the master node, such as Hive and Hadoop. A step specifies the location of a JAR file stored either on the master node of the cluster or in Amazon S3. Each step is performed by the main function of the main class of the JAR file. The main class can be specified either in the manifest of the JAR or by using the MainFunction parameter of the step. Amazon EMR executes each step in the order listed. For a step to be considered complete, the main function must exit with a zero exit code and all Hadoop jobs started while the step was running must have completed and run successfully. You can only add steps to a cluster that is in one of the following states: STARTING, BOOTSTRAPPING, RUNNING, or WAITING.  The string values passed into HadoopJarStep object cannot exceed a total of 10240 characters.
 @required {JobFlowId: str, Steps: [StepConfig]}
 @optional {ExecutionRoleArn: str}
 @returns(200) {StepIds: [str]?}
 
 @endpoint POST /
+@desc Adds tags to an Amazon EMR resource, such as a cluster or an Amazon EMR Studio. Tags make it easier to associate resources in various ways, such as grouping clusters to track your Amazon EMR resource allocation costs. For more information, see Tag Clusters.
 @required {ResourceId: str, Tags: [Tag]}
 
 @endpoint POST /
+@desc Cancels a pending step or steps in a running cluster. Available only in Amazon EMR versions 4.8.0 and later, excluding version 5.0.0. A maximum of 256 steps are allowed in each CancelSteps request. CancelSteps is idempotent but asynchronous; it does not guarantee that a step will be canceled, even if the request is successfully submitted. When you use Amazon EMR releases 5.28.0 and later, you can cancel steps that are in a PENDING or RUNNING state. In earlier versions of Amazon EMR, you can only cancel steps that are in a PENDING state.
 @required {ClusterId: str, StepIds: [str]}
 @optional {StepCancellationOption: str}
 @returns(200) {CancelStepsInfoList: [CancelStepsInfo]?}
 
 @endpoint POST /
+@desc Creates a security configuration, which is stored in the service and can be specified when a cluster is created.
 @required {Name: str, SecurityConfiguration: str}
 @returns(200) {Name: str, CreationDateTime: str(timestamp)}
 
 @endpoint POST /
+@desc Creates a new Amazon EMR Studio.
 @required {Name: str, AuthMode: str, VpcId: str, SubnetIds: [str], ServiceRole: str, WorkspaceSecurityGroupId: str, EngineSecurityGroupId: str, DefaultS3Location: str}
 @optional {Description: str, UserRole: str, IdpAuthUrl: str, IdpRelayStateParameterName: str, Tags: [Tag], TrustedIdentityPropagationEnabled: bool, IdcUserAssignment: str, IdcInstanceArn: str, EncryptionKeyArn: str}
 @returns(200) {StudioId: str?, Url: str?}
 
 @endpoint POST /
+@desc Maps a user or group to the Amazon EMR Studio specified by StudioId, and applies a session policy to refine Studio permissions for that user or group. Use CreateStudioSessionMapping to assign users to a Studio when you use IAM Identity Center authentication. For instructions on how to assign users to a Studio when you use IAM authentication, see Assign a user or group to your EMR Studio.
 @required {StudioId: str, IdentityType: str, SessionPolicyArn: str}
 @optional {IdentityId: str, IdentityName: str}
 
 @endpoint POST /
+@desc Deletes a security configuration.
 @required {Name: str}
 
 @endpoint POST /
+@desc Removes an Amazon EMR Studio from the Studio metadata store.
 @required {StudioId: str}
 
 @endpoint POST /
+@desc Removes a user or group from an Amazon EMR Studio.
 @required {StudioId: str, IdentityType: str}
 @optional {IdentityId: str, IdentityName: str}
 
 @endpoint POST /
+@desc Provides cluster-level details including status, hardware and software configuration, VPC settings, and so on.
 @required {ClusterId: str}
 @returns(200) {Cluster: Cluster?{Id: str?, Name: str?, Status: ClusterStatus?{State: str?, StateChangeReason: ClusterStateChangeReason?{Code: str?, Message: str?}, Timeline: ClusterTimeline?{CreationDateTime: str(timestamp)?, ReadyDateTime: str(timestamp)?, EndDateTime: str(timestamp)?}, ErrorDetails: [ErrorDetail]?}, Ec2InstanceAttributes: Ec2InstanceAttributes?{Ec2KeyName: str?, Ec2SubnetId: str?, RequestedEc2SubnetIds: [str]?, Ec2AvailabilityZone: str?, RequestedEc2AvailabilityZones: [str]?, IamInstanceProfile: str?, EmrManagedMasterSecurityGroup: str?, EmrManagedSlaveSecurityGroup: str?, ServiceAccessSecurityGroup: str?, AdditionalMasterSecurityGroups: [str]?, AdditionalSlaveSecurityGroups: [str]?}, InstanceCollectionType: str?, LogUri: str?, LogEncryptionKmsKeyId: str?, RequestedAmiVersion: str?, RunningAmiVersion: str?, ReleaseLabel: str?, AutoTerminate: bool?, TerminationProtected: bool?, UnhealthyNodeReplacement: bool?, VisibleToAllUsers: bool?, Applications: [Application]?, Tags: [Tag]?, ServiceRole: str?, NormalizedInstanceHours: int?, MasterPublicDnsName: str?, Configurations: [Configuration]?, SecurityConfiguration: str?, AutoScalingRole: str?, ScaleDownBehavior: str?, CustomAmiId: str?, EbsRootVolumeSize: int?, RepoUpgradeOnBoot: str?, KerberosAttributes: KerberosAttributes?{Realm: str, KdcAdminPassword: str, CrossRealmTrustPrincipalPassword: str?, ADDomainJoinUser: str?, ADDomainJoinPassword: str?}, ClusterArn: str?, OutpostArn: str?, StepConcurrencyLevel: int?, PlacementGroups: [PlacementGroupConfig]?, OSReleaseLabel: str?, EbsRootVolumeIops: int?, EbsRootVolumeThroughput: int?}}
 
 @endpoint POST /
+@desc This API is no longer supported and will eventually be removed. We recommend you use ListClusters, DescribeCluster, ListSteps, ListInstanceGroups and ListBootstrapActions instead. DescribeJobFlows returns a list of job flows that match all of the supplied parameters. The parameters can include a list of job flow IDs, job flow states, and restrictions on job flow creation date and time. Regardless of supplied parameters, only job flows created within the last two months are returned. If no parameters are supplied, then job flows matching either of the following criteria are returned:   Job flows created and completed in the last two weeks    Job flows created within the last two months that are in one of the following states: RUNNING, WAITING, SHUTTING_DOWN, STARTING    Amazon EMR can return a maximum of 512 job flow descriptions.
 @optional {CreatedAfter: str(timestamp), CreatedBefore: str(timestamp), JobFlowIds: [str], JobFlowStates: [str]}
 @returns(200) {JobFlows: [JobFlowDetail]?}
 
 @endpoint POST /
+@desc Provides details of a notebook execution.
 @required {NotebookExecutionId: str}
-@returns(200) {NotebookExecution: NotebookExecution?{NotebookExecutionId: str?, EditorId: str?, ExecutionEngine: ExecutionEngineConfig?{Id: str, Type: str?, MasterInstanceSecurityGroupId: str?, ExecutionRoleArn: str?}, NotebookExecutionName: str?, NotebookParams: str?, Status: str?, StartTime: str(timestamp)?, EndTime: str(timestamp)?, Arn: str?, OutputNotebookURI: str?, LastStateChangeReason: str?, NotebookInstanceSecurityGroupId: str?, Tags: [Tag]?, NotebookS3Location: NotebookS3LocationForOutput?{Bucket: str?, Key: str?}, OutputNotebookS3Location: OutputNotebookS3LocationForOutput?{Bucket: str?, Key: str?}, OutputNotebookFormat: str?, EnvironmentVariables: map<str,str>?}}
+@returns(200) {NotebookExecution: NotebookExecution?{NotebookExecutionId: str?, EditorId: str?, ExecutionEngine: ExecutionEngineConfig?{Id: str, Type: str?, MasterInstanceSecurityGroupId: str?, ExecutionRoleArn: str?}, NotebookExecutionName: str?, NotebookParams: str?, Status: str?, StartTime: str(timestamp)?, EndTime: str(timestamp)?, Arn: str?, OutputNotebookURI: str?, LastStateChangeReason: str?, NotebookInstanceSecurityGroupId: str?, Tags: [Tag]?, NotebookS3Location: NotebookS3LocationForOutput?{Bucket: str?, Key: str?}, OutputNotebookS3Location: OutputNotebookS3LocationForOutput?{Bucket: str?, Key: str?}, OutputNotebookFormat: str?, EnvironmentVariables: map<str, str>?: any}}
 
 @endpoint POST /
+@desc Provides Amazon EMR release label details, such as the releases available the Region where the API request is run, and the available applications for a specific Amazon EMR release label. Can also list Amazon EMR releases that support a specified version of Spark.
 @optional {ReleaseLabel: str, NextToken: str, MaxResults: int}
 @returns(200) {ReleaseLabel: str?, Applications: [SimplifiedApplication]?, NextToken: str?, AvailableOSReleases: [OSRelease]?}
 
 @endpoint POST /
+@desc Provides the details of a security configuration by returning the configuration JSON.
 @required {Name: str}
 @returns(200) {Name: str?, SecurityConfiguration: str?, CreationDateTime: str(timestamp)?}
 
 @endpoint POST /
+@desc Provides more detail about the cluster step.
 @required {ClusterId: str, StepId: str}
-@returns(200) {Step: Step?{Id: str?, Name: str?, Config: HadoopStepConfig?{Jar: str?, Properties: map<str,str>?, MainClass: str?, Args: [str]?}, ActionOnFailure: str?, Status: StepStatus?{State: str?, StateChangeReason: StepStateChangeReason?{Code: str?, Message: str?}, FailureDetails: FailureDetails?{Reason: str?, Message: str?, LogFile: str?}, Timeline: StepTimeline?{CreationDateTime: str(timestamp)?, StartDateTime: str(timestamp)?, EndDateTime: str(timestamp)?}}, ExecutionRoleArn: str?}}
+@returns(200) {Step: Step?{Id: str?, Name: str?, Config: HadoopStepConfig?{Jar: str?, Properties: map<str, str>?: any, MainClass: str?, Args: [str]?}, ActionOnFailure: str?, Status: StepStatus?{State: str?, StateChangeReason: StepStateChangeReason?{Code: str?, Message: str?}, FailureDetails: FailureDetails?{Reason: str?, Message: str?, LogFile: str?}, Timeline: StepTimeline?{CreationDateTime: str(timestamp)?, StartDateTime: str(timestamp)?, EndDateTime: str(timestamp)?}}, ExecutionRoleArn: str?}}
 
 @endpoint POST /
+@desc Returns details for the specified Amazon EMR Studio including ID, Name, VPC, Studio access URL, and so on.
 @required {StudioId: str}
 @returns(200) {Studio: Studio?{StudioId: str?, StudioArn: str?, Name: str?, Description: str?, AuthMode: str?, VpcId: str?, SubnetIds: [str]?, ServiceRole: str?, UserRole: str?, WorkspaceSecurityGroupId: str?, EngineSecurityGroupId: str?, Url: str?, CreationTime: str(timestamp)?, DefaultS3Location: str?, IdpAuthUrl: str?, IdpRelayStateParameterName: str?, Tags: [Tag]?, IdcInstanceArn: str?, TrustedIdentityPropagationEnabled: bool?, IdcUserAssignment: str?, EncryptionKeyArn: str?}}
 
 @endpoint POST /
+@desc Returns the auto-termination policy for an Amazon EMR cluster.
 @required {ClusterId: str}
 @returns(200) {AutoTerminationPolicy: AutoTerminationPolicy?{IdleTimeout: int(i64)?}}
 
 @endpoint POST /
+@desc Returns the Amazon EMR block public access configuration for your Amazon Web Services account in the current Region. For more information see Configure Block Public Access for Amazon EMR in the Amazon EMR Management Guide.
 @returns(200) {BlockPublicAccessConfiguration: BlockPublicAccessConfiguration{BlockPublicSecurityGroupRules: bool, PermittedPublicSecurityGroupRuleRanges: [PortRange]?}, BlockPublicAccessConfigurationMetadata: BlockPublicAccessConfigurationMetadata{CreationDateTime: str(timestamp), CreatedByArn: str}}
 
 @endpoint POST /
+@desc Provides temporary, HTTP basic credentials that are associated with a given runtime IAM role and used by a cluster with fine-grained access control activated. You can use these credentials to connect to cluster endpoints that support username and password authentication.
 @required {ClusterId: str}
 @optional {ExecutionRoleArn: str}
 @returns(200) {Credentials: Credentials?{UsernamePassword: UsernamePassword?{Username: str?, Password: str?}}, ExpiresAt: str(timestamp)?}
 
 @endpoint POST /
+@desc Fetches the attached managed scaling policy for an Amazon EMR cluster.
 @required {ClusterId: str}
 @returns(200) {ManagedScalingPolicy: ManagedScalingPolicy?{ComputeLimits: ComputeLimits?{UnitType: str, MinimumCapacityUnits: int, MaximumCapacityUnits: int, MaximumOnDemandCapacityUnits: int?, MaximumCoreCapacityUnits: int?}}}
 
 @endpoint POST /
+@desc Fetches mapping details for the specified Amazon EMR Studio and identity (user or group).
 @required {StudioId: str, IdentityType: str}
 @optional {IdentityId: str, IdentityName: str}
 @returns(200) {SessionMapping: SessionMappingDetail?{StudioId: str?, IdentityId: str?, IdentityName: str?, IdentityType: str?, SessionPolicyArn: str?, CreationTime: str(timestamp)?, LastModifiedTime: str(timestamp)?}}
 
 @endpoint POST /
+@desc Provides information about the bootstrap actions associated with a cluster.
 @required {ClusterId: str}
 @optional {Marker: str}
 @returns(200) {BootstrapActions: [Command]?, Marker: str?}
 
 @endpoint POST /
+@desc Provides the status of all clusters visible to this Amazon Web Services account. Allows you to filter the list of clusters based on certain criteria; for example, filtering by cluster creation date and time or by status. This call returns a maximum of 50 clusters in unsorted order per call, but returns a marker to track the paging of the cluster list across multiple ListClusters calls.
 @optional {CreatedAfter: str(timestamp), CreatedBefore: str(timestamp), ClusterStates: [str], Marker: str}
 @returns(200) {Clusters: [ClusterSummary]?, Marker: str?}
 
 @endpoint POST /
+@desc Lists all available details about the instance fleets in a cluster.  The instance fleet configuration is available only in Amazon EMR releases 4.8.0 and later, excluding 5.0.x versions.
 @required {ClusterId: str}
 @optional {Marker: str}
 @returns(200) {InstanceFleets: [InstanceFleet]?, Marker: str?}
 
 @endpoint POST /
+@desc Provides all available details about the instance groups in a cluster.
 @required {ClusterId: str}
 @optional {Marker: str}
 @returns(200) {InstanceGroups: [InstanceGroup]?, Marker: str?}
 
 @endpoint POST /
+@desc Provides information for all active Amazon EC2 instances and Amazon EC2 instances terminated in the last 30 days, up to a maximum of 2,000. Amazon EC2 instances in any of the following states are considered active: AWAITING_FULFILLMENT, PROVISIONING, BOOTSTRAPPING, RUNNING.
 @required {ClusterId: str}
 @optional {InstanceGroupId: str, InstanceGroupTypes: [str], InstanceFleetId: str, InstanceFleetType: str, InstanceStates: [str], Marker: str}
 @returns(200) {Instances: [Instance]?, Marker: str?}
 
 @endpoint POST /
+@desc Provides summaries of all notebook executions. You can filter the list based on multiple criteria such as status, time range, and editor id. Returns a maximum of 50 notebook executions and a marker to track the paging of a longer notebook execution list across multiple ListNotebookExecutions calls.
 @optional {EditorId: str, Status: str, From: str(timestamp), To: str(timestamp), Marker: str, ExecutionEngineId: str}
 @returns(200) {NotebookExecutions: [NotebookExecutionSummary]?, Marker: str?}
 
 @endpoint POST /
+@desc Retrieves release labels of Amazon EMR services in the Region where the API is called.
 @optional {Filters: ReleaseLabelFilter, NextToken: str, MaxResults: int}
 @returns(200) {ReleaseLabels: [str]?, NextToken: str?}
 
 @endpoint POST /
+@desc Lists all the security configurations visible to this account, providing their creation dates and times, and their names. This call returns a maximum of 50 clusters per call, but returns a marker to track the paging of the cluster list across multiple ListSecurityConfigurations calls.
 @optional {Marker: str}
 @returns(200) {SecurityConfigurations: [SecurityConfigurationSummary]?, Marker: str?}
 
 @endpoint POST /
+@desc Provides a list of steps for the cluster in reverse order unless you specify stepIds with the request or filter by StepStates. You can specify a maximum of 10 stepIDs. The CLI automatically paginates results to return a list greater than 50 steps. To return more than 50 steps using the CLI, specify a Marker, which is a pagination token that indicates the next set of steps to retrieve.
 @required {ClusterId: str}
 @optional {StepStates: [str], StepIds: [str], Marker: str}
 @returns(200) {Steps: [StepSummary]?, Marker: str?}
 
 @endpoint POST /
+@desc Returns a list of all user or group session mappings for the Amazon EMR Studio specified by StudioId.
 @optional {StudioId: str, IdentityType: str, Marker: str}
 @returns(200) {SessionMappings: [SessionMappingSummary]?, Marker: str?}
 
 @endpoint POST /
+@desc Returns a list of all Amazon EMR Studios associated with the Amazon Web Services account. The list includes details such as ID, Studio Access URL, and creation time for each Studio.
 @optional {Marker: str}
 @returns(200) {Studios: [StudioSummary]?, Marker: str?}
 
 @endpoint POST /
+@desc A list of the instance types that Amazon EMR supports. You can filter the list by Amazon Web Services Region and Amazon EMR release.
 @required {ReleaseLabel: str}
 @optional {Marker: str}
 @returns(200) {SupportedInstanceTypes: [SupportedInstanceType]?, Marker: str?}
 
 @endpoint POST /
+@desc Modifies the number of steps that can be executed concurrently for the cluster specified using ClusterID.
 @required {ClusterId: str}
 @optional {StepConcurrencyLevel: int}
 @returns(200) {StepConcurrencyLevel: int?}
 
 @endpoint POST /
+@desc Modifies the target On-Demand and target Spot capacities for the instance fleet with the specified InstanceFleetID within the cluster specified using ClusterID. The call either succeeds or fails atomically.  The instance fleet configuration is available only in Amazon EMR releases 4.8.0 and later, excluding 5.0.x versions.
 @required {ClusterId: str, InstanceFleet: InstanceFleetModifyConfig}
 
 @endpoint POST /
+@desc ModifyInstanceGroups modifies the number of nodes and configuration settings of an instance group. The input parameters include the new target instance count for the group and the instance group ID. The call will either succeed or fail atomically.
 @optional {ClusterId: str, InstanceGroups: [InstanceGroupModifyConfig]}
 
 @endpoint POST /
+@desc Creates or updates an automatic scaling policy for a core instance group or task instance group in an Amazon EMR cluster. The automatic scaling policy defines how an instance group dynamically adds and terminates Amazon EC2 instances in response to the value of a CloudWatch metric.
 @required {ClusterId: str, InstanceGroupId: str, AutoScalingPolicy: AutoScalingPolicy}
 @returns(200) {ClusterId: str?, InstanceGroupId: str?, AutoScalingPolicy: AutoScalingPolicyDescription?{Status: AutoScalingPolicyStatus?{State: str?, StateChangeReason: AutoScalingPolicyStateChangeReason?{Code: str?, Message: str?}}, Constraints: ScalingConstraints?{MinCapacity: int, MaxCapacity: int}, Rules: [ScalingRule]?}, ClusterArn: str?}
 
 @endpoint POST /
+@desc Auto-termination is supported in Amazon EMR releases 5.30.0 and 6.1.0 and later. For more information, see Using an auto-termination policy.  Creates or updates an auto-termination policy for an Amazon EMR cluster. An auto-termination policy defines the amount of idle time in seconds after which a cluster automatically terminates. For alternative cluster termination options, see Control cluster termination.
 @required {ClusterId: str}
 @optional {AutoTerminationPolicy: AutoTerminationPolicy}
 
 @endpoint POST /
+@desc Creates or updates an Amazon EMR block public access configuration for your Amazon Web Services account in the current Region. For more information see Configure Block Public Access for Amazon EMR in the Amazon EMR Management Guide.
 @required {BlockPublicAccessConfiguration: BlockPublicAccessConfiguration}
 
 @endpoint POST /
+@desc Creates or updates a managed scaling policy for an Amazon EMR cluster. The managed scaling policy defines the limits for resources, such as Amazon EC2 instances that can be added or terminated from a cluster. The policy only applies to the core and task nodes. The master node cannot be scaled after initial configuration.
 @required {ClusterId: str, ManagedScalingPolicy: ManagedScalingPolicy}
 
 @endpoint POST /
+@desc Removes an automatic scaling policy from a specified instance group within an Amazon EMR cluster.
 @required {ClusterId: str, InstanceGroupId: str}
 
 @endpoint POST /
+@desc Removes an auto-termination policy from an Amazon EMR cluster.
 @required {ClusterId: str}
 
 @endpoint POST /
+@desc Removes a managed scaling policy from a specified Amazon EMR cluster.
 @required {ClusterId: str}
 
 @endpoint POST /
+@desc Removes tags from an Amazon EMR resource, such as a cluster or Amazon EMR Studio. Tags make it easier to associate resources in various ways, such as grouping clusters to track your Amazon EMR resource allocation costs. For more information, see Tag Clusters.  The following example removes the stack tag with value Prod from a cluster:
 @required {ResourceId: str, TagKeys: [str]}
 
 @endpoint POST /
+@desc RunJobFlow creates and starts running a new cluster (job flow). The cluster runs the steps specified. After the steps complete, the cluster stops and the HDFS partition is lost. To prevent loss of data, configure the last step of the job flow to store results in Amazon S3. If the JobFlowInstancesConfig KeepJobFlowAliveWhenNoSteps parameter is set to TRUE, the cluster transitions to the WAITING state rather than shutting down after the steps have completed.  For additional protection, you can set the JobFlowInstancesConfig TerminationProtected parameter to TRUE to lock the cluster and prevent it from being terminated by API call, user intervention, or in the event of a job flow error. A maximum of 256 steps are allowed in each job flow. If your cluster is long-running (such as a Hive data warehouse) or complex, you may require more than 256 steps to process your data. You can bypass the 256-step limitation in various ways, including using the SSH shell to connect to the master node and submitting queries directly to the software running on the master node, such as Hive and Hadoop. For long-running clusters, we recommend that you periodically store your results.  The instance fleets configuration is available only in Amazon EMR releases 4.8.0 and later, excluding 5.0.x versions. The RunJobFlow request can contain InstanceFleets parameters or InstanceGroups parameters, but not both.
 @required {Name: str, Instances: JobFlowInstancesConfig}
 @optional {LogUri: str, LogEncryptionKmsKeyId: str, AdditionalInfo: str, AmiVersion: str, ReleaseLabel: str, Steps: [StepConfig], BootstrapActions: [BootstrapActionConfig], SupportedProducts: [str], NewSupportedProducts: [SupportedProductConfig], Applications: [Application], Configurations: [Configuration], VisibleToAllUsers: bool, JobFlowRole: str, ServiceRole: str, Tags: [Tag], SecurityConfiguration: str, AutoScalingRole: str, ScaleDownBehavior: str, CustomAmiId: str, EbsRootVolumeSize: int, RepoUpgradeOnBoot: str, KerberosAttributes: KerberosAttributes, StepConcurrencyLevel: int, ManagedScalingPolicy: ManagedScalingPolicy, PlacementGroupConfigs: [PlacementGroupConfig], AutoTerminationPolicy: AutoTerminationPolicy, OSReleaseLabel: str, EbsRootVolumeIops: int, EbsRootVolumeThroughput: int}
 @returns(200) {JobFlowId: str?, ClusterArn: str?}
 
 @endpoint POST /
+@desc You can use the SetKeepJobFlowAliveWhenNoSteps to configure a cluster (job flow) to terminate after the step execution, i.e., all your steps are executed. If you want a transient cluster that shuts down after the last of the current executing steps are completed, you can configure SetKeepJobFlowAliveWhenNoSteps to false. If you want a long running cluster, configure SetKeepJobFlowAliveWhenNoSteps to true. For more information, see Managing Cluster Termination in the Amazon EMR Management Guide.
 @required {JobFlowIds: [str], KeepJobFlowAliveWhenNoSteps: bool}
 
 @endpoint POST /
+@desc SetTerminationProtection locks a cluster (job flow) so the Amazon EC2 instances in the cluster cannot be terminated by user intervention, an API call, or in the event of a job-flow error. The cluster still terminates upon successful completion of the job flow. Calling SetTerminationProtection on a cluster is similar to calling the Amazon EC2 DisableAPITermination API on all Amazon EC2 instances in a cluster.  SetTerminationProtection is used to prevent accidental termination of a cluster and to ensure that in the event of an error, the instances persist so that you can recover any data stored in their ephemeral instance storage.  To terminate a cluster that has been locked by setting SetTerminationProtection to true, you must first unlock the job flow by a subsequent call to SetTerminationProtection in which you set the value to false.   For more information, see Managing Cluster Termination in the Amazon EMR Management Guide.
 @required {JobFlowIds: [str], TerminationProtected: bool}
 
 @endpoint POST /
+@desc Specify whether to enable unhealthy node replacement, which lets Amazon EMR gracefully replace core nodes on a cluster if any nodes become unhealthy. For example, a node becomes unhealthy if disk usage is above 90%. If unhealthy node replacement is on and TerminationProtected are off, Amazon EMR immediately terminates the unhealthy core nodes. To use unhealthy node replacement and retain unhealthy core nodes, use to turn on termination protection. In such cases, Amazon EMR adds the unhealthy nodes to a denylist, reducing job interruptions and failures. If unhealthy node replacement is on, Amazon EMR notifies YARN and other applications on the cluster to stop scheduling tasks with these nodes, moves the data, and then terminates the nodes. For more information, see graceful node replacement in the Amazon EMR Management Guide.
 @required {JobFlowIds: [str], UnhealthyNodeReplacement: bool}
 
 @endpoint POST /
+@desc The SetVisibleToAllUsers parameter is no longer supported. Your cluster may be visible to all users in your account. To restrict cluster access using an IAM policy, see Identity and Access Management for Amazon EMR.   Sets the Cluster$VisibleToAllUsers value for an Amazon EMR cluster. When true, IAM principals in the Amazon Web Services account can perform Amazon EMR cluster actions that their IAM policies allow. When false, only the IAM principal that created the cluster and the Amazon Web Services account root user can perform Amazon EMR actions on the cluster, regardless of IAM permissions policies attached to other IAM principals. This action works on running clusters. When you create a cluster, use the RunJobFlowInput$VisibleToAllUsers parameter. For more information, see Understanding the Amazon EMR Cluster VisibleToAllUsers Setting in the Amazon EMR Management Guide.
 @required {JobFlowIds: [str], VisibleToAllUsers: bool}
 
 @endpoint POST /
+@desc Starts a notebook execution.
 @required {ExecutionEngine: ExecutionEngineConfig, ServiceRole: str}
 @optional {EditorId: str, RelativePath: str, NotebookExecutionName: str, NotebookParams: str, NotebookInstanceSecurityGroupId: str, Tags: [Tag], NotebookS3Location: NotebookS3LocationFromInput, OutputNotebookS3Location: OutputNotebookS3LocationFromInput, OutputNotebookFormat: str, EnvironmentVariables: map<str,str>}
 @returns(200) {NotebookExecutionId: str?}
 
 @endpoint POST /
+@desc Stops a notebook execution.
 @required {NotebookExecutionId: str}
 
 @endpoint POST /
+@desc TerminateJobFlows shuts a list of clusters (job flows) down. When a job flow is shut down, any step not yet completed is canceled and the Amazon EC2 instances on which the cluster is running are stopped. Any log files not already saved are uploaded to Amazon S3 if a LogUri was specified when the cluster was created. The maximum number of clusters allowed is 10. The call to TerminateJobFlows is asynchronous. Depending on the configuration of the cluster, it may take up to 1-5 minutes for the cluster to completely terminate and release allocated resources, such as Amazon EC2 instances.
 @required {JobFlowIds: [str]}
 
 @endpoint POST /
+@desc Updates an Amazon EMR Studio configuration, including attributes such as name, description, and subnets.
 @required {StudioId: str}
 @optional {Name: str, Description: str, SubnetIds: [str], DefaultS3Location: str, EncryptionKeyArn: str}
 
 @endpoint POST /
+@desc Updates the session policy attached to the user or group for the specified Amazon EMR Studio.
 @required {StudioId: str, IdentityType: str, SessionPolicyArn: str}
 @optional {IdentityId: str, IdentityName: str}
 

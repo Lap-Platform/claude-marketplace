@@ -155,88 +155,102 @@ https://console.rumble.run/api/v1.0
 | GET | /account/sso/groups/{group_mapping_id} | Get SSO group mapping details |
 | DELETE | /account/sso/groups/{group_mapping_id} | Remove this SSO group mapping |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What version of the scanner agent is available?" -> GET /releases/scanner/version
-- "Export all discovered assets as JSON" -> GET /export/org/assets.json
-- "Find all services running on my network" -> GET /org/services
-- "What operating systems are most common across my assets?" -> GET /org/assets/top.os.csv
-- "Show me details for a specific asset" -> GET /org/assets/{asset_id}
-- "Start a scan on a site" -> PUT /org/sites/{site_id}/scan
-- "List all agents deployed in my organization" -> GET /org/agents
-- "Create a new site with a specific IP scope" -> PUT /org/sites
-- "How do I rotate my API key?" -> PATCH /org/key/rotate
-- "Tag multiple assets matching a search filter" -> PATCH /org/assets/bulk/tags
-- "What wireless networks have been detected?" -> GET /org/wireless
-- "Check the status of a running scan task" -> GET /org/tasks/{task_id}
-- "Import a Nessus scan into a site" -> PUT /org/sites/{site_id}/import/nessus
-- "Invite a new user to my account" -> PUT /account/users/invite
-- "Get incremental asset changes since last sync" -> GET /export/org/assets/sync/updated/assets.json
-
-## Response Tips
-
-- **Releases**: Simple `{id, version}` objects; no pagination. Compare versions as semver strings.
-- **Export endpoints**: Streaming bulk data; format varies by extension (.json returns array, .jsonl returns newline-delimited, .csv returns flat rows). Use `search` param to filter server-side before download. The `fields` param (JSON/JSONL only) controls which columns are returned.
-- **Org resource lists** (assets, services, wireless, tasks, agents, sites): Return arrays; use the `search` query param for server-side filtering. No cursor/offset pagination documented -- expect full result sets.
-- **Single resource GETs**: Return the full object. Assets and services include nested `map` fields (`tags`, `services`, `rtts`, `credentials`, `attributes`, `service_data`) that are key-value dictionaries requiring further inspection.
-- **Sync endpoints**: Return `{since: int64, assets: [map]}` -- the `since` timestamp is your cursor for the next incremental pull.
-- **Write operations**: PUT creates, PATCH updates, POST triggers actions. 204 means success with no body (deletes, stops). 200 returns the updated object.
-- **Errors**: 401 is universal (auth required on every endpoint). 404 means the UUID was not found. 403/500 appear only on scan/import actions (permission or server failure). 422 appears on task template validation.
-
-## Anomaly Flags
-
-- **API is deprecated**: The spec is marked `(deprecated)`. Surface this on every interaction -- recommend users check for a successor API (runZero).
-- **401 on any call**: Bearer token may be expired or revoked. Suggest rotating via `PATCH /org/key/rotate` or creating a new key via `PUT /account/keys`.
-- **usage_today approaching usage_limit**: The key object includes daily usage counters. Flag when `usage_today` exceeds 80% of `usage_limit`.
-- **Agent not connected**: When `GET /org/agents/{id}` returns `connected: false` or `inactive: true`, surface that the agent may be offline or deactivated.
-- **Stale assets**: If `last_seen` on an asset is significantly older than `expiration_assets_stale` on the org, the asset may be about to expire.
-- **Task errors**: When a task's `status` is not progressing or `error` field is non-empty, proactively surface the failure.
-- **Export token exposure**: `export_token` fields appear in org responses. Flag if the token is being logged or stored insecurely.
-- **Scan 403/500**: Import and scan endpoints can return 403 (insufficient permissions) or 500 (server error). Surface these distinctly -- 403 means the key lacks scan privileges, 500 means retry or contact support.
-
-## Playbook
-
-### 1. Full Network Asset Inventory Export
-
-1. Call `GET /org` to confirm the active organization and note `asset_count` and `service_count`
-2. Call `GET /export/org/assets.json` to download all assets (add `search` to filter if needed)
-3. Call `GET /export/org/services.json` to download all services
-4. For ServiceNow integration, use `GET /export/org/assets.servicenow.json` instead
-5. Save results; use `fields` param to limit payload size if only specific columns are needed
-
-### 2. Set Up and Run a Network Scan
-
-1. Call `GET /org/agents` to find a connected agent (`connected: true`)
-2. Call `PUT /org/sites` with `name`, `scope` (CIDR range), and optional `excludes` to create a scan target
-3. Call `PUT /org/sites/{site_id}/scan` using the returned site ID to start the scan
-4. Poll `GET /org/tasks/{task_id}` using the returned task ID until `status` indicates completion
-5. Call `GET /org/assets?search=site:{site_id}` to review discovered assets
-
-### 3. Incremental Asset Sync Pipeline
-
-1. On first run, call `GET /export/org/assets/sync/created/assets.json` without `since` to get baseline
-2. Store the returned `since` timestamp
-3. On subsequent runs, call `GET /export/org/assets/sync/updated/assets.json?since={timestamp}` to get only changes
-4. Process the `assets` array and update your local database
-5. Store the new `since` value for the next iteration
-
-### 4. API Key Rotation and User Management
-
-1. Call `GET /account/keys` to list all active API keys and review `last_used_at` and `usage_today`
-2. Call `PATCH /account/keys/{key_id}/rotate` to rotate a key -- save the new `token` from the response immediately
-3. Update all integrations with the new token
-4. Call `GET /account/users` to audit active users
-5. For any user showing `login_failures` > 0 or stale `last_login_at`, call `PATCH /account/users/{user_id}/resetLockout` or `DELETE /account/users/{user_id}` as appropriate
-
-### 5. Import Third-Party Scan Data (Nessus)
-
-1. Call `GET /org/sites` to find the target site, or `PUT /org/sites` to create one
-2. Call `PUT /org/sites/{site_id}/import/nessus` with the Nessus XML file in the request body
-3. Note the returned task object and its `id`
-4. Poll `GET /org/tasks/{task_id}` until `status` shows completion; check `error` field for failures
-5. Review imported assets with `GET /org/assets?search=site:{site_id}` and verify `stats` on the task for import counts
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all version?" -> GET /releases/agent/version
+- "List all version?" -> GET /releases/scanner/version
+- "List all version?" -> GET /releases/platform/version
+- "Search assets.json?" -> GET /export/org/assets.json
+- "Search assets.jsonl?" -> GET /export/org/assets.jsonl
+- "Search assets.csv?" -> GET /export/org/assets.csv
+- "Search assets.nmap.xml?" -> GET /export/org/assets.nmap.xml
+- "Search services.json?" -> GET /export/org/services.json
+- "Search services.jsonl?" -> GET /export/org/services.jsonl
+- "Search services.csv?" -> GET /export/org/services.csv
+- "Search sites.json?" -> GET /export/org/sites.json
+- "Search sites.jsonl?" -> GET /export/org/sites.jsonl
+- "List all sites.csv?" -> GET /export/org/sites.csv
+- "Search wireless.json?" -> GET /export/org/wireless.json
+- "Search wireless.jsonl?" -> GET /export/org/wireless.jsonl
+- "Search wireless.csv?" -> GET /export/org/wireless.csv
+- "List all top.types.csv?" -> GET /org/assets/top.types.csv
+- "List all top.os.csv?" -> GET /org/assets/top.os.csv
+- "List all top.hw.csv?" -> GET /org/assets/top.hw.csv
+- "List all top.tags.csv?" -> GET /org/assets/top.tags.csv
+- "List all top.tcp.csv?" -> GET /org/services/top.tcp.csv
+- "List all top.udp.csv?" -> GET /org/services/top.udp.csv
+- "List all top.protocols.csv?" -> GET /org/services/top.protocols.csv
+- "List all top.products.csv?" -> GET /org/services/top.products.csv
+- "List all subnet.stats.csv?" -> GET /org/services/subnet.stats.csv
+- "List all org?" -> GET /org
+- "List all key?" -> GET /org/key
+- "List all agents?" -> GET /org/agents
+- "Get agent details?" -> GET /org/agents/{agent_id}
+- "Delete a agent?" -> DELETE /org/agents/{agent_id}
+- "Partially update a agent?" -> PATCH /org/agents/{agent_id}
+- "Create a update?" -> POST /org/agents/{agent_id}/update
+- "List all sites?" -> GET /org/sites
+- "Get site details?" -> GET /org/sites/{site_id}
+- "Delete a site?" -> DELETE /org/sites/{site_id}
+- "Partially update a site?" -> PATCH /org/sites/{site_id}
+- "Search assets?" -> GET /org/assets
+- "Get asset details?" -> GET /org/assets/{asset_id}
+- "Delete a asset?" -> DELETE /org/assets/{asset_id}
+- "Create a clearTag?" -> POST /org/assets/bulk/clearTags
+- "Search services?" -> GET /org/services
+- "Get service details?" -> GET /org/services/{service_id}
+- "Delete a service?" -> DELETE /org/services/{service_id}
+- "Search wireless?" -> GET /org/wireless
+- "Get wireless details?" -> GET /org/wireless/{wireless_id}
+- "Delete a wireless?" -> DELETE /org/wireless/{wireless_id}
+- "Search tasks?" -> GET /org/tasks
+- "Get task details?" -> GET /org/tasks/{task_id}
+- "Partially update a task?" -> PATCH /org/tasks/{task_id}
+- "List all data?" -> GET /org/tasks/{task_id}/data
+- "List all changes?" -> GET /org/tasks/{task_id}/changes
+- "List all log?" -> GET /org/tasks/{task_id}/log
+- "Create a stop?" -> POST /org/tasks/{task_id}/stop
+- "Create a hide?" -> POST /org/tasks/{task_id}/hide
+- "Search orgs?" -> GET /account/orgs
+- "Get org details?" -> GET /account/orgs/{org_id}
+- "Partially update a org?" -> PATCH /account/orgs/{org_id}
+- "Delete a org?" -> DELETE /account/orgs/{org_id}
+- "List all license?" -> GET /account/license
+- "Search sites?" -> GET /account/sites
+- "Search credentials?" -> GET /account/credentials
+- "Get credential details?" -> GET /account/credentials/{credential_id}
+- "Delete a credential?" -> DELETE /account/credentials/{credential_id}
+- "List all keys?" -> GET /account/keys
+- "Get key details?" -> GET /account/keys/{key_id}
+- "Delete a key?" -> DELETE /account/keys/{key_id}
+- "Search events.json?" -> GET /account/events.json
+- "Search events.jsonl?" -> GET /account/events.jsonl
+- "Search tasks?" -> GET /account/tasks
+- "Search templates?" -> GET /account/tasks/templates
+- "Create a template?" -> POST /account/tasks/templates
+- "Get template details?" -> GET /account/tasks/templates/{scan_template_id}
+- "Delete a template?" -> DELETE /account/tasks/templates/{scan_template_id}
+- "Search agents?" -> GET /account/agents
+- "List all users?" -> GET /account/users
+- "Get user details?" -> GET /account/users/{user_id}
+- "Delete a user?" -> DELETE /account/users/{user_id}
+- "Partially update a user?" -> PATCH /account/users/{user_id}
+- "List all groups?" -> GET /account/groups
+- "Create a group?" -> POST /account/groups
+- "Get group details?" -> GET /account/groups/{group_id}
+- "Delete a group?" -> DELETE /account/groups/{group_id}
+- "List all groups?" -> GET /account/sso/groups
+- "Create a group?" -> POST /account/sso/groups
+- "Get group details?" -> GET /account/sso/groups/{group_mapping_id}
+- "Delete a group?" -> DELETE /account/sso/groups/{group_mapping_id}
+- "Search assets.json?" -> GET /export/org/assets/sync/created/assets.json
+- "Search assets.json?" -> GET /export/org/assets/sync/updated/assets.json
+- "List all assets.servicenow.csv?" -> GET /export/org/assets.servicenow.csv
+- "List all assets.servicenow.json?" -> GET /export/org/assets.servicenow.json
+- "List all services.servicenow.csv?" -> GET /export/org/services.servicenow.csv
+- "Search assets.cisco.csv?" -> GET /export/org/assets.cisco.csv
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

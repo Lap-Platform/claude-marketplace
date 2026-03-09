@@ -7,42 +7,51 @@
 @toc participant(9)
 
 @endpoint POST /participant/complete-attachment-upload
+@desc Allows you to confirm that the attachment has been uploaded using the pre-signed URL provided in StartAttachmentUpload API. A conflict exception is thrown when an attachment with that identifier is already being uploaded.   ConnectionToken is used for invoking this API instead of ParticipantToken.  The Amazon Connect Participant Service APIs do not use Signature Version 4 authentication.
 @required {X-Amz-Bearer: str, AttachmentIds: [str], ClientToken: str}
 
 @endpoint POST /participant/connection
+@desc Creates the participant's connection.    ParticipantToken is used for invoking this API instead of ConnectionToken.  The participant token is valid for the lifetime of the participant – until they are part of a contact. The response URL for WEBSOCKET Type has a connect expiry timeout of 100s. Clients must manually connect to the returned websocket URL and subscribe to the desired topic.  For chat, you need to publish the following on the established websocket connection:  {"topic":"aws/subscribe","content":{"topics":["aws/chat"]}}  Upon websocket URL expiry, as specified in the response ConnectionExpiry parameter, clients need to call this API again to obtain a new websocket URL and perform the same steps as before.  Message streaming support: This API can also be used together with the StartContactStreaming API to create a participant connection for chat contacts that are not using a websocket. For more information about message streaming, Enable real-time chat message streaming in the Amazon Connect Administrator Guide.  Feature specifications: For information about feature specifications, such as the allowed number of open websocket connections per participant, see Feature specifications in the Amazon Connect Administrator Guide.   The Amazon Connect Participant Service APIs do not use Signature Version 4 authentication.
 @required {X-Amz-Bearer: str}
 @optional {Type: [str], ConnectParticipant: bool}
 @returns(200) {Websocket: Websocket?{Url: str?, ConnectionExpiry: str?}, ConnectionCredentials: ConnectionCredentials?{ConnectionToken: str?, Expiry: str?}}
 
 @endpoint GET /participant/views/{ViewToken}
+@desc Retrieves the view for the specified view token.
 @required {ViewToken: str, X-Amz-Bearer: str}
 @returns(200) {View: View?{Id: str?, Arn: str?, Name: str?, Version: int?, Content: ViewContent?{InputSchema: str?, Template: str?, Actions: [str]?}}}
 
 @endpoint POST /participant/disconnect
+@desc Disconnects a participant.    ConnectionToken is used for invoking this API instead of ParticipantToken.  The Amazon Connect Participant Service APIs do not use Signature Version 4 authentication.
 @required {X-Amz-Bearer: str}
 @optional {ClientToken: str}
 
 @endpoint POST /participant/attachment
+@desc Provides a pre-signed URL for download of a completed attachment. This is an asynchronous API for use with active contacts.   ConnectionToken is used for invoking this API instead of ParticipantToken.  The Amazon Connect Participant Service APIs do not use Signature Version 4 authentication.
 @required {X-Amz-Bearer: str, AttachmentId: str}
 @returns(200) {Url: str?, UrlExpiry: str?}
 
 @endpoint POST /participant/transcript
+@desc Retrieves a transcript of the session, including details about any attachments. For information about accessing past chat contact transcripts for a persistent chat, see Enable persistent chat.  If you have a process that consumes events in the transcript of an chat that has ended, note that chat transcripts contain the following event content types if the event has occurred during the chat session:    application/vnd.amazonaws.connect.event.participant.left     application/vnd.amazonaws.connect.event.participant.joined     application/vnd.amazonaws.connect.event.chat.ended     application/vnd.amazonaws.connect.event.transfer.succeeded     application/vnd.amazonaws.connect.event.transfer.failed      ConnectionToken is used for invoking this API instead of ParticipantToken.  The Amazon Connect Participant Service APIs do not use Signature Version 4 authentication.
 @required {X-Amz-Bearer: str}
 @optional {ContactId: str, MaxResults: int, NextToken: str, ScanDirection: str, SortOrder: str, StartPosition: StartPosition}
 @returns(200) {InitialContactId: str?, Transcript: [Item]?, NextToken: str?}
 
 @endpoint POST /participant/event
+@desc The application/vnd.amazonaws.connect.event.connection.acknowledged ContentType will no longer be supported starting December 31, 2024. This event has been migrated to the CreateParticipantConnection API using the ConnectParticipant field.  Sends an event. Message receipts are not supported when there are more than two active participants in the chat. Using the SendEvent API for message receipts when a supervisor is barged-in will result in a conflict exception.   ConnectionToken is used for invoking this API instead of ParticipantToken.  The Amazon Connect Participant Service APIs do not use Signature Version 4 authentication.
 @required {X-Amz-Bearer: str, ContentType: str}
 @optional {Content: str, ClientToken: str}
 @returns(200) {Id: str?, AbsoluteTime: str?}
 
 @endpoint POST /participant/message
+@desc Sends a message.   ConnectionToken is used for invoking this API instead of ParticipantToken.  The Amazon Connect Participant Service APIs do not use Signature Version 4 authentication.
 @required {X-Amz-Bearer: str, ContentType: str, Content: str}
 @optional {ClientToken: str}
 @returns(200) {Id: str?, AbsoluteTime: str?}
 
 @endpoint POST /participant/start-attachment-upload
+@desc Provides a pre-signed Amazon S3 URL in response for uploading the file directly to S3.   ConnectionToken is used for invoking this API instead of ParticipantToken.  The Amazon Connect Participant Service APIs do not use Signature Version 4 authentication.
 @required {X-Amz-Bearer: str, ContentType: str, AttachmentSizeInBytes: int(i64), AttachmentName: str, ClientToken: str}
-@returns(200) {AttachmentId: str?, UploadMetadata: UploadMetadata?{Url: str?, UrlExpiry: str?, HeadersToInclude: map<str,str>?}}
+@returns(200) {AttachmentId: str?, UploadMetadata: UploadMetadata?{Url: str?, UrlExpiry: str?, HeadersToInclude: map<str, str>?: any}}
 
 @end

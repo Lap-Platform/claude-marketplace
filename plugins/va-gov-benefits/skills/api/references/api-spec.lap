@@ -1,7 +1,7 @@
 @lap v0.3
 # Machine-readable API spec. Each @endpoint block is one API call.
 @api Benefits Intake
-@base https://sandbox-api.va.gov/services/vba_documents/{version}
+@base https://sandbox-api.va.gov/services/vba_documents/v1
 @version 1.0.0
 @auth ApiKey apikey in header
 @endpoints 6
@@ -9,38 +9,44 @@
 
 @group uploads
 @endpoint POST /uploads
-@returns(202) {data: any}
-@errors {403, 429, 500, 422, 401}
+@desc Get a location for subsequent document upload PUT request
+@returns(202) {data: any} # Accepted. Location generated
+@errors {401: Unauthorized request, 403: Forbidden, 422: Unprocessable Entity, 429: Too many requests, 500: Internal server error}
 
 @endgroup
 
 @group path
 @endpoint PUT /path
-@optional {Content-MD5: str(md5)}
-@returns(200)
-@errors {500, 401, 429, 422, 403}
+@desc Accepts document upload.
+@optional {Content-MD5: str(md5) # Base64-encoded 128-bit MD5 digest of the message. Use for integrity control}
+@returns(200) Document upload staged
+@errors {401: Unauthorized request, 403: Document upload failed, 422: Unprocessable Entity, 429: Too many requests, 500: Internal server error}
 
 @endgroup
 
 @group uploads
 @endpoint GET /uploads/{id}
-@required {id: str(uuid)}
-@returns(200) {data: any}
-@errors {404, 429, 500, 401, 403}
+@desc Get status for a previous benefits document upload
+@required {id: str(uuid) # ID as returned by a previous create upload request}
+@returns(200) {data: any} # Upload status retrieved successfully
+@errors {401: Unauthorized request, 403: Forbidden, 404: Not found, 429: Too many requests, 500: Internal server error}
 
 @endpoint GET /uploads/{id}/download
-@required {id: str(uuid)}
-@returns(200)
-@errors {401, 429, 403, 404, 500}
+@desc Download zip of "what the server sees"
+@required {id: str(uuid) # ID as returned by a previous create upload request}
+@returns(200) Zip file with the contents of your payload as parsed by our server
+@errors {401: Unauthorized request, 403: Forbidden, 404: Not found, 429: Too many requests, 500: Internal server error}
 
 @endpoint POST /uploads/report
-@required {ids: [str(uuid)]}
-@returns(200) {data: [any]}
-@errors {401, 429, 403, 422, 500, 400}
+@desc Get a bulk status report for a list of previous uploads
+@required {ids: [str(uuid)] # List of IDs for previous document upload submissions (max 1000)}
+@returns(200) {data: [any]} # Upload status report retrieved successfully
+@errors {400: Bad Request - invalid, missing, or oversized list of guids (max 1000), 401: Unauthorized request, 403: Forbidden, 422: Unprocessable Entity, 429: Too many requests, 500: Internal server error}
 
 @endpoint POST /uploads/validate_document
-@returns(200) {data: any}
-@errors {401, 429, 403, 422, 500}
+@desc Validate an individual document against system file requirements
+@returns(200) {data: any} # Document passed system requirements
+@errors {401: Unauthorized request, 403: Forbidden, 422: Document did NOT pass system requirements, 429: Too many requests, 500: Internal server error}
 
 @endgroup
 

@@ -8,397 +8,462 @@
 
 @group domains
 @endpoint GET /v1/domains
-@optional {X-Shopper-Id: any, statuses: any, statusGroups: any, limit: any, marker: any, includes: any, modifiedDate: any}
-@returns(200)
-@errors {400, 401, 403, 422, 429, 500}
+@desc Retrieve a list of Domains for the specified Shopper
+@optional {X-Shopper-Id: any # Shopper ID whose domains are to be retrieved, statuses: any # Only include results with `status` value in the specified set, statusGroups: any # Only include results with `status` value in any of the specified groups, limit: any # Maximum number of domains to return, marker: any # Marker Domain to use as the offset in results, includes: any # Optional details to be included in the response, modifiedDate: any # Only include results that have been modified since the specified date}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 422: Limit must have a value no greater than 1000, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v1/domains/agreements
-@required {tlds: any, privacy: any}
-@optional {X-Market-Id: any, forTransfer: any}
-@returns(200)
-@errors {400, 401, 403, 404, 429, 500}
+@desc Retrieve the legal agreement(s) required to purchase the specified TLD and add-ons
+@required {tlds: any # list of TLDs whose legal agreements are to be retrieved, privacy: any # Whether or not privacy has been requested}
+@optional {X-Market-Id: any # Unique identifier of the Market used to retrieve/translate Legal Agreements, forTransfer: any # Whether or not domain tranfer has been requested}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v1/domains/available
-@required {domain: any}
-@optional {checkType: any, forTransfer: any}
-@returns(200)
-@errors {400, 401, 403, 422, 429, 500}
+@desc Determine whether or not the specified domain is available for purchase
+@required {domain: any # Domain name whose availability is to be checked}
+@optional {checkType: any # Optimize for time ('FAST') or accuracy ('FULL'), forTransfer: any # Whether or not to include domains available for transfer. If set to True, checkType is ignored}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 422: Cannot convert domain label error<br>Domain is missing IDN script<br>Domain segment ends with dash<br>Domain starts with dashbr>Domain uses unsupported IDN script<br>FQDN fails generic validity regex<br>Invalid character(s) error<br>Invalid tld error<br>Non-IDN domain name must not have dashes at the third and fourth position<br>Reserved name error<br>domain must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v1/domains/available
-@required {domains: [str]}
-@optional {checkType: any}
-@returns(200)
-@returns(203)
-@errors {400, 401, 403, 422, 429, 500}
+@desc Determine whether or not the specified domains are available for purchase
+@required {domains: [str] # Domain names for which to check availability}
+@optional {checkType: any # Optimize for time ('FAST') or accuracy ('FULL')}
+@returns(200) Request was successful
+@returns(203) Request was partially successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 422: Cannot convert domain label error<br>Domain is missing IDN script<br>Domain segment ends with dash<br>Domain starts with dash<br>Domain uses unsupported IDN script<br>FQDN fails generic validity regex<br>Invalid character(s) error<br>Invalid tld error<br>Non-IDN domain name must not have dashes at the third and fourth position<br>Reserved name error<br>Reserved name error<br>domain must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v1/domains/contacts/validate
-@required {body: any}
-@optional {X-Private-Label-Id: any, marketId: any}
-@returns(200)
-@returns(204)
-@errors {400, 422, 429, 500}
+@desc Validate the request body using the Domain Contact Validation Schema for specified domains.
+@required {body: any # An instance document expected for domains contacts validation}
+@optional {X-Private-Label-Id: any # PrivateLabelId to operate as, if different from JWT, marketId: any # MarketId in which the request is being made, and for which responses should be localized}
+@returns(200) No response was specified
+@returns(204) Request was successful
+@errors {400: Request was malformed, 422: Request body doesn't fulfill schema, see details in `fields`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v1/domains/purchase
-@required {body: any}
-@optional {X-Shopper-Id: any}
-@returns(200)
-@errors {400, 401, 403, 404, 422, 429, 500}
+@desc Purchase and register the specified Domain
+@required {body: any # An instance document expected to match the JSON schema returned by `./schema/{tld}`}
+@optional {X-Shopper-Id: any # The Shopper for whom the domain should be purchased}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 422: domain must be specified<br>Based on restrictions declared in JSON schema returned by `./schema/{tld}`<br>Cannot convert domain label error<br>Domain is missing IDN script<br>Domain segment ends with dash<br>Domain starts with dash<br>Domain uses unsupported IDN script<br>FQDN fails generic validity regex<br>Invalid character(s) error<br>Invalid tld error<br>Non-IDN domain name must not have dashes at the third and fourth position<br>Reserved name error<br>`body` must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v1/domains/purchase/schema/{tld}
-@required {tld: any}
-@returns(200)
-@errors {400, 401, 403, 404, 422, 429, 500}
+@desc Retrieve the schema to be submitted when registering a Domain for the specified TLD
+@required {tld: any # The Top-Level Domain whose schema should be retrieved}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 422: `tld` must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v1/domains/purchase/validate
-@required {body: any}
-@returns(200)
-@errors {400, 401, 403, 404, 422, 429, 500}
+@desc Validate the request body using the Domain Purchase Schema for the specified TLD
+@required {body: any # An instance document expected to match the JSON schema returned by `./schema/{tld}`}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 422: Based on restrictions declared in JSON schema returned by `./schema/{tld}`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v1/domains/suggest
-@optional {X-Shopper-Id: any, query: any, country: any, city: any, sources: any, tlds: any, lengthMax: any, lengthMin: any, limit: any, waitMs: any}
-@returns(200)
-@errors {400, 401, 403, 404, 422, 429, 500, 504}
+@desc Suggest alternate Domain names based on a seed Domain, a set of keywords, or the shopper's purchase history
+@optional {X-Shopper-Id: any # Shopper ID for which the suggestions are being generated, query: any # Domain name or set of keywords for which alternative domain names will be suggested, country: any # Two-letter ISO country code to be used as a hint for target region<br/><br/> NOTE: These are sample values, there are many <a href="http://www.iso.org/iso/country_codes.htm">more</a>, city: any # Name of city to be used as a hint for target region, sources: any # Sources to be queried<br/><br/><ul> <li><strong>CC_TLD</strong> - Varies the TLD using Country Codes</li> <li><strong>EXTENSION</strong> - Varies the TLD</li> <li><strong>KEYWORD_SPIN</strong> - Identifies keywords and then rotates each one</li> <li><strong>PREMIUM</strong> - Includes variations with premium prices</li></ul>, tlds: any # Top-level domains to be included in suggestions<br/><br/> NOTE: These are sample values, there are many <a href="http://www.godaddy.com/tlds/gtld.aspx#domain_search_form">more</a>, lengthMax: any # Maximum length of second-level domain, lengthMin: any # Minimum length of second-level domain, limit: any # Maximum number of suggestions to return, waitMs: any # Maximum amount of time, in milliseconds, to wait for responses If elapses, return the results compiled up to that point}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 422: `query` must be specified, 429: Too many requests received within interval, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint GET /v1/domains/tlds
-@returns(200)
-@errors {400, 401, 403, 429, 500}
+@desc Retrieves a list of TLDs supported and enabled for sale
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint DELETE /v1/domains/{domain}
-@required {domain: any}
-@returns(200)
-@errors {400, 401, 403, 404, 422, 429, 500}
+@desc Cancel a purchased domain
+@required {domain: any # Domain to cancel}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 422: Unknown domain error<br>At least two apex (aka @) `nameServers` must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v1/domains/{domain}
-@required {domain: any}
-@optional {X-Shopper-Id: any}
-@returns(200)
-@returns(203)
-@errors {400, 401, 403, 404, 422, 429, 500}
+@desc Retrieve details for the specified Domain
+@required {domain: any # Domain name whose details are to be retrieved}
+@optional {X-Shopper-Id: any # Shopper ID expected to own the specified domain}
+@returns(200) Request was successful
+@returns(203) Request was partially successful, see verifications.status for further detail
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 422: `domain` must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint PATCH /v1/domains/{domain}
-@required {domain: any, body: any}
-@optional {X-Shopper-Id: any}
-@returns(200)
-@errors {400, 401, 403, 404, 409, 422, 429, 500}
+@desc Update details for the specified Domain
+@required {domain: any # Domain whose details are to be updated, body: any # Changes to apply to existing Domain}
+@optional {X-Shopper-Id: any # Shopper for whom Domain is to be updated. NOTE: This is only required if you are a Reseller managing a domain purchased outside the scope of your reseller account. For instance, if you're a Reseller, but purchased a Domain via http://www.godaddy.com}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Specified Subaccount not owned by authenticated Shopper, 404: Resource not found, 409: The given domain is not eligible to have its nameservers changed, 422: At least two apex (aka @) `nameServers` must be specified<br>Failed to update nameservers, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint PATCH /v1/domains/{domain}/contacts
-@required {domain: any, contacts: any}
-@optional {X-Shopper-Id: any}
-@returns(200)
-@returns(204)
-@errors {400, 401, 403, 404, 422, 429, 500, 504}
+@desc Update domain
+@required {domain: any # Domain whose Contacts are to be updated., contacts: any # Changes to apply to existing Contacts}
+@optional {X-Shopper-Id: any # Shopper for whom domain contacts are to be updated. NOTE: This is only required if you are a Reseller managing a domain purchased outside the scope of your reseller account. For instance, if you're a Reseller, but purchased a Domain via http://www.godaddy.com}
+@returns(200) No response was specified
+@returns(204) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Domain not found<br>Identity document not found, 422: `domain` is not a valid Domain name, 429: Too many requests received within interval, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint DELETE /v1/domains/{domain}/privacy
-@required {domain: any}
-@optional {X-Shopper-Id: any}
-@returns(200)
-@errors {400, 401, 403, 404, 422, 429, 500}
+@desc Submit a privacy cancellation request for the given domain
+@required {domain: any # Domain whose privacy is to be cancelled}
+@optional {X-Shopper-Id: any # Shopper ID of the owner of the domain}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 422: Customer has purchased Domain Ownership Protection and the domain has expired<br>The domain status does not allow performing the operation<br>Unknown domain error, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v1/domains/{domain}/privacy/purchase
-@required {domain: any, body: any}
-@optional {X-Shopper-Id: any}
-@returns(200)
-@errors {400, 401, 403, 404, 409, 422, 429, 500}
+@desc Purchase privacy for a specified domain
+@required {domain: any # Domain for which to purchase privacy, body: any # Options for purchasing privacy}
+@optional {X-Shopper-Id: any # Shopper ID of the owner of the domain}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 409: The domain status does not allow performing the operation, 422: End-user must read and consent to all of the following legal agreements<br>`domain` must match `sld.tld`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint PATCH /v1/domains/{domain}/records
-@required {domain: any, records: [any]}
-@optional {X-Shopper-Id: any}
-@returns(200)
-@errors {400, 401, 403, 404, 422, 429, 500, 504}
+@desc Add the specified DNS Records to the specified Domain
+@required {domain: any # Domain whose DNS Records are to be augmented, records: [any] # DNS Records to add to whatever currently exists}
+@optional {X-Shopper-Id: any # Shopper ID which owns the domain. NOTE: This is only required if you are a Reseller managing a domain purchased outside the scope of your reseller account. For instance, if you're a Reseller, but purchased a Domain via http://www.godaddy.com}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 422: `domain` is not a valid Domain name, 429: Too many requests received within interval, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint PUT /v1/domains/{domain}/records
-@required {domain: any, records: [any]}
-@optional {X-Shopper-Id: any}
-@returns(200)
-@errors {400, 401, 403, 404, 422, 429, 500, 504}
+@desc Replace all DNS Records for the specified Domain
+@required {domain: any # Domain whose DNS Records are to be replaced, records: [any] # DNS Records to replace whatever currently exists}
+@optional {X-Shopper-Id: any # Shopper ID which owns the domain. NOTE: This is only required if you are a Reseller managing a domain purchased outside the scope of your reseller account. For instance, if you're a Reseller, but purchased a Domain via http://www.godaddy.com}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 422: `domain` is not a valid Domain name<br>`record` does not fulfill the schema, 429: Too many requests received within interval, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint GET /v1/domains/{domain}/records/{type}/{name}
-@required {domain: any, type: any, name: any}
-@optional {X-Shopper-Id: any, offset: any, limit: any}
-@returns(200)
-@errors {400, 401, 403, 404, 422, 429, 500, 504}
+@desc Retrieve DNS Records for the specified Domain, optionally with the specified Type and/or Name
+@required {domain: any # Domain whose DNS Records are to be retrieved, type: any # DNS Record Type for which DNS Records are to be retrieved, name: any # DNS Record Name for which DNS Records are to be retrieved}
+@optional {X-Shopper-Id: any # Shopper ID which owns the domain. NOTE: This is only required if you are a Reseller managing a domain purchased outside the scope of your reseller account. For instance, if you're a Reseller, but purchased a Domain via http://www.godaddy.com, offset: any # Number of results to skip for pagination, limit: any # Maximum number of items to return}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 422: `record` does not fulfill the schema<br>`domain` is not a valid Domain name, 429: Too many requests received within interval, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint PUT /v1/domains/{domain}/records/{type}/{name}
-@required {domain: any, type: any, name: any, records: [any]}
-@optional {X-Shopper-Id: any}
-@returns(200)
-@errors {400, 401, 403, 404, 422, 429, 500, 504}
+@desc Replace all DNS Records for the specified Domain with the specified Type and Name
+@required {domain: any # Domain whose DNS Records are to be replaced, type: any # DNS Record Type for which DNS Records are to be replaced, name: any # DNS Record Name for which DNS Records are to be replaced, records: [any] # DNS Records to replace whatever currently exists}
+@optional {X-Shopper-Id: any # Shopper ID which owns the domain. NOTE: This is only required if you are a Reseller managing a domain purchased outside the scope of your reseller account. For instance, if you're a Reseller, but purchased a Domain via http://www.godaddy.com}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 422: `record` does not fulfill the schema, 429: Too many requests received within interval, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint DELETE /v1/domains/{domain}/records/{type}/{name}
-@required {domain: any, type: any, name: any}
-@optional {X-Shopper-Id: any}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429, 500, 504}
+@desc Delete all DNS Records for the specified Domain with the specified Type and Name
+@required {domain: any # Domain whose DNS Records are to be deleted, type: any # DNS Record Type for which DNS Records are to be deleted, name: any # DNS Record Name for which DNS Records are to be deleted}
+@optional {X-Shopper-Id: any # Shopper ID which owns the domain. NOTE: This is only required if you are a Reseller managing a domain purchased outside the scope of your reseller account. For instance, if you're a Reseller, but purchased a Domain via http://www.godaddy.com}
+@returns(204) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Domain not found, 409: The given domain is not eligible to have its records changed, 422: `domain` is not a valid Domain name, 429: Too many requests received within interval, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint PUT /v1/domains/{domain}/records/{type}
-@required {domain: any, type: any, records: [any]}
-@optional {X-Shopper-Id: any}
-@returns(200)
-@errors {400, 401, 403, 404, 422, 429, 500, 504}
+@desc Replace all DNS Records for the specified Domain with the specified Type
+@required {domain: any # Domain whose DNS Records are to be replaced, type: any # DNS Record Type for which DNS Records are to be replaced, records: [any] # DNS Records to replace whatever currently exists}
+@optional {X-Shopper-Id: any # Shopper ID which owns the domain. NOTE: This is only required if you are a Reseller managing a domain purchased outside the scope of your reseller account. For instance, if you're a Reseller, but purchased a Domain via http://www.godaddy.com}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 422: `record` does not fulfill the schema, 429: Too many requests received within interval, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint POST /v1/domains/{domain}/renew
-@required {domain: any}
-@optional {X-Shopper-Id: any, body: any}
-@returns(200)
-@errors {400, 401, 403, 404, 409, 422, 429, 500}
+@desc Renew the specified Domain
+@required {domain: any # Domain to renew}
+@optional {X-Shopper-Id: any # Shopper for whom Domain is to be renewed. NOTE: This is only required if you are a Reseller managing a domain purchased outside the scope of your reseller account. For instance, if you're a Reseller, but purchased a Domain via http://www.godaddy.com, body: any # Options for renewing existing Domain}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 409: The domain status does not allow performing the operation, 422: End-user must read and consent to all of the following legal agreements<br>`domain` must match `sld.tld`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v1/domains/{domain}/transfer
-@required {domain: any, body: any}
-@optional {X-Shopper-Id: any}
-@returns(200)
-@errors {400, 401, 403, 409, 422, 429, 500}
+@desc Purchase and start or restart transfer process
+@required {domain: any # Domain to transfer in, body: any # Details for domain transfer purchase}
+@optional {X-Shopper-Id: any # The Shopper to whom the domain should be transfered}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 409: `domain` (domain) isn't available for transfer, 422: Based on restrictions declared in JSON schema returned by `./schema/{tld}`<br>Cannot convert domain label error<br>Domain is missing IDN script<br>Domain segment ends with dash<br>Domain starts with dash<br>Domain uses unsupported IDN script<br>End-user must read and consent to all of the following legal agreements<br>FQDN fails generic validity regex<br>Invalid character(s) error<br>Invalid period range<br>Invalid tld error<br>Non-IDN domain name must not have dashes at the third and fourth position<br>Reserved name error<br>`authCode` cannot be empty<br>`domain` must match `sld.tld`<br>domain must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v1/domains/{domain}/verifyRegistrantEmail
-@required {domain: any}
-@optional {X-Shopper-Id: any}
-@returns(200)
-@errors {400, 401, 403, 404, 422, 429, 500, 504}
+@desc Re-send Contact E-mail Verification for specified Domain
+@required {domain: any # Domain whose Contact E-mail should be verified.}
+@optional {X-Shopper-Id: any # Shopper for whom domain contact e-mail should be verified. NOTE: This is only required if you are a Reseller managing a domain purchased outside the scope of your reseller account. For instance, if you're a Reseller, but purchased a Domain via http://www.godaddy.com}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 422: `domain` is not a valid Domain name, 429: Too many requests received within interval, 500: Internal server error, 504: Gateway timeout}
 
 @endgroup
 
 @group customers
 @endpoint GET /v2/customers/{customerId}/domains/{domain}
-@required {customerId: any, domain: any}
-@optional {X-Request-Id: any, includes: any}
-@returns(200)
-@returns(203)
-@errors {401, 403, 404, 422, 429, 500}
+@desc Retrieve details for the specified Domain
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain name whose details are to be retrieved}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request., includes: any # Optional details to be included in the response}
+@returns(200) Request was successful
+@returns(203) Request was partially successful, but actions, contacts, and/or verifications may not be included.
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The contact does not exist, 422: `domain` must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint DELETE /v2/customers/{customerId}/domains/{domain}/changeOfRegistrant
-@required {customerId: any, domain: any}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {401, 403, 404, 409, 422, 429, 500, 502}
+@desc Cancels a pending change of registrant request for a given domain
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain whose change of registrant is to be cancelled}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/CHANGE_OF_REGISTRANT_DELETE to poll status
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The contact does not exist, 409: There is already a similar action processing, 422: `domain` must be specified, 429: Too many requests received within interval, 500: Internal server error, 502: Dependent service unavailable}
 
 @endpoint GET /v2/customers/{customerId}/domains/{domain}/changeOfRegistrant
-@required {customerId: any, domain: any}
-@optional {X-Request-Id: any}
-@returns(200)
-@errors {401, 403, 404, 409, 422, 429, 500, 502}
+@desc Retrieve change of registrant information
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain whose change of registrant information is to be retrieved}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(200) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The contact does not exist, 409: There is already a similar action processing, 422: `domain` must be specified, 429: Too many requests received within interval, 500: Internal server error, 502: Dependent service unavailable}
 
 @endpoint PATCH /v2/customers/{customerId}/domains/{domain}/dnssecRecords
-@required {customerId: any, domain: any, body: [any]}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {400, 401, 403, 404, 409, 422, 429, 500}
+@desc Add the specifed DNSSEC records to the domain
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to add the DNSSEC record for, body: [any] # DNSSEC records to add}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/DNSSEC_CREATE to poll status
+@errors {400: Authentication info not sent or invalid, 401: Request was malformed, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 422: Request body doesn't fulfill schema, see details in `fields`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint DELETE /v2/customers/{customerId}/domains/{domain}/dnssecRecords
-@required {customerId: any, domain: any, body: [any]}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {400, 401, 403, 404, 409, 422, 429, 500}
+@desc Remove the specifed DNSSEC record from the domain
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to delete the DNSSEC record for, body: [any] # DNSSEC records to remove}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/DNSSEC_DELETE to poll status
+@errors {400: Authentication info not sent or invalid, 401: Request was malformed, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 422: Request body doesn't fulfill schema, see details in `fields`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint PUT /v2/customers/{customerId}/domains/{domain}/nameServers
-@required {customerId: any, domain: any, body: any}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {400, 401, 403, 404, 409, 422, 429, 500}
+@desc Replaces the existing name servers on the domain.
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain whose name servers are to be replaced, body: any # Name server records to replace on the domain}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/DOMAIN_UPDATE_NAME_SERVERS to poll status
+@errors {400: Authentication info not sent or invalid, 401: Request was malformed, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 422: Request body doesn't fulfill schema, see details in `fields`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v2/customers/{customerId}/domains/{domain}/privacy/forwarding
-@required {customerId: any, domain: any}
-@optional {X-Request-Id: any}
-@returns(200)
-@errors {401, 403, 404, 422, 429, 500}
+@desc Retrieve privacy email forwarding settings showing where emails are delivered
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain name whose details are to be retrieved}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(200) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 422: `domain` must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint PATCH /v2/customers/{customerId}/domains/{domain}/privacy/forwarding
-@required {customerId: any, domain: any, body: any}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {401, 403, 404, 409, 422, 429, 500}
+@desc Update privacy email forwarding settings to determine how emails are delivered
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain name whose details are to be retrieved, body: any # Update privacy email forwarding settings}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/PRIVACY_FORWARDING_UPDATE to poll status
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 422: Request body doesn't fulfill schema, see details in `fields`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/{domain}/redeem
-@required {customerId: any, domain: any}
-@optional {X-Request-Id: any, body: any}
-@returns(202)
-@errors {401, 403, 404, 409, 422, 429, 500}
+@desc Purchase a restore for the given domain to bring it out of redemption
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to request redeem for}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request., body: any # Options for redeeming existing Domain}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/REDEEM to poll status
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 422: Domain invalid, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/{domain}/renew
-@required {customerId: any, domain: any, body: any}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {400, 401, 403, 404, 409, 422, 429, 500}
+@desc Renew the specified Domain
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to be renewed, body: any # Options for renewing existing Domain}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/RENEW to poll status
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 422: Request body doesn't fulfill schema, see details in `fields`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/{domain}/transfer
-@required {customerId: any, domain: any, body: any}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {400, 401, 403, 404, 409, 422, 429, 500}
+@desc Purchase and start or restart transfer process
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to transfer in, body: any # Details for domain transfer purchase}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/TRANSFER to poll status
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 422: Based on restrictions declared in JSON schema returned by `./schema/{tld}`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v2/customers/{customerId}/domains/{domain}/transfer
-@required {customerId: any, domain: any}
-@optional {X-Request-Id: any}
-@returns(200)
-@errors {400, 401, 403, 404, 429, 500}
+@desc Query the current transfer status
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain Name}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/{domain}/transfer/validate
-@required {customerId: any, domain: any, body: any}
-@optional {X-Request-Id: any}
-@returns(204)
-@errors {400, 401, 403, 404, 409, 422, 429, 500}
+@desc Validate the request body using the Domain Transfer Schema for the specified TLD
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to transfer in, body: any # Details for domain transfer purchase}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(204) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 422: Based on restrictions declared in JSON schema returned by `./schema/{tld}`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/{domain}/transferInAccept
-@required {customerId: any, domain: any, body: map}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {400, 401, 403, 404, 409, 422, 429, 500}
+@desc Accepts the transfer in
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to accept the transfer in for, body: map # An Authorization code for transferring the Domain}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/TRANSFER_IN_ACCEPT to poll status
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: The domain status does not allow performing the operation, 422: Request body doesn't fulfill schema, see details in `fields`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/{domain}/transferInCancel
-@required {customerId: any, domain: any}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {401, 403, 404, 409, 429, 500}
+@desc Cancels the transfer in
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to cancel the transfer in for}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/TRANSFER_IN_CANCEL to poll status
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/{domain}/transferInRestart
-@required {customerId: any, domain: any}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {401, 403, 404, 409, 429, 500}
+@desc Restarts transfer in request from the beginning
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to restart the transfer in}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/TRANSFER_IN_RESTART to poll status
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 409: The domain status does not allow performing the operation, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/{domain}/transferInRetry
-@required {customerId: any, domain: any, body: map}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {400, 401, 403, 404, 409, 422, 429, 500}
+@desc Retries the current transfer in request with supplied Authorization code
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to retry the transfer in, body: map # An Authorization code for transferring the Domain}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/TRANSFER_IN_RETRY to poll status
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 409: The domain status does not allow performing the operation, 422: Request body doesn't fulfill schema, see details in `fields`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/{domain}/transferOut
-@required {customerId: any, domain: any, registrar: any}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {401, 403, 404, 409, 422, 429, 500}
+@desc Initiate transfer out to another registrar for a .uk domain.
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to initiate the transfer out for, registrar: any # Registrar tag to push transfer to}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/TRANSFER_OUT_REQUESTED to poll status
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 422: Domain invalid. TLD must be .uk, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/{domain}/transferOutAccept
-@required {customerId: any, domain: any}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {401, 403, 404, 409, 429, 500}
+@desc Accept transfer out
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to accept the transfer out for}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/TRANSFER_OUT_ACCEPT to poll status
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/{domain}/transferOutReject
-@required {customerId: any, domain: any}
-@optional {X-Request-Id: any, reason: any}
-@returns(202)
-@errors {401, 403, 404, 409, 429, 500}
+@desc Reject transfer out
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to reject the transfer out for}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request., reason: any # Transfer out reject reason}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/TRANSFER_OUT_REJECT to poll status
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint DELETE /v2/customers/{customerId}/domains/forwards/{fqdn}
-@required {customerId: any, fqdn: any}
-@returns(204)
-@errors {401, 403, 404, 409, 422, 429, 500}
+@desc Submit a forwarding cancellation request for the given fqdn
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., fqdn: any # The fully qualified domain name whose forwarding details are to be deleted.}
+@returns(204) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 409: The domain status does not allow performing the operation, 422: A valid `fqdn` must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v2/customers/{customerId}/domains/forwards/{fqdn}
-@required {customerId: any, fqdn: any}
-@optional {includeSubs: any}
-@returns(200)
-@errors {401, 403, 404, 422, 429, 500}
+@desc Retrieve the forwarding information for the given fqdn
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., fqdn: any # The fully qualified domain name whose forwarding details are to be retrieved.}
+@optional {includeSubs: any # Optionally include all sub domains if the fqdn specified is a domain and not a sub domain.}
+@returns(200) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 422: A valid `fqdn` must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint PUT /v2/customers/{customerId}/domains/forwards/{fqdn}
-@required {customerId: any, fqdn: any, body: any}
-@returns(204)
-@errors {401, 403, 404, 409, 422, 429, 500}
+@desc Modify the forwarding information for the given fqdn
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., fqdn: any # The fully qualified domain name whose forwarding details are to be modified., body: any # Domain forwarding rule to create or replace on the fqdn}
+@returns(204) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 409: The domain status does not allow performing the operation, 422: Request body doesn't fulfill schema, see details in `fields`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/forwards/{fqdn}
-@required {customerId: any, fqdn: any, body: any}
-@returns(204)
-@errors {401, 403, 404, 409, 422, 429, 500}
+@desc Create a new forwarding configuration for the given FQDN
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your own customer id., fqdn: any # The fully qualified domain name whose forwarding details are to be modified., body: any # Domain forwarding rule to create for the specified fqdn}
+@returns(204) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: Resource not found, 409: Provided `fqdn` already has forwarding setup, 422: Request body doesn't fulfill schema, see details in `fields`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v2/customers/{customerId}/domains/{domain}/actions
-@required {customerId: any, domain: any}
-@optional {X-Request-Id: any}
-@returns(200)
-@errors {401, 403, 404, 429, 500}
+@desc Retrieves a list of the most recent actions for the specified domain
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain whose actions are to be retrieved}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(200) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint DELETE /v2/customers/{customerId}/domains/{domain}/actions/{type}
-@required {customerId: any, domain: any, type: any}
-@optional {X-Request-Id: any}
-@returns(204)
-@errors {401, 403, 404, 409, 429, 500}
+@desc Cancel the most recent user action for the specified domain
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain whose action is to be cancelled, type: any # The type of action to cancel}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(204) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: The action status does not allow performing the operation, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v2/customers/{customerId}/domains/{domain}/actions/{type}
-@required {customerId: any, domain: any, type: any}
-@optional {X-Request-Id: any}
-@returns(200)
-@errors {401, 403, 404, 409, 429, 500}
+@desc Retrieves the most recent action for the specified domain
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain whose action is to be retrieved, type: any # The type of action to retrieve}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(200) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: The domain status does not allow performing the operation, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v2/customers/{customerId}/domains/notifications
-@required {customerId: any}
-@optional {X-Request-Id: any}
-@returns(200)
-@errors {401, 403, 404, 429, 500}
+@desc Retrieve the next domain notification
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id.}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(200) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The customer does not exist, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v2/customers/{customerId}/domains/notifications/optIn
-@required {customerId: any}
-@optional {X-Request-Id: any}
-@returns(200)
-@errors {401, 403, 404, 429, 500}
+@desc Retrieve a list of notification types that are opted in
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id.}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(200) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The customer does not exist, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint PUT /v2/customers/{customerId}/domains/notifications/optIn
-@required {customerId: any, types: any}
-@optional {X-Request-Id: any}
-@returns(204)
-@errors {401, 403, 404, 422, 429, 500}
+@desc Opt in to recieve notifications for the submitted notification types
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., types: any # The notification types that should be opted in}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(204) Command successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The customer does not exist, 422: `type` must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v2/customers/{customerId}/domains/notifications/schemas/{type}
-@required {customerId: any, type: any}
-@optional {X-Request-Id: any}
-@returns(200)
-@errors {401, 403, 404, 422, 429, 500}
+@desc Retrieve the schema for the notification data for the specified notification type
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., type: any # The notification type whose schema should be retrieved}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(200) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The schema type does not exist, 422: `type` must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/notifications/{notificationId}/acknowledge
-@required {customerId: any, notificationId: any}
-@optional {X-Request-Id: any}
-@returns(204)
-@errors {401, 403, 404, 429, 500}
+@desc Acknowledge a domain notification
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., notificationId: any # The notification ID to acknowledge}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(204) Message acknowledged
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/register
-@required {customerId: any, body: any}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {400, 401, 403, 409, 422, 429, 500}
+@desc Purchase and register the specified Domain
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., body: any # An instance document expected to match the JSON schema returned by `./schema/{tld}`}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/REGISTER to poll status
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 409: There is already a similar action processing, 422: Based on restrictions declared in JSON schema returned by `./schema/{tld}`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v2/customers/{customerId}/domains/register/schema/{tld}
-@required {customerId: any, tld: any}
-@optional {X-Request-Id: any}
-@returns(200)
-@errors {401, 403, 404, 422, 429, 500}
+@desc Retrieve the schema to be submitted when registering a Domain for the specified TLD
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., tld: any # The Top-Level Domain whose schema should be retrieved}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(200) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The tld does not exist, 422: `tld` must be specified, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/register/validate
-@required {customerId: any, body: any}
-@optional {X-Request-Id: any}
-@returns(204)
-@errors {400, 401, 403, 404, 422, 429, 500}
+@desc Validate the request body using the Domain Registration Schema for the specified TLD
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., body: any # An instance document expected to match the JSON schema returned by `./schema/{tld}`}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(204) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The customer does not exist, 422: Based on restrictions declared in JSON schema returned by `./schema/{tld}`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endgroup
 
 @group domains
 @endpoint GET /v2/domains/maintenances
-@optional {X-Request-Id: any, status: any, modifiedAtAfter: any, startsAtAfter: any, limit: any}
-@returns(200)
-@errors {400, 401, 403, 422, 429, 500}
+@desc Retrieve a list of upcoming system Maintenances
+@optional {X-Request-Id: any # A client provided identifier for tracking this request., status: any # Only include results with the selected `status` value.  Returns all results if omitted<br/><ul><li><strong style='margin-left: 12px;'>ACTIVE</strong> - The upcoming maintenance is active.</li><li><strong style='margin-left: 12px;'>CANCELLED</strong> - The upcoming maintenance has been cancelled.</li></ul>, modifiedAtAfter: any # Only include results with `modifiedAt` after the supplied date, startsAtAfter: any # Only include results with `startsAt` after the supplied date, limit: any # Maximum number of results to return}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 422: Filter parameters don't match schema and/or restrictions, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v2/domains/maintenances/{maintenanceId}
-@required {maintenanceId: any}
-@optional {X-Request-Id: any}
-@returns(200)
-@errors {400, 401, 403, 404, 429, 500}
+@desc Retrieve the details for an upcoming system Maintenances
+@required {maintenanceId: any # The identifier for the system maintenance}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(200) Request was successful
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The maintenance does not exist, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint GET /v2/domains/usage/{yyyymm}
-@required {yyyymm: any}
-@optional {X-Request-Id: any, includes: any}
-@returns(200)
-@errors {401, 403, 429, 500}
+@desc Retrieve api usage request counts for a specific year/month.  The data is retained for a period of three months.
+@required {yyyymm: any # The year/month timeframe for the request counts (in the format yyyy-mm)}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request., includes: any # Determines if the detail records (grouped by request path) are included in the response}
+@returns(200) Request was successful
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 429: Too many requests received within interval, 500: Internal server error}
 
 @endgroup
 
 @group customers
 @endpoint PATCH /v2/customers/{customerId}/domains/{domain}/contacts
-@required {customerId: any, domain: any, body: any}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {400, 401, 403, 404, 409, 422, 429, 500}
+@desc Update domain contacts
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain whose Contacts are to be updated., body: any # Changes to apply to existing Contacts}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/DOMAIN_UPDATE_CONTACTS to poll status
+@errors {400: Request was malformed, 401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 422: Request body doesn't fulfill schema, see details in `fields`, 429: Too many requests received within interval, 500: Internal server error}
 
 @endpoint POST /v2/customers/{customerId}/domains/{domain}/regenerateAuthCode
-@required {customerId: any, domain: any}
-@optional {X-Request-Id: any}
-@returns(202)
-@errors {401, 403, 404, 409, 429, 500}
+@desc Regenerate the auth code for the given domain
+@required {customerId: any # The Customer identifier<br/> Note: For API Resellers, performing actions on behalf of your customers, you need to specify the Subaccount you're operating on behalf of; otherwise use your shopper id., domain: any # Domain to update authcode for}
+@optional {X-Request-Id: any # A client provided identifier for tracking this request.}
+@returns(202) Request Accepted. You may use GET /v2/customers/{customerId}/domains/{domain}/actions/AUTH_CODE_REGENERATE to poll status
+@errors {401: Authentication info not sent or invalid, 403: Authenticated user is not allowed access, 404: The domain does not exist, 409: There is already a similar action processing, 429: Too many requests received within interval, 500: Internal server error}
 
 @endgroup
 

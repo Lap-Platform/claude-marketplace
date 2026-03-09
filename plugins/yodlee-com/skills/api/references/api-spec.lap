@@ -9,483 +9,553 @@
 
 @group transactions
 @endpoint GET /transactions
-@optional {accountId: str, baseType: str, categoryId: str, categoryType: str, container: str, detailCategoryId: str, fromDate: str, highLevelCategoryId: str, keyword: str, skip: int(int32), toDate: str, top: int(int32), type: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Transactions
+@optional {accountId: str # Comma separated accountIds, baseType: str # DEBIT/CREDIT, categoryId: str # Comma separated categoryIds, categoryType: str # Transaction Category Type(UNCATEGORIZE, INCOME, TRANSFER, EXPENSE or DEFERRED_COMPENSATION), container: str # bank/creditCard/investment/insurance/loan, detailCategoryId: str # Comma separated detailCategoryIds, fromDate: str # Transaction from date(YYYY-MM-DD), highLevelCategoryId: str # Comma separated highLevelCategoryIds, keyword: str # Transaction search text, skip: int(int32) # skip (Min 0), toDate: str # Transaction end date (YYYY-MM-DD), top: int(int32) # top (Max 500), type: str # Transaction Type(SELL,SWEEP, etc.) for bank/creditCard/investment}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for baseType<br>Y800 : Invalid value for fromDate<br>Y800 : Invalid value for category<br>Y800 : Invalid value for toDate<br>Y800 : Invalid value for container<br>Y809 : Invalid date range<br>Y804 : Permitted values of top between 1 - 500<br>Y805 : Multiple containers not supported<br>Y800 : Invalid value for transaction type<br>Y824 : The maximum number of accountIds permitted is 100<br>Y824 : The maximum number of categoryIds permitted is 100<br>Y824 : The maximum number of highLevelCategoryIds permitted is 100<br>Y848 : detailCategoryId cannot be provided as input, as the detailedCategory feature is not enabled<br>Y823 : detailCategoryId is not for applicable containers other than bank and card<br>Y824 : The maximum number of detailCategoryIds permitted is 100<br>Y800 : Invalid value for detailCategoryId, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group cobrand
 @endpoint POST /cobrand/login
+@desc Cobrand Login
 @required {cobrand: map{cobrandLogin!: str, cobrandPassword!: str, locale: str}}
-@returns(200)
-@errors {400, 401, 404}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for cobrandParam, 401: Y003 : Account is locked, contact Yodlee customer care<br>Y001 : User name and password required, 404: Not Found}
 
 @endgroup
 
 @group dataExtracts
 @endpoint GET /dataExtracts/userData
-@required {fromDate: str, loginName: str, toDate: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get userData
+@required {fromDate: str # From DateTime (YYYY-MM-DDThh:mm:ssZ), loginName: str # Login Name, toDate: str # To DateTime (YYYY-MM-DDThh:mm:ssZ)}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for eventName<br>Y821 : Data update event not supported<br>Y800 : Invalid value for fromDate.fromDate cannot be greater than current time<br>Y800 : Invalid value for toDate.toDate cannot be greater than current time<br>.Y800 : Invalid value for fromDate or toDate.fromDate and toDate cannot be older than 7 days<br>Y800 : Invalid value for fromDate.fromDate can not be greater than toDate<br>Y800 : Invalid value for loginName, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group providers
 @endpoint GET /providers
-@optional {capability: str, dataset$filter: str, fullAccountNumberFields: str, institutionId: int(int64), name: str, priority: str, providerId: str, skip: int(int32), top: int(int32)}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Providers
+@optional {capability: str # CHALLENGE_DEPOSIT_VERIFICATION - capability search is deprecated, dataset$filter: str # Expression to filter the providers by dataset(s) or dataset attribute(s). The default value will be the dataset or dataset attributes configured as default for the customer., fullAccountNumberFields: str # Specify to filter the providers with values paymentAccountNumber,unmaskedAccountNumber., institutionId: int(int64) # Institution Id for Single site selection, name: str # Name in minimum 1 character or routing number., priority: str # Search priority, providerId: str # Max 5 Comma seperated Provider Ids, skip: int(int32) # skip (Min 0) - This is not applicable along with 'name' parameter., top: int(int32) # top (Max 500) - This is not applicable along with 'name' parameter.}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for priority<br>Y800 : Invalid value for providerName<br>Y801 : Invalid length for a site search. The search string must have atleast 1 character<br>Y800 : Invalid value for skip<br>Y804 : Permitted values of top between 1 - 500<br>Y821 : Dataset not supported<br>Y820 : The additionalDataSet is not supported for Get provider API, 401: Unauthorized, 404: Not Found}
 
 @endpoint GET /providers/{providerId}
-@required {providerId: int(int64)}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Provider Details
+@required {providerId: int(int64) # providerId}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for providerId, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group cobrand
 @endpoint PUT /cobrand/config/notifications/events/{eventName}
-@required {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES), event: map{callbackUrl: str}}
-@returns(204)
-@errors {400, 401, 404}
+@desc Update Subscription
+@required {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES) # eventName, event: map{callbackUrl: str}}
+@returns(204) OK
+@errors {400: Y803 : eventName required<br>Y803 : callbackUrl required<br>Y800 : Invalid value for callbackUrl, 401: Unauthorized, 404: Not Found}
 
 @endpoint POST /cobrand/config/notifications/events/{eventName}
-@required {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES), event: map{callbackUrl: str}}
-@returns(201)
-@errors {400, 401, 404}
+@desc Subscribe Event
+@required {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES) # eventName, event: map{callbackUrl: str}}
+@returns(201) OK
+@errors {400: Y803 : eventName required<br>Y803 : callbackUrl required<br>Y800 : Invalid value for callbackUrl, 401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /cobrand/config/notifications/events/{eventName}
-@required {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES)}
-@returns(204)
-@errors {400, 401, 404}
+@desc Delete Subscription
+@required {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES) # eventName}
+@returns(204) OK
+@errors {400: Y803 : eventName required, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group configs
 @endpoint GET /configs/notifications/events
-@optional {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES)}
-@returns(200)
-@errors {401, 404}
+@desc Get Subscribed Notification Events
+@optional {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES) # eventName}
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group providers
 @endpoint GET /providers/count
-@optional {capability: str, dataset$filter: str, fullAccountNumberFields: str, name: str, priority: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Providers Count
+@optional {capability: str # CHALLENGE_DEPOSIT_VERIFICATION - capability search is deprecated, dataset$filter: str # Expression to filter the providers by dataset(s) or dataset attribute(s). The default value will be the dataset or dataset attributes configured as default for the customer., fullAccountNumberFields: str # Specify to filter the providers with values paymentAccountNumber,unmaskedAccountNumber., name: str # Name in minimum 1 character or routing number., priority: str # Search priority}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for priority<br>Y800 : Invalid value for providerName<br>Y801 : Invalid length for a site search. The search string must have at least 1 character<br>Y800 : Invalid value for skip<br>Y804 : Permitted values of top between 1 - 500<br>Y821 : Dataset not supported<br>Y820 : The additionalDataSet is not supported for Get provider API, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group derived
 @endpoint GET /derived/networth
-@optional {accountIds: str, container: str, fromDate: str, include: str, interval: str, skip: int(int32), toDate: str, top: int(int32)}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Networth Summary
+@optional {accountIds: str # comma separated accountIds, container: str # bank/creditCard/investment/insurance/loan/realEstate/otherAssets/otherLiabilities, fromDate: str # from date for balance retrieval (YYYY-MM-DD), include: str # details, interval: str # D-daily, W-weekly or M-monthly, skip: int(int32) # skip (Min 0), toDate: str # toDate for balance retrieval (YYYY-MM-DD), top: int(int32) # top (Max 500)}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for accountIds<br>Y800 : Invalid value for fromDate<br>Y800 : Invalid value for toDate<br>Y809 : Invalid date range<br>Y800 : Invalid value for interval<br>Y802 : Future date not allowed<br>Y814 : Exchange rate not available for currency<br>Y800 : Invalid value for container, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group user
 @endpoint POST /user/samlLogin
-@required {issuer: str, samlResponse: str}
-@optional {source: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Saml Login
+@required {issuer: str # issuer, samlResponse: str # samlResponse}
+@optional {source: str # source}
+@returns(200) OK
+@errors {400: Y013 : Invalid value for samlResponse<br>Y013 : Invalid value for issuer, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group transactions
 @endpoint PUT /transactions/categories/rules/{ruleId}
-@required {ruleId: int(int64), rule: map{ruleClause!: [map{field: str, operation: str, value: map}], source: str, priority: int(int32), categoryId!: int(int32)}}
-@returns(204)
-@errors {400, 401, 404}
+@desc Update Transaction Categorization Rule
+@required {ruleId: int(int64) # ruleId, rule: map{ruleClause!: [map{field: str, operation: str, value: map}], source: str, priority: int(int32), categoryId!: int(int32)}}
+@returns(204) Updated Successfully
+@errors {400: Y800 : Invalid value for ruleId<br>Y806 : Invalid input, 401: Unauthorized, 404: Not Found}
 
 @endpoint POST /transactions/categories/rules/{ruleId}
-@required {action: str=run, ruleId: int(int64)}
-@returns(204)
-@errors {400, 401, 404}
+@desc Run Transaction Categorization Rule
+@required {action: str=run, ruleId: int(int64) # Unique id of the categorization rule}
+@returns(204) Run Successfully
+@errors {400: Y800 : Invalid value for ruleId<br>Y400 : Categorization already in progress, 401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /transactions/categories/rules/{ruleId}
-@required {ruleId: int(int64)}
-@returns(204)
-@errors {400, 401, 404}
+@desc Delete Transaction Categorization Rule
+@required {ruleId: int(int64) # ruleId}
+@returns(204) Deleted Successfully
+@errors {400: Y800 : Invalid value for ruleId, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group documents
 @endpoint GET /documents/{documentId}
-@required {documentId: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Download a Document
+@required {documentId: str # documentId}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for documentId, 401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /documents/{documentId}
-@required {documentId: str}
-@returns(204)
-@errors {400, 401, 404}
+@desc Delete Document
+@required {documentId: str # documentId}
+@returns(204) OK
+@errors {400: Y800 : Invalid value for documentId<br>Y868 : No action is allowed, as the data is being migrated to the Open Banking provider<br>, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group user
 @endpoint GET /user/accessTokens
-@required {appIds: str}
-@returns(200)
-@errors {401, 404}
+@desc Get Access Tokens
+@required {appIds: str # appIds}
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group cobrand
 @endpoint POST /cobrand/logout
-@returns(204)
-@errors {401, 404}
+@desc Cobrand Logout
+@returns(204) Logout successful
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group providerAccounts
 @endpoint PUT /providerAccounts/{providerAccountId}/preferences
-@required {providerAccountId: int(int64)}
+@desc Update Preferences
+@required {providerAccountId: int(int64) # providerAccountId}
 @optional {preferences: map{isDataExtractsEnabled: bool, linkedProviderAccountId: int(int64), isAutoRefreshEnabled: bool}}
-@returns(204)
-@errors {400, 401, 404}
+@returns(204) OK
+@errors {400: Y800 : Invalid value for preferences<br>Y800 : Invalid value for preferences.isDataExtractsEnabled<br>Y800 : Invalid value for preferences.isAutoRefreshEnabled<br>Y807 : Resource not found<br>Y830 : Data extracts feature has to be enabled to set preferences.isDataExtractsEnabled as true<br>Y830 : Auto refresh feature has to be enabled to set preferences.isAutoRefreshEnabled as true<br>Y868 : No action is allowed, as the data is being migrated to the Open Banking provider<br>, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group auth
 @endpoint POST /auth/token
-@returns(201)
-@errors {400, 401, 404}
+@desc Generate Access Token
+@returns(201) OK
+@errors {400: Y800 : Invalid value for loginName<br>Y806 : Invalid input<br>Y801 : Invalid length for loginName<br>Y303 : clientId or secret is missing<br>Y301 : Invalid clientId or secret<br>Y305 : Access token can be issued only for pre-registered users<br>Y004 : Inactive user<br>Y901 : Service not supported<br>, 401: Y016 : loginName header missing<br>Y015 : Unauthorized User<br>Y016 : Api-Version header missing<br>Y020 : Invalid token in authorization header<br>Y027 : Unsupported authentication type, 404: Not Found}
 
 @endpoint DELETE /auth/token
-@returns(204)
-@errors {401, 404}
+@desc Delete Token
+@returns(204) No Content
+@errors {401: Y020 : Invalid token in authorization header<br>Y023 : Token has expired<br>Y016 : Api-Version header missing<br>Y015 : Unauthorized User<br>Y027 : Unsupported authentication type<br>Y007 : Authorization header missing<br>Y020 : Invalid token in authorization header, 404: Not Found}
 
 @endgroup
 
 @group user
 @endpoint GET /user
-@returns(200)
-@errors {401, 404}
+@desc Get User Details
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PUT /user
+@desc Update User Details
 @required {user: map{preferences: map{dateFormat: str, timeZone: str, currency: str, locale: str}, address: map{zip: str, country: str, address3: str, address2: str, city: str, address1: str, state: str}, name: map{middle: str, last: str, fullName: str, first: str}, email: str, segmentName: str}}
-@returns(204)
-@errors {401, 404}
+@returns(204) No Content
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group providerAccounts
 @endpoint GET /providerAccounts/{providerAccountId}
-@required {providerAccountId: int(int64)}
-@optional {include: str, requestId: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Provider Account Details
+@required {providerAccountId: int(int64) # providerAccountId}
+@optional {include: str # include credentials,questions, requestId: str # The unique identifier for the request that returns contextual data}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for providerAccountId<br>Y816 : questions can only be requested for questionAndAnswer Supported Sites, 401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /providerAccounts/{providerAccountId}
-@required {providerAccountId: int(int64)}
-@returns(200)
-@errors {400, 401, 404}
+@desc Delete Provider Account
+@required {providerAccountId: int(int64) # providerAccountId}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for providerAccountId<br>Y868 : No action is allowed, as the data is being migrated to the Open Banking provider<br>, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group accounts
 @endpoint GET /accounts
-@optional {accountId: str, container: str, include: str, providerAccountId: str, requestId: str, status: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Accounts
+@optional {accountId: str # Comma separated accountIds., container: str # bank/creditCard/investment/insurance/loan/reward/realEstate/otherAssets/otherLiabilities, include: str # profile, holder, fullAccountNumber, fullAccountNumberList, paymentProfile, autoRefresh<br><b>Note:</b>fullAccountNumber is deprecated and is replaced with fullAccountNumberList in include parameter and response., providerAccountId: str # Comma separated providerAccountIds., requestId: str # The unique identifier that returns contextual data, status: str # ACTIVE,INACTIVE,TO_BE_CLOSED,CLOSED}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for status<br>Y800 : Invalid value for container<br>Y800 : Invalid value for providerAccountId<br>Y824 : The maximum number of accountIds permitted is 100, 401: Unauthorized, 404: Not Found}
 
 @endpoint POST /accounts
+@desc Add Manual Account
 @required {account: map{includeInNetWorth: str, address: map{zip: str, country: str, address3: str, address2: str, city: str, sourceType: str, address1: str, street: str, state: str, type: str}, accountName!: str, accountType!: str, dueDate: str, memo: str, homeValue: map{amount!: num(double), currency!: str}, accountNumber: str, frequency: str, amountDue: map{amount!: num(double), currency!: str}, balance: map{amount!: num(double), currency!: str}, nickname: str, valuationType: str}}
-@returns(200)
-@errors {400, 401, 404}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for accountParam<br>Y811 : Real Estate Property value already exists<br>Y862 : The provided address is invalid, or the valuation is not available<br>Y869 : Multiple matches found. Provide the complete address or call the POST /accounts/evaluateAddress API to retrieve the list of matched addresses<br>, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group user
 @endpoint DELETE /user/unregister
-@returns(204)
-@errors {401, 404}
+@desc Delete User
+@returns(204) No Content
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group holdings
 @endpoint GET /holdings/assetClassificationList
-@returns(200)
-@errors {401, 404}
+@desc Get Asset Classification List
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group verifyAccount
 @endpoint POST /verifyAccount/{providerAccountId}
-@required {providerAccountId: str, transactionCriteria: [map{date!: str, amount!: num(double), verifiedTransaction: [map{date: str, sourceId: str, symbol: str, cusipNumber: str, highLevelCategoryId: int(int64), detailCategoryId: int(int64), description: map, memo: str, settleDate: str, type: str, baseType: str, categorySource: str, principal: map, lastUpdated: str, interest: map, price: map, commission: map, id: int(int64), amount: map, checkNumber: str, quantity: num(double), valoren: str, isManual: bool, merchant: map, sedol: str, transactionDate: str, categoryType: str, accountId: int(int64), createdDate: str, sourceType: str, CONTAINER: str, postDate: str, parentCategoryId: int(int64), subType: str, category: str, runningBalance: map, categoryId: int(int64), holdingDescription: str, isin: str, status: str}], matched: str, keyword: str, dateVariance: str, baseType: str}]}
+@desc Verify Accounts Using Transactions
+@required {providerAccountId: str # providerAccountId, transactionCriteria: [map{date!: str, amount!: num(double), verifiedTransaction: [map{date: str, sourceId: str, symbol: str, cusipNumber: str, highLevelCategoryId: int(int64), detailCategoryId: int(int64), description: map, memo: str, settleDate: str, type: str, baseType: str, categorySource: str, principal: map, lastUpdated: str, interest: map, price: map, commission: map, id: int(int64), amount: map, checkNumber: str, quantity: num(double), valoren: str, isManual: bool, merchant: map, sedol: str, transactionDate: str, categoryType: str, accountId: int(int64), createdDate: str, sourceType: str, CONTAINER: str, postDate: str, parentCategoryId: int(int64), subType: str, category: str, runningBalance: map, categoryId: int(int64), holdingDescription: str, isin: str, status: str}], matched: str, keyword: str, dateVariance: str, baseType: str}]}
 @optional {container: str(bank/creditCard/investment/insurance/loan/reward/realEstate/otherAssets/otherLiabilities), accountId: int(int64)}
-@returns(200)
-@errors {400, 401, 404}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for container<br>Y800 : Invalid value for accountId<br>Y800 : Invalid value for amount<br>Y800 : Invalid value for dateVariance<br>Y801 : Invalid length for keyword<br>Y804 : Permitted values of dateVariance between 1 - 7<br>Y806 : Invalid input<br>Y807 : Resource not found<br>Y809 : Invalid date range<br>Y812 : Required field/value - transactionCriteria missing in the input<br>Y812 : Required field/value - amount missing in the transactionCriteria<br>Y812 : Required field/value - amount date in the transactionCriteria<br>Y812 : Required field/value - baseType missing in the transactionCriteria<br>Y823 : Transaction not applicable for container <br>Y824 : The maximum number of transactionCriteria permitted is 5<br>Y857 : Transactions are not refreshed in the past 24 hours<br>Y858 : Only active accounts can be verified<br>Y901 : Service not supported<br>, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group configs
 @endpoint GET /configs/publicKey
-@returns(200)
-@errors {401, 404}
+@desc Get Public Key
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group auth
 @endpoint DELETE /auth/apiKey/{key}
-@required {key: str}
-@returns(201)
-@returns(204)
-@errors {400, 401, 404}
+@desc Delete API Key
+@required {key: str # key}
+@returns(201) OK
+@returns(204) No Content
+@errors {400: Y807 : Resource not found<br>Y806 : Invalid input, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group providerAccounts
 @endpoint GET /providerAccounts
-@optional {include: str, providerIds: str}
-@returns(200)
-@errors {401, 404}
+@desc Get Provider Accounts
+@optional {include: str # include, providerIds: str # Comma separated providerIds.}
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PUT /providerAccounts
-@required {providerAccountIds: str, field: [map{image: str, prefix: str, minLength: int(int64), valueEditable: str, isOptional: bool, suffix: str, type: str, isValueProvided: bool, name: str, id: str, value: str, maxLength: int(int64), option: [map{displayText: str, optionValue: str, isSelected: bool}]}]}
-@optional {consentId: int(int64), preferences: map{isDataExtractsEnabled: bool, linkedProviderAccountId: int(int64), isAutoRefreshEnabled: bool}, aggregationSource: str(SYSTEM/USER), datasetName: [str], dataset: [map{name: str, attribute: [map{container: [str], fromDate: str, toFinYear: str, fromFinYear: str, containerAttributes: map, toDate: str, name: str}]}]}
-@returns(200)
-@errors {400, 401, 404}
+@desc Update Account
+@required {providerAccountIds: str # comma separated providerAccountIds, field: [map{image: str, prefix: str, minLength: int(int64), valueEditable: str, isOptional: bool, suffix: str, type: str, isValueProvided: bool, name: str, id: str, value: str, maxLength: int(int64), option: [map{displayText: str, optionValue: str, isSelected: bool}]}]}
+@optional {consentId: int(int64) # Consent Id generated for the request through POST Consent.<br><br><b>Endpoints</b>:<ul><li>POST Provider Account</li><li>PUT Provider Account</li></ul>, preferences: map{isDataExtractsEnabled: bool, linkedProviderAccountId: int(int64), isAutoRefreshEnabled: bool}, aggregationSource: str(SYSTEM/USER), datasetName: [str], dataset: [map{name: str, attribute: [map{container: [str], fromDate: str, toFinYear: str, fromFinYear: str, containerAttributes: map, toDate: str, name: str}]}]}
+@returns(200) OK
+@errors {400: Y805 : Multiple providerAccountId not supported for updating credentials<br>Y800 : Invalid value for credentialsParam<br>Y400 : id and value in credentialsParam are mandatory<br>Y806 : Invalid input<br>Y823 : Credentials are not applicable for real estate aggregated / manual accounts<br>Y868 : No action is allowed, as the data is being migrated to the Open Banking provider<br>, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group transactions
 @endpoint GET /transactions/count
-@optional {accountId: str, baseType: str, categoryId: str, categoryType: str, container: str, detailCategoryId: str, fromDate: str, highLevelCategoryId: str, keyword: str, toDate: str, type: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Transactions Count
+@optional {accountId: str # Comma separated accountIds, baseType: str # DEBIT/CREDIT, categoryId: str # Comma separated categoryIds, categoryType: str # Transaction Category Type(UNCATEGORIZE, INCOME, TRANSFER, EXPENSE or DEFERRED_COMPENSATION), container: str # bank/creditCard/investment/insurance/loan, detailCategoryId: str # Comma separated detailCategoryIds, fromDate: str # Transaction from date(YYYY-MM-DD), highLevelCategoryId: str # Comma separated highLevelCategoryIds, keyword: str # Transaction search text, toDate: str # Transaction end date (YYYY-MM-DD), type: str # Transaction Type(SELL,SWEEP, etc.)}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for detailCategoryId<br>Y848 : detailCategoryId cannot be provided as input, as the detailedCategory feature is not enabled<br>Y823 : detailCategoryId is not applicable for containers other than bank and card<br>Y824 : The maximum number of detailCategoryIds permitted is 100<br>, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group derived
 @endpoint GET /derived/transactionSummary
-@required {groupBy: str}
-@optional {accountId: str, categoryId: str, categoryType: str, fromDate: str, include: str, includeUserCategory: bool, interval: str, toDate: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Transaction Summary
+@required {groupBy: str # CATEGORY_TYPE, HIGH_LEVEL_CATEGORY or CATEGORY}
+@optional {accountId: str # comma separated account Ids, categoryId: str # comma separated categoryIds, categoryType: str # INCOME, EXPENSE, TRANSFER, UNCATEGORIZE or DEFERRED_COMPENSATION, fromDate: str # YYYY-MM-DD format, include: str # details, includeUserCategory: bool # TRUE/FALSE, interval: str # D-daily, W-weekly, M-mothly or Y-yearly, toDate: str # YYYY-MM-DD format}
+@returns(200) OK
+@errors {400: Y010 : Invalid session<br>Y800 : Invalid value for accountId<br>Y800 : Invalid value for groupBy<br>Y803 : groupBy required<br>Y803 : categoryType required<br>Y800 : Invalid value for categoryId<br>Y800 : Invalid value for fromDate<br>Y800 : Invalid value for toDate<br>Y800 : Invalid value for fromDate or toDate<br>Y814 : Exchange rate not available for currency<br>Y815 : Cannot apply filter on categoryId if groupBy value is CATEGORY_TYPE<br>Y816 : User-defined category details can only be requested for one system categoryId with groupBy='CATEGORY'<br>Y824 : The maximum number of accountIds permitted is 100<br>Y824 : The maximum number of categoryIds permitted is 100<br>Y824 : The maximum number of categoryTypes permitted is 100, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group transactions
 @endpoint GET /transactions/categories/txnRules
-@returns(200)
-@errors {401, 404}
+@desc Get Transaction Categorization Rules
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /transactions/categories/{categoryId}
-@required {categoryId: int(int64)}
-@returns(204)
-@errors {400, 401, 404}
+@desc Delete Category
+@required {categoryId: int(int64) # categoryId}
+@returns(204) Deleted Successfully
+@errors {400: Y800 : Invalid value for categoryId, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group documents
 @endpoint GET /documents
-@optional {Keyword: str, accountId: str, docType: str, fromDate: str, toDate: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Documents
+@optional {Keyword: str # The string used to search a document by its name., accountId: str # The unique identifier of an account. Retrieve documents for a given accountId., docType: str # Accepts only one of the following valid document types: STMT, TAX, and EBILL., fromDate: str # The date from which documents have to be retrieved., toDate: str # The date to which documents have to be retrieved.}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for accountId<br>Y800 : Invalid value for fromDate<br>Y800 : Invalid value for toDate<br>Y800 : Invalid value for docType, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group accounts
 @endpoint POST /accounts/evaluateAddress
+@desc Evaluate Address
 @required {address: map{zip: str, country: str, address3: str, address2: str, city: str, sourceType: str, address1: str, street!: str, state: str, type: str}}
-@returns(200)
-@errors {400, 401, 404}
+@returns(200) OK
+@errors {400: Y806 : Invalid input<br>Y800 : Invalid value for zip<br>Y812 : Required field/value - address missing in the request<br>Y812 : Required field/value - street missing in the request<br>Y812 : Required field/value - state & city / zip missing in the request, 401: Unauthorized, 404: Not Found}
 
 @endpoint GET /accounts/{accountId}
-@required {accountId: int(int64)}
-@optional {include: str}
-@returns(200)
-@errors {401, 404}
+@desc Get Account Details
+@required {accountId: int(int64) # accountId}
+@optional {include: str # profile, holder, fullAccountNumber, fullAccountNumberList, paymentProfile, autoRefresh<br><b>Note:</b>fullAccountNumber is deprecated and is replaced with fullAccountNumberList in include parameter and response.}
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PUT /accounts/{accountId}
-@required {accountId: int(int64), account: map{container: str, includeInNetWorth: str, address: map{zip: str, country: str, address3: str, address2: str, city: str, sourceType: str, address1: str, street: str, state: str, type: str}, accountName: str, dueDate: str, memo: str, homeValue: map{amount!: num(double), currency!: str}, accountNumber: str, frequency: str, accountStatus: str, amountDue: map{amount!: num(double), currency!: str}, balance: map{amount!: num(double), currency!: str}, isEbillEnrolled: str, nickname: str}}
-@returns(204)
-@errors {400, 401, 404}
+@desc Update Account
+@required {accountId: int(int64) # accountId, account: map{container: str, includeInNetWorth: str, address: map{zip: str, country: str, address3: str, address2: str, city: str, sourceType: str, address1: str, street: str, state: str, type: str}, accountName: str, dueDate: str, memo: str, homeValue: map{amount!: num(double), currency!: str}, accountNumber: str, frequency: str, accountStatus: str, amountDue: map{amount!: num(double), currency!: str}, balance: map{amount!: num(double), currency!: str}, isEbillEnrolled: str, nickname: str}}
+@returns(204) OK
+@errors {400: Y800 : Invalid value for accountId<br>Y800 : Invalid value for updateParam<br>Y862 : The provided address is invalid, or the valuation is not available<br>Y868 : No action is allowed, as the data is being migrated to the Open Banking provider<br>Y869 : Multiple matches found. Provide the complete address or call the POST /accounts/evaluateAddress API to retrieve the list of matched addresses<br>, 401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /accounts/{accountId}
-@required {accountId: int(int64)}
-@returns(204)
-@errors {400, 401, 404}
+@desc Delete Account
+@required {accountId: int(int64) # accountId}
+@returns(204) OK
+@errors {400: Y800 : Invalid value for accountId<br>Y807 : Resource not found<br>Y868 : No action is allowed, as the data is being migrated to the Open Banking provider<br>, 401: Unauthorized, 404: Not Found}
 
 @endpoint GET /accounts/historicalBalances
-@optional {accountId: str, fromDate: str, includeCF: bool, interval: str, skip: int(int32), toDate: str, top: int(int32)}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Historical Balances
+@optional {accountId: str # accountId, fromDate: str # from date for balance retrieval (YYYY-MM-DD), includeCF: bool # Consider carry forward logic for missing balances, interval: str # D-daily, W-weekly or M-monthly, skip: int(int32) # skip (Min 0), toDate: str # toDate for balance retrieval (YYYY-MM-DD), top: int(int32) # top (Max 500)}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for accountId<br>Y800 : Invalid value for fromDate<br>Y800 : Invalid value for toDate<br>Y809 : Invalid date range<br>Y800 : Invalid value for interval<br>Y802 : Future date not allowed, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group user
 @endpoint POST /user/register
+@desc Register User
 @required {user: map{preferences: map{dateFormat: str, timeZone: str, currency: str, locale: str}, address: map{zip: str, country: str, address3: str, address2: str, city: str, address1: str, state: str}, loginName!: str, name: map{middle: str, last: str, fullName: str, first: str}, email: str, segmentName: str}}
-@returns(200)
-@errors {400, 401, 404}
+@returns(200) Login Successful
+@errors {400: Y800 : Invalid value for loginName<br>Y800 : Invalid value for email<br>Y801 : Invalid length for loginName<br>, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group providerAccounts
 @endpoint GET /providerAccounts/profile
-@optional {providerAccountId: str}
-@returns(200)
-@errors {401, 404}
+@desc Get User Profile Details
+@optional {providerAccountId: str # Comma separated providerAccountIds.}
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group verification
 @endpoint GET /verification
-@optional {accountId: str, providerAccountId: str, verificationType: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Verification Status
+@optional {accountId: str # Comma separated accountId, providerAccountId: str # Comma separated providerAccountId, verificationType: str # verificationType}
+@returns(200) OK
+@errors {400: Y901 : Service not supported<br>Y813 : Either of accountId or providerAccountId should be provided<br>Y800 : Invalid value for accountId<br>Y800 : Invalid value for verification.verificationType<br>Y800 : Invalid value for providerAccountId<br>Y835 : Account(s) not eligible for Matching verification<br>Y836 : No verification initiated, 401: Unauthorized, 404: Not Found}
 
 @endpoint PUT /verification
+@desc Verify Challenge Deposit
 @optional {verification: map{accountId: int(int64), reason: str, verificationStatus: str, providerAccountId: int(int64), verificationType: str, account: map{accountName: str, accountType!: str, accountNumber!: str, bankTransferCode!: map}, transaction!: [map{amount!: map, baseType!: str}], verificationDate: str, verificationId: int(int64)}}
-@returns(200)
-@errors {400, 401, 404}
+@returns(200) OK
+@errors {400: Y901 : Service not supported<br>Y812 : Required field/value - verification.verificationType missing in the verificationParam<br>Y812 : Required field/value - amount.amount missing in the verificationParam<br>Y812 : Required field/value - baseType missing in the verificationParam<br>Y812 : Required field/value - currency missing in the verificationParam<br>Y812 : Required field/value - providerAccountId missing in the verificationParam<br>Y812 : Required field/value - accountId missing in the verificationParam<br>Y800 : Invalid value for verificationParam<br>Y800 : Invalid value for verification.verificationType<br>Y800 : Invalid value for baseType<br>Y800 : Invalid value for providerAccountId<br>Y800 : Invalid value for accountId<br>Y813 : Transaction should be provided<br>Y801 : Invalid length for accountNumber<br>Y801 : Invalid length for amount<br>Y835 : Account(s) not eligible for Challenge Deposit verification<br>Y806 : Invalid Input<br>Y840 : Verification has been initiated already<br>Y837 : Account has been verified already<br>Y838 : The currency code provided does not match with the currency of the transaction executed on the target account<br>Y846 : The number of financial transactions made on the target account does not match with the number of transactions entered by the user.<br>Y842 : Number of retries exceeded the maximum Challenge Deposit verification limit<br>Y844 : Financial Instructions were not executed successfully on the target account<br>Y845 : Verification time expired. Please try initiating challenge deposit again<br>Y868 : No action is allowed, as the data is being migrated to the Open Banking provider<br>, 401: Unauthorized, 404: Not Found}
 
 @endpoint POST /verification
+@desc Initiaite Matching Service and Challenge Deposit
 @required {verification: map{accountId: int(int64), reason: str, verificationStatus: str, providerAccountId: int(int64), verificationType: str, account: map{accountName: str, accountType!: str, accountNumber!: str, bankTransferCode!: map}, verificationDate: str, verificationId: int(int64)}}
-@returns(200)
-@errors {400, 401, 404}
+@returns(200) OK
+@errors {400: Y901 : Service not supported<br>Y812 : Required field/value - verification.verificationType missing in the verificationParam<br>Y812 : Required field/value - accountNumber missing in the verificationParam<br>Y812 : Required field/value - accountType missing in the verificationParam<br>Y812 : Required field/value - bankTransferCode missing in the verificationParam<br>Y812 : Required field/value - bankTransferCode.id missing in the verificationParam<br>Y812 : Required field/value - bankTransferCode.type missing in the verificationParam<br>Y800 : Invalid value for verification.verificationType<br>Y800 : Invalid value for verificationParam<br>Y800 : Invalid value for bankTransferCode.type<br>Y800 : Invalid value for bankTransferCode.id<br>Y800 : Invalid value for accountType<br>Y800 : Invalid value for accountId<br>Y813 : Account details should be provided<br>Y801 : Invalid length for accountNumber<br>Y835 : Account(s) not eligible for Challenge Deposit verification<br>Y806 : Invalid Input<br>Y840 : Verification has been initiated already<br>Y837 : Account has been verified already, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group holdings
 @endpoint GET /holdings/securities
-@optional {holdingId: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Security Details
+@optional {holdingId: str # Comma separated holdingId}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for holdingId<br>Y824 : The maximum number of holdingIds permitted is 100, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group configs
 @endpoint PUT /configs/notifications/events/{eventName}
-@required {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES), event: map{callbackUrl: str}}
-@returns(204)
-@errors {400, 401, 404}
+@desc Update Notification Subscription
+@required {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES) # eventName, event: map{callbackUrl: str}}
+@returns(204) OK
+@errors {400: Y803 : eventName required<br>Y803 : callbackUrl required<br>Y800 : Invalid value for callbackUrl, 401: Unauthorized, 404: Not Found}
 
 @endpoint POST /configs/notifications/events/{eventName}
-@required {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES), event: map{callbackUrl: str}}
-@returns(201)
-@errors {400, 401, 404}
+@desc Subscribe For Notification Event
+@required {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES) # eventName, event: map{callbackUrl: str}}
+@returns(201) OK
+@errors {400: Y803 : eventName required<br>Y803 : callbackUrl required<br>Y800 : Invalid value for callbackUrl, 401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /configs/notifications/events/{eventName}
-@required {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES)}
-@returns(204)
-@errors {400, 401, 404}
+@desc Delete Notification Subscription
+@required {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES) # eventName}
+@returns(204) OK
+@errors {400: Y803 : eventName required, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group holdings
 @endpoint GET /holdings
-@optional {accountId: str, assetClassification.classificationType: str, classificationValue: str, include: str, providerAccountId: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Holdings
+@optional {accountId: str # Comma separated accountId, assetClassification.classificationType: str # e.g. Country, Sector, etc., classificationValue: str # e.g. US, include: str # assetClassification, providerAccountId: str # providerAccountId}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for accountId<br>Y800 : Invalid value for providerAccountId<br>Y800 : Invalid value for include<br>Y800 : Invalid value for classificationType<br>Y800 : Invalid value for classificationValue<br>Y800 : Invalid value for include<br>Y400 : classificationType mismatch<br>Y400 : classificationValue mismatch<br>Y824 : The maximum number of accountIds permitted is 100, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group cobrand
 @endpoint GET /cobrand/config/notifications/events
-@optional {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES)}
-@returns(200)
-@errors {401, 404}
+@desc Get Subscribed Events
+@optional {eventName: str(REFRESH/DATA_UPDATES/AUTO_REFRESH_UPDATES) # eventName}
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group auth
 @endpoint GET /auth/apiKey
-@returns(200)
-@errors {401, 404}
+@desc Get API Keys
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint POST /auth/apiKey
-@optional {publicKey: str}
-@returns(201)
-@errors {400, 401, 404}
+@desc Generate API Key
+@optional {publicKey: str # Public key uploaded by the customer while generating ApiKey.<br><br><b>Endpoints</b>:<ul><li>GET /auth/apiKey</li><li>POST /auth/apiKey</li></ul>}
+@returns(201) OK
+@errors {400: Y800 : Invalid value for RS512 publicKey<br>Y806 : Invalid input<br>Y824 : The maximum number of apiKey permitted is 5<br>Y811 : publicKey value already exists, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group cobrand
 @endpoint GET /cobrand/publicKey
-@returns(200)
-@errors {401, 404}
+@desc Get Public Key
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group transactions
 @endpoint GET /transactions/categories
-@returns(200)
-@errors {401, 404}
+@desc Get Transaction Category List
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PUT /transactions/categories
+@desc Update Category
 @required {id: int(int64), source: str(SYSTEM/USER)}
 @optional {highLevelCategoryName: str, categoryName: str}
-@returns(204)
-@errors {400, 401, 404}
+@returns(204) Updated Successfully
+@errors {400: Y800 : Invalid value for categoryParam<br>Y800 : Invalid value for source<br>Y801 : Invalid length for categoryName. Min 1 and max 50 is required<br>Y803 : id required<br>Y811 : categoryName value already exists, 401: Unauthorized, 404: Not Found}
 
 @endpoint POST /transactions/categories
+@desc Create Category
 @required {parentCategoryId: int(int32)}
 @optional {source: str, categoryName: str}
-@returns(201)
-@errors {400, 401, 404}
+@returns(201) Created Successfully
+@errors {400: Y800 : Invalid value for categoryParam<br>Y800 : Invalid value for source<br>Y801 : Invalid length for categoryName. Min 1 and max 50 is required<br>Y803 : parentCategoryId required<br>Y811 : categoryName value already exists, 401: Unauthorized, 404: Not Found}
 
 @endpoint GET /transactions/categories/rules
-@returns(200)
-@errors {401, 404}
+@desc Get Transaction Categorization Rules
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint POST /transactions/categories/rules
-@optional {action: str, ruleParam: str}
-@returns(201)
-@returns(204)
-@errors {400, 401, 404}
+@desc Create or Run Transaction Categorization Rule
+@optional {action: str # To run rules, pass action=run. Only value run is supported, ruleParam: str # rules(JSON format) to categorize the transactions}
+@returns(201) Created Successfully
+@returns(204) No Content
+@errors {400: Y806 : Invalid input<br>Y400 : Rule already exists. Rule should be unique in terms of combination of description and amount, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group statements
 @endpoint GET /statements
-@optional {accountId: str, container: str, fromDate: str, isLatest: str, status: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Statements
+@optional {accountId: str # accountId, container: str # creditCard/loan/insurance, fromDate: str # from date for statement retrieval (YYYY-MM-DD), isLatest: str # isLatest (true/false), status: str # ACTIVE,TO_BE_CLOSED,CLOSED}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for accountId<br>Y800 : Invalid value for status<br>Y805 : Multiple containers not supported<br>Y800 : Invalid value for container<br>Y800 : Invalid value for isLatest<br>Y800 : Invalid value for fromDate<br>, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group holdings
 @endpoint GET /holdings/holdingTypeList
-@returns(200)
-@errors {401, 404}
+@desc Get Holding Type List
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group user
 @endpoint POST /user/logout
-@returns(204)
-@errors {401, 404}
+@desc User Logout
+@returns(204) Logout successful
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group transactions
 @endpoint PUT /transactions/{transactionId}
-@required {transactionId: int(int64), transaction: map{categorySource!: str, container!: str, description: map{security: str, original: str, simple: str, consumer: str}, memo: str, categoryId!: int(int64)}}
-@returns(204)
-@errors {400, 401, 404}
+@desc Update Transaction
+@required {transactionId: int(int64) # transactionId, transaction: map{categorySource!: str, container!: str, description: map{security: str, original: str, simple: str, consumer: str}, memo: str, categoryId!: int(int64)}}
+@returns(204) Updated Successfully
+@errors {400: Y812 : Required field -container missing in the transactionParam parameter input<br>Y800 : Invalid value for transactionId<br>Y800 : Invalid value for categoryId<br>Y868 : No action is allowed, as the data is being migrated to the Open Banking provider<br>, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group dataExtracts
 @endpoint GET /dataExtracts/events
-@required {eventName: str, fromDate: str, toDate: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Events
+@required {eventName: str # Event Name, fromDate: str # From DateTime (YYYY-MM-DDThh:mm:ssZ), toDate: str # To DateTime (YYYY-MM-DDThh:mm:ssZ)}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for fromDate.fromDate cannot be greater than current time<br>Y800 : Invalid value for toDate.toDate cannot be greater than current time<br>Y800 : Invalid value for fromDate or toDate.fromDate and toDate cannot be older than 7 days<br>Y800 : Invalid value for fromDate.fromDate cannot be greater than toDate., 401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group derived
 @endpoint GET /derived/holdingSummary
-@optional {accountIds: str, classificationType: str, include: str}
-@returns(200)
-@errors {400, 401, 404}
+@desc Get Holding Summary
+@optional {accountIds: str # Comma separated accountIds, classificationType: str # e.g. Country, Sector, etc., include: str # details}
+@returns(200) OK
+@errors {400: Y800 : Invalid value for classificationType<br>Y814 : Exchange rate not available for currency<br>Y824 : The maximum number of accountIds permitted is 100<br>, 401: Unauthorized, 404: Not Found}
 
 @endgroup
 

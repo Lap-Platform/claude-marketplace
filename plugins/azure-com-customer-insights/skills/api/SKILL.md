@@ -97,88 +97,76 @@ https://management.azure.com
 | POST | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/predictions/{predictionName}/modelStatus | Creates or updates the model status of prediction. |
 | GET | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/predictions | Gets all the predictions in the specified hub. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What operations are available for Customer Insights?" -> GET /providers/Microsoft.CustomerInsights/operations
-- "How do I create a new Customer Insights hub?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}
-- "List all hubs in my subscription" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.CustomerInsights/hubs
-- "How do I define a customer profile in my hub?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/profiles/{profileName}
-- "What KPIs are configured for my hub?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/kpi
-- "How do I set up a data connector?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/connectors/{connectorName}
-- "How do I map connector data to a profile or interaction?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/connectors/{connectorName}/mappings/{mappingName}
-- "How do I create a relationship between two profiles?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/relationships/{relationshipName}
-- "How do I regenerate an authorization policy key?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/authorizationPolicies/{authorizationPolicyName}/regeneratePrimaryKey
-- "How do I assign a role to a user in my hub?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/roleAssignments/{assignmentName}
-- "What predictions are running in my hub?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/predictions
-- "How do I check the training status of a prediction model?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/predictions/{predictionName}/getModelStatus
-- "How do I get an image upload URL for an entity type?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/images/getEntityTypeImageUploadUrl
-- "What interactions are tracked in my hub?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/interactions
-- "How do I get suggested relationship links for an interaction?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/interactions/{interactionName}/suggestRelationshipLinks
-
-## Response Tips
-
-- **Hubs (CRUD):** 201 on create, 200 on update/get; DELETE returns 202 for async deletion in progress and 204 when already gone -- check both.
-- **Profiles & Interactions:** PUT returns 202 when provisioning is async; poll the GET endpoint until `provisioningState` reaches a terminal value.
-- **Connectors & Mappings:** List endpoints return paged arrays with a `nextLink` property; follow it to retrieve all results.
-- **KPIs:** POST .../reprocess returns only 202 (no body) -- the reprocess is fire-and-forget; check KPI status via GET afterward.
-- **Authorization Policies:** Regenerate key endpoints return the full policy object including the new key in the 200 response body.
-- **Predictions:** getTrainingResults and getModelStatus return nested objects with scoring metrics and status enums -- inspect `status` and `scoringResults` fields.
-- **Views:** GET requires a `userId` query parameter even for list operations -- omitting it produces a 400.
-- **Role Assignments:** DELETE may return 200, 202, or 204 depending on timing; treat all three as success.
-
-## Anomaly Flags
-
-- **202 Accepted on mutations:** Surface to user that the operation is async. Recommend polling the corresponding GET endpoint until provisioning completes.
-- **204 on DELETE:** Indicate the resource was already deleted or never existed -- not an error, but worth noting if the caller expected it to exist.
-- **Missing `api-version` query parameter:** All endpoints require `api-version=2017-04-26` as a common field. Omission causes 400 errors that may be cryptic.
-- **Stale API version (2017-04-26):** This is a legacy API version. Flag that newer versions may be available and some features could be deprecated.
-- **OAuth2 token expiry:** Surface proactively if repeated 401 responses occur -- token may need refresh.
-- **Provisioning state stuck:** If a profile, interaction, connector, or prediction stays in a non-terminal provisioning state across multiple polls, flag it as potentially failed.
-- **Prediction model status regressions:** If getModelStatus returns a worse status than previously observed (e.g., moved from "Succeeded" back to "Failed"), surface immediately.
-- **Rate limiting from Azure Resource Manager:** ARM applies per-subscription throttling; surface 429 responses with retry-after headers.
-
-## Playbook
-
-### 1. Set Up a New Customer Insights Hub with a Profile
-
-1. PUT .../hubs/{hubName} with hub configuration parameters to create the hub
-2. GET .../hubs/{hubName} to confirm provisioning completed (check `provisioningState`)
-3. PUT .../hubs/{hubName}/profiles/{profileName} to define a customer profile schema
-4. GET .../hubs/{hubName}/profiles/{profileName} to verify the profile is provisioned
-5. PUT .../hubs/{hubName}/authorizationPolicies/{policyName} to create an access policy for the hub
-
-### 2. Connect a Data Source and Map It to a Profile
-
-1. PUT .../hubs/{hubName}/connectors/{connectorName} with connection parameters (e.g., blob storage credentials)
-2. GET .../hubs/{hubName}/connectors/{connectorName} to confirm connector provisioning
-3. PUT .../hubs/{hubName}/connectors/{connectorName}/mappings/{mappingName} with field mappings from source to profile
-4. GET .../hubs/{hubName}/connectors/{connectorName}/mappings to verify all mappings are active
-
-### 3. Build and Monitor a Prediction Model
-
-1. GET .../hubs/{hubName}/profiles to identify available profile types for prediction input
-2. GET .../hubs/{hubName}/kpi to review existing KPIs that can serve as prediction targets
-3. PUT .../hubs/{hubName}/predictions/{predictionName} with model definition and target KPI
-4. POST .../hubs/{hubName}/predictions/{predictionName}/getModelStatus to monitor training progress
-5. POST .../hubs/{hubName}/predictions/{predictionName}/getTrainingResults to review accuracy and scoring metrics once complete
-
-### 4. Configure Relationships and Links Between Profiles
-
-1. GET .../hubs/{hubName}/profiles to list available profiles
-2. PUT .../hubs/{hubName}/relationships/{relationshipName} to define a relationship between two profile types
-3. PUT .../hubs/{hubName}/relationshipLinks/{linkName} to create a link that maps interaction data into the relationship
-4. POST .../hubs/{hubName}/interactions/{interactionName}/suggestRelationshipLinks to discover additional link candidates automatically
-5. GET .../hubs/{hubName}/relationships to verify the full relationship graph
-
-### 5. Manage Access Control and Key Rotation
-
-1. GET .../hubs/{hubName}/roles to list available role definitions
-2. PUT .../hubs/{hubName}/roleAssignments/{assignmentName} to assign a role to a principal
-3. GET .../hubs/{hubName}/authorizationPolicies to review current policies
-4. POST .../hubs/{hubName}/authorizationPolicies/{policyName}/regeneratePrimaryKey to rotate the primary key
-5. POST .../hubs/{hubName}/authorizationPolicies/{policyName}/regenerateSecondaryKey to rotate the secondary key (do this on a staggered schedule from primary)
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all operations?" -> GET /providers/Microsoft.CustomerInsights/operations
+- "Update a hub?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}
+- "Partially update a hub?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}
+- "Delete a hub?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}
+- "Get hub details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}
+- "List all hubs?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs
+- "List all hubs?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.CustomerInsights/hubs
+- "Update a profile?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/profiles/{profileName}
+- "Get profile details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/profiles/{profileName}
+- "Delete a profile?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/profiles/{profileName}
+- "List all profiles?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/profiles
+- "Create a getEnrichingKpis?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/profiles/{profileName}/getEnrichingKpis
+- "Update a interaction?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/interactions/{interactionName}
+- "Get interaction details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/interactions/{interactionName}
+- "List all interactions?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/interactions
+- "Create a suggestRelationshipLink?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/interactions/{interactionName}/suggestRelationshipLinks
+- "Update a relationship?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/relationships/{relationshipName}
+- "Get relationship details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/relationships/{relationshipName}
+- "Delete a relationship?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/relationships/{relationshipName}
+- "List all relationships?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/relationships
+- "Update a relationshipLink?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/relationshipLinks/{relationshipLinkName}
+- "Get relationshipLink details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/relationshipLinks/{relationshipLinkName}
+- "Delete a relationshipLink?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/relationshipLinks/{relationshipLinkName}
+- "List all relationshipLinks?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/relationshipLinks
+- "Update a authorizationPolicy?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/authorizationPolicies/{authorizationPolicyName}
+- "Get authorizationPolicy details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/authorizationPolicies/{authorizationPolicyName}
+- "List all authorizationPolicies?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/authorizationPolicies
+- "Create a regeneratePrimaryKey?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/authorizationPolicies/{authorizationPolicyName}/regeneratePrimaryKey
+- "Create a regenerateSecondaryKey?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/authorizationPolicies/{authorizationPolicyName}/regenerateSecondaryKey
+- "Update a connector?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/connectors/{connectorName}
+- "Get connector details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/connectors/{connectorName}
+- "Delete a connector?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/connectors/{connectorName}
+- "List all connectors?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/connectors
+- "Update a mapping?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/connectors/{connectorName}/mappings/{mappingName}
+- "Get mapping details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/connectors/{connectorName}/mappings/{mappingName}
+- "Delete a mapping?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/connectors/{connectorName}/mappings/{mappingName}
+- "List all mappings?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/connectors/{connectorName}/mappings
+- "Update a kpi?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/kpi/{kpiName}
+- "Get kpi details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/kpi/{kpiName}
+- "Delete a kpi?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/kpi/{kpiName}
+- "Create a reprocess?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/kpi/{kpiName}/reprocess
+- "List all kpi?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/kpi
+- "List all widgetTypes?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/widgetTypes
+- "Get widgetType details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/widgetTypes/{widgetTypeName}
+- "List all views?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/views
+- "Update a view?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/views/{viewName}
+- "Get view details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/views/{viewName}
+- "Delete a view?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/views/{viewName}
+- "Update a link?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/links/{linkName}
+- "Get link details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/links/{linkName}
+- "Delete a link?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/links/{linkName}
+- "List all links?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/links
+- "List all roles?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/roles
+- "List all roleAssignments?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/roleAssignments
+- "Update a roleAssignment?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/roleAssignments/{assignmentName}
+- "Get roleAssignment details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/roleAssignments/{assignmentName}
+- "Delete a roleAssignment?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/roleAssignments/{assignmentName}
+- "Create a getEntityTypeImageUploadUrl?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/images/getEntityTypeImageUploadUrl
+- "Create a getDataImageUploadUrl?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/images/getDataImageUploadUrl
+- "Update a prediction?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/predictions/{predictionName}
+- "Get prediction details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/predictions/{predictionName}
+- "Delete a prediction?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/predictions/{predictionName}
+- "Create a getTrainingResult?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/predictions/{predictionName}/getTrainingResults
+- "Create a getModelStatus?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/predictions/{predictionName}/getModelStatus
+- "Create a modelStatus?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/predictions/{predictionName}/modelStatus
+- "List all predictions?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.CustomerInsights/hubs/{hubName}/predictions
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

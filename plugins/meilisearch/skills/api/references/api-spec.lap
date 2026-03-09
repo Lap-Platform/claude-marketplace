@@ -10,370 +10,452 @@
 
 @group dumps
 @endpoint POST /dumps
-@returns(202)
-@errors {401}
+@desc Create a Dump
+@returns(202) Accepted
+@errors {401: Unauthorized}
 
 @endgroup
 
 @group snapshots
 @endpoint POST /snapshots
-@returns(202)
-@errors {401}
+@desc Create a Snapshot
+@returns(202) Accepted
+@errors {401: Unauthorized}
 
 @endgroup
 
 @group health
 @endpoint GET /health
-@returns(200) {status: str}
+@desc Get health
+@returns(200) {status: str} # Ok
 
 @endgroup
 
 @group indexes
 @endpoint GET /indexes
-@optional {limit: num=20, offset: num=0}
-@returns(200) {results: [map], limit: int, offset: int, total: int}
-@errors {401}
+@desc List Indexes
+@optional {limit: num=20 # Maximum number of results to return., offset: num=0 # Number of results to skip.}
+@returns(200) {results: [map], limit: int, offset: int, total: int} # Ok
+@errors {401: Unauthorized}
 
 @endpoint POST /indexes
-@required {Content-Type: str, uid: str}
+@desc Create Index
+@required {Content-Type: str # Payload content-type, uid: str}
 @optional {primaryKey: str}
-@returns(202)
-@errors {400, 401}
+@returns(202) Accepted
+@errors {400: Bad Request, 401: Unauthorized}
+@example_request {"uid":"movies","primaryKey":"movie_id"}
 
 @endpoint GET /indexes/{indexUid}
-@returns(200) {uid: str, primaryKey: str?, createdAt: str, updatedAt: str}
-@errors {401, 404}
+@desc Get Index
+@returns(200) {uid: str, primaryKey: str?, createdAt: str, updatedAt: str} # OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PATCH /indexes/{indexUid}
-@required {Content-Type: str, primaryKey: str}
-@returns(202)
-@errors {400, 401, 404}
+@desc Update Index
+@required {Content-Type: str # Payload content-type, primaryKey: str}
+@returns(202) Accepted
+@errors {400: Bad Request, 401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /indexes/{indexUid}
-@returns(202)
-@errors {401, 404}
+@desc Delete Index
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/documents
-@optional {limit: num=20, offset: num=0, fields: str=*, filter: any}
-@returns(200) {results: [map], limit: int, offset: int, total: int}
-@errors {401, 404}
+@desc Get Documents
+@optional {limit: num=20 # Maximum number of results to return., offset: num=0 # Number of results to skip., fields: str=* # Comma-separated list of fields to display for an API resource. By default it contains all fields of an API resource., filter: any # Attribute(s) to filter on.  Can be made of 3 syntaxes  - Nested Array: `["something > 1", "genres=comedy", ["genres=horror", "title=batman"]]` - String: `something > 1 AND genres=comedy AND (genres=horror OR title=batman)` - Mixed: `["something > 1 AND genres=comedy", "genres=horror OR title=batman"]`  > info > _geoRadius({lat}, {lng}, {distance_in_meters}) and _geoBoundingBox([{lat, lng}], [{lat}, {lng}]) built-in filter rules can be used to filter documents within geo shapes.  > warn > Attribute(s) used in `filter` should be declared as filterable attributes. See [Filtering and Faceted Search](https://docs.meilisearch.com/reference/features/filtering_and_faceted_search.html).}
+@returns(200) {results: [map], limit: int, offset: int, total: int} # Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint POST /indexes/{indexUid}/documents
-@required {Content-Type: str(application/json/text/csv/application/x-ndjson)}
-@optional {primaryKey: str, csvDelimiter: str=,}
-@returns(202)
-@errors {401, 413}
+@desc Add or replace documents
+@required {Content-Type: str(application/json/text/csv/application/x-ndjson) # The content-type associated with the format to be indexed}
+@optional {primaryKey: str # The [primary key](https://docs.meilisearch.com/learn/core_concepts/documents.html#primary-key) of the documents. primaryKey is optional. If you want to set the primary key of your index through this route, it only has to be done the first time you add documents to the index. After which it will be ignored if given., csvDelimiter: str=, # Customize the csv delimiter when importing CSV documents. By default its a comma ","}
+@returns(202) Accepted
+@errors {401: Unauthorized, 413: Payload Too Large}
 
 @endpoint PUT /indexes/{indexUid}/documents
-@required {Content-Type: str(application/json/text/csv/application/x-ndjson)}
-@optional {primaryKey: str, csvDelimiter: str=,}
-@returns(202)
-@errors {401, 413}
+@desc Add or update documents
+@required {Content-Type: str(application/json/text/csv/application/x-ndjson) # The content-type associated with the format to be indexed}
+@optional {primaryKey: str # The [primary key](https://docs.meilisearch.com/learn/core_concepts/documents.html#primary-key) of the documents. primaryKey is optional. If you want to set the primary key of your index through this route, it only has to be done the first time you add documents to the index. After which it will be ignored if given., csvDelimiter: str=, # Customize the csv delimiter when importing CSV documents. By default its a comma ","}
+@returns(202) Accepted
+@errors {401: Unauthorized, 413: Payload Too Large}
+@example_request [{"id":25684,"title":"American Ninja 5","poster":"https://image.tmdb.org/t/p/w1280/iuAQVI4mvjI83wnirpD8GVNRVuY.jpg","overview":"When a scientists daughter is kidnapped, American Ninja, attempts to find her, but this time he teams up with a youngster he has trained in the ways of the ninja.","release_date":725846400}]
 
 @endpoint DELETE /indexes/{indexUid}/documents
-@returns(202)
-@errors {401, 404}
+@desc Delete all documents
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint POST /indexes/{indexUid}/documents/fetch
-@optional {offset: num=0, limit: num=20, fields: [str], filter: any}
-@returns(200) {results: [map], limit: int, offset: int, total: int}
-@errors {401, 404}
+@desc Get Documents
+@optional {offset: num=0 # Number of documents to skip., limit: num=20 # Maximum number of documents returned., fields: [str] # Array of attributes whose fields will be present in the returned documents. By default all attributes will be returned., filter: any # Attribute(s) to filter on.  Can be made of 3 syntaxes  - Nested Array: `["something > 1", "genres=comedy", ["genres=horror", "title=batman"]]` - String: `"something > 1 AND genres=comedy AND (genres=horror OR title=batman)"` - Mixed: `["something > 1 AND genres=comedy", "genres=horror OR title=batman"]`  > info > _geoRadius({lat}, {lng}, {distance_in_meters}) and _geoBoundingBox([{lat, lng}], [{lat}, {lng}]) built-in filter rules can be used to filter documents within geo shapes.  > warn > Attribute(s) used in `filter` should be declared as filterable attributes. See [Filtering and Faceted Search](https://docs.meilisearch.com/reference/features/filtering_and_faceted_search.html).}
+@returns(200) {results: [map], limit: int, offset: int, total: int} # Ok
+@errors {401: Unauthorized, 404: Not Found}
+@example_request {"offset":2,"limit":5,"fields":["name","picture"],"filter":"doggo = \"bernese mountain\""}
 
 @endpoint POST /indexes/{indexUid}/documents/delete-batch
-@required {Content-Type: str}
-@returns(202)
-@errors {401, 404}
+@desc Delete documents
+@required {Content-Type: str # Payload content-type}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
+@example_request [1,2,3,"a string id"]
 
 @endpoint POST /indexes/{indexUid}/documents/delete
-@required {Content-Type: str}
-@optional {filter: any}
-@returns(202)
-@errors {401, 404}
+@desc Delete documents
+@required {Content-Type: str # Payload content-type}
+@optional {filter: any # Attribute(s) to filter on.  Can be made of 3 syntaxes  - Nested Array: `["something > 1", "genres=comedy", ["genres=horror", "title=batman"]]` - String: `"something > 1 AND genres=comedy AND (genres=horror OR title=batman)"` - Mixed: `["something > 1 AND genres=comedy", "genres=horror OR title=batman"]`  > info > _geoRadius({lat}, {lng}, {distance_in_meters}) and _geoBoundingBox([{lat, lng}], [{lat}, {lng}]) built-in filter rules can be used to filter documents within geo shapes.  > warn > Attribute(s) used in `filter` should be declared as filterable attributes. See [Filtering and Faceted Search](https://docs.meilisearch.com/reference/features/filtering_and_faceted_search.html).}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
+@example_request {"offset":2,"limit":5,"fields":["name","picture"],"filter":"doggo = \"bernese mountain\""}
 
 @endpoint GET /indexes/{indexUid}/documents/{documentId}
-@optional {fields: str=*}
-@returns(200)
-@errors {401, 404}
+@desc Get one document
+@optional {fields: str=* # Comma-separated list of fields to display for an API resource. By default it contains all fields of an API resource.}
+@returns(200) Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /indexes/{indexUid}/documents/{documentId}
-@returns(202)
-@errors {401, 404}
+@desc Delete one document
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/search
-@optional {q: str="", attributesToRetrieve: str=*, attributesToHighlight: str, highlightPreTag: str=<em>, highlightPostTag: str=</em>, attributesToCrop: str, cropMarker: str=…, cropLength: int=10, facets: str, filter: any, offset: num=0, sort: str, limit: num=20, page: num=1, hitsPerPage: num=20, showMatchesPosition: bool=false, matchingStrategy: str(last/all)=last}
-@returns(200) {hits: [map], offset: int, limit: int, estimatedTotalHits: int, page: int, hitsPerPage: int, totalHits: int, totalPages: int, facetDistribution: map, facetStats: map, processingTimeMs: int, query: str}
-@errors {401, 404}
+@desc Search
+@optional {q: str="" # Query string., attributesToRetrieve: str=* # Comma-separated list of attributes whose fields will be present in the returned documents. Defaults to the [displayedAttributes list](https://docs.meilisearch.com/reference/features/settings.html#displayed-attributes) which contains by default all attributes found in the documents., attributesToHighlight: str # Comma-separated list of attributes whose values will contain highlighted matching terms. Highlighted attributes are returned in `_formatted` response object., highlightPreTag: str=<em> # Specify the tag to put before the highlighted query terms., highlightPostTag: str=</em> # Specify the tag to put after the highlighted query terms., attributesToCrop: str # Comma-separated list of attributes whose values have to be cropped. Cropped attributes are returned in `_formatted` response object., cropMarker: str=… # Sets the crop marker to apply before and/or after cropped part selected within an attribute defined in `attributesToCrop` parameter., cropLength: int=10 # Sets the total number of words to keep around the matched part of an attribute specified in the `attributesToCrop` parameter., facets: str # Comma-separated list of attributes whose fields will be distributed as a facet. If you have [set up filterableAttributes](https://docs.meilisearch.com/reference/features/settings.html#filterable-attributes), you can retrieve the count of matching terms for each facets.[Learn more about facet distribution in the dedicated guide](https://docs.meilisearch.com/reference/features/search_parameters.html#facet-distribution), filter: any # Attribute(s) to filter on.  Can be made of 3 syntaxes  - Nested Array: `["something > 1", "genres=comedy", ["genres=horror", "title=batman"]]` - String: `something > 1 AND genres=comedy AND (genres=horror OR title=batman)` - Mixed: `["something > 1 AND genres=comedy", "genres=horror OR title=batman"]`  > info > _geoRadius({lat}, {lng}, {distance_in_meters}) and _geoBoundingBox([{lat, lng}], [{lat}, {lng}]) built-in filter rules can be used to filter documents within geo shapes.  > warn > Attribute(s) used in `filter` should be declared as filterable attributes. See [Filtering and Faceted Search](https://docs.meilisearch.com/reference/features/filtering_and_faceted_search.html)., offset: num=0 # Number of results to skip., sort: str # Fields on which you want to sort the results.  > warn > Attribute(s) used in `sort` should be declared as sortable attributes. See [Sorting](https://docs.meilisearch.com/reference/features/sorting.html).  > info > _geoPoint({lat}, {long}) built-in sort rule can be used to sort documents around a geo point., limit: num=20 # Maximum number of results to return., page: num=1 # Sets the specific results page., hitsPerPage: num=20 # Sets the number of results returned for a query. If hitsPerPage is not provided as a query parameter, this parameter is ignored., showMatchesPosition: bool=false # Defines whether an `_matchesPosition` object that contains information about the matches should be returned or not., matchingStrategy: str(last/all)=last # Defines which strategy to use to match the query terms within the documents as search results. Two different strategies are available, `last` and `all`. By default, the `last` strategy is chosen.}
+@returns(200) {hits: [map], offset: int, limit: int, estimatedTotalHits: int, page: int, hitsPerPage: int, totalHits: int, totalPages: int, facetDistribution: map, facetStats: map, processingTimeMs: int, query: str} # Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint POST /indexes/{indexUid}/search
-@required {Content-Type: str}
-@optional {q: str="", vector: [any]=null, attributesToRetrieve: [str], attributesToHighlight: [str], highlightPreTag: str=<em>, highlightPostTag: str=</em>, attributesToCrop: [str], cropMarker: str=…, cropLength: num=10, showMatchesPosition: bool=False, showRankingScore: bool=False, showRankingScoreDetails: bool=False, matchingStrategy: str=last, attributesToSearchOn: [any]=["*"], filter: any, facets: [str], offset: num=0, limit: num=20, page: num, hitsPerPage: num, sort: any}
-@returns(200) {hits: [map], offset: int, limit: int, estimatedTotalHits: int, page: int, hitsPerPage: int, totalHits: int, totalPages: int, facetDistribution: map, facetStats: map, processingTimeMs: int, query: str}
-@errors {401, 404}
+@desc Search
+@required {Content-Type: str # Payload content-type}
+@optional {q: str="" # Query string., vector: [any]=null # Query vector., attributesToRetrieve: [str] # Array of attributes whose fields will be present in the returned documents. Defaults to the [displayedAttributes list](https://docs.meilisearch.com/reference/features/settings.html#displayed-attributes) which contains by default all attributes found in the documents., attributesToHighlight: [str] # Array of attributes whose values will contain highlighted matching terms. Highlighted attributes are returned in `_formatted` response object., highlightPreTag: str=<em> # Specify the tag to put before the highlighted query terms., highlightPostTag: str=</em> # Specify the tag to put after the highlighted query terms., attributesToCrop: [str] # Array of attributes whose values have to be cropped. Cropped attributes are returned in `_formatted` response object., cropMarker: str=… # Sets the crop marker to apply before and/or after cropped part selected within an attribute defined in `attributesToCrop` parameter., cropLength: num=10 # Sets the total number of **words** to keep for the cropped part of an attribute specified in the `attributesToCrop` parameter., showMatchesPosition: bool=False # Defines whether an `_matchesPosition` object that contains information about the matches should be returned or not., showRankingScore: bool=False # Defines whether a `_rankingScore` number representing the relevancy score of that document should be returned or not., showRankingScoreDetails: bool=False # Defines whether a `_rankingScoreDetails` object containing information about the score of that document for each ranking rule should be returned or not., matchingStrategy: str=last # Defines which strategy to use to match the query terms within the documents as search results. Two different strategies are available, `last` and `all`. By default, the `last` strategy is chosen., attributesToSearchOn: [any]=["*"] # Defines which `searchableAttributes` the query will search on., filter: any # Attribute(s) to filter on.  Can be made of 3 syntaxes  - Nested Array: `["something > 1", "genres=comedy", ["genres=horror", "title=batman"]]` - String: `"something > 1 AND genres=comedy AND (genres=horror OR title=batman)"` - Mixed: `["something > 1 AND genres=comedy", "genres=horror OR title=batman"]`  > info > _geoRadius({lat}, {lng}, {distance_in_meters}) and _geoBoundingBox([{lat, lng}], [{lat}, {lng}]) built-in filter rules can be used to filter documents within geo shapes.  > warn > Attribute(s) used in `filter` should be declared as filterable attributes. See [Filtering and Faceted Search](https://docs.meilisearch.com/reference/features/filtering_and_faceted_search.html)., facets: [str] # Array of attributes whose fields will be distributed as a facet. If you have [set up filterableAttributes](https://docs.meilisearch.com/reference/features/settings.html#filterable-attributes), you can retrieve the count of matching terms for each [facets](https://docs.meilisearch.com/reference/features/filtering_and_faceted_search.html#faceted-search).[Learn more about facet distribution in the dedicated guide](https://docs.meilisearch.com/reference/features/search_parameters.html#facet-distribution), offset: num=0 # Number of documents to skip., limit: num=20 # Maximum number of documents returned., page: num # The specific search results page to fetch., hitsPerPage: num # Number of returned results per page., sort: any # Fields on which you want to sort the results.  > warn > Attribute(s) used in `sort` should be declared as sortable attributes. See [Sorting](https://docs.meilisearch.com/reference/features/sorting.html).  > info > _geoPoint({lat}, {long}) built-in sort rule can be used to sort documents around a geo point.}
+@returns(200) {hits: [map], offset: int, limit: int, estimatedTotalHits: int, page: int, hitsPerPage: int, totalHits: int, totalPages: int, facetDistribution: map, facetStats: map, processingTimeMs: int, query: str} # Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint POST /indexes/{indexUid}/facet-search
-@required {Content-Type: str}
-@optional {facetName: str, facetQuery: str="", q: str="", matchingStrategy: str=last, filter: any}
-@returns(200) {facetHits: [map], facetQuery: str, processingTimeMs: int}
-@errors {401, 404}
+@desc Facet Search
+@required {Content-Type: str # Payload content-type}
+@optional {facetName: str # Query string., facetQuery: str="", q: str="" # Additional search parameter. If additional search parameters are set, the method will return facet values that both: - Match the face query - Are contained in the records matching the additional search parameters, matchingStrategy: str=last # Additional search parameter. If additional search parameters are set, the method will return facet values that both: - Match the face query - Are contained in the records matching the additional search parameters, filter: any # Attribute(s) to filter on.  Can be made of 3 syntaxes  - Nested Array: `["something > 1", "genres=comedy", ["genres=horror", "title=batman"]]` - String: `"something > 1 AND genres=comedy AND (genres=horror OR title=batman)"` - Mixed: `["something > 1 AND genres=comedy", "genres=horror OR title=batman"]`  > info > _geoRadius({lat}, {lng}, {distance_in_meters}) and _geoBoundingBox([{lat, lng}], [{lat}, {lng}]) built-in filter rules can be used to filter documents within geo shapes.  > warn > Attribute(s) used in `filter` should be declared as filterable attributes. See [Filtering and Faceted Search](https://docs.meilisearch.com/reference/features/filtering_and_faceted_search.html).}
+@returns(200) {facetHits: [map], facetQuery: str, processingTimeMs: int} # Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/settings
-@returns(200) {rankingRules: [str], distinctAttribute: str?, searchableAttributes: [str], displayedAttributes: [str], stopWords: [str], synonyms: map, filterableAttributes: [str], sortableAttributes: [str], typoTolerance: map{enabled: bool, disableOnAttributes: [str], disableOnWords: [str], minWordSizeForTypos: map{oneTypo: int, twoTypos: int}}, pagination: map{maxTotalHits: int}, faceting: map{maxValuesPerFacet: int, sortFacetValuesBy: map}}
-@errors {401, 404}
+@desc Get settings
+@returns(200) {rankingRules: [str], distinctAttribute: str?, searchableAttributes: [str], displayedAttributes: [str], stopWords: [str], synonyms: map, filterableAttributes: [str], sortableAttributes: [str], typoTolerance: map{enabled: bool, disableOnAttributes: [str], disableOnWords: [str], minWordSizeForTypos: map{oneTypo: int, twoTypos: int}}, pagination: map{maxTotalHits: int}, faceting: map{maxValuesPerFacet: int, sortFacetValuesBy: map}} # Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PATCH /indexes/{indexUid}/settings
-@required {Content-Type: str}
-@optional {synonyms: map, stopWords: [str], rankingRules: [str], distinctAttribute: str, searchableAttributes: [str], displayedAttributes: [str], filterableAttributes: [str], sortableAttributes: [str], typoTolerance: map{enabled: bool, disableOnAttributes: [str], disableOnWords: [str], minWordSizeForTypos: map{oneTypo: int, twoTypos: int}}, pagination: map{maxTotalHits: int}, faceting: map{maxValuesPerFacet: int, sortFacetValuesBy: map}}
-@returns(202)
-@errors {401, 404}
+@desc Update settings
+@required {Content-Type: str # Payload content-type}
+@optional {synonyms: map # List of associated words treated similarly. A word associated to an array of word as synonyms., stopWords: [str] # List of words ignored when present in search queries., rankingRules: [str] # List of ranking rules sorted by order of importance. The order is customizable.  [A list of ordered built-in ranking rules](https://docs.meilisearch.com/learn/core_concepts/relevancy.html)., distinctAttribute: str # Search returns documents with distinct (different) values of the given field., searchableAttributes: [str] # Fields in which to search for matching query words sorted by order of importance., displayedAttributes: [str] # Fields displayed in the returned documents., filterableAttributes: [str] # Attributes to use for faceting and filtering. See [Filtering and Faceted Search](https://docs.meilisearch.com/reference/features/filtering_and_faceted_search.html)., sortableAttributes: [str] # List of attributes to sort on at search., typoTolerance: map{enabled: bool, disableOnAttributes: [str], disableOnWords: [str], minWordSizeForTypos: map{oneTypo: int, twoTypos: int}} # Customize typo tolerance feature., pagination: map{maxTotalHits: int} # Customize pagination settings, faceting: map{maxValuesPerFacet: int, sortFacetValuesBy: map} # Customize faceting settings}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
+@example_request {"synonyms":{"wolverine":["xmen","logan"],"logan":["wolverine","xmen"],"wow":["world of warcraft"]},"stopWords":["of","the","to"],"rankingRules":["words","typo","proximity","attribute","sort","exactness","release_date:asc"],"distinctAttribute":"ean13","searchableAttributes":["title","description","genre"],"displayedAttributes":["title","description","genre","release_date"],"filterableAttributes":[],"sortableAttributes":null,"typoTolerance":{"enabled":false,"disableOnAttributes":["title","author"],"disableOnWords":["Tolkien"],"minWordSizeForTypos":{"oneTypo":4,"twoTypos":8}},"pagination":{"maxTotalHits":1000},"faceting":{"maxValuesPerFacet":100,"sortFacetValuesBy":{"*":"alpha"}}}
 
 @endpoint DELETE /indexes/{indexUid}/settings
-@returns(202)
-@errors {401, 404}
+@desc Reset settings
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/settings/synonyms
-@returns(200)
-@errors {401, 404}
+@desc Get synonyms
+@returns(200) Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PUT /indexes/{indexUid}/settings/synonyms
-@required {Content-Type: str}
-@returns(202)
-@errors {401, 404}
+@desc Update synonyms
+@required {Content-Type: str # Payload content-type}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /indexes/{indexUid}/settings/synonyms
-@returns(202)
-@errors {401, 404}
+@desc Reset synonyms
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/settings/sortable-attributes
-@returns(200)
-@errors {401, 404}
+@desc Get sortable attributes
+@returns(200) Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PUT /indexes/{indexUid}/settings/sortable-attributes
-@required {Content-Type: str}
-@returns(202)
-@errors {401, 404}
+@desc Update sortable attributes
+@required {Content-Type: str # Payload content-type}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /indexes/{indexUid}/settings/sortable-attributes
-@returns(202)
-@errors {401, 404}
+@desc Reset sortable attributes
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/settings/stop-words
-@returns(200)
-@errors {401, 404}
+@desc Get stop-words
+@returns(200) Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PUT /indexes/{indexUid}/settings/stop-words
-@required {Content-Type: str}
-@returns(202)
-@errors {401, 404}
+@desc Update stop-words
+@required {Content-Type: str # Payload content-type}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /indexes/{indexUid}/settings/stop-words
-@returns(202)
-@errors {401, 404}
+@desc Reset stop-words
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/settings/ranking-rules
-@returns(200)
-@errors {401, 404}
+@desc Get ranking rules
+@returns(200) Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PUT /indexes/{indexUid}/settings/ranking-rules
-@required {Content-Type: str}
-@returns(202)
-@errors {401, 404}
+@desc Update ranking rules
+@required {Content-Type: str # Payload content-type}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /indexes/{indexUid}/settings/ranking-rules
-@returns(202)
-@errors {401, 404}
+@desc Reset ranking rules
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/settings/typo-tolerance
-@returns(200) {enabled: bool, disableOnAttributes: [str], disableOnWords: [str], minWordSizeForTypos: map{oneTypo: int, twoTypos: int}}
-@errors {401, 404}
+@desc Get typo tolerance configuration
+@returns(200) {enabled: bool, disableOnAttributes: [str], disableOnWords: [str], minWordSizeForTypos: map{oneTypo: int, twoTypos: int}} # Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PATCH /indexes/{indexUid}/settings/typo-tolerance
-@required {Content-Type: str}
-@optional {enabled: bool=True, disableOnAttributes: [str]=[], disableOnWords: [str]=[], minWordSizeForTypos: map{oneTypo: int, twoTypos: int}}
-@returns(202)
-@errors {401, 404}
+@desc Update typo tolerance settings
+@required {Content-Type: str # Payload content-type}
+@optional {enabled: bool=True # Enable the typo tolerance feature., disableOnAttributes: [str]=[] # Disable the typo tolerance feature on the specified attributes., disableOnWords: [str]=[] # Disable the typo tolerance feature for a set of query terms given for a search query., minWordSizeForTypos: map{oneTypo: int, twoTypos: int}}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /indexes/{indexUid}/settings/typo-tolerance
-@returns(202)
-@errors {401, 404}
+@desc Reset typo tolerance settings to the default configuration
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/settings/pagination
-@returns(200) {maxTotalHits: int}
-@errors {401, 404}
+@desc Get pagination configuration
+@returns(200) {maxTotalHits: int} # Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PATCH /indexes/{indexUid}/settings/pagination
-@required {Content-Type: str}
-@optional {maxTotalHits: int=1000}
-@returns(202)
-@errors {401, 404}
+@desc Update pagination settings
+@required {Content-Type: str # Payload content-type}
+@optional {maxTotalHits: int=1000 # Define the maximum number of documents reachable for a search request. It means that with the default value of `1000`, it is not possible to see the `1001`st result for a **search query**.}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /indexes/{indexUid}/settings/pagination
-@returns(202)
-@errors {401, 404}
+@desc Reset pagination settings to the default configuration
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/settings/faceting
-@returns(200) {maxValuesPerFacet: int, sortFacetValuesBy: map}
-@errors {401, 404}
+@desc Get faceting configuration
+@returns(200) {maxValuesPerFacet: int, sortFacetValuesBy: map} # Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PATCH /indexes/{indexUid}/settings/faceting
-@required {Content-Type: str}
-@optional {maxValuesPerFacet: int=100, sortFacetValuesBy: map}
-@returns(202)
-@errors {401, 404}
+@desc Update faceting settings
+@required {Content-Type: str # Payload content-type}
+@optional {maxValuesPerFacet: int=100 # Define maximum number of value returned for a facet for a **search query**. It means that with the default value of `100`, it is not possible to have `101` different colors if the `color`` field is defined as a facet at search time., sortFacetValuesBy: map # Defines how facet values are sorted. By default, all facets (`*`) are sorted by name, alphanumerically in ascending order (`alpha`). `count` sorts facet values by the number of documents containing a facet value in descending order.}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /indexes/{indexUid}/settings/faceting
-@returns(202)
-@errors {401, 404}
+@desc Reset faceting settings to the default configuration
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/settings/filterable-attributes
-@returns(200)
-@errors {401, 404}
+@desc Get Filterable Attributes
+@returns(200) Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PUT /indexes/{indexUid}/settings/filterable-attributes
-@required {Content-Type: str}
-@returns(202)
-@errors {401, 404}
+@desc Update Filterable Attributes
+@required {Content-Type: str # Payload content-type}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /indexes/{indexUid}/settings/filterable-attributes
-@returns(202)
-@errors {401, 404}
+@desc Reset Filterable Attributes
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/settings/distinct-attribute
-@returns(200)
-@errors {401, 404}
+@desc Get distinct attribute
+@returns(200) Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PUT /indexes/{indexUid}/settings/distinct-attribute
-@required {Content-Type: str}
-@returns(202)
-@errors {401, 404}
+@desc Update distinct attribute
+@required {Content-Type: str # Payload content-type}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /indexes/{indexUid}/settings/distinct-attribute
-@returns(202)
-@errors {401, 404}
+@desc Reset distinct attribute
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/settings/searchable-attributes
-@returns(200)
-@errors {401, 404}
+@desc Get searchable attributes
+@returns(200) Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PUT /indexes/{indexUid}/settings/searchable-attributes
-@required {Content-Type: str}
-@returns(202)
-@errors {401, 404}
+@desc Update searchable attributes
+@required {Content-Type: str # Payload content-type}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /indexes/{indexUid}/settings/searchable-attributes
-@returns(202)
-@errors {401, 404}
+@desc Reset searchable attributes
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/settings/displayed-attributes
-@returns(200)
-@errors {401, 404}
+@desc Get displayed attributes
+@returns(200) Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint PUT /indexes/{indexUid}/settings/displayed-attributes
-@required {Content-Type: str}
-@returns(202)
-@errors {401, 404}
+@desc Update displayed attributes
+@required {Content-Type: str # Payload content-type}
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /indexes/{indexUid}/settings/displayed-attributes
-@returns(202)
-@errors {401, 404}
+@desc Reset displayed attributes
+@returns(202) Accepted
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint GET /indexes/{indexUid}/stats
-@returns(200) {numberOfDocuments: int, isIndexing: bool, fieldDistribution: map}
-@errors {401, 404}
+@desc Get stat of an index
+@returns(200) {numberOfDocuments: int, isIndexing: bool, fieldDistribution: map} # Ok
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group multi-search
 @endpoint POST /multi-search
-@required {Content-Type: str, queries: [map{indexUid!: str, $ref: any}]}
-@returns(200) {results: [map]}
-@errors {401}
+@desc Multi Search
+@required {Content-Type: str # Payload content-type, queries: [map{indexUid!: str, $ref: any}] # Array of the search queries to be performed.}
+@returns(200) {results: [map]} # Ok
+@errors {401: Unauthorized}
 
 @endgroup
 
 @group keys
 @endpoint GET /keys
-@optional {limit: num=20, offset: num=0}
-@returns(200) {results: [map], limit: int, offset: int, total: int}
-@errors {401}
+@desc Get API Keys
+@optional {limit: num=20 # Maximum number of results to return., offset: num=0 # Number of results to skip.}
+@returns(200) {results: [map], limit: int, offset: int, total: int} # Ok
+@errors {401: Unauthorized}
 
 @endpoint POST /keys
-@required {Content-Type: str, actions: [str], indexes: [str], expiresAt: str}
-@optional {uid: str, key: str, name: str=None, description: str=None, createdAt: str, updatedAt: str=None}
-@returns(200) {uid: str, key: str, actions: [str], indexes: [str], name: str?, description: str?, expiresAt: str?, createdAt: str, updatedAt: str?}
+@desc Create an API Key
+@required {Content-Type: str # Payload content-type, actions: [str] # A list of actions permitted for the key. ["*"] for all actions. The * character can be used as a wildcard when located at the last position. e.g. `documents.*` to authorize access on all documents endpoints., indexes: [str] # A list of accesible indexes permitted for the key. ["*"] for all indexes. The * character can be used as a wildcard when located at the last position. e.g. "products_*"" to allow access to all indexes whose names start with "products_"., expiresAt: str # Represent the expiration date and time as RFC 3339 format. null equals to no expiration time.}
+@optional {uid: str # A uuid v4 to identify the API Key. If not specified, it's generated by Meilisearch., key: str # The derived key to use in the Authorization header to authorize requests. Generated by Meilisearch with an HMAC, using an SHA-256 hash, of the uid and the master key., name: str=None # A human-readable name for the key. null if empty., description: str=None # A description for the key. null if empty., createdAt: str # Represent the date and time as RFC 3339 format when the API key has been created. Generated by Meilisearch., updatedAt: str=None # Represent the date and time as RFC 3339 format when the API key has been updated. Generated by Meilisearch.}
+@returns(200) {uid: str, key: str, actions: [str], indexes: [str], name: str?, description: str?, expiresAt: str?, createdAt: str, updatedAt: str?} # OK
+@example_request {"name":"Indexing Products API key","actions":["documents.add"],"indexes":["products"],"expiresAt":"2021-11-13T00:00:00Z"}
 
 @endpoint GET /keys/{uid_or_key}
-@required {uidOrKey: str}
-@returns(200) {uid: str, key: str, actions: [str], indexes: [str], name: str?, description: str?, expiresAt: str?, createdAt: str, updatedAt: str?}
+@desc Get an API key from its uid or key field.
+@required {uidOrKey: str # The uid or the key field value of the API Key.}
+@returns(200) {uid: str, key: str, actions: [str], indexes: [str], name: str?, description: str?, expiresAt: str?, createdAt: str, updatedAt: str?} # OK
 
 @endpoint DELETE /keys/{uid_or_key}
-@returns(204)
+@desc Delete an API key specified by its uid or key field.
+@returns(204) No Content
 
 @endpoint PATCH /keys/{uid_or_key}
-@required {Content-Type: str}
+@desc Update an API key specified by its uid or key field.
+@required {Content-Type: str # Payload content-type}
 @optional {name: str, description: str}
-@returns(200) {uid: str, key: str, actions: [str], indexes: [str], name: str?, description: str?, expiresAt: str?, createdAt: str, updatedAt: str?}
+@returns(200) {uid: str, key: str, actions: [str], indexes: [str], name: str?, description: str?, expiresAt: str?, createdAt: str, updatedAt: str?} # OK
+@example_request {"description":"Indexing Products API key"}
 
 @endgroup
 
 @group stats
 @endpoint GET /stats
-@returns(200) {databaseSize: num, lastUpdate: str, indexes: map{indexUid: map{numberOfDocuments: int, isIndexing: bool, fieldDistribution: map}}}
-@errors {401}
+@desc Get stats of all indexes
+@returns(200) {databaseSize: num, lastUpdate: str, indexes: map{indexUid: map{numberOfDocuments: int, isIndexing: bool, fieldDistribution: map}}} # Ok
+@errors {401: Unauthorized}
 
 @endgroup
 
 @group version
 @endpoint GET /version
-@returns(200) {commitSha: str, commitDate: str, pkgVersion: str}
-@errors {401}
+@desc Get version of Meilisearch
+@returns(200) {commitSha: str, commitDate: str, pkgVersion: str} # Ok
+@errors {401: Unauthorized}
 
 @endgroup
 
 @group tasks
 @endpoint GET /tasks
-@optional {limit: num=20, from: num, uids: num, indexUids: str, statuses: str, types: str, canceledBy: str, beforeEnqueuedAt: str, afterEnqueuedAt: str, beforeStartedAt: str, afterStartedAt: str, beforeFinishedAt: str, afterFinishedAt: str}
-@returns(200) {results: [map], total: int, limit: int, from: int, next: int}
+@desc Get all tasks
+@optional {limit: num=20 # Maximum number of results to return., from: num # Fetch the next set of results from the given uid., uids: num # Permits to filter tasks by their uid. By default, when the `uids` query parameter is not set, all task uids are returned. It's possible to specify several uids by separating them with the `,` character., indexUids: str # Permits to filter tasks by their related index. By default, when `indexUids` query parameter is not set, the tasks of all the indexes are returned. It is possible to specify several indexes by separating them with the `,` character., statuses: str # Permits to filter tasks by their status. By default, when `statuses` query parameter is not set, all task statuses are returned. It's possible to specify several statuses by separating them with the `,` character., types: str # Permits to filter tasks by their related type. By default, when `types` query parameter is not set, all task types are returned. It's possible to specify several types by separating them with the `,` character., canceledBy: str # Permits to filter tasks using the uid of the task that canceled them. It's possible to specify several task uids by separating them with the `,` character., beforeEnqueuedAt: str # Permits to filter tasks based on their enqueuedAt time. Matches tasks enqueued before the given date. Supports RFC 3339 date format., afterEnqueuedAt: str # Permits to filter tasks based on their enqueuedAt time. Matches tasks enqueued after the given date. Supports RFC 3339 date format., beforeStartedAt: str # Permits to filter tasks based on their startedAt time. Matches tasks started before the given date. Supports RFC 3339 date format., afterStartedAt: str # Permits to filter tasks based on their startedAt time. Matches tasks started after the given date. Supports RFC 3339 date format., beforeFinishedAt: str # Permits to filter tasks based on their finishedAt time. Matches tasks finished before the given date. Supports RFC 3339 date format., afterFinishedAt: str # Permits to filter tasks based on their finishedAt time. Matches tasks finished after the given date. Supports RFC 3339 date format.}
+@returns(200) {results: [map], total: int, limit: int, from: int, next: int} # OK
 
 @endpoint DELETE /tasks
-@optional {uids: num, indexUids: str, statuses: str, types: str, canceledBy: str, beforeEnqueuedAt: str, afterEnqueuedAt: str, beforeStartedAt: str, afterStartedAt: str, beforeFinishedAt: str, afterFinishedAt: str}
-@returns(202)
-@errors {400}
+@desc Delete tasks
+@optional {uids: num # Permits to filter tasks by their uid. By default, when the `uids` query parameter is not set, all task uids are returned. It's possible to specify several uids by separating them with the `,` character., indexUids: str # Permits to filter tasks by their related index. By default, when `indexUids` query parameter is not set, the tasks of all the indexes are returned. It is possible to specify several indexes by separating them with the `,` character., statuses: str # Permits to filter tasks by their status. By default, when `statuses` query parameter is not set, all task statuses are returned. It's possible to specify several statuses by separating them with the `,` character., types: str # Permits to filter tasks by their related type. By default, when `types` query parameter is not set, all task types are returned. It's possible to specify several types by separating them with the `,` character., canceledBy: str # Permits to filter tasks using the uid of the task that canceled them. It's possible to specify several task uids by separating them with the `,` character., beforeEnqueuedAt: str # Permits to filter tasks based on their enqueuedAt time. Matches tasks enqueued before the given date. Supports RFC 3339 date format., afterEnqueuedAt: str # Permits to filter tasks based on their enqueuedAt time. Matches tasks enqueued after the given date. Supports RFC 3339 date format., beforeStartedAt: str # Permits to filter tasks based on their startedAt time. Matches tasks started before the given date. Supports RFC 3339 date format., afterStartedAt: str # Permits to filter tasks based on their startedAt time. Matches tasks started after the given date. Supports RFC 3339 date format., beforeFinishedAt: str # Permits to filter tasks based on their finishedAt time. Matches tasks finished before the given date. Supports RFC 3339 date format., afterFinishedAt: str # Permits to filter tasks based on their finishedAt time. Matches tasks finished after the given date. Supports RFC 3339 date format.}
+@returns(202) Accepted
+@errors {400: Bad Request}
 
 @endpoint GET /tasks/:taskUid
-@required {taskUid: int}
-@returns(200) {uid: int, indexUid: str, status: str, type: str, canceledBy: int, details: map{receivedDocuments: int, indexedDocuments: int, providedIds: int, deletedDocuments: int, primaryKey: str, settings: map{synonyms: map, stopWords: [str], rankingRules: [str], filterableAttributes: [str], distinctAttribute: str?, searchableAttributes: [str], displayedAttributes: [str], typoTolerance: map{enabled: bool, disableOnAttributes: [str], disableOnWords: [str], minWordSizeForTypos: map}}, dumpUid: str, matchedTasks: int, canceledTasks: int, deletedTasks: int, originalFilter: str}, error: map{message: str, code: str, type: str, link: str}, duration: str?, enqueuedAt: str, startedAt: str, finishedAt: str}
-@errors {401, 404}
+@desc Get a task
+@required {taskUid: int # The task identifier}
+@returns(200) {uid: int, indexUid: str, status: str, type: str, canceledBy: int, details: map{receivedDocuments: int, indexedDocuments: int, providedIds: int, deletedDocuments: int, primaryKey: str, settings: map{synonyms: map, stopWords: [str], rankingRules: [str], filterableAttributes: [str], distinctAttribute: str?, searchableAttributes: [str], displayedAttributes: [str], typoTolerance: map{enabled: bool, disableOnAttributes: [str], disableOnWords: [str], minWordSizeForTypos: map}}, dumpUid: str, matchedTasks: int, canceledTasks: int, deletedTasks: int, originalFilter: str}, error: map{message: str, code: str, type: str, link: str}, duration: str?, enqueuedAt: str, startedAt: str, finishedAt: str} # OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint POST /tasks/cancel
-@optional {uids: num, indexUids: str, statuses: str, types: str, canceledBy: str, beforeEnqueuedAt: str, afterEnqueuedAt: str, beforeStartedAt: str, afterStartedAt: str, beforeFinishedAt: str, afterFinishedAt: str}
-@returns(202) {taskUid: int, indexUid: str, status: str, type: str, enqueuedAt: str}
-@errors {400, 401}
+@desc Cancel tasks
+@optional {uids: num # Permits to filter tasks by their uid. By default, when the `uids` query parameter is not set, all task uids are returned. It's possible to specify several uids by separating them with the `,` character., indexUids: str # Permits to filter tasks by their related index. By default, when `indexUids` query parameter is not set, the tasks of all the indexes are returned. It is possible to specify several indexes by separating them with the `,` character., statuses: str # Permits to filter tasks by their status. By default, when `statuses` query parameter is not set, all task statuses are returned. It's possible to specify several statuses by separating them with the `,` character., types: str # Permits to filter tasks by their related type. By default, when `types` query parameter is not set, all task types are returned. It's possible to specify several types by separating them with the `,` character., canceledBy: str # Permits to filter tasks using the uid of the task that canceled them. It's possible to specify several task uids by separating them with the `,` character., beforeEnqueuedAt: str # Permits to filter tasks based on their enqueuedAt time. Matches tasks enqueued before the given date. Supports RFC 3339 date format., afterEnqueuedAt: str # Permits to filter tasks based on their enqueuedAt time. Matches tasks enqueued after the given date. Supports RFC 3339 date format., beforeStartedAt: str # Permits to filter tasks based on their startedAt time. Matches tasks started before the given date. Supports RFC 3339 date format., afterStartedAt: str # Permits to filter tasks based on their startedAt time. Matches tasks started after the given date. Supports RFC 3339 date format., beforeFinishedAt: str # Permits to filter tasks based on their finishedAt time. Matches tasks finished before the given date. Supports RFC 3339 date format., afterFinishedAt: str # Permits to filter tasks based on their finishedAt time. Matches tasks finished after the given date. Supports RFC 3339 date format.}
+@returns(202) {taskUid: int, indexUid: str, status: str, type: str, enqueuedAt: str} # Accepted
+@errors {400: Bad Request, 401: Unauthorized}
 
 @endgroup
 
 @group swap-indexes
 @endpoint POST /swap-indexes
-@required {Content-Type: str}
-@returns(202)
-@errors {401}
+@desc Swap Indexes
+@required {Content-Type: str # Payload content-type}
+@returns(202) Accepted
+@errors {401: Unauthorized}
 
 @endgroup
 
 @group experimental-features
 @endpoint GET /experimental-features
-@returns(200) {vectorStore: bool, metrics: bool, exportPuffinReports: bool}
-@errors {401}
+@desc (EXPERIMENTAL) Get the status of runtime experimental features
+@returns(200) {vectorStore: bool, metrics: bool, exportPuffinReports: bool} # Ok
+@errors {401: Unauthorized}
 
 @endpoint PATCH /experimental-features
+@desc (EXPERIMENTAL) Set the status of runtime experimental features
 @optional {vectorStore: bool, metrics: bool, exportPuffinReports: bool}
-@returns(200) {vectorStore: bool, metrics: bool, exportPuffinReports: bool}
-@errors {401}
+@returns(200) {vectorStore: bool, metrics: bool, exportPuffinReports: bool} # Ok
+@errors {401: Unauthorized}
+@example_request {"vectorStore":true,"metrics":false,"exportPuffinReports":false}
 
 @endgroup
 
 @group metrics
 @endpoint GET /metrics
-@returns(200)
+@desc (EXPERIMENTAL) Get prometheus format metrics for observability and monitoring
+@returns(200) OK
 
 @endgroup
 

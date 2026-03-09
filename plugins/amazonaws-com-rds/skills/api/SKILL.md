@@ -188,90 +188,10 @@ Not specified.
 | POST | / | Switches over the specified secondary DB cluster to be the new primary DB cluster in the global database cluster. Switchover operations were previously called "managed planned failovers." Aurora promotes the specified secondary cluster to assume full read/write capabilities and demotes the current primary cluster to a secondary (read-only) cluster, maintaining the orginal replication topology. All secondary clusters are synchronized with the primary at the beginning of the process so the new primary continues operations for the Aurora global database without losing any data. Your database is unavailable for a short time while the primary and selected secondary clusters are assuming their new roles. For more information about switching over an Aurora global database, see Performing switchovers for Amazon Aurora global databases in the Amazon Aurora User Guide.  This operation is intended for controlled environments, for operations such as "regional rotation" or to fall back to the original primary after a global database failover. |
 | POST | / | Switches over an Oracle standby database in an Oracle Data Guard environment, making it the new primary database. Issue this command in the Region that hosts the current standby database. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new RDS database instance?" -> POST / (CreateDBInstance: DBInstanceIdentifier, DBInstanceClass, Engine required)
-- "How do I list all my database instances?" -> POST / (DescribeDBInstances: optional DBInstanceIdentifier, Filters, MaxRecords, Marker)
-- "How do I take a snapshot of my database?" -> POST / (CreateDBSnapshot: DBSnapshotIdentifier, DBInstanceIdentifier required)
-- "How do I restore a database from a snapshot?" -> POST / (RestoreDBInstanceFromDBSnapshot: DBInstanceIdentifier required, plus DBSnapshotIdentifier)
-- "How do I create an Aurora cluster?" -> POST / (CreateDBCluster: DBClusterIdentifier, Engine required)
-- "How do I set up a read replica?" -> POST / (CreateDBInstanceReadReplica: DBInstanceIdentifier required, SourceDBInstanceIdentifier optional)
-- "How do I perform a blue/green deployment switchover?" -> POST / (SwitchoverBlueGreenDeployment: BlueGreenDeploymentIdentifier required, SwitchoverTimeout optional)
-- "How do I check what maintenance is pending?" -> POST / (DescribePendingMaintenanceActions: optional ResourceIdentifier, Filters, Marker, MaxRecords)
-- "How do I roll back an Aurora cluster to a previous point in time?" -> POST / (BacktrackDBCluster: DBClusterIdentifier, BacktrackTo required)
-- "How do I export a snapshot to S3?" -> POST / (StartExportTask: ExportTaskIdentifier, SourceArn, S3BucketName, IamRoleArn, KmsKeyId required)
-- "How do I failover a global database to another region?" -> POST / (FailoverGlobalCluster: GlobalClusterIdentifier, TargetDbClusterIdentifier required)
-- "What instance classes are available for my engine?" -> POST / (DescribeOrderableDBInstanceOptions: Engine required)
-- "How do I change the instance class of my database?" -> POST / (ModifyDBInstance: DBInstanceIdentifier required, DBInstanceClass optional, ApplyImmediately optional)
-- "How do I enable Performance Insights on my instance?" -> POST / (ModifyDBInstance: set EnablePerformanceInsights, PerformanceInsightsKMSKeyId)
-- "How do I check my RDS service quotas?" -> POST / (DescribeAccountAttributes: returns AccountQuotas)
-
-## Response Tips
-
-- **Describe/List endpoints**: All return a `Marker` field for pagination. Pass the returned `Marker` value as the `Marker` parameter in subsequent calls. Use `MaxRecords` (default typically 100) to control page size.
-- **Instance/Cluster responses**: The primary object (DBInstance, DBCluster) is always wrapped in an optional top-level key. Check `Status`/`DBInstanceStatus` to confirm the resource state. `PendingModifiedValues` is non-null when changes are queued but not yet applied.
-- **Snapshot responses**: `PercentProgress` indicates creation progress (0-100). `Status` transitions through `creating` -> `available`. Cross-region copies include `SourceRegion` and `SourceDBSnapshotIdentifier`.
-- **Error responses**: RDS uses standard AWS error XML. Common codes: `DBInstanceNotFound`, `DBInstanceAlreadyExists`, `InsufficientDBInstanceCapacity`, `StorageQuotaExceeded`, `InvalidDBInstanceState`.
-- **Endpoint/connection info**: For instances, connection details live in `Endpoint.Address` and `Endpoint.Port`. For clusters, use `Endpoint` (writer) and `ReaderEndpoint` (reader). `CustomEndpoints` is an array of custom endpoint URLs.
-- **Tags**: Returned as `TagList` on resource objects. Use `ListTagsForResource` (ResourceName required) to fetch tags separately.
-- **Blue/Green deployments**: `SwitchoverDetails` is an array of `SwitchoverDetail` objects tracking each resource in the switchover. `Tasks` tracks prerequisite task completion.
-
-## Anomaly Flags
-
-- **Certificate expiration approaching**: Surface `CertificateDetails.ValidTill` on instances/clusters when within 30 days of expiry. Prompt rotation via `ModifyCertificates` or `ModifyDBInstance` with `CACertificateIdentifier`.
-- **Pending maintenance actions**: Proactively check `DescribePendingMaintenanceActions`. Flag any `pending-maintenance` entries, especially those with `AutoAppliedAfterDate` approaching.
-- **Storage auto-scaling headroom**: If `AllocatedStorage` is approaching `MaxAllocatedStorage`, warn the user before they hit the ceiling and writes start failing.
-- **DeletionProtection disabled**: Flag instances/clusters where `DeletionProtection` is `false` on production-tagged resources.
-- **Pending modifications not applied**: When `PendingModifiedValues` contains entries, alert the user that changes are waiting for the next maintenance window (unless `ApplyImmediately` was set).
-- **Encryption mismatch**: Flag when `StorageEncrypted` is `false` or `KmsKeyId` is empty on instances that should comply with encryption policies.
-- **Backtrack window exhausted**: For Aurora, if `BacktrackConsumedChangeRecords` is high relative to `BacktrackWindow`, warn that older backtrack targets may be lost.
-- **Export/restore task failures**: Monitor `FailureCause` and `WarningMessage` on export tasks. Surface any non-empty values immediately.
-- **EngineLifecycleSupport approaching end**: Flag when `EngineLifecycleSupport` or engine version is nearing end-of-life. Cross-reference with `DescribeDBEngineVersions` for `ValidUpgradeTarget`.
-- **IsStorageConfigUpgradeAvailable**: When `true`, proactively suggest the user can upgrade storage configuration for better performance.
-
-## Playbook
-
-### 1. Create a Production-Ready Aurora Cluster with Read Replicas
-
-1. Call `CreateDBCluster` with `DBClusterIdentifier`, `Engine` (e.g., `aurora-mysql`), `EngineVersion`, `MasterUsername`, `MasterUserPassword`, `VpcSecurityGroupIds`, `DBSubnetGroupName`, `StorageEncrypted: true`, `DeletionProtection: true`, `BackupRetentionPeriod: 7`, `EnableCloudwatchLogsExports`.
-2. Call `CreateDBInstance` with the cluster's `DBClusterIdentifier`, `DBInstanceClass`, and `Engine` to create the writer instance.
-3. Call `CreateDBInstance` again (with a different `DBInstanceIdentifier`) referencing the same `DBClusterIdentifier` to add a reader instance. Set `PromotionTier` to control failover priority.
-4. Call `DescribeDBClusters` with the `DBClusterIdentifier` to verify `Status` is `available` and retrieve `Endpoint` (writer) and `ReaderEndpoint` (reader).
-5. Call `AddTagsToResource` with the cluster ARN and desired tags for cost tracking and organization.
-
-### 2. Perform a Zero-Downtime Engine Upgrade via Blue/Green Deployment
-
-1. Call `CreateBlueGreenDeployment` with `BlueGreenDeploymentName`, `Source` (the ARN of the existing instance or cluster), and `TargetEngineVersion` set to the desired version.
-2. Poll `DescribeBlueGreenDeployments` with the returned `BlueGreenDeploymentIdentifier` until `Status` is `AVAILABLE`. Monitor `Tasks` array for prerequisite completion.
-3. Validate the green environment by testing against the green endpoint.
-4. Call `SwitchoverBlueGreenDeployment` with the `BlueGreenDeploymentIdentifier` and optional `SwitchoverTimeout`.
-5. Poll `DescribeBlueGreenDeployments` until `Status` is `SWITCHOVER_COMPLETED`. The old blue environment can now be cleaned up via `DeleteBlueGreenDeployment` with `DeleteTarget: true`.
-
-### 3. Point-in-Time Recovery for a DB Instance
-
-1. Call `DescribeDBInstances` with the source `DBInstanceIdentifier` and note `LatestRestorableTime` from the response.
-2. Call `RestoreDBInstanceToPointInTime` with `TargetDBInstanceIdentifier` (new name), `SourceDBInstanceIdentifier` or `SourceDbiResourceId`, and either `RestoreTime` (a specific timestamp) or `UseLatestRestorableTime: true`.
-3. Optionally override `DBInstanceClass`, `StorageType`, `VpcSecurityGroupIds`, and `DBSubnetGroupName` for the restored instance.
-4. Poll `DescribeDBInstances` with the new identifier until `DBInstanceStatus` is `available`.
-5. Update your application connection string to point to the new instance's `Endpoint.Address` and `Endpoint.Port`.
-
-### 4. Export a Snapshot to S3 for Analytics
-
-1. Call `CreateDBSnapshot` with `DBSnapshotIdentifier` and `DBInstanceIdentifier`. Poll `DescribeDBSnapshots` until `Status` is `available`.
-2. Call `StartExportTask` with `ExportTaskIdentifier`, `SourceArn` (the snapshot ARN), `S3BucketName`, `IamRoleArn` (with S3 write and KMS permissions), `KmsKeyId`, and optionally `ExportOnly` to limit to specific tables.
-3. Poll `DescribeExportTasks` with the `ExportTaskIdentifier`. Monitor `PercentProgress` and `Status` until it reaches `complete`.
-4. If `FailureCause` or `WarningMessage` is non-empty, investigate. Common issues: IAM role permissions, KMS key policy, S3 bucket policy.
-5. Data is exported in Parquet format under `s3://{S3Bucket}/{S3Prefix}/{ExportTaskIdentifier}/`.
-
-### 5. Set Up Cross-Region Disaster Recovery with Global Database
-
-1. Create a primary Aurora cluster in the source region using `CreateDBCluster` with `Engine`, `StorageEncrypted: true`.
-2. Call `CreateGlobalCluster` with `GlobalClusterIdentifier` and `SourceDBClusterIdentifier` set to the primary cluster ARN.
-3. In the target region, call `CreateDBCluster` with `GlobalClusterIdentifier` referencing the global cluster and `Engine` matching the primary. This creates a secondary cluster.
-4. Add reader instances to the secondary cluster via `CreateDBInstance` referencing the secondary `DBClusterIdentifier`.
-5. To fail over, call `FailoverGlobalCluster` with `GlobalClusterIdentifier` and `TargetDbClusterIdentifier` set to the secondary cluster. Use `Switchover: true` for planned failover (no data loss) or `AllowDataLoss: true` for unplanned disaster recovery.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

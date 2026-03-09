@@ -12,7 +12,7 @@ API version: 2.0.0
 ApiKey X-OPENFIGI-APIKEY in header
 
 ## Base URL
-https://api.openfigi.com/{basePath}
+https://api.openfigi.com/v3
 
 ## Setup
 1. Set your API key in the appropriate header

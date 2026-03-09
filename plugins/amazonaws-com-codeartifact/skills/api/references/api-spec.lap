@@ -9,6 +9,7 @@
 
 @group repository
 @endpoint POST /v1/repository/external-connection
+@desc Adds an existing external connection to a repository. One external connection is allowed per repository.  A repository can have one or more upstream repositories, or an external connection.
 @required {domain: str, repository: str, external-connection: str}
 @optional {domain-owner: str}
 @returns(200) {repository: RepositoryDescription?{name: str?, administratorAccount: str?, domainName: str?, domainOwner: str?, arn: str?, description: str?, upstreams: [UpstreamRepositoryInfo]?, externalConnections: [RepositoryExternalConnectionInfo]?, createdTime: str(timestamp)?}}
@@ -17,6 +18,7 @@
 
 @group package
 @endpoint POST /v1/package/versions/copy
+@desc Copies package versions from one repository to another repository in the same domain.    You must specify versions or versionRevisions. You cannot specify both.
 @required {domain: str, source-repository: str, destination-repository: str, format: str, package: str}
 @optional {domain-owner: str, namespace: str, versions: [str], versionRevisions: map<str,str>, allowOverwrite: bool, includeFromUpstream: bool}
 @returns(200) {successfulVersions: map<str,SuccessfulPackageVersionInfo>?, failedVersions: map<str,PackageVersionError>?}
@@ -25,6 +27,7 @@
 
 @group domain
 @endpoint POST /v1/domain
+@desc Creates a domain. CodeArtifact domains make it easier to manage multiple repositories across an organization. You can use a domain to apply permissions across many repositories owned by different Amazon Web Services accounts. An asset is stored only once in a domain, even if it's in multiple repositories.  Although you can have multiple domains, we recommend a single production domain that contains all published artifacts so that your development teams can find and share packages. You can use a second pre-production domain to test changes to the production domain configuration.
 @required {domain: str}
 @optional {encryptionKey: str, tags: [Tag]}
 @returns(200) {domain: DomainDescription?{name: str?, owner: str?, arn: str?, status: str?, createdTime: str(timestamp)?, encryptionKey: str?, repositoryCount: int?, assetSizeBytes: int(i64)?, s3BucketArn: str?}}
@@ -33,14 +36,16 @@
 
 @group package-group
 @endpoint POST /v1/package-group
+@desc Creates a package group. For more information about creating package groups, including example CLI commands, see Create a package group in the CodeArtifact User Guide.
 @required {domain: str, packageGroup: str}
 @optional {domain-owner: str, contactInfo: str, description: str, tags: [Tag]}
-@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str,PackageGroupOriginRestriction>?}, parent: PackageGroupReference?{arn: str?, pattern: str?}}}
+@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str, PackageGroupOriginRestriction>?: any}, parent: PackageGroupReference?{arn: str?, pattern: str?}}}
 
 @endgroup
 
 @group repository
 @endpoint POST /v1/repository
+@desc Creates a repository.
 @required {domain: str, repository: str}
 @optional {domain-owner: str, description: str, upstreams: [UpstreamRepository], tags: [Tag]}
 @returns(200) {repository: RepositoryDescription?{name: str?, administratorAccount: str?, domainName: str?, domainOwner: str?, arn: str?, description: str?, upstreams: [UpstreamRepositoryInfo]?, externalConnections: [RepositoryExternalConnectionInfo]?, createdTime: str(timestamp)?}}
@@ -49,11 +54,13 @@
 
 @group domain
 @endpoint DELETE /v1/domain
+@desc Deletes a domain. You cannot delete a domain that contains repositories. If you want to delete a domain with repositories, first delete its repositories.
 @required {domain: str}
 @optional {domain-owner: str}
 @returns(200) {domain: DomainDescription?{name: str?, owner: str?, arn: str?, status: str?, createdTime: str(timestamp)?, encryptionKey: str?, repositoryCount: int?, assetSizeBytes: int(i64)?, s3BucketArn: str?}}
 
 @endpoint DELETE /v1/domain/permissions/policy
+@desc Deletes the resource policy set on a domain.
 @required {domain: str}
 @optional {domain-owner: str, policy-revision: str}
 @returns(200) {policy: ResourcePolicy?{resourceArn: str?, revision: str?, document: str?}}
@@ -62,6 +69,7 @@
 
 @group package
 @endpoint DELETE /v1/package
+@desc Deletes a package and all associated package versions. A deleted package cannot be restored. To delete one or more package versions, use the DeletePackageVersions API.
 @required {domain: str, repository: str, format: str, package: str}
 @optional {domain-owner: str, namespace: str}
 @returns(200) {deletedPackage: PackageSummary?{format: str?, namespace: str?, package: str?, originConfiguration: PackageOriginConfiguration?{restrictions: PackageOriginRestrictions?{publish: str, upstream: str}}}}
@@ -70,14 +78,16 @@
 
 @group package-group
 @endpoint DELETE /v1/package-group
+@desc Deletes a package group. Deleting a package group does not delete packages or package versions associated with the package group. When a package group is deleted, the direct child package groups will become children of the package group's direct parent package group. Therefore, if any of the child groups are inheriting any settings from the parent, those settings could change.
 @required {domain: str, package-group: str}
 @optional {domain-owner: str}
-@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str,PackageGroupOriginRestriction>?}, parent: PackageGroupReference?{arn: str?, pattern: str?}}}
+@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str, PackageGroupOriginRestriction>?: any}, parent: PackageGroupReference?{arn: str?, pattern: str?}}}
 
 @endgroup
 
 @group package
 @endpoint POST /v1/package/versions/delete
+@desc Deletes one or more versions of a package. A deleted package version cannot be restored in your repository. If you want to remove a package version from your repository and be able to restore it later, set its status to Archived. Archived packages cannot be downloaded from a repository and don't show up with list package APIs (for example, ListPackageVersions), but you can restore them using UpdatePackageVersionsStatus.
 @required {domain: str, repository: str, format: str, package: str, versions: [str]}
 @optional {domain-owner: str, namespace: str, expectedStatus: str}
 @returns(200) {successfulVersions: map<str,SuccessfulPackageVersionInfo>?, failedVersions: map<str,PackageVersionError>?}
@@ -86,11 +96,13 @@
 
 @group repository
 @endpoint DELETE /v1/repository
+@desc Deletes a repository.
 @required {domain: str, repository: str}
 @optional {domain-owner: str}
 @returns(200) {repository: RepositoryDescription?{name: str?, administratorAccount: str?, domainName: str?, domainOwner: str?, arn: str?, description: str?, upstreams: [UpstreamRepositoryInfo]?, externalConnections: [RepositoryExternalConnectionInfo]?, createdTime: str(timestamp)?}}
 
 @endpoint DELETE /v1/repository/permissions/policies
+@desc Deletes the resource policy that is set on a repository. After a resource policy is deleted, the permissions allowed and denied by the deleted policy are removed. The effect of deleting a resource policy might not be immediate.    Use DeleteRepositoryPermissionsPolicy with caution. After a policy is deleted, Amazon Web Services users, roles, and accounts lose permissions to perform the repository actions granted by the deleted policy.
 @required {domain: str, repository: str}
 @optional {domain-owner: str, policy-revision: str}
 @returns(200) {policy: ResourcePolicy?{resourceArn: str?, revision: str?, document: str?}}
@@ -99,6 +111,7 @@
 
 @group domain
 @endpoint GET /v1/domain
+@desc Returns a DomainDescription object that contains information about the requested domain.
 @required {domain: str}
 @optional {domain-owner: str}
 @returns(200) {domain: DomainDescription?{name: str?, owner: str?, arn: str?, status: str?, createdTime: str(timestamp)?, encryptionKey: str?, repositoryCount: int?, assetSizeBytes: int(i64)?, s3BucketArn: str?}}
@@ -107,6 +120,7 @@
 
 @group package
 @endpoint GET /v1/package
+@desc Returns a PackageDescription object that contains information about the requested package.
 @required {domain: str, repository: str, format: str, package: str}
 @optional {domain-owner: str, namespace: str}
 @returns(200) {package: PackageDescription{format: str?, namespace: str?, name: str?, originConfiguration: PackageOriginConfiguration?{restrictions: PackageOriginRestrictions?{publish: str, upstream: str}}}}
@@ -115,14 +129,16 @@
 
 @group package-group
 @endpoint GET /v1/package-group
+@desc Returns a PackageGroupDescription object that contains information about the requested package group.
 @required {domain: str, package-group: str}
 @optional {domain-owner: str}
-@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str,PackageGroupOriginRestriction>?}, parent: PackageGroupReference?{arn: str?, pattern: str?}}}
+@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str, PackageGroupOriginRestriction>?: any}, parent: PackageGroupReference?{arn: str?, pattern: str?}}}
 
 @endgroup
 
 @group package
 @endpoint GET /v1/package/version
+@desc Returns a PackageVersionDescription object that contains information about the requested package version.
 @required {domain: str, repository: str, format: str, package: str, version: str}
 @optional {domain-owner: str, namespace: str}
 @returns(200) {packageVersion: PackageVersionDescription{format: str?, namespace: str?, packageName: str?, displayName: str?, version: str?, summary: str?, homePage: str?, sourceCodeRepository: str?, publishedTime: str(timestamp)?, licenses: [LicenseInfo]?, revision: str?, status: str?, origin: PackageVersionOrigin?{domainEntryPoint: DomainEntryPoint?{repositoryName: str?, externalConnectionName: str?}, originType: str?}}}
@@ -131,11 +147,13 @@
 
 @group repository
 @endpoint GET /v1/repository
+@desc Returns a RepositoryDescription object that contains detailed information about the requested repository.
 @required {domain: str, repository: str}
 @optional {domain-owner: str}
 @returns(200) {repository: RepositoryDescription?{name: str?, administratorAccount: str?, domainName: str?, domainOwner: str?, arn: str?, description: str?, upstreams: [UpstreamRepositoryInfo]?, externalConnections: [RepositoryExternalConnectionInfo]?, createdTime: str(timestamp)?}}
 
 @endpoint DELETE /v1/repository/external-connection
+@desc Removes an existing external connection from a repository.
 @required {domain: str, repository: str, external-connection: str}
 @optional {domain-owner: str}
 @returns(200) {repository: RepositoryDescription?{name: str?, administratorAccount: str?, domainName: str?, domainOwner: str?, arn: str?, description: str?, upstreams: [UpstreamRepositoryInfo]?, externalConnections: [RepositoryExternalConnectionInfo]?, createdTime: str(timestamp)?}}
@@ -144,6 +162,7 @@
 
 @group package
 @endpoint POST /v1/package/versions/dispose
+@desc Deletes the assets in package versions and sets the package versions' status to Disposed. A disposed package version cannot be restored in your repository because its assets are deleted.   To view all disposed package versions in a repository, use ListPackageVersions and set the status parameter to Disposed.   To view information about a disposed package version, use DescribePackageVersion.
 @required {domain: str, repository: str, format: str, package: str, versions: [str]}
 @optional {domain-owner: str, namespace: str, versionRevisions: map<str,str>, expectedStatus: str}
 @returns(200) {successfulVersions: map<str,SuccessfulPackageVersionInfo>?, failedVersions: map<str,PackageVersionError>?}
@@ -152,14 +171,16 @@
 
 @group get-associated-package-group
 @endpoint GET /v1/get-associated-package-group
+@desc Returns the most closely associated package group to the specified package. This API does not require that the package exist in any repository in the domain. As such, GetAssociatedPackageGroup can be used to see which package group's origin configuration applies to a package before that package is in a repository. This can be helpful to check if public packages are blocked without ingesting them. For information package group association and matching, see Package group definition syntax and matching behavior in the CodeArtifact User Guide.
 @required {domain: str, format: str, package: str}
 @optional {domain-owner: str, namespace: str}
-@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str,PackageGroupOriginRestriction>?}, parent: PackageGroupReference?{arn: str?, pattern: str?}}, associationType: str?}
+@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str, PackageGroupOriginRestriction>?: any}, parent: PackageGroupReference?{arn: str?, pattern: str?}}, associationType: str?}
 
 @endgroup
 
 @group authorization-token
 @endpoint POST /v1/authorization-token
+@desc Generates a temporary authorization token for accessing repositories in the domain. This API requires the codeartifact:GetAuthorizationToken and sts:GetServiceBearerToken permissions. For more information about authorization tokens, see CodeArtifact authentication and tokens.   CodeArtifact authorization tokens are valid for a period of 12 hours when created with the login command. You can call login periodically to refresh the token. When you create an authorization token with the GetAuthorizationToken API, you can set a custom authorization period, up to a maximum of 12 hours, with the durationSeconds parameter. The authorization period begins after login or GetAuthorizationToken is called. If login or GetAuthorizationToken is called while assuming a role, the token lifetime is independent of the maximum session duration of the role. For example, if you call sts assume-role and specify a session duration of 15 minutes, then generate a CodeArtifact authorization token, the token will be valid for the full authorization period even though this is longer than the 15-minute session duration. See Using IAM Roles for more information on controlling session duration.
 @required {domain: str}
 @optional {domain-owner: str, duration: int(i64)}
 @returns(200) {authorizationToken: str?, expiration: str(timestamp)?}
@@ -168,6 +189,7 @@
 
 @group domain
 @endpoint GET /v1/domain/permissions/policy
+@desc Returns the resource policy attached to the specified domain.    The policy is a resource-based policy, not an identity-based policy. For more information, see Identity-based policies and resource-based policies  in the IAM User Guide.
 @required {domain: str}
 @optional {domain-owner: str}
 @returns(200) {policy: ResourcePolicy?{resourceArn: str?, revision: str?, document: str?}}
@@ -176,11 +198,13 @@
 
 @group package
 @endpoint GET /v1/package/version/asset
+@desc Returns an asset (or file) that is in a package. For example, for a Maven package version, use GetPackageVersionAsset to download a JAR file, a POM file, or any other assets in the package version.
 @required {domain: str, repository: str, format: str, package: str, version: str, asset: str}
 @optional {domain-owner: str, namespace: str, revision: str}
 @returns(200) {asset: bytes?, assetName: str?, packageVersion: str?, packageVersionRevision: str?}
 
 @endpoint GET /v1/package/version/readme
+@desc Gets the readme file or descriptive text for a package version.   The returned text might contain formatting. For example, it might contain formatting for Markdown or reStructuredText.
 @required {domain: str, repository: str, format: str, package: str, version: str}
 @optional {domain-owner: str, namespace: str}
 @returns(200) {format: str?, namespace: str?, package: str?, version: str?, versionRevision: str?, readme: str?}
@@ -189,11 +213,13 @@
 
 @group repository
 @endpoint GET /v1/repository/endpoint
+@desc Returns the endpoint of a repository for a specific package format. A repository has one endpoint for each package format:     cargo     generic     maven     npm     nuget     pypi     ruby     swift
 @required {domain: str, repository: str, format: str}
 @optional {domain-owner: str}
 @returns(200) {repositoryEndpoint: str?}
 
 @endpoint GET /v1/repository/permissions/policy
+@desc Returns the resource policy that is set on a repository.
 @required {domain: str, repository: str}
 @optional {domain-owner: str}
 @returns(200) {policy: ResourcePolicy?{resourceArn: str?, revision: str?, document: str?}}
@@ -202,6 +228,7 @@
 
 @group package-group-allowed-repositories
 @endpoint GET /v1/package-group-allowed-repositories
+@desc Lists the repositories in the added repositories list of the specified restriction type for a package group. For more information about restriction types and added repository lists, see Package group origin controls in the CodeArtifact User Guide.
 @required {domain: str, package-group: str, originRestrictionType: str}
 @optional {domain-owner: str, max-results: int, next-token: str}
 @returns(200) {allowedRepositories: [str]?, nextToken: str?}
@@ -210,6 +237,7 @@
 
 @group list-associated-packages
 @endpoint GET /v1/list-associated-packages
+@desc Returns a list of packages associated with the requested package group. For information package group association and matching, see Package group definition syntax and matching behavior in the CodeArtifact User Guide.
 @required {domain: str, package-group: str}
 @optional {domain-owner: str, max-results: int, next-token: str, preview: bool}
 @returns(200) {packages: [AssociatedPackage]?, nextToken: str?}
@@ -218,6 +246,7 @@
 
 @group domains
 @endpoint POST /v1/domains
+@desc Returns a list of DomainSummary objects for all domains owned by the Amazon Web Services account that makes this call. Each returned DomainSummary object contains information about a domain.
 @optional {maxResults: int, nextToken: str}
 @returns(200) {domains: [DomainSummary]?, nextToken: str?}
 
@@ -225,6 +254,7 @@
 
 @group package-groups
 @endpoint POST /v1/package-groups
+@desc Returns a list of package groups in the requested domain.
 @required {domain: str}
 @optional {domain-owner: str, max-results: int, next-token: str, prefix: str}
 @returns(200) {packageGroups: [PackageGroupSummary]?, nextToken: str?}
@@ -233,16 +263,19 @@
 
 @group package
 @endpoint POST /v1/package/version/assets
+@desc Returns a list of AssetSummary objects for assets in a package version.
 @required {domain: str, repository: str, format: str, package: str, version: str}
 @optional {domain-owner: str, namespace: str, max-results: int, next-token: str}
 @returns(200) {format: str?, namespace: str?, package: str?, version: str?, versionRevision: str?, nextToken: str?, assets: [AssetSummary]?}
 
 @endpoint POST /v1/package/version/dependencies
+@desc Returns the direct dependencies for a package version. The dependencies are returned as PackageDependency objects. CodeArtifact extracts the dependencies for a package version from the metadata file for the package format (for example, the package.json file for npm packages and the pom.xml file for Maven). Any package version dependencies that are not listed in the configuration file are not returned.
 @required {domain: str, repository: str, format: str, package: str, version: str}
 @optional {domain-owner: str, namespace: str, next-token: str}
 @returns(200) {format: str?, namespace: str?, package: str?, version: str?, versionRevision: str?, nextToken: str?, dependencies: [PackageDependency]?}
 
 @endpoint POST /v1/package/versions
+@desc Returns a list of PackageVersionSummary objects for package versions in a repository that match the request parameters. Package versions of all statuses will be returned by default when calling list-package-versions with no --status parameter.
 @required {domain: str, repository: str, format: str, package: str}
 @optional {domain-owner: str, namespace: str, status: str, sortBy: str, max-results: int, next-token: str, originType: str}
 @returns(200) {defaultDisplayVersion: str?, format: str?, namespace: str?, package: str?, versions: [PackageVersionSummary]?, nextToken: str?}
@@ -251,6 +284,7 @@
 
 @group packages
 @endpoint POST /v1/packages
+@desc Returns a list of PackageSummary objects for packages in a repository that match the request parameters.
 @required {domain: str, repository: str}
 @optional {domain-owner: str, format: str, namespace: str, package-prefix: str, max-results: int, next-token: str, publish: str, upstream: str}
 @returns(200) {packages: [PackageSummary]?, nextToken: str?}
@@ -259,6 +293,7 @@
 
 @group repositories
 @endpoint POST /v1/repositories
+@desc Returns a list of RepositorySummary objects. Each RepositorySummary contains information about a repository in the specified Amazon Web Services account and that matches the input parameters.
 @optional {repository-prefix: str, max-results: int, next-token: str}
 @returns(200) {repositories: [RepositorySummary]?, nextToken: str?}
 
@@ -266,6 +301,7 @@
 
 @group domain
 @endpoint POST /v1/domain/repositories
+@desc Returns a list of RepositorySummary objects. Each RepositorySummary contains information about a repository in the specified domain and that matches the input parameters.
 @required {domain: str}
 @optional {domain-owner: str, administrator-account: str, repository-prefix: str, max-results: int, next-token: str}
 @returns(200) {repositories: [RepositorySummary]?, nextToken: str?}
@@ -274,6 +310,7 @@
 
 @group package-groups
 @endpoint POST /v1/package-groups/sub-groups
+@desc Returns a list of direct children of the specified package group. For information package group hierarchy, see Package group definition syntax and matching behavior in the CodeArtifact User Guide.
 @required {domain: str, package-group: str}
 @optional {domain-owner: str, max-results: int, next-token: str}
 @returns(200) {packageGroups: [PackageGroupSummary]?, nextToken: str?}
@@ -282,6 +319,7 @@
 
 @group tags
 @endpoint POST /v1/tags
+@desc Gets information about Amazon Web Services tags for a specified Amazon Resource Name (ARN) in CodeArtifact.
 @required {resourceArn: str}
 @returns(200) {tags: [Tag]?}
 
@@ -289,14 +327,16 @@
 
 @group package
 @endpoint POST /v1/package/version/publish
+@desc Creates a new package version containing one or more assets (or files). The unfinished flag can be used to keep the package version in the Unfinished state until all of its assets have been uploaded (see Package version status in the CodeArtifact user guide). To set the package version’s status to Published, omit the unfinished flag when uploading the final asset, or set the status using UpdatePackageVersionStatus. Once a package version’s status is set to Published, it cannot change back to Unfinished.  Only generic packages can be published using this API. For more information, see Using generic packages in the CodeArtifact User Guide.
 @required {domain: str, repository: str, format: str, package: str, version: str, asset: str, x-amz-content-sha256: str, assetContent: bytes}
 @optional {domain-owner: str, namespace: str, unfinished: bool}
-@returns(200) {format: str?, namespace: str?, package: str?, version: str?, versionRevision: str?, status: str?, asset: AssetSummary?{name: str, size: int(i64)?, hashes: map<str,str>?}}
+@returns(200) {format: str?, namespace: str?, package: str?, version: str?, versionRevision: str?, status: str?, asset: AssetSummary?{name: str, size: int(i64)?, hashes: map<str, str>?: any}}
 
 @endgroup
 
 @group domain
 @endpoint PUT /v1/domain/permissions/policy
+@desc Sets a resource policy on a domain that specifies permissions to access it.   When you call PutDomainPermissionsPolicy, the resource policy on the domain is ignored when evaluting permissions. This ensures that the owner of a domain cannot lock themselves out of the domain, which would prevent them from being able to update the resource policy.
 @required {domain: str, policyDocument: str}
 @optional {domainOwner: str, policyRevision: str}
 @returns(200) {policy: ResourcePolicy?{resourceArn: str?, revision: str?, document: str?}}
@@ -305,6 +345,7 @@
 
 @group package
 @endpoint POST /v1/package
+@desc Sets the package origin configuration for a package. The package origin configuration determines how new versions of a package can be added to a repository. You can allow or block direct publishing of new package versions, or ingestion and retaining of new package versions from an external connection or upstream source. For more information about package origin controls and configuration, see Editing package origin controls in the CodeArtifact User Guide.  PutPackageOriginConfiguration can be called on a package that doesn't yet exist in the repository. When called on a package that does not exist, a package is created in the repository with no versions and the requested restrictions are set on the package. This can be used to preemptively block ingesting or retaining any versions from external connections or upstream repositories, or to block publishing any versions of the package into the repository before connecting any package managers or publishers to the repository.
 @required {domain: str, repository: str, format: str, package: str, restrictions: PackageOriginRestrictions}
 @optional {domain-owner: str, namespace: str}
 @returns(200) {originConfiguration: PackageOriginConfiguration?{restrictions: PackageOriginRestrictions?{publish: str, upstream: str}}}
@@ -313,6 +354,7 @@
 
 @group repository
 @endpoint PUT /v1/repository/permissions/policy
+@desc Sets the resource policy on a repository that specifies permissions to access it.   When you call PutRepositoryPermissionsPolicy, the resource policy on the repository is ignored when evaluting permissions. This ensures that the owner of a repository cannot lock themselves out of the repository, which would prevent them from being able to update the resource policy.
 @required {domain: str, repository: str, policyDocument: str}
 @optional {domain-owner: str, policyRevision: str}
 @returns(200) {policy: ResourcePolicy?{resourceArn: str?, revision: str?, document: str?}}
@@ -321,34 +363,39 @@
 
 @group tag
 @endpoint POST /v1/tag
+@desc Adds or updates tags for a resource in CodeArtifact.
 @required {resourceArn: str, tags: [Tag]}
 
 @endgroup
 
 @group untag
 @endpoint POST /v1/untag
+@desc Removes tags from a resource in CodeArtifact.
 @required {resourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group package-group
 @endpoint PUT /v1/package-group
+@desc Updates a package group. This API cannot be used to update a package group's origin configuration or pattern. To update a package group's origin configuration, use UpdatePackageGroupOriginConfiguration.
 @required {domain: str, packageGroup: str}
 @optional {domain-owner: str, contactInfo: str, description: str}
-@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str,PackageGroupOriginRestriction>?}, parent: PackageGroupReference?{arn: str?, pattern: str?}}}
+@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str, PackageGroupOriginRestriction>?: any}, parent: PackageGroupReference?{arn: str?, pattern: str?}}}
 
 @endgroup
 
 @group package-group-origin-configuration
 @endpoint PUT /v1/package-group-origin-configuration
+@desc Updates the package origin configuration for a package group. The package origin configuration determines how new versions of a package can be added to a repository. You can allow or block direct publishing of new package versions, or ingestion and retaining of new package versions from an external connection or upstream source. For more information about package group origin controls and configuration, see Package group origin controls in the CodeArtifact User Guide.
 @required {domain: str, package-group: str}
 @optional {domain-owner: str, restrictions: map<str,str>, addAllowedRepositories: [PackageGroupAllowedRepository], removeAllowedRepositories: [PackageGroupAllowedRepository]}
-@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str,PackageGroupOriginRestriction>?}, parent: PackageGroupReference?{arn: str?, pattern: str?}}, allowedRepositoryUpdates: map<str,map<str,[str]>>?}
+@returns(200) {packageGroup: PackageGroupDescription?{arn: str?, pattern: str?, domainName: str?, domainOwner: str?, createdTime: str(timestamp)?, contactInfo: str?, description: str?, originConfiguration: PackageGroupOriginConfiguration?{restrictions: map<str, PackageGroupOriginRestriction>?: any}, parent: PackageGroupReference?{arn: str?, pattern: str?}}, allowedRepositoryUpdates: map<str,map<str,[str]>>?}
 
 @endgroup
 
 @group package
 @endpoint POST /v1/package/versions/update_status
+@desc Updates the status of one or more versions of a package. Using UpdatePackageVersionsStatus, you can update the status of package versions to Archived, Published, or Unlisted. To set the status of a package version to Disposed, use DisposePackageVersions.
 @required {domain: str, repository: str, format: str, package: str, versions: [str], targetStatus: str}
 @optional {domain-owner: str, namespace: str, versionRevisions: map<str,str>, expectedStatus: str}
 @returns(200) {successfulVersions: map<str,SuccessfulPackageVersionInfo>?, failedVersions: map<str,PackageVersionError>?}
@@ -357,6 +404,7 @@
 
 @group repository
 @endpoint PUT /v1/repository
+@desc Update the properties of a repository.
 @required {domain: str, repository: str}
 @optional {domain-owner: str, description: str, upstreams: [UpstreamRepository]}
 @returns(200) {repository: RepositoryDescription?{name: str?, administratorAccount: str?, domainName: str?, domainOwner: str?, arn: str?, description: str?, upstreams: [UpstreamRepositoryInfo]?, externalConnections: [RepositoryExternalConnectionInfo]?, createdTime: str(timestamp)?}}

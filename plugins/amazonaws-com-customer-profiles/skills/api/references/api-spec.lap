@@ -9,106 +9,131 @@
 
 @group domains
 @endpoint POST /domains/{DomainName}/profiles/keys
+@desc Associates a new key value with a specific profile, such as a Contact Record ContactId. A profile object can have a single unique key and any number of additional keys that can be used to identify the profile that it belongs to.
 @required {DomainName: str, ProfileId: str, KeyName: str, Values: [str]}
 @returns(200) {KeyName: str?, Values: [str]?}
 
 @endpoint POST /domains/{DomainName}/calculated-attributes/{CalculatedAttributeName}
+@desc Creates a new calculated attribute definition. After creation, new object data ingested into Customer Profiles will be included in the calculated attribute, which can be retrieved for a profile using the GetCalculatedAttributeForProfile API. Defining a calculated attribute makes it available for all profiles within a domain. Each calculated attribute can only reference one ObjectType and at most, two fields from that ObjectType.
 @required {DomainName: str, CalculatedAttributeName: str, AttributeDetails: AttributeDetails, Statistic: str}
 @optional {DisplayName: str, Description: str, Conditions: Conditions, Tags: map<str,str>}
 @returns(200) {CalculatedAttributeName: str?, DisplayName: str?, Description: str?, AttributeDetails: AttributeDetails?{Attributes: [AttributeItem], Expression: str}, Conditions: Conditions?{Range: Range?{Value: int, Unit: str}, ObjectCount: int?, Threshold: Threshold?{Value: str, Operator: str}}, Statistic: str?, CreatedAt: str(timestamp)?, LastUpdatedAt: str(timestamp)?, Tags: map<str,str>?}
 
 @endpoint POST /domains/{DomainName}
+@desc Creates a domain, which is a container for all customer data, such as customer profile attributes, object types, profile keys, and encryption keys. You can create multiple domains, and each domain can have multiple third-party integrations. Each Amazon Connect instance can be associated with only one domain. Multiple Amazon Connect instances can be associated with one domain. Use this API or UpdateDomain to enable identity resolution: set Matching to true. To prevent cross-service impersonation when you call this API, see Cross-service confused deputy prevention for sample policies that you should apply.   It is not possible to associate a Customer Profiles domain with an Amazon Connect Instance directly from the API. If you would like to create a domain and associate a Customer Profiles domain, use the Amazon Connect admin website. For more information, see Enable Customer Profiles. Each Amazon Connect instance can be associated with only one domain. Multiple Amazon Connect instances can be associated with one domain.
 @required {DomainName: str, DefaultExpirationDays: int}
 @optional {DefaultEncryptionKey: str, DeadLetterQueueUrl: str, Matching: MatchingRequest, RuleBasedMatching: RuleBasedMatchingRequest, Tags: map<str,str>}
 @returns(200) {DomainName: str, DefaultExpirationDays: int, DefaultEncryptionKey: str?, DeadLetterQueueUrl: str?, Matching: MatchingResponse?{Enabled: bool?, JobSchedule: JobSchedule?{DayOfTheWeek: str, Time: str}, AutoMerging: AutoMerging?{Enabled: bool, Consolidation: Consolidation?{MatchingAttributesList: [[str]]}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, MinAllowedConfidenceScoreForMerging: num(f64)?}, ExportingConfig: ExportingConfig?{S3Exporting: S3ExportingConfig?{S3BucketName: str, S3KeyName: str?}}}, RuleBasedMatching: RuleBasedMatchingResponse?{Enabled: bool?, MatchingRules: [MatchingRule]?, Status: str?, MaxAllowedRuleLevelForMerging: int?, MaxAllowedRuleLevelForMatching: int?, AttributeTypesSelector: AttributeTypesSelector?{AttributeMatchingModel: str, Address: [str]?, PhoneNumber: [str]?, EmailAddress: [str]?}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, ExportingConfig: ExportingConfig?{S3Exporting: S3ExportingConfig?{S3BucketName: str, S3KeyName: str?}}}, CreatedAt: str(timestamp), LastUpdatedAt: str(timestamp), Tags: map<str,str>?}
 
 @endpoint POST /domains/{DomainName}/event-streams/{EventStreamName}
+@desc Creates an event stream, which is a subscription to real-time events, such as when profiles are created and updated through Amazon Connect Customer Profiles. Each event stream can be associated with only one Kinesis Data Stream destination in the same region and Amazon Web Services account as the customer profiles domain
 @required {DomainName: str, EventStreamName: str, Uri: str}
 @optional {Tags: map<str,str>}
 @returns(200) {EventStreamArn: str, Tags: map<str,str>?}
 
 @endpoint POST /domains/{DomainName}/workflows/integrations
+@desc Creates an integration workflow. An integration workflow is an async process which ingests historic data and sets up an integration for ongoing updates. The supported Amazon AppFlow sources are Salesforce, ServiceNow, and Marketo.
 @required {DomainName: str, WorkflowType: str, IntegrationConfig: IntegrationConfig, ObjectTypeName: str, RoleArn: str}
 @optional {Tags: map<str,str>}
 @returns(200) {WorkflowId: str, Message: str}
 
 @endpoint POST /domains/{DomainName}/profiles
+@desc Creates a standard profile. A standard profile represents the following attributes for a customer profile in a domain.
 @required {DomainName: str}
 @optional {AccountNumber: str, AdditionalInformation: str, PartyType: str, BusinessName: str, FirstName: str, MiddleName: str, LastName: str, BirthDate: str, Gender: str, PhoneNumber: str, MobilePhoneNumber: str, HomePhoneNumber: str, BusinessPhoneNumber: str, EmailAddress: str, PersonalEmailAddress: str, BusinessEmailAddress: str, Address: Address, ShippingAddress: Address, MailingAddress: Address, BillingAddress: Address, Attributes: map<str,str>, PartyTypeString: str, GenderString: str}
 @returns(200) {ProfileId: str}
 
 @endpoint DELETE /domains/{DomainName}/calculated-attributes/{CalculatedAttributeName}
+@desc Deletes an existing calculated attribute definition. Note that deleting a default calculated attribute is possible, however once deleted, you will be unable to undo that action and will need to recreate it on your own using the CreateCalculatedAttributeDefinition API if you want it back.
 @required {DomainName: str, CalculatedAttributeName: str}
 
 @endpoint DELETE /domains/{DomainName}
+@desc Deletes a specific domain and all of its customer data, such as customer profile attributes and their related objects.
 @required {DomainName: str}
 @returns(200) {Message: str}
 
 @endpoint DELETE /domains/{DomainName}/event-streams/{EventStreamName}
+@desc Disables and deletes the specified event stream.
 @required {DomainName: str, EventStreamName: str}
 
 @endpoint POST /domains/{DomainName}/integrations/delete
+@desc Removes an integration from a specific domain.
 @required {DomainName: str, Uri: str}
 @returns(200) {Message: str}
 
 @endpoint POST /domains/{DomainName}/profiles/delete
+@desc Deletes the standard customer profile and all data pertaining to the profile.
 @required {DomainName: str, ProfileId: str}
 @returns(200) {Message: str?}
 
 @endpoint POST /domains/{DomainName}/profiles/keys/delete
+@desc Removes a searchable key from a customer profile.
 @required {DomainName: str, ProfileId: str, KeyName: str, Values: [str]}
 @returns(200) {Message: str?}
 
 @endpoint POST /domains/{DomainName}/profiles/objects/delete
+@desc Removes an object associated with a profile of a given ProfileObjectType.
 @required {DomainName: str, ProfileId: str, ProfileObjectUniqueKey: str, ObjectTypeName: str}
 @returns(200) {Message: str?}
 
 @endpoint DELETE /domains/{DomainName}/object-types/{ObjectTypeName}
+@desc Removes a ProfileObjectType from a specific domain as well as removes all the ProfileObjects of that type. It also disables integrations from this specific ProfileObjectType. In addition, it scrubs all of the fields of the standard profile that were populated from this ProfileObjectType.
 @required {DomainName: str, ObjectTypeName: str}
 @returns(200) {Message: str}
 
 @endpoint DELETE /domains/{DomainName}/workflows/{WorkflowId}
+@desc Deletes the specified workflow and all its corresponding resources. This is an async process.
 @required {DomainName: str, WorkflowId: str}
 
 @endpoint POST /domains/{DomainName}/detect/object-types
+@desc The process of detecting profile object type mapping by using given objects.
 @required {DomainName: str, Objects: [str]}
 @returns(200) {DetectedProfileObjectTypes: [DetectedProfileObjectType]?}
 
 @endpoint POST /domains/{DomainName}/identity-resolution-jobs/auto-merging-preview
+@desc Tests the auto-merging settings of your Identity Resolution Job without merging your data. It randomly selects a sample of matching groups from the existing matching results, and applies the automerging settings that you provided. You can then view the number of profiles in the sample, the number of matches, and the number of profiles identified to be merged. This enables you to evaluate the accuracy of the attributes in your matching list.  You can't view which profiles are matched and would be merged.  We strongly recommend you use this API to do a dry run of the automerging process before running the Identity Resolution Job. Include at least two matching attributes. If your matching list includes too few attributes (such as only FirstName or only LastName), there may be a large number of matches. This increases the chances of erroneous merges.
 @required {DomainName: str, Consolidation: Consolidation, ConflictResolution: ConflictResolution}
 @optional {MinAllowedConfidenceScoreForMerging: num(f64)}
 @returns(200) {DomainName: str, NumberOfMatchesInSample: int(i64)?, NumberOfProfilesInSample: int(i64)?, NumberOfProfilesWillBeMerged: int(i64)?}
 
 @endpoint GET /domains/{DomainName}/calculated-attributes/{CalculatedAttributeName}
+@desc Provides more information on a calculated attribute definition for Customer Profiles.
 @required {DomainName: str, CalculatedAttributeName: str}
 @returns(200) {CalculatedAttributeName: str?, DisplayName: str?, Description: str?, CreatedAt: str(timestamp)?, LastUpdatedAt: str(timestamp)?, Statistic: str?, Conditions: Conditions?{Range: Range?{Value: int, Unit: str}, ObjectCount: int?, Threshold: Threshold?{Value: str, Operator: str}}, AttributeDetails: AttributeDetails?{Attributes: [AttributeItem], Expression: str}, Tags: map<str,str>?}
 
 @endpoint GET /domains/{DomainName}/profile/{ProfileId}/calculated-attributes/{CalculatedAttributeName}
+@desc Retrieve a calculated attribute for a customer profile.
 @required {DomainName: str, ProfileId: str, CalculatedAttributeName: str}
 @returns(200) {CalculatedAttributeName: str?, DisplayName: str?, IsDataPartial: str?, Value: str?}
 
 @endpoint GET /domains/{DomainName}
+@desc Returns information about a specific domain.
 @required {DomainName: str}
 @returns(200) {DomainName: str, DefaultExpirationDays: int?, DefaultEncryptionKey: str?, DeadLetterQueueUrl: str?, Stats: DomainStats?{ProfileCount: int(i64)?, MeteringProfileCount: int(i64)?, ObjectCount: int(i64)?, TotalSize: int(i64)?}, Matching: MatchingResponse?{Enabled: bool?, JobSchedule: JobSchedule?{DayOfTheWeek: str, Time: str}, AutoMerging: AutoMerging?{Enabled: bool, Consolidation: Consolidation?{MatchingAttributesList: [[str]]}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, MinAllowedConfidenceScoreForMerging: num(f64)?}, ExportingConfig: ExportingConfig?{S3Exporting: S3ExportingConfig?{S3BucketName: str, S3KeyName: str?}}}, RuleBasedMatching: RuleBasedMatchingResponse?{Enabled: bool?, MatchingRules: [MatchingRule]?, Status: str?, MaxAllowedRuleLevelForMerging: int?, MaxAllowedRuleLevelForMatching: int?, AttributeTypesSelector: AttributeTypesSelector?{AttributeMatchingModel: str, Address: [str]?, PhoneNumber: [str]?, EmailAddress: [str]?}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, ExportingConfig: ExportingConfig?{S3Exporting: S3ExportingConfig?{S3BucketName: str, S3KeyName: str?}}}, CreatedAt: str(timestamp), LastUpdatedAt: str(timestamp), Tags: map<str,str>?}
 
 @endpoint GET /domains/{DomainName}/event-streams/{EventStreamName}
+@desc Returns information about the specified event stream in a specific domain.
 @required {DomainName: str, EventStreamName: str}
 @returns(200) {DomainName: str, EventStreamArn: str, CreatedAt: str(timestamp), State: str, StoppedSince: str(timestamp)?, DestinationDetails: EventStreamDestinationDetails{Uri: str, Status: str, UnhealthySince: str(timestamp)?, Message: str?}, Tags: map<str,str>?}
 
 @endpoint GET /domains/{DomainName}/identity-resolution-jobs/{JobId}
+@desc Returns information about an Identity Resolution Job in a specific domain.  Identity Resolution Jobs are set up using the Amazon Connect admin console. For more information, see Use Identity Resolution to consolidate similar profiles.
 @required {DomainName: str, JobId: str}
 @returns(200) {DomainName: str?, JobId: str?, Status: str?, Message: str?, JobStartTime: str(timestamp)?, JobEndTime: str(timestamp)?, LastUpdatedAt: str(timestamp)?, JobExpirationTime: str(timestamp)?, AutoMerging: AutoMerging?{Enabled: bool, Consolidation: Consolidation?{MatchingAttributesList: [[str]]}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, MinAllowedConfidenceScoreForMerging: num(f64)?}, ExportingLocation: ExportingLocation?{S3Exporting: S3ExportingLocation?{S3BucketName: str?, S3KeyName: str?}}, JobStats: JobStats?{NumberOfProfilesReviewed: int(i64)?, NumberOfMatchesFound: int(i64)?, NumberOfMergesDone: int(i64)?}}
 
 @endpoint POST /domains/{DomainName}/integrations
+@desc Returns an integration for a domain.
 @required {DomainName: str, Uri: str}
 @returns(200) {DomainName: str, Uri: str, ObjectTypeName: str?, CreatedAt: str(timestamp), LastUpdatedAt: str(timestamp), Tags: map<str,str>?, ObjectTypeNames: map<str,str>?, WorkflowId: str?, IsUnstructured: bool?}
 
 @endpoint GET /domains/{DomainName}/matches
+@desc Before calling this API, use CreateDomain or UpdateDomain to enable identity resolution: set Matching to true. GetMatches returns potentially matching profiles, based on the results of the latest run of a machine learning process.   The process of matching duplicate profiles. If Matching = true, Amazon Connect Customer Profiles starts a weekly batch process called Identity Resolution Job. If you do not specify a date and time for Identity Resolution Job to run, by default it runs every Saturday at 12AM UTC to detect duplicate profiles in your domains.  After the Identity Resolution Job completes, use the GetMatches API to return and review the results. Or, if you have configured ExportingConfig in the MatchingRequest, you can download the results from S3.  Amazon Connect uses the following profile attributes to identify matches:   PhoneNumber   HomePhoneNumber   BusinessPhoneNumber   MobilePhoneNumber   EmailAddress   PersonalEmailAddress   BusinessEmailAddress   FullName   For example, two or more profiles—with spelling mistakes such as John Doe and Jhn Doe, or different casing email addresses such as JOHN_DOE@ANYCOMPANY.COM and johndoe@anycompany.com, or different phone number formats such as 555-010-0000 and +1-555-010-0000—can be detected as belonging to the same customer John Doe and merged into a unified profile.
 @required {DomainName: str}
 @optional {next-token: str, max-results: int}
 @returns(200) {NextToken: str?, MatchGenerationDate: str(timestamp)?, PotentialMatches: int?, Matches: [MatchItem]?}
 
 @endpoint GET /domains/{DomainName}/object-types/{ObjectTypeName}
+@desc Returns the object types for a specific domain.
 @required {DomainName: str, ObjectTypeName: str}
 @returns(200) {ObjectTypeName: str, Description: str, TemplateId: str?, ExpirationDays: int?, EncryptionKey: str?, AllowProfileCreation: bool?, SourceLastUpdatedTimestampFormat: str?, MaxAvailableProfileObjectCount: int?, MaxProfileObjectCount: int?, Fields: map<str,ObjectTypeField>?, Keys: map<str,[ObjectTypeKey]>?, CreatedAt: str(timestamp)?, LastUpdatedAt: str(timestamp)?, Tags: map<str,str>?}
 
@@ -116,6 +141,7 @@
 
 @group templates
 @endpoint GET /templates/{TemplateId}
+@desc Returns the template information for a specific object type. A template is a predefined ProfileObjectType, such as “Salesforce-Account” or “Salesforce-Contact.” When a user sends a ProfileObject, using the PutProfileObject API, with an ObjectTypeName that matches one of the TemplateIds, it uses the mappings from the template.
 @required {TemplateId: str}
 @returns(200) {TemplateId: str?, SourceName: str?, SourceObject: str?, AllowProfileCreation: bool?, SourceLastUpdatedTimestampFormat: str?, Fields: map<str,ObjectTypeField>?, Keys: map<str,[ObjectTypeKey]>?}
 
@@ -123,15 +149,18 @@
 
 @group domains
 @endpoint POST /domains/{DomainName}/matches
+@desc Returns a set of profiles that belong to the same matching group using the matchId or profileId. You can also specify the type of matching that you want for finding similar profiles using either RULE_BASED_MATCHING or ML_BASED_MATCHING.
 @required {DomainName: str, MatchType: str, SearchKey: str, SearchValue: str}
 @optional {next-token: str, max-results: int}
 @returns(200) {ProfileIds: [str]?, MatchId: str?, MatchType: str?, RuleLevel: int?, ConfidenceScore: num(f64)?, NextToken: str?}
 
 @endpoint GET /domains/{DomainName}/workflows/{WorkflowId}
+@desc Get details of specified workflow.
 @required {DomainName: str, WorkflowId: str}
 @returns(200) {WorkflowId: str?, WorkflowType: str?, Status: str?, ErrorDescription: str?, StartDate: str(timestamp)?, LastUpdatedAt: str(timestamp)?, Attributes: WorkflowAttributes?{AppflowIntegration: AppflowIntegrationWorkflowAttributes?{SourceConnectorType: str, ConnectorProfileName: str, RoleArn: str?}}, Metrics: WorkflowMetrics?{AppflowIntegration: AppflowIntegrationWorkflowMetrics?{RecordsProcessed: int(i64), StepsCompleted: int(i64), TotalSteps: int(i64)}}}
 
 @endpoint GET /domains/{DomainName}/workflows/{WorkflowId}/steps
+@desc Get granular list of steps in workflow.
 @required {DomainName: str, WorkflowId: str}
 @optional {next-token: str, max-results: int}
 @returns(200) {WorkflowId: str?, WorkflowType: str?, Items: [WorkflowStepItem]?, NextToken: str?}
@@ -140,6 +169,7 @@
 
 @group integrations
 @endpoint POST /integrations
+@desc Lists all of the integrations associated to a specific URI in the AWS account.
 @required {Uri: str}
 @optional {next-token: str, max-results: int, include-hidden: bool}
 @returns(200) {Items: [ListIntegrationItem]?, NextToken: str?}
@@ -148,30 +178,36 @@
 
 @group domains
 @endpoint GET /domains/{DomainName}/calculated-attributes
+@desc Lists calculated attribute definitions for Customer Profiles
 @required {DomainName: str}
 @optional {next-token: str, max-results: int}
 @returns(200) {Items: [ListCalculatedAttributeDefinitionItem]?, NextToken: str?}
 
 @endpoint GET /domains/{DomainName}/profile/{ProfileId}/calculated-attributes
+@desc Retrieve a list of calculated attributes for a customer profile.
 @required {DomainName: str, ProfileId: str}
 @optional {next-token: str, max-results: int}
 @returns(200) {Items: [ListCalculatedAttributeForProfileItem]?, NextToken: str?}
 
 @endpoint GET /domains
+@desc Returns a list of all the domains for an AWS account that have been created.
 @optional {next-token: str, max-results: int}
 @returns(200) {Items: [ListDomainItem]?, NextToken: str?}
 
 @endpoint GET /domains/{DomainName}/event-streams
+@desc Returns a list of all the event streams in a specific domain.
 @required {DomainName: str}
 @optional {next-token: str, max-results: int}
 @returns(200) {Items: [EventStreamSummary]?, NextToken: str?}
 
 @endpoint GET /domains/{DomainName}/identity-resolution-jobs
+@desc Lists all of the Identity Resolution Jobs in your domain. The response sorts the list by JobStartTime.
 @required {DomainName: str}
 @optional {next-token: str, max-results: int}
 @returns(200) {IdentityResolutionJobsList: [IdentityResolutionJob]?, NextToken: str?}
 
 @endpoint GET /domains/{DomainName}/integrations
+@desc Lists all of the integrations in your domain.
 @required {DomainName: str}
 @optional {next-token: str, max-results: int, include-hidden: bool}
 @returns(200) {Items: [ListIntegrationItem]?, NextToken: str?}
@@ -180,6 +216,7 @@
 
 @group templates
 @endpoint GET /templates
+@desc Lists all of the template information for object types.
 @optional {next-token: str, max-results: int}
 @returns(200) {Items: [ListProfileObjectTypeTemplateItem]?, NextToken: str?}
 
@@ -187,16 +224,19 @@
 
 @group domains
 @endpoint GET /domains/{DomainName}/object-types
+@desc Lists all of the templates available within the service.
 @required {DomainName: str}
 @optional {next-token: str, max-results: int}
 @returns(200) {Items: [ListProfileObjectTypeItem]?, NextToken: str?}
 
 @endpoint POST /domains/{DomainName}/profiles/objects
+@desc Returns a list of objects associated with a profile of a given ProfileObjectType.
 @required {DomainName: str, ObjectTypeName: str, ProfileId: str}
 @optional {next-token: str, max-results: int, ObjectFilter: ObjectFilter}
 @returns(200) {Items: [ListProfileObjectsItem]?, NextToken: str?}
 
 @endpoint GET /domains/{DomainName}/profiles/ruleBasedMatches
+@desc Returns a set of MatchIds that belong to the given domain.
 @required {DomainName: str}
 @optional {next-token: str, max-results: int}
 @returns(200) {MatchIds: [str]?, NextToken: str?}
@@ -205,6 +245,7 @@
 
 @group tags
 @endpoint GET /tags/{resourceArn}
+@desc Displays the tags associated with an Amazon Connect Customer Profiles resource. In Connect Customer Profiles, domains, profile object types, and integrations can be tagged.
 @required {resourceArn: str}
 @returns(200) {tags: map<str,str>?}
 
@@ -212,30 +253,36 @@
 
 @group domains
 @endpoint POST /domains/{DomainName}/workflows
+@desc Query to list all workflows.
 @required {DomainName: str}
 @optional {next-token: str, max-results: int, WorkflowType: str, Status: str, QueryStartDate: str(timestamp), QueryEndDate: str(timestamp)}
 @returns(200) {Items: [ListWorkflowsItem]?, NextToken: str?}
 
 @endpoint POST /domains/{DomainName}/profiles/objects/merge
+@desc Runs an AWS Lambda job that does the following:   All the profileKeys in the ProfileToBeMerged will be moved to the main profile.   All the objects in the ProfileToBeMerged will be moved to the main profile.   All the ProfileToBeMerged will be deleted at the end.   All the profileKeys in the ProfileIdsToBeMerged will be moved to the main profile.   Standard fields are merged as follows:   Fields are always "union"-ed if there are no conflicts in standard fields or attributeKeys.   When there are conflicting fields:   If no SourceProfileIds entry is specified, the main Profile value is always taken.    If a SourceProfileIds entry is specified, the specified profileId is always taken, even if it is a NULL value.       You can use MergeProfiles together with GetMatches, which returns potentially matching profiles, or use it with the results of another matching system. After profiles have been merged, they cannot be separated (unmerged).
 @required {DomainName: str, MainProfileId: str, ProfileIdsToBeMerged: [str]}
 @optional {FieldSourceProfileIds: FieldSourceProfileIds}
 @returns(200) {Message: str?}
 
 @endpoint PUT /domains/{DomainName}/integrations
+@desc Adds an integration between the service and a third-party service, which includes Amazon AppFlow and Amazon Connect. An integration can belong to only one domain. To add or remove tags on an existing Integration, see  TagResource / UntagResource.
 @required {DomainName: str}
 @optional {Uri: str, ObjectTypeName: str, Tags: map<str,str>, FlowDefinition: FlowDefinition, ObjectTypeNames: map<str,str>}
 @returns(200) {DomainName: str, Uri: str, ObjectTypeName: str?, CreatedAt: str(timestamp), LastUpdatedAt: str(timestamp), Tags: map<str,str>?, ObjectTypeNames: map<str,str>?, WorkflowId: str?, IsUnstructured: bool?}
 
 @endpoint PUT /domains/{DomainName}/profiles/objects
+@desc Adds additional objects to customer profiles of a given ObjectType. When adding a specific profile object, like a Contact Record, an inferred profile can get created if it is not mapped to an existing profile. The resulting profile will only have a phone number populated in the standard ProfileObject. Any additional Contact Records with the same phone number will be mapped to the same inferred profile. When a ProfileObject is created and if a ProfileObjectType already exists for the ProfileObject, it will provide data to a standard profile depending on the ProfileObjectType definition. PutProfileObject needs an ObjectType, which can be created using PutProfileObjectType.
 @required {DomainName: str, ObjectTypeName: str, Object: str}
 @returns(200) {ProfileObjectUniqueKey: str?}
 
 @endpoint PUT /domains/{DomainName}/object-types/{ObjectTypeName}
+@desc Defines a ProfileObjectType. To add or remove tags on an existing ObjectType, see  TagResource/UntagResource.
 @required {DomainName: str, ObjectTypeName: str, Description: str}
 @optional {TemplateId: str, ExpirationDays: int, EncryptionKey: str, AllowProfileCreation: bool, SourceLastUpdatedTimestampFormat: str, MaxProfileObjectCount: int, Fields: map<str,ObjectTypeField>, Keys: map<str,[ObjectTypeKey]>, Tags: map<str,str>}
 @returns(200) {ObjectTypeName: str, Description: str, TemplateId: str?, ExpirationDays: int?, EncryptionKey: str?, AllowProfileCreation: bool?, SourceLastUpdatedTimestampFormat: str?, MaxProfileObjectCount: int?, MaxAvailableProfileObjectCount: int?, Fields: map<str,ObjectTypeField>?, Keys: map<str,[ObjectTypeKey]>?, CreatedAt: str(timestamp)?, LastUpdatedAt: str(timestamp)?, Tags: map<str,str>?}
 
 @endpoint POST /domains/{DomainName}/profiles/search
+@desc Searches for profiles within a specific domain using one or more predefined search keys (e.g., _fullName, _phone, _email, _account, etc.) and/or custom-defined search keys. A search key is a data type pair that consists of a KeyName and Values list. This operation supports searching for profiles with a minimum of 1 key-value(s) pair and up to 5 key-value(s) pairs using either AND or OR logic.
 @required {DomainName: str, KeyName: str, Values: [str]}
 @optional {next-token: str, max-results: int, AdditionalSearchKeys: [AdditionalSearchKey], LogicalOperator: str}
 @returns(200) {Items: [Profile]?, NextToken: str?}
@@ -244,25 +291,30 @@
 
 @group tags
 @endpoint POST /tags/{resourceArn}
+@desc Assigns one or more tags (key-value pairs) to the specified Amazon Connect Customer Profiles resource. Tags can help you organize and categorize your resources. You can also use them to scope user permissions by granting a user permission to access or change only resources with certain tag values. In Connect Customer Profiles, domains, profile object types, and integrations can be tagged. Tags don't have any semantic meaning to AWS and are interpreted strictly as strings of characters. You can use the TagResource action with a resource that already has tags. If you specify a new tag key, this tag is appended to the list of tags associated with the resource. If you specify a tag key that is already associated with the resource, the new tag value that you specify replaces the previous value for that tag. You can associate as many as 50 tags with a resource.
 @required {resourceArn: str, tags: map<str,str>}
 
 @endpoint DELETE /tags/{resourceArn}
+@desc Removes one or more tags from the specified Amazon Connect Customer Profiles resource. In Connect Customer Profiles, domains, profile object types, and integrations can be tagged.
 @required {resourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group domains
 @endpoint PUT /domains/{DomainName}/calculated-attributes/{CalculatedAttributeName}
+@desc Updates an existing calculated attribute definition. When updating the Conditions, note that increasing the date range of a calculated attribute will not trigger inclusion of historical data greater than the current date range.
 @required {DomainName: str, CalculatedAttributeName: str}
 @optional {DisplayName: str, Description: str, Conditions: Conditions}
 @returns(200) {CalculatedAttributeName: str?, DisplayName: str?, Description: str?, CreatedAt: str(timestamp)?, LastUpdatedAt: str(timestamp)?, Statistic: str?, Conditions: Conditions?{Range: Range?{Value: int, Unit: str}, ObjectCount: int?, Threshold: Threshold?{Value: str, Operator: str}}, AttributeDetails: AttributeDetails?{Attributes: [AttributeItem], Expression: str}, Tags: map<str,str>?}
 
 @endpoint PUT /domains/{DomainName}
+@desc Updates the properties of a domain, including creating or selecting a dead letter queue or an encryption key. After a domain is created, the name can’t be changed. Use this API or CreateDomain to enable identity resolution: set Matching to true. To prevent cross-service impersonation when you call this API, see Cross-service confused deputy prevention for sample policies that you should apply.  To add or remove tags on an existing Domain, see TagResource/UntagResource.
 @required {DomainName: str}
 @optional {DefaultExpirationDays: int, DefaultEncryptionKey: str, DeadLetterQueueUrl: str, Matching: MatchingRequest, RuleBasedMatching: RuleBasedMatchingRequest, Tags: map<str,str>}
 @returns(200) {DomainName: str, DefaultExpirationDays: int?, DefaultEncryptionKey: str?, DeadLetterQueueUrl: str?, Matching: MatchingResponse?{Enabled: bool?, JobSchedule: JobSchedule?{DayOfTheWeek: str, Time: str}, AutoMerging: AutoMerging?{Enabled: bool, Consolidation: Consolidation?{MatchingAttributesList: [[str]]}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, MinAllowedConfidenceScoreForMerging: num(f64)?}, ExportingConfig: ExportingConfig?{S3Exporting: S3ExportingConfig?{S3BucketName: str, S3KeyName: str?}}}, RuleBasedMatching: RuleBasedMatchingResponse?{Enabled: bool?, MatchingRules: [MatchingRule]?, Status: str?, MaxAllowedRuleLevelForMerging: int?, MaxAllowedRuleLevelForMatching: int?, AttributeTypesSelector: AttributeTypesSelector?{AttributeMatchingModel: str, Address: [str]?, PhoneNumber: [str]?, EmailAddress: [str]?}, ConflictResolution: ConflictResolution?{ConflictResolvingModel: str, SourceName: str?}, ExportingConfig: ExportingConfig?{S3Exporting: S3ExportingConfig?{S3BucketName: str, S3KeyName: str?}}}, CreatedAt: str(timestamp), LastUpdatedAt: str(timestamp), Tags: map<str,str>?}
 
 @endpoint PUT /domains/{DomainName}/profiles
+@desc Updates the properties of a profile. The ProfileId is required for updating a customer profile. When calling the UpdateProfile API, specifying an empty string value means that any existing value will be removed. Not specifying a string value means that any value already there will be kept.
 @required {DomainName: str, ProfileId: str}
 @optional {AdditionalInformation: str, AccountNumber: str, PartyType: str, BusinessName: str, FirstName: str, MiddleName: str, LastName: str, BirthDate: str, Gender: str, PhoneNumber: str, MobilePhoneNumber: str, HomePhoneNumber: str, BusinessPhoneNumber: str, EmailAddress: str, PersonalEmailAddress: str, BusinessEmailAddress: str, Address: UpdateAddress, ShippingAddress: UpdateAddress, MailingAddress: UpdateAddress, BillingAddress: UpdateAddress, Attributes: map<str,str>, PartyTypeString: str, GenderString: str}
 @returns(200) {ProfileId: str}

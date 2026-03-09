@@ -9,87 +9,103 @@
 
 @group activity
 @endpoint GET /activity
-@optional {limit: int=50, offset: int=0}
-@returns(200)
-@errors {401}
+@desc Retrieve a list of API Requests that have been made.
+@optional {limit: int=50 # How many API Events should be retrieved in a single request., offset: int=0 # How far into the collection of API Events should the response start}
+@returns(200) OK
+@errors {401: Invalid or missing token}
 
 @endgroup
 
 @group vaults
 @endpoint GET /vaults
-@optional {filter: str}
-@returns(200)
-@errors {401}
+@desc Get all Vaults
+@optional {filter: str # Filter the Vault collection based on Vault name using SCIM eq filter}
+@returns(200) OK
+@errors {401: Invalid or missing token}
 
 @endpoint GET /vaults/{vaultUuid}
-@required {vaultUuid: str}
-@returns(200) {id: str, name: str, description: str, attributeVersion: int, contentVersion: int, items: int, type: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {401, 403, 404}
+@desc Get Vault details and metadata
+@required {vaultUuid: str # The UUID of the Vault to fetch Items from}
+@returns(200) {id: str, name: str, description: str, attributeVersion: int, contentVersion: int, items: int, type: str, createdAt: str(date-time), updatedAt: str(date-time)} # OK
+@errors {401: Invalid or missing token, 403: Unauthorized access, 404: Vault not found}
 
 @endpoint GET /vaults/{vaultUuid}/items
-@required {vaultUuid: str}
-@optional {filter: str}
-@returns(200)
-@errors {401, 404}
+@desc Get all items for inside a Vault
+@required {vaultUuid: str # The UUID of the Vault to fetch Items from}
+@optional {filter: str # Filter the Item collection based on Item name using SCIM eq filter}
+@returns(200) OK
+@errors {401: Invalid or missing token, 404: Vault not found}
 
 @endpoint POST /vaults/{vaultUuid}/items
-@required {vaultUuid: str}
-@returns(200)
-@errors {400, 401, 403, 404}
+@desc Create a new Item
+@required {vaultUuid: str # The UUID of the Vault to create an Item in}
+@returns(200) OK
+@errors {400: Unable to create item due to invalid input, 401: Invalid or missing token, 403: Unauthorized access, 404: Item not found}
 
 @endpoint GET /vaults/{vaultUuid}/items/{itemUuid}
-@required {vaultUuid: str, itemUuid: str}
-@returns(200)
-@errors {401, 403, 404}
+@desc Get the details of an Item
+@required {vaultUuid: str # The UUID of the Vault to fetch Item from, itemUuid: str # The UUID of the Item to fetch}
+@returns(200) OK
+@errors {401: Invalid or missing token, 403: Unauthorized access, 404: Item not found}
 
 @endpoint PUT /vaults/{vaultUuid}/items/{itemUuid}
-@required {vaultUuid: str, itemUuid: str}
-@returns(200)
-@errors {400, 401, 403, 404}
+@desc Update an Item
+@required {vaultUuid: str # The UUID of the Item's Vault, itemUuid: str # The UUID of the Item to update}
+@returns(200) OK
+@errors {400: Unable to create item due to invalid input, 401: Invalid or missing token, 403: Unauthorized access, 404: Item not found}
 
 @endpoint DELETE /vaults/{vaultUuid}/items/{itemUuid}
-@required {vaultUuid: str, itemUuid: str}
-@returns(204)
-@errors {401, 403, 404}
+@desc Delete an Item
+@required {vaultUuid: str # The UUID of the Vault the item is in, itemUuid: str # The UUID of the Item to update}
+@returns(204) Successfully deleted an item
+@errors {401: Invalid or missing token, 403: Unauthorized access, 404: Item not found}
 
 @endpoint PATCH /vaults/{vaultUuid}/items/{itemUuid}
-@required {vaultUuid: str, itemUuid: str}
-@returns(200)
-@errors {401, 403, 404}
+@desc Update a subset of Item attributes
+@required {vaultUuid: str # The UUID of the Vault the item is in, itemUuid: str # The UUID of the Item to update}
+@returns(200) OK - Item updated. If no Patch operations were provided, Item is unmodified.
+@errors {401: Invalid or missing token, 403: Unauthorized access, 404: Item not found}
+@example_request [{"op":"replace","path":"/","value":{"title":"New Title","favorite":true,"tags":["tag1","tag2"],"...":"Any attr from FullItem schema"}}]
 
 @endpoint GET /vaults/{vaultUuid}/items/{itemUuid}/files
-@required {vaultUuid: str(uuid), itemUuid: str(uuid)}
-@optional {inline_files: bool}
-@returns(200)
-@errors {401, 404, 413}
+@desc Get all the files inside an Item
+@required {vaultUuid: str(uuid) # The UUID of the Vault to fetch Items from, itemUuid: str(uuid) # The UUID of the Item to fetch files from}
+@optional {inline_files: bool # Tells server to return the base64-encoded file contents in the response.}
+@returns(200) OK
+@errors {401: Invalid or missing token, 404: Item not found, 413: File content too large to display}
 
 @endpoint GET /vaults/{vaultUuid}/items/{itemUuid}/files/{fileUuid}
-@required {vaultUuid: str(uuid), itemUuid: str(uuid), fileUuid: str(uuid)}
-@optional {inline_files: bool}
-@returns(200) {id: str, name: str, size: int, content_path: str, section: map{id: str}, content: str(byte)}
-@errors {401, 403, 404, 413}
+@desc Get the details of a File
+@required {vaultUuid: str(uuid) # The UUID of the Vault to fetch Item from, itemUuid: str(uuid) # The UUID of the Item to fetch File from, fileUuid: str(uuid) # The UUID of the File to fetch}
+@optional {inline_files: bool # Tells server to return the base64-encoded file contents in the response.}
+@returns(200) {id: str, name: str, size: int, content_path: str, section: map{id: str}, content: str(byte)} # OK
+@errors {401: Invalid or missing token, 403: Unauthorized access, 404: File not found, 413: File content too large to display}
 
 @endpoint GET /vaults/{vaultUuid}/items/{itemUuid}/files/{fileUuid}/content
-@returns(200)
-@errors {401, 404}
+@desc Get the content of a File
+@returns(200) Success
+@errors {401: Invalid or missing token, 404: File not found}
 
 @endgroup
 
 @group heartbeat
 @endpoint GET /heartbeat
-@returns(200)
+@desc Ping the server for liveness
+@returns(200) OK
 
 @endgroup
 
 @group health
 @endpoint GET /health
-@returns(200) {name: str, version: str, dependencies: [map]}
+@desc Get state of the server and its dependencies.
+@returns(200) {name: str, version: str, dependencies: [map]} # OK
 
 @endgroup
 
 @group metrics
 @endpoint GET /metrics
-@returns(200)
+@desc Query server for exposed Prometheus metrics
+@returns(200) Successfully returned Prometheus metrics
 
 @endgroup
 

@@ -4,94 +4,112 @@
 @base https://management.azure.com
 @version 2018-01-22
 @auth OAuth2
-@common_fields {api-version: any}
+@common_fields {api-version: any # The version of the API.}
 @endpoints 18
 @toc providers(1), subscriptions(17)
 
 @group providers
 @endpoint GET /providers/Microsoft.Devices/operations
-@returns(200)
+@desc Lists all of the available Microsoft.Devices REST API operations.
+@returns(200) OK. The request has succeeded.
 
 @endgroup
 
 @group subscriptions
 @endpoint GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}/certificates/{certificateName}
-@required {certificateName: any, subscriptionId: any, resourceGroupName: any, provisioningServiceName: any}
-@optional {If-Match: any}
-@returns(200)
+@desc Get the certificate from the provisioning service.
+@required {certificateName: any # Name of the certificate to retrieve., subscriptionId: any # The subscription identifier., resourceGroupName: any # Resource group identifier., provisioningServiceName: any # Name of the provisioning service the certificate is associated with.}
+@optional {If-Match: any # ETag of the certificate.}
+@returns(200) Metadata for the specified certificate.
 
 @endpoint PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}/certificates/{certificateName}
-@required {subscriptionId: any, resourceGroupName: any, provisioningServiceName: any, certificateName: any, certificateDescription: map}
-@optional {If-Match: any}
-@returns(200)
+@desc Upload the certificate to the provisioning service.
+@required {subscriptionId: any # The subscription identifier., resourceGroupName: any # Resource group identifier., provisioningServiceName: any # The name of the provisioning service., certificateName: any # The name of the certificate create or update., certificateDescription: map # The certificate body.}
+@optional {If-Match: any # ETag of the certificate. This is required to update an existing certificate, and ignored while creating a brand new certificate.}
+@returns(200) If certificate already exist and update was successful, the operation returns HTTP status code of 201 (OK).
 
 @endpoint DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}/certificates/{certificateName}
-@required {subscriptionId: any, resourceGroupName: any, If-Match: any, provisioningServiceName: any, certificateName: any}
-@optional {certificate.name: any, certificate.rawBytes: any, certificate.isVerified: any, certificate.purpose: any, certificate.created: any, certificate.lastUpdated: any, certificate.hasPrivateKey: any, certificate.nonce: any}
-@returns(200)
-@returns(204)
+@desc Delete the Provisioning Service Certificate.
+@required {subscriptionId: any # The subscription identifier., resourceGroupName: any # Resource group identifier., If-Match: any # ETag of the certificate, provisioningServiceName: any # The name of the provisioning service., certificateName: any # This is a mandatory field, and is the logical name of the certificate that the provisioning service will access by.}
+@optional {certificate.name: any # This is optional, and it is the Common Name of the certificate., certificate.rawBytes: any # Raw data within the certificate., certificate.isVerified: any # Indicates if certificate has been verified by owner of the private key., certificate.purpose: any # A description that mentions the purpose of the certificate., certificate.created: any # Time the certificate is created., certificate.lastUpdated: any # Time the certificate is last updated., certificate.hasPrivateKey: any # Indicates if the certificate contains a private key., certificate.nonce: any # Random number generated to indicate Proof of Possession.}
+@returns(200) OK.
+@returns(204) No content.
 
 @endpoint GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}
-@required {provisioningServiceName: any, subscriptionId: any, resourceGroupName: any}
-@returns(200)
+@desc Get the non-security related metadata of the provisioning service.
+@required {provisioningServiceName: any # Name of the provisioning service to retrieve., subscriptionId: any # The subscription identifier., resourceGroupName: any # Resource group name.}
+@returns(200) Provisioning service description with no keys is included in the response.
 
 @endpoint PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}
-@required {subscriptionId: any, resourceGroupName: any, provisioningServiceName: any, iotDpsDescription: map}
-@returns(200)
-@returns(201)
+@desc Create or update the metadata of the provisioning service.
+@required {subscriptionId: any # The subscription identifier., resourceGroupName: any # Resource group identifier., provisioningServiceName: any # Name of provisioning service to create or update., iotDpsDescription: map # Description of the provisioning service to create or update.}
+@returns(200) The body contains all the non-security properties of the provisioning service. Security-related properties are set to null.
+@returns(201) This is a long running operation. The operation returns a 201 if the validation is complete. The response includes an Azure-AsyncOperation header that contains a status URL. Clients are expected to poll the status URL for the status of the operation. If successful, the operation returns HTTP status code of 201 (OK).
 
 @endpoint PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}
-@required {subscriptionId: any, resourceGroupName: any, provisioningServiceName: any, ProvisioningServiceTags: any}
-@returns(200)
+@desc Update an existing provisioning service's tags.
+@required {subscriptionId: any # The subscription identifier., resourceGroupName: any # Resource group identifier., provisioningServiceName: any # Name of provisioning service to create or update., ProvisioningServiceTags: any # Updated tag information to set into the provisioning service instance.}
+@returns(200) Provisioning Service was successfully updated
 
 @endpoint DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}
-@required {provisioningServiceName: any, subscriptionId: any, resourceGroupName: any}
-@returns(202)
-@returns(200)
-@returns(204)
-@errors {404}
+@desc Delete the Provisioning Service
+@required {provisioningServiceName: any # Name of provisioning service to delete., subscriptionId: any # The subscription identifier., resourceGroupName: any # Resource group identifier.}
+@returns(202) The provisioning service resource provider always returns a 202 Accepted status code with valid Location and Retry-After headers. The resource provider also sets the Azure-AsyncOperation header with a URL that points to the operation resource for this operation. Subsequent GET attempts on the resource after a DELETE operation return a resource representation that indicates a transitional provisioning state (such as Terminating). To retrieve the status of the operation, a client can either poll the URL returned in the Location header after the Retry-After interval, get the provisioning service status directly, or query the operation resource.
+@returns(200) This is returned as a response to the status polling request for the delete operation. The body contains the resource representation that indicates a transitional provisioning state.
+@returns(204) Once the long running delete operation completes successfully, a 204 No Content status code is returned when the status polling request finds the provisioning service metadata in the service and the status of the delete operation is set to a completed state.
+@errors {404: After the long running delete operation completes successfully, a 404 Not Found is returned when the status polling request no longer finds the provisioning service metadata in the service.}
 
 @endpoint GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}/certificates
-@required {subscriptionId: any, resourceGroupName: any, provisioningServiceName: any}
-@returns(200)
+@desc Get all the certificates tied to the provisioning service.
+@required {subscriptionId: any # The subscription identifier., resourceGroupName: any # Name of resource group., provisioningServiceName: any # Name of provisioning service to retrieve certificates for.}
+@returns(200) List of certificate descriptions in a JSON-serialized array.
 
 @endpoint GET /subscriptions/{subscriptionId}/providers/Microsoft.Devices/provisioningServices
-@required {subscriptionId: any}
-@returns(200)
+@desc Get all the provisioning services in a subscription.
+@required {subscriptionId: any # The subscription identifier.}
+@returns(200) This is a synchronous operation. The body contains a JSON-serialized array of the metadata from all the provisioning services in the subscription.
 
 @endpoint GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices
-@required {subscriptionId: any, resourceGroupName: any}
-@returns(200)
+@desc Get a list of all provisioning services in the given resource group.
+@required {subscriptionId: any # The subscription identifier., resourceGroupName: any # Resource group identifier.}
+@returns(200) List of provisioning services in the resource group.
 
 @endpoint GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}/operationresults/{operationId}
-@required {operationId: any, subscriptionId: any, resourceGroupName: any, provisioningServiceName: any, asyncinfo: any}
-@returns(200)
+@desc Gets the status of a long running operation, such as create, update or delete a provisioning service.
+@required {operationId: any # Operation id corresponding to long running operation. Use this to poll for the status., subscriptionId: any # The subscription identifier., resourceGroupName: any # Resource group identifier., provisioningServiceName: any # Name of provisioning service that the operation is running on., asyncinfo: any # Async header used to poll on the status of the operation, obtained while creating the long running operation.}
+@returns(200) The status of the long running operation.
 
 @endpoint GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}/skus
-@required {provisioningServiceName: any, subscriptionId: any, resourceGroupName: any}
-@returns(200)
+@desc Get the list of valid SKUs for a provisioning service.
+@required {provisioningServiceName: any # Name of provisioning service., subscriptionId: any # The subscription identifier., resourceGroupName: any # Name of resource group.}
+@returns(200) This is a synchronous operation. The body contains a JSON-serialized array of the valid SKUs for this provisioning service.
 
 @endpoint POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}/certificates/{certificateName}/generateVerificationCode
-@required {certificateName: any, If-Match: any, subscriptionId: any, resourceGroupName: any, provisioningServiceName: any}
-@optional {certificate.name: any, certificate.rawBytes: any, certificate.isVerified: any, certificate.purpose: any, certificate.created: any, certificate.lastUpdated: any, certificate.hasPrivateKey: any, certificate.nonce: any}
-@returns(200)
+@desc Generate verification code for Proof of Possession.
+@required {certificateName: any # The mandatory logical name of the certificate, that the provisioning service uses to access., If-Match: any # ETag of the certificate. This is required to update an existing certificate, and ignored while creating a brand new certificate., subscriptionId: any # The subscription identifier., resourceGroupName: any # name of resource group., provisioningServiceName: any # Name of provisioning service.}
+@optional {certificate.name: any # Common Name for the certificate., certificate.rawBytes: any # Raw data of certificate., certificate.isVerified: any # Indicates if the certificate has been verified by owner of the private key., certificate.purpose: any # Description mentioning the purpose of the certificate., certificate.created: any # Certificate creation time., certificate.lastUpdated: any # Certificate last updated time., certificate.hasPrivateKey: any # Indicates if the certificate contains private key., certificate.nonce: any # Random number generated to indicate Proof of Possession.}
+@returns(200) Generated verification code for that certificate is returned.
 
 @endpoint POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}/certificates/{certificateName}/verify
-@required {certificateName: any, If-Match: any, request: map, subscriptionId: any, resourceGroupName: any, provisioningServiceName: any}
-@optional {certificate.name: any, certificate.rawBytes: any, certificate.isVerified: any, certificate.purpose: any, certificate.created: any, certificate.lastUpdated: any, certificate.hasPrivateKey: any, certificate.nonce: any}
-@returns(200)
+@desc Verify certificate's private key possession.
+@required {certificateName: any # The mandatory logical name of the certificate, that the provisioning service uses to access., If-Match: any # ETag of the certificate., request: map # The name of the certificate, subscriptionId: any # The subscription identifier., resourceGroupName: any # Resource group name., provisioningServiceName: any # Provisioning service name.}
+@optional {certificate.name: any # Common Name for the certificate., certificate.rawBytes: any # Raw data of certificate., certificate.isVerified: any # Indicates if the certificate has been verified by owner of the private key., certificate.purpose: any # Describe the purpose of the certificate., certificate.created: any # Certificate creation time., certificate.lastUpdated: any # Certificate last updated time., certificate.hasPrivateKey: any # Indicates if the certificate contains private key., certificate.nonce: any # Random number generated to indicate Proof of Possession.}
+@returns(200) OK
 
 @endpoint POST /subscriptions/{subscriptionId}/providers/Microsoft.Devices/checkProvisioningServiceNameAvailability
-@required {subscriptionId: any, arguments: map}
-@returns(200)
+@desc Check if a provisioning service name is available.
+@required {subscriptionId: any # The subscription identifier., arguments: map # Set the name parameter in the OperationInputs structure to the name of the provisioning service to check.}
+@returns(200) This is a synchronous operation. The body contains a JSON-serialized response that specifies whether the provisioning service name is available. If the name is not available, the body contains the reason.
 
 @endpoint POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}/listkeys
-@required {provisioningServiceName: any, subscriptionId: any, resourceGroupName: any}
-@returns(200)
+@desc Get the security metadata for a provisioning service.
+@required {provisioningServiceName: any # The provisioning service name to get the shared access keys for., subscriptionId: any # The subscription identifier., resourceGroupName: any # resource group name}
+@returns(200) This is a synchronous operation. The body contains a JSON-serialized array of shared access policies, including keys, that you can use to access the provisioning service endpoints.
 
 @endpoint POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Devices/provisioningServices/{provisioningServiceName}/keys/{keyName}/listkeys
-@required {provisioningServiceName: any, keyName: any, subscriptionId: any, resourceGroupName: any}
-@returns(200)
+@desc Get a shared access policy by name from a provisioning service.
+@required {provisioningServiceName: any # Name of the provisioning service., keyName: any # Logical key name to get key-values for., subscriptionId: any # The subscription identifier., resourceGroupName: any # The name of the resource group that contains the provisioning service.}
+@returns(200) This is a synchronous operation. The body contains a JSON-serialized shared access policy, including keys, that you can use to access one or more provisioning service endpoints.
 
 @endgroup
 

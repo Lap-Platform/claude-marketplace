@@ -116,91 +116,10 @@ Not specified.
 | POST | / | Updates a snapshot schedule configured for a gateway volume. This operation is only supported in the cached volume and stored volume gateway types. The default snapshot schedule for volume is once every 24 hours, starting at the creation time of the volume. You can use this API to change the snapshot schedule configured for the volume. In the request you must identify the gateway volume whose snapshot schedule you want to update, and the schedule information, including when you want the snapshot to begin on a day and the frequency (in hours) of snapshots. |
 | POST | / | Updates the type of medium changer in a tape gateway. When you activate a tape gateway, you select a medium changer type for the tape gateway. This operation enables you to select a different type of medium changer after a tape gateway is activated. This operation is only supported in the tape gateway type. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I activate a new storage gateway?" -> POST / (ActivateGateway: ActivationKey, GatewayName, GatewayTimezone, GatewayRegion)
-- "How do I create an NFS file share on my gateway?" -> POST / (CreateNFSFileShare: ClientToken, GatewayARN, Role, LocationARN)
-- "How do I create an SMB file share?" -> POST / (CreateSMBFileShare: ClientToken, GatewayARN, Role, LocationARN + SMB options)
-- "How do I create a cached iSCSI volume?" -> POST / (CreateCachediSCSIVolume: GatewayARN, VolumeSizeInBytes, TargetName, NetworkInterfaceId, ClientToken)
-- "How do I list all my gateways?" -> POST / (ListGateways: optional Marker, Limit)
-- "How do I check the cache utilization on my gateway?" -> POST / (DescribeCache: GatewayARN -- returns hit/miss/dirty percentages)
-- "How do I create virtual tapes in bulk?" -> POST / (CreateTapes: GatewayARN, TapeSizeInBytes, NumTapesToCreate, TapeBarcodePrefix, ClientToken)
-- "How do I set bandwidth throttling on a gateway?" -> POST / (UpdateBandwidthRateLimit: GatewayARN, AverageUploadRateLimitInBitsPerSec, AverageDownloadRateLimitInBitsPerSec)
-- "How do I join a gateway to an Active Directory domain?" -> POST / (JoinDomain: GatewayARN, DomainName, UserName, Password)
-- "How do I take a snapshot of a volume?" -> POST / (CreateSnapshot: VolumeARN, SnapshotDescription)
-- "How do I retrieve an archived tape?" -> POST / (RetrieveTapeArchive: TapeARN, GatewayARN)
-- "How do I refresh the file share cache after S3 changes?" -> POST / (RefreshCache: FileShareARN, optional FolderList, Recursive)
-- "How do I check gateway details like software version and deprecation date?" -> POST / (DescribeGatewayInformation: GatewayARN)
-- "How do I schedule recurring volume snapshots?" -> POST / (UpdateSnapshotSchedule: VolumeARN, StartAt, RecurrenceInHours)
-- "How do I delete a tape that has governance retention?" -> POST / (DeleteTape: GatewayARN, TapeARN, BypassGovernanceRetention=true)
-
-## Response Tips
-
-- **Gateway operations**: All return `GatewayARN` on success; a null/missing ARN indicates the operation was accepted but the resource may still be provisioning.
-- **Volume/Tape creation**: Returns both resource ARN and `TargetARN` (for iSCSI volumes) or `TapeARNs` array (for bulk tape creation) -- always capture both.
-- **List/Describe endpoints**: Paginated via `Marker`/`NextMarker` pattern; keep calling with the returned `Marker` value until it is null or absent.
-- **Describe endpoints returning arrays**: Results like `CachediSCSIVolumes`, `VTLDevices`, and `TapeArchives` are nested object arrays -- iterate the inner objects for per-resource details.
-- **Cache/Upload/Working storage stats**: Return byte counts as `int(i64)` and percentages as `num(f64)` -- divide bytes by 1073741824 for GiB display.
-- **File share operations**: NFS and SMB are separate endpoint families with different option sets; never mix `NFSFileShareDefaults` with SMB parameters.
-- **Error responses**: AWS returns structured JSON errors with `__type` and `message` fields; common codes include `InvalidGatewayRequestException` and `InternalServerError`.
-
-## Anomaly Flags
-
-- **DeprecationDate and SoftwareUpdatesEndDate** in DescribeGatewayInformation: surface immediately if either is set or approaching -- the gateway will stop receiving updates.
-- **CacheDirtyPercentage** above 70% from DescribeCache: indicates the gateway is struggling to upload cached data to AWS; likely a bandwidth or connectivity problem.
-- **CacheHitPercentage** below 50%: the cache may be undersized for the workload; recommend adding cache disks.
-- **UploadBufferUsedInBytes** approaching **UploadBufferAllocatedInBytes**: the upload buffer is nearly full, risking write stalls; add upload buffer disks or increase bandwidth.
-- **ActiveDirectoryStatus** returning anything other than `ACCESS_DENIED` or `JOINED` from JoinDomain/DescribeSMBSettings: domain connectivity issues that will block SMB access.
-- **LastSoftwareUpdate** older than 90 days in DescribeGatewayInformation: the gateway may be running outdated software; trigger UpdateGatewaySoftwareNow.
-- **WORM tapes** (CreateTapeWithBarcode with `Worm: true`): flag that these tapes cannot be deleted without governance bypass -- accidental creation is costly.
-- **ForceDelete/ForceDetach** parameters being used: alert the user that forced operations skip safety checks and may cause data loss.
-
-## Playbook
-
-### 1. Provision a New File Gateway with NFS Share
-
-1. Call **ActivateGateway** with the activation key from the gateway VM console, gateway name, timezone, and region.
-2. Call **ListLocalDisks** with the returned `GatewayARN` to discover available disks.
-3. Call **AddCache** with the gateway ARN and the disk IDs designated for caching.
-4. Call **CreateNFSFileShare** with a client token, the gateway ARN, an IAM role ARN, and the S3 bucket location ARN.
-5. Call **DescribeNFSFileShares** with the returned `FileShareARN` to confirm the share is `AVAILABLE`.
-6. Optionally call **AddTagsToResource** to tag the gateway and file share for cost tracking.
-
-### 2. Set Up a Tape Gateway with Automatic Tape Creation
-
-1. Call **ActivateGateway** with `GatewayType: "VTL"` to create a Virtual Tape Library gateway.
-2. Call **ListLocalDisks**, then **AddCache** and **AddUploadBuffer** with appropriate disk IDs.
-3. Call **CreateTapePool** with a pool name and storage class (e.g., `GLACIER` or `DEEP_ARCHIVE`).
-4. Call **UpdateAutomaticTapeCreationPolicy** with rules specifying the gateway ARN, minimum tape count, tape size, barcode prefix, and the pool ARN.
-5. Verify by calling **ListAutomaticTapeCreationPolicies** to confirm the policy is active.
-6. Call **DescribeTapes** periodically to monitor tape status and archival progress.
-
-### 3. Recover a Volume from a Snapshot
-
-1. Call **ListVolumes** to identify the volume ARN, or **DescribeCachediSCSIVolumes**/**DescribeStorediSCSIVolumes** for detailed volume state.
-2. Call **CreateSnapshotFromVolumeRecoveryPoint** with the volume ARN and a description to capture the latest recovery point.
-3. Call **CreateCachediSCSIVolume** (or **CreateStorediSCSIVolume**) with the `SnapshotId` from step 2 to provision a new volume from the snapshot.
-4. Call **AttachVolume** if the volume needs to be connected to a different gateway or network interface.
-5. Verify with **DescribeCachediSCSIVolumes** that the new volume is in `AVAILABLE` state.
-
-### 4. Tune Gateway Bandwidth and Maintenance Window
-
-1. Call **DescribeBandwidthRateLimit** to check current upload/download limits.
-2. Call **UpdateBandwidthRateLimitSchedule** with time-based intervals to throttle bandwidth during business hours and allow full speed overnight.
-3. Call **DescribeMaintenanceStartTime** to check the current maintenance window.
-4. Call **UpdateMaintenanceStartTime** to move maintenance to a low-traffic period (set `HourOfDay`, `MinuteOfHour`, `DayOfWeek`).
-5. Call **DescribeCache** and **DescribeUploadBuffer** to verify cache and buffer health after changes.
-
-### 5. Join Gateway to Active Directory and Configure SMB Shares
-
-1. Call **JoinDomain** with the gateway ARN, AD domain name, AD credentials, and optionally an organizational unit.
-2. Verify `ActiveDirectoryStatus` is `JOINED` in the response.
-3. Call **SetSMBGuestPassword** if guest access is needed for unauthenticated users.
-4. Call **CreateSMBFileShare** with the gateway ARN, IAM role, S3 location, and configure `SMBACLEnabled`, `AdminUserList`, and `ValidUserList` as needed.
-5. Call **UpdateSMBSecurityStrategy** to enforce the desired encryption level (`ClientSpecified`, `MandatorySigning`, or `MandatoryEncryption`).
-6. Optionally call **UpdateSMBLocalGroups** to grant gateway admin privileges to specific AD users.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

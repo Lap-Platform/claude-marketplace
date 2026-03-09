@@ -173,84 +173,101 @@ https://api.magicbell.com/v2
 | DELETE | /users/{user_id}/channels/web_push/tokens/{token_id} | Revokes a specific user's web_push token. This endpoint is available to project administrators and permanently invalidates the specified token. Once revoked, the token can no longer be used to access channel features. This action cannot be undone. |
 | GET | /users/{user_id}/channels/web_push/tokens/{token_id} | Retrieves a specific web_push token by its ID for a given user. This endpoint is available to project administrators and requires project-level authentication. Use this to inspect token details including its status, creation date, and associated metadata. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I send a notification to multiple users?" -> POST /broadcasts
-- "How do I check the status of a broadcast I sent?" -> GET /broadcasts/{broadcast_id}
-- "What broadcasts have been sent recently?" -> GET /broadcasts
-- "How do I register an iOS device for push notifications?" -> POST /channels/mobile_push/apns/tokens
-- "How do I remove a user's FCM push token?" -> DELETE /channels/mobile_push/fcm/tokens/{token_id}
-- "How do I set up SendGrid as my email provider?" -> PUT /integrations/sendgrid
-- "How do I configure the notification inbox theme and branding?" -> PUT /integrations/inbox
-- "How do I connect Slack to MagicBell?" -> PUT /integrations/slack then POST /integrations/slack/installations/start
-- "How do I create a project-level JWT token?" -> POST /jwt/project
-- "How do I revoke a user's JWT token?" -> DELETE /jwt/user/{token_id}
-- "What push tokens does a specific user have registered?" -> GET /users/{user_id}/channels/mobile_push/apns/tokens (or fcm/expo variants)
-- "How do I set up delivery rules for notification channels?" -> PUT /channels/deliveryconfig
-- "How do I remove the Twilio SMS integration?" -> DELETE /integrations/twilio
-- "What events have occurred in my project?" -> GET /events
-- "How do I register a web push subscription for a user?" -> POST /channels/web_push/tokens
-
-## Response Tips
-
-- **Broadcasts**: `status.summary` contains `total` and `failures` counts; check `status.errors[]` for per-recipient failure details. A 201 means accepted for processing, not fully delivered.
-- **Paginated lists** (broadcasts, tokens, events, integrations, JWT): All return `{data: [], links: {first, next?, prev?}}`. Use cursor-based pagination via `page[after]` / `page[before]` from `links.next` / `links.prev`. Absence of `next` means last page.
-- **Token endpoints**: DELETE returns `{discarded_at, id}` with a 200 (soft delete). The `discarded_at` field on GET responses being non-null means the token was previously removed.
-- **Integration PUT**: Returns the full saved config on 200. Sensitive fields (API keys, secrets) are echoed back -- treat responses carefully.
-- **Integration DELETE**: Returns 204 with no body. A subsequent GET will return an empty `data` array.
-- **JWT creation**: Returns the raw `token` string only on creation (POST). Store it immediately -- it cannot be retrieved again via GET (GET lists metadata only).
-
-## Anomaly Flags
-
-- **Broadcast failures**: Surface when `status.summary.failures > 0` after a POST /broadcasts -- indicates recipients were not reached.
-- **Soft-deleted tokens**: Flag if a GET on a token returns a non-null `discarded_at` -- the token is inactive and should be re-registered.
-- **Missing integrations**: If GET /integrations/{provider} returns an empty `data` array for a provider the user is trying to send through, warn that the integration is not configured.
-- **JWT expiry**: After POST /jwt/project or /jwt/user, compare `expires_at` to current time. Flag tokens with very short or very long expiry windows.
-- **Broadcast overrides conflict**: When POST /broadcasts includes both `overrides.channels` and `overrides.providers`, flag potential conflicts where channel-level and provider-level settings may contradict.
-- **204 vs 200 on DELETE**: Integration deletes return 204 (no body) while token deletes return 200 (with body). Flag if a delete returns an unexpected status.
-- **Pagination exhaustion**: If a loop through paginated results exceeds a reasonable page count (e.g., 50+), surface a warning about unexpectedly large result sets.
-
-## Playbook
-
-### 1. Send a branded notification across all channels
-
-1. Verify integrations are configured: GET /integrations to list active providers.
-2. For any missing channel (e.g., email), configure it: PUT /integrations/sendgrid with `api_key` and optional `from`.
-3. Send the broadcast: POST /broadcasts with `recipients`, `title`, `content`, and `overrides.channels` for per-channel customization.
-4. Check delivery status: GET /broadcasts/{broadcast_id} and inspect `status.summary` for total/failures.
-5. If failures exist, review `status.errors[]` for actionable error messages.
-
-### 2. Set up Slack notifications end-to-end
-
-1. Configure the Slack integration: PUT /integrations/slack with `app_id`, `client_id`, `client_secret`, `signing_secret`.
-2. Start the OAuth flow: POST /integrations/slack/installations/start with `app_id` to get `auth_url`.
-3. After user authorizes, finish installation: POST /integrations/slack/installations/finish with `app_id` and the OAuth `code`.
-4. Register user-level Slack tokens: POST /channels/slack/tokens with `oauth` or `webhook` details.
-5. Send a test broadcast: POST /broadcasts targeting Slack via `overrides.channels.slack`.
-
-### 3. Register and manage mobile push tokens for a user
-
-1. Register the device token: POST /channels/mobile_push/apns/tokens (or /fcm/tokens, /expo/tokens) with `device_token`.
-2. Verify registration: GET /channels/mobile_push/apns/tokens/{token_id} and confirm `discarded_at` is null.
-3. List all tokens for a specific user: GET /users/{user_id}/channels/mobile_push/apns/tokens.
-4. Remove a stale token: DELETE /channels/mobile_push/apns/tokens/{token_id} and confirm `discarded_at` in response.
-
-### 4. Configure delivery rules and notification templates
-
-1. Review current delivery config: GET /channels/deliveryconfig.
-2. Update channel priorities and delays: PUT /channels/deliveryconfig with `channels[]` specifying `channel`, `priority`, `delay`, and optional `if` conditions.
-3. Set up notification templates: POST /integrations/templates/installations with `channel`, `text`, and optional `category`.
-4. Verify templates are active: GET /integrations/templates.
-
-### 5. Issue and manage JWT tokens for authentication
-
-1. Create a project token: POST /jwt/project with `name` and optional `expiry`. Save the returned `token` immediately.
-2. Create a user token: POST /jwt/user with `email` or `external_id` to scope it to a specific user.
-3. List active project tokens: GET /jwt/project to review all issued tokens.
-4. List tokens for a specific user: GET /jwt/user/{user_id}.
-5. Revoke a compromised token: DELETE /jwt/project/{token_id} or DELETE /jwt/user/{token_id} and confirm `discarded_at` in the response.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all broadcasts?" -> GET /broadcasts
+- "Create a broadcast?" -> POST /broadcasts
+- "Get broadcast details?" -> GET /broadcasts/{broadcast_id}
+- "List all deliveryconfig?" -> GET /channels/deliveryconfig
+- "List all tokens?" -> GET /channels/mobile_push/apns/tokens
+- "Create a token?" -> POST /channels/mobile_push/apns/tokens
+- "Delete a token?" -> DELETE /channels/mobile_push/apns/tokens/{token_id}
+- "Get token details?" -> GET /channels/mobile_push/apns/tokens/{token_id}
+- "List all tokens?" -> GET /channels/mobile_push/expo/tokens
+- "Create a token?" -> POST /channels/mobile_push/expo/tokens
+- "Delete a token?" -> DELETE /channels/mobile_push/expo/tokens/{token_id}
+- "Get token details?" -> GET /channels/mobile_push/expo/tokens/{token_id}
+- "List all tokens?" -> GET /channels/mobile_push/fcm/tokens
+- "Create a token?" -> POST /channels/mobile_push/fcm/tokens
+- "Delete a token?" -> DELETE /channels/mobile_push/fcm/tokens/{token_id}
+- "Get token details?" -> GET /channels/mobile_push/fcm/tokens/{token_id}
+- "List all tokens?" -> GET /channels/slack/tokens
+- "Create a token?" -> POST /channels/slack/tokens
+- "Delete a token?" -> DELETE /channels/slack/tokens/{token_id}
+- "Get token details?" -> GET /channels/slack/tokens/{token_id}
+- "List all tokens?" -> GET /channels/teams/tokens
+- "Create a token?" -> POST /channels/teams/tokens
+- "Delete a token?" -> DELETE /channels/teams/tokens/{token_id}
+- "Get token details?" -> GET /channels/teams/tokens/{token_id}
+- "List all tokens?" -> GET /channels/web_push/tokens
+- "Create a token?" -> POST /channels/web_push/tokens
+- "Delete a token?" -> DELETE /channels/web_push/tokens/{token_id}
+- "Get token details?" -> GET /channels/web_push/tokens/{token_id}
+- "List all events?" -> GET /events
+- "List all integrations?" -> GET /integrations
+- "List all apns?" -> GET /integrations/apns
+- "Delete a apn?" -> DELETE /integrations/apns/{id}
+- "List all awssns?" -> GET /integrations/awssns
+- "Delete a awssn?" -> DELETE /integrations/awssns/{id}
+- "List all expo?" -> GET /integrations/expo
+- "Delete a expo?" -> DELETE /integrations/expo/{id}
+- "List all fcm?" -> GET /integrations/fcm
+- "Delete a fcm?" -> DELETE /integrations/fcm/{id}
+- "List all github?" -> GET /integrations/github
+- "Delete a github?" -> DELETE /integrations/github/{id}
+- "List all inbox?" -> GET /integrations/inbox
+- "Create a installation?" -> POST /integrations/inbox/installations
+- "Create a start?" -> POST /integrations/inbox/installations/start
+- "Delete a inbox?" -> DELETE /integrations/inbox/{id}
+- "List all mailgun?" -> GET /integrations/mailgun
+- "Delete a mailgun?" -> DELETE /integrations/mailgun/{id}
+- "List all ping_email?" -> GET /integrations/ping_email
+- "Delete a ping_email?" -> DELETE /integrations/ping_email/{id}
+- "List all sendgrid?" -> GET /integrations/sendgrid
+- "Delete a sendgrid?" -> DELETE /integrations/sendgrid/{id}
+- "List all ses?" -> GET /integrations/ses
+- "Delete a se?" -> DELETE /integrations/ses/{id}
+- "List all slack?" -> GET /integrations/slack
+- "Create a installation?" -> POST /integrations/slack/installations
+- "Create a finish?" -> POST /integrations/slack/installations/finish
+- "Create a start?" -> POST /integrations/slack/installations/start
+- "Delete a slack?" -> DELETE /integrations/slack/{id}
+- "List all stripe?" -> GET /integrations/stripe
+- "Delete a stripe?" -> DELETE /integrations/stripe/{id}
+- "List all templates?" -> GET /integrations/templates
+- "Create a installation?" -> POST /integrations/templates/installations
+- "Delete a template?" -> DELETE /integrations/templates/{id}
+- "List all twilio?" -> GET /integrations/twilio
+- "Delete a twilio?" -> DELETE /integrations/twilio/{id}
+- "List all web_push?" -> GET /integrations/web_push
+- "Create a installation?" -> POST /integrations/web_push/installations
+- "Create a start?" -> POST /integrations/web_push/installations/start
+- "Delete a web_push?" -> DELETE /integrations/web_push/{id}
+- "List all project?" -> GET /jwt/project
+- "Create a project?" -> POST /jwt/project
+- "Delete a project?" -> DELETE /jwt/project/{token_id}
+- "Create a user?" -> POST /jwt/user
+- "Delete a user?" -> DELETE /jwt/user/{token_id}
+- "Get user details?" -> GET /jwt/user/{user_id}
+- "List all tokens?" -> GET /users/{user_id}/channels/mobile_push/apns/tokens
+- "Delete a token?" -> DELETE /users/{user_id}/channels/mobile_push/apns/tokens/{token_id}
+- "Get token details?" -> GET /users/{user_id}/channels/mobile_push/apns/tokens/{token_id}
+- "List all tokens?" -> GET /users/{user_id}/channels/mobile_push/expo/tokens
+- "Delete a token?" -> DELETE /users/{user_id}/channels/mobile_push/expo/tokens/{token_id}
+- "Get token details?" -> GET /users/{user_id}/channels/mobile_push/expo/tokens/{token_id}
+- "List all tokens?" -> GET /users/{user_id}/channels/mobile_push/fcm/tokens
+- "Delete a token?" -> DELETE /users/{user_id}/channels/mobile_push/fcm/tokens/{token_id}
+- "Get token details?" -> GET /users/{user_id}/channels/mobile_push/fcm/tokens/{token_id}
+- "List all tokens?" -> GET /users/{user_id}/channels/slack/tokens
+- "Delete a token?" -> DELETE /users/{user_id}/channels/slack/tokens/{token_id}
+- "Get token details?" -> GET /users/{user_id}/channels/slack/tokens/{token_id}
+- "List all tokens?" -> GET /users/{user_id}/channels/teams/tokens
+- "Delete a token?" -> DELETE /users/{user_id}/channels/teams/tokens/{token_id}
+- "Get token details?" -> GET /users/{user_id}/channels/teams/tokens/{token_id}
+- "List all tokens?" -> GET /users/{user_id}/channels/web_push/tokens
+- "Delete a token?" -> DELETE /users/{user_id}/channels/web_push/tokens/{token_id}
+- "Get token details?" -> GET /users/{user_id}/channels/web_push/tokens/{token_id}
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

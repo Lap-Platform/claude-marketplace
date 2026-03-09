@@ -10,1003 +10,1200 @@
 
 @group blueprints
 @endpoint GET /blueprints
-@optional {ownerId: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc List Blueprints
+@optional {ownerId: [str] # The ID of the workspaces to return resources for, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /blueprints/validate
-@returns(200) {valid: bool, errors: [map], plan: map{services: [str], databases: [str], keyValue: [str], envGroups: [str], totalActions: int}}
-@errors {400, 401, 403, 429, 500}
+@desc Validate Blueprint
+@returns(200) {valid: bool, errors: [map], plan: map{services: [str], databases: [str], keyValue: [str], envGroups: [str], totalActions: int}} # Validation complete
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred.}
 
 @endgroup
 
 @group owners
 @endpoint PATCH /owners/{ownerId}/members/{userId}
-@required {role: str(ADMIN/DEVELOPER/WORKSPACE_CONTRIBUTOR/WORKSPACE_BILLING/WORKSPACE_VIEWER)}
-@returns(200) {userId: str, name: str, email: str, status: str, role: str, mfaEnabled: bool}
-@errors {400, 401, 403, 404, 409, 429, 500, 503}
+@desc Update workspace member role
+@required {role: str(ADMIN/DEVELOPER/WORKSPACE_CONTRIBUTOR/WORKSPACE_BILLING/WORKSPACE_VIEWER) # The member's workspace role. Values are always returned in uppercase.}
+@returns(200) {userId: str, name: str, email: str, status: str, role: str, mfaEnabled: bool} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 409: The current state of the resource conflicts with this request., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
+@example_request {"role":"ADMIN"}
 
 @endpoint DELETE /owners/{ownerId}/members/{userId}
-@returns(204)
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Remove workspace member
+@returns(204) No Content
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group blueprints
 @endpoint GET /blueprints/{blueprintId}
-@returns(200) {id: any, name: str, status: str, autoSync: bool, repo: str, branch: str, path: str, lastSync: str(date-time), resources: [map]}
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Retrieve Blueprint
+@returns(200) {id: any, name: str, status: str, autoSync: bool, repo: str, branch: str, path: str, lastSync: str(date-time), resources: [map]} # OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /blueprints/{blueprintId}
-@optional {name: str, autoSync: bool, path: str}
-@returns(200) {id: any, name: str, status: str, autoSync: bool, repo: str, branch: str, path: str, lastSync: str(date-time)}
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Update Blueprint
+@optional {name: str, autoSync: bool # Automatically sync changes to render.yaml, path: str # Path to the Blueprint file in the repository}
+@returns(200) {id: any, name: str, status: str, autoSync: bool, repo: str, branch: str, path: str, lastSync: str(date-time)} # Updated
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /blueprints/{blueprintId}
-@returns(204)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Disconnect Blueprint
+@returns(204) Blueprint disconnected
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /blueprints/{blueprintId}/syncs
-@returns(200)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc List Blueprint syncs
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group disks
 @endpoint GET /disks
-@optional {ownerId: [str], diskId: [any], name: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), serviceId: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc List disks
+@optional {ownerId: [str] # The ID of the workspaces to return resources for, diskId: [any] # Filter by disk IDs, name: [str] # Filter by name, createdBefore: str(date-time) # Filter for resources created before a certain time (specified as an ISO 8601 timestamp), createdAfter: str(date-time) # Filter for resources created after a certain time (specified as an ISO 8601 timestamp), updatedBefore: str(date-time) # Filter for resources updated before a certain time (specified as an ISO 8601 timestamp), updatedAfter: str(date-time) # Filter for resources updated after a certain time (specified as an ISO 8601 timestamp), serviceId: [str] # Filter for resources by service ID, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /disks
+@desc Add disk
 @required {name: str, sizeGB: int, mountPath: str, serviceId: str}
-@returns(201) {id: any, name: str, sizeGB: int, mountPath: str, serviceId: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@returns(201) {id: any, name: str, sizeGB: int, mountPath: str, serviceId: str, createdAt: str(date-time), updatedAt: str(date-time)} # Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /disks/{diskId}
-@returns(200) {id: any, name: str, sizeGB: int, mountPath: str, serviceId: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Retrieve disk
+@returns(200) {id: any, name: str, sizeGB: int, mountPath: str, serviceId: str, createdAt: str(date-time), updatedAt: str(date-time)} # OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /disks/{diskId}
+@desc Update disk
 @optional {name: str, sizeGB: int, mountPath: str}
-@returns(200) {id: any, name: str, sizeGB: int, mountPath: str, serviceId: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@returns(200) {id: any, name: str, sizeGB: int, mountPath: str, serviceId: str, createdAt: str(date-time), updatedAt: str(date-time)} # Updated
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /disks/{diskId}
-@returns(204)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Delete disk
+@returns(204) Disk deleted
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /disks/{diskId}/snapshots
-@returns(201)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc List snapshots
+@returns(201) Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /disks/{diskId}/snapshots/restore
+@desc Restore snapshot
 @required {snapshotKey: str}
-@optional {instanceId: str}
-@returns(200) {id: any, name: str, sizeGB: int, mountPath: str, serviceId: str, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@optional {instanceId: str # When a service with a disk is scaled, the instanceId is used to identify the instance that the disk is attached to. Each instance's disks get their own snapshots, and can be restored separately.}
+@returns(200) {id: any, name: str, sizeGB: int, mountPath: str, serviceId: str, createdAt: str(date-time), updatedAt: str(date-time)} # Restored
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group users
 @endpoint GET /users
-@returns(200) {email: str, name: str}
-@errors {401, 406, 429, 500, 503}
+@desc Get the authenticated user
+@returns(200) {email: str, name: str} # OK
+@errors {401: Authorization information is missing or invalid., 406: Unable to generate preferred media types as specified by Accept request header., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group owners
 @endpoint GET /owners
-@optional {name: [str], email: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 406, 429, 500, 503}
+@desc List workspaces
+@optional {name: [str] # Only return workspaces with one of the provided names. Only exact matches are returned., email: [str] # Only return workspaces owned by one of the provided email addresses., cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 406: Unable to generate preferred media types as specified by Accept request header., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /owners/{ownerId}
-@returns(200) {id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}
-@errors {401, 404, 406, 410, 429, 500, 503}
+@desc Retrieve workspace
+@returns(200) {id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str} # OK
+@errors {401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /owners/{ownerId}/members
-@returns(200)
-@errors {401, 404, 406, 410, 429, 500, 503}
+@desc List workspace members
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /owners/{ownerId}/audit-logs
-@optional {startTime: str(date-time), endTime: str(date-time), cursor: str, limit: int=20}
-@returns(200)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc List workspace audit logs
+@optional {startTime: str(date-time) # Start time for filtering audit logs (ISO 8601 format), endTime: str(date-time) # End time for filtering audit logs (ISO 8601 format), cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of audit log items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group organizations
 @endpoint GET /organizations/{orgId}/audit-logs
-@optional {startTime: str(date-time), endTime: str(date-time), cursor: str, limit: int=20}
-@returns(200)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc List organization audit logs
+@optional {startTime: str(date-time) # Start time for filtering audit logs (ISO 8601 format), endTime: str(date-time) # End time for filtering audit logs (ISO 8601 format), cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of audit log items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group notification-settings
 @endpoint GET /notification-settings/owners/{ownerId}
-@returns(200) {ownerId: str, slackEnabled: bool, emailEnabled: bool, previewNotificationsEnabled: bool, notificationsToSend: any}
-@errors {401, 406, 429, 500, 503}
+@desc Retrieve notification settings
+@returns(200) {ownerId: str, slackEnabled: bool, emailEnabled: bool, previewNotificationsEnabled: bool, notificationsToSend: any} # OK
+@errors {401: Authorization information is missing or invalid., 406: Unable to generate preferred media types as specified by Accept request header., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /notification-settings/owners/{ownerId}
+@desc Update notification settings
 @optional {emailEnabled: bool, previewNotificationsEnabled: bool, notificationsToSend: str(none/failure/all)}
-@returns(200)
-@errors {401, 406, 429, 500, 503}
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 406: Unable to generate preferred media types as specified by Accept request header., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /notification-settings/overrides
-@optional {ownerId: [str], serviceId: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 406, 429, 500, 503}
+@desc List notification overrides
+@optional {ownerId: [str] # The ID of the workspaces to return resources for, serviceId: [str] # Filter for resources by service ID, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 406: Unable to generate preferred media types as specified by Accept request header., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /notification-settings/overrides/services/{serviceId}
-@returns(200) {serviceId: str, previewNotificationsEnabled: str, notificationsToSend: str}
-@errors {401, 406, 429, 500, 503}
+@desc Retrieve notification override
+@returns(200) {serviceId: str, previewNotificationsEnabled: str, notificationsToSend: str} # OK
+@errors {401: Authorization information is missing or invalid., 406: Unable to generate preferred media types as specified by Accept request header., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /notification-settings/overrides/services/{serviceId}
+@desc Update notification override
 @optional {previewNotificationsEnabled: str(default/false/true), notificationsToSend: str(default/none/failure/all)}
-@returns(200)
-@errors {401, 406, 429, 500, 503}
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 406: Unable to generate preferred media types as specified by Accept request header., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group registrycredentials
 @endpoint GET /registrycredentials
-@optional {name: [str], username: [str], type: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 406, 429, 500, 503}
+@desc List registry credentials
+@optional {name: [str] # Filter for the name of a credential, username: [str] # Filter for the username of a credential, type: [str] # Filter for the registry type for the credential, createdBefore: str(date-time) # Filter for services created before a certain time (specified as an ISO 8601 timestamp), createdAfter: str(date-time) # Filter for services created after a certain time (specified as an ISO 8601 timestamp), updatedBefore: str(date-time) # Filter for services updated before a certain time (specified as an ISO 8601 timestamp), updatedAfter: str(date-time) # Filter for services updated after a certain time (specified as an ISO 8601 timestamp), ownerId: [str] # The ID of the workspaces to return resources for, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 406: Unable to generate preferred media types as specified by Accept request header., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /registrycredentials
-@required {registry: str(GITHUB/GITLAB/DOCKER/GOOGLE_ARTIFACT/AWS_ECR), name: str, username: str, authToken: str, ownerId: str}
-@returns(200) {id: str, name: str, registry: str, username: str, updatedAt: str(date-time)}
-@errors {400, 401, 402, 406, 409, 429, 500, 503}
+@desc Create registry credential
+@required {registry: str(GITHUB/GITLAB/DOCKER/GOOGLE_ARTIFACT/AWS_ECR) # The registry to use this credential with, name: str, username: str, authToken: str, ownerId: str}
+@returns(200) {id: str, name: str, registry: str, username: str, updatedAt: str(date-time)} # Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 402: You must enter payment information to perform this request., 406: Unable to generate preferred media types as specified by Accept request header., 409: The current state of the resource conflicts with this request., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /registrycredentials/{registryCredentialId}
-@returns(200) {id: str, name: str, registry: str, username: str, updatedAt: str(date-time)}
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Retrieve registry credential
+@returns(200) {id: str, name: str, registry: str, username: str, updatedAt: str(date-time)} # OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /registrycredentials/{registryCredentialId}
-@required {registry: str(GITHUB/GITLAB/DOCKER/GOOGLE_ARTIFACT/AWS_ECR), name: str, username: str, authToken: str}
-@returns(200) {id: str, name: str, registry: str, username: str, updatedAt: str(date-time)}
-@errors {400, 401, 402, 403, 404, 406, 409, 410, 429, 500, 503}
+@desc Update registry credential
+@required {registry: str(GITHUB/GITLAB/DOCKER/GOOGLE_ARTIFACT/AWS_ECR) # The registry to use this credential with, name: str, username: str, authToken: str}
+@returns(200) {id: str, name: str, registry: str, username: str, updatedAt: str(date-time)} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 402: You must enter payment information to perform this request., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 409: The current state of the resource conflicts with this request., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /registrycredentials/{registryCredentialId}
-@returns(204)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Delete registry credential
+@returns(204) Registry credential deleted
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group services
 @endpoint GET /services
-@optional {name: [str], type: [str], environmentId: [str], env: [str], region: [str], suspended: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], includePreviews: bool=True, cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 406, 429, 500, 503}
+@desc List services
+@optional {name: [str] # Filter by name, type: [str] # Filter for types of services, environmentId: [str] # Filter for resources that belong to an environment, env: [str] # Filter for environments (runtimes) of services (deprecated; use `runtime` instead), region: [str] # Filter by resource region, suspended: [str] # Filter resources based on whether they're suspended or not suspended, createdBefore: str(date-time) # Filter for resources created before a certain time (specified as an ISO 8601 timestamp), createdAfter: str(date-time) # Filter for resources created after a certain time (specified as an ISO 8601 timestamp), updatedBefore: str(date-time) # Filter for resources updated before a certain time (specified as an ISO 8601 timestamp), updatedAfter: str(date-time) # Filter for resources updated after a certain time (specified as an ISO 8601 timestamp), ownerId: [str] # The ID of the workspaces to return resources for, includePreviews: bool=True # Include previews in the response, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 406: Unable to generate preferred media types as specified by Accept request header., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services
-@required {type: str(static_site/web_service/private_service/background_worker/cron_job), name: str, ownerId: str}
-@optional {repo: str, autoDeploy: str(yes/no)=yes, branch: str, image: map{ownerId!: str, registryCredentialId: str, imagePath!: str}, buildFilter: map{paths!: [str], ignoredPaths!: [str]}, rootDir: str, envVars: [map], secretFiles: [map{name!: str, content!: str}], environmentId: str, serviceDetails: any}
-@returns(201) {service: map{id: str, autoDeploy: str, branch: str, buildFilter: map{paths: [str], ignoredPaths: [str]}, createdAt: str(date-time), dashboardUrl: str, environmentId: str, imagePath: str, name: str, notifyOnFail: str, ownerId: str, registryCredential: map{id: str, name: str}, repo: str, rootDir: str, slug: str, suspended: str, suspenders: [str], type: str, updatedAt: str(date-time), serviceDetails: any}, deployId: str}
-@errors {400, 401, 402, 406, 409, 429, 500, 503}
+@desc Create service
+@required {type: str(static_site/web_service/private_service/background_worker/cron_job), name: str # The service's name. Must be unique within the workspace., ownerId: str # The ID of the workspace the service belongs to. Obtain your workspace's ID from its Settings page in the Render Dashboard.}
+@optional {repo: str # The service's repository URL. Do not specify a branch in this string (use the `branch` parameter instead)., autoDeploy: str(yes/no)=yes, branch: str # The repo branch to pull, build, and deploy. If omitted, uses the repository's default branch., image: map{ownerId!: str, registryCredentialId: str, imagePath!: str}, buildFilter: map{paths!: [str], ignoredPaths!: [str]}, rootDir: str, envVars: [map], secretFiles: [map{name!: str, content!: str}], environmentId: str # The ID of the environment the service belongs to, if any. Obtain an environment's ID from its Settings page in the Render Dashboard., serviceDetails: any}
+@returns(201) {service: map{id: str, autoDeploy: str, branch: str, buildFilter: map{paths: [str], ignoredPaths: [str]}, createdAt: str(date-time), dashboardUrl: str, environmentId: str, imagePath: str, name: str, notifyOnFail: str, ownerId: str, registryCredential: map{id: str, name: str}, repo: str, rootDir: str, slug: str, suspended: str, suspenders: [str], type: str, updatedAt: str(date-time), serviceDetails: any}, deployId: str} # Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 402: You must enter payment information to perform this request., 406: Unable to generate preferred media types as specified by Accept request header., 409: The current state of the resource conflicts with this request., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}
-@returns(200) {id: str, autoDeploy: str, branch: str, buildFilter: map{paths: [str], ignoredPaths: [str]}, createdAt: str(date-time), dashboardUrl: str, environmentId: str, imagePath: str, name: str, notifyOnFail: str, ownerId: str, registryCredential: map{id: str, name: str}, repo: str, rootDir: str, slug: str, suspended: str, suspenders: [str], type: str, updatedAt: str(date-time), serviceDetails: any}
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Retrieve service
+@returns(200) {id: str, autoDeploy: str, branch: str, buildFilter: map{paths: [str], ignoredPaths: [str]}, createdAt: str(date-time), dashboardUrl: str, environmentId: str, imagePath: str, name: str, notifyOnFail: str, ownerId: str, registryCredential: map{id: str, name: str}, repo: str, rootDir: str, slug: str, suspended: str, suspenders: [str], type: str, updatedAt: str(date-time), serviceDetails: any} # OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /services/{serviceId}
+@desc Update service
 @optional {autoDeploy: str(yes/no)=yes, repo: str, branch: str, image: map{ownerId!: str, registryCredentialId: str, imagePath!: str}, name: str, buildFilter: map{paths!: [str], ignoredPaths!: [str]}, rootDir: str, serviceDetails: any}
-@returns(200) {id: str, autoDeploy: str, branch: str, buildFilter: map{paths: [str], ignoredPaths: [str]}, createdAt: str(date-time), dashboardUrl: str, environmentId: str, imagePath: str, name: str, notifyOnFail: str, ownerId: str, registryCredential: map{id: str, name: str}, repo: str, rootDir: str, slug: str, suspended: str, suspenders: [str], type: str, updatedAt: str(date-time), serviceDetails: any}
-@errors {400, 401, 402, 403, 404, 406, 409, 410, 429, 500, 503}
+@returns(200) {id: str, autoDeploy: str, branch: str, buildFilter: map{paths: [str], ignoredPaths: [str]}, createdAt: str(date-time), dashboardUrl: str, environmentId: str, imagePath: str, name: str, notifyOnFail: str, ownerId: str, registryCredential: map{id: str, name: str}, repo: str, rootDir: str, slug: str, suspended: str, suspenders: [str], type: str, updatedAt: str(date-time), serviceDetails: any} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 402: You must enter payment information to perform this request., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 409: The current state of the resource conflicts with this request., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /services/{serviceId}
-@returns(204)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Delete service
+@returns(204) Service deleted
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/cache/purge
-@returns(202)
-@errors {400, 401, 404, 406, 409, 410, 429, 500, 503}
+@desc Purge Web Service Cache
+@returns(202) Cache purge request accepted
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 409: The current state of the resource conflicts with this request., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/deploys
-@optional {status: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), finishedBefore: str(date-time), finishedAfter: str(date-time), cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc List deploys
+@optional {status: [str] # Filter for deploys with the specified statuses, createdBefore: str(date-time) # Filter for deploys created before a certain time (specified as an ISO 8601 timestamp), createdAfter: str(date-time) # Filter for deploys created after a certain time (specified as an ISO 8601 timestamp), updatedBefore: str(date-time) # Filter for deploys updated before a certain time (specified as an ISO 8601 timestamp), updatedAfter: str(date-time) # Filter for deploys updated after a certain time (specified as an ISO 8601 timestamp), finishedBefore: str(date-time) # Filter for deploys finished before a certain time (specified as an ISO 8601 timestamp), finishedAfter: str(date-time) # Filter for deploys finished after a certain time (specified as an ISO 8601 timestamp), cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/deploys
-@optional {clearCache: str(clear/do_not_clear)=do_not_clear, commitId: str, imageUrl: str, deployMode: str(deploy_only/build_and_deploy)=build_and_deploy}
-@returns(201) {id: str, commit: map{id: str, message: str, createdAt: str(date-time)}, image: map{ref: str, sha: str, registryCredential: str}, status: str, trigger: str, startedAt: str(date-time), finishedAt: str(date-time), createdAt: str(date-time), updatedAt: str(date-time)}
-@returns(202)
-@errors {400, 401, 404, 406, 409, 410, 429, 500, 503}
+@desc Trigger deploy
+@optional {clearCache: str(clear/do_not_clear)=do_not_clear # If `clear`, Render clears the service's build cache before deploying. This can be useful if you're experiencing issues with your build., commitId: str # The SHA of a specific Git commit to deploy for a service. Defaults to the latest commit on the service's connected branch.  Note that deploying a specific commit with this endpoint does not disable autodeploys for the service.  You can toggle autodeploys for your service with the [Update service](https://api-docs.render.com/reference/update-service) endpoint or in the Render Dashboard.  Not supported for cron jobs., imageUrl: str # The URL of the image to deploy for an image-backed service.  The host, repository, and image name all must match the currently configured image for the service., deployMode: str(deploy_only/build_and_deploy)=build_and_deploy # Controls deployment behavior when triggering a deploy.  - `deploy_only`: Deploy the last successful build without rebuilding (minimizes downtime) - `build_and_deploy`: Build new code and deploy it (default behavior when not specified)  **Note:** `deploy_only` cannot be combined with `commitId`, `imageUrl` or `clearCache` parameters, as those are build related fields.}
+@returns(201) {id: str, commit: map{id: str, message: str, createdAt: str(date-time)}, image: map{ref: str, sha: str, registryCredential: str}, status: str, trigger: str, startedAt: str(date-time), finishedAt: str(date-time), createdAt: str(date-time), updatedAt: str(date-time)} # Created
+@returns(202) Queued
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 409: The current state of the resource conflicts with this request., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/deploys/{deployId}
-@returns(200) {id: str, commit: map{id: str, message: str, createdAt: str(date-time)}, image: map{ref: str, sha: str, registryCredential: str}, status: str, trigger: str, startedAt: str(date-time), finishedAt: str(date-time), createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Retrieve deploy
+@returns(200) {id: str, commit: map{id: str, message: str, createdAt: str(date-time)}, image: map{ref: str, sha: str, registryCredential: str}, status: str, trigger: str, startedAt: str(date-time), finishedAt: str(date-time), createdAt: str(date-time), updatedAt: str(date-time)} # OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/deploys/{deployId}/cancel
-@returns(200) {id: str, commit: map{id: str, message: str, createdAt: str(date-time)}, image: map{ref: str, sha: str, registryCredential: str}, status: str, trigger: str, startedAt: str(date-time), finishedAt: str(date-time), createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Cancel deploy
+@returns(200) {id: str, commit: map{id: str, message: str, createdAt: str(date-time)}, image: map{ref: str, sha: str, registryCredential: str}, status: str, trigger: str, startedAt: str(date-time), finishedAt: str(date-time), createdAt: str(date-time), updatedAt: str(date-time)} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/rollback
-@required {deployId: str}
-@returns(201) {id: str, commit: map{id: str, message: str, createdAt: str(date-time)}, image: map{ref: str, sha: str, registryCredential: str}, status: str, trigger: str, startedAt: str(date-time), finishedAt: str(date-time), createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Roll back deploy
+@required {deployId: str # The ID of the deploy to roll back to}
+@returns(201) {id: str, commit: map{id: str, message: str, createdAt: str(date-time)}, image: map{ref: str, sha: str, registryCredential: str}, status: str, trigger: str, startedAt: str(date-time), finishedAt: str(date-time), createdAt: str(date-time), updatedAt: str(date-time)} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/env-vars
-@optional {cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc List environment variables
+@optional {cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PUT /services/{serviceId}/env-vars
-@returns(200)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Update environment variables
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/env-vars/{envVarKey}
-@returns(200) {key: str, value: str}
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Retrieve environment variable
+@returns(200) {key: str, value: str} # OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PUT /services/{serviceId}/env-vars/{envVarKey}
-@returns(200) {key: str, value: str}
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Add or update environment variable
+@returns(200) {key: str, value: str} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /services/{serviceId}/env-vars/{envVarKey}
-@returns(204)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Delete environment variable
+@returns(204) Environment variable deleted
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/secret-files
-@optional {cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc List secret files
+@optional {cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PUT /services/{serviceId}/secret-files
-@returns(200)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Update secret files
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/secret-files/{secretFileName}
-@returns(200) {name: str, content: str}
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Retrieve secret file
+@returns(200) {name: str, content: str} # OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PUT /services/{serviceId}/secret-files/{secretFileName}
+@desc Add or update secret file
 @optional {content: str}
-@returns(201) {name: str, content: str}
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@returns(201) {name: str, content: str} # Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /services/{serviceId}/secret-files/{secretFileName}
-@returns(204)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Delete secret file
+@returns(204) Secret file deleted
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/events
-@required {serviceId: str}
-@optional {type: any, startTime: str(date-time), endTime: str(date-time), cursor: str, limit: int=20}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc List events
+@required {serviceId: str # The ID of the service}
+@optional {type: any # The type of event to filter to, startTime: str(date-time) # Epoch/Unix timestamp of start of time range to return. Defaults to `now() - 1 hour`., endTime: str(date-time) # Epoch/Unix timestamp of end of time range to return. Defaults to `now()`., cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/headers
-@optional {path: [str], name: [str], value: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc List header rules
+@optional {path: [str] # Filter for specific paths that headers apply to, name: [str] # Filter for header names, value: [str] # Filter for header values, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/headers
-@required {path: str, name: str, value: str}
-@returns(201) {headers: map{id: str, path: str, name: str, value: str}}
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Add header rule
+@required {path: str # The request path to add the header to. Wildcards will cause headers to be applied to all matching paths., name: str # Header name, value: str # Header value}
+@returns(201) {headers: map{id: str, path: str, name: str, value: str}} # Created
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PUT /services/{serviceId}/headers
-@returns(200)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Replace header rules
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /services/{serviceId}/headers/{headerId}
-@returns(204)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Delete header rule
+@returns(204) Header deleted
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/routes
-@optional {type: [str], source: [str], destination: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc List redirect/rewrite rules
+@optional {type: [str] # Filter for the type of route rule, source: [str] # Filter for the source path of the route, destination: [str] # Filter for the destination path of the route, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/routes
+@desc Add redirect/rewrite rules
 @required {type: str(redirect/rewrite), source: str, destination: str}
-@optional {priority: int}
-@returns(201) {id: str, type: str, source: str, destination: str, priority: int}
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@optional {priority: int # Redirect and Rewrite Rules are applied in priority order starting at 0. Defaults to last in the priority list.}
+@returns(201) {id: str, type: str, source: str, destination: str, priority: int} # Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /services/{serviceId}/routes
-@required {priority: int}
-@returns(200) {headers: map{id: str, type: str, source: str, destination: str, priority: int}}
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Update redirect/rewrite rule priority
+@required {priority: int # Redirect and Rewrite Rules are applied in priority order starting at 0. Moves this route to the specified priority and adjusts other route priorities accordingly.}
+@returns(200) {headers: map{id: str, type: str, source: str, destination: str, priority: int}} # Updated
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PUT /services/{serviceId}/routes
-@returns(200)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Update redirect/rewrite rules
+@returns(200) Updated
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /services/{serviceId}/routes/{routeId}
-@returns(204)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Delete redirect/rewrite rule
+@returns(204) Route deleted
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/custom-domains
-@optional {cursor: str, limit: int=20, name: [str], domainType: str(apex/subdomain), verificationStatus: str(verified/unverified), createdBefore: str(date-time), createdAfter: str(date-time)}
-@returns(200)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc List custom domains
+@optional {cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., name: [str] # Filter for the names of custom domain, domainType: str(apex/subdomain) # Filter for domain type, verificationStatus: str(verified/unverified) # Filter for domain verification status (`verified` or `unverified`), createdBefore: str(date-time) # Filter for custom domains created before a certain time (specified as an ISO 8601 timestamp), createdAfter: str(date-time) # Filter for custom domains created after a certain time (specified as an ISO 8601 timestamp)}
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/custom-domains
+@desc Add custom domain
 @required {name: str}
-@returns(201)
-@errors {400, 401, 402, 403, 404, 406, 409, 410, 429, 500, 503}
+@returns(201) Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 402: You must enter payment information to perform this request., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 409: The current state of the resource conflicts with this request., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/custom-domains/{customDomainIdOrName}
-@returns(200) {id: str, name: str, domainType: str, publicSuffix: str, redirectForName: str, verificationStatus: str, createdAt: str(date-time), server: map{id: str, name: str}}
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Retrieve custom domain
+@returns(200) {id: str, name: str, domainType: str, publicSuffix: str, redirectForName: str, verificationStatus: str, createdAt: str(date-time), server: map{id: str, name: str}} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /services/{serviceId}/custom-domains/{customDomainIdOrName}
-@returns(204)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Delete custom domain
+@returns(204) Custom domain deleted
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/custom-domains/{customDomainIdOrName}/verify
-@returns(202)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Verify DNS configuration
+@returns(202) Custom domain verification triggered
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/suspend
-@returns(202)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Suspend service
+@returns(202) Service suspended successfully
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/resume
-@returns(202)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Resume service
+@returns(202) Service resumed successfully
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/restart
-@returns(200)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Restart service
+@returns(200) Service restarted
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/scale
+@desc Scale instance count
 @required {numInstances: int}
-@returns(202)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@returns(202) Service scaled successfully
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PUT /services/{serviceId}/autoscaling
-@required {enabled: bool=False, min: int, max: int, criteria: map{cpu!: map{enabled!: bool, percentage!: int}, memory!: map{enabled!: bool, percentage!: int}}}
-@returns(200) {enabled: bool, min: int, max: int, criteria: map{cpu: map{enabled: bool, percentage: int}, memory: map{enabled: bool, percentage: int}}}
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Update autoscaling config
+@required {enabled: bool=False, min: int # The minimum number of instances for the service, max: int # The maximum number of instances for the service, criteria: map{cpu!: map{enabled!: bool, percentage!: int}, memory!: map{enabled!: bool, percentage!: int}}}
+@returns(200) {enabled: bool, min: int, max: int, criteria: map{cpu: map{enabled: bool, percentage: int}, memory: map{enabled: bool, percentage: int}}} # Autoscaling configuration updated
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /services/{serviceId}/autoscaling
-@returns(204)
-@errors {401, 403, 404, 406, 410, 429, 500, 503}
+@desc Delete autoscaling config
+@returns(204) Autoscaling config deleted
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/preview
-@required {imagePath: str}
-@optional {name: str, plan: str(starter/starter_plus/standard/standard_plus/pro/pro_plus/pro_max/pro_ultra/free/custom)}
-@returns(200) {service: map{id: str, autoDeploy: str, branch: str, buildFilter: map{paths: [str], ignoredPaths: [str]}, createdAt: str(date-time), dashboardUrl: str, environmentId: str, imagePath: str, name: str, notifyOnFail: str, ownerId: str, registryCredential: map{id: str, name: str}, repo: str, rootDir: str, slug: str, suspended: str, suspenders: [str], type: str, updatedAt: str(date-time), serviceDetails: any}, deployId: str}
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Create service preview (image-backed)
+@required {imagePath: str # Must be either a full URL or the relative path to an image. If a relative path, Render uses the base service's image URL as its root. For example, if the base service's image URL is `docker.io/library/nginx:latest`, then valid values are: `docker.io/library/nginx:<any tag or SHA>`, `library/nginx:<any tag or SHA>`, or `nginx:<any tag or SHA>`. Note that the path must match (only the tag or SHA can vary).}
+@optional {name: str # A name for the service preview instance. If not specified, Render generates the name using the base service's name and the specified tag or SHA., plan: str(starter/starter_plus/standard/standard_plus/pro/pro_plus/pro_max/pro_ultra/free/custom) # The instance type to use. Note that base services on any paid instance type can't create preview instances with the `free` instance type.}
+@returns(200) {service: map{id: str, autoDeploy: str, branch: str, buildFilter: map{paths: [str], ignoredPaths: [str]}, createdAt: str(date-time), dashboardUrl: str, environmentId: str, imagePath: str, name: str, notifyOnFail: str, ownerId: str, registryCredential: map{id: str, name: str}, repo: str, rootDir: str, slug: str, suspended: str, suspenders: [str], type: str, updatedAt: str(date-time), serviceDetails: any}, deployId: str} # Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/jobs
-@optional {cursor: str, limit: int=20, status: [str], createdBefore: str(date-time), createdAfter: str(date-time), startedBefore: str(date-time), startedAfter: str(date-time), finishedBefore: str(date-time), finishedAfter: str(date-time)}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc List jobs
+@optional {cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., status: [str] # Filter for the status of the job (`pending`, `running`, `succeeded`, `failed`, or `canceled`), createdBefore: str(date-time) # Filter for jobs created before a certain time (specified as an ISO 8601 timestamp), createdAfter: str(date-time) # Filter for jobs created after a certain time (specified as an ISO 8601 timestamp), startedBefore: str(date-time) # Filter for jobs started before a certain time (specified as an ISO 8601 timestamp), startedAfter: str(date-time) # Filter for jobs started after a certain time (specified as an ISO 8601 timestamp), finishedBefore: str(date-time) # Filter for jobs finished before a certain time (specified as an ISO 8601 timestamp), finishedAfter: str(date-time) # Filter for jobs finished after a certain time (specified as an ISO 8601 timestamp)}
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/jobs
+@desc Create job
 @required {startCommand: str}
 @optional {planId: str}
-@returns(201) {id: any, serviceId: str, startCommand: str, planId: str, status: any, createdAt: str(date-time), startedAt: str(date-time), finishedAt: str(date-time)}
-@errors {400, 401, 404, 429, 500, 503}
+@returns(201) {id: any, serviceId: str, startCommand: str, planId: str, status: any, createdAt: str(date-time), startedAt: str(date-time), finishedAt: str(date-time)} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/jobs/{jobId}
-@returns(200) {id: any, serviceId: str, startCommand: str, planId: str, status: any, createdAt: str(date-time), startedAt: str(date-time), finishedAt: str(date-time)}
-@errors {400, 401, 404, 429, 500, 503}
+@desc Retrieve job
+@returns(200) {id: any, serviceId: str, startCommand: str, planId: str, status: any, createdAt: str(date-time), startedAt: str(date-time), finishedAt: str(date-time)} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /services/{serviceId}/jobs/{jobId}/cancel
-@returns(200) {id: any, serviceId: str, startCommand: str, planId: str, status: any, createdAt: str(date-time), startedAt: str(date-time), finishedAt: str(date-time)}
-@errors {400, 401, 404, 429, 500, 503}
+@desc Cancel running job
+@returns(200) {id: any, serviceId: str, startCommand: str, planId: str, status: any, createdAt: str(date-time), startedAt: str(date-time), finishedAt: str(date-time)} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /services/{serviceId}/instances
-@returns(200)
-@errors {401, 404, 429, 500, 503}
+@desc List instances
+@returns(200) OK
+@errors {401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group cron-jobs
 @endpoint POST /cron-jobs/{cronJobId}/runs
-@returns(200) {id: str, status: str, startedAt: str(date-time), finishedAt: str(date-time), triggeredBy: str, canceledBy: str}
-@errors {401, 406, 429, 500, 503}
+@desc Trigger cron job run
+@returns(200) {id: str, status: str, startedAt: str(date-time), finishedAt: str(date-time), triggeredBy: str, canceledBy: str} # OK
+@errors {401: Authorization information is missing or invalid., 406: Unable to generate preferred media types as specified by Accept request header., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /cron-jobs/{cronJobId}/runs
-@returns(204)
-@errors {401, 406, 429, 500, 503}
+@desc Cancel running cron job
+@returns(204) Cancelled
+@errors {401: Authorization information is missing or invalid., 406: Unable to generate preferred media types as specified by Accept request header., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group events
 @endpoint GET /events/{eventId}
-@returns(200) {id: any, timestamp: str(date-time), serviceId: str, type: str, details: any}
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Retrieve event
+@returns(200) {id: any, timestamp: str(date-time), serviceId: str, type: str, details: any} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group logs
 @endpoint GET /logs
-@required {ownerId: str, resource: [str]}
-@optional {startTime: str(date-time), endTime: str(date-time), direction: str(forward/backward)=backward, instance: [str], host: [str], statusCode: [str], method: [str], task: [str], taskRun: [str], level: [str], type: [str], text: [str], path: [str], limit: int=20}
-@returns(200) {hasMore: bool, nextStartTime: str(date-time), nextEndTime: str(date-time), logs: [any]}
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc List logs
+@required {ownerId: str # The ID of the workspace to return logs for, resource: [str] # Filter logs by their resource. A resource is the id of a server, cronjob, job, postgres, redis, or workflow.}
+@optional {startTime: str(date-time) # Epoch/Unix timestamp of start of time range to return. Defaults to `now() - 1 hour`., endTime: str(date-time) # Epoch/Unix timestamp of end of time range to return. Defaults to `now()`., direction: str(forward/backward)=backward # The direction to query logs for. Backward will return most recent logs first. Forward will start with the oldest logs in the time range., instance: [str] # Filter logs by the instance they were emitted from. An instance is the id of a specific running server., host: [str] # Filter request logs by their host. [Wildcards and regex](https://render.com/docs/logging#wildcards-and-regular-expressions) are supported., statusCode: [str] # Filter request logs by their status code. [Wildcards and regex](https://render.com/docs/logging#wildcards-and-regular-expressions) are supported., method: [str] # Filter request logs by their requests method. [Wildcards and regex](https://render.com/docs/logging#wildcards-and-regular-expressions) are supported., task: [str] # Filter logs by their task(s), taskRun: [str] # Filter logs by their task run id(s), level: [str] # Filter logs by their severity level. [Wildcards and regex](https://render.com/docs/logging#wildcards-and-regular-expressions) are supported., type: [str] # Filter logs by their type. Types include `app` for application logs, `request` for request logs, and `build` for build logs. You can find the full set of types available for a query by using the `GET /logs/values` endpoint., text: [str] # Filter by the text of the logs. [Wildcards and regex](https://render.com/docs/logging#wildcards-and-regular-expressions) are supported., path: [str] # Filter request logs by their path. [Wildcards and regex](https://render.com/docs/logging#wildcards-and-regular-expressions) are supported., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) {hasMore: bool, nextStartTime: str(date-time), nextEndTime: str(date-time), logs: [any]} # A collection of logs with pagination metadata
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /logs/subscribe
-@required {ownerId: str}
-@optional {startTime: str(date-time), endTime: str(date-time), limit: int=20}
-@errors {101, 400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Subscribe to new logs
+@required {ownerId: str # The ID of the workspace to return logs for}
+@optional {startTime: str(date-time) # Epoch/Unix timestamp of start of time range to return. Defaults to `now() - 1 hour`., endTime: str(date-time) # Epoch/Unix timestamp of end of time range to return. Defaults to `now()`., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@errors {101: The connection has been upgraded to a websocket. The server will send log messages as they are generated in the format defined below., 400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /logs/values
-@required {ownerId: str, label: str(instance/host/statusCode/method/level/type)}
-@optional {startTime: str(date-time), endTime: str(date-time), limit: int=20}
-@returns(200)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc List log label values
+@required {ownerId: str # The ID of the workspace to return log label values for, label: str(instance/host/statusCode/method/level/type) # The label to query logs for}
+@optional {startTime: str(date-time) # Epoch/Unix timestamp of start of time range to return. Defaults to `now() - 1 hour`., endTime: str(date-time) # Epoch/Unix timestamp of end of time range to return. Defaults to `now()`., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) An array of possible values for a log label
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /logs/streams/owner/{ownerId}
-@required {ownerId: str}
-@returns(200) {ownerId: str, endpoint: str, preview: any}
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Retrieve log stream
+@required {ownerId: str # The ID of the workspace to return log stream information for}
+@returns(200) {ownerId: str, endpoint: str, preview: any} # Owner log stream setting
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PUT /logs/streams/owner/{ownerId}
-@required {ownerId: str, preview: str(send/drop)}
-@optional {endpoint: str, token: str}
+@desc Update log stream
+@required {ownerId: str # The ID of the workspace to update log stream information for, preview: str(send/drop) # Whether to send logs or drop them.}
+@optional {endpoint: str # The endpoint to stream logs to., token: str # The optional token to authenticate the log stream.}
 @returns(200)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /logs/streams/owner/{ownerId}
-@required {ownerId: str}
-@returns(204)
-@errors {400, 401, 404, 429, 500, 503}
+@desc Delete log stream
+@required {ownerId: str # The ID of the workspace to delete the log stream for}
+@returns(204) Log stream setting deleted
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /logs/streams/resource
-@optional {ownerId: [str], logStreamId: [str], resourceId: [str], setting: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc List log stream overrides
+@optional {ownerId: [str] # The ID of the workspaces to return resources for, logStreamId: [str] # Filter log streams by their id., resourceId: [str] # IDs of resources (server, cron job, postgres, or redis) to filter by, setting: [str] # Filter log streams by their setting., cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) Resource log stream override
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /logs/streams/resource/{resourceId}
-@required {resourceId: str}
-@returns(200) {resourceId: str, endpoint: str, setting: any}
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Retrieve log stream override
+@required {resourceId: str # The ID of the resource (server, cron job, postgres, or redis) to return log stream override information for}
+@returns(200) {resourceId: str, endpoint: str, setting: any} # Resource log stream override
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PUT /logs/streams/resource/{resourceId}
-@required {resourceId: str, setting: any}
+@desc Update log stream override
+@required {resourceId: str # The ID of the resource (server, cron job, postgres, or redis) to update log stream override information for, setting: any}
 @optional {endpoint: any, token: any}
 @returns(200)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /logs/streams/resource/{resourceId}
-@required {resourceId: str}
-@returns(204)
-@errors {400, 401, 404, 429, 500, 503}
+@desc Delete log stream override
+@required {resourceId: str # The ID of the resource (server, cron job, postgres, or redis) whose log streams should be returned}
+@returns(204) Log stream setting deleted
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group metrics-stream
 @endpoint GET /metrics-stream/{ownerId}
-@returns(200)
-@errors {400, 404, 500}
+@desc Retrieve metrics stream
+@returns(200) The metrics stream integration for the owner
+@errors {400: The request could not be understood by the server., 404: metrics stream not found, 500: An unexpected server error has occurred.}
 
 @endpoint PUT /metrics-stream/{ownerId}
-@optional {provider: str(BETTER_STACK/GRAFANA/DATADOG/NEW_RELIC/HONEYCOMB/SIGNOZ/GROUNDCOVER/CUSTOM), url: str, token: str}
-@returns(200) {ownerId: str, provider: any, url: str}
-@errors {400, 500}
+@desc Create or update metrics stream
+@optional {provider: str(BETTER_STACK/GRAFANA/DATADOG/NEW_RELIC/HONEYCOMB/SIGNOZ/GROUNDCOVER/CUSTOM) # Provider to send metrics to, url: str # The endpoint URL to stream metrics to, token: str # Authentication token for the metrics stream}
+@returns(200) {ownerId: str, provider: any, url: str} # metrics stream successfully updated
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint DELETE /metrics-stream/{ownerId}
-@returns(204)
-@errors {400, 404, 500}
+@desc Delete metrics stream
+@returns(204) metrics stream integration deleted successfully
+@errors {400: The request could not be understood by the server., 404: metrics stream not found, 500: An unexpected server error has occurred.}
 
 @endgroup
 
 @group metrics
 @endpoint GET /metrics/cpu
-@returns(200)
-@errors {400, 500}
+@desc Get CPU usage
+@returns(200) A successful response
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/cpu-limit
+@desc Get CPU limit
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/cpu-target
+@desc Get CPU target
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/memory
+@desc Get memory usage
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/memory-limit
+@desc Get memory limit
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/memory-target
+@desc Get memory target
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/http-requests
+@desc Get HTTP request count
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/http-latency
+@desc Get HTTP latency
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/bandwidth
+@desc Get bandwidth usage
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/bandwidth-sources
-@returns(200) {data: [map]}
-@errors {400, 500}
+@desc Get bandwidth usage breakdown by traffic source
+@returns(200) {data: [map]} # A successful response with traffic source breakdown
+@errors {400: Bad request - invalid date range, 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/disk-usage
+@desc Get disk usage
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/disk-capacity
+@desc Get disk capacity
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/instance-count
+@desc Get instance count
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/active-connections
+@desc Get active connection count
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/replication-lag
+@desc Get replica lag
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/filters/application
-@returns(200)
-@errors {400, 500}
+@desc List queryable instance values
+@returns(200) A successful response
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/filters/http
-@returns(200)
-@errors {400, 500}
+@desc List queryable status codes and host values
+@returns(200) A successful response
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/filters/path
-@returns(200)
-@errors {400, 500}
+@desc List queryable paths
+@returns(200) A successful response
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/task-runs-queued
+@desc Get task runs queued count
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endpoint GET /metrics/task-runs-completed
+@desc Get task runs completed count
 @returns(200)
-@errors {400, 500}
+@errors {400: The request could not be understood by the server., 500: An unexpected server error has occurred.}
 
 @endgroup
 
 @group key-value
 @endpoint GET /key-value
-@optional {name: [str], region: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], environmentId: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {400, 401, 404, 409, 429, 500, 503}
+@desc List Key Value instances
+@optional {name: [str] # Filter by name, region: [str] # Filter by resource region, createdBefore: str(date-time) # Filter for resources created before a certain time (specified as an ISO 8601 timestamp), createdAfter: str(date-time) # Filter for resources created after a certain time (specified as an ISO 8601 timestamp), updatedBefore: str(date-time) # Filter for resources updated before a certain time (specified as an ISO 8601 timestamp), updatedAfter: str(date-time) # Filter for resources updated after a certain time (specified as an ISO 8601 timestamp), ownerId: [str] # The ID of the workspaces to return resources for, environmentId: [str] # Filter for resources that belong to an environment, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 409: The current state of the resource conflicts with this request., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /key-value
-@required {name: str, ownerId: str, plan: str(free/starter/standard/pro/pro_plus/custom)}
-@optional {region: str, environmentId: str, maxmemoryPolicy: str(noeviction/allkeys_lfu/allkeys_lru/allkeys_random/volatile_lfu/volatile_lru/volatile_random/volatile_ttl), ipAllowList: [map{cidrBlock!: str, description!: str}]}
-@returns(201) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}}
-@errors {400, 401, 404, 429, 500, 503}
+@desc Create Key Value instance
+@required {name: str # The name of the Key Value instance, ownerId: str # The ID of the owner of the Key Value instance, plan: str(free/starter/standard/pro/pro_plus/custom)}
+@optional {region: str # The region where the Key Value instance is located, environmentId: str, maxmemoryPolicy: str(noeviction/allkeys_lfu/allkeys_lru/allkeys_random/volatile_lfu/volatile_lru/volatile_random/volatile_ttl) # The eviction policy for the Key Value instance, ipAllowList: [map{cidrBlock!: str, description!: str}]}
+@returns(201) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}} # Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /key-value/{keyValueId}
+@desc Retrieve Key Value instance
 @required {keyValueId: str}
-@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}}
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}} # Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /key-value/{keyValueId}
+@desc Update Key Value instance
 @required {keyValueId: str}
-@optional {name: str, plan: str(free/starter/standard/pro/pro_plus/custom), maxmemoryPolicy: str(noeviction/allkeys_lfu/allkeys_lru/allkeys_random/volatile_lfu/volatile_lru/volatile_random/volatile_ttl), ipAllowList: [map{cidrBlock!: str, description!: str}]}
-@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}}
-@errors {400, 401, 404, 409, 429, 500, 503}
+@optional {name: str # The name of the Key Value instance, plan: str(free/starter/standard/pro/pro_plus/custom), maxmemoryPolicy: str(noeviction/allkeys_lfu/allkeys_lru/allkeys_random/volatile_lfu/volatile_lru/volatile_random/volatile_ttl) # The eviction policy for the Key Value instance, ipAllowList: [map{cidrBlock!: str, description!: str}]}
+@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}} # Updated
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 409: The current state of the resource conflicts with this request., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /key-value/{keyValueId}
+@desc Delete Key Value instance
 @required {keyValueId: str}
-@returns(204)
-@errors {400, 401, 404, 429, 500, 503}
+@returns(204) Key Value instance deleted
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /key-value/{keyValueId}/connection-info
+@desc Retrieve Key Value connection info
 @required {keyValueId: str}
-@returns(200) {internalConnectionString: str, externalConnectionString: str(password), cliCommand: str(password)}
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) {internalConnectionString: str, externalConnectionString: str(password), cliCommand: str(password)} # Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /key-value/{keyValueId}/suspend
-@returns(202)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Suspend Key Value instance
+@returns(202) Service suspended successfully
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /key-value/{keyValueId}/resume
-@returns(202)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Resume Key Value instance
+@returns(202) Service resumed successfully
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group redis
 @endpoint GET /redis
-@optional {name: [str], region: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], environmentId: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {400, 401, 404, 409, 429, 500, 503}
+@desc List Redis instances
+@optional {name: [str] # Filter by name, region: [str] # Filter by resource region, createdBefore: str(date-time) # Filter for resources created before a certain time (specified as an ISO 8601 timestamp), createdAfter: str(date-time) # Filter for resources created after a certain time (specified as an ISO 8601 timestamp), updatedBefore: str(date-time) # Filter for resources updated before a certain time (specified as an ISO 8601 timestamp), updatedAfter: str(date-time) # Filter for resources updated after a certain time (specified as an ISO 8601 timestamp), ownerId: [str] # The ID of the workspaces to return resources for, environmentId: [str] # Filter for resources that belong to an environment, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 409: The current state of the resource conflicts with this request., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /redis
-@required {name: str, ownerId: str, plan: str(free/starter/standard/pro/pro_plus/custom)}
-@optional {region: str, environmentId: str, maxmemoryPolicy: str(noeviction/allkeys_lfu/allkeys_lru/allkeys_random/volatile_lfu/volatile_lru/volatile_random/volatile_ttl), ipAllowList: [map{cidrBlock!: str, description!: str}]}
-@returns(201) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}}
-@errors {400, 401, 404, 429, 500, 503}
+@desc Create Redis instance
+@required {name: str # The name of the Redis instance, ownerId: str # The ID of the owner of the Redis instance, plan: str(free/starter/standard/pro/pro_plus/custom)}
+@optional {region: str # The region where the Redis instance is located, environmentId: str, maxmemoryPolicy: str(noeviction/allkeys_lfu/allkeys_lru/allkeys_random/volatile_lfu/volatile_lru/volatile_random/volatile_ttl) # The eviction policy for the Key Value instance, ipAllowList: [map{cidrBlock!: str, description!: str}]}
+@returns(201) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}} # Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /redis/{redisId}
+@desc Retrieve Redis instance
 @required {redisId: str}
-@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}}
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}} # Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /redis/{redisId}
+@desc Update Redis instance
 @required {redisId: str}
-@optional {name: str, plan: str(free/starter/standard/pro/pro_plus/custom), maxmemoryPolicy: str(noeviction/allkeys_lfu/allkeys_lru/allkeys_random/volatile_lfu/volatile_lru/volatile_random/volatile_ttl), ipAllowList: [map{cidrBlock!: str, description!: str}]}
-@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}}
-@errors {400, 401, 404, 409, 429, 500, 503}
+@optional {name: str # The name of the Redis instance, plan: str(free/starter/standard/pro/pro_plus/custom), maxmemoryPolicy: str(noeviction/allkeys_lfu/allkeys_lru/allkeys_random/volatile_lfu/volatile_lru/volatile_random/volatile_ttl) # The eviction policy for the Key Value instance, ipAllowList: [map{cidrBlock!: str, description!: str}]}
+@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), status: str, region: str, plan: str, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, options: map{maxmemoryPolicy: str}, ipAllowList: [map], environmentId: str, version: str, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}} # Updated
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 409: The current state of the resource conflicts with this request., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /redis/{redisId}
+@desc Delete Redis instance
 @required {redisId: str}
-@returns(204)
-@errors {400, 401, 404, 429, 500, 503}
+@returns(204) Redis instance deleted
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /redis/{redisId}/connection-info
+@desc Retrieve Redis connection info
 @required {redisId: str}
-@returns(200) {internalConnectionString: str, externalConnectionString: str(password), redisCLICommand: str(password)}
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) {internalConnectionString: str, externalConnectionString: str(password), redisCLICommand: str(password)} # Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group postgres
 @endpoint GET /postgres
-@optional {name: [str], region: [str], suspended: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], environmentId: [str], includeReplicas: bool=True, cursor: str, limit: int=20}
-@returns(200)
-@errors {400, 401, 404, 409, 429, 500, 503}
+@desc List Postgres instances
+@optional {name: [str] # Filter by name, region: [str] # Filter by resource region, suspended: [str] # Filter resources based on whether they're suspended or not suspended, createdBefore: str(date-time) # Filter for resources created before a certain time (specified as an ISO 8601 timestamp), createdAfter: str(date-time) # Filter for resources created after a certain time (specified as an ISO 8601 timestamp), updatedBefore: str(date-time) # Filter for resources updated before a certain time (specified as an ISO 8601 timestamp), updatedAfter: str(date-time) # Filter for resources updated after a certain time (specified as an ISO 8601 timestamp), ownerId: [str] # The ID of the workspaces to return resources for, environmentId: [str] # Filter for resources that belong to an environment, includeReplicas: bool=True # Include replicas in the response, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 409: The current state of the resource conflicts with this request., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /postgres
-@required {name: str, ownerId: str, plan: str(free/starter/standard/pro/pro_plus/custom/basic_256mb/basic_1gb/basic_4gb/pro_4gb/pro_8gb/pro_16gb/pro_32gb/pro_64gb/pro_128gb/pro_192gb/pro_256gb/pro_384gb/pro_512gb/accelerated_16gb/accelerated_32gb/accelerated_64gb/accelerated_128gb/accelerated_256gb/accelerated_384gb/accelerated_512gb/accelerated_768gb/accelerated_1024gb), version: str(11/12/13/14/15/16/17/18)}
-@optional {databaseName: str=randomly generated, databaseUser: str=randomly generated, datadogAPIKey: str, datadogSite: str, enableHighAvailability: bool=False, environmentId: str, diskSizeGB: int, enableDiskAutoscaling: bool=False, region: str, ipAllowList: [map{cidrBlock!: str, description!: str}], parameterOverrides: map, readReplicas: [map{name!: str, parameterOverrides: map}]}
-@returns(201) {id: str, ipAllowList: [map], createdAt: str(date-time), updatedAt: str(date-time), expiresAt: str(date-time), dashboardUrl: str, databaseName: str, databaseUser: str, environmentId: str, highAvailabilityEnabled: bool, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, plan: str, diskSizeGB: int, parameterOverrides: map, primaryPostgresID: str, region: str, readReplicas: [map], role: str, status: str, version: str, suspended: str, suspenders: [str], diskAutoscalingEnabled: bool}
-@errors {400, 401, 404, 429, 500, 503}
+@desc Create Postgres instance
+@required {name: str # The name of the database as it will appear in the Render Dashboard, ownerId: str # The ID of the workspace to create the database for, plan: str(free/starter/standard/pro/pro_plus/custom/basic_256mb/basic_1gb/basic_4gb/pro_4gb/pro_8gb/pro_16gb/pro_32gb/pro_64gb/pro_128gb/pro_192gb/pro_256gb/pro_384gb/pro_512gb/accelerated_16gb/accelerated_32gb/accelerated_64gb/accelerated_128gb/accelerated_256gb/accelerated_384gb/accelerated_512gb/accelerated_768gb/accelerated_1024gb), version: str(11/12/13/14/15/16/17/18) # The PostgreSQL version}
+@optional {databaseName: str=randomly generated, databaseUser: str=randomly generated, datadogAPIKey: str # The Datadog API key for the Datadog agent to monitor the new database., datadogSite: str # Datadog region to use for monitoring the new database. Defaults to 'US1'., enableHighAvailability: bool=False, environmentId: str, diskSizeGB: int # The number of gigabytes of disk space to allocate for the database, enableDiskAutoscaling: bool=False, region: str, ipAllowList: [map{cidrBlock!: str, description!: str}], parameterOverrides: map, readReplicas: [map{name!: str, parameterOverrides: map}]}
+@returns(201) {id: str, ipAllowList: [map], createdAt: str(date-time), updatedAt: str(date-time), expiresAt: str(date-time), dashboardUrl: str, databaseName: str, databaseUser: str, environmentId: str, highAvailabilityEnabled: bool, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, plan: str, diskSizeGB: int, parameterOverrides: map, primaryPostgresID: str, region: str, readReplicas: [map], role: str, status: str, version: str, suspended: str, suspenders: [str], diskAutoscalingEnabled: bool} # Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /postgres/{postgresId}
+@desc Retrieve Postgres instance
 @required {postgresId: str}
-@returns(200) {id: str, ipAllowList: [map], createdAt: str(date-time), updatedAt: str(date-time), expiresAt: str(date-time), dashboardUrl: str, databaseName: str, databaseUser: str, environmentId: str, highAvailabilityEnabled: bool, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, plan: str, diskSizeGB: int, parameterOverrides: map, primaryPostgresID: str, region: str, readReplicas: [map], role: str, status: str, version: str, suspended: str, suspenders: [str], diskAutoscalingEnabled: bool}
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) {id: str, ipAllowList: [map], createdAt: str(date-time), updatedAt: str(date-time), expiresAt: str(date-time), dashboardUrl: str, databaseName: str, databaseUser: str, environmentId: str, highAvailabilityEnabled: bool, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, plan: str, diskSizeGB: int, parameterOverrides: map, primaryPostgresID: str, region: str, readReplicas: [map], role: str, status: str, version: str, suspended: str, suspenders: [str], diskAutoscalingEnabled: bool} # Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /postgres/{postgresId}
+@desc Update Postgres instance
 @required {postgresId: str}
-@optional {name: str, plan: str(free/starter/standard/pro/pro_plus/custom/basic_256mb/basic_1gb/basic_4gb/pro_4gb/pro_8gb/pro_16gb/pro_32gb/pro_64gb/pro_128gb/pro_192gb/pro_256gb/pro_384gb/pro_512gb/accelerated_16gb/accelerated_32gb/accelerated_64gb/accelerated_128gb/accelerated_256gb/accelerated_384gb/accelerated_512gb/accelerated_768gb/accelerated_1024gb), diskSizeGB: int, enableDiskAutoscaling: bool, enableHighAvailability: bool, datadogAPIKey: str, datadogSite: str, ipAllowList: [map{cidrBlock!: str, description!: str}], parameterOverrides: map, readReplicas: [map{name!: str, parameterOverrides: map}]}
-@returns(200) {id: str, ipAllowList: [map], createdAt: str(date-time), updatedAt: str(date-time), expiresAt: str(date-time), dashboardUrl: str, databaseName: str, databaseUser: str, environmentId: str, highAvailabilityEnabled: bool, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, plan: str, diskSizeGB: int, parameterOverrides: map, primaryPostgresID: str, region: str, readReplicas: [map], role: str, status: str, version: str, suspended: str, suspenders: [str], diskAutoscalingEnabled: bool}
-@errors {400, 401, 404, 409, 429, 500, 503}
+@optional {name: str, plan: str(free/starter/standard/pro/pro_plus/custom/basic_256mb/basic_1gb/basic_4gb/pro_4gb/pro_8gb/pro_16gb/pro_32gb/pro_64gb/pro_128gb/pro_192gb/pro_256gb/pro_384gb/pro_512gb/accelerated_16gb/accelerated_32gb/accelerated_64gb/accelerated_128gb/accelerated_256gb/accelerated_384gb/accelerated_512gb/accelerated_768gb/accelerated_1024gb), diskSizeGB: int # The number of gigabytes of disk space to allocate for the database, enableDiskAutoscaling: bool, enableHighAvailability: bool, datadogAPIKey: str # The Datadog API key for the Datadog agent to monitor the database. Pass empty string to remove. Restarts Postgres on change., datadogSite: str # Datadog region to use for monitoring the new database. Defaults to 'US1'., ipAllowList: [map{cidrBlock!: str, description!: str}], parameterOverrides: map, readReplicas: [map{name!: str, parameterOverrides: map}]}
+@returns(200) {id: str, ipAllowList: [map], createdAt: str(date-time), updatedAt: str(date-time), expiresAt: str(date-time), dashboardUrl: str, databaseName: str, databaseUser: str, environmentId: str, highAvailabilityEnabled: bool, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, plan: str, diskSizeGB: int, parameterOverrides: map, primaryPostgresID: str, region: str, readReplicas: [map], role: str, status: str, version: str, suspended: str, suspenders: [str], diskAutoscalingEnabled: bool} # Updated
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 409: The current state of the resource conflicts with this request., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /postgres/{postgresId}
+@desc Delete Postgres instance
 @required {postgresId: str}
-@returns(204)
-@errors {400, 401, 404, 429, 500, 503}
+@returns(204) Postgres instance deleted
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /postgres/{postgresId}/connection-info
+@desc Retrieve Postgres connection info
 @required {postgresId: str}
-@returns(200) {password: str(password), internalConnectionString: str(password), externalConnectionString: str(password), psqlCommand: str(password)}
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) {password: str(password), internalConnectionString: str(password), externalConnectionString: str(password), psqlCommand: str(password)} # Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /postgres/{postgresId}/recovery
+@desc Retrieve point-in-time recovery status
 @required {postgresId: str}
-@returns(200) {recoveryStatus: str, startsAt: str(date-time)}
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) {recoveryStatus: str, startsAt: str(date-time)} # Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /postgres/{postgresId}/recovery
-@required {postgresId: str, restoreTime: str(date-time)}
-@optional {restoreName: str, datadogApiKey: str, datadogSite: str, plan: str, environmentId: str}
-@returns(200) {id: str, ipAllowList: [map], createdAt: str(date-time), updatedAt: str(date-time), expiresAt: str(date-time), dashboardUrl: str, databaseName: str, databaseUser: str, environmentId: str, highAvailabilityEnabled: bool, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, plan: str, diskSizeGB: int, parameterOverrides: map, primaryPostgresID: str, region: str, readReplicas: [map], role: str, status: str, version: str, suspended: str, suspenders: [str], diskAutoscalingEnabled: bool}
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Trigger point-in-time recovery
+@required {postgresId: str, restoreTime: str(date-time) # The point in time to restore the database to. See `/recovery-info` for restore availability}
+@optional {restoreName: str # Name of the new database., datadogApiKey: str # Datadog API key to use for monitoring the new database. Defaults to the API key of the original database. Use an empty string to prevent copying of the API key to the new database., datadogSite: str # Datadog region code to use for monitoring the new database. Defaults to the region code of the original database. Use an empty string to prevent copying of the region code to the new database., plan: str # The plan to use for the new database. Defaults to the same plan as the original database. Cannot be a lower tier plan than the original database., environmentId: str # The environment to create the new database in. Defaults to the environment of the original database.}
+@returns(200) {id: str, ipAllowList: [map], createdAt: str(date-time), updatedAt: str(date-time), expiresAt: str(date-time), dashboardUrl: str, databaseName: str, databaseUser: str, environmentId: str, highAvailabilityEnabled: bool, maintenance: map{id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any}, name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, plan: str, diskSizeGB: int, parameterOverrides: map, primaryPostgresID: str, region: str, readReplicas: [map], role: str, status: str, version: str, suspended: str, suspenders: [str], diskAutoscalingEnabled: bool} # Recovery initiated
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /postgres/{postgresId}/suspend
-@returns(202)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Suspend Postgres instance
+@returns(202) Service suspended successfully
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /postgres/{postgresId}/resume
-@returns(202)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Resume Postgres instance
+@returns(202) Service resumed successfully
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /postgres/{postgresId}/restart
-@returns(202)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Restart Postgres instance
+@returns(202) Service restarted successfully
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /postgres/{postgresId}/failover
-@returns(202)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Failover Postgres instance
+@returns(202) Service failed over successfully
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /postgres/{postgresId}/export
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc List Postgres exports
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /postgres/{postgresId}/export
-@returns(202)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Create Postgres export
+@returns(202) Export started successfully
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /postgres/{postgresId}/credentials
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc List PostgreSQL Users
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /postgres/{postgresId}/credentials
-@required {username: str}
-@returns(202)
-@errors {400, 401, 403, 404, 406, 410, 429, 500, 503}
+@desc Create PostgreSQL User
+@required {username: str # Name of the new user.}
+@returns(202) PostgreSQL user created successfully
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 406: Unable to generate preferred media types as specified by Accept request header., 410: The requested resource is no longer available., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /postgres/{postgresId}/credentials/{username}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc Delete PostgreSQL User
+@returns(200) PostgreSQL user deleted
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group projects
 @endpoint GET /projects
-@optional {name: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc List projects
+@optional {name: [str] # Filter by name, createdBefore: str(date-time) # Filter for resources created before a certain time (specified as an ISO 8601 timestamp), createdAfter: str(date-time) # Filter for resources created after a certain time (specified as an ISO 8601 timestamp), updatedBefore: str(date-time) # Filter for resources updated before a certain time (specified as an ISO 8601 timestamp), updatedAfter: str(date-time) # Filter for resources updated after a certain time (specified as an ISO 8601 timestamp), ownerId: [str] # The ID of the workspaces to return resources for, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /projects
-@required {name: str, ownerId: str, environments: [map{name!: str, protectedStatus: str, networkIsolationEnabled: bool, ipAllowList: [map{cidrBlock!: str, description!: str}]}]}
-@returns(201) {id: str, createdAt: str(date-time), updatedAt: str(date-time), name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, environmentIds: [str]}
-@errors {400, 401, 404, 429, 500, 503}
+@desc Create project
+@required {name: str # The name of the project, ownerId: str # The ID of the owner that the project belongs to, environments: [map{name!: str, protectedStatus: str, networkIsolationEnabled: bool, ipAllowList: [map{cidrBlock!: str, description!: str}]}] # The environments to create when creating the project}
+@returns(201) {id: str, createdAt: str(date-time), updatedAt: str(date-time), name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, environmentIds: [str]} # Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /projects/{projectId}
+@desc Retrieve Project
 @required {projectId: str}
-@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, environmentIds: [str]}
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, environmentIds: [str]} # Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /projects/{projectId}
+@desc Update project
 @required {projectId: str}
 @optional {name: str}
-@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, environmentIds: [str]}
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) {id: str, createdAt: str(date-time), updatedAt: str(date-time), name: str, owner: map{id: str, name: str, email: str, ipAllowList: [map], twoFactorAuthEnabled: bool, type: str}, environmentIds: [str]} # Updated
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /projects/{projectId}
+@desc Delete project
 @required {projectId: str}
-@returns(204)
-@errors {400, 401, 404, 429, 500, 503}
+@returns(204) Project deleted
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group environments
 @endpoint POST /environments
+@desc Create environment
 @required {name: str, projectId: str}
-@optional {protectedStatus: str(unprotected/protected), networkIsolationEnabled: bool, ipAllowList: [map{cidrBlock!: str, description!: str}]}
-@returns(201) {id: str, name: str, projectId: str, databasesIds: [str], ipAllowList: [map], redisIds: [str], serviceIds: [str], envGroupIds: [str], protectedStatus: str, networkIsolationEnabled: bool}
-@errors {400, 401, 404, 429, 500, 503}
+@optional {protectedStatus: str(unprotected/protected) # Indicates whether an environment is `unprotected` or `protected`. Only admin users can perform destructive actions in `protected` environments., networkIsolationEnabled: bool # Indicates whether network connections across environments are allowed., ipAllowList: [map{cidrBlock!: str, description!: str}]}
+@returns(201) {id: str, name: str, projectId: str, databasesIds: [str], ipAllowList: [map], redisIds: [str], serviceIds: [str], envGroupIds: [str], protectedStatus: str, networkIsolationEnabled: bool} # Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /environments
-@required {projectId: [str]}
-@optional {name: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], environmentId: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc List environments
+@required {projectId: [str] # Filter for resources that belong to a project}
+@optional {name: [str] # Filter by name, createdBefore: str(date-time) # Filter for resources created before a certain time (specified as an ISO 8601 timestamp), createdAfter: str(date-time) # Filter for resources created after a certain time (specified as an ISO 8601 timestamp), updatedBefore: str(date-time) # Filter for resources updated before a certain time (specified as an ISO 8601 timestamp), updatedAfter: str(date-time) # Filter for resources updated after a certain time (specified as an ISO 8601 timestamp), ownerId: [str] # The ID of the workspaces to return resources for, environmentId: [str] # Filter for resources that belong to an environment, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /environments/{environmentId}
+@desc Retrieve environment
 @required {environmentId: str}
-@returns(200) {id: str, name: str, projectId: str, databasesIds: [str], ipAllowList: [map], redisIds: [str], serviceIds: [str], envGroupIds: [str], protectedStatus: str, networkIsolationEnabled: bool}
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) {id: str, name: str, projectId: str, databasesIds: [str], ipAllowList: [map], redisIds: [str], serviceIds: [str], envGroupIds: [str], protectedStatus: str, networkIsolationEnabled: bool} # Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /environments/{environmentId}
+@desc Update environment
 @required {environmentId: str}
-@optional {name: str, networkIsolationEnabled: bool, protectedStatus: str(unprotected/protected), ipAllowList: [map{cidrBlock!: str, description!: str}]}
-@returns(200) {id: str, name: str, projectId: str, databasesIds: [str], ipAllowList: [map], redisIds: [str], serviceIds: [str], envGroupIds: [str], protectedStatus: str, networkIsolationEnabled: bool}
-@errors {400, 401, 404, 429, 500, 503}
+@optional {name: str, networkIsolationEnabled: bool # Indicates whether network connections across environments are allowed., protectedStatus: str(unprotected/protected) # Indicates whether an environment is `unprotected` or `protected`. Only admin users can perform destructive actions in `protected` environments., ipAllowList: [map{cidrBlock!: str, description!: str}]}
+@returns(200) {id: str, name: str, projectId: str, databasesIds: [str], ipAllowList: [map], redisIds: [str], serviceIds: [str], envGroupIds: [str], protectedStatus: str, networkIsolationEnabled: bool} # Updated
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /environments/{environmentId}
+@desc Delete environment
 @required {environmentId: str}
-@returns(204)
-@errors {400, 401, 404, 429, 500, 503}
+@returns(204) Environment deleted
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /environments/{environmentId}/resources
+@desc Add resources to environment
 @required {environmentId: str, resourceIds: [str]}
-@returns(200) {id: str, name: str, projectId: str, databasesIds: [str], ipAllowList: [map], redisIds: [str], serviceIds: [str], envGroupIds: [str], protectedStatus: str, networkIsolationEnabled: bool}
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) {id: str, name: str, projectId: str, databasesIds: [str], ipAllowList: [map], redisIds: [str], serviceIds: [str], envGroupIds: [str], protectedStatus: str, networkIsolationEnabled: bool} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /environments/{environmentId}/resources
+@desc Remove resources from environment
 @required {environmentId: str, resourceIds: [str]}
-@returns(204)
-@errors {400, 401, 404, 429, 500, 503}
+@returns(204) Resources removed from environment
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group env-groups
 @endpoint GET /env-groups
-@optional {name: [str], createdBefore: str(date-time), createdAfter: str(date-time), updatedBefore: str(date-time), updatedAfter: str(date-time), ownerId: [str], environmentId: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc List environment groups
+@optional {name: [str] # Filter by name, createdBefore: str(date-time) # Filter for resources created before a certain time (specified as an ISO 8601 timestamp), createdAfter: str(date-time) # Filter for resources created after a certain time (specified as an ISO 8601 timestamp), updatedBefore: str(date-time) # Filter for resources updated before a certain time (specified as an ISO 8601 timestamp), updatedAfter: str(date-time) # Filter for resources updated after a certain time (specified as an ISO 8601 timestamp), ownerId: [str] # The ID of the workspaces to return resources for, environmentId: [str] # Filter for resources that belong to an environment, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /env-groups
+@desc Create environment group
 @required {name: str, ownerId: str, envVars: [map]}
 @optional {secretFiles: [map{name!: str, content!: str}], serviceIds: [str], environmentId: str}
-@returns(201)
-@errors {400, 401, 404, 429, 500, 503}
+@returns(201) Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /env-groups/{envGroupId}
-@required {envGroupId: str}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc Retrieve environment group
+@required {envGroupId: str # Filter for resources that belong to an environment group}
+@returns(200) Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /env-groups/{envGroupId}
+@desc Update environment group
 @required {envGroupId: str, name: str}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) Updated
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /env-groups/{envGroupId}
+@desc Delete environment group
 @required {envGroupId: str}
-@returns(204)
-@errors {400, 401, 404, 429, 500, 503}
+@returns(204) environment group deleted
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /env-groups/{envGroupId}/services/{serviceId}
-@required {envGroupId: str, serviceId: str}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc Link service
+@required {envGroupId: str # Filter for resources that belong to an environment group, serviceId: str # The ID of the service}
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /env-groups/{envGroupId}/services/{serviceId}
+@desc Unlink service
 @required {envGroupId: str, serviceId: str}
-@returns(204)
-@errors {400, 401, 404, 429, 500, 503}
+@returns(204) service unlinked from environment group
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /env-groups/{envGroupId}/env-vars/{envVarKey}
-@required {envGroupId: str, envVarKey: str}
-@returns(200) {key: str, value: str}
-@errors {400, 401, 404, 429, 500, 503}
+@desc Retrieve environment variable
+@required {envGroupId: str # Filter for resources that belong to an environment group, envVarKey: str # The name of the environment variable}
+@returns(200) {key: str, value: str} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PUT /env-groups/{envGroupId}/env-vars/{envVarKey}
-@required {envGroupId: str, envVarKey: str}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc Add or update environment variable
+@required {envGroupId: str # Filter for resources that belong to an environment group, envVarKey: str # The name of the environment variable}
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /env-groups/{envGroupId}/env-vars/{envVarKey}
-@required {envGroupId: str, envVarKey: str}
-@returns(204)
-@errors {400, 401, 404, 429, 500, 503}
+@desc Remove environment variable
+@required {envGroupId: str, envVarKey: str # The name of the environment variable}
+@returns(204) environment variable removed from environment group
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /env-groups/{envGroupId}/secret-files/{secretFileName}
-@required {envGroupId: str, secretFileName: str}
-@returns(200) {name: str, content: str}
-@errors {400, 401, 404, 429, 500, 503}
+@desc Retrieve secret file
+@required {envGroupId: str # Filter for resources that belong to an environment group, secretFileName: str # The name of the secret file}
+@returns(200) {name: str, content: str} # OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PUT /env-groups/{envGroupId}/secret-files/{secretFileName}
+@desc Add or update secret file
 @required {envGroupId: str, secretFileName: str}
 @optional {content: str}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) OK
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /env-groups/{envGroupId}/secret-files/{secretFileName}
-@required {envGroupId: str, secretFileName: str}
-@returns(204)
-@errors {400, 401, 404, 429, 500, 503}
+@desc Remove secret file
+@required {envGroupId: str # Filter for resources that belong to an environment group, secretFileName: str # The name of the secret file}
+@returns(204) secret file removed from environment group
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group maintenance
 @endpoint GET /maintenance
-@optional {resourceId: [str], ownerId: [str], state: [str]}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc List maintenance runs
+@optional {resourceId: [str], ownerId: [str] # The ID of the workspaces to return resources for, state: [str]}
+@returns(200) Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /maintenance/{maintenanceRunParam}
+@desc Retrieve maintenance run
 @required {maintenanceRunParam: str}
-@returns(200) {id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any, resourceId: any}
-@errors {400, 401, 404, 429, 500, 503}
+@returns(200) {id: any, type: str, scheduledAt: str(date-time), pendingMaintenanceBy: str(date-time), state: any, resourceId: any} # Successful response
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /maintenance/{maintenanceRunParam}
-@optional {scheduledAt: str(date-time)}
-@returns(202)
-@errors {400, 401, 404, 429, 500, 503}
+@desc Update maintenance run
+@optional {scheduledAt: str(date-time) # The date-time at which the maintenance is scheduled to start. This must be before the pendingMaintenanceBy date-time.}
+@returns(202) Maintenance run updated
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /maintenance/{maintenanceRunParam}/trigger
-@returns(202)
-@errors {400, 401, 404, 429, 500, 503}
+@desc Trigger maintenance run
+@returns(202) Maintenance run triggered
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group webhooks
 @endpoint POST /webhooks
-@required {ownerId: str, url: str, name: str, enabled: bool, eventFilter: [str]}
-@returns(201) {id: any, url: str, name: str, secret: str, enabled: bool, eventFilter: [str]}
-@errors {400, 401, 404, 429, 500, 503}
+@desc Create a webhook
+@required {ownerId: str # The ID of the owner (team or personal user) whose resources should be returned, url: str, name: str, enabled: bool, eventFilter: [str] # The event types that will trigger the webhook. An empty list means all event types will trigger the webhook.}
+@returns(201) {id: any, url: str, name: str, secret: str, enabled: bool, eventFilter: [str]} # Created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /webhooks
-@optional {cursor: str, limit: int=20, ownerId: [str]}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc List webhooks
+@optional {cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., ownerId: [str] # The ID of the workspaces to return resources for}
+@returns(200) Success
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /webhooks/{webhookId}
-@returns(200) {id: any, url: str, name: str, secret: str, enabled: bool, eventFilter: [str]}
-@errors {401, 404, 429, 500, 503}
+@desc Retrieve a webhook
+@returns(200) {id: any, url: str, name: str, secret: str, enabled: bool, eventFilter: [str]} # Success
+@errors {401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /webhooks/{webhookId}
-@optional {name: str, url: str, enabled: bool, eventFilter: [str]}
-@returns(200) {id: any, url: str, name: str, secret: str, enabled: bool, eventFilter: [str]}
-@errors {400, 401, 404, 429, 500, 503}
+@desc Update a webhook
+@optional {name: str, url: str, enabled: bool, eventFilter: [str] # The event types that will trigger the webhook. An empty list means all event types will trigger the webhook.}
+@returns(200) {id: any, url: str, name: str, secret: str, enabled: bool, eventFilter: [str]} # Updated
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /webhooks/{webhookId}
-@returns(204)
-@errors {401, 404, 429, 500, 503}
+@desc Delete a webhook
+@returns(204) Webhook deleted
+@errors {401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /webhooks/{webhookId}/events
-@optional {sentBefore: str(date-time), sentAfter: str(date-time), limit: int=20, cursor: str}
-@returns(200)
-@errors {400, 401, 404, 429, 500, 503}
+@desc List webhook events
+@optional {sentBefore: str(date-time) # Filter events sent before this time (specified as an ISO 8601 timestamp), sentAfter: str(date-time) # Filter for resources sent after a certain time (specified as an ISO 8601 timestamp), limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) Success
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group workflows
 @endpoint GET /workflows
-@optional {name: [str], ownerId: [str], workflowID: [str], environmentId: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 403, 404, 429, 500, 503}
+@desc List workflows
+@optional {name: [str] # Filter by name, ownerId: [str] # The ID of the workspaces to return resources for, workflowID: [str] # The IDs of the workflows to return resources for, environmentId: [str] # Filter for resources that belong to an environment, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) List of workflows
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /workflows
-@required {name: str, ownerId: str, buildConfig: map{branch: str, buildCommand!: str, repo!: str, rootDir: str, runtime!: str}, runCommand: str, region: str(frankfurt/oregon/ohio/singapore/virginia)=oregon}
-@returns(201) {id: str, name: str, ownerId: str, createdAt: str(date-time), updatedAt: str(date-time), buildConfig: map{branch: str, buildCommand: str, repo: str, rootDir: str, runtime: str}, runCommand: str, region: str, environmentId: str, slug: str}
-@errors {401, 403, 404, 429, 500, 503}
+@desc Create a workflow
+@required {name: str, ownerId: str, buildConfig: map{branch: str, buildCommand!: str, repo!: str, rootDir: str, runtime!: str}, runCommand: str # The command to run the workflow, region: str(frankfurt/oregon/ohio/singapore/virginia)=oregon # Defaults to "oregon"}
+@returns(201) {id: str, name: str, ownerId: str, createdAt: str(date-time), updatedAt: str(date-time), buildConfig: map{branch: str, buildCommand: str, repo: str, rootDir: str, runtime: str}, runCommand: str, region: str, environmentId: str, slug: str} # Workflow created
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /workflows/{workflowId}
-@returns(200) {id: str, name: str, ownerId: str, createdAt: str(date-time), updatedAt: str(date-time), buildConfig: map{branch: str, buildCommand: str, repo: str, rootDir: str, runtime: str}, runCommand: str, region: str, environmentId: str, slug: str}
-@errors {401, 403, 404, 429, 500, 503}
+@desc Retrieve workflow
+@returns(200) {id: str, name: str, ownerId: str, createdAt: str(date-time), updatedAt: str(date-time), buildConfig: map{branch: str, buildCommand: str, repo: str, rootDir: str, runtime: str}, runCommand: str, region: str, environmentId: str, slug: str} # Workflow details
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint PATCH /workflows/{workflowId}
-@optional {name: str, buildConfig: map{branch: str, buildCommand!: str, repo!: str, rootDir: str, runtime!: str}, runCommand: str}
-@returns(200) {id: str, name: str, ownerId: str, createdAt: str(date-time), updatedAt: str(date-time), buildConfig: map{branch: str, buildCommand: str, repo: str, rootDir: str, runtime: str}, runCommand: str, region: str, environmentId: str, slug: str}
-@errors {401, 403, 404, 429, 500, 503}
+@desc Update workflow
+@optional {name: str, buildConfig: map{branch: str, buildCommand!: str, repo!: str, rootDir: str, runtime!: str}, runCommand: str # The command to run the workflow}
+@returns(200) {id: str, name: str, ownerId: str, createdAt: str(date-time), updatedAt: str(date-time), buildConfig: map{branch: str, buildCommand: str, repo: str, rootDir: str, runtime: str}, runCommand: str, region: str, environmentId: str, slug: str} # Workflow updated
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /workflows/{workflowId}
-@returns(204)
-@errors {401, 403, 404, 429, 500, 503}
+@desc Delete workflow
+@returns(204) Workflow deleted
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group workflowversions
 @endpoint GET /workflowversions
-@optional {ownerId: [str], workflowID: [str], workflowVersionId: [str], cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 403, 404, 429, 500, 503}
+@desc List workflow versions
+@optional {ownerId: [str] # The ID of the workspaces to return resources for, workflowID: [str] # The IDs of the workflows to return resources for, workflowVersionId: [str] # The IDs of the workflow versions to return resources for, cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) List of workflow versions
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /workflowversions
+@desc Deploy a workflow version
 @required {workflowId: str}
 @optional {commit: str}
-@returns(202)
-@errors {401, 403, 404, 429, 500, 503}
+@returns(202) Workflow version created
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /workflowversions/{workflowVersionId}
-@returns(200) {id: str, workflowId: str, name: str, createdAt: str(date-time), status: str}
-@errors {401, 403, 404, 429, 500, 503}
+@desc Retrieve workflow version
+@returns(200) {id: str, workflowId: str, name: str, createdAt: str(date-time), status: str} # Workflow version details
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group tasks
 @endpoint GET /tasks
-@optional {cursor: str, limit: int=20}
-@returns(200)
-@errors {401, 403, 404, 429, 500, 503}
+@desc List tasks
+@optional {cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination).}
+@returns(200) List of tasks
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /tasks/{taskId}
-@returns(200) {id: str, name: str, createdAt: str(date-time), workflowId: str, workflowVersionId: str}
-@errors {401, 403, 404, 429, 500, 503}
+@desc Retrieve task
+@returns(200) {id: str, name: str, createdAt: str(date-time), workflowId: str, workflowVersionId: str} # Task details
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 
 @group task-runs
 @endpoint GET /task-runs
-@optional {cursor: str, limit: int=20, rootTaskRunId: [str], ownerId: [str]}
-@returns(200)
-@errors {401, 403, 404, 429, 500, 503}
+@desc List task runs
+@optional {cursor: str # The position in the result list to start from when fetching paginated results. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., limit: int=20 # The maximum number of items to return. For details, see [Pagination](https://api-docs.render.com/reference/pagination)., rootTaskRunId: [str] # An array of root task IDs to filter on, ownerId: [str] # The ID of the workspaces to return resources for}
+@returns(200) List of task runs
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint POST /task-runs
-@required {task: str, input: any}
-@returns(202) {id: str, taskId: str, status: str, startedAt: str(date-time), completedAt: str(date-time), parentTaskRunId: str, rootTaskRunId: str, retries: int, attempts: [map]}
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Run task
+@required {task: str # Either a task ID or a workflow slug with task name and optional version name. If a version is not provided, the latest version of the task will be used., input: any # Input data for a task. Can be either an array (for positional arguments) or an object (for named parameters).}
+@returns(202) {id: str, taskId: str, status: str, startedAt: str(date-time), completedAt: str(date-time), parentTaskRunId: str, rootTaskRunId: str, retries: int, attempts: [map]} # Task run created
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /task-runs/events
-@required {taskRunIds: [str]}
-@optional {Accept: str}
-@returns(200)
-@errors {400, 401, 403, 404, 429, 500, 503}
+@desc Stream realtime events (SSE)
+@required {taskRunIds: [str] # Filter to a subset of task run IDs.}
+@optional {Accept: str # Must be `text/event-stream`.}
+@returns(200) Event stream established
+@errors {400: The request could not be understood by the server., 401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint GET /task-runs/{taskRunId}
-@returns(200) {id: str, taskId: str, status: any, results: [any], error: str, startedAt: str(date-time), completedAt: str(date-time), input: any, parentTaskRunId: str, rootTaskRunId: str, retries: int, attempts: [map]}
-@errors {401, 403, 404, 429, 500, 503}
+@desc Retrieve task run
+@returns(200) {id: str, taskId: str, status: any, results: [any], error: str, startedAt: str(date-time), completedAt: str(date-time), input: any, parentTaskRunId: str, rootTaskRunId: str, retries: int, attempts: [map]} # Task run details
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endpoint DELETE /task-runs/{taskRunId}
-@returns(204)
-@errors {401, 403, 404, 429, 500, 503}
+@desc Cancel task run
+@returns(204) Task run canceled
+@errors {401: Authorization information is missing or invalid., 403: You do not have permissions for the requested resource., 404: Unable to find the requested resource., 429: Rate limit has been surpassed., 500: An unexpected server error has occurred., 503: Server currently unavailable.}
 
 @endgroup
 

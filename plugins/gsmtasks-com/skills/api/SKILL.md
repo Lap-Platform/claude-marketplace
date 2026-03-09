@@ -504,89 +504,263 @@ Not specified.
 | POST | /working_state/ |  |
 | GET | /working_state/{id}/ |  |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I authenticate with the API?" -> POST /authenticate/
-- "Show me all tasks for a specific worker today?" -> GET /tasks/ (with `assignee` and `complete_after__gte`/`complete_before__lte` filters)
-- "How do I create a new delivery task with a pickup and drop-off?" -> POST /orders/ (with `tasks_data` containing pick_up and drop_off category tasks)
-- "Which drivers are currently on duty?" -> GET /account_roles/ (with `is_worker=true` and `is_active=true`)
-- "How do I assign a task to a specific driver?" -> POST /tasks/{id}/assign/
-- "What is the status of a specific task?" -> GET /tasks/{id}/
-- "How do I mark a task as completed?" -> POST /tasks/{id}/complete/
-- "Can I optimize routes for my fleet?" -> POST /route_optimizations/
-- "How do I set up a webhook for task status changes?" -> POST /webhooks/
-- "Where is my driver right now?" -> GET /worker_features/{user_id}/ or GET /time_location_features/ (filtered by `user`)
-- "How do I import tasks from a spreadsheet?" -> POST /task_import/ (with `tasks_data` array and optional `mapping`)
-- "How do I create a recurring delivery schedule?" -> POST /recurrences/ (with `rrule` and `tasks_data`)
-- "How do I send a notification to a customer about their delivery?" -> POST /notifications/ (with `task` and `recipient`)
-- "How do I get a task completion report for last week?" -> GET /reports/tasks/states_count/ (with `account`, `date_from`, `date_until`)
-- "How do I create a tracking link for a customer?" -> POST /trackers/ (with `tasks` array)
-
-## Response Tips
-
-- **List endpoints** (`GET /tasks/`, `/orders/`, etc.): Cursor-based pagination -- use `cursor` and `page_size` params; next page cursor is in the response. No total count returned by default.
-- **Task state transitions** (`/accept/`, `/complete/`, `/fail/`, etc.): Return the full updated task object on 200; invalid transitions return 400 with an error describing the allowed source states.
-- **Bulk/nested creates** (`POST /orders/` with `tasks_data`): The response nests created task URIs in `tasks`; individual task errors appear per-item in validation errors keyed by array index.
-- **Route optimizations**: Async workflow -- POST returns 201 with `state: pending`; poll `GET /route_optimizations/{id}/` until state is `ready` or `completed`, then fetch `/results/` for the plan.
-- **Webhooks/notifications/SMS/emails**: Check the `state` field for delivery status (queued/sent/failed); `error` or `disable_message` fields contain failure details.
-- **Export endpoints** (`/task_exports/`, `/contact_address_exports/`): Support `fields` param to select specific columns; use `format=xlsx` for spreadsheet output with `page`-based (not cursor) pagination.
-
-## Anomaly Flags
-
-- **Webhook disabled**: Surface when `GET /webhooks/` returns entries with `state: disabled` or `failure_count > 3` -- the integration is silently broken.
-- **Route optimization failed**: Flag `state: failed` or `state: over_quota` on route optimizations -- tasks remain unoptimized and need manual assignment.
-- **Geocode failures**: Watch for `address.geocode_failed_at` being populated on tasks or contact addresses -- delivery locations are unresolvable and tasks may fail.
-- **SMS/email over quota**: Flag notifications with `state: over_quota` -- customer communications are being dropped silently.
-- **Stale worker location**: If `time_location_features` for an on-duty worker has a `time` older than 15 minutes, the worker's app may be offline or GPS disabled.
-- **Recurrence errors**: Flag recurrences where `last_errored_at` is more recent than `last_recurred_at` -- scheduled task generation is failing.
-- **Task import failures**: Surface `task_import` entries with `state: failed` -- batch uploads did not complete and `errors` map contains per-row details.
-- **Account billing issues**: Invoices with `state: overdue` should be flagged immediately as they may lead to service restrictions.
-
-## Playbook
-
-### 1. Create and dispatch a delivery order
-
-1. `POST /authenticate/` with username, password, and token to get an API session.
-2. `POST /orders/` with `account`, `tasks_data` containing two tasks: one with `category: pick_up` and one with `category: drop_off`, each with `contact` and `address` objects.
-3. Note the returned task URIs from the `tasks` field.
-4. `POST /tasks/{pickup_id}/assign/` with `assignee` set to the driver's account role URI.
-5. Optionally `POST /trackers/` with the task URIs to generate a customer tracking link.
-6. Monitor via `GET /tasks/{id}/` or set up `POST /webhooks/` for real-time state updates.
-
-### 2. Optimize and commit routes for the day
-
-1. `GET /account_roles/?is_worker=true&is_active=true` to list available drivers and their vehicle profiles.
-2. `GET /tasks/?state=unassigned&complete_before__date={today}` to collect all unassigned tasks for today.
-3. `POST /route_optimizations/` with `assignees` (driver URIs), `tasks` (task URIs), `objective` (e.g., `transport_time`), and optionally `start_location`/`end_location`.
-4. Poll `GET /route_optimizations/{id}/` until `state` becomes `ready`.
-5. Review the plan via `GET /route_optimizations/{id}/results/`.
-6. `POST /route_optimizations/{id}/commit/` to apply assignments and ordering to the tasks.
-
-### 3. Set up real-time webhook integration
-
-1. `POST /webhooks/` with `account`, `name`, `target` (your endpoint URL), `task_events: true`, and optionally `document_events`, `signature_events`, `review_events`.
-2. Set `version` to `2.4.13` (latest) and provide a `shared_secret` for payload verification.
-3. `POST /webhooks/{id}/active/` to activate the webhook.
-4. Monitor `GET /webhooks/{id}/` periodically -- if `failure_count` increases or `state` becomes `disabled`, check your target endpoint and re-activate.
-5. To pause, call `POST /webhooks/{id}/inactive/`; to resume, call `/active/` again.
-
-### 4. Import tasks from a CSV file
-
-1. `GET /task_import_mapping/?account={account_id}` to check for existing column mappings.
-2. If no mapping exists, `POST /task_import_mapping/` with `field_names` (your CSV headers) and `lines` array mapping `from_field` to `to_field` (e.g., `{"from_field": "Address", "to_field": "address.raw_address"}`).
-3. `POST /task_import/` with `account`, `tasks_data` (array of row objects), and `mapping` (URI from step 2).
-4. Poll `GET /task_import/{id}/` until `state` is `completed` or `failed`.
-5. On failure, inspect the `errors` map for per-row issues. On success, use `tasks_created` URIs to verify the imported tasks.
-
-### 5. Track driver duty hours and location
-
-1. `PUT /users/{id}/on_duty/` with `account` URI to clock a driver in.
-2. Location updates flow automatically from the mobile app via `POST /time_locations/` or `POST /time_location_features/`.
-3. `GET /worker_features/{user_id}/` to get the driver's latest position, speed, heading, and battery level as a GeoJSON feature.
-4. `GET /users_on_duty_log/?user={user_id}&timestamp__gte={start}&timestamp__lte={end}` to pull duty history for payroll.
-5. `DELETE /users/{id}/on_duty/` to clock the driver out.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Search account_roles?" -> GET /account_roles/
+- "Create a account_role?" -> POST /account_roles/
+- "Get account_role details?" -> GET /account_roles/{id}/
+- "Update a account_role?" -> PUT /account_roles/{id}/
+- "Partially update a account_role?" -> PATCH /account_roles/{id}/
+- "Delete a account_role?" -> DELETE /account_roles/{id}/
+- "Create a activate?" -> POST /account_roles/{id}/activate/
+- "Create a notify?" -> POST /account_roles/{id}/notify/
+- "List all token?" -> GET /account_roles/{id}/token/
+- "Search accounts?" -> GET /accounts/
+- "Get account details?" -> GET /accounts/{id}/
+- "Update a account?" -> PUT /accounts/{id}/
+- "Partially update a account?" -> PATCH /accounts/{id}/
+- "List all braintree_customer?" -> GET /accounts/{id}/braintree_customer/
+- "Create a change_owner?" -> POST /accounts/{id}/change_owner/
+- "List all managers?" -> GET /accounts/{id}/managers/
+- "Create a manager?" -> POST /accounts/{id}/managers/
+- "Create a stripe_create_setup_intent?" -> POST /accounts/{id}/stripe_create_setup_intent/
+- "List all stripe_get_payment_method?" -> GET /accounts/{id}/stripe_get_payment_method/
+- "List all stripe_get_setup_attempt?" -> GET /accounts/{id}/stripe_get_setup_attempt/
+- "List all stripe_get_setup_intent?" -> GET /accounts/{id}/stripe_get_setup_intent/
+- "List all stripe_payment_methods?" -> GET /accounts/{id}/stripe_payment_methods/
+- "List all stripe_setup_intents?" -> GET /accounts/{id}/stripe_setup_intents/
+- "List all workers?" -> GET /accounts/{id}/workers/
+- "Create a worker?" -> POST /accounts/{id}/workers/
+- "List all addons?" -> GET /addons/
+- "Get addon details?" -> GET /addons/{id}/
+- "Create a authenticate?" -> POST /authenticate/
+- "List all customers?" -> GET /billing/customers/
+- "Create a customer?" -> POST /billing/customers/
+- "Get customer details?" -> GET /billing/customers/{id}/
+- "Update a customer?" -> PUT /billing/customers/{id}/
+- "Partially update a customer?" -> PATCH /billing/customers/{id}/
+- "List all client_token?" -> GET /billing/customers/{id}/client_token/
+- "List all invoices?" -> GET /billing/invoices/
+- "Get invoice details?" -> GET /billing/invoices/{id}/
+- "Update a invoice?" -> PUT /billing/invoices/{id}/
+- "Partially update a invoice?" -> PATCH /billing/invoices/{id}/
+- "Create a mark_as_paid?" -> POST /billing/invoices/{id}/mark_as_paid/
+- "List all stripe_payments?" -> GET /billing/stripe_payments/
+- "Get stripe_payment details?" -> GET /billing/stripe_payments/{id}/
+- "List all transactions?" -> GET /billing/transactions/
+- "Get transaction details?" -> GET /billing/transactions/{id}/
+- "Search client_roles?" -> GET /client_roles/
+- "Create a client_role?" -> POST /client_roles/
+- "Get client_role details?" -> GET /client_roles/{id}/
+- "Update a client_role?" -> PUT /client_roles/{id}/
+- "Partially update a client_role?" -> PATCH /client_roles/{id}/
+- "Create a notify?" -> POST /client_roles/{id}/notify/
+- "Search clients?" -> GET /clients/
+- "Create a client?" -> POST /clients/
+- "Get client details?" -> GET /clients/{id}/
+- "Update a client?" -> PUT /clients/{id}/
+- "Partially update a client?" -> PATCH /clients/{id}/
+- "List all configurations?" -> GET /configurations/
+- "Search contact_address_exports?" -> GET /contact_address_exports/
+- "List all contact_address_import?" -> GET /contact_address_import/
+- "Create a contact_address_import?" -> POST /contact_address_import/
+- "Get contact_address_import details?" -> GET /contact_address_import/{id}/
+- "Search contact_addresses?" -> GET /contact_addresses/
+- "Create a contact_address?" -> POST /contact_addresses/
+- "Get contact_address details?" -> GET /contact_addresses/{id}/
+- "Update a contact_address?" -> PUT /contact_addresses/{id}/
+- "Partially update a contact_address?" -> PATCH /contact_addresses/{id}/
+- "Search devices?" -> GET /devices/
+- "Create a device?" -> POST /devices/
+- "Get device details?" -> GET /devices/{id}/
+- "List all schema?" -> GET /docs/schema/
+- "Search documents?" -> GET /documents/
+- "Create a document?" -> POST /documents/
+- "Get document details?" -> GET /documents/{id}/
+- "Delete a document?" -> DELETE /documents/{id}/
+- "Create a batch_delete?" -> POST /documents/batch_delete/
+- "Search emails?" -> GET /emails/
+- "Create a email?" -> POST /emails/
+- "Get email details?" -> GET /emails/{id}/
+- "Update a email?" -> PUT /emails/{id}/
+- "Partially update a email?" -> PATCH /emails/{id}/
+- "Delete a email?" -> DELETE /emails/{id}/
+- "Create a resend?" -> POST /emails/{id}/resend/
+- "List all exports?" -> GET /exports/
+- "Create a export?" -> POST /exports/
+- "Get export details?" -> GET /exports/{id}/
+- "Update a export?" -> PUT /exports/{id}/
+- "Partially update a export?" -> PATCH /exports/{id}/
+- "Delete a export?" -> DELETE /exports/{id}/
+- "List all file_uploads?" -> GET /file_uploads/
+- "Create a file_upload?" -> POST /file_uploads/
+- "Get file_upload details?" -> GET /file_uploads/{id}/
+- "Search formrules?" -> GET /formrules/
+- "Create a formrule?" -> POST /formrules/
+- "Get formrule details?" -> GET /formrules/{id}/
+- "Update a formrule?" -> PUT /formrules/{id}/
+- "Partially update a formrule?" -> PATCH /formrules/{id}/
+- "Delete a formrule?" -> DELETE /formrules/{id}/
+- "Create a integration?" -> POST /integrations/
+- "Search metafields?" -> GET /metafields/
+- "Create a metafield?" -> POST /metafields/
+- "Get metafield details?" -> GET /metafields/{id}/
+- "Update a metafield?" -> PUT /metafields/{id}/
+- "Partially update a metafield?" -> PATCH /metafields/{id}/
+- "Delete a metafield?" -> DELETE /metafields/{id}/
+- "Search notification_templates?" -> GET /notification_templates/
+- "Create a notification_template?" -> POST /notification_templates/
+- "Get notification_template details?" -> GET /notification_templates/{id}/
+- "Update a notification_template?" -> PUT /notification_templates/{id}/
+- "Partially update a notification_template?" -> PATCH /notification_templates/{id}/
+- "Delete a notification_template?" -> DELETE /notification_templates/{id}/
+- "Create a render?" -> POST /notification_templates/{id}/render/
+- "Search notifications?" -> GET /notifications/
+- "Create a notification?" -> POST /notifications/
+- "Get notification details?" -> GET /notifications/{id}/
+- "Search orders?" -> GET /orders/
+- "Create a order?" -> POST /orders/
+- "Get order details?" -> GET /orders/{id}/
+- "Update a order?" -> PUT /orders/{id}/
+- "Partially update a order?" -> PATCH /orders/{id}/
+- "Create a password_change?" -> POST /password_change/
+- "Create a password_reset?" -> POST /password_reset/
+- "Create a password_reset_confirm?" -> POST /password_reset_confirm/
+- "Search push_notifications?" -> GET /push_notifications/
+- "Create a push_notification?" -> POST /push_notifications/
+- "Get push_notification details?" -> GET /push_notifications/{id}/
+- "Update a push_notification?" -> PUT /push_notifications/{id}/
+- "Partially update a push_notification?" -> PATCH /push_notifications/{id}/
+- "Delete a push_notification?" -> DELETE /push_notifications/{id}/
+- "Create a resend?" -> POST /push_notifications/{id}/resend/
+- "Search recurrences?" -> GET /recurrences/
+- "Create a recurrence?" -> POST /recurrences/
+- "Get recurrence details?" -> GET /recurrences/{id}/
+- "Update a recurrence?" -> PUT /recurrences/{id}/
+- "Partially update a recurrence?" -> PATCH /recurrences/{id}/
+- "Create a register?" -> POST /register/
+- "List all states_count?" -> GET /reports/tasks/states_count/
+- "List all reviews?" -> GET /reviews/
+- "Create a review?" -> POST /reviews/
+- "Get review details?" -> GET /reviews/{id}/
+- "List all route_optimizations?" -> GET /route_optimizations/
+- "Create a route_optimization?" -> POST /route_optimizations/
+- "Get route_optimization details?" -> GET /route_optimizations/{id}/
+- "Create a commit?" -> POST /route_optimizations/{id}/commit/
+- "List all results?" -> GET /route_optimizations/{id}/results/
+- "List all routes?" -> GET /route_optimizations/{id}/routes/
+- "Create a route?" -> POST /route_optimizations/{id}/routes/
+- "Create a schedule?" -> POST /route_optimizations/{id}/schedule/
+- "List all routes?" -> GET /routes/
+- "Create a route?" -> POST /routes/
+- "Get route details?" -> GET /routes/{id}/
+- "Update a route?" -> PUT /routes/{id}/
+- "Partially update a route?" -> PATCH /routes/{id}/
+- "Delete a route?" -> DELETE /routes/{id}/
+- "Search dashboard?" -> GET /scenes/dashboard/
+- "Search order_list?" -> GET /scenes/order_list/
+- "Search recurrence_list?" -> GET /scenes/recurrence_list/
+- "Search task_list?" -> GET /scenes/task_list/
+- "Search signatures?" -> GET /signatures/
+- "Create a signature?" -> POST /signatures/
+- "Get signature details?" -> GET /signatures/{id}/
+- "Delete a signature?" -> DELETE /signatures/{id}/
+- "Create a batch_delete?" -> POST /signatures/batch_delete/
+- "Search sms?" -> GET /sms/
+- "Create a sm?" -> POST /sms/
+- "Get sm details?" -> GET /sms/{id}/
+- "Update a sm?" -> PUT /sms/{id}/
+- "Partially update a sm?" -> PATCH /sms/{id}/
+- "Delete a sm?" -> DELETE /sms/{id}/
+- "Create a resend?" -> POST /sms/{id}/resend/
+- "List all task_address_features?" -> GET /task_address_features/
+- "Get task_address_feature details?" -> GET /task_address_features/{id}/
+- "List all task_commands?" -> GET /task_commands/
+- "Create a task_command?" -> POST /task_commands/
+- "Get task_command details?" -> GET /task_commands/{id}/
+- "Update a task_command?" -> PUT /task_commands/{id}/
+- "List all task_event_tracks?" -> GET /task_event_tracks/
+- "Get task_event_track details?" -> GET /task_event_tracks/{id}/
+- "List all task_events?" -> GET /task_events/
+- "Get task_event details?" -> GET /task_events/{id}/
+- "Search task_exports?" -> GET /task_exports/
+- "List all task_forms?" -> GET /task_forms/
+- "Create a task_form?" -> POST /task_forms/
+- "Get task_form details?" -> GET /task_forms/{id}/
+- "Update a task_form?" -> PUT /task_forms/{id}/
+- "Partially update a task_form?" -> PATCH /task_forms/{id}/
+- "Delete a task_form?" -> DELETE /task_forms/{id}/
+- "List all task_import?" -> GET /task_import/
+- "Create a task_import?" -> POST /task_import/
+- "Get task_import details?" -> GET /task_import/{id}/
+- "List all task_import_mapping?" -> GET /task_import_mapping/
+- "Create a task_import_mapping?" -> POST /task_import_mapping/
+- "Get task_import_mapping details?" -> GET /task_import_mapping/{id}/
+- "List all task_metadatas?" -> GET /task_metadatas/
+- "Get task_metadata details?" -> GET /task_metadatas/{id}/
+- "Search tasks?" -> GET /tasks/
+- "Create a task?" -> POST /tasks/
+- "Get task details?" -> GET /tasks/{id}/
+- "Update a task?" -> PUT /tasks/{id}/
+- "Partially update a task?" -> PATCH /tasks/{id}/
+- "Create a accept?" -> POST /tasks/{id}/accept/
+- "Create a account_change?" -> POST /tasks/{id}/account_change/
+- "Create a activate?" -> POST /tasks/{id}/activate/
+- "Create a assign?" -> POST /tasks/{id}/assign/
+- "Create a cancel?" -> POST /tasks/{id}/cancel/
+- "Create a complete?" -> POST /tasks/{id}/complete/
+- "List all documents?" -> GET /tasks/{id}/documents/
+- "List all events?" -> GET /tasks/{id}/events/
+- "Create a fail?" -> POST /tasks/{id}/fail/
+- "Create a reject?" -> POST /tasks/{id}/reject/
+- "List all signatures?" -> GET /tasks/{id}/signatures/
+- "Create a transit?" -> POST /tasks/{id}/transit/
+- "Create a unaccept?" -> POST /tasks/{id}/unaccept/
+- "Create a unassign?" -> POST /tasks/{id}/unassign/
+- "Create a reorder?" -> POST /tasks/reorder/
+- "Create a reposition?" -> POST /tasks/reposition/
+- "List all time_location_features?" -> GET /time_location_features/
+- "Create a time_location_feature?" -> POST /time_location_features/
+- "Get time_location_feature details?" -> GET /time_location_features/{id}/
+- "Update a time_location_feature?" -> PUT /time_location_features/{id}/
+- "Partially update a time_location_feature?" -> PATCH /time_location_features/{id}/
+- "Delete a time_location_feature?" -> DELETE /time_location_features/{id}/
+- "List all time_locations?" -> GET /time_locations/
+- "Create a time_location?" -> POST /time_locations/
+- "Get time_location details?" -> GET /time_locations/{id}/
+- "List all trackers?" -> GET /trackers/
+- "Create a tracker?" -> POST /trackers/
+- "Get tracker details?" -> GET /trackers/{id}/
+- "Update a tracker?" -> PUT /trackers/{id}/
+- "Partially update a tracker?" -> PATCH /trackers/{id}/
+- "List all public?" -> GET /trackers/{id}/public/
+- "Search users?" -> GET /users/
+- "Create a user?" -> POST /users/
+- "Get user details?" -> GET /users/{id}/
+- "Update a user?" -> PUT /users/{id}/
+- "Partially update a user?" -> PATCH /users/{id}/
+- "Delete a user?" -> DELETE /users/{id}/
+- "Create a activate?" -> POST /users/{id}/activate/
+- "List all on_duty?" -> GET /users/{id}/on_duty/
+- "List all users_on_duty_log?" -> GET /users_on_duty_log/
+- "Create a users_on_duty_log?" -> POST /users_on_duty_log/
+- "Get users_on_duty_log details?" -> GET /users_on_duty_log/{id}/
+- "Search webhooks?" -> GET /webhooks/
+- "Create a webhook?" -> POST /webhooks/
+- "Get webhook details?" -> GET /webhooks/{id}/
+- "Update a webhook?" -> PUT /webhooks/{id}/
+- "Partially update a webhook?" -> PATCH /webhooks/{id}/
+- "Delete a webhook?" -> DELETE /webhooks/{id}/
+- "Create a active?" -> POST /webhooks/{id}/active/
+- "Create a inactive?" -> POST /webhooks/{id}/inactive/
+- "List all worker_features?" -> GET /worker_features/
+- "Get worker_feature details?" -> GET /worker_features/{user_id}/
+- "List all worker_tracks?" -> GET /worker_tracks/
+- "List all working_state?" -> GET /working_state/
+- "Create a working_state?" -> POST /working_state/
+- "Get working_state details?" -> GET /working_state/{id}/
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

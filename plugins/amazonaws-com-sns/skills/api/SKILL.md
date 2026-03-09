@@ -68,84 +68,10 @@ Not specified.
 | POST | / | Remove tags from the specified Amazon SNS topic. For an overview, see Amazon SNS Tags in the Amazon SNS Developer Guide. |
 | POST | / | Verifies a destination phone number with a one-time password (OTP) for the calling Amazon Web Services account. When you start using Amazon SNS to send SMS messages, your Amazon Web Services account is in the SMS sandbox. The SMS sandbox provides a safe environment for you to try Amazon SNS features without risking your reputation as an SMS sender. While your Amazon Web Services account is in the SMS sandbox, you can use all of the features of Amazon SNS. However, you can send SMS messages only to verified destination phone numbers. For more information, including how to move out of the sandbox to send messages without restrictions, see SMS sandbox in the Amazon SNS Developer Guide. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I send a notification to a topic?" -> POST / (Publish with TopicArn + Message)
-- "How do I send an SMS to a phone number?" -> POST / (Publish with PhoneNumber + Message)
-- "How do I create a new SNS topic?" -> POST / (CreateTopic with Name)
-- "How do I subscribe an endpoint to a topic?" -> POST / (Subscribe with TopicArn + Protocol)
-- "How do I unsubscribe from a topic?" -> POST / (Unsubscribe with SubscriptionArn)
-- "How do I list all my topics?" -> POST / (ListTopics, paginate with NextToken)
-- "How do I check if a phone number opted out of SMS?" -> POST / (CheckIfPhoneNumberIsOptedOut with phoneNumber)
-- "How do I send messages in bulk?" -> POST / (PublishBatch with TopicArn + PublishBatchRequestEntries)
-- "How do I set up push notifications for mobile?" -> POST / (CreatePlatformApplication then CreatePlatformEndpoint)
-- "How do I tag an SNS resource?" -> POST / (TagResource with ResourceArn + Tags)
-- "How do I see who is subscribed to a topic?" -> POST / (ListSubscriptionsByTopic with TopicArn)
-- "How do I confirm a pending subscription?" -> POST / (ConfirmSubscription with TopicArn + Token)
-- "Am I still in the SMS sandbox?" -> POST / (GetSMSSandboxAccountStatus, check IsInSandbox)
-- "How do I grant another AWS account access to my topic?" -> POST / (AddPermission with TopicArn + AWSAccountId + ActionName)
-- "How do I set a data protection policy on a topic?" -> POST / (PutDataProtectionPolicy with ResourceArn + DataProtectionPolicy)
-
-## Response Tips
-
-- **Publish/PublishBatch**: MessageId confirms delivery acceptance, not final delivery; PublishBatch returns both Successful and Failed arrays -- always check Failed for partial failures.
-- **List endpoints (Topics, Subscriptions, Endpoints, PhoneNumbers)**: All use NextToken-based pagination -- keep calling until NextToken is null; no total count is provided.
-- **Get*Attributes endpoints**: Return flat `map<str,str>` -- all values are strings even for booleans and numbers; parse accordingly.
-- **Create endpoints (Topic, PlatformApplication, PlatformEndpoint)**: Return the ARN of the created resource; creating a topic with the same name is idempotent and returns the existing ARN.
-- **SMS operations**: Note casing inconsistency -- some use `phoneNumber`/`nextToken` (camelCase) while others use `PhoneNumber`/`NextToken` (PascalCase); match exactly.
-
-## Anomaly Flags
-
-- **SMS Sandbox mode**: Surface `IsInSandbox: true` from GetSMSSandboxAccountStatus -- production SMS will fail until sandbox is exited.
-- **PublishBatch partial failures**: Alert when `Failed` array is non-empty even if some entries in `Successful` -- partial failures are easy to miss.
-- **Opted-out phone numbers**: Flag when CheckIfPhoneNumberIsOptedOut returns `isOptedOut: true` before attempting Publish to that number.
-- **Pagination truncation**: Warn if a List call returns a NextToken but the caller does not paginate -- results are incomplete.
-- **Missing SubscriptionArn**: After Subscribe, `SubscriptionArn` may be `"pending confirmation"` instead of a real ARN -- flag that confirmation is still needed.
-- **Platform endpoint disabled**: When GetEndpointAttributes returns `Enabled: "false"`, surface this before attempting Publish to that endpoint.
-
-## Playbook
-
-### 1. Set Up a Topic and Subscribe an Email Endpoint
-
-1. Call CreateTopic with `Name` to get the `TopicArn`
-2. Call Subscribe with the `TopicArn`, `Protocol: "email"`, and `Endpoint: "user@example.com"`
-3. Note the `SubscriptionArn` will be `"pending confirmation"` until the recipient clicks the confirmation link
-4. Once confirmed, call GetSubscriptionAttributes with the `SubscriptionArn` to verify `PendingConfirmation: "false"`
-5. Call Publish with the `TopicArn` and `Message` to send a notification
-
-### 2. Set Up Mobile Push Notifications
-
-1. Call CreatePlatformApplication with `Name`, `Platform` (e.g., `"GCM"` or `"APNS"`), and `Attributes` containing platform credentials
-2. For each device, call CreatePlatformEndpoint with the `PlatformApplicationArn` and the device `Token`
-3. Store the returned `EndpointArn` for each device
-4. Call Publish with `TargetArn` set to the `EndpointArn` and `Message` containing the push payload
-5. Periodically call ListEndpointsByPlatformApplication to audit registered devices; remove stale endpoints with DeleteEndpoint
-
-### 3. Send SMS and Manage Opt-Outs
-
-1. Call GetSMSSandboxAccountStatus -- if `IsInSandbox` is `true`, add destination numbers with CreateSMSSandboxPhoneNumber and verify with VerifySMSSandboxPhoneNumber
-2. Before sending, call CheckIfPhoneNumberIsOptedOut to confirm the number has not opted out
-3. Call Publish with `PhoneNumber` and `Message` to send the SMS
-4. If users opt back in, call OptInPhoneNumber with their number
-5. Call ListPhoneNumbersOptedOut periodically to audit opted-out numbers
-
-### 4. Bulk Publish with Error Handling
-
-1. Call CreateTopic or use an existing `TopicArn`
-2. Build up to 10 `PublishBatchRequestEntries` with unique `Id` values per entry
-3. Call PublishBatch with the `TopicArn` and entries
-4. Inspect the `Failed` array -- retry failed entries with exponential backoff
-5. Log `MessageId` from `Successful` entries for delivery tracking
-
-### 5. Manage Topic Access Control and Tagging
-
-1. Call AddPermission with `TopicArn`, a `Label`, the target `AWSAccountId` list, and allowed `ActionName` list (e.g., `"Publish"`)
-2. Call TagResource with the topic's ARN and a `Tags` array for cost allocation or organization
-3. Verify with ListTagsForResource and GetTopicAttributes
-4. To revoke access, call RemovePermission with the same `TopicArn` and `Label`
-5. Clean up tags with UntagResource specifying the `TagKeys` to remove
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

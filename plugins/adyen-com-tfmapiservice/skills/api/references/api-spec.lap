@@ -9,44 +9,54 @@
 
 @group assignTerminals
 @endpoint POST /assignTerminals
-@required {companyAccount: str, terminals: [str]}
-@optional {merchantAccount: str, merchantInventory: bool, store: str}
-@returns(200) {results: map}
-@errors {400, 401, 403, 422, 500}
+@desc Assign terminals
+@required {companyAccount: str # Your company account. To return terminals to the company inventory, specify only this parameter and the `terminals`., terminals: [str] # Array containing a list of terminal IDs that you want to assign or reassign to the merchant account or store, or that you want to return to the company inventory.  For example, `["V400m-324689776","P400Plus-329127412"]`.}
+@optional {merchantAccount: str # Name of the merchant account. Specify this parameter to assign terminals to this merchant account or to a store under this merchant account., merchantInventory: bool # Boolean that indicates if you are assigning the terminals to the merchant inventory. Do not use when assigning terminals to a store. Required when assigning the terminal to a merchant account.  - Set this to **true** to assign the terminals to the merchant inventory. This also means that the terminals cannot be boarded.  - Set this to **false** to assign the terminals to the merchant account as in-store terminals. This makes the terminals ready to be boarded and to process payments through the specified merchant account., store: str # The store code of the store that you want to assign the terminals to.}
+@returns(200) {results: map} # OK - the request has succeeded.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"companyAccount":"YOUR_COMPANY_ACCOUNT","terminals":["P400Plus-275479597"]}
 
 @endgroup
 
 @group findTerminal
 @endpoint POST /findTerminal
-@required {terminal: str}
-@returns(200) {companyAccount: str, merchantAccount: str, merchantInventory: bool, store: str, terminal: str}
-@errors {400, 401, 403, 422, 500}
+@desc Get the account or store of a terminal
+@required {terminal: str # The unique terminal ID in the format `[Device model]-[Serial number]`.   For example, **V400m-324689776**.}
+@returns(200) {companyAccount: str, merchantAccount: str, merchantInventory: bool, store: str, terminal: str} # OK - the request has succeeded.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"terminal":"M400-401972715"}
 
 @endgroup
 
 @group getStoresUnderAccount
 @endpoint POST /getStoresUnderAccount
-@required {companyAccount: str}
-@optional {merchantAccount: str}
-@returns(200) {stores: [map]}
-@errors {400, 401, 403, 422, 500}
+@desc Get the stores of an account
+@required {companyAccount: str # The company account. If you only specify this parameter, the response includes the stores of all merchant accounts that are associated with the company account.}
+@optional {merchantAccount: str # The merchant account. With this parameter, the response only includes the stores of the specified merchant account.}
+@returns(200) {stores: [map]} # OK - the request has succeeded.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"companyAccount":"YOUR_COMPANY_ACCOUNT"}
 
 @endgroup
 
 @group getTerminalDetails
 @endpoint POST /getTerminalDetails
-@required {terminal: str}
-@returns(200) {bluetoothIp: str, bluetoothMac: str, companyAccount: str, country: str, deviceModel: str, dhcpEnabled: bool, displayLabel: str?, ethernetIp: str?, ethernetMac: str?, firmwareVersion: str, iccid: str?, lastActivityDateTime: str(date-time)?, lastTransactionDateTime: str(date-time)?, linkNegotiation: str?, merchantAccount: str, merchantInventory: bool, permanentTerminalId: str, serialNumber: str, simStatus: str?, store: str, storeDetails: map{address: map{city: str, countryCode: str, postalCode: str, stateOrProvince: str, streetAddress: str, streetAddress2: str}, description: str, inStoreTerminals: [str], merchantAccountCode: str, status: str, store: str}, terminal: str, terminalStatus: str, wifiIp: str, wifiMac: str}
-@errors {400, 401, 403, 422, 500}
+@desc Get the details of a terminal
+@required {terminal: str # The unique terminal ID in the format `[Device model]-[Serial number]`.   For example, **V400m-324689776**.}
+@returns(200) {bluetoothIp: str, bluetoothMac: str, companyAccount: str, country: str, deviceModel: str, dhcpEnabled: bool, displayLabel: str?, ethernetIp: str?, ethernetMac: str?, firmwareVersion: str, iccid: str?, lastActivityDateTime: str(date-time)?, lastTransactionDateTime: str(date-time)?, linkNegotiation: str?, merchantAccount: str, merchantInventory: bool, permanentTerminalId: str, serialNumber: str, simStatus: str?, store: str, storeDetails: map{address: map{city: str, countryCode: str, postalCode: str, stateOrProvince: str, streetAddress: str, streetAddress2: str}, description: str, inStoreTerminals: [str], merchantAccountCode: str, status: str, store: str}, terminal: str, terminalStatus: str, wifiIp: str, wifiMac: str} # OK - the request has succeeded.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"terminal":"M400-401972715"}
 
 @endgroup
 
 @group getTerminalsUnderAccount
 @endpoint POST /getTerminalsUnderAccount
-@required {companyAccount: str}
-@optional {merchantAccount: str, store: str}
-@returns(200) {companyAccount: str, inventoryTerminals: [str], merchantAccounts: [map]}
-@errors {400, 401, 403, 422, 500}
+@desc Get the list of terminals
+@required {companyAccount: str # Your company account. If you only specify this parameter, the response includes all terminals at all account levels.}
+@optional {merchantAccount: str # The merchant account. This is required if you are retrieving the terminals assigned to a store.If you don't specify a `store` the response includes the terminals assigned to the specified merchant account and the terminals assigned to the stores under this merchant account., store: str # The store code of the store. With this parameter, the response only includes the terminals assigned to the specified store.}
+@returns(200) {companyAccount: str, inventoryTerminals: [str], merchantAccounts: [map]} # OK - the request has succeeded.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"companyAccount":"YOUR_COMPANY_ACCOUNT"}
 
 @endgroup
 

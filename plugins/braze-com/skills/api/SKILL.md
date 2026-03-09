@@ -158,85 +158,75 @@ https://{{instance_url}}
 | POST | /templates/email/create | Create Email Template |
 | POST | /templates/email/update | Update Email Template |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Which emails have hard bounced recently?" -> GET /email/hard_bounces
-- "Who unsubscribed from our emails this month?" -> GET /email/unsubscribes
-- "How do I resubscribe a user or change their email subscription status?" -> POST /email/status
-- "Remove an email from the bounce list" -> POST /email/bounce/remove
-- "What campaigns are running and how are they performing?" -> GET /campaigns/list then GET /campaigns/data_series
-- "Show me the details and analytics for a specific Canvas" -> GET /canvas/details then GET /canvas/data_series
-- "How many daily active users do we have?" -> GET /kpi/dau/data_series
-- "What is our new user growth trend?" -> GET /kpi/new_users/data_series
-- "Export user profiles by external ID or email" -> POST /users/export/ids
-- "Export all users in a segment" -> POST /users/export/segment
-- "Schedule a campaign to send later" -> POST /campaigns/trigger/schedule/create
-- "Cancel a scheduled broadcast" -> POST /messages/schedule/delete
-- "Track custom events and purchases for users" -> POST /users/track
-- "List all subscription groups a user belongs to" -> GET /subscription/user/status
-- "Create or update an email template" -> POST /templates/email/create or POST /templates/email/update
-
-## Response Tips
-
-- **List endpoints** (campaigns/list, canvas/list, segments/list, feed/list, events/list, content_blocks/list, templates/email/list): Paginated via `page` or `offset`/`limit` params; always check if more pages exist before stopping iteration.
-- **Data series endpoints** (*/data_series): Return time-bucketed arrays; confirm `length`, `ending_at`, and `unit` align to avoid empty or truncated series.
-- **Export endpoints** (users/export/*): Large exports return asynchronously via `callback_endpoint`; poll or listen for the callback rather than expecting inline data.
-- **Schedule endpoints** (*/schedule/create, */schedule/update): Return a `schedule_id` on creation; persist it because deletion and updates require it.
-- **Subscription endpoints**: Identical paths serve both email and SMS contexts -- differentiate by whether `email` or `phone` is provided in params.
-- **Error responses**: Braze returns `errors` arrays with message strings; check HTTP status and the `errors` field together since 4xx can carry multiple validation failures.
-
-## Anomaly Flags
-
-- **Rate limit headers**: Surface `X-RateLimit-Remaining` and `X-RateLimit-Reset` when remaining calls drop below 10% of the limit; warn before the agent queues more requests.
-- **Deprecation notices**: Flag any `Deprecation` or `Sunset` response headers; Braze periodically retires endpoints and these headers appear before removal.
-- **Empty data series**: Alert when a data_series call returns zero data points despite a valid date range -- likely indicates a wrong `app_id`, `segment_id`, or `campaign_id`.
-- **Export callback missing**: Warn if `POST /users/export/segment` is called without a `callback_endpoint` -- the response will not contain user data inline and results may be unrecoverable.
-- **Bounce/spam removal on non-bounced addresses**: Flag when `POST /email/bounce/remove` or `POST /email/spam/remove` returns a no-op response, indicating the address was not on the list.
-- **Bulk user delete**: Proactively confirm before executing `POST /users/delete` since it is irreversible and accepts arrays of IDs.
-- **Schedule in the past**: Warn if a schedule/create or schedule/update call sets a time that has already passed -- Braze may reject or send immediately.
-
-## Playbook
-
-### 1. Investigate and Fix Email Deliverability Issues
-
-1. `GET /email/hard_bounces` with the relevant date range to identify bounced addresses.
-2. `GET /email/unsubscribes` for the same period to separate voluntary unsubscribes from technical bounces.
-3. For addresses that bounced due to transient issues, call `POST /email/bounce/remove` to re-enable delivery.
-4. For addresses flagged as spam, call `POST /email/spam/remove` after confirming re-consent.
-5. Optionally call `POST /email/status` to set `subscription_state` back to `subscribed` for cleaned addresses.
-
-### 2. Launch and Monitor a Scheduled Campaign
-
-1. `GET /campaigns/list` to find the target campaign and note its `campaign_id`.
-2. `POST /sends/id/create` to generate a unique `send_id` for tracking this particular send.
-3. `POST /campaigns/trigger/schedule/create` with the `campaign_id`, audience, and desired schedule.
-4. Persist the returned `schedule_id` for later modification or cancellation.
-5. After the send window, call `GET /campaigns/data_series` and `GET /sends/data_series` to review performance metrics.
-
-### 3. Export and Analyze a User Segment
-
-1. `GET /segments/list` to browse available segments and pick the target `segment_id`.
-2. `GET /segments/details` to confirm segment size and filters before exporting.
-3. `POST /users/export/segment` with the `segment_id`, desired `fields_to_export`, and a `callback_endpoint`.
-4. Wait for the callback or poll the callback URL to retrieve the export file.
-5. `GET /segments/data_series` to overlay segment growth trends alongside the exported snapshot.
-
-### 4. Manage Subscription Group Opt-ins Across Email and SMS
-
-1. `GET /subscription/user/status` with the user's `external_id` to see all current subscription group memberships.
-2. To check a specific group, call `GET /subscription/status/get` with the `subscription_group_id` and `email` (or `phone` for SMS).
-3. To opt a user in or out, call `POST /subscription/status/set` with the group ID, target `subscription_state`, and the user's email array or phone array.
-4. Re-query `GET /subscription/user/status` to confirm the change took effect.
-
-### 5. Create and Deploy an Email Template with Content Blocks
-
-1. `GET /content_blocks/list` to check for existing reusable blocks (headers, footers, legal copy).
-2. If needed, `POST /content_blocks/create` to build new shared content blocks.
-3. `POST /templates/email/create` referencing the content blocks via Liquid tags in the `body` field.
-4. `GET /templates/email/info` with the returned `email_template_id` to verify the template rendered correctly.
-5. Use the template ID in a subsequent `POST /messages/send` or campaign trigger to deploy.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all hard_bounces?" -> GET /email/hard_bounces
+- "List all unsubscribes?" -> GET /email/unsubscribes
+- "Create a status?" -> POST /email/status
+- "Create a remove?" -> POST /email/bounce/remove
+- "Create a remove?" -> POST /email/spam/remove
+- "Create a blacklist?" -> POST /email/blacklist
+- "List all data_series?" -> GET /campaigns/data_series
+- "List all details?" -> GET /campaigns/details
+- "List all list?" -> GET /campaigns/list
+- "List all data_series?" -> GET /sends/data_series
+- "List all data_series?" -> GET /canvas/data_series
+- "List all data_summary?" -> GET /canvas/data_summary
+- "List all details?" -> GET /canvas/details
+- "List all list?" -> GET /canvas/list
+- "List all list?" -> GET /events/list
+- "List all data_series?" -> GET /events/data_series
+- "List all data_series?" -> GET /kpi/new_users/data_series
+- "List all data_series?" -> GET /kpi/dau/data_series
+- "List all data_series?" -> GET /kpi/mau/data_series
+- "List all data_series?" -> GET /kpi/uninstalls/data_series
+- "List all data_series?" -> GET /feed/data_series
+- "List all details?" -> GET /feed/details
+- "List all list?" -> GET /feed/list
+- "List all product_list?" -> GET /purchases/product_list
+- "List all list?" -> GET /segments/list
+- "List all data_series?" -> GET /segments/data_series
+- "List all details?" -> GET /segments/details
+- "List all data_series?" -> GET /sessions/data_series
+- "Create a id?" -> POST /users/export/ids
+- "Create a segment?" -> POST /users/export/segment
+- "Create a global_control_group?" -> POST /users/export/global_control_group
+- "List all scheduled_broadcasts?" -> GET /messages/scheduled_broadcasts
+- "Create a delete?" -> POST /messages/schedule/delete
+- "Create a delete?" -> POST /campaigns/trigger/schedule/delete
+- "Create a delete?" -> POST /canvas/trigger/schedule/delete
+- "Create a create?" -> POST /messages/schedule/create
+- "Create a create?" -> POST /campaigns/trigger/schedule/create
+- "Create a create?" -> POST /canvas/trigger/schedule/create
+- "Create a update?" -> POST /messages/schedule/update
+- "Create a update?" -> POST /campaigns/trigger/schedule/update
+- "Create a update?" -> POST /canvas/trigger/schedule/update
+- "Create a create?" -> POST /sends/id/create
+- "Create a send?" -> POST /messages/send
+- "Create a send?" -> POST /campaigns/trigger/send
+- "Create a send?" -> POST /canvas/trigger/send
+- "Create a send?" -> POST /transactional/v1/campaigns/YOUR_CAMPAIGN_ID_HERE/send
+- "List all invalid_phone_numbers?" -> GET /sms/invalid_phone_numbers
+- "Create a remove?" -> POST /sms/invalid_phone_numbers/remove
+- "List all get?" -> GET /subscription/status/get
+- "List all status?" -> GET /subscription/user/status
+- "Create a set?" -> POST /subscription/status/set
+- "List all list?" -> GET /content_blocks/list
+- "List all info?" -> GET /content_blocks/info
+- "Create a create?" -> POST /content_blocks/create
+- "Create a update?" -> POST /content_blocks/update
+- "List all list?" -> GET /templates/email/list
+- "List all info?" -> GET /templates/email/info
+- "Create a create?" -> POST /templates/email/create
+- "Create a update?" -> POST /templates/email/update
+- "Create a remove?" -> POST /users/external_ids/remove
+- "Create a rename?" -> POST /users/external_ids/rename
+- "Create a new?" -> POST /users/alias/new
+- "Create a delete?" -> POST /users/delete
+- "Create a identify?" -> POST /users/identify
+- "Create a track?" -> POST /users/track
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

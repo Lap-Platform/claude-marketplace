@@ -392,87 +392,83 @@ https://api.telegram.org/bot{token}
 |--------|------|-------------|
 | POST | /getGameHighScores | Use this method to get data for high score tables. Will return the score of the specified user and several of their neighbors in a game. On success, returns an *Array* of [GameHighScore](https://core.telegram.org/bots/api/#gamehighscore) objects. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I send a text message to a user or group?" -> POST /sendMessage
-- "How do I check for new incoming messages?" -> POST /getUpdates
-- "How do I get information about my bot?" -> POST /getMe
-- "How do I forward a message from one chat to another?" -> POST /forwardMessage
-- "How do I download a file that a user sent?" -> POST /getFile
-- "How do I kick or ban a user from a group?" -> POST /kickChatMember
-- "How do I set up a webhook to receive updates?" -> POST /setWebhook
-- "How do I send multiple photos or videos at once?" -> POST /sendMediaGroup
-- "How do I edit a message the bot already sent?" -> POST /editMessageText
-- "How do I create a poll or quiz in a chat?" -> POST /sendPoll
-- "How do I get the list of admins in a group?" -> POST /getChatAdministrators
-- "How do I send an invoice for payment?" -> POST /sendInvoice
-- "How do I respond to a callback button press?" -> POST /answerCallbackQuery
-- "How do I share a live location that updates?" -> POST /sendLocation (with live_period)
-- "How do I delete a message?" -> POST /deleteMessage
-
-## Response Tips
-
-- **All endpoints**: Every response wraps in `{ok: bool, result: ...}` -- always check `ok` before reading `result`; on failure, `description` and `error_code` fields appear instead.
-- **Message-sending endpoints** (sendMessage, sendPhoto, etc.): `result` is a deeply nested Message object -- extract `result.message_id` to reference later; media fields (photo, document, video) contain `file_id` for re-sending and `file_unique_id` for deduplication.
-- **getUpdates**: `result` is an array of Update objects -- track the highest `update_id` and pass `offset = update_id + 1` on next call to acknowledge; no built-in pagination beyond this.
-- **Edit endpoints** (editMessageText, editMessageCaption, etc.): `result` is either a Message object (regular messages) or `true` (inline messages) -- type-check before parsing.
-- **Boolean endpoints** (kickChatMember, setChatPermissions, etc.): `result` is simply `true` on success -- no additional data returned.
-- **getFile**: The returned `file_path` is relative -- construct the download URL as `https://api.telegram.org/file/bot{token}/{file_path}`.
-- **Payments** (answerShippingQuery, answerPreCheckoutQuery): Pass `ok: false` with `error_message` to reject -- omitting `error_message` when `ok` is false causes silent failures.
-
-## Anomaly Flags
-
-- **`ok: false` responses**: Surface the `error_code` and `description` immediately -- common codes are 400 (bad request), 401 (invalid token), 403 (bot lacks permissions), 429 (rate limited with `retry_after` seconds).
-- **429 Too Many Requests**: Extract `retry_after` from the error response and warn the user about the cooldown period before retrying.
-- **getWebhookInfo `pending_update_count`**: If this grows steadily, the webhook endpoint is failing to process updates -- surface counts above 100 as a warning.
-- **getWebhookInfo `last_error_message`**: Surface any non-empty value -- indicates Telegram cannot reach the webhook URL.
-- **`migrate_to_chat_id` in responses**: Indicates a group was upgraded to a supergroup -- the agent should flag this and suggest updating the stored chat_id.
-- **`kickChatMember` naming**: This is the legacy name (renamed to `banChatMember` in newer API versions) -- flag if the user is on a newer Bot API version.
-- **File size limits**: `getFile` only works for files up to 20MB -- surface a warning if attempting to download larger files.
-- **`left_chat_member` or `new_chat_members` in updates**: These indicate membership changes that may affect bot functionality -- surface when the bot itself is removed.
-
-## Playbook
-
-### Send a Message with Inline Keyboard Buttons
-
-1. Call POST /sendMessage with `chat_id`, `text`, and `reply_markup` set to `{"inline_keyboard": [[{"text": "Click me", "callback_data": "btn1"}]]}`.
-2. Store the returned `result.message_id` for later editing.
-3. When the user presses the button, receive a callback_query update via /getUpdates or webhook.
-4. Call POST /answerCallbackQuery with the `callback_query_id` to dismiss the loading indicator.
-5. Optionally call POST /editMessageText to update the original message based on the button pressed.
-
-### Set Up Webhook-Based Updates
-
-1. Call POST /getWebhookInfo to check current webhook status.
-2. If a webhook is already set that you want to replace, call POST /deleteWebhook first (optionally with `drop_pending_updates: true`).
-3. Call POST /setWebhook with your HTTPS URL as a parameter.
-4. Verify success by calling POST /getWebhookInfo again -- confirm `url` matches and `last_error_message` is empty.
-5. Monitor `pending_update_count` periodically to ensure your server is processing updates.
-
-### Moderate a Group Chat
-
-1. Call POST /getChat with the `chat_id` to retrieve current group settings and permissions.
-2. To restrict a user, call POST /restrictChatMember with `user_id` and a `permissions` object setting specific booleans (e.g., `can_send_messages: false`).
-3. To ban a user, call POST /kickChatMember with `user_id` and optionally `until_date` for a temporary ban.
-4. To promote a user to admin, call POST /promoteChatMember with the desired permission flags.
-5. Optionally call POST /setChatAdministratorCustomTitle to assign a visible title to the new admin.
-
-### Send and Track a Live Location
-
-1. Call POST /sendLocation with `chat_id`, `latitude`, `longitude`, and `live_period` (60-86400 seconds).
-2. Store the returned `result.message_id` and `result.chat.id`.
-3. Periodically call POST /editMessageLiveLocation with updated `latitude`, `longitude`, `chat_id`, and `message_id`.
-4. When tracking is complete, call POST /stopMessageLiveLocation with `chat_id` and `message_id` to finalize.
-
-### Process a Payment
-
-1. Call POST /sendInvoice with `chat_id`, `title`, `description`, `payload`, `provider_token`, `currency`, and `prices` array.
-2. When a shipping query arrives (if `is_flexible` was true), call POST /answerShippingQuery with `shipping_query_id`, `ok: true`, and available `shipping_options`.
-3. When a pre-checkout query arrives, validate the order and call POST /answerPreCheckoutQuery with `pre_checkout_query_id` and `ok: true` (or `ok: false` with `error_message` to reject).
-4. After successful payment, a message with `successful_payment` will arrive in updates -- extract `telegram_payment_charge_id` and `provider_payment_charge_id` for records.
-5. If passport data is required, handle errors via POST /setPassportDataErrors to notify the user of issues with their submitted documents.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a getUpdate?" -> POST /getUpdates
+- "Create a setWebhook?" -> POST /setWebhook
+- "Create a deleteWebhook?" -> POST /deleteWebhook
+- "Create a getWebhookInfo?" -> POST /getWebhookInfo
+- "Create a getMe?" -> POST /getMe
+- "Create a logOut?" -> POST /logOut
+- "Create a close?" -> POST /close
+- "Create a sendMessage?" -> POST /sendMessage
+- "Create a forwardMessage?" -> POST /forwardMessage
+- "Create a copyMessage?" -> POST /copyMessage
+- "Create a sendPhoto?" -> POST /sendPhoto
+- "Create a sendAudio?" -> POST /sendAudio
+- "Create a sendDocument?" -> POST /sendDocument
+- "Create a sendVideo?" -> POST /sendVideo
+- "Create a sendAnimation?" -> POST /sendAnimation
+- "Create a sendVoice?" -> POST /sendVoice
+- "Create a sendVideoNote?" -> POST /sendVideoNote
+- "Create a sendMediaGroup?" -> POST /sendMediaGroup
+- "Create a sendLocation?" -> POST /sendLocation
+- "Create a editMessageLiveLocation?" -> POST /editMessageLiveLocation
+- "Create a stopMessageLiveLocation?" -> POST /stopMessageLiveLocation
+- "Create a sendVenue?" -> POST /sendVenue
+- "Create a sendContact?" -> POST /sendContact
+- "Create a sendPoll?" -> POST /sendPoll
+- "Create a sendDice?" -> POST /sendDice
+- "Create a sendChatAction?" -> POST /sendChatAction
+- "Create a getUserProfilePhoto?" -> POST /getUserProfilePhotos
+- "Create a getFile?" -> POST /getFile
+- "Create a kickChatMember?" -> POST /kickChatMember
+- "Create a unbanChatMember?" -> POST /unbanChatMember
+- "Create a restrictChatMember?" -> POST /restrictChatMember
+- "Create a promoteChatMember?" -> POST /promoteChatMember
+- "Create a setChatAdministratorCustomTitle?" -> POST /setChatAdministratorCustomTitle
+- "Create a setChatPermission?" -> POST /setChatPermissions
+- "Create a exportChatInviteLink?" -> POST /exportChatInviteLink
+- "Create a setChatPhoto?" -> POST /setChatPhoto
+- "Create a deleteChatPhoto?" -> POST /deleteChatPhoto
+- "Create a setChatTitle?" -> POST /setChatTitle
+- "Create a setChatDescription?" -> POST /setChatDescription
+- "Create a pinChatMessage?" -> POST /pinChatMessage
+- "Create a unpinChatMessage?" -> POST /unpinChatMessage
+- "Create a unpinAllChatMessage?" -> POST /unpinAllChatMessages
+- "Create a leaveChat?" -> POST /leaveChat
+- "Create a getChat?" -> POST /getChat
+- "Create a getChatAdministrator?" -> POST /getChatAdministrators
+- "Create a getChatMembersCount?" -> POST /getChatMembersCount
+- "Create a getChatMember?" -> POST /getChatMember
+- "Create a setChatStickerSet?" -> POST /setChatStickerSet
+- "Create a deleteChatStickerSet?" -> POST /deleteChatStickerSet
+- "Create a answerCallbackQuery?" -> POST /answerCallbackQuery
+- "Create a setMyCommand?" -> POST /setMyCommands
+- "Create a getMyCommand?" -> POST /getMyCommands
+- "Create a editMessageText?" -> POST /editMessageText
+- "Create a editMessageCaption?" -> POST /editMessageCaption
+- "Create a editMessageMedia?" -> POST /editMessageMedia
+- "Create a editMessageReplyMarkup?" -> POST /editMessageReplyMarkup
+- "Create a stopPoll?" -> POST /stopPoll
+- "Create a deleteMessage?" -> POST /deleteMessage
+- "Create a sendSticker?" -> POST /sendSticker
+- "Create a getStickerSet?" -> POST /getStickerSet
+- "Create a uploadStickerFile?" -> POST /uploadStickerFile
+- "Create a createNewStickerSet?" -> POST /createNewStickerSet
+- "Create a addStickerToSet?" -> POST /addStickerToSet
+- "Create a setStickerPositionInSet?" -> POST /setStickerPositionInSet
+- "Create a deleteStickerFromSet?" -> POST /deleteStickerFromSet
+- "Create a setStickerSetThumb?" -> POST /setStickerSetThumb
+- "Create a answerInlineQuery?" -> POST /answerInlineQuery
+- "Create a sendInvoice?" -> POST /sendInvoice
+- "Create a answerShippingQuery?" -> POST /answerShippingQuery
+- "Create a answerPreCheckoutQuery?" -> POST /answerPreCheckoutQuery
+- "Create a setPassportDataError?" -> POST /setPassportDataErrors
+- "Create a sendGame?" -> POST /sendGame
+- "Create a setGameScore?" -> POST /setGameScore
+- "Create a getGameHighScore?" -> POST /getGameHighScores
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

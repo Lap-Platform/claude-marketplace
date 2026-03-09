@@ -184,84 +184,79 @@ https://api.spotify.com/v1
 |--------|------|-------------|
 | GET | /markets | Get Available Markets |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What information is available about a specific album?" -> GET /albums/{id}
-- "Search for tracks, artists, or playlists by name" -> GET /search
-- "What is currently playing on my Spotify?" -> GET /me/player/currently-playing
-- "Show me my saved/liked tracks" -> GET /me/tracks
-- "Add a song to my playlist" -> POST /playlists/{playlist_id}/tracks
-- "What are an artist's most popular songs?" -> GET /artists/{id}/top-tracks
-- "Get recommendations based on seed tracks or genres" -> GET /recommendations
-- "What devices are available for playback?" -> GET /me/player/devices
-- "Skip to the next track" -> POST /me/player/next
-- "What are my top artists or tracks over time?" -> GET /me/top/artists
-- "Remove tracks from a playlist" -> DELETE /playlists/{playlist_id}/tracks
-- "Create a new playlist for a user" -> POST /users/{user_id}/playlists
-- "Get the audio features (danceability, energy, tempo) of a track" -> GET /audio-features/{id}
-- "Do I already follow this artist?" -> GET /me/following/contains
-- "What genres are available for recommendations?" -> GET /recommendations/available-genre-seeds
-
-## Response Tips
-
-- **Albums/Artists/Tracks/Shows/Episodes**: Single-item GETs return the object directly; multi-item GETs (`?ids=`) wrap results in a keyed array (e.g., `{albums: [...]}`) where entries can be `null` for invalid IDs.
-- **Paginated lists** (tracks in playlist, saved items, search results): Use `limit` and `offset` params; responses include `total`, `next`, and `previous` URLs -- follow `next` until it is `null` to exhaust pages.
-- **Search**: Returns a map per requested `type` (tracks, artists, albums, etc.), each containing its own paginated object with `items`, `total`, `limit`, `offset`.
-- **Player endpoints**: GET /me/player returns 204 (no body) when nothing is active; always check status code before parsing JSON.
-- **Write/Delete operations on playlists**: Return a `snapshot_id` string -- store this to make subsequent operations idempotent and to detect concurrent edits.
-- **Library endpoints** (`/me/tracks`, `/me/albums`, etc.): `contains` endpoints return a plain JSON array of booleans in the same order as the `ids` query param.
-- **Recommendations**: `seeds` array in the response shows which seed values were actually used and how many results each contributed.
-
-## Anomaly Flags
-
-- **429 Too Many Requests**: Every endpoint can return 429. Surface the `Retry-After` header value and pause all requests for that duration. Alert the user if 429s occur more than twice in a session.
-- **204 No Content from player**: GET /me/player returning 204 means no active device -- surface this clearly rather than treating it as an error.
-- **Null entries in batch responses**: When fetching multiple IDs (`/albums?ids=`, `/tracks?ids=`), individual entries may be `null` for invalid or region-restricted IDs. Flag which IDs returned null.
-- **Market restrictions**: Tracks with `is_playable: false` or non-empty `restrictions` indicate region-locked content. Proactively warn when a track is unavailable in the user's market.
-- **Deprecated `preview_url`**: The `preview_url` field on tracks is nullable (`str?`) and increasingly returns `null`. Alert if a workflow depends on preview URLs and none are available.
-- **Empty queue**: GET /me/player/queue may return `currently_playing: null` with an empty `queue` array when playback is inactive. Surface this state explicitly.
-- **Snapshot drift**: If a playlist `snapshot_id` returned from a write differs from the one sent, another client modified the playlist concurrently. Flag this for the user.
-
-## Playbook
-
-### 1. Build a Personalized Recommendation Playlist
-
-1. GET /me/top/tracks?time_range=short_term&limit=5 -- get the user's recent favorites
-2. GET /recommendations?seed_tracks={ids}&target_energy=0.7&limit=20 -- generate recommendations
-3. POST /users/{user_id}/playlists with `name` and `description` -- create a new playlist
-4. POST /playlists/{playlist_id}/tracks with `uris` from the recommendations response -- populate the playlist
-
-### 2. Analyze the Mood of a Playlist
-
-1. GET /playlists/{playlist_id}/tracks?limit=50 -- fetch all tracks (paginate with `offset` if more than 50)
-2. Collect all track IDs from the paginated results
-3. GET /audio-features?ids={comma-separated-ids} -- batch fetch audio features (max 100 IDs per call)
-4. Aggregate `valence`, `energy`, `danceability`, and `tempo` across all tracks to produce a mood profile
-
-### 3. Transfer Playback and Start a Playlist
-
-1. GET /me/player/devices -- list available devices
-2. PUT /me/player with `device_ids` set to the target device -- transfer playback
-3. PUT /me/player/play with `context_uri` set to the playlist/album URI -- start playing
-4. GET /me/player -- confirm playback state on the new device
-
-### 4. Curate a Playlist by Removing Unwanted Tracks
-
-1. GET /playlists/{playlist_id} -- get current playlist details and `snapshot_id`
-2. GET /playlists/{playlist_id}/tracks?limit=50 -- fetch all tracks (paginate as needed)
-3. Identify tracks to remove based on criteria (e.g., low popularity, explicit content)
-4. DELETE /playlists/{playlist_id}/tracks with `tracks: [{uri: "..."}]` and the current `snapshot_id`
-5. Verify the returned `snapshot_id` to confirm the edit was applied cleanly
-
-### 5. Discover and Follow Related Artists
-
-1. GET /search?q={artist_name}&type=artist&limit=1 -- find the seed artist's ID
-2. GET /artists/{id}/related-artists -- get up to 20 related artists
-3. GET /me/following/contains?type=artist&ids={related_ids} -- check which ones the user already follows
-4. PUT /me/following?type=artist&ids={unfollowed_ids} -- follow the new discoveries
-5. GET /artists/{id}/top-tracks?market={user_market} for each new artist -- preview their best work
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get album details?" -> GET /albums/{id}
+- "List all albums?" -> GET /albums
+- "List all tracks?" -> GET /albums/{id}/tracks
+- "Get artist details?" -> GET /artists/{id}
+- "List all artists?" -> GET /artists
+- "List all albums?" -> GET /artists/{id}/albums
+- "List all top-tracks?" -> GET /artists/{id}/top-tracks
+- "List all related-artists?" -> GET /artists/{id}/related-artists
+- "Get show details?" -> GET /shows/{id}
+- "List all shows?" -> GET /shows
+- "List all episodes?" -> GET /shows/{id}/episodes
+- "Get episode details?" -> GET /episodes/{id}
+- "List all episodes?" -> GET /episodes
+- "Get audiobook details?" -> GET /audiobooks/{id}
+- "List all audiobooks?" -> GET /audiobooks
+- "List all chapters?" -> GET /audiobooks/{id}/chapters
+- "List all audiobooks?" -> GET /me/audiobooks
+- "List all contains?" -> GET /me/audiobooks/contains
+- "Get chapter details?" -> GET /chapters/{id}
+- "List all chapters?" -> GET /chapters
+- "Get track details?" -> GET /tracks/{id}
+- "List all tracks?" -> GET /tracks
+- "Search search?" -> GET /search
+- "List all me?" -> GET /me
+- "Get playlist details?" -> GET /playlists/{playlist_id}
+- "Update a playlist?" -> PUT /playlists/{playlist_id}
+- "List all tracks?" -> GET /playlists/{playlist_id}/tracks
+- "Create a track?" -> POST /playlists/{playlist_id}/tracks
+- "List all items?" -> GET /playlists/{playlist_id}/items
+- "Create a item?" -> POST /playlists/{playlist_id}/items
+- "List all playlists?" -> GET /me/playlists
+- "Create a playlist?" -> POST /me/playlists
+- "List all contains?" -> GET /me/library/contains
+- "List all albums?" -> GET /me/albums
+- "List all contains?" -> GET /me/albums/contains
+- "List all tracks?" -> GET /me/tracks
+- "List all contains?" -> GET /me/tracks/contains
+- "List all episodes?" -> GET /me/episodes
+- "List all contains?" -> GET /me/episodes/contains
+- "List all shows?" -> GET /me/shows
+- "List all contains?" -> GET /me/shows/contains
+- "Get user details?" -> GET /users/{user_id}
+- "List all playlists?" -> GET /users/{user_id}/playlists
+- "Create a playlist?" -> POST /users/{user_id}/playlists
+- "List all featured-playlists?" -> GET /browse/featured-playlists
+- "List all categories?" -> GET /browse/categories
+- "Get category details?" -> GET /browse/categories/{category_id}
+- "List all playlists?" -> GET /browse/categories/{category_id}/playlists
+- "List all images?" -> GET /playlists/{playlist_id}/images
+- "List all new-releases?" -> GET /browse/new-releases
+- "List all following?" -> GET /me/following
+- "List all contains?" -> GET /me/following/contains
+- "List all contains?" -> GET /playlists/{playlist_id}/followers/contains
+- "List all audio-features?" -> GET /audio-features
+- "Get audio-feature details?" -> GET /audio-features/{id}
+- "Get audio-analysis details?" -> GET /audio-analysis/{id}
+- "List all recommendations?" -> GET /recommendations
+- "List all available-genre-seeds?" -> GET /recommendations/available-genre-seeds
+- "List all player?" -> GET /me/player
+- "List all devices?" -> GET /me/player/devices
+- "List all currently-playing?" -> GET /me/player/currently-playing
+- "Create a next?" -> POST /me/player/next
+- "Create a previous?" -> POST /me/player/previous
+- "List all recently-played?" -> GET /me/player/recently-played
+- "List all queue?" -> GET /me/player/queue
+- "Create a queue?" -> POST /me/player/queue
+- "List all markets?" -> GET /markets
+- "List all artists?" -> GET /me/top/artists
+- "List all tracks?" -> GET /me/top/tracks
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

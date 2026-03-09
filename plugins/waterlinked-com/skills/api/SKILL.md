@@ -64,91 +64,39 @@ http://demo.waterlinked.com
 | GET | /api/v1/status_report/ | Get status_report |
 | GET | /api/v1/warnings/ | Get warnings |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What version or info does the Water Linked system report?" -> GET /api/v1/about
-- "What is the current status of the underwater GPS?" -> GET /api/v1/about/status
-- "What is the system temperature?" -> GET /api/v1/about/temperature
-- "How do I factory reset the device?" -> POST /api/v1/about/factoryreset
-- "Where is the locator right now in global coordinates?" -> GET /api/v1/position/global
-- "What is the raw acoustic position of the locator?" -> GET /api/v1/position/acoustic/raw
-- "What is the filtered acoustic position?" -> GET /api/v1/position/acoustic/filtered
-- "How do I configure the antenna placement?" -> PUT /api/v1/config/antenna
-- "How do I set the depth of the locator externally?" -> PUT /api/v1/external/depth
-- "How do I add a point of interest?" -> POST /api/v1/poi/
-- "How do I delete a saved point of interest?" -> DELETE /api/v1/poi/{ID}
-- "What receivers are connected and how are they configured?" -> GET /api/v1/config/receivers/
-- "How do I calibrate the IMU?" -> POST /api/v1/imu/calibrate
-- "Are there any active warnings on the system?" -> GET /api/v1/warnings/
-- "How do I change the Wi-Fi settings?" -> PUT /api/v1/config/wifi
-
-## Response Tips
-
-- **About/Status endpoints**: Return flat objects with system metadata; 200 means healthy, watch for 503 (service unavailable during boot or reset).
-- **Position endpoints**: Return coordinate objects (x/y/z or lat/lon); a 500 means the positioning engine has no valid fix -- retry after ensuring receivers are online.
-- **Config endpoints**: GET returns current config as a map; PUT expects the full config object back (not a partial patch), returns 200 on success or 400 for validation errors.
-- **Receiver endpoints**: GET /{ID} returns a single receiver object; PUT returns 204 (no body) on success -- check status code, not response body.
-- **POI endpoints**: POST returns 201 with the created resource; PATCH and DELETE return 204 (no body); 403 on POST means the POI limit has been reached.
-- **IMU endpoints**: 408 means calibration timed out; 409 means a conflicting operation is already in progress -- wait and retry.
-- **External sensor endpoints**: Used to feed external data (depth, orientation, IMU, master position) into the system; 500 usually means the system rejected the input format.
-
-## Anomaly Flags
-
-- **503 on config writes or factory reset**: System is busy or rebooting -- surface this as "device unavailable, retry shortly."
-- **500 on position endpoints**: No acoustic fix available -- alert the user that receivers may be misaligned or the locator is out of range.
-- **408 on IMU calibration**: Calibration timed out -- flag that the device may not be in the correct orientation or environment for calibration.
-- **409 on IMU operations**: Another calibration or gyro reset is already running -- warn before retrying.
-- **403 on POI creation**: POI storage limit reached -- proactively suggest deleting unused POIs before retrying.
-- **404 on receiver or POI by ID**: The requested resource does not exist -- surface as a possible ID mismatch and list available IDs.
-- **Repeated 500s on /api/v1/warnings/**: The warning subsystem itself is failing -- escalate as a potential hardware issue.
-- **Temperature reading outside normal range**: If /about/temperature returns extreme values, flag possible overheating or sensor fault.
-
-## Playbook
-
-### 1. Initial System Setup
-
-1. GET /api/v1/about -- confirm device firmware version and identity.
-2. GET /api/v1/about/status -- verify the system is operational.
-3. GET /api/v1/config/generic -- review current generic configuration.
-4. PUT /api/v1/config/ip -- set the desired network configuration.
-5. PUT /api/v1/config/wifi -- configure Wi-Fi access if needed.
-6. PUT /api/v1/config/antenna -- set receiver antenna positions for your setup.
-7. GET /api/v1/config/receivers/ -- confirm all receivers are detected.
-
-### 2. Real-Time Locator Tracking
-
-1. PUT /api/v1/external/depth -- send current depth from an external depth sensor.
-2. GET /api/v1/position/acoustic/raw -- poll raw acoustic position to verify signal.
-3. GET /api/v1/position/acoustic/filtered -- read the filtered (smoothed) position.
-4. GET /api/v1/position/global -- retrieve lat/lon/depth in global coordinates.
-5. GET /api/v1/warnings/ -- check for any positioning warnings after each cycle.
-
-### 3. IMU Calibration Workflow
-
-1. GET /api/v1/imu/calibrate -- check current calibration status.
-2. POST /api/v1/imu/calibrate -- start calibration (handle 408 timeout or 409 conflict).
-3. POST /api/v1/imu/setnorth -- set the north reference heading after calibration.
-4. POST /api/v1/imu/resetgyros -- reset gyro drift if orientation seems off.
-5. GET /api/v1/external/orientation -- verify orientation readings are sensible.
-
-### 4. Managing Points of Interest
-
-1. GET /api/v1/poi/ -- list all saved points of interest.
-2. POST /api/v1/poi/ -- create a new POI with name and coordinates (watch for 403 if at limit).
-3. GET /api/v1/poi/{ID} -- retrieve a specific POI to verify it was saved correctly.
-4. PATCH /api/v1/poi/{ID} -- update a POI's name or coordinates.
-5. DELETE /api/v1/poi/{ID} -- remove a POI that is no longer needed.
-
-### 5. Diagnostics and Troubleshooting
-
-1. GET /api/v1/about/status -- check overall system health.
-2. GET /api/v1/about/temperature -- verify operating temperature is within range.
-3. GET /api/v1/about/led -- check LED status for visual diagnostics.
-4. GET /api/v1/warnings/ -- review active warnings for specific issues.
-5. GET /api/v1/status_report/ -- pull the full status report for detailed diagnostics.
-6. POST /api/v1/about/factoryreset -- last resort: factory reset the device (causes reboot, expect 503 temporarily).
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all api?" -> GET /api/
+- "List all about?" -> GET /api/v1/about
+- "Create a factoryreset?" -> POST /api/v1/about/factoryreset
+- "List all led?" -> GET /api/v1/about/led
+- "List all status?" -> GET /api/v1/about/status
+- "List all temperature?" -> GET /api/v1/about/temperature
+- "List all antenna?" -> GET /api/v1/config/antenna
+- "List all generic?" -> GET /api/v1/config/generic
+- "List all ip?" -> GET /api/v1/config/ip
+- "List all receivers?" -> GET /api/v1/config/receivers/
+- "Get receiver details?" -> GET /api/v1/config/receivers/{ID}
+- "Update a receiver?" -> PUT /api/v1/config/receivers/{ID}
+- "List all wifi?" -> GET /api/v1/config/wifi
+- "List all imu?" -> GET /api/v1/external/imu
+- "List all orientation?" -> GET /api/v1/external/orientation
+- "List all calibrate?" -> GET /api/v1/imu/calibrate
+- "Create a calibrate?" -> POST /api/v1/imu/calibrate
+- "Create a resetgyro?" -> POST /api/v1/imu/resetgyros
+- "Create a setnorth?" -> POST /api/v1/imu/setnorth
+- "List all poi?" -> GET /api/v1/poi/
+- "Create a poi?" -> POST /api/v1/poi/
+- "Get poi details?" -> GET /api/v1/poi/{ID}
+- "Delete a poi?" -> DELETE /api/v1/poi/{ID}
+- "Partially update a poi?" -> PATCH /api/v1/poi/{ID}
+- "List all filtered?" -> GET /api/v1/position/acoustic/filtered
+- "List all raw?" -> GET /api/v1/position/acoustic/raw
+- "List all global?" -> GET /api/v1/position/global
+- "List all master?" -> GET /api/v1/position/master
+- "List all status_report?" -> GET /api/v1/status_report/
+- "List all warnings?" -> GET /api/v1/warnings/
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -10,381 +10,444 @@
 
 @group apps
 @endpoint POST /v1/apps/accesstokens
-@optional {clientId: str, refreshToken: str, nonce: int(int64), grantType: str, clientSecret: str}
-@returns(201) {businessId: int(int64), apiApplicationId: int(int64), expiry: str(date-time), permissions: [str], accessToken: str}
-@errors {400, 401, 403}
+@desc Authenticate with the API.
+@optional {clientId: str # The Client ID for this API Application, refreshToken: str # The Refresh Token for this API Application, nonce: int(int64) # A random non-repeating number used as a salt for the `clientSecret` below. The simplest nonce is a unix time., grantType: str # Always `AccessToken`. (This will change to `refresh_token` in a future release.), clientSecret: str # The SHA256 hash of the nonce above and the app’s Client Key. The Client Key will only be shown to you when you create the app, so don’t forget to save it somewhere safe. SECRET=( `/bin/echo -n $NONCE$CLIENT_KEY | sha256sum` ).}
+@returns(201) {businessId: int(int64), apiApplicationId: int(int64), expiry: str(date-time), permissions: [str], accessToken: str} # Access token created
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group accounts
 @endpoint GET /v1/accounts
-@returns(200) {accounts: [map]}
-@errors {400, 401, 403}
+@desc List accounts
+@returns(200) {accounts: [map]} # An array of account objects.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint POST /v1/accounts
-@optional {accountName: str, currency: str(EUR/GBP), acceptFeesAndCharges: bool}
-@returns(201) {ican: int(int64), name: str, colour: str, currency: map{code: str, description: str}, balance: int(int64), status: str, cbic: str, ciban: str, cnsc: str, ccan: str, defaultAccount: bool, directDebitsAllowed: bool, fopOnly: bool}
-@errors {400, 401, 403}
+@desc Create a new Fire Account.
+@optional {accountName: str # Name to give the new account, currency: str(EUR/GBP) # The currency of the new account, acceptFeesAndCharges: bool # a field to indicate you accept the fee for a new account}
+@returns(201) {ican: int(int64), name: str, colour: str, currency: map{code: str, description: str}, balance: int(int64), status: str, cbic: str, ciban: str, cnsc: str, ccan: str, defaultAccount: bool, directDebitsAllowed: bool, fopOnly: bool} # The details of the new account
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v2/accounts
-@returns(200) {activities: [map]}
-@errors {400, 401, 403}
+@desc List accounts (V2)
+@returns(200) {activities: [map]} # An array of account objects.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v2/accounts/{ican}
+@desc Get details of an account (V2)
 @required {ican: int(int64)}
-@returns(200) {ican: int(int64), name: str, currency: str, balance: int(int64), status: str, accountDetails: map{localDetails: map{nsc: str, accountNumber: str, bic: str, iban: str}, internationalDetails: map{status: str, swiftCode: str, iban: str}}, defaultAccount: bool, directDebitsAllowed: bool, fopOnly: bool}
-@errors {400, 401, 403}
+@returns(200) {ican: int(int64), name: str, currency: str, balance: int(int64), status: str, accountDetails: map{localDetails: map{nsc: str, accountNumber: str, bic: str, iban: str}, internationalDetails: map{status: str, swiftCode: str, iban: str}}, defaultAccount: bool, directDebitsAllowed: bool, fopOnly: bool} # An account information object.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint PUT /v2/accounts/{ican}
+@desc Update account configuration
 @required {ican: str}
-@optional {accountName: str}
-@returns(204)
-@errors {400, 401, 403}
+@optional {accountName: str # This is the name the account will be updated to.}
+@returns(204) The account was updated.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint PUT /v2/accounts/{ican}/internationaldetails
+@desc Request international account details
 @required {ican: int(int64)}
-@returns(204)
-@errors {400, 401, 403}
+@returns(204) No body is returned - “Status 204 No Content” signifies the call was successful. You will need to call 'Get details of an account' to view your international account details.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group activities
 @endpoint GET /v2/activities
-@returns(200) {activities: [map]}
-@errors {400, 401, 403}
+@desc Get activity
+@returns(200) {activities: [map]} # An array of activity objects.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group accounts
 @endpoint GET /v1/accounts/{ican}
+@desc Get details of an account
 @required {ican: int(int64)}
-@returns(200) {ican: int(int64), name: str, colour: str, currency: map{code: str, description: str}, balance: int(int64), status: str, cbic: str, ciban: str, cnsc: str, ccan: str, defaultAccount: bool, directDebitsAllowed: bool, fopOnly: bool}
-@errors {400, 401, 403}
+@returns(200) {ican: int(int64), name: str, colour: str, currency: map{code: str, description: str}, balance: int(int64), status: str, cbic: str, ciban: str, cnsc: str, ccan: str, defaultAccount: bool, directDebitsAllowed: bool, fopOnly: bool} # An account object.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v3/accounts/{ican}/transactions
+@desc List transactions for an account
 @required {ican: int(int64)}
 @optional {limit: int(int64), dateRangeFrom: int(int64), dateRangeTo: int(int64), startAfter: str}
-@returns(200) {links: [map], content: [map]}
-@errors {400, 401, 403}
+@returns(200) {links: [map], content: [map]} # An array of transaction objects for the account with a count (`total`).
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group cards
 @endpoint GET /v1/cards
-@returns(200) {cards: [map]}
-@errors {400, 401, 403}
+@desc List debit cards
+@returns(200) {cards: [map]} # Successful response
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint POST /v1/cards
+@desc Create a new Fire debit card
 @optional {userId: int(int64), cardPin: str, eurIcan: int(int64), gbpIcan: int(int64), addressType: str(HOME/BUSINESS), acceptFeesAndCharges: bool}
-@returns(200) {cardId: int(int64), maskedPan: str, expiryDate: str(date-time), status: str}
-@errors {400, 401, 403}
+@returns(200) {cardId: int(int64), maskedPan: str, expiryDate: str(date-time), status: str} # Card created successfully
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group me
 @endpoint GET /v1/me/cards/{cardId}/transactions
+@desc Get a list of debit card transactions
 @required {cardId: int(int64)}
 @optional {limit: int(int64), offset: int(int64)}
-@returns(200)
-@errors {400, 401, 403}
+@returns(200) Successful response
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint POST /v1/me/cards/{cardId}/block
+@desc Block a Fire debit card
 @required {cardId: int(int64)}
-@returns(204)
-@errors {400, 401, 403}
+@returns(204) No body is returned - “Status 204 No Content” signifies the call was successful.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint POST /v1/me/cards/{cardId}/unblock
+@desc Unblock a Fire debit card
 @required {cardId: int(int64)}
-@returns(204)
-@errors {400, 401, 403}
+@returns(204) No body is returned - “Status 204 No Content” signifies the call was successful.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group paymentrequests
 @endpoint POST /v1/paymentrequests
-@required {currency: str(EUR/GBP), type: str, icanTo: int(int64), myRef: str, description: str}
-@optional {amount: int(int64), maxNumberPayments: int, expiry: str(date-time), returnUrl: str, orderDetails: map{merchantNumber: str, orderId: str, productId: str, customerNumber: str, variableReference: str, comment1: str, comment2: str, merchantCustomerIdentification: str, deliveryAddressLine1: str, deliveryAddressLine2: str, deliveryCity: str, deliveryPostCode: str, deliveryCountry: str}, collectFields: str, mandatoryFields: str, additionalFields: str}
-@returns(201) {code: str, type: str}
-@errors {400, 401, 403}
+@desc Create a payment request
+@required {currency: str(EUR/GBP) # Either `EUR` or `GBP`, and must correspond to the currency of the account the funds are being lodged into in the `icanTo`., type: str # The type of Fire Open Payment that was created, icanTo: int(int64) # The ican of the account to collect the funds into. Must be one of your fire.com Accounts., myRef: str # An internal description of the request., description: str # A public facing description of the request. This will be shown to the user when they tap or scan the request. Fire will truncate to 18 characters to ensure it is accepted by all banks. It is safest to use only numbers, letters, spaces and a fullstop (.) Special characters are not accepted by most banks and errors will only occur after the customer has approved the payment.}
+@optional {amount: int(int64) # The requested amount to pay. Note the last two digits represent pennies/cents, (e.g., £1.00 = 100)., maxNumberPayments: int # The max number of people who can pay this request. Must be set to 1 for the ECOMMERCE_GOODS and ECOMMERCE_SERVICES types., expiry: str(date-time) # This is the expiry of the payment request. After this time, the payment cannot be paid., returnUrl: str # The merchant return URL where the customer will be re-directed to with the result of the transaction. The returnUrl variable should handle two scenarios. If the user cancels the payment before reaching their banking app, URLs are identified with a /return?status=cancelled. If the user proceeds to their banking app, URLs are identified with /paymentUUID={paymentUUID}, orderDetails: map{merchantNumber: str, orderId: str, productId: str, customerNumber: str, variableReference: str, comment1: str, comment2: str, merchantCustomerIdentification: str, deliveryAddressLine1: str, deliveryAddressLine2: str, deliveryCity: str, deliveryPostCode: str, deliveryCountry: str}, collectFields: str # For the hosted option, the payer will be asked to fill in these fields but they will not be mandatory. You can choose to collect any of the payer's `ADDRESS`, `REFERENCE` and/or `COMMENT1`. If you choose to collect these fields from the payer, you cannot set 'delivery’, 'variableReference’ or 'comment1’ fields respectively., mandatoryFields: str # For the hosted option, these fields will be madatory for the payer to fill in on the hosted payment page. You can choose to collect any the payer's `ADDRESS`, `REFERENCE` and/or `COMMENT1`. If you choose to collect these fields from the payer, you cannot set 'delivery’, 'variableReference’ or 'comment1’ fields respectively., additionalFields: str # These fields will be displayed to the payer when using the hosted option. You can choose to display any of `ORDER_ID`, `PRODUCT_ID`, `CUSTOMER_ID`, `CUSTOMER_NUMBER` and `COMMENT2` to the payer.}
+@returns(201) {code: str, type: str} # Payment Request created successfully
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v1/paymentrequests/{paymentRequestCode}
+@desc Get payment request details
 @required {paymentRequestCode: str}
-@returns(200) {code: str, type: str, direction: str, status: str, currency: str, accountName: str, amount: int(int64), description: str, myRef: str, dateCreated: str(date-time), icanTo: int(int64), orderDetails: map{merchantNumber: str, orderId: str, productId: str, customerNumber: str, variableReference: str, comment1: str, comment2: str, merchantCustomerIdentification: str, deliveryAddressLine1: str, deliveryAddressLine2: str, deliveryCity: str, deliveryPostCode: str, deliveryCountry: str}, countTimesViewedPaymentDetailsPage: int(int64), countTimesViewedSelectBankPage: int(int64), countTimesViewedConsentPage: int(int64), countTimesViewedResponsePage: int(int64), countTimesConsented: int(int64), countTimesAuthorised: int(int64), totalAmountAuthorised: int(int64), countTimesPaid: int(int64), totalAmountPaid: int(int64)}
-@errors {400, 401, 403}
+@returns(200) {code: str, type: str, direction: str, status: str, currency: str, accountName: str, amount: int(int64), description: str, myRef: str, dateCreated: str(date-time), icanTo: int(int64), orderDetails: map{merchantNumber: str, orderId: str, productId: str, customerNumber: str, variableReference: str, comment1: str, comment2: str, merchantCustomerIdentification: str, deliveryAddressLine1: str, deliveryAddressLine2: str, deliveryCity: str, deliveryPostCode: str, deliveryCountry: str}, countTimesViewedPaymentDetailsPage: int(int64), countTimesViewedSelectBankPage: int(int64), countTimesViewedConsentPage: int(int64), countTimesViewedResponsePage: int(int64), countTimesConsented: int(int64), countTimesAuthorised: int(int64), totalAmountAuthorised: int(int64), countTimesPaid: int(int64), totalAmountPaid: int(int64)} # The Payment Request details object
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v2/paymentrequests/{paymentRequestCode}/payments
+@desc Get list of all payment attempts related to a payment request
 @required {paymentRequestCode: str}
-@returns(200) {type: str, paymentRequestCode: str, transactionType: str, endToEndId: str, paymentUuid: str, relatedPaymentUuid: str, status: str, reason: str, amountBeforeCharges: int(int64), feeAmount: int(int64), amountAfterCharges: int(int64), currency: map{code: str, description: str}, myRef: str, description: str, returnUrl: str, webhookUrl: str, relatedAccountTxnId: int(int64), relatedPayeeId: int(int64), dateFundsReceived: str(date-time), dateCreated: str(date-time), lastUpdated: str(date-time), orderDetails: map{merchantNumber: str, orderId: str, productId: str, customerNumber: str, variableReference: str, comment1: str, comment2: str, merchantCustomerIdentification: str, deliveryAddressLine1: str, deliveryAddressLine2: str, deliveryCity: str, deliveryPostCode: str, deliveryCountry: str}, to: map{type: str, account: map{type: str, account: map{id: int(int64), alias: str, bic: str, iban: str, nsc: str, accountNumber: str}}}, bank: map{aspspUuid: str, alias: str, logoUrl: str, country: map{code: str, description: str}, currency: map{code: str, description: str}, dateCreated: str(date-time), lastUpdated: str(date-time)}, domesticPaymentId: str, allowFopReceipt: bool}
-@errors {400, 401, 403}
+@returns(200) {type: str, paymentRequestCode: str, transactionType: str, endToEndId: str, paymentUuid: str, relatedPaymentUuid: str, status: str, reason: str, amountBeforeCharges: int(int64), feeAmount: int(int64), amountAfterCharges: int(int64), currency: map{code: str, description: str}, myRef: str, description: str, returnUrl: str, webhookUrl: str, relatedAccountTxnId: int(int64), relatedPayeeId: int(int64), dateFundsReceived: str(date-time), dateCreated: str(date-time), lastUpdated: str(date-time), orderDetails: map{merchantNumber: str, orderId: str, productId: str, customerNumber: str, variableReference: str, comment1: str, comment2: str, merchantCustomerIdentification: str, deliveryAddressLine1: str, deliveryAddressLine2: str, deliveryCity: str, deliveryPostCode: str, deliveryCountry: str}, to: map{type: str, account: map{type: str, account: map{id: int(int64), alias: str, bic: str, iban: str, nsc: str, accountNumber: str}}}, bank: map{aspspUuid: str, alias: str, logoUrl: str, country: map{code: str, description: str}, currency: map{code: str, description: str}, dateCreated: str(date-time), lastUpdated: str(date-time)}, domesticPaymentId: str, allowFopReceipt: bool} # The Payment Request Payments
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v2/paymentrequests/{paymentRequestCode}/reports
+@desc Get a report from a payment request
 @required {paymentRequestCode: str}
-@returns(200) {currency: str, amount: int(int64), numberOfTimes: int(int64)}
-@errors {400, 401, 403}
+@returns(200) {currency: str, amount: int(int64), numberOfTimes: int(int64)} # The Payment Request Report
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v2/paymentrequests/sent
-@returns(200) {total: int(int64), dateRangeTo: int(int64), paymentRequests: [map]}
-@errors {400, 401, 403}
+@desc Get a list of payment request transactions
+@returns(200) {total: int(int64), dateRangeTo: int(int64), paymentRequests: [map]} # The list of payment requests sent
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v2/paymentrequests/{paymentRequestCode}/public
+@desc List details of a public payment request
 @required {paymentRequestCode: str}
-@returns(200) {code: str, pisp: str, status: str, currency: map{code: str, description: str}, amount: int(int64), description: str, dateCreated: str, mandatoryFields: str, sender: map{type: str, name: str, businessAddress: map{type: str, address1: str, city: str, country: map{code: str, description: str}}}}
-@errors {400, 401, 403}
+@returns(200) {code: str, pisp: str, status: str, currency: map{code: str, description: str}, amount: int(int64), description: str, dateCreated: str, mandatoryFields: str, sender: map{type: str, name: str, businessAddress: map{type: str, address1: str, city: str, country: map{code: str, description: str}}}} # The Payment Request Information
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group fx
 @endpoint GET /v2/fx/rate
+@desc Get FX rates
 @required {sellCurrency: str, buyCurrency: str}
-@returns(200) {provider: str, buyCurrency: str, sellCurrency: str, fixedSide: str, buyAmount: int(int64), sellAmount: int(int64), rate4d: int(int64)}
-@errors {400, 401, 403}
+@returns(200) {provider: str, buyCurrency: str, sellCurrency: str, fixedSide: str, buyAmount: int(int64), sellAmount: int(int64), rate4d: int(int64)} # An object of FX information
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group limits
 @endpoint GET /v2/limits
-@returns(200) {limitType: str, level: any, country: map{code: str, description: str}, currency: map{code: str, description: str}, value: int(int64), remainingValue: int(int64)}
-@errors {400, 401, 403}
+@desc List all limits
+@returns(200) {limitType: str, level: any, country: map{code: str, description: str}, currency: map{code: str, description: str}, value: int(int64), remainingValue: int(int64)} # An object of limit information
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group webhooks
 @endpoint GET /v2/webhooks/{webhookId}/events/{event}/test
+@desc Send test webhooks
 @required {webhookId: int(int64), event: str(LODGEMENT_RECEIVED/PAYMENT_RECEIVED/PAYMENT_REQUEST_PAYMENT_RECEIVED/ACCOUNT_CREATED/CARD_CREATED/CARD_AUTHORISATION/CARD_SETTLEMENT/PAYMENT_REQUEST_PAYMENT_AUTHORISED/PIS_LODGEMENT_RECEIVED)}
-@returns(200)
-@errors {400, 401, 403}
+@returns(200) Webhook test sent.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v2/webhooks
-@returns(200)
-@errors {400, 401, 403}
+@desc List all webhooks
+@returns(200) An object of information about your webhooks
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group batches
 @endpoint GET /v2/batches/{batchUuid}/newpayees
+@desc List new payees in a batch
 @required {batchUuid: str}
-@returns(200) {total: int(int64), items: [map]}
-@errors {400, 401, 403}
+@returns(200) {total: int(int64), items: [map]} # New Payee Object
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group payments
 @endpoint GET /v2/payments/{paymentUuid}
+@desc Get payment details
 @required {paymentUuid: str}
-@returns(200) {type: str, paymentRequestCode: str, transactionType: str, endToEndId: str, paymentUuid: str, relatedPaymentUuid: str, status: str, reason: str, amountBeforeCharges: int(int64), feeAmount: int(int64), amountAfterCharges: int(int64), currency: map{code: str, description: str}, myRef: str, description: str, returnUrl: str, webhookUrl: str, relatedAccountTxnId: int(int64), relatedPayeeId: int(int64), dateFundsReceived: str(date-time), dateCreated: str(date-time), lastUpdated: str(date-time), orderDetails: map{merchantNumber: str, orderId: str, productId: str, customerNumber: str, variableReference: str, comment1: str, comment2: str, merchantCustomerIdentification: str, deliveryAddressLine1: str, deliveryAddressLine2: str, deliveryCity: str, deliveryPostCode: str, deliveryCountry: str}, to: map{type: str, account: map{type: str, account: map{id: int(int64), alias: str, bic: str, iban: str, nsc: str, accountNumber: str}}}, bank: map{aspspUuid: str, alias: str, logoUrl: str, country: map{code: str, description: str}, currency: map{code: str, description: str}, dateCreated: str(date-time), lastUpdated: str(date-time)}, domesticPaymentId: str, allowFopReceipt: bool}
-@errors {400, 401, 403}
+@returns(200) {type: str, paymentRequestCode: str, transactionType: str, endToEndId: str, paymentUuid: str, relatedPaymentUuid: str, status: str, reason: str, amountBeforeCharges: int(int64), feeAmount: int(int64), amountAfterCharges: int(int64), currency: map{code: str, description: str}, myRef: str, description: str, returnUrl: str, webhookUrl: str, relatedAccountTxnId: int(int64), relatedPayeeId: int(int64), dateFundsReceived: str(date-time), dateCreated: str(date-time), lastUpdated: str(date-time), orderDetails: map{merchantNumber: str, orderId: str, productId: str, customerNumber: str, variableReference: str, comment1: str, comment2: str, merchantCustomerIdentification: str, deliveryAddressLine1: str, deliveryAddressLine2: str, deliveryCity: str, deliveryPostCode: str, deliveryCountry: str}, to: map{type: str, account: map{type: str, account: map{id: int(int64), alias: str, bic: str, iban: str, nsc: str, accountNumber: str}}}, bank: map{aspspUuid: str, alias: str, logoUrl: str, country: map{code: str, description: str}, currency: map{code: str, description: str}, dateCreated: str(date-time), lastUpdated: str(date-time)}, domesticPaymentId: str, allowFopReceipt: bool} # The Payment Request details object
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group aspsps
 @endpoint GET /v1/aspsps
-@optional {currency: str}
-@returns(200) {total: int, aspsps: [map]}
-@errors {400, 401, 403}
+@desc Get list of ASPSPs / Banks
+@optional {currency: str # The three letter code for the currency - either `EUR` or `GBP`. Use this to filter the list for banks that can be used to pay in a certain currency.}
+@returns(200) {total: int, aspsps: [map]} # A list of ASPSPs the customers can use to pay a payment.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group users
 @endpoint GET /v1/users
-@returns(200)
-@errors {400, 401, 403}
+@desc List all users
+@returns(200) List of all Users.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v1/users/{userId}
+@desc Get the details of a user
 @required {userId: int(int64)}
-@returns(200) {id: int(int64), emailAddress: str, firstName: str, lastName: str, mobileNumber: str, role: str, status: str, lastlogin: str, userCvl: str, mobileApplicationDetails: map{businessUserId: int(int64), mobileApplicationId: int(int64), clientID: str, status: str, deviceName: str, OS: str, deviceOSVersion: str}}
-@errors {400, 401, 403}
+@returns(200) {id: int(int64), emailAddress: str, firstName: str, lastName: str, mobileNumber: str, role: str, status: str, lastlogin: str, userCvl: str, mobileApplicationDetails: map{businessUserId: int(int64), mobileApplicationId: int(int64), clientID: str, status: str, deviceName: str, OS: str, deviceOSVersion: str}} # Unique information about a User.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group apps
 @endpoint GET /v1/apps
-@returns(200) {applications: [map]}
-@errors {400, 401, 403}
+@desc List all API applications
+@returns(200) {applications: [map]} # Successful response
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint POST /v1/apps
-@optional {ican: int(int64), enabled: bool, expiry: str(date-time), applicationName: str, numberOfPaymentApprovalsRequired: int, numberOfPayeeApprovalsRequired: int, permissions: [str]}
-@returns(201) {clientId: str, refreshToken: str, clientKey: str}
-@errors {400, 401, 403}
+@desc Create an API Application
+@optional {ican: int(int64) # The ICAN of one of your Fire accounts. Restrict this API Application to a certain account., enabled: bool # Whether or not this API Application can be used, expiry: str(date-time) # The date that this API Application can no longer be used., applicationName: str # A name for the API Application to help you identify it, numberOfPaymentApprovalsRequired: int # Number of approvals required to process a payment in a batch, numberOfPayeeApprovalsRequired: int # Number of approvals required to create a payee in a batch, permissions: [str] # The list of permissions required}
+@returns(201) {clientId: str, refreshToken: str, clientKey: str} # API Application created successfully
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v1/apps/{applicationId}/permissions
+@desc List all permissions for an API application
 @required {applicationId: int(int64)}
-@returns(200) {permissions: [map]}
-@errors {400, 401, 403}
+@returns(200) {permissions: [map]} # An array of permission objects.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v1/apps/permissions
-@returns(200) {permissions: [map]}
-@errors {400, 401, 403}
+@desc List all permissions for API applications
+@returns(200) {permissions: [map]} # An array of permission objects.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group payees
 @endpoint GET /v1/payees
+@desc List payees
 @optional {limit: int(int64), offset: int(int64)}
-@returns(200) {total: int, fundingSources: [map]}
-@errors {400, 401, 403}
+@returns(200) {total: int, fundingSources: [map]} # An array of Payees
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v1/payees/{payeeId}
+@desc Get details of a payee
 @required {payeeId: int(int64)}
-@returns(200) {id: int(int64), currency: map{code: str, description: str}, status: str, accountName: str, accountHolderName: str, bic: str, iban: str, nsc: str, accountNumber: str, combinedAccountNumbers: str, createdBy: str, dateCreated: str(date-time)}
-@errors {400, 401, 403}
+@returns(200) {id: int(int64), currency: map{code: str, description: str}, status: str, accountName: str, accountHolderName: str, bic: str, iban: str, nsc: str, accountNumber: str, combinedAccountNumbers: str, createdBy: str, dateCreated: str(date-time)} # An array of payee information
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v1/payees/{payeeId}/transactions
+@desc List transaction for a payee account
 @required {payeeId: int(int64)}
-@returns(200) {total: int(int64), dateRangeTo: int(int64), transactions: [map]}
-@errors {400, 401, 403}
+@returns(200) {total: int(int64), dateRangeTo: int(int64), transactions: [map]} # An array of payee transaction information
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group directdebits
 @endpoint GET /v1/directdebits
-@required {mandateUuid: str}
-@returns(200) {total: int(int64), directdebits: [map]}
-@errors {400, 401, 403}
+@desc List all direct debits
+@required {mandateUuid: str # The mandate UUID to retrieve}
+@returns(200) {total: int(int64), directdebits: [map]} # Retrieve all direct debit payments associated with a direct debit mandate.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v1/directdebits/{directDebitUuid}
+@desc Get the details of a direct debit
 @required {directDebitUuid: str}
-@returns(200) {directDebitUuid: str, currency: map{code: str, description: str}, status: str, type: str, mandateUUid: str, originatorReference: str, originatorName: str, originatorAlias: str, directDebitReference: str, targetIcan: int(int64), targetPayeeId: int(int64), isDDIC: bool, amount: int(int64), schemeRejectReason: str, schemeRejectReasonCode: str, lastUpdated: str(date-time), dateCreated: str(date-time)}
-@errors {400, 401, 403}
+@returns(200) {directDebitUuid: str, currency: map{code: str, description: str}, status: str, type: str, mandateUUid: str, originatorReference: str, originatorName: str, originatorAlias: str, directDebitReference: str, targetIcan: int(int64), targetPayeeId: int(int64), isDDIC: bool, amount: int(int64), schemeRejectReason: str, schemeRejectReasonCode: str, lastUpdated: str(date-time), dateCreated: str(date-time)} # Retrieve all details of a single direct debit collection/payment
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint POST /v1/directdebits/{directDebitUuid}/reject
+@desc Reject a direct debit
 @required {directDebitUuid: str}
-@returns(204)
-@errors {400, 401, 403}
+@returns(204) 204 no content
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group mandates
 @endpoint GET /v1/mandates
-@returns(200) {total: int(int64), mandates: [map]}
-@errors {400, 401, 403}
+@desc List all direct debit mandates
+@returns(200) {total: int(int64), mandates: [map]} # List all direct debit mandates.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v1/mandates/{mandateUuid}
+@desc Get the details of a direct debit mandate
 @required {mandateUuid: str}
-@returns(200) {mandateUuid: str, currency: map{code: str, description: str}, status: str, originatorReference: str, originatorName: str, originatorAlias: str, originatorLogoUrlSmall: str, originatorLogoUrlLarge: str, mandateReference: str, alias: str, targetIcan: int(int64), numberOfDirectDebitCollected: int(int64), valueOfDirectDebitCollected: int(int64), latestDirectDebitAmount: int(int64), latestDirectDebitDate: str(date-time), fireRejectionReason: str, schemeCancelReason: str, schemeCancelReasonCode: str, lastUpdated: str(date-time), dateCreated: str(date-time), dateCompleted: str(date-time), dateCancelled: str(date-time)}
-@errors {400, 401, 403}
+@returns(200) {mandateUuid: str, currency: map{code: str, description: str}, status: str, originatorReference: str, originatorName: str, originatorAlias: str, originatorLogoUrlSmall: str, originatorLogoUrlLarge: str, mandateReference: str, alias: str, targetIcan: int(int64), numberOfDirectDebitCollected: int(int64), valueOfDirectDebitCollected: int(int64), latestDirectDebitAmount: int(int64), latestDirectDebitDate: str(date-time), fireRejectionReason: str, schemeCancelReason: str, schemeCancelReasonCode: str, lastUpdated: str(date-time), dateCreated: str(date-time), dateCompleted: str(date-time), dateCancelled: str(date-time)} # Retrieve all details for a direct debit mandate.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint PUT /v1/mandates/{mandateUuid}
+@desc Update direct debit mandate alias
 @required {mandateUuid: str}
-@optional {alias: str}
-@returns(204)
-@errors {400, 401, 403}
+@optional {alias: str # The alias of the mandate}
+@returns(204) 204 no content
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint POST /v1/mandates/{mandateUuid}/cancel
+@desc Cancel a direct debit mandate
 @required {mandateUuid: str}
-@returns(204)
-@errors {400, 401, 403}
+@returns(204) 204 no content
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint POST /v1/mandates/{mandateUuid}/activate
+@desc Activate a direct debit mandate
 @required {mandateUuid: str}
-@returns(204)
-@errors {400, 401, 403}
+@returns(204) 204 no content
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group batches
 @endpoint POST /v1/batches
-@optional {type: str(BANK_TRANSFER/INTERNAL_TRANSFER/INTERNATIONAL_TRANSFER), currency: str, batchName: str, jobNumber: str, callbackUrl: str}
-@returns(200) {batchUuid: str}
-@errors {400, 401, 403}
+@desc Create a new batch
+@optional {type: str(BANK_TRANSFER/INTERNAL_TRANSFER/INTERNATIONAL_TRANSFER) # The type of the batch - can be one of the listed 3, currency: str # 3 digit ISO code for the currency you wish to send - GBP, EUR, USD, CAD, etc..., batchName: str # An optional name you give to the batch at creation time., jobNumber: str # An optional job number you can give to the batch to help link it to your own system., callbackUrl: str # An optional POST URL that all events for this batch will be sent to.}
+@returns(200) {batchUuid: str} # Batch created successfully
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v1/batches
+@desc List all batches
 @optional {batchTypes: str(INTERNAL_TRANSFER/BANK_TRANSFER/INTERNATIONAL_TRANSFER/NEW_PAYEE), orderBy: str, order: str(DESC/ASC), offset: int(int64), limit: int(int64)}
-@returns(200) {total: int(int64), batchRequests: [map]}
-@errors {400, 401, 403}
+@returns(200) {total: int(int64), batchRequests: [map]} # List all batches.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint POST /v1/batches/{batchUuid}/internaltransfers
+@desc Add an internal transfer to a Batch
 @required {batchUuid: str}
-@optional {icanFrom: int(int64), icanTo: int(int64), amount: int(int64), ref: str}
-@returns(200) {batchItemUuid: str}
-@errors {400, 401, 403}
+@optional {icanFrom: int(int64) # The account ID for the fire.com account the funds are taken from, icanTo: int(int64) # The account ID for the fire.com account the funds are directed to, amount: int(int64) # The amount of funds to be transferred. Note the last two digits represent pennies/cents, (e.g., £1.00 = 100)., ref: str # The reference on the transaction}
+@returns(200) {batchItemUuid: str} # Batch payment added successfully. Note* Please use batchUuid when submitting a batch, not batchItemUuid.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v1/batches/{batchUuid}/internaltransfers
+@desc List items for an internal transfer batch
 @required {batchUuid: str}
 @optional {offset: int(int64), limit: int(int64)}
-@returns(200) {total: int(int64), items: [map]}
-@errors {400, 401, 403}
+@returns(200) {total: int(int64), items: [map]} # A fire.com list object of Batch Items (Internal transfers or Bank transfers).
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint POST /v1/batches/{batchUuid}/banktransfers
+@desc Add a bank transfer to a batch.
 @required {batchUuid: str}
-@returns(200) {batchItemUuid: str}
-@errors {400, 401, 403}
+@returns(200) {batchItemUuid: str} # Batch payment added successfully. **Note*** Please use batchUuid when submitting a batch, not batchItemUuid.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v1/batches/{batchUuid}/banktransfers
+@desc List items for a bank transfer batch
 @required {batchUuid: str}
 @optional {offset: int(int64), limit: int(int64)}
-@returns(200) {total: int(int64), items: [map]}
-@errors {400, 401, 403}
+@returns(200) {total: int(int64), items: [map]} # A fire.com list object of Batch Items (Internal transfers or Bank transfers).
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint POST /v2/batches/{batchUuid}/internationaltransfers
+@desc Add an international transfer to a Batch
 @required {batchUuid: str}
-@optional {icanFrom: int(int64), payeeId: int(int64), amount: int(int64), myRef: str, yourRef: str, paymentReason: str}
-@returns(200) {batchItemUuid: str}
-@errors {400, 401, 403}
+@optional {icanFrom: int(int64) # The Fire account ID for the fire.com account the funds are taken from., payeeId: int(int64) # The ID of the existing payee, amount: int(int64) # The value of the payment in the beneficiary currency. Note the last two digits represent pennies/cents, (e.g., £1.00 = 100)., myRef: str # The reference on the transaction for your records - not shown to the beneficiary., yourRef: str # The reference on the transaction - displayed on the beneficiary bank statement., paymentReason: str # The reason for the payment, used for transaction monitoring purposes. Must be one of Invoice Payment|Salary/Dividend Payment|Expenses|Savings|Other}
+@returns(200) {batchItemUuid: str} # Batch payment added successfully. **Note*** Please use batchUuid when submitting a batch, not batchItemUuid.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v2/batches/{batchUuid}/internationaltransfers
+@desc List items for an international transfer batch
 @required {batchUuid: str}
 @optional {offset: int(int64), limit: int(int64)}
-@returns(200) {total: int(int64), items: [map]}
-@errors {400, 401, 403}
+@returns(200) {total: int(int64), items: [map]} # A fire.com list object of Batch Items (Internal transfers, Bank transfers or International transfers).
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint DELETE /v1/batches/{batchUuid}/internaltransfers/{itemUuid}
+@desc Remove an internal transfer from a batch
 @required {batchUuid: str, itemUuid: str}
-@returns(200)
-@errors {400, 401, 403}
+@returns(200) Batch payment deleted successfully.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint DELETE /v1/batches/{batchUuid}/banktransfers/{itemUuid}
+@desc Remove a bank transfer from a batch.
 @required {batchUuid: str, itemUuid: str}
-@returns(200)
-@errors {400, 401, 403}
+@returns(200) Batch payment deleted successfully.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint DELETE /v2/batches/{batchUuid}/internationaltransfers/{itemUuid}
+@desc Remove an international transfer from a batch
 @required {batchUuid: str, itemUuid: str}
-@returns(200)
-@errors {400, 401, 403}
+@returns(200) Batch payment deleted successfully.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint DELETE /v1/batches/{batchUuid}
+@desc Cancel a batch
 @required {batchUuid: str}
-@returns(200)
-@errors {400, 401, 403}
+@returns(200) Batch payment deleted successfully.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v1/batches/{batchUuid}
+@desc Get the details of a batch
 @required {batchUuid: str}
-@returns(200) {batchUuid: str, type: str, status: str, sourceName: str, batchName: str, jobNumber: str, callbackUrl: str, currency: str, numberOfItemsSubmitted: int(int64), valueOfItemsSubmitted: int(int64), numberOfItemsFailed: int(int64), valueOfItemsFailed: int(int64), numberOfItemsSucceeded: int(int64), valueOfItemsSucceeded: int(int64), lastUpdated: str(date-time), dateCreated: str(date-time)}
-@errors {400, 401, 403}
+@returns(200) {batchUuid: str, type: str, status: str, sourceName: str, batchName: str, jobNumber: str, callbackUrl: str, currency: str, numberOfItemsSubmitted: int(int64), valueOfItemsSubmitted: int(int64), numberOfItemsFailed: int(int64), valueOfItemsFailed: int(int64), numberOfItemsSucceeded: int(int64), valueOfItemsSucceeded: int(int64), lastUpdated: str(date-time), dateCreated: str(date-time)} # Returns the details of the batch specified in the API endpoint - {batchUuid}.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint PUT /v1/batches/{batchUuid}
+@desc Submit a batch
 @required {batchUuid: str}
-@returns(204)
-@errors {400, 401, 403}
+@returns(204) No body is returned - a HTTP 204 No Content response signifies the call was successful.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endpoint GET /v1/batches/{batchUuid}/approvals
+@desc List approvals for a batch.
 @required {batchUuid: str}
-@returns(200) {approvals: [map]}
-@errors {400, 401, 403}
+@returns(200) {approvals: [map]} # A list of approvers for this batch.
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group users
 @endpoint GET /v2/users/{userId}/address
+@desc Get the address of a user
 @required {userId: int(int64)}
-@returns(200) {type: str, address1: str, city: str, country: map{code: str, description: str}, postcode: str}
-@errors {400, 401, 403}
+@returns(200) {type: str, address1: str, city: str, country: map{code: str, description: str}, postcode: str} # A user's address
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group services
 @endpoint GET /v2/services
-@returns(200)
-@errors {400, 401, 403}
+@desc Get service Fees and info
+@returns(200) An object of services information
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 
 @group paymentrequests
 @endpoint PUT /v2/paymentrequests/{paymentRequestCode}/status
+@desc Update the status of a payment request
 @required {paymentRequestCode: str}
-@optional {status: str}
-@returns(204)
-@errors {400, 401, 403}
+@optional {status: str # The status to update the payment request to}
+@returns(204) 204 no content
+@errors {400: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 401: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint., 403: An error has occured. Any 403 errors usually mean your access token is invalid or missing. For other errors, check the validity of your input, and if you are permitted to access this endpoint.}
 
 @endgroup
 

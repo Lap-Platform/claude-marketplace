@@ -107,91 +107,50 @@ https://api.upstash.com/v2
 |--------|------|-------------|
 | POST | /qstash-upgrade | Set QStash Plan |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What Redis databases do I have?" -> GET /redis/databases
-- "Show me details for a specific Redis database" -> GET /redis/database/{id}
-- "Create a new Redis database on AWS in us-east-1" -> POST /redis/database
-- "Delete a Redis database" -> DELETE /redis/database/{id}
-- "How is my Redis database performing?" -> GET /redis/stats/{id}
-- "Change the plan for my Redis database to pay-as-you-go" -> POST /redis/change-plan/{id}
-- "Reset the password on my Redis database" -> POST /redis/reset-password/{id}
-- "List all my vector indexes" -> GET /vector/index
-- "Create a vector index with cosine similarity" -> POST /vector/index
-- "What are my QStash usage stats for the last 7 days?" -> GET /qstash/stats
-- "Rotate my QStash token" -> POST /qstash/user/rotatetoken
-- "Add a team member as a developer" -> POST /teams/member
-- "Transfer a vector index to another account" -> POST /vector/index/{id}/transfer
-- "Create a new search index" -> POST /search
-- "What teams am I part of?" -> GET /teams
-
-## Response Tips
-
-- **Redis databases**: Responses include nested `securityAddons` map with boolean flags for IP whitelisting, VPC peering, private link, mutual TLS, and encryption at rest -- always check these for security audits.
-- **Redis stats**: Time-series data comes as arrays of maps (e.g., `throughput`, `latencymean`, `hits`); the `days` array provides labels for daily aggregates like `dailyrequests` and `dailybilling`.
-- **Vector indexes**: Creation returns `token` and `read_only_token` directly -- capture these immediately as they may not be retrievable later without a reset.
-- **Search indexes**: Same token pattern as vector; the `throughput_vector` array of maps tracks throughput over time.
-- **QStash user**: Returns all rate limits (`max_requests_per_day`, `max_retries`, `max_schedules`, etc.) in a flat object -- useful for capacity planning.
-- **Teams**: Member creation returns the full team context including `copy_cc` billing flag; deletion endpoints return minimal confirmation.
-- **All endpoints**: 200 is the only documented success code; treat any non-200 as an error. Many toggle endpoints (enable/disable eviction, autoupgrade, daily backup) return empty 200 responses.
-
-## Anomaly Flags
-
-- **Database state not "active"**: Surface `state` and `modifying_state` values when they indicate provisioning, migration, or error conditions.
-- **Budget thresholds**: Flag when `budget` is set low relative to usage patterns visible in `redis/stats` monthly totals (`total_monthly_billing`).
-- **QStash daily request limits**: Compare `max_requests_per_day` from `/qstash/user` against `daily_used` from `/qstash/stats` and warn when approaching the cap.
-- **TLS disabled**: Flag any database where `tls: false` -- this is a security concern for production workloads.
-- **Eviction enabled unexpectedly**: Surface `db_eviction: true` or `eviction: true` when it may cause data loss in non-cache use cases.
-- **Plan mismatch**: Warn if a database is on the `free` plan but has high request counts or storage usage suggesting it should be upgraded.
-- **Vector index pending count**: Flag when `pending_index_count` is non-zero in vector stats, indicating indexing backlog.
-- **Bandwidth spikes**: Compare `total_monthly_bandwidth` against `max_monthly_bandwidth` for vector and search indexes to warn before hitting limits.
-- **ACL disabled**: Surface `db_acl_enabled` when it is not set to a truthy value on databases that have multiple clients.
-
-## Playbook
-
-### 1. Provision a Production Redis Database
-
-1. `POST /redis/database` with `platform: "aws"`, desired `primary_region`, `plan: "payg"`, `tls: true`, and `eviction: false`.
-2. Capture `database_id` and `endpoint` from the response.
-3. `POST /redis/enable-tls/{id}` if TLS was not set during creation.
-4. `POST /redis/disable-eviction/{id}` to confirm eviction is off for data safety.
-5. `PATCH /redis/enable-dailybackup/{id}` to enable automated backups.
-6. `PATCH /redis/update-budget/{id}` to set a spending cap.
-7. Verify with `GET /redis/database/{id}` and confirm `state: "active"`, `tls: true`, `daily_backup_enabled: true`.
-
-### 2. Set Up a Vector Search Index with Embeddings
-
-1. `POST /vector/index` with `name`, `region`, `similarity_function: "COSINE"`, `dimension_count` matching your embedding model, and optionally `embedding_model: "BGE_SMALL_EN_V1_5"` for built-in embeddings.
-2. Save the returned `token`, `read_only_token`, and `endpoint`.
-3. Verify creation with `GET /vector/index/{id}`.
-4. Monitor usage with `GET /vector/index/{id}/stats` using `period: "1d"` for daily trends.
-5. If needed later, change plan with `POST /vector/index/{id}/setplan`.
-
-### 3. Manage Team Access and Billing
-
-1. `POST /team` with `team_name` and `copy_cc: true` to share billing.
-2. `POST /teams/member` with `team_id`, `member_email`, and `member_role: "dev"` for each developer.
-3. `POST /redis/move-to-team` to transfer existing databases under team ownership.
-4. Verify team structure with `GET /teams/{team_id}`.
-5. Review activity with `GET /auditlogs` to confirm member actions.
-
-### 4. Rotate Credentials Across All Services
-
-1. For each Redis database: `POST /redis/reset-password/{id}` and update connection strings with new credentials from the response.
-2. For QStash: `POST /qstash/user/rotatetoken` and update all webhook publishers with the new `token`.
-3. For each vector index: `POST /vector/index/{id}/reset-password` and update application configs.
-4. For each search index: `POST /search/{id}/reset-password` and update clients.
-5. Verify connectivity to each service after rotation.
-
-### 5. Monitor Costs and Usage Across Services
-
-1. `GET /redis/stats/{id}` for each database -- check `total_monthly_requests`, `total_monthly_billing`, and `current_storage`.
-2. `GET /vector/index/stats` for aggregate vector usage across all indexes.
-3. `GET /search/stats` for aggregate search usage.
-4. `GET /qstash/stats?period=30d` for monthly QStash message volume and billing.
-5. Compare each service's usage against plan limits from their respective detail endpoints to identify upgrade or downgrade opportunities.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all databases?" -> GET /redis/databases
+- "Get database details?" -> GET /redis/database/{id}
+- "Delete a database?" -> DELETE /redis/database/{id}
+- "Create a database?" -> POST /redis/database
+- "Partially update a update-budget?" -> PATCH /redis/update-budget/{id}
+- "Create a move-to-team?" -> POST /redis/move-to-team
+- "Get stat details?" -> GET /redis/stats/{id}
+- "Get list-backup details?" -> GET /redis/list-backup/{id}
+- "Delete a delete-backup?" -> DELETE /redis/delete-backup/{id}/{backup_id}
+- "Partially update a enable-dailybackup?" -> PATCH /redis/enable-dailybackup/{id}
+- "Partially update a disable-dailybackup?" -> PATCH /redis/disable-dailybackup/{id}
+- "List all teams?" -> GET /teams
+- "List all auditlogs?" -> GET /auditlogs
+- "Create a team?" -> POST /team
+- "Delete a team?" -> DELETE /team/{id}
+- "Get team details?" -> GET /teams/{team_id}
+- "Create a member?" -> POST /teams/member
+- "List all index?" -> GET /vector/index
+- "Create a index?" -> POST /vector/index
+- "Get index details?" -> GET /vector/index/{id}
+- "Delete a index?" -> DELETE /vector/index/{id}
+- "Create a rename?" -> POST /vector/index/{id}/rename
+- "Create a reset-password?" -> POST /vector/index/{id}/reset-password
+- "Create a setplan?" -> POST /vector/index/{id}/setplan
+- "Create a transfer?" -> POST /vector/index/{id}/transfer
+- "List all stats?" -> GET /vector/index/stats
+- "List all stats?" -> GET /vector/index/{id}/stats
+- "List all search?" -> GET /search
+- "Create a search?" -> POST /search
+- "Get search details?" -> GET /search/{id}
+- "Delete a search?" -> DELETE /search/{id}
+- "List all stats?" -> GET /search/stats
+- "List all stats?" -> GET /search/{id}/stats
+- "Create a reset-password?" -> POST /search/{id}/reset-password
+- "Create a transfer?" -> POST /search/{id}/transfer
+- "Create a rename?" -> POST /search/{id}/rename
+- "List all user?" -> GET /qstash/user
+- "Create a rotatetoken?" -> POST /qstash/user/rotatetoken
+- "Create a qstash-upgrade?" -> POST /qstash-upgrade
+- "List all stats?" -> GET /qstash/stats
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

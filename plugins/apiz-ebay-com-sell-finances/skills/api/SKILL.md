@@ -12,7 +12,7 @@ API version: v1.18.0
 OAuth2
 
 ## Base URL
-https://apiz.ebay.com{basePath}
+https://apiz.ebay.com/sell/finances/v1
 
 ## Setup
 1. Configure auth: OAuth2
@@ -58,85 +58,18 @@ https://apiz.ebay.com{basePath}
 |--------|------|-------------|
 | GET | /billing_activity | <div class="msgbox_important"><p class="msgbox_importantInDiv" data-mc-autonum="&lt;b&gt;&lt;span style=&quot;color: #dd1e31;&quot; class=&quot;mcFormatColor&quot;&gt;Important! &lt;/span&gt;&lt;/b&gt;"><span class="autonumber"><span><b><span style="color: #dd1e31;" class="mcFormatColor">Important!</span></b></span></span> Due to EU &amp; UK Payments regulatory requirements, an additional security verification via Digital Signatures is required for certain API calls that are made on behalf of EU/UK sellers, including all <b>Finances API</b> methods. Please refer to <a href="/develop/guides/digital-signatures-for-apis " target="_blank">Digital Signatures for APIs</a> to learn more on the impacted APIs and the process to create signatures to be included in the HTTP payload.</p></div><br><span class="tablenote"><b>Note:</b>  The <b>Finances API</b> does not support <a href="https://www.ebay.com/sellercenter/ebay-for-business/multi-user-account-access" target="_blank">Team Access</a>. Financial information, such as payouts or transactions, is only returned for the user that makes the call. You cannot use any of the methods in this API to return financial information for another user.</span><br>This method retrieves filtered billing activities of the seller. Returned results are filtered through query parameters such as date range, activity ID, listing ID, or order ID. Sorting and pagination features help organize and navigate returned activities efficiently. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What are my recent payouts?" -> GET /payout
-- "Show me details for a specific payout" -> GET /payout/{payout_Id}
-- "What is the status of my last payout?" -> GET /payout/{payout_Id}
-- "How much have I been paid out this month?" -> GET /payout_summary
-- "How many transactions were included in my payouts?" -> GET /payout_summary
-- "What funds do I have available for payout?" -> GET /seller_funds_summary
-- "How much money is currently on hold?" -> GET /seller_funds_summary
-- "Show me my recent sales transactions" -> GET /transaction
-- "How many refunds have I issued this month?" -> GET /transaction_summary
-- "What are my total dispute amounts?" -> GET /transaction_summary
-- "Break down my fees, refunds, and adjustments" -> GET /transaction_summary
-- "Show details of a specific fund transfer" -> GET /transfer/{transfer_Id}
-- "What are my billing charges from eBay?" -> GET /billing_activity
-- "List payouts sorted by date for the US marketplace" -> GET /payout
-- "What shipping label costs have I incurred?" -> GET /transaction_summary
-
-## Response Tips
-
-- **Payout/Transaction lists**: Paginated via `limit`, `offset`, `next`, `prev`, and `total` -- follow `next` URL to page forward; a 204 means no results exist (not an error).
-- **Payout details**: The `amount` vs `totalAmount` distinction matters -- `amount` is the net payout, `totalAmount` is pre-fee; check `totalFee` and `totalFeeDetails` for fee breakdown.
-- **Summaries (payout/transaction)**: Return aggregate counts and amounts, not individual records -- use `filter` to scope by date range or status before calling.
-- **Money fields**: All amounts use a nested structure with `currency`/`value` plus optional `convertedFrom*` and `exchangeRate` fields for cross-currency sellers; always read `currency` to know the denomination.
-- **Transfer details**: Deeply nested -- `transferDetail.balanceAdjustment.adjustmentAmount` and `transferDetail.charges[]` require drilling into sub-objects.
-- **Billing activity**: Uses `count` (items in current page) and `total` (all matching records) -- do not confuse the two when calculating remaining pages.
-
-## Anomaly Flags
-
-- **Payout status not `SUCCEEDED`**: Surface any payout where `payoutStatus` is `FAILED`, `REVERSED`, or `BLOCKED` -- these need seller attention.
-- **Funds on hold increasing**: If `seller_funds_summary.fundsOnHold` is a significant portion of `totalFunds`, warn the seller about potential account restrictions.
-- **High dispute amounts**: When `transaction_summary.disputeCount` is non-zero or `disputeAmount` is rising, flag for seller review.
-- **Currency conversion active**: When `exchangeRate` is present and non-trivial, alert that cross-currency conversion fees may apply.
-- **204 No Content responses**: These indicate zero results for the query period -- surface this clearly rather than showing an empty state silently.
-- **Loan repayment entries**: Non-zero `loanRepaymentAmount` or `loanRepaymentCount` in transaction summaries should be called out since these reduce available funds.
-- **Pagination truncation**: If `total` significantly exceeds `limit`, warn that results are partial and offer to fetch remaining pages.
-
-## Playbook
-
-### 1. Daily Payout Reconciliation
-
-1. Call `GET /seller_funds_summary` with the marketplace header to get current available, on-hold, and processing funds.
-2. Call `GET /payout?filter=payoutDate:[{today}..{today}]&sort=payoutDate` to list today's payouts.
-3. For each payout, call `GET /payout/{payout_Id}` to verify the `payoutStatus` is `SUCCEEDED` and review `totalFee`.
-4. Call `GET /payout_summary?filter=payoutDate:[{today}..{today}]` to cross-check aggregate totals against individual payouts.
-5. Flag any payout where `payoutStatus` is not `SUCCEEDED` for follow-up.
-
-### 2. Monthly Financial Summary
-
-1. Call `GET /transaction_summary?filter=transactionDate:[{monthStart}..{monthEnd}]` to get a full breakdown of sales, refunds, disputes, fees, and adjustments.
-2. Call `GET /payout_summary?filter=payoutDate:[{monthStart}..{monthEnd}]` to get total payouts and transaction counts.
-3. Compare `creditAmount` (sales) against `refundAmount` and `disputeAmount` to calculate net revenue.
-4. Review `nonSaleChargeAmount` and `shippingLabelAmount` for operational costs.
-5. Call `GET /billing_activity?filter=transactionDate:[{monthStart}..{monthEnd}]` for eBay-specific billing charges.
-
-### 3. Investigating a Missing Payout
-
-1. Call `GET /payout?filter=payoutStatus:{RETRYABLE_FAILURE|TERMINAL_FAILURE}&sort=-payoutDate` to find failed payouts.
-2. For each failed payout, call `GET /payout/{payout_Id}` and read `payoutStatusDescription` and `payoutMemo` for the failure reason.
-3. Check `payoutInstrument` to confirm bank account details (last four digits, instrument type).
-4. Check `lastAttemptedPayoutDate` versus `payoutDate` to see if retries occurred.
-5. Call `GET /seller_funds_summary` to verify the funds are still available and not stuck on hold.
-
-### 4. Dispute and Refund Tracking
-
-1. Call `GET /transaction_summary?filter=transactionDate:[{start}..{end}]` and examine `disputeCount`, `disputeAmount`, `refundCount`, and `refundAmount`.
-2. If counts are elevated, call `GET /transaction?filter=transactionType:{DISPUTE}&sort=-transactionDate` to list individual dispute transactions.
-3. Page through results using `next` until all disputes are retrieved.
-4. Cross-reference dispute transactions with order IDs for resolution tracking.
-
-### 5. Transfer and Balance Adjustment Review
-
-1. Call `GET /transaction?filter=transactionType:{TRANSFER}&sort=-transactionDate` to find recent transfers.
-2. For each transfer of interest, call `GET /transfer/{transfer_Id}` to get full details.
-3. Review `fundingSource` to understand the transfer origin (credit card charge, bank debit, etc.).
-4. Check `transferDetail.balanceAdjustment` for any balance corrections applied.
-5. Sum `transferDetail.charges[]` via `totalChargeNetAmount` to understand associated fees.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get payout details?" -> GET /payout/{payout_Id}
+- "List all payout?" -> GET /payout
+- "List all payout_summary?" -> GET /payout_summary
+- "List all seller_funds_summary?" -> GET /seller_funds_summary
+- "List all transaction?" -> GET /transaction
+- "List all transaction_summary?" -> GET /transaction_summary
+- "Get transfer details?" -> GET /transfer/{transfer_Id}
+- "List all billing_activity?" -> GET /billing_activity
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

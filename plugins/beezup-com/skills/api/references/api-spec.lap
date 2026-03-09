@@ -1,6 +1,6 @@
 @lap v0.3
 # Machine-readable API spec. Each @endpoint block is one API call.
-@api BeezUP Merchant API 
+@api BeezUP Merchant API
 @base https://api.beezup.com
 @version 2.0
 @auth ApiKey Ocp-Apim-Subscription-Key in header
@@ -10,1264 +10,1513 @@
 
 @group public
 @endpoint POST /v2/public/security/login
+@desc Login
 @required {request: map}
-@returns(200)
-@errors {400, 403, 500}
+@returns(200) Your tokens
+@errors {400: Bad Request, 403: Invalid credentials, 500: Occurs when something goes wrong}
 
 @endpoint POST /v2/public/security/login/mfa
+@desc Login
 @required {request: map}
-@returns(200)
-@returns(202)
-@errors {400, 401, 403, 500}
+@returns(200) Your tokens
+@returns(202) One time password sent by email
+@errors {400: Bad Request, 401: OTP required for authentication, 403: Invalid credentials, 500: Occurs when something goes wrong}
 
 @endpoint POST /v2/public/security/register
+@desc User Registration
 @required {request: map}
-@returns(204)
-@errors {400, 409, 500}
+@returns(204) Customer registered
+@errors {400: Email or password is invalid. Disposable email are refused., 409: Email already used, 500: Occurs when something goes wrong}
 
 @endpoint POST /v2/public/security/lostpassword
-@required {email: str(email)}
-@returns(204)
-@errors {400, 404, 500, 502}
+@desc Lost password
+@required {email: str(email) # Your email}
+@returns(204) New password sent
+@errors {400: Bad Request, 404: Email not found, 500: Occurs when something goes wrong, 502: Problem with SMTP service}
 
 @endpoint GET /v2/public/channels/
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304}
+@desc Get public channel index
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Channel list regrouped by country and links to list of values
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !}
 
 @endpoint GET /v2/public/channels/{countryIsoCode}
-@required {countryIsoCode: any, Accept-Encoding: any}
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc The channel list for one country
+@required {countryIsoCode: any # The country iso code alpha 3 based on this: https://en.wikipedia.org/wiki/ISO_3166-1_alpha-3#Decoding_table \ To know which country are available you have to use the operation: GetChannelsByCountry, Accept-Encoding: any # Allows the client to indicate whether it accepts a compressed encoding to reduce traffic size.}
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) The channel list for one country
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Channel country not found}
 
 @endpoint GET /v2/public/lov/
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304}
+@desc Get all list names
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Get the list names
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you can keep your version.}
 
 @endpoint GET /v2/public/lov/{listName}
-@required {listName: any}
-@optional {Accept-Language: any, If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc Get the list of values related to this list name
+@required {listName: any # The list of value name your want to get}
+@optional {Accept-Language: any # Indicates that the client accepts the following languages., If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) The list of values
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you can keep your version., 404: List not found}
 
 @endgroup
 
 @group user
 @endpoint GET /v2/user/lov/
-@returns(200)
-@errors {304}
+@desc Get all list names
+@returns(200) Get the list names
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you can keep your version.}
 
 @endpoint GET /v2/user/lov/{listName}
-@required {listName: any}
-@optional {Accept-Language: any, If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc Get the list of values related to this list name
+@required {listName: any # The list of value name your want to get}
+@optional {Accept-Language: any # Indicates that the client accepts the following languages., If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) The list of values
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you can keep your version., 404: List not found}
 
 @endpoint GET /v2/user/customer/
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304}
+@desc The index of all operations and LOV
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) OK
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !}
 
 @endpoint GET /v2/user/customer/account
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304}
+@desc Get user account information
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) User account information
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !}
 
 @endpoint POST /v2/user/customer/account/resendEmailActivation
-@returns(204)
-@errors {400, 429, 409, 502}
+@desc Resend email activation
+@returns(204) Email activation resent
+@errors {400: Email activation not sent because of email problem. Ensure that your email is the correct one., 429: Email activation sent recently, must retry later. (One per hour), 409: Email activation not available because user account already activated., 502: Email activate send failed because of our email service. Ensure that your email is the correct one otherwise please contact our support if the problem persists.}
 
 @endpoint POST /v2/user/customer/account/activate
-@required {emailActivationId: str(guid)}
-@returns(204)
-@errors {403, 409}
+@desc Activate the user account
+@required {emailActivationId: str(guid) # The email activation id received by email.}
+@returns(204) User account activated.
+@errors {403: Invalid email activation id, 409: User account already activated.}
 
 @endpoint PUT /v2/user/customer/account/personalInfo
+@desc Save user personal information
 @required {request: map}
-@returns(204)
-@errors {400}
+@returns(204) User account information updated
+@errors {400: Bad Request}
 
 @endpoint PUT /v2/user/customer/account/companyInfo
+@desc Change company information
 @required {request: map}
-@returns(204)
-@errors {400, 403}
+@returns(204) Company information saved
+@errors {400: Bad request or invalid VATNumber., 403: User not found or unauthorized}
 
 @endpoint GET /v2/user/customer/account/profilePictureInfo
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304}
+@desc Get profile picture information
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Profile picture information
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !}
 
 @endpoint PUT /v2/user/customer/account/profilePictureInfo
+@desc Change user picture information
 @required {request: map}
-@returns(204)
-@errors {400, 413, 415}
+@returns(204) User profile picture information saved.
+@errors {400: BadRequest (Url invalid), 413: The picture size is too large, 415: The content type of the image must be an image}
 
 @endpoint GET /v2/user/customer/account/creditCardInfo
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304, 404, 503}
+@desc Get credit card information
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) User credit card information
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Credit Card not found, 503: We are unable to get your credit card info. This is a temporary state. Please retry later}
 
 @endpoint PUT /v2/user/customer/account/creditCardInfo
-@required {request: map}
-@returns(202)
-@errors {400, 502}
+@desc Save user credit card info
+@required {request: map # Credit card info}
+@returns(202) The credit card information has been accepted for processing, the authorization will be processed shortly.
+@errors {400: BadRequest, 502: Communication problem with our payment service}
 
 @endpoint POST /v2/user/customer/account/changeEmail
+@desc Change user email
 @required {request: map}
-@returns(204)
-@errors {400}
+@returns(204) Email updated
+@errors {400: New email does not respect the emails's constraints}
 
 @endpoint POST /v2/user/customer/account/changePassword
+@desc Change user password
 @required {request: map}
-@returns(204)
-@errors {400}
+@returns(204) Password updated
+@errors {400: Old password is invalid or the new password does not respect the password's constraints}
 
 @endpoint POST /v2/user/customer/security/logout
-@returns(204)
+@desc Log out the current user from go2
+@returns(204) User logout
 
 @endpoint GET /v2/user/customer/zendeskToken
-@returns(200)
-@errors {500}
+@desc Zendesk token
+@returns(200) A JWT token to connect the Zendesk Web Widget
+@errors {500: Occurs when something goes wrong}
 
 @endpoint GET /v2/user/customer/stores
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304}
+@desc Get store list
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Store list
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !}
 
 @endpoint POST /v2/user/customer/stores
+@desc Create a new store
 @required {request: map}
-@returns(201)
-@errors {402, 409}
+@returns(201) The store has been created successfully. The http header Location contains the new resource url. The body contains the link to the new resource.
+@errors {402: The maximum amount of store has been reached. Please upgrade your contract., 409: The customer has a store with the same name}
 
 @endpoint GET /v2/user/customer/stores/{storeId}
-@required {storeId: any}
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc Get store's information
+@required {storeId: any # Your store identifier}
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) The store information
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Store not found or not authorized}
 
 @endpoint PATCH /v2/user/customer/stores/{storeId}
-@required {storeId: any, request: map}
-@returns(204)
-@errors {404, 409}
+@desc Update some store's information.
+@required {storeId: any # Your store identifier, request: map}
+@returns(204) Store updated
+@errors {404: Store not found or customer not the owner, 409: The store name already used}
 
 @endpoint DELETE /v2/user/customer/stores/{storeId}
-@required {storeId: any}
-@returns(204)
-@errors {404}
+@desc Delete a store
+@required {storeId: any # Your store identifier}
+@returns(204) Store deleted
+@errors {404: Store not found or customer not the owner}
 
 @endpoint GET /v2/user/customer/stores/{storeId}/rights
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc Get store's rights
+@required {storeId: any # Your store identifier}
+@returns(200) The store's rights
+@errors {404: Store not found or not authorized}
 
 @endpoint GET /v2/user/customer/stores/{storeId}/alerts
-@required {storeId: any}
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc Get store's alerts
+@required {storeId: any # Your store identifier}
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) User account alerts information
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Store not found or not authorized}
 
 @endpoint POST /v2/user/customer/stores/{storeId}/alerts
-@required {storeId: any, request: map}
-@returns(204)
-@errors {400, 404}
+@desc Save store alerts
+@required {storeId: any # Your store identifier, request: map}
+@returns(204) Store alerts saved
+@errors {400: BadRequest, 404: Store not found or not authorized}
 
 @endpoint GET /v2/user/customer/stores/{storeId}/shares
-@required {storeId: any}
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc Get shares related to this store
+@required {storeId: any # Your store identifier}
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) The sharing list of the store
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Store not found or customer not the owner}
 
 @endpoint POST /v2/user/customer/stores/{storeId}/shares
-@required {storeId: any, email: str(email)}
-@returns(204)
-@errors {402, 404}
+@desc Share a store to another user
+@required {storeId: any # Your store identifier, email: str(email) # Your friend's email}
+@returns(204) Store shared
+@errors {402: Free offer is not allowed to share store., 404: Only the owner of the store can make this operation or user not found}
 
 @endpoint DELETE /v2/user/customer/stores/{storeId}/shares/{userId}
-@required {storeId: any, userId: any}
-@returns(204)
-@errors {404}
+@desc Delete a share of a store to another user
+@required {storeId: any # Your store identifier, userId: any # The friend user id}
+@returns(204) Share deleted
+@errors {404: Store not found or customer not the owner}
 
 @endpoint GET /v2/user/customer/friends/{userId}
-@required {userId: any}
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc Get friend information
+@required {userId: any # Your friend user id}
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Get friend info
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: User not found}
 
 @endpoint GET /v2/user/customer/billingPeriods
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304}
+@desc Get billing periods conditions
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Get the billing periods conditions
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !}
 
 @endpoint GET /v2/user/customer/offers
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304}
+@desc Get all standard offers
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Get all standard offers
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !}
 
 @endpoint POST /v2/user/customer/offers
+@desc Get offer pricing
 @required {request: map}
-@returns(200)
-@errors {400, 403}
+@returns(200) Get the offer proposal considering your current contract
+@errors {400: Bad request. (Invalid billing period, invalid offer, etc.). You cannot get a pricing for a free offer., 403: You current contract is not modifiable. Please choose another offer.}
 
 @endpoint GET /v2/user/customer/contracts
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304}
+@desc Get contract list
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Contract list
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !}
 
 @endpoint POST /v2/user/customer/contracts
+@desc Create a new contract
 @required {request: any}
-@returns(200)
-@errors {400, 403}
+@returns(200) New contract has been created. Some warnings can be present in response.
+@errors {400: Bad request. (Invalid billing period, invalid offer, etc.), 403: The contract is not modifiable or the coupon offer has been already used}
 
 @endpoint POST /v2/user/customer/contracts/current/disableAutoRenewal
-@required {request: map}
-@returns(204)
-@errors {400, 404}
+@desc Schedule termination of your current contract at the end of the commitment.
+@required {request: map # Indicate the termination reason}
+@returns(204) Your current contract termination has been scheduled
+@errors {400: Invalid reason type, 404: No current contract}
 
 @endpoint POST /v2/user/customer/contracts/current/reenableAutoRenewal
-@returns(204)
-@errors {404}
+@desc Reactivate your terminated contract.
+@returns(204) Your current contract has been resumed
+@errors {404: No current contract}
 
 @endpoint DELETE /v2/user/customer/contracts/next
-@returns(204)
+@desc Delete your next contract
+@returns(204) Next contract has been deleted
 
 @endpoint GET /v2/user/customer/invoices
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304}
+@desc Get all your invoices
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Get all invoices of a customer
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !}
 
 @endpoint GET /v2/user/catalogs/
-@returns(200)
+@desc Get the index of the catalog API
+@returns(200) OK
 
 @endpoint GET /v2/user/catalogs/beezupColumns
-@returns(200)
+@desc Get the BeezUP columns
+@returns(200) The catalog API index
 
 @endpoint GET /v2/user/catalogs/{storeId}
-@required {storeId: any}
-@returns(200)
+@desc Get the index of the catalog API for this store
+@required {storeId: any # Your store identifier}
+@returns(200) The catalog index
 
 @endpoint GET /v2/user/catalogs/{storeId}/inputConfiguration
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc Get the last input configuration
+@required {storeId: any # Your store identifier}
+@returns(200) OK
+@errors {404: StoreId or Manual Update last configuration not found}
 
 @endpoint GET /v2/user/catalogs/{storeId}/catalogColumns
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc Get catalog column list
+@required {storeId: any # Your store identifier}
+@returns(200) Catalog column list
+@errors {404: StoreId not found}
 
 @endpoint POST /v2/user/catalogs/{storeId}/catalogColumns/{columnId}/rename
-@required {storeId: any, columnId: any, request: map}
-@returns(204)
-@errors {400, 404, 409}
+@desc Change Catalog Column User Name
+@required {storeId: any # Your store identifier, columnId: any # The catalog column identifier, request: map}
+@returns(204) Catalog column user name changed
+@errors {400: When a user column name is duplicate., 404: Occurs when a user tries to work on the wrong store. Occurs when a catalog column is not found., 409: A catalog importation is already in progress!}
 
 @endpoint GET /v2/user/catalogs/{storeId}/customColumns
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc Get custom column list
+@required {storeId: any # Your store identifier}
+@returns(200) Custom column list
+@errors {404: StoreId not found}
 
 @endpoint PUT /v2/user/catalogs/{storeId}/customColumns/{columnId}
-@required {storeId: any, columnId: any, request: map}
-@returns(204)
-@errors {400, 404, 409}
+@desc Create or replace a custom column
+@required {storeId: any # Your store identifier, columnId: any # The custom column identifier, request: map}
+@returns(204) Custom column saved
+@errors {400: Occurs when a catalog custom column id is already used by a catalog column. When the catalog custom column count limit has been reached., 404: Occurs when a user tries to work on the wrong store., 409: A catalog importation is already in progress!}
 
 @endpoint DELETE /v2/user/catalogs/{storeId}/customColumns/{columnId}
-@required {storeId: any, columnId: any}
-@returns(204)
-@errors {403, 404, 409}
+@desc Delete custom column
+@required {storeId: any # Your store identifier, columnId: any # The custom column identifier}
+@returns(204) Custom column deleted
+@errors {403: Occurs when the parent category is not found., 404: Occurs when a user tries to work on the wrong store., 409: When a catalog importation is already in progress!}
 
 @endpoint POST /v2/user/catalogs/{storeId}/customColumns/{columnId}/rename
-@required {storeId: any, columnId: any, request: map}
-@returns(204)
-@errors {400, 404, 409}
+@desc Change Custom Column User Name
+@required {storeId: any # Your store identifier, columnId: any # The custom column identifier, request: map}
+@returns(204) Custom column renamed
+@errors {400: When a user column name is duplicate., 404: Occurs when a user tries to work on the wrong store. Occurs when a catalog column is not found., 409: A catalog importation is already in progress!}
 
 @endpoint GET /v2/user/catalogs/{storeId}/customColumns/{columnId}/expression
-@required {storeId: any, columnId: any}
-@returns(200)
-@errors {404}
+@desc Get the encrypted custom column expression
+@required {storeId: any # Your store identifier, columnId: any # The custom column identifier}
+@returns(200) Encrypted expression
+@errors {404: Occurs when a user tries to work on the wrong store. Occurs when a catalog custom column is not found.}
 
 @endpoint PUT /v2/user/catalogs/{storeId}/customColumns/{columnId}/expression
-@required {storeId: any, columnId: any, request: map}
-@returns(204)
-@errors {403, 404, 409}
+@desc Change custom column expression
+@required {storeId: any # Your store identifier, columnId: any # The custom column identifier, request: map}
+@returns(204) Custom column expression saved
+@errors {403: Occurs when the user try to change a custom column related to a Category. If you want to change this custom column expression you have to make a new manual importation., 404: Occurs when a user tries to work on the wrong store. Occurs when a catalog custom column is not found., 409: A catalog importation is already in progress!}
 
 @endpoint POST /v2/user/catalogs/{storeId}/customColumns/computeExpression
-@required {storeId: any, request: map}
-@returns(200)
-@errors {400}
+@desc Compute the expression for this catalog.
+@required {storeId: any # Your store identifier, request: map}
+@returns(200) Compute an expression
+@errors {400: Occurs when the expression cannot be computed}
 
 @endpoint GET /v2/user/catalogs/{storeId}/categories
-@required {storeId: any, Accept-Encoding: any}
-@returns(200)
-@errors {404}
+@desc Get category list
+@required {storeId: any # Your store identifier, Accept-Encoding: any # Indicates that the client accepts that the response will be compressed to reduce traffic size.}
+@returns(200) Categories
+@errors {404: StoreId not found}
 
 @endpoint POST /v2/user/catalogs/{storeId}/products/list
-@required {storeId: any, request: map}
-@returns(200)
-@errors {404}
+@desc Get product list
+@required {storeId: any # Your store identifier, request: map}
+@returns(200) Product list
+@errors {404: StoreId not found}
 
 @endpoint GET /v2/user/catalogs/{storeId}/products/random
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc Get random product list
+@required {storeId: any # Your store identifier}
+@returns(200) Random product list
+@errors {404: StoreId not found}
 
 @endpoint GET /v2/user/catalogs/{storeId}/products/{productId}
-@required {storeId: any, productId: any}
-@returns(200)
-@errors {404}
+@desc Get product by ProductId
+@required {storeId: any # Your store identifier, productId: any # The product identifier you want to get}
+@returns(200) Product
+@errors {404: StoreId not found}
 
 @endpoint GET /v2/user/catalogs/{storeId}/products
-@required {storeId: any, sku: any}
-@returns(200)
-@errors {404}
+@desc Get product by Sku
+@required {storeId: any # Your store identifier, sku: any # The product sku you want to get}
+@returns(200) Product
+@errors {404: StoreId or Product not found}
 
 @endpoint POST /v2/user/catalogs/{storeId}/products/batches/{actionType}
-@required {storeId: any, actionType: any, request: [map]}
-@returns(202)
-@errors {400, 404}
+@desc Push product batches
+@required {storeId: any # Your store identifier, actionType: any # Possible Values: - REPLACE: Add or replace the existing product. If there is any custom column already declared on the catalog, the custom columns computation will be applied on the fly based on the product properties provided in the message - MERGE: Update the product properties of the existing product.       You cannot remove a product property using this action type, you must using REPLACE action type for that.       If there is any custom column already declared on the catalog, the custom columns computation will be applied on the fly based on the product properties provided in the message if it's possible or asynchronously. - DELETE: Simply delete the product, request: [map]}
+@returns(202) Request accepted
+@errors {400: The request is invalid, 404: The store is not found}
 
 @endpoint GET /v2/user/catalogs/{storeId}/importations/{batchId}/getReportUrl
-@required {storeId: any, batchId: any}
-@errors {303, 409}
+@desc Get Reporting By BatchId
+@required {storeId: any # Your store identifier, batchId: any # The product batchId you want to get}
+@errors {303: Follow location to retrieve the Importation Reporting, 409: Get Reporting is not ready yet. Please retry after 1mn.}
 
 @endpoint GET /v2/user/catalogs/{storeId}/beezUPColumns
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc Get the BeezUPColumns' Mapping of a Store
+@required {storeId: any # Your store identifier}
+@returns(200) BeezUPColumns' Mapping of a Store
+@errors {404: StoreId not found}
 
 @endpoint PATCH /v2/user/catalogs/{storeId}/beezUPColumns
-@required {storeId: any, request: [map]}
-@returns(204)
-@errors {404}
+@desc Patch the BeezUPColumns' Mapping of a Store.
+@required {storeId: any # Your store identifier, request: [map]}
+@returns(204) BeezUPColumns' Mapping of a Store Patched
+@errors {404: StoreId not found}
 
 @endpoint PUT /v2/user/catalogs/{storeId}/beezUPColumns
-@required {storeId: any, request: [map]}
-@returns(204)
-@errors {404}
+@desc Replace the BeezUPColumns' Mapping of a Store.
+@required {storeId: any # Your store identifier, request: [map]}
+@returns(204) BeezUPColumns' Mapping of a Store Replaced
+@errors {404: StoreId not found}
 
 @endpoint PUT /v2/user/catalogs/{storeId}/beezUPColumns/{beezUPColumnName}
-@required {storeId: any, beezUPColumnName: any, request: map}
-@returns(204)
-@errors {404}
+@desc Replace the BeezUPColumns' Mapping of a Store.
+@required {storeId: any # Your store identifier, beezUPColumnName: any # BeezUP Column Name, request: map}
+@returns(204) BeezUPColumn' Mapping saved
+@errors {404: StoreId or BeezUPColumnName or ColumnId not found}
 
 @endpoint DELETE /v2/user/catalogs/{storeId}/beezUPColumns/{beezUPColumnName}
-@required {storeId: any, beezUPColumnName: any}
-@returns(204)
-@errors {404}
+@desc Delete the BeezUPColumn' Mapping of a Store.
+@required {storeId: any # Your store identifier, beezUPColumnName: any # BeezUP Column Name}
+@returns(204) BeezUPColumn' Mapping deleted
+@errors {404: StoreId or BeezUPColumnName not found}
 
 @endpoint GET /v2/user/catalogs/importations
-@returns(200)
-@errors {404}
+@desc Get the latest catalog importation reporting for all your stores
+@returns(200) The last importation reportings
+@errors {404: UserId not found}
 
 @endpoint GET /v2/user/catalogs/{storeId}/importations
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc Get the latest catalog importation reporting
+@required {storeId: any # Your store identifier}
+@returns(200) The last importation reportings
+@errors {404: StoreId not found}
 
 @endpoint POST /v2/user/catalogs/{storeId}/importations/start
-@required {storeId: any, request: map}
-@returns(202)
-@errors {400, 404, 409}
+@desc Start Manual Import
+@required {storeId: any # Your store identifier, request: map}
+@returns(202) Catalog importation started
+@errors {400: Missing Input configuration in the request Occurs when there is a duplicate file number in the input configuration Occurs when there is a duplicate file Uri in the input configuration, 404: StoreId not found, 409: A catalog importation is already in progress!}
 
 @endpoint GET /v2/user/catalogs/{storeId}/importations/{executionId}
-@required {storeId: any, executionId: any}
-@returns(200)
-@errors {404}
+@desc Get the importation status
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation}
+@returns(200) OK
+@errors {404: ExecutionId not found or not yet synchronized. If not synchronized within 30 sec after the import has been started, please contact our support}
 
 @endpoint POST /v2/user/catalogs/{storeId}/importations/{executionId}/cancel
-@required {storeId: any, executionId: any}
-@returns(204)
-@errors {404, 409}
+@desc Cancel importation
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation}
+@returns(204) Catalog importation canceled
+@errors {404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution., 409: Occurs when this importation is already finished.}
 
 @endpoint GET /v2/user/catalogs/{storeId}/importations/{executionId}/technicalProgression
-@required {storeId: any, executionId: any}
-@returns(200)
-@errors {404, 409}
+@desc Get technical progression
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation}
+@returns(200) When the technical progression is correctly retrived
+@errors {404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution., 409: Occurs when this importation is already finished.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/importations/{executionId}/configureRemainingCatalogColumns
-@required {storeId: any, executionId: any}
-@returns(204)
-@errors {400, 404, 409}
+@desc Configure remaining catalog columns
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation}
+@returns(204) Remaining catalog columns have been configured. This operation has no impact on the current catalog until you commit the catalog importation.
+@errors {400: When a user column name is duplicate. When the catalog column name are duplicate. When the BeezUP column have duplicate mapping. Occurs when the required beezup column is not mapped to any column. Occurs when the category hierarchy is not correctly mapped. Occurs when the duplicate strategy on {catalogColumnName} is not found., 404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution. Occurs when a catalog column is not found., 409: Occurs when this importation is already finished.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/importations/{executionId}/commitColumns
-@required {storeId: any, executionId: any}
-@returns(204)
-@errors {400, 404}
+@desc Commit columns
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation}
+@returns(204) Columns configuration have been committed. This operation has no impact on the current catalog until you commit the catalog importation.
+@errors {400: When a user column name is duplicate. When the catalog column name are duplicate. When the BeezUP column have duplicate mapping. Occurs when the required beezup column is not mapped to any column. Occurs when the category hierarchy is not correctly mapped. When the catalog column count limit has been reached. When the catalog custom column count limit has been reached., 404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution. Occurs when a catalog column is not found.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/importations/{executionId}/commit
-@required {storeId: any, executionId: any}
-@returns(204)
-@errors {400, 404, 409}
+@desc Commit Importation
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation}
+@returns(204) Catalog importation committed
+@errors {400, 404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution., 409: Occurs when this importation is already finished.}
 
 @endpoint GET /v2/user/catalogs/{storeId}/importations/{executionId}/productSamples/{productSampleIndex}
-@required {storeId: any, executionId: any, productSampleIndex: any}
-@returns(200)
-@errors {404, 409}
+@desc Get the product sample related to this importation with all columns (catalog and custom)
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation, productSampleIndex: any # Index of the product sample. Starting from 0 to 99.}
+@returns(200) OK
+@errors {404: ExecutionId not found or not yet synchronized. If not synchronized within 30 sec, please contact our support       schema: $ref: 'https://api.beezup.com/swaggerhub/domains/BeezUP/api.beezup.com/v2#/definitions/BeezUP.Common.ErrorResponseMessage', 409: Catalog preparation read step is not completed. Please refer to the reporting of this execution for more details.}
 
 @endpoint GET /v2/user/catalogs/{storeId}/importations/{executionId}/productSamples/{productSampleIndex}/customColumns/{columnId}
-@required {storeId: any, executionId: any, productSampleIndex: any, columnId: any}
-@returns(200)
-@errors {404, 409}
+@desc Get product sample custom column value related to this importation.
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation, productSampleIndex: any # Index of the product sample. Starting from 0 to 99., columnId: any # The custom column identifier}
+@returns(200) Product sample custom column value
+@errors {404: ExecutionId not found or not yet synchronized. If not synchronized within 30 sec, please contact our support, 409: Catalog preparation read step is not completed. Please refer to the reporting of this execution for more details.}
 
 @endpoint GET /v2/user/catalogs/{storeId}/importations/{executionId}/catalogColumns
-@required {storeId: any, executionId: any}
-@returns(200)
-@errors {404, 409}
+@desc Get detected catalog columns during this importation.
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation}
+@returns(200) OK
+@errors {404: ExecutionId not found or not yet synchronized. If not synchronized within 30 sec, please contact our support, 409: Catalog preparation read step is not completed. Please refer to the reporting of this execution for more details.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/importations/{executionId}/catalogColumns/{columnId}
-@required {storeId: any, executionId: any, columnId: any, request: map}
-@returns(204)
-@errors {400, 404, 409}
+@desc Configure catalog column
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation, columnId: any # The custom column identifier, request: map}
+@returns(204) Catalog column configured. This operation has no impact on the current catalog until you commit the catalog importation.
+@errors {400: When the catalog column name is not found, 404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution. Occurs when a catalog column is not found., 409: Occurs when this importation is already finished.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/importations/{executionId}/catalogColumns/{columnId}/ignore
-@required {storeId: any, executionId: any, columnId: any}
-@returns(204)
-@errors {404, 409}
+@desc Ignore Column
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation, columnId: any # The custom column identifier}
+@returns(204) Catalog column ignored. This operation has no impact on the current catalog until you commit the catalog importation.
+@errors {404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution. Occurs when a catalog column is not found., 409: Occurs when this importation is already finished.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/importations/{executionId}/catalogColumns/{columnId}/reattend
-@required {storeId: any, executionId: any, columnId: any}
-@returns(204)
-@errors {404, 409}
+@desc Reattend Column
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation, columnId: any # The custom column identifier}
+@returns(204) Catalog column reattended. This operation has no impact on the current catalog until you commit the catalog importation.
+@errors {404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution. Occurs when a catalog column is not found., 409: Occurs when this importation is already finished.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/importations/{executionId}/catalogColumns/{columnId}/map
-@required {storeId: any, executionId: any, columnId: any, request: map}
-@returns(204)
-@errors {404, 409}
+@desc Map catalog column to a BeezUP column
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation, columnId: any # The catalog column identifier, request: map}
+@returns(204) Catalog column mapped. This operation has no impact on the current catalog until you commit the catalog importation.
+@errors {404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution. Occurs when a catalog column is not found., 409: Occurs when this importation is already finished.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/importations/{executionId}/catalogColumns/{columnId}/unmap
-@required {storeId: any, executionId: any, columnId: any}
-@returns(204)
-@errors {404, 409}
+@desc Unmap catalog column
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation, columnId: any # The catalog column identifier}
+@returns(204) Catalog Column unmapped. This operation has no impact on the current catalog until you commit the catalog importation.
+@errors {404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution. Occurs when a catalog column is not found., 409: Occurs when this importation is already finished.}
 
 @endpoint GET /v2/user/catalogs/{storeId}/importations/{executionId}/customColumns
-@required {storeId: any, executionId: any}
-@returns(200)
-@errors {404, 409}
+@desc Get custom columns currently place in this importation
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation}
+@returns(200) Custom columns of current Importation successfully retrieved
+@errors {404: ExecutionId not found or not yet synchronized. If not synchronized within 30 sec, please contact our support, 409: Catalog preparation read step is not completed. Please refer to the reporting of this execution for more details.}
 
 @endpoint GET /v2/user/catalogs/{storeId}/importations/{executionId}/customColumns/{columnId}/expression
-@required {storeId: any, executionId: any, columnId: any}
-@returns(200)
-@errors {404, 409}
+@desc Get the encrypted custom column expression in this importation
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation, columnId: any # The custom column identifier}
+@returns(200) Encrypted expression
+@errors {404: ExecutionId not found or not yet synchronized. If not synchronized within 30 sec, please contact our support, 409: Catalog preparation read step is not completed. Please refer to the reporting of this execution for more details.}
 
 @endpoint PUT /v2/user/catalogs/{storeId}/importations/{executionId}/customColumns/{columnId}
-@required {storeId: any, executionId: any, columnId: any, request: map}
-@returns(204)
-@errors {404, 409}
+@desc Create or replace a custom column
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation, columnId: any # The custom column identifier, request: map}
+@returns(204) Custom column configured. This operation has no impact on the current catalog until you commit the catalog importation.
+@errors {404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution., 409: Occurs when this importation is already finished.}
 
 @endpoint DELETE /v2/user/catalogs/{storeId}/importations/{executionId}/customColumns/{columnId}
-@required {storeId: any, executionId: any, columnId: any}
-@returns(204)
-@errors {404}
+@desc Delete Custom Column
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation, columnId: any # The custom column identifier}
+@returns(204) When the custom column for this importation is correctly deleted
+@errors {404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/importations/{executionId}/customColumns/{columnId}/map
-@required {storeId: any, executionId: any, columnId: any, request: map}
-@returns(204)
-@errors {404, 409}
+@desc Map custom column to a BeezUP column
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation, columnId: any # The custom column identifier, request: map}
+@returns(204) Custom column mapped. This operation has no impact on the current catalog until you commit the catalog importation.
+@errors {404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution. Occurs when a catalog column is not found., 409: Occurs when this importation is already finished.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/importations/{executionId}/customColumns/{columnId}/unmap
-@required {storeId: any, executionId: any, columnId: any}
-@returns(204)
-@errors {404, 409}
+@desc Unmap custom column
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation, columnId: any # The custom column identifier}
+@returns(204) Custom column unmapped. This operation has no impact on the current catalog until you commit the catalog importation.
+@errors {404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution. Occurs when a catalog column is not found., 409: Occurs when this importation is already finished.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/importations/{executionId}/products/list
-@required {storeId: any, executionId: any, request: map}
-@returns(200)
-@errors {404, 409}
+@desc Importation Get Products Report
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation, request: map}
+@returns(200) Get Products Report Response
+@errors {404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution., 409: Report Not ready Yet. Please retry in a few minutes.}
 
 @endpoint GET /v2/user/catalogs/{storeId}/importations/{executionId}/report
-@required {storeId: any, executionId: any}
-@returns(200)
-@errors {404, 409}
+@desc Importation Get Report
+@required {storeId: any # Your store identifier, executionId: any # The execution identifier of you catalog importation}
+@returns(200) Get Report Response
+@errors {404: Occurs when a user tries to work on the wrong store. Occurs when the message concerns the wrong execution., 409: Report Not ready Yet. Please retry in a few minutes.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/autoImport/activate
-@required {storeId: any}
-@returns(204)
-@errors {400, 404, 409}
+@desc Activate the auto importation of the last successful manual catalog importation.
+@required {storeId: any # Your store identifier}
+@returns(204) Auto import activated
+@errors {400: Occurs when the user tries to auto import a local file., 404: Occurs when a user tries to work on the wrong store., 409: When a catalog importation is already in progress!}
 
 @endpoint GET /v2/user/catalogs/{storeId}/autoImport
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc Get the auto import configuration
+@required {storeId: any # Your store identifier}
+@returns(200) Auto import configuration
+@errors {404: StoreId or Auto Import configuration not found}
 
 @endpoint DELETE /v2/user/catalogs/{storeId}/autoImport
-@required {storeId: any}
-@returns(204)
-@errors {400, 404}
+@desc Delete Auto Import
+@required {storeId: any # Your store identifier}
+@returns(204) Auto import deleted
+@errors {400: Occurs when the catalog auto import is not configured., 404: Occurs when a user tries to work on the wrong store.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/autoImport/start
-@required {storeId: any}
-@returns(202)
-@errors {400, 404, 409}
+@desc Start Auto Import Manually
+@required {storeId: any # Your store identifier}
+@returns(202) Catalog importation started
+@errors {400: Occurs when the catalog auto import is not configured. When a user column name is duplicate. When the catalog column name are duplicate. When the BeezUP column have duplicate mapping. Occurs when the required beezup column is not mapped to any column. Occurs when the category hierarchy is not correctly mapped. Occurs when the duplicate strategy on {catalogColumnName} is not found. When the user tries to import to ofen the catalog file to download count max limit has been reached., 404: Occurs when a user tries to work on the wrong store., 409: An importation is already in progress}
 
 @endpoint POST /v2/user/catalogs/{storeId}/autoImport/pause
-@required {storeId: any}
-@returns(204)
-@errors {400, 404}
+@desc Pause Auto Import
+@required {storeId: any # Your store identifier}
+@returns(204) Auto import paused
+@errors {400: Occurs when the catalog auto import is not configured., 404: Occurs when a user tries to work on the wrong store.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/autoImport/resume
-@required {storeId: any}
-@returns(204)
-@errors {400, 404}
+@desc Resume Auto Import
+@required {storeId: any # Your store identifier}
+@returns(204) Auto import resumed
+@errors {400: Occurs when the catalog auto import is not configured., 404: Occurs when a user tries to work on the wrong store.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/autoImport/scheduling/interval
-@required {storeId: any, request: map}
-@returns(204)
-@errors {400, 404}
+@desc Configure Auto Import Interval
+@required {storeId: any # Your store identifier, request: map}
+@returns(204) Auto import scheduling interval saved
+@errors {400: When the min catalog Auto Import scheduling interval delay has been reached. When the max catalog Auto Import count has been reached., 404: Occurs when a user tries to work on the wrong store.}
 
 @endpoint POST /v2/user/catalogs/{storeId}/autoImport/scheduling/schedules
-@required {storeId: any, request: map}
-@returns(204)
-@errors {400, 404}
+@desc Configure Auto Import Schedules
+@required {storeId: any # Your store identifier, request: map}
+@returns(204) Auto import scheduling saved
+@errors {400: When the max catalog Auto Import count has been reached. When the min catalog Auto Import scheduling interval delay has been reached. When the max catalog Auto Import count has been reached., 404: Occurs when a user tries to work on the wrong store.}
 
 @endpoint GET /v2/user/catalogs/{storeId}/replication/to
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc [PREVIEW] [Mocked] Get Store's Replicated To Configuration
+@required {storeId: any # Your store identifier}
+@returns(200) Get Store's Replicated To Configuration
+@errors {404: StoreId not found}
 
 @endpoint PUT /v2/user/catalogs/{storeId}/replication/to
-@required {storeId: any, request: [any]}
-@returns(202)
-@errors {400, 401, 404}
+@desc [PREVIEW] [Mocked] Put Store's Replicated To Configuration
+@required {storeId: any # Your store identifier, request: [any]}
+@returns(202) Request accepted
+@errors {400: Bad Request, 401: Unauthorized, 404: StoreId not found}
 
 @endpoint PATCH /v2/user/catalogs/{storeId}/replication/to
-@required {storeId: any, request: any}
-@returns(202)
-@errors {400, 401, 404}
+@desc [PREVIEW] [Mocked] Patch Store's Replicated To Configuration
+@required {storeId: any # Your store identifier, request: any}
+@returns(202) Request accepted
+@errors {400: Bad Request, 401: Unauthorized, 404: StoreId not found}
 
 @endpoint GET /v2/user/catalogs/{storeId}/replication/from
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc [PREVIEW] [Mocked] Get Store's Replicated From Configuration
+@required {storeId: any # Your store identifier}
+@returns(200) Store's Replicated From Configuration retrieved
+@errors {404: StoreId not found}
 
 @endpoint GET /v2/user/catalogs/{storeId}/replication/logs
-@required {storeId: any}
-@optional {executionId: any, minReplicationUtcDate: any, maxReplicationUtcDate: any}
-@returns(200)
-@errors {404}
+@desc [PREVIEW] [Mocked] Get Replication Logs - Can be filtered by ExecutionId
+@required {storeId: any # Your store identifier}
+@optional {executionId: any # The execution identifier, minReplicationUtcDate: any # The minimum date for the logs. Cannot be lower than current date. Default is current date., maxReplicationUtcDate: any # The maximum date for the logs. Cannot be greater than 31 days from current date. Default is 2 days from current date.}
+@returns(200) Get Replication Logs
+@errors {404: StoreId not found}
 
 @endpoint GET /v2/user/channels/
-@required {storeId: any}
-@returns(200)
+@desc List all available channel for this store
+@required {storeId: any # The store identifier}
+@returns(200) Available channel list for this store
 
 @endpoint GET /v2/user/channels/{channelId}
-@required {channelId: any}
-@returns(200)
+@desc Get channel information
+@required {channelId: any # The channel identifier}
+@returns(200) Channel information
 
 @endpoint GET /v2/user/channels/{channelId}/categories
-@required {channelId: any, Accept-Encoding: any}
-@returns(200)
+@desc Get channel categories
+@required {channelId: any # The channel identifier, Accept-Encoding: any # Indicates that the client accepts that the response will be compressed to reduce traffic size.}
+@returns(200) Channel categories
 
 @endpoint POST /v2/user/channels/{channelId}/columns
-@required {channelId: any, Accept-Encoding: any}
-@optional {request: [str(guid)]}
-@returns(200)
+@desc Get channel columns
+@required {channelId: any # The channel identifier, Accept-Encoding: any # Indicates that the client accepts that the response will be compressed to reduce traffic size.}
+@optional {request: [str(guid)] # Allow you to filter the channel column identifier list your want to get}
+@returns(200) Channel columns
 
 @endpoint GET /v2/user/channelCatalogs/
-@optional {storeId: any}
-@returns(200)
+@desc List all your current channel catalogs
+@optional {storeId: any # The store identifier}
+@returns(200) OK
 
 @endpoint POST /v2/user/channelCatalogs/
+@desc Add a new channel catalog
 @required {request: map}
-@returns(201)
-@errors {404}
+@returns(201) When the channel has been successfully added for this store
+@errors {404: StoreId not found or not authorized}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}
-@required {channelCatalogId: any}
-@returns(200)
-@errors {404}
+@desc Get the channel catalog information
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(200) Channel catalog
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint DELETE /v2/user/channelCatalogs/{channelCatalogId}
-@required {channelCatalogId: any}
-@returns(204)
-@errors {404}
+@desc Delete the channel catalog
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(204) Channel catalog deleted
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint GET /v2/user/channelCatalogs/filterOperators
-@returns(200)
+@desc Get channel catalog filter operators
+@returns(200) Channel catalog  filter operator list
 
 @endpoint POST /v2/user/channelCatalogs/{channelCatalogId}/enable
-@required {channelCatalogId: any}
-@returns(204)
-@errors {403, 404, 402}
+@desc Enable a channel catalog
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(204) Channel catalog enabled
+@errors {403: Occurs when a user tries to enable a non-configured ChannelCatalog., 404: Occurs when a user tries to work on the wrong ChannelCatalogId., 402: You have to upgrade your offer to activate this channel catalog}
 
 @endpoint POST /v2/user/channelCatalogs/{channelCatalogId}/disable
-@required {channelCatalogId: any}
-@returns(204)
-@errors {404}
+@desc Disable a channel catalog
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(204) Channel catalog disabled
+@errors {404: Occurs when a user tries to work on the wrong ChanelCatalogId.}
 
 @endpoint PUT /v2/user/channelCatalogs/{channelCatalogId}/settings/general
-@required {channelCatalogId: any, request: map}
-@returns(204)
-@errors {404}
+@desc Configure channel catalog general settings
+@required {channelCatalogId: any # The channel catalog identifier, request: map}
+@returns(204) Channel catalog general settings configured
+@errors {404: Occurs when a user tries to work on the wrong ChanelCatalogId.}
 
 @endpoint PUT /v2/user/channelCatalogs/{channelCatalogId}/settings/cost
-@required {channelCatalogId: any, request: map}
-@returns(204)
-@errors {404}
+@desc Configure channel catalog cost settings
+@required {channelCatalogId: any # The channel catalog identifier, request: map}
+@returns(204) Channel catalog cost settings configured
+@errors {404: Occurs when a user tries to work on the wrong ChanelCatalogId.}
 
 @endpoint PUT /v2/user/channelCatalogs/{channelCatalogId}/columnMappings
-@required {channelCatalogId: any, request: [map]}
-@returns(204)
-@errors {404}
+@desc Configure channel catalog column mappings
+@required {channelCatalogId: any # The channel catalog identifier, request: [map]}
+@returns(204) Channel catalog column mappings configured
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}/categories
-@required {channelCatalogId: any}
-@returns(200)
-@errors {404}
+@desc Get channel catalog categories
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(200) Channel catalog category mappings
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint POST /v2/user/channelCatalogs/{channelCatalogId}/categories/disableMapping
-@required {channelCatalogId: any}
-@returns(204)
-@errors {404}
+@desc Disable a channel catalog category mapping
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(204) Channel catalog category mapping disabled
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint POST /v2/user/channelCatalogs/{channelCatalogId}/categories/reenableMapping
-@required {channelCatalogId: any}
-@returns(204)
-@errors {404}
+@desc Reenable a channel catalog category mapping
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(204) Channel catalog category mapping reenabled
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint POST /v2/user/channelCatalogs/{channelCatalogId}/categories/configure
-@required {channelCatalogId: any, request: map}
-@returns(204)
-@errors {400, 404}
+@desc Configure channel catalog category
+@required {channelCatalogId: any # The channel catalog identifier, request: map}
+@returns(204) Channel catalog category configured
+@errors {400: BadRequest. See Error Response for more details, 404: ChannelCatalogId not found or not authorized}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}/exclusionFilters
-@required {channelCatalogId: any}
-@returns(200)
-@errors {404}
+@desc Get channel catalog exclusion filters
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(200) Channel catalog exclusion filter list
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint PUT /v2/user/channelCatalogs/{channelCatalogId}/exclusionFilters
-@required {channelCatalogId: any, request: [map]}
-@returns(204)
-@errors {400, 404}
+@desc Configure channel catalog exclusion filters
+@required {channelCatalogId: any # The channel catalog identifier, request: [map]}
+@returns(204) Channel catalog exclusion filter list configured
+@errors {400: BadRequest. See Error Response for more details, 404: ChannelCatalogId not found or not authorized}
 
 @endpoint POST /v2/user/channelCatalogs/{channelCatalogId}/products
-@required {channelCatalogId: any, request: map}
-@returns(200)
-@errors {404}
+@desc Get channel catalog product information list
+@required {channelCatalogId: any # The channel catalog identifier, request: map # The channel catalog product list filter}
+@returns(200) Channel catalog product information
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint POST /v2/user/channelCatalogs/{channelCatalogId}/products/export
-@required {channelCatalogId: any, format: any, request: map}
-@returns(200)
-@errors {404}
+@desc Export channel catalog product information list
+@required {channelCatalogId: any # The channel catalog identifier, format: any # The file type of the exportation, request: map # The channel catalog product list filter}
+@returns(200) Channel catalog product information list exported
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}/products/counters
-@required {channelCatalogId: any}
-@returns(200)
-@errors {404}
+@desc Get channel catalog products' counters
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(200) Channel catalog products' counters
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint POST /v2/user/channelCatalogs/products
+@desc Get channel catalog products related to these channel catalogs
 @required {request: map}
-@returns(200)
-@errors {404}
+@returns(200) The channel catalog product by channel catalog
+@errors {404: ProductId not found or not authorized}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}/products/{productId}
-@required {channelCatalogId: any, productId: any}
-@returns(200)
-@errors {404}
+@desc Get channel catalog product information
+@required {channelCatalogId: any # The channel catalog identifier, productId: any # The product identifier}
+@returns(200) Channel catalog product information
+@errors {404: ChannelCatalog or ProductId not found or not authorized}
 
 @endpoint PUT /v2/user/channelCatalogs/{channelCatalogId}/products/{productId}/overrides
-@required {channelCatalogId: any, productId: any, request: map}
-@returns(204)
-@errors {400, 404}
+@desc Override channel catalog product values
+@required {channelCatalogId: any # The channel catalog identifier, productId: any # The product identifier, request: map}
+@returns(204) Channel catalog product overriden
+@errors {400: BadRequest. See Error Response for more details, 404: ChannelCatalogId or ProductId not found or not authorized}
 
 @endpoint DELETE /v2/user/channelCatalogs/{channelCatalogId}/products/{productId}/overrides/{channelColumnId}
-@required {channelCatalogId: any, productId: any, channelColumnId: any}
-@returns(204)
-@errors {404}
+@desc Delete a specific channel catalog product value override
+@required {channelCatalogId: any # The channel catalog identifier, productId: any # The product identifier, channelColumnId: any # The channel column identifier}
+@returns(204) Channel catalog product value override deleted
+@errors {404: ChannelCatalogId or ProductId not found or not authorized}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}/products/{productId}/overrides/copy
-@required {channelCatalogId: any, productId: any}
-@returns(204)
-@errors {404}
+@desc Get channel catalog product value override compatibilities status
+@required {channelCatalogId: any # The channel catalog identifier, productId: any # The product identifier}
+@returns(204) placeholder. will be completed soon.
+@errors {404: ChannelCatalog or ProductId not found or not authorized}
 
 @endpoint POST /v2/user/channelCatalogs/{channelCatalogId}/products/{productId}/overrides/copy
-@required {channelCatalogId: any, productId: any}
-@returns(204)
-@errors {404}
+@desc Copy channel catalog product value override
+@required {channelCatalogId: any # The channel catalog identifier, productId: any # The product identifier}
+@returns(204) Channel catalog product value override deleted
+@errors {404: ChannelCatalogId or ProductId not found or not authorized}
 
 @endpoint POST /v2/user/channelCatalogs/{channelCatalogId}/products/{productId}/disable
-@required {channelCatalogId: any, productId: any}
-@returns(204)
-@errors {404}
+@desc Disable channel catalog product
+@required {channelCatalogId: any # The channel catalog identifier, productId: any # The product identifier}
+@returns(204) Channel catalog product disabled
+@errors {404: ChannelCatalogId Or ProductId not found or not authorized}
 
 @endpoint POST /v2/user/channelCatalogs/{channelCatalogId}/products/{productId}/reenable
-@required {channelCatalogId: any, productId: any}
-@returns(204)
-@errors {404}
+@desc Reenable channel catalog product
+@required {channelCatalogId: any # The channel catalog identifier, productId: any # The product identifier}
+@returns(204) Channel catalog product reenabled
+@errors {404: ChannelCatalogId or ProductId not found or not authorized}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}/exportations/cache
-@required {channelCatalogId: any}
-@returns(200)
-@errors {404}
+@desc Get the exportation cache information
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(200) Channel catalog exportation cache information
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint POST /v2/user/channelCatalogs/{channelCatalogId}/exportations/cache/clear
-@required {channelCatalogId: any}
-@returns(204)
-@errors {404}
+@desc Clear the exportation cache
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(204) Channel catalog exportation cache cleared
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}/exportations/history
-@required {channelCatalogId: any, pageNumber: any, pageSize: any}
-@returns(200)
-@errors {404}
+@desc Get the exportation history
+@required {channelCatalogId: any # The channel catalog identifier, pageNumber: any # The page number you want to get, pageSize: any # The entry count you want to get}
+@returns(200) Channel catalog exportation history
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}/attributes
-@required {channelCatalogId: any}
-@returns(200)
-@errors {404}
+@desc Get the Concerned Channel Catalog Attributes
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(200) Concerned Channel Attributes
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}/attributes/counters
-@required {channelCatalogId: any}
-@returns(200)
-@errors {404}
+@desc Get Attributes Value Mapping Counters
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(200) Channel Attributes Counters
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}/attributes/{channelAttributeId}/mapping
-@required {channelCatalogId: any, channelAttributeId: any}
-@returns(200)
-@errors {404}
+@desc Get the Channel Catalog Attribute Value Mapping
+@required {channelCatalogId: any # The channel catalog identifier, channelAttributeId: any # The channel attribute identifier}
+@returns(200) Channel Attribute Value Mapping
+@errors {404: ChannelCatalogId not found or not authorized}
 
 @endpoint POST /v2/user/channelCatalogs/{channelCatalogId}/attributes/{channelAttributeId}/mapping
-@required {channelCatalogId: any, channelAttributeId: any, request: map}
-@returns(204)
-@errors {400, 404}
+@desc Set the Channel Catalog Attribute Value Mapping
+@required {channelCatalogId: any # The channel catalog identifier, channelAttributeId: any # The channel attribute identifier, request: map}
+@returns(204) Channel Attribute Value Mapping Saved
+@errors {400: Bad Request, 404: ChannelCatalogId not found or not authorized}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}/replication/to
-@required {channelCatalogId: any}
-@returns(200)
-@errors {404}
+@desc [PREVIEW] [Mocked] Get ChannelCatalog's Replicated To Configuration
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(200) Get ChannelCatalog's Replicated To Configuration
+@errors {404: ChannelCatalogId not found}
 
 @endpoint PUT /v2/user/channelCatalogs/{channelCatalogId}/replication/to
-@required {channelCatalogId: any, request: [any]}
-@returns(202)
-@errors {400, 401, 404}
+@desc [PREVIEW] [Mocked] Put ChannelCatalog's Replicated To Configuration
+@required {channelCatalogId: any # The channel catalog identifier, request: [any]}
+@returns(202) Request accepted
+@errors {400: Bad Request, 401: Unauthorized, 404: ChannelCatalogId not found}
 
 @endpoint PATCH /v2/user/channelCatalogs/{channelCatalogId}/replication/to
-@required {channelCatalogId: any, request: any}
-@returns(202)
-@errors {400, 401, 404}
+@desc [PREVIEW] [Mocked] Patch ChannelCatalog's Replicated To Configuration
+@required {channelCatalogId: any # The channel catalog identifier, request: any}
+@returns(202) Request accepted
+@errors {400: Bad Request, 401: Unauthorized, 404: ChannelCatalogId not found}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}/replication/from
-@required {channelCatalogId: any}
-@returns(200)
-@errors {404}
+@desc [PREVIEW] [Mocked] Get ChannelCatalog's Replicated From Configuration
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(200) ChannelCatalog's Replicated From Configuration retrieved
+@errors {404: ChannelCatalogId not found}
 
 @endpoint GET /v2/user/channelCatalogs/{channelCatalogId}/replication/logs
-@required {channelCatalogId: any}
-@optional {executionId: any, minReplicationUtcDate: any, maxReplicationUtcDate: any}
-@returns(200)
-@errors {404}
+@desc [PREVIEW] [Mocked] Get Replication Logs - Can be filtered by ExecutionId.
+@required {channelCatalogId: any # The channel catalog identifier}
+@optional {executionId: any # The execution identifier, minReplicationUtcDate: any # The minimum date for the logs. Cannot be lower than current date. Default is current date., maxReplicationUtcDate: any # The maximum date for the logs. Cannot be greater than 31 days from current date. Default is 2 days from current date.}
+@returns(200) Get Replication Logs
+@errors {404: ChannelCatalogId not found}
 
 @endpoint GET /v2/user/marketplaces/channelcatalogs/
-@optional {storeId: any}
-@returns(200)
-@errors {404}
+@desc Get your marketplace channel catalog list
+@optional {storeId: any # The StoreId to filter by}
+@returns(200) Marketplace channel catalog list
+@errors {404: Store not found}
 
 @endpoint POST /v2/user/marketplaces/channelcatalogs/publications/{marketplaceTechnicalCode}/{accountId}/publish
-@required {marketplaceTechnicalCode: any, accountId: any, request: map}
-@returns(202)
-@errors {400, 404, 503}
+@desc Launch a publication of the catalog to the marketplace
+@required {marketplaceTechnicalCode: any # Marketplace Technical Code to query (required), accountId: any # Account Id to query (required), request: map}
+@returns(202) Publication request accepted
+@errors {400: One or more channel catalog marketplace property keys or values are invalid for requested marketplace channel catalog. See response for details., 404: Requested account, marketplace or authorization for current user not found, 503: The marketplace configuration related to this channel catalog is currently in progress. Please retry later.}
 
 @endpoint GET /v2/user/marketplaces/channelcatalogs/publications/{marketplaceTechnicalCode}/{accountId}/history
-@required {marketplaceTechnicalCode: any, accountId: any, publicationTypes: any}
-@optional {channelCatalogId: any, count: any}
-@returns(200)
-@errors {400, 404, 503}
+@desc Fetch the publication history for an account, sorted by descending start date
+@required {marketplaceTechnicalCode: any # Marketplace Technical Code to query (required), accountId: any # Account Id to query (required), publicationTypes: any # Publication types by which to filter (optional)}
+@optional {channelCatalogId: any # Channel Catalog Id by which to filter (optional), count: any # Amount of entries to fetch (optional, default set to 10)}
+@returns(200) Successfully fetched channel catalog settings
+@errors {400: Feature only available for Amazon, Ebay, CDiscount and Mirakl marketplaces, 404: Requested account, marketplace or authorization for current user not found, 503: The marketplace configuration related to this channel catalog is currently in progress. Please retry later.}
 
 @endpoint GET /v2/user/marketplaces/channelcatalogs/{channelCatalogId}/properties
+@desc Get the marketplace properties for a channel catalog
 @required {channelCatalogId: any, redirectionPageUrl: any}
-@optional {Accept-Language: any}
-@returns(200)
-@errors {404, 503}
+@optional {Accept-Language: any # Indicates that the client accepts the following languages.}
+@returns(200) Successfully fetched channel catalog properties
+@errors {404: Marketplace channel Catalog not found, 503: The marketplace configuration related to this channel catalog is currently in progress. Please retry later.}
 
 @endpoint GET /v2/user/marketplaces/channelcatalogs/{channelCatalogId}/settings
-@required {channelCatalogId: any}
-@returns(200)
-@errors {404, 503}
+@desc Get the marketplace settings for a channel catalog
+@required {channelCatalogId: any # Channel Catalog Id to query (required)}
+@returns(200) Successfully fetched channel catalog settings
+@errors {404: Marketplace channel catalog not found, 503: The marketplace configuration related to this channel catalog is currently in progress. Please retry later.}
 
 @endpoint POST /v2/user/marketplaces/channelcatalogs/{channelCatalogId}/settings
-@required {channelCatalogId: any, model: map}
-@returns(204)
-@errors {400, 404, 503}
+@desc Save new marketplace settings for a channel catalog
+@required {channelCatalogId: any # Channel Catalog Id to query, model: map # Settings to save}
+@returns(204) Successfully saved channel catalog marketplace settings
+@errors {400: One or more channel catalog marketplace property keys or values are invalid for requested marketplace channel catalog. See response for details., 404: Marketplace channel catalog not found, 503: The marketplace configuration related to this channel catalog is currently in progress. Please retry later.}
 
 @endpoint GET /v2/user/marketplaces/orders/
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304}
+@desc [DEPRECATED] Get all actions you can do on the order API
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Order index
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !}
 
 @endpoint GET /v2/user/marketplaces/orders/status
-@optional {storeId: any, If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc [DEPRECATED] Get current synchronization status between your marketplaces and BeezUP accounts
+@optional {storeId: any # The StoreId to filter by, If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Successfully fetched current synchronization status
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Requested Store could not be found}
 
 @endpoint POST /v2/user/marketplaces/orders/harvest
-@optional {storeId: any}
-@returns(202)
-@errors {404, 409}
+@desc [DEPRECATED] Send harvest request to all your marketplaces
+@optional {storeId: any # The StoreId to filter by}
+@returns(202) Successfully sent harvest request to all marketplaces
+@errors {404: Requested Store could not be found, 409: Failed to send harvest request because allowed rate limits have been exceeded}
 
 @endpoint GET /v2/user/marketplaces/orders/automaticTransitions
-@optional {storeId: any, If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc Get list of configured automatic Order status transitions
+@optional {storeId: any # The StoreId to filter by, If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Successfully fetched list of configured automatic Order status transitions
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Requested Store could not be found}
 
 @endpoint POST /v2/user/marketplaces/orders/automaticTransitions
+@desc Configure new or existing automatic Order status transition
 @required {request: map}
-@returns(204)
-@errors {400}
+@returns(204) Successfully confirugred new or existing automatic Order status transition
+@errors {400: Requested automatic Order status transition could not be configured}
 
 @endpoint POST /v2/user/marketplaces/orders/list/full
-@required {Accept-Encoding: any, request: any}
-@returns(200)
-@errors {400}
+@desc [DEPRECATED] Get a paginated list of all Orders with all Order and Order Item(s) properties
+@required {Accept-Encoding: any # Allows the client to indicate wether it accepts a compressed encoding to reduce traffic size, request: any}
+@returns(200) Successfully fetched the full list of Orders
+@errors {400: Could not process request for given parameters values. Please check error message for more details.}
 
 @endpoint POST /v2/user/marketplaces/orders/list/light
+@desc [DEPRECATED] Get a paginated list of all Orders without details
 @required {request: any}
-@returns(200)
-@errors {400}
+@returns(200) Successfully fetched the list of Orders
+@errors {400: Could not process request for given parameters values. Please check error message for more details.}
 
 @endpoint GET /v2/user/marketplaces/orders/exportations
-@required {pageNumber: any, pageSize: any, storeId: any}
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304, 400}
+@desc Get a paginated list of Order report exportations
+@required {pageNumber: any # The page number you want to get, pageSize: any # The entry count you want to get, storeId: any # The store identifier to regroup the order exportations}
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Successfully fetched the list of Order report exportations
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 400: Could not process request for given parameters values. Please check error message for more details.}
 
 @endpoint POST /v2/user/marketplaces/orders/exportations
+@desc Request a new Order report exportation to be generated
 @required {request: map}
-@returns(202)
-@errors {400, 404}
+@returns(202) Successfully requested new Order report exportation generation
+@errors {400: Could not process request for given parameters values. Please check error message for more details., 404: No orders have been found for this request.}
 
 @endpoint POST /v2/user/marketplaces/orders/batches/setMerchantOrderInfos
+@desc [DEPRECATED] Send a batch of operations to set an Order's merchant information  (max 100 items per call)
 @required {request: map}
-@returns(202)
-@errors {400}
+@returns(202) Succesfully received and processed batched operations. Please check response to see the status per operation.
+@errors {400: Requested too many batch operations}
 
 @endpoint POST /v2/user/marketplaces/orders/batches/clearMerchantOrderInfos
+@desc [DEPRECATED] Send a batch of operations to clear an Order's merchant information (max 100 items per call)
 @required {request: map}
-@returns(202)
-@errors {400}
+@returns(202) Succesfully received and processed batched operations. Please check response to see the status per operation.
+@errors {400: Requested too many batch operations}
 
 @endpoint POST /v2/user/marketplaces/orders/batches/changeOrders/{changeOrderType}
-@required {changeOrderType: any, userName: any, request: map}
-@optional {testMode: any}
-@returns(202)
-@errors {400}
+@desc [DEPRECATED] Send a batch of operations to change your marketplace Order information: accept, ship, etc.  (max 100 items per call)
+@required {changeOrderType: any # The Order change type, userName: any # Sometimes the user in the e-commerce application is not the same as user associated with the current subscription key. We recommend providing your application's user login., request: map}
+@optional {testMode: any # If true, the operation will be not be sent to marketplace. But the validation will be taken in account.}
+@returns(202) Succesfully received and processed batched operations. Please check response to see the status per operation.
+@errors {400: Requested too many batch operations}
 
 @endpoint HEAD /v2/user/marketplaces/orders/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any}
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc [DEPRECATED] DEPRECATED - Get the meta information about the order (ETag, Last-Modified)
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier}
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Successfully fetched Order and Order Item(s) properties
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Requested Order could not be found}
 
 @endpoint GET /v2/user/marketplaces/orders/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any}
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc [DEPRECATED] DEPRECATED - Get full Order and Order Item(s) properties
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier}
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Successfully fetched Order and Order Item(s) properties
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Requested Order could not be found}
 
 @endpoint GET /v2/user/marketplaces/orders/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/history
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any}
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc [DEPRECATED] Get an Order's harvest and change history
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier}
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Successfully fetched Order history
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Requested Order could not be found}
 
 @endpoint POST /v2/user/marketplaces/orders/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/harvest
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any}
-@returns(202)
-@errors {404, 409}
+@desc [DEPRECATED] Send harvest request for a single Order
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier}
+@returns(202) Successfully sent Order harvest request
+@errors {404: Requested Order could not be found, 409: Failed to send harvest request because allowed rate limits have been exceeded}
 
 @endpoint POST /v2/user/marketplaces/orders/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/setMerchantOrderInfo
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any, request: map}
-@returns(204)
-@errors {400, 404}
+@desc [DEPRECATED] Set an Order's merchant information
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier, request: map}
+@returns(204) Successfully set Order merchant order info set
+@errors {400: Could not update Order merchant information. Please see body for more information., 404: Requested Order could not be found}
 
 @endpoint POST /v2/user/marketplaces/orders/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/clearMerchantOrderInfo
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any}
-@returns(204)
-@errors {400, 404}
+@desc [DEPRECATED] Clear an Order's merchant information
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier}
+@returns(204) Successfully cleared Order merchant order info set
+@errors {400: Could not update Order merchant information. Please see body for more information., 404: Requested Order could not be found}
 
 @endpoint POST /v2/user/marketplaces/orders/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/{changeOrderType}
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any, changeOrderType: any, userName: any, If-Match: any}
-@optional {testMode: any, request: map}
-@returns(202)
-@errors {400, 404, 409, 412}
+@desc [DEPRECATED] Change your marketplace Order Information (accept, ship, etc.)
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier, changeOrderType: any # The Order change type, userName: any # Sometimes the user in the e-commerce application is not the same as user associated with the current subscription key. We recommend providing your application's user login., If-Match: any # ETag value to identify the last known version of requested resource.\ To ensure that you are making a change on the lastest version of the resource.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@optional {testMode: any # If true, the operation will be not be sent to marketplace. But the validation will be taken in account., request: map}
+@returns(202) Order change request accepted
+@errors {400: Invalid order change request, could not be send to the marketplace. Please check the body of this request., 404: Requested Order could not be found, 409: Already processing a change request for this Order.\ Please refresh your clients Order information and retry later., 412: The ETag sent in the http header If-Match did not match with the current version. Please refresh the information related to this resource.}
 
 @endgroup
 
 @group orders
 @endpoint GET /orders/v3//lov/orderManagementReadyMarketplaceBusinessCode
-@optional {Accept-Language: any, storeIds: any}
-@returns(200)
-@errors {304, 404}
+@desc Get the list of MarketplaceBusinessCode ready for Order Management
+@optional {Accept-Language: any # Indicates that the client accepts the following languages., storeIds: any # StoredIds to filter}
+@returns(200) Successfully fetched current synchronization status
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Requested Store could not be found}
 
 @endpoint GET /orders/v3//status
-@optional {If-None-Match: any, storeIds: any}
-@returns(200)
-@errors {304, 400}
+@desc Get current synchronization status between your marketplaces and BeezUP accounts
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3, storeIds: any # StoredIds to filter}
+@returns(200) Successfully fetched the list of MarketplaceBusinessCode ready for Order Management
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 400: Invalid store id}
 
 @endpoint POST /orders/v3//harvest
-@optional {storeId: any}
-@returns(202)
-@errors {404, 409}
+@desc Send harvest request to all your marketplaces
+@optional {storeId: any # The StoreId to filter by}
+@returns(202) Successfully sent harvest request to all marketplaces
+@errors {404: Requested Store could not be found, 409: Failed to send harvest request because allowed rate limits have been exceeded}
 
 @endpoint POST /orders/v3//list/full
-@required {Accept-Encoding: any, request: any}
-@returns(200)
-@errors {400}
+@desc Get a paginated list of all Orders with all Order and Order Item(s) properties
+@required {Accept-Encoding: any # Allows the client to indicate wether it accepts a compressed encoding to reduce traffic size, request: any}
+@returns(200) Successfully fetched the full list of Orders
+@errors {400: Could not process request for given parameters values. Please check error message for more details.}
 
 @endpoint POST /orders/v3//list/light
+@desc Get a paginated list of all Orders without details
 @required {request: any}
-@returns(200)
-@errors {400}
+@returns(200) Successfully fetched the list of Orders
+@errors {400: Could not process request for given parameters values. Please check error message for more details.}
 
 @endpoint HEAD /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any}
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc Get the meta information about the order (ETag, Last-Modified)
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier}
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Successfully fetched Order and Order Item(s) properties
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Requested Order could not be found}
 
 @endpoint GET /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any}
-@optional {If-None-Match: any}
-@returns(200)
-@errors {304, 404}
+@desc Get full Order and Order Item(s) properties
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier}
+@optional {If-None-Match: any # ETag value to identify the last known version of requested resource.\ To avoid useless exchange, we recommend you to indicate the ETag you previously got from this operation.\ If the ETag value does not match the response will be 200 to give you a new content, otherwise the response will be: 304 Not Modified, without any content.\ For more details go to this link: http://tools.ietf.org/html/rfc7232#section-2.3}
+@returns(200) Successfully fetched Order and Order Item(s) properties
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Requested Order could not be found}
 
 @endpoint POST /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/{changeOrderType}
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any, changeOrderType: any, userName: any}
-@optional {testMode: any, request: map}
-@returns(202)
-@errors {400, 404, 409, 412, 503}
+@desc Change your marketplace Order Information (accept, ship, etc.)
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier, changeOrderType: any # The Order change type, userName: any # Sometimes the user in the e-commerce application is not the same as user associated with the current subscription key. We recommend providing your application's user login.}
+@optional {testMode: any # If true, the operation will be not be sent to marketplace. But the validation will be taken in account., request: map}
+@returns(202) Order change request accepted
+@errors {400: Invalid order change request, could not be send to the marketplace. Please check the body of this request., 404: Requested Order could not be found, 409: Already processing a change request for this Order.\ Please refresh your clients Order information and retry later., 412: The ETag sent in the http header If-Match did not match with the current version. Please refresh the information related to this resource., 503: Service could not perform the request}
 
 @endpoint POST /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/closeIncident
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any, userName: any}
-@optional {testMode: any, request: map}
-@returns(202)
-@errors {400, 503}
+@desc Mark an order incident as resolved
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier, userName: any # Sometimes the user in the e-commerce application is not the same as user associated with the current subscription key. We recommend providing your application's user login.}
+@optional {testMode: any # If true, the operation will be not be sent to marketplace. But the validation will be taken in account., request: map}
+@returns(202) Order incident closed successfully
+@errors {400: Invalid order change request, could not be send to the marketplace. Please check the body of this request., 503: Service could not perform the request}
 
 @endpoint GET /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/history
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any}
-@returns(200)
-@errors {304, 404}
+@desc Get an Order's harvest and change history
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier}
+@returns(200) Successfully fetched Order history
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Requested Order could not be found}
 
 @endpoint POST /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/harvest
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any}
-@returns(202)
-@errors {404, 409}
+@desc Send harvest request for a single Order
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier}
+@returns(202) Successfully sent Order harvest request
+@errors {404: Requested Order could not be found, 409: Failed to send harvest request because allowed rate limits have been exceeded}
 
 @endpoint POST /orders/v3//{marketplaceTechnicalCode}/{accountId}/harvest
-@required {marketplaceTechnicalCode: any, accountId: any}
+@desc Send harvest request for an Account
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any}
 @optional {marketplaceOrderId: any, beezUPOrderId: any}
-@returns(202)
-@errors {404, 409}
+@returns(202) Successfully sent Order harvest request
+@errors {404: Requested Account Or beezUPOrderId could not be found, 409: Failed to send harvest request because allowed rate limits have been exceeded}
 
 @endpoint GET /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/history/{orderChangeExecutionUUID}
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any, orderChangeExecutionUUID: any}
-@returns(200)
-@errors {304, 404}
+@desc Get the order change reporting
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier, orderChangeExecutionUUID: any # The order change execution id}
+@returns(200) Successfully fetched Order change reporting
+@errors {304: The ETag sent in the http header If-None-Match did not change. So you are up to date !, 404: Requested Order could not be found}
 
 @endpoint POST /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/setMerchantOrderInfo
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any, request: map}
-@optional {testMode: any}
-@returns(202)
-@errors {400, 404}
+@desc Set an Order's merchant information
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier, request: map}
+@optional {testMode: any # If true, the operation will be not be sent to marketplace. But the validation will be taken in account.}
+@returns(202) Set Order merchant order info accepted
+@errors {400: Could not update Order merchant information. Please see body for more information., 404: Requested Order could not be found}
 
 @endpoint POST /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/clearMerchantOrderInfo
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderId: any}
-@optional {testMode: any}
-@returns(202)
-@errors {400, 404}
+@desc Clear an Order's merchant information
+@required {marketplaceTechnicalCode: any # The marketplace technical code, accountId: any, beezUPOrderId: any # The BeezUP Order identifier}
+@optional {testMode: any # If true, the operation will be not be sent to marketplace. But the validation will be taken in account.}
+@returns(202) Clear Order merchant order info accepted
+@errors {400: Could not update Order merchant information. Please see body for more information., 404: Requested Order could not be found}
 
 @endpoint POST /orders/v3//batches/setMerchantOrderInfos
+@desc Send a batch of operations to set an Order's merchant information  (max 100 items per call)
 @required {request: map}
-@optional {testMode: any}
-@returns(202)
-@errors {400}
+@optional {testMode: any # If true, the operation will be not be sent to marketplace. But the validation will be taken in account.}
+@returns(202) Succesfully received and processed batched operations. Please check response to see the status per operation.
+@errors {400: Requested too many batch operations}
 
 @endpoint POST /orders/v3//batches/clearMerchantOrderInfos
+@desc Send a batch of operations to clear an Order's merchant information (max 100 items per call)
 @required {request: map}
-@optional {testMode: any}
-@returns(202)
-@errors {400}
+@optional {testMode: any # If true, the operation will be not be sent to marketplace. But the validation will be taken in account.}
+@returns(202) Succesfully received and processed batched operations. Please check response to see the status per operation.
+@errors {400: Requested too many batch operations}
 
 @endpoint POST /orders/v3//batches/changeOrders/{changeOrderType}
-@required {userName: any, changeOrderType: any, request: map}
-@optional {testMode: any}
-@returns(202)
-@errors {400, 503}
+@desc Send a batch of operations to change your marketplace Order information: accept, ship, etc.  (max 100 items per call)
+@required {userName: any # Sometimes the user in the e-commerce application is not the same as user associated with the current subscription key. We recommend providing your application's user login., changeOrderType: any # The Order change type, request: map}
+@optional {testMode: any # If true, the operation will be not be sent to marketplace. But the validation will be taken in account.}
+@returns(202) Succesfully received and processed batched operations. Please check response to see the status per operation.
+@errors {400: Requested too many batch operations, 503: Service could not perform the request}
 
 @endpoint POST /orders/v3//batches/changeOrders
-@required {userName: any, request: map}
-@optional {testMode: any}
-@returns(202)
-@errors {400, 503}
+@desc Send a batch of operations to change your marketplace Order information: accept, ship, etc.  (max 100 items per call)
+@required {userName: any # Sometimes the user in the e-commerce application is not the same as user associated with the current subscription key. We recommend providing your application's user login., request: map}
+@optional {testMode: any # If true, the operation will be not be sent to marketplace. But the validation will be taken in account.}
+@returns(202) Succesfully received and processed batched operations. Please check response to see the status per operation.
+@errors {400: Requested too many batch operations, 503: Service could not perform the request}
 
 @endgroup
 
 @group user
 @endpoint GET /v2/user/marketplaces/orders/subscriptions/
-@returns(200)
+@desc Get the subscription list
+@returns(200) The subscription list
 
 @endpoint POST /v2/user/marketplaces/orders/subscriptions/{id}
+@desc Creates a subscription to the orders
 @required {id: any, request: map}
-@returns(202)
-@errors {400, 404, 409}
+@returns(202) Subscription creation accepted
+@errors {400: Invalid subscription request., 404: The subscription is not found, 409: The subscription id is already used.}
 
 @endpoint GET /v2/user/marketplaces/orders/subscriptions/{id}
+@desc Get a subscription to the orders
 @required {id: any}
-@returns(200)
-@errors {404}
+@returns(200) Subscription info
+@errors {404: The subscription is not found}
 
 @endpoint DELETE /v2/user/marketplaces/orders/subscriptions/{id}
+@desc Delete a subscription to the orders
 @required {id: any}
-@returns(202)
-@errors {404}
+@returns(202) Subscription deletion accepted
+@errors {404: The subscription is not found}
 
 @endpoint GET /v2/user/marketplaces/orders/subscriptions/{id}/reporting
+@desc Get the push reporting related to this subscription
 @required {id: any}
 @optional {pageNumber: any, pageSize: any}
-@returns(200)
-@errors {404}
+@returns(200) Subscription push reporting info
+@errors {404: The subscription is not found}
 
 @endpoint POST /v2/user/marketplaces/orders/subscriptions/{id}/activate
+@desc Activate a subscription to the orders
 @required {id: any}
 @optional {request: map}
-@returns(202)
-@errors {400, 404, 503}
+@returns(202) Subscription activation accepted
+@errors {400: Activation subscription request is invalid, 404: The subscription is not found, 503: The target url is not available}
 
 @endpoint POST /v2/user/marketplaces/orders/subscriptions/{id}/deactivate
+@desc Deactivate a subscription to the orders
 @required {id: any}
-@returns(202)
-@errors {404}
+@returns(202) Subscription deactivation accepted
+@errors {404: The subscription is not found}
 
 @endpoint POST /v2/user/marketplaces/orders/subscriptions/{id}/retry
+@desc Force retry push orders immediatly
 @required {id: any}
-@returns(202)
-@errors {404, 409}
+@returns(202) Retry push orders request accepted
+@errors {404: The subscription is not found, 409: The subscription is deactivated or your subscription consumption availability status is available.}
 
 @endpoint GET /v2/user/analytics/
-@returns(200)
+@desc Get the Analytics API operation index
+@returns(200) Analytics API operation index
 
 @endpoint GET /v2/user/analytics/{storeId}
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc Get the Analytics API operation index for one store
+@required {storeId: any # Your store identifier}
+@returns(200) Analytics API operation index for one store
+@errors {404: Store or resource not found}
 
 @endpoint GET /v2/user/analytics/tracking/status
-@returns(200)
+@desc Get the global synchronization status of clicks and orders
+@returns(200) The tracking status informations
 
 @endpoint GET /v2/user/analytics/{storeId}/tracking/status
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc Get the synchronization status of clicks and orders of a store
+@required {storeId: any # Your store identifier}
+@returns(200) Store Tracking Status
+@errors {404: Store or resource not found}
 
 @endpoint GET /v2/user/analytics/{storeId}/tracking/clicks
-@required {storeId: any}
-@optional {count: any}
-@returns(200)
-@errors {404}
+@desc Get the latest tracked clicks
+@required {storeId: any # Your store identifier}
+@optional {count: any # The amount of clicks to retrieve}
+@returns(200) Click list
+@errors {404: Store or resource not found}
 
 @endpoint GET /v2/user/analytics/{storeId}/tracking/orders
-@required {storeId: any}
-@optional {count: any}
-@returns(200)
-@errors {400, 404}
+@desc Get the latest tracked orders
+@required {storeId: any # Your store identifier}
+@optional {count: any # The amount of orders to retrieve}
+@returns(200) Order list
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint GET /v2/user/analytics/{storeId}/tracking/externalorders
-@required {storeId: any}
-@optional {count: any}
-@returns(200)
-@errors {400, 404}
+@desc Get the latest tracked external orders
+@required {storeId: any # Your store identifier}
+@optional {count: any # The amount of external orders to retrieve}
+@returns(200) External Order list
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint POST /v2/user/analytics/reports/byday
+@desc Get the report by day for a StoreId
 @required {request: map}
-@returns(200)
-@errors {400, 404}
+@returns(200) Your reporting by day
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint POST /v2/user/analytics/{storeId}/reports/byday
-@required {storeId: any, request: map}
-@returns(200)
-@errors {400, 404}
+@desc Get the report by day for a StoreId
+@required {storeId: any # Your store identifier, request: map}
+@returns(200) Your reporting by day
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint POST /v2/user/analytics/{storeId}/reports/bychannel
-@required {storeId: any, request: any}
-@returns(200)
-@errors {400, 404}
+@desc Get the report by channel
+@required {storeId: any # Your store identifier, request: any}
+@returns(200) Your reporting by channel
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint POST /v2/user/analytics/{storeId}/reports/bycategory
-@required {storeId: any, request: any}
-@returns(200)
-@errors {400, 404}
+@desc Get the report by category
+@required {storeId: any # Your store identifier, request: any}
+@returns(200) Your reporting by channel
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint POST /v2/user/analytics/{storeId}/reports/byproduct
-@required {storeId: any, request: any}
-@returns(200)
-@errors {400, 404}
+@desc Get the report by product
+@required {storeId: any # Your store identifier, request: any}
+@returns(200) Your reporting by product
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint POST /v2/user/analytics/{storeId}/optimisations/all/{actionName}
-@required {storeId: any, actionName: any, request: any}
-@returns(204)
-@errors {400, 404}
+@desc Optimise all products
+@required {storeId: any # Your store identifier, actionName: any, request: any}
+@returns(204) Products optimisatized
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint POST /v2/user/analytics/{storeId}/optimisations/{actionName}
-@required {storeId: any, actionName: any, request: any}
-@returns(204)
-@errors {400, 404}
+@desc Optimise products by page
+@required {storeId: any # Your store identifier, actionName: any, request: any}
+@returns(204) Products optimisatized
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint POST /v2/user/analytics/{storeId}/optimisations/bychannel/{channelId}/{actionName}
-@required {storeId: any, channelId: any, actionName: any}
-@returns(204)
-@errors {400, 404}
+@desc Optimise products by channel
+@required {storeId: any # Your store identifier, channelId: any # The channel identifier concerned by this optimisation, actionName: any}
+@returns(204) Products optimisatized
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint POST /v2/user/analytics/{storeId}/optimisations/bycategory/{catalogCategoryId}/{actionName}
-@required {storeId: any, catalogCategoryId: any, actionName: any}
-@optional {request: [str(guid)]}
-@returns(204)
-@errors {400, 404}
+@desc Optimise products by category
+@required {storeId: any # Your store identifier, catalogCategoryId: any # The category identifier concerned by this optimisation, actionName: any}
+@optional {request: [str(guid)] # The channel identifier list concerned by this optimisation}
+@returns(204) Products optimisatized
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint POST /v2/user/analytics/{storeId}/optimisations/byproduct/{productId}/{actionName}
-@required {storeId: any, productId: any, actionName: any}
-@optional {request: [str(guid)]}
-@returns(204)
-@errors {400, 404}
+@desc Optimise product
+@required {storeId: any # Your store identifier, productId: any # The product identifier concerned by this optimisation, actionName: any}
+@optional {request: [str(guid)] # The channel identifier list concerned by this optimisation}
+@returns(204) Product(s) optimisatized
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint POST /v2/user/analytics/{storeId}/optimisations/copy
-@required {storeId: any, request: map}
-@returns(200)
-@errors {400, 404}
+@desc Copy product optimisations between 2 channels
+@required {storeId: any # Your store identifier, request: map}
+@returns(200) Products optimisatisation copied
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint GET /v2/user/analytics/{storeId}/reports/filters
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc Get report filter list for the given store
+@required {storeId: any # Your store identifier}
+@returns(200) Report filter list
+@errors {404: Store or resource not found}
 
 @endpoint GET /v2/user/analytics/{storeId}/reports/filters/{reportFilterId}
-@required {storeId: any, reportFilterId: any}
-@returns(200)
-@errors {404}
+@desc Get the report filter description
+@required {storeId: any # Your store identifier, reportFilterId: any # Your report filter identifier}
+@returns(200) Report filter
+@errors {404: Report filter not found}
 
 @endpoint PUT /v2/user/analytics/{storeId}/reports/filters/{reportFilterId}
-@required {storeId: any, reportFilterId: any, reportFilter: map}
-@returns(204)
-@errors {409, 401, 403, 400, 404}
+@desc Save the report filter
+@required {storeId: any # Your store identifier, reportFilterId: any # Your report filter identifier, reportFilter: map}
+@returns(204) Report filter saved
+@errors {409: Report filter name already exists, 401: This report filter is used by rule. In the error message you will find the rule identifier., 403: This report filter identifier is already used by another store, please check your identifiers., 400: Invalid request, 404: Store or resource not found}
 
 @endpoint DELETE /v2/user/analytics/{storeId}/reports/filters/{reportFilterId}
-@required {storeId: any, reportFilterId: any}
-@returns(204)
-@errors {404, 401}
+@desc Delete the report filter
+@required {storeId: any # Your store identifier, reportFilterId: any # Your report filter identifier}
+@returns(204) Report filter deleted
+@errors {404: Report filter not found, 401: This report filter is used by rule. In the error message you will find the rule identifier.}
 
 @endpoint GET /v2/user/analytics/{storeId}/rules
-@required {storeId: any}
-@returns(200)
-@errors {404}
+@desc Gets the list of rules for a given store
+@required {storeId: any # Your store identifier}
+@returns(200) Rule list
+@errors {404: Store or resource not found}
 
 @endpoint POST /v2/user/analytics/{storeId}/rules
-@required {storeId: any, request: map}
-@returns(204)
-@errors {400, 401, 404, 403}
+@desc Rule creation
+@required {storeId: any # Your store identifier, request: map}
+@returns(204) Rule created
+@errors {400: Period on filter cannot be custom or filter does not exist, 401: Store not allowed to use rules. Please upgrade your offer or contact us., 404: Store or resource not found, 403: Reached the maximum amount of rules allowed for your offer. Please upgrade your offer or contact us.}
 
 @endpoint GET /v2/user/analytics/{storeId}/rules/{ruleId}
-@required {storeId: any, ruleId: any}
-@returns(200)
-@errors {404}
+@desc Gets the rule
+@required {storeId: any # Your store identifier, ruleId: any # Your rule identifier}
+@returns(200) Get Rule
+@errors {404: Store or resource not found}
 
 @endpoint PATCH /v2/user/analytics/{storeId}/rules/{ruleId}
-@required {storeId: any, ruleId: any, request: map}
-@returns(204)
-@errors {400, 401, 404, 409}
+@desc Update Rule
+@required {storeId: any # Your store identifier, ruleId: any # Your rule identifier, request: map}
+@returns(204) Rule updated
+@errors {400: Filter does not exist or period on filter cannot be custom, 401: Store not allowed to use rules. Please upgrade your offer or contact us., 404: Rule not found, 409: Rules for this store are currently running. Please try again later.}
 
 @endpoint DELETE /v2/user/analytics/{storeId}/rules/{ruleId}
-@required {storeId: any, ruleId: any}
-@returns(204)
-@errors {404, 409}
+@desc Delete Rule
+@required {storeId: any # Your store identifier, ruleId: any # Your rule identifier}
+@returns(204) Rule deleted
+@errors {404: Rule not found, 409: Rules for this store are currently running. Please try again later.}
 
 @endpoint POST /v2/user/analytics/{storeId}/rules/{ruleId}/moveup
-@required {storeId: any, ruleId: any}
-@returns(204)
-@errors {400, 404, 409}
+@desc Move the rule up
+@required {storeId: any # Your store identifier, ruleId: any # Your rule identifier}
+@returns(204) Rule moved up
+@errors {400: Priority can only be changed when more than one rule is defined, 404: Rule not found, 409: Rules for this store are currently running. Please try again later.}
 
 @endpoint POST /v2/user/analytics/{storeId}/rules/{ruleId}/movedown
-@required {storeId: any, ruleId: any}
-@returns(204)
-@errors {400, 404, 409}
+@desc Move the rule down
+@required {storeId: any # Your store identifier, ruleId: any # Your rule identifier}
+@returns(204) Rule moved down
+@errors {400: Priority can only be changed when more than one rule is defined, 404: Rule not found, 409: Rules for this store are currently running. Please try again later.}
 
 @endpoint POST /v2/user/analytics/{storeId}/rules/{ruleId}/enable
-@required {storeId: any, ruleId: any}
-@returns(204)
-@errors {404, 409}
+@desc Enable rule
+@required {storeId: any # Your store identifier, ruleId: any # Your rule identifier}
+@returns(204) Rune enabled
+@errors {404: Rule not found, 409: Rules for this store are currently running. Please try again later.}
 
 @endpoint POST /v2/user/analytics/{storeId}/rules/{ruleId}/disable
-@required {storeId: any, ruleId: any}
-@returns(204)
-@errors {404, 409}
+@desc Disable rule
+@required {storeId: any # Your store identifier, ruleId: any # Your rule identifier}
+@returns(204) Rule disabled
+@errors {404: Rule not found, 409: Rules for this store are currently running. Please try again later.}
 
 @endpoint POST /v2/user/analytics/{storeId}/rules/run
-@required {storeId: any}
-@returns(204)
-@errors {401, 404, 409}
+@desc Run all rules for this store
+@required {storeId: any # Your store identifier}
+@returns(204) All rules executed.
+@errors {401: Store not allowed to use rules. Please upgrade your offer or contact us., 404: Rule not found, 409: Rules for this store are currently running. Please try again later.}
 
 @endpoint POST /v2/user/analytics/{storeId}/rules/{ruleId}/run
-@required {storeId: any, ruleId: any}
-@returns(204)
-@errors {400, 401, 404, 409}
+@desc Run rule
+@required {storeId: any # Your store identifier, ruleId: any # Your rule identifier}
+@returns(204) Rule executed
+@errors {400: Rule is not enabled. Please enable this run before trying to run it., 401: Store not allowed to use rules. Please upgrade your offer or contact us., 404: Rule not found, 409: Rules for this store are currently running. Please try again later.}
 
 @endpoint GET /v2/user/analytics/{storeId}/rules/executions
-@required {storeId: any, pageNumber: any, pageSize: any}
-@returns(200)
-@errors {400, 404}
+@desc Get the rules execution history
+@required {storeId: any # Your store identifier, pageNumber: any # The page to retrieve, pageSize: any # The count of rule history to retrieve}
+@returns(200) Rules executions list
+@errors {400: Invalid request, 404: Store or resource not found}
 
 @endpoint GET /v2/user/legacyTracking/channelCatalogs/
-@optional {storeId: any}
-@returns(200)
+@desc List all your current channel catalogs configured to use legacy tracking format
+@optional {storeId: any # The store identifier}
+@returns(200) OK
 
 @endpoint GET /v2/user/legacyTracking/channelCatalogs/{channelCatalogId}
-@required {channelCatalogId: any}
-@returns(200)
-@errors {404}
+@desc Get the channel catalog configured to use legacy tracking format information
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(200) Channel catalog configured to use legacy tracking format
+@errors {404: Channel catalog not found or not authorized}
 
 @endpoint POST /v2/user/legacyTracking/channelCatalogs/{channelCatalogId}/migrate
-@required {channelCatalogId: any}
-@returns(204)
-@errors {404}
+@desc Migrate a channel catalog to current tracking format
+@required {channelCatalogId: any # The channel catalog identifier}
+@returns(204) Channel catalog migrated
+@errors {404: Channel catalog not found or not authorized}
 
 @endpoint PUT /v2/user/marketplaces/orders/invoices/settings/general
+@desc Save Order Invoice general settings
 @required {request: map}
-@returns(204)
-@errors {400, 403}
+@returns(204) General Settings successfully saved
+@errors {400: The settingsgeneral did not pass the validation, 403: The ownerId is not found or not authorized}
 
 @endpoint GET /v2/user/marketplaces/orders/invoices/settings/general
-@returns(200)
-@errors {403, 404}
+@desc Get Order Invoice general settings
+@returns(200) Settings successfully retrieved
+@errors {403: The ownerId is not found or not authorized, 404: The order invoice general settings are not found}
 
 @endpoint PUT /v2/user/marketplaces/orders/invoices/settings/design
+@desc Save Order Invoice design settings
 @required {request: map}
-@returns(204)
-@errors {400, 403}
+@returns(204) Design successfully saved
+@errors {400: The design did not pass the validation, 403: The ownerId is not found or not authorized}
 
 @endpoint GET /v2/user/marketplaces/orders/invoices/settings/design
-@returns(200)
-@errors {403, 404}
+@desc Get Order Invoice design settings
+@returns(200) Design successfully retrieved
+@errors {403: The ownerId is not found or not authorized, 404: The order invoice design is not found}
 
 @endpoint POST /v2/user/marketplaces/orders/invoices/settings/design/preview
-@required {Accept-Encoding: any, request: map}
-@returns(200)
-@errors {403}
+@desc View a preview an Order Invoice using custom design settings
+@required {Accept-Encoding: any # Allows the client to indicate wether it accepts a compressed encoding to reduce traffic size, request: map}
+@returns(200) Design Preview successfully retrieved
+@errors {403: The ownerId is not found or not authorized}
 
 @endpoint POST /v2/user/marketplaces/orders/invoices/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderUUID}/generate
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderUUID: any, userName: any, request: map}
-@returns(202)
-@errors {403, 404, 409, 429}
+@desc Generate an Order Invoice
+@required {marketplaceTechnicalCode: any # The Marketplace Technical Code, accountId: any # The Account Identifier, beezUPOrderUUID: any # The BeezUP Order UUID, userName: any # Sometimes the user in the e-commerce application is not the same as user associated with the current subscription key. We recommend providing your application's user login., request: map}
+@returns(202) Request Accepted.
+@errors {403: OwnerId not authorized The required order invoice settings have not been set BeezUPOrderStatus forbidden, 404: The order cannot be retrieved, 409: The InvoiceNumber is already used There is already an invoice for this order, 429: Too many Requests. Please retry in a few seconds}
 
 @endpoint POST /v2/user/marketplaces/orders/invoices/generate
-@required {userName: any, request: [map]}
-@returns(202)
-@errors {400, 403, 404, 409, 429}
+@desc Generate an Order Invoice batch
+@required {userName: any # Sometimes the user in the e-commerce application is not the same as user associated with the current subscription key. We recommend providing your application's user login., request: [map]}
+@returns(202) The locations of the generated invoice. Might take a few seconds to be available
+@errors {400: GenerateBatchOrderInvoiceErrorResponse, 403: OwnerId not authorized The required order invoice settings have not been set BeezUPOrderStatus forbidden, 404: The order cannot be retrieved, 409: The InvoiceNumber is already used There is already an invoice for this order, 429: Too many Requests. Please retry in a few seconds}
 
 @endpoint POST /v2/user/marketplaces/orders/invoices/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderUUID}/preview
-@required {marketplaceTechnicalCode: any, accountId: any, beezUPOrderUUID: any, Accept-Encoding: any, request: map}
-@returns(200)
-@errors {403, 404, 409}
+@desc View a preview an Order Invoice
+@required {marketplaceTechnicalCode: any # The Marketplace Technical Code, accountId: any # The Account Identifier, beezUPOrderUUID: any # The BeezUP Order UUID, Accept-Encoding: any # Allows the client to indicate wether it accepts a compressed encoding to reduce traffic size, request: map}
+@returns(200) Order Invoice preview successfully returned.
+@errors {403: OwnerId not authorized The required order invoice settings have not been set BeezUPOrderStatus forbidden, 404: The order cannot be retrieved, 409: The InvoiceNumber is already used There is already an invoice for this order}
 
 @endpoint POST /v2/user/marketplaces/orders/invoices/getPdfInvoice
+@desc Returns the PDF version of the invoice
 @required {request: map}
-@returns(200)
-@errors {403, 404}
+@returns(200) The PDF version of the HTML invoice URL in the request
+@errors {403: The ownerId is not found or not authorized, 404: The order invoice does not exist}
 
 @endgroup
 

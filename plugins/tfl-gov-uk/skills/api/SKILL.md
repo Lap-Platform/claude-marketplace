@@ -162,88 +162,94 @@ https://api.digital.tfl.gov.uk
 |--------|------|-------------|
 | GET | /Vehicle/{ids}/Arrivals | Gets the predictions for a given list of vehicle Id's. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What accidents happened in London in 2023?" -> GET /AccidentStats/{year}
-- "What is the current air quality in London?" -> GET /AirQuality
-- "Where are the nearest bike docking stations?" -> GET /BikePoint/Search
-- "How many bikes are available at this docking station?" -> GET /Occupancy/BikePoints/{ids}
-- "How do I get from King's Cross to Heathrow?" -> GET /Journey/JourneyResults/{from}/to/{to}
-- "Is the Northern line running normally?" -> GET /Line/{ids}/Status
-- "What disruptions are on the District line right now?" -> GET /Line/{ids}/Disruption
-- "When is the next train arriving at Paddington?" -> GET /StopPoint/{id}/Arrivals
-- "What are the stop points on the Jubilee line?" -> GET /Line/{id}/StopPoints
-- "Find a licensed cab near Covent Garden." -> GET /Cabwise/search
-- "Are there any road disruptions on the A40?" -> GET /Road/{ids}/Disruption
-- "What types of transport modes are available?" -> GET /Line/Meta/Modes
-- "Show me the timetable from Baker Street to Wembley Park on the Metropolitan line." -> GET /Line/{id}/Timetable/{fromStopPointId}/to/{toStopPointId}
-- "Which car parks have spaces available right now?" -> GET /Occupancy/CarPark
-- "What street disruptions are planned for next week?" -> GET /Road/all/Street/Disruption
-
-## Response Tips
-
-- **AccidentStats / AirQuality**: Returns flat arrays or single objects; no pagination. Air quality includes `forecastBand` and `forecastSummary` -- parse these for human-readable output.
-- **BikePoint / Occupancy**: BikePoint responses contain `additionalProperties` arrays with key-value pairs for dock count, bikes available, and empty docks -- iterate these rather than expecting top-level fields.
-- **Journey**: Results nest deeply: `journeys[] -> legs[] -> instruction/disruptions`. Always check `journeys` array length; zero results means no viable route. The `duration` is in minutes.
-- **Line Status / Disruption**: Status responses include `lineStatuses[]` with `statusSeverity` (10 = Good Service). Disruption objects include `categoryDescription` and `closureText` which may contain HTML markup if `applyHtmlMarkup` was set.
-- **StopPoint**: Paginated via `/Type/{types}/page/{page}` -- pages are 1-indexed. Single stop lookups return nested `children` and `lineModeGroups`. Search results wrap matches in a `matches[]` array.
-- **Road**: Road status includes `statusSeverity` and `statusSeverityDescription`. Disruption responses may be large; use `stripContent=true` to reduce payload size.
-- **Cabwise**: Returns XML by default unless `legacyFormat=false`. Set `forceXml=false` for JSON. Results are capped by `maxResults` (default varies).
-- **Search**: General search returns `searchMatches[]` with mixed types (stops, lines, places) -- filter by the `type` field on each match.
-
-## Anomaly Flags
-
-- **Rate limiting**: TfL enforces per-key rate limits. Surface HTTP 429 responses immediately and recommend backing off or registering for a higher-tier app_key.
-- **Stale data**: If `$modified` or timestamp fields on arrivals/predictions are more than 5 minutes old, flag that real-time data may be delayed or the feed may be down.
-- **Empty arrivals**: If `/StopPoint/{id}/Arrivals` returns an empty array during operating hours, proactively note that the station may be closed, suspended, or the line may have no service.
-- **Severity 0 or unusual codes**: Line status severity below 1 or unrecognized severity values should be flagged -- they may indicate API changes or data quality issues.
-- **Disruption volume**: If a line or mode disruption query returns more than 5 active disruptions, summarize and highlight this as an abnormally high disruption count.
-- **Missing auth keys**: If responses return 401 or 403 errors, remind the user to include `app_key` and optionally `app_id` as query parameters. Unauthenticated requests have severely reduced rate limits.
-- **HTML in responses**: Some endpoints inject HTML markup into text fields (especially journey instructions). Flag when raw HTML appears so the user can strip or render it appropriately.
-
-## Playbook
-
-### 1. Plan a Journey with Accessibility Needs
-
-1. Call `GET /Journey/Meta/Modes` to list available travel modes and confirm accessibility options.
-2. Call `GET /Journey/JourneyResults/{from}/to/{to}` with `accessibilityPreference=NoSolidStairs,NoEscalators` and desired `mode` filters.
-3. Review the `journeys[]` array. For each journey, inspect `legs[].disruptions` for active issues.
-4. If no results, retry with relaxed preferences (remove mode filters or accessibility constraints) and compare options.
-5. Present the top 2-3 journeys with duration, number of changes, and any disruption warnings.
-
-### 2. Monitor Line Status and Surface Disruptions
-
-1. Call `GET /Line/Mode/{modes}/Status` (e.g., modes=`tube,dlr,overground`) to get current status for all lines in those modes.
-2. Filter results where `lineStatuses[0].statusSeverity` is not 10 (Good Service).
-3. For any disrupted lines, call `GET /Line/{ids}/Disruption` to get detailed disruption descriptions.
-4. Optionally call `GET /StopPoint/Mode/{modes}/Disruption` to identify which specific stations are affected.
-5. Summarize: list affected lines, severity, affected stations, and expected resolution if provided.
-
-### 3. Find and Check Bike Availability
-
-1. Call `GET /BikePoint/Search?query={location}` to find docking stations near a landmark or area name.
-2. From results, extract the `id` values (e.g., `BikePoints_123`).
-3. Call `GET /Occupancy/BikePoints/{ids}` with a comma-separated list of station IDs.
-4. Parse each station's occupancy: `bikesCount` for available bikes, `emptyDocks` for return spaces.
-5. Recommend the nearest station with both available bikes and empty docks (for return trips).
-
-### 4. Investigate Road Conditions Before Driving
-
-1. Call `GET /Road` to list all managed road corridors and their current `statusSeverity`.
-2. For roads with poor status, call `GET /Road/{ids}/Disruption` to get disruption details.
-3. To check a specific date range (e.g., planned works), call `GET /Road/all/Street/Disruption?startDate={date}&endDate={date}`.
-4. Use `GET /Road/Meta/Severities` to decode severity codes into human-readable labels.
-5. Present a summary: road name, severity, disruption category, and whether closures are in effect.
-
-### 5. Look Up Stop Information and Live Arrivals
-
-1. Call `GET /StopPoint/Search/{query}` to find a station by name (e.g., "Victoria").
-2. From the results, pick the correct stop using `name` and `modes` fields to disambiguate (e.g., tube vs. bus).
-3. Call `GET /StopPoint/{id}/Arrivals` to get real-time arrival predictions.
-4. Sort arrivals by `timeToStation` (seconds) and group by `lineName` and `platformName`.
-5. If the user needs onward travel, call `GET /StopPoint/{id}/Route` to see which lines and directions serve that stop.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get AccidentStat details?" -> GET /AccidentStats/{year}
+- "List all AirQuality?" -> GET /AirQuality
+- "List all BikePoint?" -> GET /BikePoint
+- "Get BikePoint details?" -> GET /BikePoint/{id}
+- "Search Search?" -> GET /BikePoint/Search
+- "List all search?" -> GET /Cabwise/search
+- "List all Modes?" -> GET /Journey/Meta/Modes
+- "Get to details?" -> GET /Journey/JourneyResults/{from}/to/{to}
+- "List all Modes?" -> GET /Line/Meta/Modes
+- "List all Severity?" -> GET /Line/Meta/Severity
+- "List all DisruptionCategories?" -> GET /Line/Meta/DisruptionCategories
+- "List all ServiceTypes?" -> GET /Line/Meta/ServiceTypes
+- "Get Line details?" -> GET /Line/{ids}
+- "Get Mode details?" -> GET /Line/Mode/{modes}
+- "List all Route?" -> GET /Line/Route
+- "List all Route?" -> GET /Line/{ids}/Route
+- "List all Route?" -> GET /Line/Mode/{modes}/Route
+- "Get Sequence details?" -> GET /Line/{id}/Route/Sequence/{direction}
+- "Get to details?" -> GET /Line/{ids}/Status/{StartDate}/to/{EndDate}
+- "List all Status?" -> GET /Line/{ids}/Status
+- "Search Search?" -> GET /Line/Search/{query}
+- "Get Status details?" -> GET /Line/Status/{severity}
+- "List all Status?" -> GET /Line/Mode/{modes}/Status
+- "List all StopPoints?" -> GET /Line/{id}/StopPoints
+- "Get Timetable details?" -> GET /Line/{id}/Timetable/{fromStopPointId}
+- "Get to details?" -> GET /Line/{id}/Timetable/{fromStopPointId}/to/{toStopPointId}
+- "List all Disruption?" -> GET /Line/{ids}/Disruption
+- "List all Disruption?" -> GET /Line/Mode/{modes}/Disruption
+- "Get Arrival details?" -> GET /Line/{ids}/Arrivals/{stopPointId}
+- "List all ActiveServiceTypes?" -> GET /Mode/ActiveServiceTypes
+- "List all Arrivals?" -> GET /Mode/{mode}/Arrivals
+- "Get CarPark details?" -> GET /Occupancy/CarPark/{id}
+- "List all CarPark?" -> GET /Occupancy/CarPark
+- "Get ChargeConnector details?" -> GET /Occupancy/ChargeConnector/{ids}
+- "List all ChargeConnector?" -> GET /Occupancy/ChargeConnector
+- "Get BikePoint details?" -> GET /Occupancy/BikePoints/{ids}
+- "List all Categories?" -> GET /Place/Meta/Categories
+- "List all PlaceTypes?" -> GET /Place/Meta/PlaceTypes
+- "Get Street details?" -> GET /Place/Address/Streets/{Postcode}
+- "Get Type details?" -> GET /Place/Type/{types}
+- "Get Place details?" -> GET /Place/{id}
+- "List all Place?" -> GET /Place
+- "Get At details?" -> GET /Place/{type}/At/{Lat}/{Lon}
+- "Get overlay details?" -> GET /Place/{type}/overlay/{z}/{Lat}/{Lon}/{width}/{height}
+- "List all Search?" -> GET /Place/Search
+- "List all Road?" -> GET /Road
+- "Get Road details?" -> GET /Road/{ids}
+- "List all Status?" -> GET /Road/{ids}/Status
+- "List all Disruption?" -> GET /Road/{ids}/Disruption
+- "List all Disruption?" -> GET /Road/all/Street/Disruption
+- "Get Disruption details?" -> GET /Road/all/Disruption/{disruptionIds}
+- "List all Categories?" -> GET /Road/Meta/Categories
+- "List all Severities?" -> GET /Road/Meta/Severities
+- "Search Search?" -> GET /Search
+- "Search BusSchedules?" -> GET /Search/BusSchedules
+- "List all SearchProviders?" -> GET /Search/Meta/SearchProviders
+- "List all Categories?" -> GET /Search/Meta/Categories
+- "List all Sorts?" -> GET /Search/Meta/Sorts
+- "List all Categories?" -> GET /StopPoint/Meta/Categories
+- "List all StopTypes?" -> GET /StopPoint/Meta/StopTypes
+- "List all Modes?" -> GET /StopPoint/Meta/Modes
+- "Get StopPoint details?" -> GET /StopPoint/{ids}
+- "List all placeTypes?" -> GET /StopPoint/{id}/placeTypes
+- "Get Crowding details?" -> GET /StopPoint/{id}/Crowding/{line}
+- "Get Type details?" -> GET /StopPoint/Type/{types}
+- "Get page details?" -> GET /StopPoint/Type/{types}/page/{page}
+- "List all ServiceTypes?" -> GET /StopPoint/ServiceTypes
+- "List all Arrivals?" -> GET /StopPoint/{id}/Arrivals
+- "List all ArrivalDepartures?" -> GET /StopPoint/{id}/ArrivalDepartures
+- "Get CanReachOnLine details?" -> GET /StopPoint/{id}/CanReachOnLine/{lineId}
+- "List all Route?" -> GET /StopPoint/{id}/Route
+- "List all Disruption?" -> GET /StopPoint/Mode/{modes}/Disruption
+- "List all Disruption?" -> GET /StopPoint/{ids}/Disruption
+- "Get DirectionTo details?" -> GET /StopPoint/{id}/DirectionTo/{toStopPointId}
+- "List all StopPoint?" -> GET /StopPoint
+- "Get Mode details?" -> GET /StopPoint/Mode/{modes}
+- "Search Search?" -> GET /StopPoint/Search/{query}
+- "Search Search?" -> GET /StopPoint/Search
+- "Get Sm details?" -> GET /StopPoint/Sms/{id}
+- "List all TaxiRanks?" -> GET /StopPoint/{stopPointId}/TaxiRanks
+- "List all CarParks?" -> GET /StopPoint/{stopPointId}/CarParks
+- "Get dimension details?" -> GET /TravelTimes/overlay/{z}/mapcenter/{mapCenterLat}/{mapCenterLon}/pinlocation/{pinLat}/{pinLon}/dimensions/{width}/{height}
+- "Get dimension details?" -> GET /TravelTimes/compareOverlay/{z}/mapcenter/{mapCenterLat}/{mapCenterLon}/pinlocation/{pinLat}/{pinLon}/dimensions/{width}/{height}
+- "List all Arrivals?" -> GET /Vehicle/{ids}/Arrivals
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -62,85 +62,41 @@ https://management.azure.com
 |--------|------|-------------|
 | GET | /providers/Microsoft.DataLakeAnalytics/operations | Lists all of the available Data Lake Analytics REST API operations. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What Data Lake Analytics accounts exist in my subscription?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.DataLakeAnalytics/accounts
-- "List all Data Lake Analytics accounts in a specific resource group?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts
-- "How do I create a new Data Lake Analytics account?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}
-- "Get details of a specific Data Lake Analytics account?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}
-- "How do I delete a Data Lake Analytics account?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}
-- "What Data Lake Store accounts are linked to my analytics account?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/dataLakeStoreAccounts
-- "How do I add an Azure Storage account as a data source?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/storageAccounts/{storageAccountName}
-- "How do I get a SAS token for a storage container?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/storageAccounts/{storageAccountName}/containers/{containerName}/listSasTokens
-- "What compute policies are configured on my account?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/computePolicies
-- "How do I add a firewall rule to my Data Lake Analytics account?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/firewallRules/{firewallRuleName}
-- "Is this account name available in my region?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.DataLakeAnalytics/locations/{location}/checkNameAvailability
-- "What Data Lake Analytics capabilities are available in a given region?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.DataLakeAnalytics/locations/{location}/capability
-- "What operations does the Data Lake Analytics resource provider support?" -> GET /providers/Microsoft.DataLakeAnalytics/operations
-- "How do I list storage containers linked to my analytics account?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/storageAccounts/{storageAccountName}/containers
-- "How do I update compute policy limits without recreating the policy?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/computePolicies/{computePolicyName}
-
-## Response Tips
-
-- **Account listings** (`GET .../accounts`): Paginated via `nextLink`; use `$top`, `$skip`, and `$filter` OData params to control page size and filtering. The `$count` param returns total count alongside results.
-- **Create/Update accounts** (`PUT`/`PATCH .../accounts/{accountName}`): 200 means completed synchronously; 201/202 means the operation is asynchronous -- poll the `Location` or `Azure-AsyncOperation` header URL until terminal state.
-- **Delete operations** (`DELETE`): 200 = deleted, 202 = deletion in progress (poll async), 204 = resource already gone (idempotent, not an error).
-- **SAS token listing** (`POST .../listSasTokens`): Returns an array of token objects; tokens are time-bound so check expiry fields before use.
-- **Location capability** (`GET .../capability`): 404 means the region does not support Data Lake Analytics at all -- not a transient error.
-- **Name availability** (`POST .../checkNameAvailability`): Response includes `nameAvailable` boolean and a `reason`/`message` when unavailable.
-
-## Anomaly Flags
-
-- **202 Accepted on create/update/delete**: The operation is long-running. Surface the async operation URL and remind the user to poll for completion status before assuming success.
-- **204 on delete**: The resource was already absent. Flag this if the user expected the resource to exist, as it may indicate a naming mismatch or prior deletion.
-- **404 on location capability**: The requested Azure region does not support Data Lake Analytics. Proactively suggest checking supported regions.
-- **OData filter/pagination ignored**: If a list call returns more items than `$top` specified, or filtering appears ineffective, flag possible server-side OData support limitations.
-- **API version drift**: This spec targets `2016-11-01`. If Azure returns errors about unsupported API versions, surface that the client may need updating to a newer API version.
-- **Provisioning state not "Succeeded"**: After account creation (201), the account may be in a `Creating` or `Failed` provisioning state. Alert the user if GET on the account shows a non-terminal state.
-- **Firewall rule conflicts**: When adding firewall rules, flag if the IP range overlaps with or contradicts existing rules that could lock out access.
-
-## Playbook
-
-### 1. Create a New Data Lake Analytics Account
-
-1. Check name availability: `POST .../locations/{location}/checkNameAvailability` with the desired account name
-2. Verify the response `nameAvailable` is `true`; if not, choose a different name based on the `reason` field
-3. Create the account: `PUT .../accounts/{accountName}` with required `parameters` body (location, default Data Lake Store, etc.)
-4. If response is 201, poll the async operation URL from the response headers until provisioning completes
-5. Confirm creation: `GET .../accounts/{accountName}` and verify `provisioningState` is `Succeeded`
-
-### 2. Link Storage and Generate SAS Tokens
-
-1. Add a storage account: `PUT .../accounts/{accountName}/storageAccounts/{storageAccountName}` with access key in `parameters`
-2. List containers: `GET .../storageAccounts/{storageAccountName}/containers`
-3. Pick the target container and generate SAS tokens: `POST .../containers/{containerName}/listSasTokens`
-4. Use the returned SAS token for data access within its validity window
-
-### 3. Configure Network Security with Firewall Rules
-
-1. List existing rules: `GET .../accounts/{accountName}/firewallRules`
-2. Create a new rule: `PUT .../firewallRules/{firewallRuleName}` with `startIpAddress` and `endIpAddress` in the parameters body
-3. Verify the rule: `GET .../firewallRules/{firewallRuleName}`
-4. To modify the range later: `PATCH .../firewallRules/{firewallRuleName}` with updated IP range
-5. To remove access: `DELETE .../firewallRules/{firewallRuleName}`
-
-### 4. Set Up Compute Policies for Job Governance
-
-1. List current policies: `GET .../accounts/{accountName}/computePolicies`
-2. Create a policy: `PUT .../computePolicies/{computePolicyName}` with `objectId`, `objectType`, and limits (`maxDegreeOfParallelismPerJob`, `minPriorityPerJob`) in the parameters body
-3. Verify: `GET .../computePolicies/{computePolicyName}`
-4. Adjust limits as needed: `PATCH .../computePolicies/{computePolicyName}` with updated parameters
-5. Remove a policy when no longer needed: `DELETE .../computePolicies/{computePolicyName}`
-
-### 5. Audit and Inventory All Accounts Across Subscription
-
-1. List all accounts subscription-wide: `GET .../providers/Microsoft.DataLakeAnalytics/accounts` with `$select` to limit returned fields
-2. Page through results using `$top` and `$skip` if the account count exceeds a single page
-3. For each account, get details: `GET .../accounts/{accountName}` to inspect provisioning state, linked stores, and configuration
-4. List linked Data Lake Store accounts: `GET .../accounts/{accountName}/dataLakeStoreAccounts`
-5. List linked Storage accounts: `GET .../accounts/{accountName}/storageAccounts`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all accounts?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.DataLakeAnalytics/accounts
+- "List all accounts?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts
+- "Update a account?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}
+- "Get account details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}
+- "Partially update a account?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}
+- "Delete a account?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}
+- "List all dataLakeStoreAccounts?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/dataLakeStoreAccounts
+- "Update a dataLakeStoreAccount?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/dataLakeStoreAccounts/{dataLakeStoreAccountName}
+- "Get dataLakeStoreAccount details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/dataLakeStoreAccounts/{dataLakeStoreAccountName}
+- "Delete a dataLakeStoreAccount?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/dataLakeStoreAccounts/{dataLakeStoreAccountName}
+- "List all storageAccounts?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/storageAccounts
+- "Update a storageAccount?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/storageAccounts/{storageAccountName}
+- "Get storageAccount details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/storageAccounts/{storageAccountName}
+- "Partially update a storageAccount?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/storageAccounts/{storageAccountName}
+- "Delete a storageAccount?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/storageAccounts/{storageAccountName}
+- "List all containers?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/storageAccounts/{storageAccountName}/containers
+- "Get container details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/storageAccounts/{storageAccountName}/containers/{containerName}
+- "Create a listSasToken?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/storageAccounts/{storageAccountName}/containers/{containerName}/listSasTokens
+- "List all computePolicies?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/computePolicies
+- "Update a computePolicy?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/computePolicies/{computePolicyName}
+- "Get computePolicy details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/computePolicies/{computePolicyName}
+- "Partially update a computePolicy?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/computePolicies/{computePolicyName}
+- "Delete a computePolicy?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/computePolicies/{computePolicyName}
+- "List all firewallRules?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/firewallRules
+- "Update a firewallRule?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/firewallRules/{firewallRuleName}
+- "Get firewallRule details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/firewallRules/{firewallRuleName}
+- "Partially update a firewallRule?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/firewallRules/{firewallRuleName}
+- "Delete a firewallRule?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DataLakeAnalytics/accounts/{accountName}/firewallRules/{firewallRuleName}
+- "List all operations?" -> GET /providers/Microsoft.DataLakeAnalytics/operations
+- "List all capability?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.DataLakeAnalytics/locations/{location}/capability
+- "Create a checkNameAvailability?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.DataLakeAnalytics/locations/{location}/checkNameAvailability
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

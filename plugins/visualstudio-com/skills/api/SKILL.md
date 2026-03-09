@@ -104,86 +104,62 @@ https://online.visualstudio.com
 |--------|------|-------------|
 | GET | /warmup |  |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new codespace?" -> POST /api/v1/Environments
-- "How do I list all my environments?" -> GET /api/v1/Environments
-- "What is the status of my codespace?" -> GET /api/v1/Environments/{environmentId}
-- "How do I stop a running codespace?" -> POST /api/v1/Environments/{environmentId}/shutdown
-- "How do I start a stopped codespace?" -> POST /api/v1/Environments/{environmentId}/start
-- "How do I delete an environment?" -> DELETE /api/v1/Environments/{environmentId}
-- "How do I change the SKU or auto-shutdown timeout on my codespace?" -> PATCH /api/v1/Environments/{environmentId}
-- "How do I set secrets on an environment?" -> PUT /api/v1/Environments/{environmentId}/secrets
-- "What regions and SKUs are available?" -> GET /api/v1/Locations/{location}
-- "How do I check my billing plan?" -> GET /api/v1/Billing
-- "How do I ensure a billing plan exists for my subscription?" -> PUT /api/v1/Billing/ensure_plan
-- "How do I archive a codespace for long-term storage?" -> POST /api/v1/Environments/{environmentId}/archive
-- "How do I restore an archived codespace?" -> PATCH /api/v1/Environments/{environmentId}/restore
-- "How do I export my environment data?" -> POST /api/v1/Environments/{environmentId}/export
-- "How do I check if a prebuild template exists for my repo and branch?" -> GET /api/v2/prebuilds/templates/skus/repo/{repoId}/branch/{branchName}/hash/{prebuildHash}/location/{location}/devcontainerpath/{devContainerPath}
-
-## Response Tips
-
-- **Environments**: Responses are deeply nested -- `seed.repository`, `connection.tunnelProperties`, and `gitStatus` are the most useful sub-objects; most top-level fields are nullable.
-- **Billing**: `usage` and `usageDetail` are opaque maps; always check `periodStart`/`periodEnd` for the billing window.
-- **Locations**: `available` is an integer array of location enum codes (not names); map them using the enum defined on the billing endpoint.
-- **State values**: Environment `state` is a string (Available, Shutdown, Archived, etc.) but GenevaActions state-change endpoints use integer enums (0-16) for `oldValue`/`newValue`.
-- **204 responses**: Shutdown secrets, delete, telemetry, and heartbeat return empty bodies on success -- check status code only.
-- **Error codes**: 307 on POST Environments or PUT secrets means a region redirect; follow the Location header. 409 on PATCH means a concurrent modification conflict; retry with fresh data. 503 means the service is temporarily overloaded.
-
-## Anomaly Flags
-
-- **State: Failed (13) or Unavailable (6)**: Surface immediately when an environment enters these states -- user action or support escalation likely needed.
-- **409 Conflict on PATCH**: Indicates a race condition; warn the user to re-fetch before retrying.
-- **307 Redirect on create/secrets**: The environment is in a different region than expected; confirm the redirect target with the user.
-- **503 on start/archive/export**: Service is capacity-constrained; recommend retrying after a short wait or choosing a different region.
-- **subscriptionData.computeUsage approaching computeQuota**: Proactively warn when usage is above 80% of quota to prevent creation failures.
-- **gitStatus.hasUnpushedChanges or hasUncommittedChanges**: Flag before shutdown/delete/archive to prevent data loss.
-- **lastStateUpdateReason**: Surface when it contains error-related text -- it explains why the environment entered its current state.
-- **Deprecated prebuild fields**: `storageType` V1 (0) is legacy; flag if templates are still using it when V2 is available.
-
-## Playbook
-
-### 1. Create and Connect to a New Codespace
-
-1. `GET /api/v1/Locations` to find available regions.
-2. `GET /api/v1/Locations/{location}` with your preferred region to list available SKUs.
-3. `GET /api/v1/Billing` to confirm a billing plan exists; if not, call `PUT /api/v1/Billing/ensure_plan`.
-4. `POST /api/v1/Environments` with `type`, `friendlyName`, `skuName`, `location`, and `seed.repository` for your repo.
-5. Poll `GET /api/v1/Environments/{environmentId}` until `state` is `Available`.
-6. Read `connection.tunnelProperties` from the response to establish your tunnel connection.
-
-### 2. Safely Shut Down and Archive an Idle Codespace
-
-1. `GET /api/v1/Environments/{environmentId}` and check `gitStatus.hasUnpushedChanges` and `hasUncommittedChanges`.
-2. If there are uncommitted/unpushed changes, warn the user or push first.
-3. `POST /api/v1/Environments/{environmentId}/shutdown` and wait for `state` to become `Shutdown`.
-4. Optionally, `POST /api/v1/Environments/{environmentId}/archive` for long-term storage (reduces costs).
-5. Confirm archive by checking `GET /api/v1/Environments/{environmentId}/archive` returns the archived state.
-
-### 3. Restore and Resize an Archived Environment
-
-1. `PATCH /api/v1/Environments/{environmentId}/restore` to move from Archived back to Shutdown.
-2. `PATCH /api/v1/Environments/{environmentId}` with the new `skuName` to resize.
-3. `POST /api/v1/Environments/{environmentId}/start` to boot the environment.
-4. Poll `GET /api/v1/Environments/{environmentId}` until `state` is `Available`.
-
-### 4. Set Up Prebuild Templates for Faster Creation
-
-1. `POST /api/v2/prebuilds/templates` with `friendlyName`, `seed.repository`, and `planId`.
-2. Wait for the template build; call `POST /api/v2/prebuilds/templates/{templateId}/updatestatus` with `isSuccess: true` when done.
-3. Verify availability: `GET /api/v2/prebuilds/templates/skus/repo/{repoId}/branch/{branchName}/hash/{prebuildHash}/location/{location}/devcontainerpath/{devContainerPath}`.
-4. Create environments from the prebuild by setting `createFromPrebuild` and `seed.repository.prebuildHash` in the `POST /api/v1/Environments` call.
-
-### 5. Investigate and Diagnose a Failed Environment
-
-1. `GET /api/v1/Environments/{environmentId}` -- check `state`, `lastStateUpdateReason`, and `userControlledFailureReason`.
-2. `GET /api/v1/Environments/{environmentId}/state` for the raw state value.
-3. `GET /api/v1/GenevaActions/Billing/{environmentId}/state-changes` to review the state transition history and find when the failure occurred.
-4. `POST /api/v1/GenevaActions/Environments/{environmentId}/upload/running/vm/logs` to capture VM-level logs for deeper investigation.
-5. If the environment is recoverable, try `POST /api/v1/Environments/{environmentId}/start`; if it returns 503, consider creating a new environment from the same seed.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get Agent details?" -> GET /api/v1/Agents/{family}
+- "Create a AgentTelemetry?" -> POST /api/v1/AgentTelemetry
+- "Create a standalone?" -> POST /api/v1/AgentTelemetry/standalone
+- "List all Billing?" -> GET /api/v1/Billing
+- "Get Billing details?" -> GET /api/v1/GenevaActions/Billing/{environmentId}
+- "Create a resend?" -> POST /api/v1/GenevaActions/Billing/resend
+- "Create a state-change?" -> POST /api/v1/GenevaActions/Billing/{environmentId}/state-changes
+- "List all state-changes?" -> GET /api/v1/GenevaActions/Billing/{environmentId}/state-changes
+- "Get Configuration details?" -> GET /api/v1/GenevaActions/Configuration/{key}
+- "Delete a Configuration?" -> DELETE /api/v1/GenevaActions/Configuration/{key}
+- "Create a Configuration?" -> POST /api/v1/GenevaActions/Configuration
+- "Get Environment details?" -> GET /api/v1/Environments/{environmentId}
+- "Delete a Environment?" -> DELETE /api/v1/Environments/{environmentId}
+- "Partially update a Environment?" -> PATCH /api/v1/Environments/{environmentId}
+- "List all Environments?" -> GET /api/v1/Environments
+- "Create a Environment?" -> POST /api/v1/Environments
+- "Create a shutdown?" -> POST /api/v1/Environments/{environmentId}/shutdown
+- "Create a start?" -> POST /api/v1/Environments/{environmentId}/start
+- "Create a archive?" -> POST /api/v1/Environments/{environmentId}/archive
+- "List all archive?" -> GET /api/v1/Environments/{environmentId}/archive
+- "Create a export?" -> POST /api/v1/Environments/{environmentId}/export
+- "Create a notify?" -> POST /api/v1/Environments/{environmentId}/notify
+- "Get Environment details?" -> GET /api/v1/GenevaActions/Environments/{environmentId}
+- "Delete a Environment?" -> DELETE /api/v1/GenevaActions/Environments/{environmentId}
+- "Get storage details?" -> GET /api/v1/GenevaActions/Environments/storage/{environmentIdOrFriendlyName}/{targetBlob}
+- "Create a log?" -> POST /api/v1/GenevaActions/Environments/{environmentId}/upload/running/vm/logs
+- "List all state?" -> GET /api/v1/Environments/{environmentId}/state
+- "List all health?" -> GET /health
+- "Create a HeartBeat?" -> POST /api/v1/HeartBeat
+- "List all Locations?" -> GET /api/v1/Locations
+- "Get Location details?" -> GET /api/v1/Locations/{location}
+- "List all correlation?" -> GET /internal/Netmon/correlation
+- "List all jwks?" -> GET /.well-known/jwks
+- "List all openid-configuration?" -> GET /.well-known/openid-configuration
+- "List all default?" -> GET /api/v1/pools/default
+- "Create a rotate-pool?" -> POST /api/v1/GenevaActions/Pools/rotate-pools
+- "Create a Pool?" -> POST /api/v1/GenevaActions/Pools
+- "Create a change-resource-deletion-setting?" -> POST /api/v1/GenevaActions/Pools/change-resource-deletion-setting
+- "Create a template?" -> POST /api/v2/prebuilds/templates
+- "Create a updatestatus?" -> POST /api/v2/prebuilds/templates/{templateId}/updatestatus
+- "Get devcontainerpath details?" -> GET /api/v2/prebuilds/templates/skus/repo/{repoId}/branch/{branchName}/hash/{prebuildHash}/location/{location}/devcontainerpath/{devContainerPath}
+- "Create a delete?" -> POST /api/v2/prebuilds/delete
+- "Create a updatemaxversion?" -> POST /api/v2/prebuilds/templates/updatemaxversions
+- "Create a instance?" -> POST /api/v2/prebuilds/pools/{poolId}/instances
+- "Get template details?" -> GET /api/v2/prebuilds/template/{environmentId}
+- "Create a delete?" -> POST /api/v1/GenevaActions/Prebuilds/pools/delete
+- "Create a createorupdatesetting?" -> POST /api/v1/GenevaActions/Prebuilds/pools/createorupdatesettings
+- "Create a under-investigation?" -> POST /api/v1/GenevaActions/Resources/{resourceId}/under-investigation
+- "Create a storage-credential?" -> POST /api/v1/GenevaActions/Resources/{resourceId}/storage-credentials
+- "List all portInfo?" -> GET /api/v1/Tunnel/{environmentId}/portInfo
+- "Create a VnetPoolDefinition?" -> POST /api/v1/GenevaActions/VnetPoolDefinitions
+- "List all warmup?" -> GET /warmup
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

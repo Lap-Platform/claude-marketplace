@@ -1,7 +1,7 @@
 @lap v0.3
 # Machine-readable API spec. Each @endpoint block is one API call.
 @api TCGdex API
-@base https://api.tcgdex.net/v2/{lang}
+@base https://api.tcgdex.net/v2/en
 @version 2
 @endpoints 33
 @hint download_for_search
@@ -9,227 +9,260 @@
 
 @group cards
 @endpoint GET /cards
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc fetch the list of cards
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /cards/{cardId}
-@required {cardId: str}
-@returns(200) {id: str, localId: str, image: str, name: str, illustrator: str, category: str, rarity: str, set: map{id: str, name: str, logo: str, symbol: str, cardCount: map{total: num, official: num}}, variants: map{normal: bool, reverse: bool, holo: bool, firstEdition: bool, wPromo: bool}, variant_detailed: [map]?, hp: num?, types: [str], evolveFrom: str, stage: str, suffix: str, item: map{name: str, effect: str}, trainerType: str, energyType: str, regulationMark: str, legal: map{standard: bool, expanded: bool}, description: str, level: num, abilities: [map], attacks: [map], retreat: num, dexId: [num], weaknesses: [[map]], resistances: [[map]], boosters: [map], updated: str(date-time)}
-@errors {404, 400, 500}
+@desc Find card by ID
+@required {cardId: str # ID of card to return}
+@returns(200) {id: str, localId: str, image: str, name: str, illustrator: str, category: str, rarity: str, set: map{id: str, name: str, logo: str, symbol: str, cardCount: map{total: num, official: num}}, variants: map{normal: bool, reverse: bool, holo: bool, firstEdition: bool, wPromo: bool}, variant_detailed: [map]?, hp: num?, types: [str], evolveFrom: str, stage: str, suffix: str, item: map{name: str, effect: str}, trainerType: str, energyType: str, regulationMark: str, legal: map{standard: bool, expanded: bool}, description: str, level: num, abilities: [map], attacks: [map], retreat: num, dexId: [num], weaknesses: [[map]], resistances: [[map]], boosters: [map], updated: str(date-time)} # Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group sets
 @endpoint GET /sets
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all sets
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /sets/{set}
-@required {set: str}
-@returns(200) {id: str, name: str, logo: str, symbol: str, serie: map{id: str, name: str, logo: str}, tcgOnline: str, releaseDate: str(date), variants: map{normal: bool, reverse: bool, holo: bool, firstEdition: bool, wPromo: bool}, boosters: [map], legal: map{standard: bool, expanded: bool}, abbreviation: map{official: str, localized: str}, cardCount: map{total: num, official: num, normal: num, reverse: num, holo: num, firstEd: num}, cards: [map]}
-@errors {404, 400, 500}
+@desc Find set by ID
+@required {set: str # ID of set to return}
+@returns(200) {id: str, name: str, logo: str, symbol: str, serie: map{id: str, name: str, logo: str}, tcgOnline: str, releaseDate: str(date), variants: map{normal: bool, reverse: bool, holo: bool, firstEdition: bool, wPromo: bool}, boosters: [map], legal: map{standard: bool, expanded: bool}, abbreviation: map{official: str, localized: str}, cardCount: map{total: num, official: num, normal: num, reverse: num, holo: num, firstEd: num}, cards: [map]} # Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endpoint GET /sets/{set}/{cardLocalId}
+@desc Find card by set and local ID
 @required {set: str, cardLocalId: str}
-@returns(200) {id: str, localId: str, image: str, name: str, illustrator: str, category: str, rarity: str, set: map{id: str, name: str, logo: str, symbol: str, cardCount: map{total: num, official: num}}, variants: map{normal: bool, reverse: bool, holo: bool, firstEdition: bool, wPromo: bool}, variant_detailed: [map]?, hp: num?, types: [str], evolveFrom: str, stage: str, suffix: str, item: map{name: str, effect: str}, trainerType: str, energyType: str, regulationMark: str, legal: map{standard: bool, expanded: bool}, description: str, level: num, abilities: [map], attacks: [map], retreat: num, dexId: [num], weaknesses: [[map]], resistances: [[map]], boosters: [map], updated: str(date-time)}
-@errors {404, 400, 500}
+@returns(200) {id: str, localId: str, image: str, name: str, illustrator: str, category: str, rarity: str, set: map{id: str, name: str, logo: str, symbol: str, cardCount: map{total: num, official: num}}, variants: map{normal: bool, reverse: bool, holo: bool, firstEdition: bool, wPromo: bool}, variant_detailed: [map]?, hp: num?, types: [str], evolveFrom: str, stage: str, suffix: str, item: map{name: str, effect: str}, trainerType: str, energyType: str, regulationMark: str, legal: map{standard: bool, expanded: bool}, description: str, level: num, abilities: [map], attacks: [map], retreat: num, dexId: [num], weaknesses: [[map]], resistances: [[map]], boosters: [map], updated: str(date-time)} # Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group series
 @endpoint GET /series
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all series
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /series/{serie}
-@required {serie: str}
-@returns(200) {id: str, name: str, logo: str, releaseDate: str(date), firstSet: map{id: str, name: str, logo: str, symbol: str, cardCount: map{total: num, official: num}}, lastSet: map{id: str, name: str, logo: str, symbol: str, cardCount: map{total: num, official: num}}, sets: [map]}
-@errors {404, 400, 500}
+@desc Find series by ID
+@required {serie: str # ID of serie to return}
+@returns(200) {id: str, name: str, logo: str, releaseDate: str(date), firstSet: map{id: str, name: str, logo: str, symbol: str, cardCount: map{total: num, official: num}}, lastSet: map{id: str, name: str, logo: str, symbol: str, cardCount: map{total: num, official: num}}, sets: [map]} # Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group categories
 @endpoint GET /categories
-@optional {sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all categories
+@optional {sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /categories/{category}
+@desc Get cards by category
 @required {category: str}
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200) {name: str, cards: [map]}
-@errors {404, 400, 500}
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) {name: str, cards: [map]} # Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group hp
 @endpoint GET /hp
-@optional {sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all HP values
+@optional {sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /hp/{hp}
+@desc Get cards by HP value
 @required {hp: str}
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200) {name: str, cards: [map]}
-@errors {404, 400, 500}
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) {name: str, cards: [map]} # Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group illustrators
 @endpoint GET /illustrators
-@optional {sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all illustrators
+@optional {sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /illustrators/{illustrator}
+@desc Get cards by illustrator
 @required {illustrator: str}
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200) {name: str, cards: [map]}
-@errors {404, 400, 500}
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) {name: str, cards: [map]} # Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group rarities
 @endpoint GET /rarities
-@optional {sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all rarities
+@optional {sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /rarities/{rarity}
+@desc Get cards by rarity
 @required {rarity: str}
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200) {name: str, cards: [map]}
-@errors {404, 400, 500}
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) {name: str, cards: [map]} # Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group retreats
 @endpoint GET /retreats
-@optional {sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all retreat costs
+@optional {sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /retreats/{retreat}
+@desc Get cards by retreat cost
 @required {retreat: str}
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200) {name: str, cards: [map]}
-@errors {404, 400, 500}
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) {name: str, cards: [map]} # Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group types
 @endpoint GET /types
-@optional {sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all types
+@optional {sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /types/{type}
+@desc Get cards by type
 @required {type: str}
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {404, 400, 500}
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group dex-ids
 @endpoint GET /dex-ids
-@optional {sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all Pokedex IDs
+@optional {sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /dex-ids/{dexId}
+@desc Get cards by Pokedex ID
 @required {dexId: str}
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {404, 400, 500}
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group energy-types
 @endpoint GET /energy-types
-@optional {sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all energy types
+@optional {sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /energy-types/{energy-type}
+@desc Get cards by energy type
 @required {energy-type: str}
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {404, 400, 500}
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group regulation-marks
 @endpoint GET /regulation-marks
-@optional {sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all regulation marks
+@optional {sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /regulation-marks/{regulation-mark}
+@desc Get cards by regulation mark
 @required {regulation-mark: str}
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {404, 400, 500}
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group stages
 @endpoint GET /stages
-@optional {sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all Pokemon stages
+@optional {sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /stages/{stage}
+@desc Get cards by stage
 @required {stage: str}
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {404, 400, 500}
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group suffixes
 @endpoint GET /suffixes
-@optional {sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all card suffixes
+@optional {sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /suffixes/{suffix}
+@desc Get cards by suffix
 @required {suffix: str}
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {404, 400, 500}
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group trainer-types
 @endpoint GET /trainer-types
-@optional {sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all trainer types
+@optional {sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /trainer-types/{trainer-type}
+@desc Get cards by trainer type
 @required {trainer-type: str}
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {404, 400, 500}
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 
 @group variants
 @endpoint GET /variants
-@optional {sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {400, 500}
+@desc Get all card variants
+@optional {sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 500: An unexpected error occurred on the server}
 
 @endpoint GET /variants/{variant}
+@desc Get cards by variant
 @required {variant: str}
-@optional {filters: map, sort:field: str, sort:order: str(ASC/DESC)=None, pagination:page: int=1, pagination:itemsPerPage: int=100}
-@returns(200)
-@errors {404, 400, 500}
+@optional {filters: map # Filter results by field value.  Supports various operators: - Default/`like:` - Laxist equality (contains, case insensitive) - `not:`/`notlike:` - Laxist inequality - `eq:` - Strict equality - `neq:` - Strict inequality - `gte:` - Greater than or equal (numbers) - `lte:` - Less than or equal (numbers) - `gt:` - Greater than (numbers) - `lt:` - Less than (numbers) - `null:` - Field is null - `notnull:` - Field is not null - Multiple values with `|` (e.g., `name=eq:Furret|Pikachu`), sort:field: str # Field to sort results by (overrides default sorting), sort:order: str(ASC/DESC)=null # Order to sort results (ASC or DESC), pagination:page: int=1 # Page number for paginated results, pagination:itemsPerPage: int=100 # Number of items per page (applied when pagination:page is used)}
+@returns(200) Successful request
+@errors {400: The request was invalid, 404: The specified resource was not found, 500: An unexpected error occurred on the server}
 
 @endgroup
 

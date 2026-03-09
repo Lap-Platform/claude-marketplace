@@ -9,512 +9,636 @@
 
 @group broadcasts
 @endpoint GET /broadcasts
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves a paginated list of broadcasts for the project. Returns basic information about each broadcast including its creation time and status.
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint POST /broadcasts
+@desc Creates a new broadcast message. When a broadcast is created, it generates individual notifications for relevant users within the project. Only administrators can create broadcasts.
 @required {recipients: [map], title: str}
-@optional {action_url: str, category: str, content: str, created_at: str(date-time), custom_attributes: map, id: str, overrides: map{channels: map{email: map, in_app: map, mobile_push: map, slack: map, sms: map, web_push: map}, providers: map{amazon_ses: map, android: map, ios: map, mailgun: map, postmark: map, sendgrid: map, slack: map}}, status: map{errors!: [map{message: str}], status!: str, summary!: map{failures!: int, total!: int}}, topic: str}
-@returns(201) {action_url: str?, category: str?, content: str?, created_at: str(date-time), custom_attributes: map?, id: str, overrides: map?{channels: map{email: map{action_url: str?, content: str, title: str}, in_app: map{action_url: str?, content: str, title: str}, mobile_push: map{action_url: str?, content: str, title: str}, slack: map{action_url: str?, content: str, title: str}, sms: map{action_url: str?, content: str, title: str}, web_push: map{action_url: str?, content: str, title: str}}, providers: map{amazon_ses: map, android: map, ios: map, mailgun: map, postmark: map, sendgrid: map, slack: map}}, recipients: [map], status: map{errors: [map]?, status: str, summary: map{failures: int, total: int}}, title: str, topic: str?}
+@optional {action_url: str, category: str, content: str, created_at: str(date-time) # The timestamp when the broadcast was created., custom_attributes: map, id: str # The unique id for this broadcast., overrides: map{channels: map{email: map, in_app: map, mobile_push: map, slack: map, sms: map, web_push: map}, providers: map{amazon_ses: map, android: map, ios: map, mailgun: map, postmark: map, sendgrid: map, slack: map}}, status: map{errors!: [map{message: str}], status!: str, summary!: map{failures!: int, total!: int}}, topic: str}
+@returns(201) {action_url: str?, category: str?, content: str?, created_at: str(date-time), custom_attributes: map?, id: str, overrides: map?{channels: map{email: map{action_url: str?, content: str, title: str}, in_app: map{action_url: str?, content: str, title: str}, mobile_push: map{action_url: str?, content: str, title: str}, slack: map{action_url: str?, content: str, title: str}, sms: map{action_url: str?, content: str, title: str}, web_push: map{action_url: str?, content: str, title: str}}, providers: map{amazon_ses: map, android: map, ios: map, mailgun: map, postmark: map, sendgrid: map, slack: map}}, recipients: [map], status: map{errors: [map]?, status: str, summary: map{failures: int, total: int}}, title: str, topic: str?} # Created
 
 @endpoint GET /broadcasts/{broadcast_id}
+@desc Retrieves detailed information about a specific broadcast by its ID. Includes the broadcast's configuration and current status.
 @required {broadcast_id: str}
-@returns(200) {action_url: str?, category: str?, content: str?, created_at: str(date-time), custom_attributes: map?, id: str, overrides: map?{channels: map{email: map{action_url: str?, content: str, title: str}, in_app: map{action_url: str?, content: str, title: str}, mobile_push: map{action_url: str?, content: str, title: str}, slack: map{action_url: str?, content: str, title: str}, sms: map{action_url: str?, content: str, title: str}, web_push: map{action_url: str?, content: str, title: str}}, providers: map{amazon_ses: map, android: map, ios: map, mailgun: map, postmark: map, sendgrid: map, slack: map}}, recipients: [map], status: map{errors: [map]?, status: str, summary: map{failures: int, total: int}}, title: str, topic: str?}
+@returns(200) {action_url: str?, category: str?, content: str?, created_at: str(date-time), custom_attributes: map?, id: str, overrides: map?{channels: map{email: map{action_url: str?, content: str, title: str}, in_app: map{action_url: str?, content: str, title: str}, mobile_push: map{action_url: str?, content: str, title: str}, slack: map{action_url: str?, content: str, title: str}, sms: map{action_url: str?, content: str, title: str}, web_push: map{action_url: str?, content: str, title: str}}, providers: map{amazon_ses: map, android: map, ios: map, mailgun: map, postmark: map, sendgrid: map, slack: map}}, recipients: [map], status: map{errors: [map]?, status: str, summary: map{failures: int, total: int}}, title: str, topic: str?} # OK
 
 @endgroup
 
 @group channels
 @endpoint GET /channels/deliveryconfig
 @optional {key: str}
-@returns(200) {channels: [map], disabled: bool, key: str}
+@returns(200) {channels: [map], disabled: bool, key: str} # OK
 
 @endpoint PUT /channels/deliveryconfig
 @required {channels: [map{channel!: str, delay: int, disabled: bool, if: str, priority: int}], key: str}
 @optional {disabled: bool=False}
-@returns(200) {channels: [map], disabled: bool, key: str}
+@returns(200) {channels: [map], disabled: bool, key: str} # OK
 
 @endpoint GET /channels/mobile_push/apns/tokens
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Lists all mobile_push tokens belonging to the authenticated user. Returns a paginated list of tokens, including their status, creation dates, and associated metadata.
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint POST /channels/mobile_push/apns/tokens
+@desc Saves a mobile_push token for the authenticated user. This token serves as a credential for accessing channel-specific functionality. Each token is unique to the user and channel combination, allowing for direct communication with the user via the channel.
 @required {device_token: str}
-@optional {app_id: str, installation_id: str(development/production)}
-@returns(201) {app_id: str, device_token: str, installation_id: str}
+@optional {app_id: str # (Optional) The bundle identifier of the application that is registering this token. Use this field to override the default identifier specified in the projects APNs integration., installation_id: str(development/production) # (Optional) The APNs environment the token is registered for. If none is provided we assume the token is used in `production`.}
+@returns(201) {app_id: str, device_token: str, installation_id: str} # Created
 
 @endpoint DELETE /channels/mobile_push/apns/tokens/{token_id}
+@desc Revokes one of the authenticated user's mobile_push tokens. This permanently invalidates the specified token, preventing it from being used for future channel access. This action cannot be undone. Users can only revoke their own tokens.
 @required {token_id: str}
-@returns(200) {discarded_at: str, id: str}
+@returns(200) {discarded_at: str, id: str} # OK
 
 @endpoint GET /channels/mobile_push/apns/tokens/{token_id}
+@desc Retrieves details of a specific mobile_push token belonging to the authenticated user. Returns information about the token's status, creation date, and any associated metadata. Users can only access their own tokens.
 @required {token_id: str}
-@returns(200) {app_id: str, created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, installation_id: str, updated_at: str(date-time)?}
+@returns(200) {app_id: str, created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, installation_id: str, updated_at: str(date-time)?} # OK
 
 @endpoint GET /channels/mobile_push/expo/tokens
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Lists all mobile_push tokens belonging to the authenticated user. Returns a paginated list of tokens, including their status, creation dates, and associated metadata.
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint POST /channels/mobile_push/expo/tokens
+@desc Saves a mobile_push token for the authenticated user. This token serves as a credential for accessing channel-specific functionality. Each token is unique to the user and channel combination, allowing for direct communication with the user via the channel.
 @required {device_token: str}
-@returns(201) {device_token: str}
+@returns(201) {device_token: str} # Created
 
 @endpoint DELETE /channels/mobile_push/expo/tokens/{token_id}
+@desc Revokes one of the authenticated user's mobile_push tokens. This permanently invalidates the specified token, preventing it from being used for future channel access. This action cannot be undone. Users can only revoke their own tokens.
 @required {token_id: str}
-@returns(200) {discarded_at: str, id: str}
+@returns(200) {discarded_at: str, id: str} # OK
 
 @endpoint GET /channels/mobile_push/expo/tokens/{token_id}
+@desc Retrieves details of a specific mobile_push token belonging to the authenticated user. Returns information about the token's status, creation date, and any associated metadata. Users can only access their own tokens.
 @required {token_id: str}
-@returns(200) {created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, updated_at: str(date-time)?}
+@returns(200) {created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, updated_at: str(date-time)?} # OK
 
 @endpoint GET /channels/mobile_push/fcm/tokens
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Lists all mobile_push tokens belonging to the authenticated user. Returns a paginated list of tokens, including their status, creation dates, and associated metadata.
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint POST /channels/mobile_push/fcm/tokens
+@desc Saves a mobile_push token for the authenticated user. This token serves as a credential for accessing channel-specific functionality. Each token is unique to the user and channel combination, allowing for direct communication with the user via the channel.
 @required {device_token: str}
 @optional {installation_id: str(development/production)}
-@returns(201) {device_token: str, installation_id: str}
+@returns(201) {device_token: str, installation_id: str} # Created
 
 @endpoint DELETE /channels/mobile_push/fcm/tokens/{token_id}
+@desc Revokes one of the authenticated user's mobile_push tokens. This permanently invalidates the specified token, preventing it from being used for future channel access. This action cannot be undone. Users can only revoke their own tokens.
 @required {token_id: str}
-@returns(200) {discarded_at: str, id: str}
+@returns(200) {discarded_at: str, id: str} # OK
 
 @endpoint GET /channels/mobile_push/fcm/tokens/{token_id}
+@desc Retrieves details of a specific mobile_push token belonging to the authenticated user. Returns information about the token's status, creation date, and any associated metadata. Users can only access their own tokens.
 @required {token_id: str}
-@returns(200) {created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, installation_id: str, updated_at: str(date-time)?}
+@returns(200) {created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, installation_id: str, updated_at: str(date-time)?} # OK
 
 @endpoint GET /channels/slack/tokens
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Lists all slack tokens belonging to the authenticated user. Returns a paginated list of tokens, including their status, creation dates, and associated metadata.
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint POST /channels/slack/tokens
+@desc Saves a slack token for the authenticated user. This token serves as a credential for accessing channel-specific functionality. Each token is unique to the user and channel combination, allowing for direct communication with the user via the channel.
 @optional {oauth: map{channel_id!: str, installation_id!: str, scope: str}, webhook: map{url!: str(uri)}}
-@returns(201) {oauth: map{channel_id: str, installation_id: str, scope: str}, webhook: map{url: str(uri)}}
+@returns(201) {oauth: map{channel_id: str, installation_id: str, scope: str}, webhook: map{url: str(uri)}} # Created
 
 @endpoint DELETE /channels/slack/tokens/{token_id}
+@desc Revokes one of the authenticated user's slack tokens. This permanently invalidates the specified token, preventing it from being used for future channel access. This action cannot be undone. Users can only revoke their own tokens.
 @required {token_id: str}
-@returns(200) {discarded_at: str, id: str}
+@returns(200) {discarded_at: str, id: str} # OK
 
 @endpoint GET /channels/slack/tokens/{token_id}
+@desc Retrieves details of a specific slack token belonging to the authenticated user. Returns information about the token's status, creation date, and any associated metadata. Users can only access their own tokens.
 @required {token_id: str}
-@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, id: str, oauth: map{channel_id: str, installation_id: str, scope: str}, updated_at: str(date-time)?, webhook: map{url: str(uri)}}
+@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, id: str, oauth: map{channel_id: str, installation_id: str, scope: str}, updated_at: str(date-time)?, webhook: map{url: str(uri)}} # OK
 
 @endpoint GET /channels/teams/tokens
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Lists all teams tokens belonging to the authenticated user. Returns a paginated list of tokens, including their status, creation dates, and associated metadata.
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint POST /channels/teams/tokens
+@desc Saves a teams token for the authenticated user. This token serves as a credential for accessing channel-specific functionality. Each token is unique to the user and channel combination, allowing for direct communication with the user via the channel.
 @optional {webhook: map{url: str}}
-@returns(201) {webhook: map{url: str}}
+@returns(201) {webhook: map{url: str}} # Created
 
 @endpoint DELETE /channels/teams/tokens/{token_id}
+@desc Revokes one of the authenticated user's teams tokens. This permanently invalidates the specified token, preventing it from being used for future channel access. This action cannot be undone. Users can only revoke their own tokens.
 @required {token_id: str}
-@returns(200) {discarded_at: str, id: str}
+@returns(200) {discarded_at: str, id: str} # OK
 
 @endpoint GET /channels/teams/tokens/{token_id}
+@desc Retrieves details of a specific teams token belonging to the authenticated user. Returns information about the token's status, creation date, and any associated metadata. Users can only access their own tokens.
 @required {token_id: str}
-@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, id: str, updated_at: str(date-time)?, webhook: map{url: str}}
+@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, id: str, updated_at: str(date-time)?, webhook: map{url: str}} # OK
 
 @endpoint GET /channels/web_push/tokens
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Lists all web_push tokens belonging to the authenticated user. Returns a paginated list of tokens, including their status, creation dates, and associated metadata.
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint POST /channels/web_push/tokens
+@desc Saves a web_push token for the authenticated user. This token serves as a credential for accessing channel-specific functionality. Each token is unique to the user and channel combination, allowing for direct communication with the user via the channel.
 @required {endpoint: str(uri), keys: map{auth!: str, p256dh!: str}}
-@returns(201) {endpoint: str(uri), keys: map{auth: str, p256dh: str}}
+@returns(201) {endpoint: str(uri), keys: map{auth: str, p256dh: str}} # Created
 
 @endpoint DELETE /channels/web_push/tokens/{token_id}
+@desc Revokes one of the authenticated user's web_push tokens. This permanently invalidates the specified token, preventing it from being used for future channel access. This action cannot be undone. Users can only revoke their own tokens.
 @required {token_id: str}
-@returns(200) {discarded_at: str, id: str}
+@returns(200) {discarded_at: str, id: str} # OK
 
 @endpoint GET /channels/web_push/tokens/{token_id}
+@desc Retrieves details of a specific web_push token belonging to the authenticated user. Returns information about the token's status, creation date, and any associated metadata. Users can only access their own tokens.
 @required {token_id: str}
-@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, endpoint: str(uri), id: str, keys: map{auth: str, p256dh: str}, updated_at: str(date-time)?}
+@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, endpoint: str(uri), id: str, keys: map{auth: str, p256dh: str}, updated_at: str(date-time)?} # OK
 
 @endgroup
 
 @group events
 @endpoint GET /events
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves a paginated list of events for the project.
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endgroup
 
 @group integrations
 @endpoint GET /integrations
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc List Integrations
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint DELETE /integrations/apns
-@returns(204)
+@desc Removes a apns integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/apns
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current apns integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/apns
-@required {app_id: str, badge: str(unread/unseen), certificate: str, key_id: str, team_id: str}
+@desc Creates or updates a apns integration for the project. Only administrators can configure integrations.
+@required {app_id: str # The default bundle identifier of the application that is configured with this project. It can be overriden on a per token basis, when registering device tokens., badge: str(unread/unseen), certificate: str # The APNs certificate in P8 format. Generate it at [developer.apple.com](https://developer.apple.com/account/resources/authkeys/add) with the 'Apple Push Notification service (APNs)' option selected., key_id: str, team_id: str}
 @optional {payload_version: str(1/2)=2}
-@returns(200) {app_id: str, badge: str, certificate: str, key_id: str, payload_version: str, team_id: str}
+@returns(200) {app_id: str, badge: str, certificate: str, key_id: str, payload_version: str, team_id: str} # OK
 
 @endpoint DELETE /integrations/apns/{id}
+@desc Removes a specific apns integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/awssns
-@returns(204)
+@desc Removes a awssns integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/awssns
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current awssns integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/awssns
-@required {webhook_signing_secret: str}
-@returns(200) {webhook_signing_secret: str}
+@desc Creates or updates a awssns integration for the project. Only administrators can configure integrations.
+@required {webhook_signing_secret: str # The signing certificate from AWS SNS}
+@returns(200) {webhook_signing_secret: str} # OK
 
 @endpoint POST /integrations/awssns/webhooks/incoming/{id}
+@desc Receives and processes incoming webhook events from the awssns integration. Each integration can define its own webhook payload format and handling logic.
 @required {id: str}
 @optional {description: str, payload: map, type: str}
-@returns(201) {description: str, payload: map?, type: str}
+@returns(201) {description: str, payload: map?, type: str} # Created
 
 @endpoint DELETE /integrations/awssns/{id}
+@desc Removes a specific awssns integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/expo
-@returns(204)
+@desc Removes a expo integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/expo
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current expo integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/expo
+@desc Creates or updates a expo integration for the project. Only administrators can configure integrations.
 @required {access_token: str}
-@returns(200) {access_token: str}
+@returns(200) {access_token: str} # OK
 
 @endpoint DELETE /integrations/expo/{id}
+@desc Removes a specific expo integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/fcm
-@returns(204)
+@desc Removes a fcm integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/fcm
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current fcm integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/fcm
+@desc Creates or updates a fcm integration for the project. Only administrators can configure integrations.
 @required {auth_provider_x509_cert_url: str, auth_uri: str, client_email: str, client_id: str, client_x509_cert_url: str, private_key: str, private_key_id: str, project_id: str, token_uri: str, type: str, universe_domain: str}
-@returns(200) {auth_provider_x509_cert_url: str, auth_uri: str, client_email: str, client_id: str, client_x509_cert_url: str, private_key: str, private_key_id: str, project_id: str, token_uri: str, type: str, universe_domain: str}
+@returns(200) {auth_provider_x509_cert_url: str, auth_uri: str, client_email: str, client_id: str, client_x509_cert_url: str, private_key: str, private_key_id: str, project_id: str, token_uri: str, type: str, universe_domain: str} # OK
 
 @endpoint DELETE /integrations/fcm/{id}
+@desc Removes a specific fcm integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/github
-@returns(204)
+@desc Removes a github integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/github
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current github integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/github
-@required {webhook_signing_secret: str}
-@returns(200) {webhook_signing_secret: str}
+@desc Creates or updates a github integration for the project. Only administrators can configure integrations.
+@required {webhook_signing_secret: str # The signing secret to verify incoming requests from Github}
+@returns(200) {webhook_signing_secret: str} # OK
 
 @endpoint POST /integrations/github/webhooks/incoming/{id}
+@desc Receives and processes incoming webhook events from the github integration. Each integration can define its own webhook payload format and handling logic.
 @required {id: str}
 @optional {description: str, payload: map, type: str}
-@returns(201) {description: str, payload: map, type: str}
+@returns(201) {description: str, payload: map, type: str} # Created
 
 @endpoint DELETE /integrations/github/{id}
+@desc Removes a specific github integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/inbox
-@returns(204)
+@desc Removes a inbox integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/inbox
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current inbox integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/inbox
+@desc Creates or updates a inbox integration for the project. Only administrators can configure integrations.
 @required {images: map{emptyInboxUrl!: str}, locale: str, theme: map{banner: map{backgroundColor!: str, backgroundOpacity: num, fontSize!: str, textColor!: str}, dialog: map{accentColor!: str, backgroundColor!: str, textColor!: str}, footer: map{backgroundColor!: str, borderRadius!: str, fontSize!: str, textColor!: str}, header: map{backgroundColor!: str, borderRadius!: str, fontFamily!: str, fontSize!: str, textColor!: str}, icon: map{borderColor!: str, width!: str}, notification: map{default!: map, unread!: map, unseen!: map}, unseenBadge: map{backgroundColor!: str}}}
-@returns(200) {images: map?{emptyInboxUrl: str}, locale: str?, theme: map?{banner: map{backgroundColor: str, backgroundOpacity: num, fontSize: str, textColor: str}, dialog: map{accentColor: str, backgroundColor: str, textColor: str}, footer: map{backgroundColor: str, borderRadius: str, fontSize: str, textColor: str}, header: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, textColor: str}, icon: map{borderColor: str, width: str}, notification: map{default: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, hover: map, margin: str, state: map, textColor: str}, unread: map{backgroundColor: str, hover: map, state: map, textColor: str}, unseen: map{backgroundColor: str, hover: map, state: map, textColor: str}}, unseenBadge: map{backgroundColor: str}}}
+@returns(200) {images: map?{emptyInboxUrl: str}, locale: str?, theme: map?{banner: map{backgroundColor: str, backgroundOpacity: num, fontSize: str, textColor: str}, dialog: map{accentColor: str, backgroundColor: str, textColor: str}, footer: map{backgroundColor: str, borderRadius: str, fontSize: str, textColor: str}, header: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, textColor: str}, icon: map{borderColor: str, width: str}, notification: map{default: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, hover: map, margin: str, state: map, textColor: str}, unread: map{backgroundColor: str, hover: map, state: map, textColor: str}, unseen: map{backgroundColor: str, hover: map, state: map, textColor: str}}, unseenBadge: map{backgroundColor: str}}} # OK
 
 @endpoint POST /integrations/inbox/installations
+@desc Creates a new installation of a inbox integration for a user. This endpoint is used when an integration needs to be set up with user-specific credentials or configuration.
 @required {images: map{emptyInboxUrl!: str}, locale: str, theme: map{banner: map{backgroundColor!: str, backgroundOpacity: num, fontSize!: str, textColor!: str}, dialog: map{accentColor!: str, backgroundColor!: str, textColor!: str}, footer: map{backgroundColor!: str, borderRadius!: str, fontSize!: str, textColor!: str}, header: map{backgroundColor!: str, borderRadius!: str, fontFamily!: str, fontSize!: str, textColor!: str}, icon: map{borderColor!: str, width!: str}, notification: map{default!: map, unread!: map, unseen!: map}, unseenBadge: map{backgroundColor!: str}}}
-@returns(201) {images: map?{emptyInboxUrl: str}, locale: str?, theme: map?{banner: map{backgroundColor: str, backgroundOpacity: num, fontSize: str, textColor: str}, dialog: map{accentColor: str, backgroundColor: str, textColor: str}, footer: map{backgroundColor: str, borderRadius: str, fontSize: str, textColor: str}, header: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, textColor: str}, icon: map{borderColor: str, width: str}, notification: map{default: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, hover: map, margin: str, state: map, textColor: str}, unread: map{backgroundColor: str, hover: map, state: map, textColor: str}, unseen: map{backgroundColor: str, hover: map, state: map, textColor: str}}, unseenBadge: map{backgroundColor: str}}}
+@returns(201) {images: map?{emptyInboxUrl: str}, locale: str?, theme: map?{banner: map{backgroundColor: str, backgroundOpacity: num, fontSize: str, textColor: str}, dialog: map{accentColor: str, backgroundColor: str, textColor: str}, footer: map{backgroundColor: str, borderRadius: str, fontSize: str, textColor: str}, header: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, textColor: str}, icon: map{borderColor: str, width: str}, notification: map{default: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, hover: map, margin: str, state: map, textColor: str}, unread: map{backgroundColor: str, hover: map, state: map, textColor: str}, unseen: map{backgroundColor: str, hover: map, state: map, textColor: str}}, unseenBadge: map{backgroundColor: str}}} # Created
 
 @endpoint POST /integrations/inbox/installations/start
-@returns(201) {images: map?{emptyInboxUrl: str}, locale: str?, theme: map?{banner: map{backgroundColor: str, backgroundOpacity: num, fontSize: str, textColor: str}, dialog: map{accentColor: str, backgroundColor: str, textColor: str}, footer: map{backgroundColor: str, borderRadius: str, fontSize: str, textColor: str}, header: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, textColor: str}, icon: map{borderColor: str, width: str}, notification: map{default: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, hover: map, margin: str, state: map, textColor: str}, unread: map{backgroundColor: str, hover: map, state: map, textColor: str}, unseen: map{backgroundColor: str, hover: map, state: map, textColor: str}}, unseenBadge: map{backgroundColor: str}}}
+@desc Initiates the installation flow for a inbox integration. This is the first step in a multi-step installation process where user authorization or external service configuration may be required.
+@returns(201) {images: map?{emptyInboxUrl: str}, locale: str?, theme: map?{banner: map{backgroundColor: str, backgroundOpacity: num, fontSize: str, textColor: str}, dialog: map{accentColor: str, backgroundColor: str, textColor: str}, footer: map{backgroundColor: str, borderRadius: str, fontSize: str, textColor: str}, header: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, textColor: str}, icon: map{borderColor: str, width: str}, notification: map{default: map{backgroundColor: str, borderRadius: str, fontFamily: str, fontSize: str, hover: map, margin: str, state: map, textColor: str}, unread: map{backgroundColor: str, hover: map, state: map, textColor: str}, unseen: map{backgroundColor: str, hover: map, state: map, textColor: str}}, unseenBadge: map{backgroundColor: str}}} # Created
 
 @endpoint DELETE /integrations/inbox/{id}
+@desc Removes a specific inbox integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/mailgun
-@returns(204)
+@desc Removes a mailgun integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/mailgun
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current mailgun integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/mailgun
+@desc Creates or updates a mailgun integration for the project. Only administrators can configure integrations.
 @required {api_key: str, domain: str, region: str(us/eu)}
-@returns(200) {api_key: str, domain: str, region: str}
+@returns(200) {api_key: str, domain: str, region: str} # OK
 
 @endpoint DELETE /integrations/mailgun/{id}
+@desc Removes a specific mailgun integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/ping_email
-@returns(204)
+@desc Removes a ping_email integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/ping_email
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current ping_email integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/ping_email
-@required {url: str(uri)}
-@returns(200) {url: str(uri)}
+@desc Creates or updates a ping_email integration for the project. Only administrators can configure integrations.
+@required {url: str(uri) # URL to ping}
+@returns(200) {url: str(uri)} # OK
 
 @endpoint DELETE /integrations/ping_email/{id}
+@desc Removes a specific ping_email integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/sendgrid
-@returns(204)
+@desc Removes a sendgrid integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/sendgrid
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current sendgrid integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/sendgrid
-@required {api_key: str}
+@desc Creates or updates a sendgrid integration for the project. Only administrators can configure integrations.
+@required {api_key: str # The API key for Sendgrid}
 @optional {from: map{email!: str(email), name: str}, reply_to: map{email!: str(email), name: str}}
-@returns(200) {api_key: str, from: map{email: str(email), name: str?}, reply_to: map{email: str(email), name: str?}}
+@returns(200) {api_key: str, from: map{email: str(email), name: str?}, reply_to: map{email: str(email), name: str?}} # OK
 
 @endpoint DELETE /integrations/sendgrid/{id}
+@desc Removes a specific sendgrid integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/ses
-@returns(204)
+@desc Removes a ses integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/ses
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current ses integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/ses
-@required {key_id: str, region: str, secret_key: str}
+@desc Creates or updates a ses integration for the project. Only administrators can configure integrations.
+@required {key_id: str # AWS Access Key ID, region: str # AWS Region, secret_key: str # AWS Secret Key}
 @optional {from: map{email!: str(email), name: str}}
-@returns(200) {from: map{email: str(email), name: str?}, key_id: str, region: str, secret_key: str}
+@returns(200) {from: map{email: str(email), name: str?}, key_id: str, region: str, secret_key: str} # OK
 
 @endpoint DELETE /integrations/ses/{id}
+@desc Removes a specific ses integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/slack
-@returns(204)
+@desc Removes a slack integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/slack
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current slack integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/slack
-@required {app_id: str, client_id: str, client_secret: str, signing_secret: str}
-@returns(200) {app_id: str, client_id: str, client_secret: str, signing_secret: str}
+@desc Creates or updates a slack integration for the project. Only administrators can configure integrations.
+@required {app_id: str # The Slack app ID that can be found in the app's settings page of the Slack API dashboard., client_id: str # The Slack client ID that can be found in the app's settings page of the Slack API dashboard., client_secret: str # The Slack client secret that can be found in the app's settings page of the Slack API dashboard., signing_secret: str # The Slack signing secret that can be found in the app's settings page of the Slack API dashboard.}
+@returns(200) {app_id: str, client_id: str, client_secret: str, signing_secret: str} # OK
 
 @endpoint POST /integrations/slack/installations
+@desc Creates a new installation of a slack integration for a user. This endpoint is used when an integration needs to be set up with user-specific credentials or configuration.
 @required {access_token: str, app_id: str, authed_user: map{access_token: str, expires_in: int, id!: str, refresh_token: str, scope: str, token_type: str}, team: map{id!: str, name: str}}
 @optional {bot_user_id: str, enterprise: map{id!: str, name!: str}, expires_in: int, id: str, incoming_webhook: map{channel!: str, configuration_url!: str, url!: str}, is_enterprise_install: bool, refresh_token: str, scope: str, token_type: str}
-@returns(201) {access_token: str, app_id: str, authed_user: map{access_token: str, expires_in: int, id: str, refresh_token: str, scope: str, token_type: str}, bot_user_id: str, enterprise: map{id: str, name: str}, expires_in: int, id: str, incoming_webhook: map{channel: str, configuration_url: str, url: str}, is_enterprise_install: bool, refresh_token: str, scope: str, team: map{id: str, name: str}, token_type: str}
+@returns(201) {access_token: str, app_id: str, authed_user: map{access_token: str, expires_in: int, id: str, refresh_token: str, scope: str, token_type: str}, bot_user_id: str, enterprise: map{id: str, name: str}, expires_in: int, id: str, incoming_webhook: map{channel: str, configuration_url: str, url: str}, is_enterprise_install: bool, refresh_token: str, scope: str, team: map{id: str, name: str}, token_type: str} # Created
 
 @endpoint POST /integrations/slack/installations/finish
+@desc Completes the installation flow for a slack integration. This endpoint is typically called after the user has completed any required authorization steps with slack.
 @required {app_id: str, code: str}
 @optional {redirect_url: str}
-@returns(201) {access_token: str, app_id: str, authed_user: map{access_token: str, expires_in: int, id: str, refresh_token: str, scope: str, token_type: str}, bot_user_id: str, enterprise: map{id: str, name: str}, expires_in: int, id: str, incoming_webhook: map{channel: str, configuration_url: str, url: str}, is_enterprise_install: bool, refresh_token: str, scope: str, team: map{id: str, name: str}, token_type: str}
+@returns(201) {access_token: str, app_id: str, authed_user: map{access_token: str, expires_in: int, id: str, refresh_token: str, scope: str, token_type: str}, bot_user_id: str, enterprise: map{id: str, name: str}, expires_in: int, id: str, incoming_webhook: map{channel: str, configuration_url: str, url: str}, is_enterprise_install: bool, refresh_token: str, scope: str, team: map{id: str, name: str}, token_type: str} # Created
 
 @endpoint POST /integrations/slack/installations/start
+@desc Initiates the installation flow for a slack integration. This is the first step in a multi-step installation process where user authorization or external service configuration may be required.
 @required {app_id: str}
 @optional {auth_url: str, extra_scopes: [str], redirect_url: str}
-@returns(201) {app_id: str, auth_url: str, scopes: [str]}
+@returns(201) {app_id: str, auth_url: str, scopes: [str]} # Created
 
 @endpoint DELETE /integrations/slack/{id}
+@desc Removes a specific slack integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/stripe
-@returns(204)
+@desc Removes a stripe integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/stripe
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current stripe integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/stripe
-@required {webhook_signing_secret: str}
-@returns(200) {webhook_signing_secret: str}
+@desc Creates or updates a stripe integration for the project. Only administrators can configure integrations.
+@required {webhook_signing_secret: str # The signing secret to verify incoming requests from Stripe}
+@returns(200) {webhook_signing_secret: str} # OK
 
 @endpoint POST /integrations/stripe/webhooks/incoming/{id}
-@required {id: str, description: str, id: str}
-@returns(201) {description: str, id: str}
+@desc Receives and processes incoming webhook events from the stripe integration. Each integration can define its own webhook payload format and handling logic.
+@required {id: str, description: str # Description of the webhook event, id: str # Unique identifier for the webhook event}
+@returns(201) {description: str, id: str} # Created
 
 @endpoint DELETE /integrations/stripe/{id}
+@desc Removes a specific stripe integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/templates
-@returns(204)
+@desc Removes a templates integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/templates
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current templates integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/templates
-@returns(200)
+@desc Creates or updates a templates integration for the project. Only administrators can configure integrations.
+@returns(200) OK
 
 @endpoint POST /integrations/templates/installations
+@desc Creates a new installation of a templates integration for a user. This endpoint is used when an integration needs to be set up with user-specific credentials or configuration.
 @required {channel: str, text: str}
 @optional {category: str}
-@returns(201) {category: str?, channel: str, text: str}
+@returns(201) {category: str?, channel: str, text: str} # Created
 
 @endpoint DELETE /integrations/templates/{id}
+@desc Removes a specific templates integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/twilio
-@returns(204)
+@desc Removes a twilio integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/twilio
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current twilio integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/twilio
-@required {account_sid: str, api_key: str, api_secret: str, from: str}
-@optional {region: str(us1/ie1/au1)}
-@returns(200) {account_sid: str, api_key: str, api_secret: str, from: str, region: str}
+@desc Creates or updates a twilio integration for the project. Only administrators can configure integrations.
+@required {account_sid: str # The SID for your Twilio account, api_key: str # The API key for Twilio, api_secret: str # The API Secret for Twilio, from: str # The phone number to send from, in E.164 format}
+@optional {region: str(us1/ie1/au1) # The region to use for Twilio, defaults to 'us1'}
+@returns(200) {account_sid: str, api_key: str, api_secret: str, from: str, region: str} # OK
 
 @endpoint DELETE /integrations/twilio/{id}
+@desc Removes a specific twilio integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /integrations/web_push
-@returns(204)
+@desc Removes a web_push integration configuration from the project. This will disable the integration's functionality within the project.
+@returns(204) No Content
 
 @endpoint GET /integrations/web_push
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves the current web_push integration configurations for a specific integration type in the project. Returns configuration details and status information.
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint PUT /integrations/web_push
+@desc Creates or updates a web_push integration for the project. Only administrators can configure integrations.
 @required {private_key: str, public_key: str}
-@returns(200) {private_key: str, public_key: str}
+@returns(200) {private_key: str, public_key: str} # OK
 
 @endpoint POST /integrations/web_push/installations
+@desc Creates a new installation of a web_push integration for a user. This endpoint is used when an integration needs to be set up with user-specific credentials or configuration.
 @required {endpoint: str(uri), keys: map{auth!: str, p256dh!: str}}
-@returns(201) {endpoint: str(uri), keys: map{auth: str, p256dh: str}}
+@returns(201) {endpoint: str(uri), keys: map{auth: str, p256dh: str}} # Created
 
 @endpoint POST /integrations/web_push/installations/start
-@returns(201) {auth_token: str, public_key: str}
+@desc Initiates the installation flow for a web_push integration. This is the first step in a multi-step installation process where user authorization or external service configuration may be required.
+@returns(201) {auth_token: str, public_key: str} # Created
 
 @endpoint DELETE /integrations/web_push/{id}
+@desc Removes a specific web_push integration instance by ID from the project.
 @required {id: str}
-@returns(204)
+@returns(204) No Content
 
 @endgroup
 
 @group jwt
 @endpoint GET /jwt/project
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@desc Retrieves a list of all active project-level JWT tokens. Returns a paginated list showing token metadata including creation date, last used date, and expiration time. For security reasons, the actual token values are not included in the response.
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint POST /jwt/project
-@required {name: str}
-@optional {expiry: int}
-@returns(201) {created_at: str(date-time), expires_at: str(date-time), token: str, token_id: str(uuid)}
+@desc Creates a new project-level JWT token. These tokens provide project-wide access and should be carefully managed. Only administrators can create project tokens. The returned token should be securely stored as it cannot be retrieved again after creation.
+@required {name: str # The name of the token.}
+@optional {expiry: int # The duration for which the token is valid (in seconds)}
+@returns(201) {created_at: str(date-time), expires_at: str(date-time), token: str, token_id: str(uuid)} # Created
 
 @endpoint DELETE /jwt/project/{token_id}
+@desc Immediately revokes a project-level JWT token. Once revoked, any requests using this token will be rejected. This action is immediate and cannot be undone. Active sessions using this token will be terminated.
 @required {token_id: str}
-@returns(200) {discarded_at: str(date-time), token_id: str(uuid)}
+@returns(200) {discarded_at: str(date-time), token_id: str(uuid)} # OK
 
 @endpoint POST /jwt/user
-@optional {email: str, expiry: int, external_id: str, name: str}
-@returns(201) {created_at: str(date-time), expires_at: str(date-time), token: str, token_id: str(uuid)}
+@desc Issues a new user-specific JWT token. These tokens are scoped to individual user permissions and access levels. Only administrators can create user tokens. The token is returned only once at creation time and cannot be retrieved later.
+@optional {email: str # The user's email., expiry: int # The duration for which the token is valid (in seconds), external_id: str # A unique string that MagicBell can utilize to identify the user uniquely. We recommend setting this attribute to the ID of the user in your database. Provide the external id if the user's email is unavailable., name: str # The name of the token.}
+@returns(201) {created_at: str(date-time), expires_at: str(date-time), token: str, token_id: str(uuid)} # Created
 
 @endpoint DELETE /jwt/user/{token_id}
+@desc Revokes a specific user's JWT token. This immediately invalidates the token and terminates any active sessions using it. This action cannot be undone. Administrators should use this to revoke access when needed for security purposes.
 @required {token_id: str}
-@returns(200) {discarded_at: str(date-time), token_id: str(uuid)}
+@returns(200) {discarded_at: str(date-time), token_id: str(uuid)} # OK
 
 @endpoint GET /jwt/user/{user_id}
+@desc Lists all JWT tokens associated with a specific user. Returns token metadata including creation time, last access time, and expiration date. Administrators can use this to audit user token usage and manage active sessions. Token values are not included in the response for security reasons.
 @required {user_id: str}
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endgroup
 
 @group users
 @endpoint GET /users/{user_id}/channels/mobile_push/apns/tokens
+@desc Lists all mobile_push tokens associated with a specific user. This endpoint is available to project administrators and returns a paginated list of tokens, including both active and revoked tokens.
 @required {user_id: str}
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint DELETE /users/{user_id}/channels/mobile_push/apns/tokens/{token_id}
+@desc Revokes a specific user's mobile_push token. This endpoint is available to project administrators and permanently invalidates the specified token. Once revoked, the token can no longer be used to access channel features. This action cannot be undone.
 @required {user_id: str, token_id: str}
-@returns(200) {discarded_at: str, id: str}
+@returns(200) {discarded_at: str, id: str} # OK
 
 @endpoint GET /users/{user_id}/channels/mobile_push/apns/tokens/{token_id}
+@desc Retrieves a specific mobile_push token by its ID for a given user. This endpoint is available to project administrators and requires project-level authentication. Use this to inspect token details including its status, creation date, and associated metadata.
 @required {user_id: str, token_id: str}
-@returns(200) {app_id: str, created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, installation_id: str, updated_at: str(date-time)?}
+@returns(200) {app_id: str, created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, installation_id: str, updated_at: str(date-time)?} # OK
 
 @endpoint GET /users/{user_id}/channels/mobile_push/expo/tokens
+@desc Lists all mobile_push tokens associated with a specific user. This endpoint is available to project administrators and returns a paginated list of tokens, including both active and revoked tokens.
 @required {user_id: str}
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint DELETE /users/{user_id}/channels/mobile_push/expo/tokens/{token_id}
+@desc Revokes a specific user's mobile_push token. This endpoint is available to project administrators and permanently invalidates the specified token. Once revoked, the token can no longer be used to access channel features. This action cannot be undone.
 @required {user_id: str, token_id: str}
-@returns(200) {discarded_at: str, id: str}
+@returns(200) {discarded_at: str, id: str} # OK
 
 @endpoint GET /users/{user_id}/channels/mobile_push/expo/tokens/{token_id}
+@desc Retrieves a specific mobile_push token by its ID for a given user. This endpoint is available to project administrators and requires project-level authentication. Use this to inspect token details including its status, creation date, and associated metadata.
 @required {user_id: str, token_id: str}
-@returns(200) {created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, updated_at: str(date-time)?}
+@returns(200) {created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, updated_at: str(date-time)?} # OK
 
 @endpoint GET /users/{user_id}/channels/mobile_push/fcm/tokens
+@desc Lists all mobile_push tokens associated with a specific user. This endpoint is available to project administrators and returns a paginated list of tokens, including both active and revoked tokens.
 @required {user_id: str}
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint DELETE /users/{user_id}/channels/mobile_push/fcm/tokens/{token_id}
+@desc Revokes a specific user's mobile_push token. This endpoint is available to project administrators and permanently invalidates the specified token. Once revoked, the token can no longer be used to access channel features. This action cannot be undone.
 @required {user_id: str, token_id: str}
-@returns(200) {discarded_at: str, id: str}
+@returns(200) {discarded_at: str, id: str} # OK
 
 @endpoint GET /users/{user_id}/channels/mobile_push/fcm/tokens/{token_id}
+@desc Retrieves a specific mobile_push token by its ID for a given user. This endpoint is available to project administrators and requires project-level authentication. Use this to inspect token details including its status, creation date, and associated metadata.
 @required {user_id: str, token_id: str}
-@returns(200) {created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, installation_id: str, updated_at: str(date-time)?}
+@returns(200) {created_at: str(date-time), device_token: str, discarded_at: str(date-time)?, id: str, installation_id: str, updated_at: str(date-time)?} # OK
 
 @endpoint GET /users/{user_id}/channels/slack/tokens
+@desc Lists all slack tokens associated with a specific user. This endpoint is available to project administrators and returns a paginated list of tokens, including both active and revoked tokens.
 @required {user_id: str}
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint DELETE /users/{user_id}/channels/slack/tokens/{token_id}
+@desc Revokes a specific user's slack token. This endpoint is available to project administrators and permanently invalidates the specified token. Once revoked, the token can no longer be used to access channel features. This action cannot be undone.
 @required {user_id: str, token_id: str}
-@returns(200) {discarded_at: str, id: str}
+@returns(200) {discarded_at: str, id: str} # OK
 
 @endpoint GET /users/{user_id}/channels/slack/tokens/{token_id}
+@desc Retrieves a specific slack token by its ID for a given user. This endpoint is available to project administrators and requires project-level authentication. Use this to inspect token details including its status, creation date, and associated metadata.
 @required {user_id: str, token_id: str}
-@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, id: str, oauth: map{channel_id: str, installation_id: str, scope: str}, updated_at: str(date-time)?, webhook: map{url: str(uri)}}
+@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, id: str, oauth: map{channel_id: str, installation_id: str, scope: str}, updated_at: str(date-time)?, webhook: map{url: str(uri)}} # OK
 
 @endpoint GET /users/{user_id}/channels/teams/tokens
+@desc Lists all teams tokens associated with a specific user. This endpoint is available to project administrators and returns a paginated list of tokens, including both active and revoked tokens.
 @required {user_id: str}
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint DELETE /users/{user_id}/channels/teams/tokens/{token_id}
+@desc Revokes a specific user's teams token. This endpoint is available to project administrators and permanently invalidates the specified token. Once revoked, the token can no longer be used to access channel features. This action cannot be undone.
 @required {user_id: str, token_id: str}
-@returns(200) {discarded_at: str, id: str}
+@returns(200) {discarded_at: str, id: str} # OK
 
 @endpoint GET /users/{user_id}/channels/teams/tokens/{token_id}
+@desc Retrieves a specific teams token by its ID for a given user. This endpoint is available to project administrators and requires project-level authentication. Use this to inspect token details including its status, creation date, and associated metadata.
 @required {user_id: str, token_id: str}
-@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, id: str, updated_at: str(date-time)?, webhook: map{url: str}}
+@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, id: str, updated_at: str(date-time)?, webhook: map{url: str}} # OK
 
 @endpoint GET /users/{user_id}/channels/web_push/tokens
+@desc Lists all web_push tokens associated with a specific user. This endpoint is available to project administrators and returns a paginated list of tokens, including both active and revoked tokens.
 @required {user_id: str}
-@optional {page[size]: int, page[after]: str, page[before]: str}
-@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}}
+@optional {page[size]: int, page[after]: str, page[before]: str: any}
+@returns(200) {data: [map], links: map{first: str, next: str?, prev: str?}} # OK
 
 @endpoint DELETE /users/{user_id}/channels/web_push/tokens/{token_id}
+@desc Revokes a specific user's web_push token. This endpoint is available to project administrators and permanently invalidates the specified token. Once revoked, the token can no longer be used to access channel features. This action cannot be undone.
 @required {user_id: str, token_id: str}
-@returns(200) {discarded_at: str, id: str}
+@returns(200) {discarded_at: str, id: str} # OK
 
 @endpoint GET /users/{user_id}/channels/web_push/tokens/{token_id}
+@desc Retrieves a specific web_push token by its ID for a given user. This endpoint is available to project administrators and requires project-level authentication. Use this to inspect token details including its status, creation date, and associated metadata.
 @required {user_id: str, token_id: str}
-@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, endpoint: str(uri), id: str, keys: map{auth: str, p256dh: str}, updated_at: str(date-time)?}
+@returns(200) {created_at: str(date-time), discarded_at: str(date-time)?, endpoint: str(uri), id: str, keys: map{auth: str, p256dh: str}, updated_at: str(date-time)?} # OK
 
 @endgroup
 

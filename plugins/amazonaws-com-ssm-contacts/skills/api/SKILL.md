@@ -65,92 +65,10 @@ Not specified.
 | POST | / | Updates a contact's contact channel. |
 | POST | / | Updates the information specified for an on-call rotation. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I set up a new on-call contact?" -> POST / (CreateContact: Alias, Type, Plan)
-- "How do I add a phone number or email to a contact?" -> POST / (CreateContactChannel: ContactId, Name, Type, DeliveryAddress)
-- "How do I verify a contact channel after adding it?" -> POST / (ActivateContactChannel: ContactChannelId, ActivationCode)
-- "How do I create an on-call rotation schedule?" -> POST / (CreateRotation: Name, ContactIds, TimeZoneId, Recurrence)
-- "How do I temporarily override who is on call?" -> POST / (CreateRotationOverride: RotationId, NewContactIds, StartTime, EndTime)
-- "How do I page someone during an incident?" -> POST / (StartEngagement: ContactId, Sender, Subject, Content)
-- "How do I check if a page was delivered and read?" -> POST / (ListPageReceipts: PageId)
-- "Who is currently on call for a rotation?" -> POST / (ListRotationShifts: RotationId, EndTime)
-- "How do I preview what a rotation schedule would look like before creating it?" -> POST / (ListPreviewRotationShifts: EndTime, Members, TimeZoneId, Recurrence)
-- "How do I acknowledge a page?" -> POST / (AcceptPage: PageId, AcceptType, AcceptCode)
-- "How do I look up a contact's escalation plan?" -> POST / (GetContact: ContactId)
-- "How do I stop an active engagement?" -> POST / (StopEngagement: EngagementId)
-- "What engagements have been triggered for a specific incident?" -> POST / (ListEngagements: IncidentId, TimeRangeValue)
-- "How do I remove someone from on-call entirely?" -> POST / (DeleteContact: ContactId) after POST / (DeleteContactChannel) for each channel
-- "How do I update a rotation's recurrence or members?" -> POST / (UpdateRotation: RotationId, Recurrence, ContactIds)
-
-## Response Tips
-
-- **Contact/Channel/Rotation creates**: Return ARN strings; store these as the primary identifier for all subsequent operations.
-- **List endpoints**: All paginated via `NextToken`/`MaxResults` (default page size varies); keep calling until `NextToken` is null. Arrays may be empty but present, or absent entirely (nullable).
-- **Get/Describe endpoints**: Nested objects like `Plan{Stages, RotationIds}`, `Recurrence{MonthlySettings, WeeklySettings, DailySettings, ShiftCoverages}`, and `DeliveryAddress{SimpleAddress}` -- always check for optional nested fields before accessing.
-- **Page receipts**: `SentTime`, `ReadTime`, `DeliveryTime` are all optional timestamps; a missing `ReadTime` means the page is unread.
-- **Void operations** (Delete, Deactivate, Accept, SendActivationCode, PutContactPolicy, Tag/Untag, Stop): Return empty 200 on success; any non-200 is an error.
-- **Error responses**: AWS standard `__type` + `message` structure; watch for `ResourceNotFoundException`, `ValidationException`, `ThrottlingException`, and `ConflictException` (idempotency collisions).
-
-## Anomaly Flags
-
-- **ThrottlingException**: Surface immediately with retry-after guidance; indicate the specific action being throttled so the user can prioritize.
-- **Contact channel stuck in INACTIVE**: If `ActivationStatus` remains inactive after activation attempt, flag that the activation code may have expired or was entered incorrectly.
-- **Engagement without StopTime**: An engagement returned by DescribeEngagement with no `StopTime` is still active -- surface this if the user seems to be cleaning up or auditing.
-- **Empty rotation shifts**: If `ListRotationShifts` returns an empty `RotationShifts` array for a time range, warn that no one is on call during that period (coverage gap).
-- **Recurrence misconfiguration**: If `ShiftCoverages` map is empty or `NumberOfOnCalls` is 0 in a GetRotation response, flag as a likely misconfigured rotation.
-- **Orphaned overrides**: If `ListRotationOverrides` returns overrides with `EndTime` in the past, suggest cleanup.
-- **Missing DeliveryAddress**: A contact channel with no `SimpleAddress` in its `DeliveryAddress` should be flagged as incomplete.
-- **Idempotency token reuse**: If a create call returns an existing ARN without error, note that the idempotency token matched a previous request -- the resource was not recreated.
-
-## Playbook
-
-### 1. Set Up a New On-Call Contact with Verified Channels
-
-1. Call CreateContact with `Alias`, `Type: ESCALATION` or `PERSONAL`, and an escalation `Plan` defining stages.
-2. Store the returned `ContactArn`.
-3. Call CreateContactChannel with the `ContactId`, channel `Name`, `Type` (SMS, EMAIL, VOICE), and `DeliveryAddress`.
-4. Store the returned `ContactChannelArn`.
-5. Call SendActivationCode with the `ContactChannelId` to trigger a verification code.
-6. Collect the code from the user, then call ActivateContactChannel with the `ContactChannelId` and `ActivationCode`.
-7. Repeat steps 3-6 for each additional channel (e.g., add both SMS and email).
-8. Verify setup by calling GetContact and ListContactChannels to confirm the plan and active channels.
-
-### 2. Create and Preview a Weekly Rotation
-
-1. Call ListPreviewRotationShifts with the desired `Members` (contact IDs), `TimeZoneId`, `Recurrence` (e.g., WeeklySettings), and an `EndTime` a few weeks out.
-2. Review the returned `RotationShifts` to confirm coverage and handoff times look correct.
-3. Adjust `Recurrence`, `NumberOfOnCalls`, or `ShiftCoverages` and re-preview until satisfied.
-4. Call CreateRotation with the finalized parameters.
-5. Store the returned `RotationArn` for future management.
-
-### 3. Handle an Incident Engagement End-to-End
-
-1. Call StartEngagement with the on-call `ContactId`, `Sender`, `Subject`, `Content`, and the `IncidentId`.
-2. Store the returned `EngagementArn`.
-3. Call ListPagesByEngagement with the `EngagementId` to see all pages sent through the escalation plan.
-4. For each page, call ListPageReceipts with the `PageId` to check delivery and read status.
-5. Once the incident is resolved, call StopEngagement with the `EngagementId` and a `Reason`.
-
-### 4. Apply a Temporary On-Call Override
-
-1. Call GetRotation with the `RotationId` to confirm current members and schedule.
-2. Call ListRotationShifts to see who is currently on call and when the next handoff occurs.
-3. Call CreateRotationOverride with the `RotationId`, `NewContactIds` (the replacement person), and the `StartTime`/`EndTime` window.
-4. Store the returned `RotationOverrideId`.
-5. Verify by calling ListRotationShifts again for the override window to confirm the replacement appears.
-6. To cancel early, call DeleteRotationOverride with the `RotationId` and `RotationOverrideId`.
-
-### 5. Audit and Clean Up Stale Resources
-
-1. Call ListContacts to enumerate all contacts; note any with unfamiliar aliases.
-2. For each contact, call ListContactChannels and flag any with `ActivationStatus: NOT_ACTIVATED`.
-3. Call ListRotations and for each, call ListRotationOverrides with a past time range to find expired overrides.
-4. Delete expired overrides via DeleteRotationOverride.
-5. For contacts no longer needed, first delete all their channels via DeleteContactChannel, then call DeleteContact.
-6. Call ListTagsForResource on key ARNs to verify tagging compliance; use TagResource/UntagResource to correct.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

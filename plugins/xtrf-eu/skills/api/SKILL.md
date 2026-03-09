@@ -444,95 +444,268 @@ https://presentation.s.xtrf.eu/home-api
 | PUT | /tasks/{taskId}/clientTaskPONumber | Updates Client Task PO Number of a given task. |
 | PUT | /tasks/{taskId}/name | Updates name of a given task. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all customers?" -> GET /customers
-- "How do I create a new translation project?" -> POST /v2/projects
-- "What invoices were updated recently?" -> GET /accounting/customers/invoices (with updatedSince)
-- "How do I assign a vendor to a job?" -> PUT /v2/jobs/{jobId}/vendor
-- "How do I check a project's financial summary?" -> GET /v2/projects/{projectId}/finance
-- "How do I upload a file to a project?" -> POST /v2/projects/{projectId}/files/upload
-- "How do I change a job's status?" -> PUT /v2/jobs/{jobId}/status
-- "How do I find a customer by email?" -> GET /customers/ids (with emailEquals)
-- "How do I send an invoice reminder?" -> POST /accounting/customers/invoices/{invoiceId}/sendReminder
-- "How do I convert a quote into a project?" -> POST /quotes/{quoteId}/start
-- "What languages and specializations are available?" -> GET /dictionaries/{type}/active
-- "How do I get the current exchange rate for a currency?" -> GET /dictionaries/currency/{isoCode}/exchangeRate
-- "How do I check who I am authenticated as?" -> GET /users/me
-- "How do I add a language combination to a project?" -> POST /projects/{projectId}/languageCombinations
-- "How do I look up a project created by an external system?" -> GET /v2/projects/for-external-id/{externalProjectId}
-
-## Response Tips
-
-- **Browser/views**: Returns paginated table data; use `page` and `maxRows` params to control result size. Column metadata is nested under `columns`.
-- **Customers/providers**: Use `embed` param on detail endpoints to inline nested objects (addresses, contacts) and reduce follow-up calls. The `updatedSince` param takes epoch milliseconds.
-- **Accounting/invoices**: 204 responses on payment and reminder endpoints mean success with no body. Invoice detail supports `embed` for nested payment terms and dates.
-- **Projects/quotes**: IDs are strings (not integers) -- these are smart IDs like "P12345". Finance sub-objects contain `languageCombination` maps and enum fields (`rateOrigin`, `type`).
-- **Jobs**: Job IDs are strings. File endpoints return 200 with file metadata objects. Status updates return 204 with no body.
-- **Dictionaries**: Returns arrays of dictionary entries. Use `type` path param (e.g., "language", "specialization", "currency") to filter. The `nameEquals` param does exact matching.
-- **Tasks**: All GET endpoints return 200 explicitly. Dates use nested `{value: int(int64)}` wrapper objects for epoch-millisecond timestamps.
-- **Delete operations**: Universally return 204. Some (like task delete) accept flags like `removeFilesFromDisc` and `forceJobsRemoval` -- omitting these defaults to safe/non-destructive behavior.
-
-## Anomaly Flags
-
-- **409 on subscription creation**: The only endpoint declaring a conflict error. Surface this when a subscription already exists to prevent confusion.
-- **Duplicate parameter names**: `confidential-groups` endpoints declare `clientId`/`sensitiveClientId`/`trustedVendorId` twice in required params -- likely a spec artifact. Warn if requests fail unexpectedly.
-- **Date format inconsistency**: Some dates are raw `int(int64)` epoch millis (jobs, invoices), others use `map{value: int(int64)}` wrappers (projects, tasks, quotes). Flag this mismatch when constructing payloads.
-- **v1 vs v2 endpoint duplication**: Projects, quotes, jobs, and dictionaries exist in both v1 and v2 forms with different schemas. Surface a warning if a user mixes versions in a workflow.
-- **204 vs 200 inconsistency on updates**: Some PUT endpoints return 200 with a body (task contacts, task custom fields), while others return 204 with no body (job dates, project status). Flag when a response body is expected but absent.
-- **String vs integer IDs**: Customers and providers use `int(int64)` IDs, but projects, quotes, jobs, and tasks use `str` IDs (smart IDs). Alert if an integer is passed where a string is expected.
-- **Mass reminder sends**: `POST /accounting/customers/invoices/sendReminders` (no invoiceId) sends reminders in bulk -- surface confirmation before calling.
-
-## Playbook
-
-### 1. Create a Translation Project End-to-End
-
-1. Look up the client: `GET /customers/ids?nameEquals=ClientName` to get the customer ID
-2. Retrieve available services: `GET /services/active` to find the right service ID
-3. Create the project: `POST /v2/projects` with `name`, `clientId`, and `serviceId`
-4. Set source and target languages: `PUT /v2/projects/{projectId}/sourceLanguage` then `PUT /v2/projects/{projectId}/targetLanguages`
-5. Upload source files: `POST /v2/projects/{projectId}/files/upload`
-6. Add a job to the project: `POST /v2/projects/{projectId}/addJob`
-7. Assign a vendor to the job: `PUT /v2/jobs/{jobId}/vendor`
-8. Set the client deadline: `PUT /v2/projects/{projectId}/clientDeadline`
-
-### 2. Invoice a Customer and Track Payment
-
-1. Create the customer invoice: `POST /accounting/customers/invoices`
-2. Retrieve the invoice to confirm details: `GET /accounting/customers/invoices/{invoiceId}?embed=payments`
-3. Generate the invoice document: `POST /accounting/customers/invoices/documents`
-4. Send a payment reminder if overdue: `POST /accounting/customers/invoices/{invoiceId}/sendReminder`
-5. Record a payment when received: `POST /accounting/customers/invoices/{invoiceId}/payments`
-6. Verify payment status: `GET /accounting/customers/invoices/{invoiceId}/payments`
-
-### 3. Quote-to-Project Conversion
-
-1. Create a quote: `POST /v2/quotes` with `name`, `clientId`, `serviceId`
-2. Configure languages and specialization: `PUT /v2/quotes/{quoteId}/sourceLanguage`, `PUT /v2/quotes/{quoteId}/targetLanguages`, `PUT /v2/quotes/{quoteId}/specialization`
-3. Add financial receivables: `POST /quotes/{quoteId}/finance/receivables`
-4. Send the quote confirmation to the client: `POST /quotes/{quoteId}/confirmation/send`
-5. Once approved, start the quote (converts to project): `POST /quotes/{quoteId}/start`
-6. Retrieve the resulting project and continue with project workflows
-
-### 4. Onboard a New Customer
-
-1. Create the customer record: `POST /customers` with name, billing address, contact info, and status `ACTIVE`
-2. Add contact persons: include `persons` array in the POST body, or create individually via `POST /customers/persons`
-3. Set industry and category classifications: `PUT /customers/{customerId}/industries` and `PUT /customers/{customerId}/categories`
-4. Configure custom fields if needed: `PUT /customers/{customerId}/customFields`
-5. Verify the record: `GET /customers/{customerId}?embed=all`
-
-### 5. Manage Provider Jobs and Deliverables
-
-1. Find jobs for an external project: `GET /v2/jobs/for-external-id?externalProjectId=EXT123`
-2. Review job details: `GET /v2/jobs/{jobId}`
-3. Update job dates and instructions: `PUT /v2/jobs/{jobId}/dates` and `PUT /v2/jobs/{jobId}/instructions`
-4. Upload delivered files from vendor: `POST /v2/jobs/{jobId}/files/delivered/upload`
-5. Update job status to completed: `PUT /v2/jobs/{jobId}/status` with `status` field
-6. Create the provider invoice: `POST /accounting/providers/invoices` with `jobsIds`
-7. Send the invoice to the provider: `POST /accounting/providers/invoices/{invoiceId}/send`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all csv?" -> GET /browser/csv
+- "List all browser?" -> GET /browser
+- "Get for details?" -> GET /browser/views/for/{className}
+- "Get view details?" -> GET /browser/views/{viewId}
+- "Update a view?" -> PUT /browser/views/{viewId}
+- "Delete a view?" -> DELETE /browser/views/{viewId}
+- "Delete a column?" -> DELETE /browser/views/{viewId}/columns/{columnName}
+- "List all settings?" -> GET /browser/views/{viewId}/columns/{columnName}/settings
+- "List all columns?" -> GET /browser/views/{viewId}/columns
+- "Get for details?" -> GET /browser/views/details/for/{className}
+- "List all filter?" -> GET /browser/views/{viewId}/filter
+- "List all local?" -> GET /browser/views/{viewId}/settings/local
+- "List all order?" -> GET /browser/views/{viewId}/order
+- "List all permissions?" -> GET /browser/views/{viewId}/permissions
+- "List all settings?" -> GET /browser/views/{viewId}/settings
+- "Get for details?" -> GET /browser/views/details/for/{className}/{viewId}
+- "Update a filter?" -> PUT /browser/views/{viewId}/filter/{filterProperty}
+- "List all invoices?" -> GET /accounting/customers/invoices
+- "Create a invoice?" -> POST /accounting/customers/invoices
+- "List all payments?" -> GET /accounting/customers/invoices/{invoiceId}/payments
+- "Create a payment?" -> POST /accounting/customers/invoices/{invoiceId}/payments
+- "Get invoice details?" -> GET /accounting/customers/invoices/{invoiceId}
+- "Delete a invoice?" -> DELETE /accounting/customers/invoices/{invoiceId}
+- "Create a document?" -> POST /accounting/customers/invoices/documents
+- "Create a xmlDocument?" -> POST /accounting/customers/invoices/xmlDocuments
+- "Create a duplicate?" -> POST /accounting/customers/invoices/{invoiceId}/duplicate
+- "Create a proForma?" -> POST /accounting/customers/invoices/{invoiceId}/duplicate/proForma
+- "List all ids?" -> GET /accounting/customers/invoices/ids
+- "List all dates?" -> GET /accounting/customers/invoices/{invoiceId}/dates
+- "List all document?" -> GET /accounting/customers/invoices/{invoiceId}/document
+- "List all paymentTerms?" -> GET /accounting/customers/invoices/{invoiceId}/paymentTerms
+- "List all xmlDocument?" -> GET /accounting/customers/invoices/{invoiceId}/xmlDocument
+- "Create a sendReminder?" -> POST /accounting/customers/invoices/{invoiceId}/sendReminder
+- "Create a sendReminder?" -> POST /accounting/customers/invoices/sendReminders
+- "Delete a payment?" -> DELETE /accounting/customers/payments/{paymentId}
+- "Create a person?" -> POST /customers/persons
+- "Get person details?" -> GET /customers/persons/{personId}
+- "Update a person?" -> PUT /customers/persons/{personId}
+- "Delete a person?" -> DELETE /customers/persons/{personId}
+- "Create a accessToken?" -> POST /customers/persons/accessToken
+- "List all ids?" -> GET /customers/persons/ids
+- "List all contact?" -> GET /customers/persons/{personId}/contact
+- "List all customFields?" -> GET /customers/persons/{personId}/customFields
+- "Delete a priceList?" -> DELETE /customers/priceLists/{priceListId}
+- "List all customers?" -> GET /customers
+- "Create a customer?" -> POST /customers
+- "Get customer details?" -> GET /customers/{customerId}
+- "Update a customer?" -> PUT /customers/{customerId}
+- "Delete a customer?" -> DELETE /customers/{customerId}
+- "List all active?" -> GET /customers/{customerId}/priceProfiles/active
+- "List all address?" -> GET /customers/{customerId}/address
+- "List all ids?" -> GET /customers/ids
+- "List all budgetCodes?" -> GET /customers/{customerId}/budgetCodes
+- "List all byAlias?" -> GET /customers/byAlias
+- "List all categories?" -> GET /customers/{customerId}/categories
+- "List all contact?" -> GET /customers/{customerId}/contact
+- "List all correspondenceAddress?" -> GET /customers/{customerId}/correspondenceAddress
+- "Get customField details?" -> GET /customers/{customerId}/customFields/{customFieldKey}
+- "Update a customField?" -> PUT /customers/{customerId}/customFields/{customFieldKey}
+- "List all customFields?" -> GET /customers/{customerId}/customFields
+- "List all specializations?" -> GET /customers/{customerId}/settings/specializations
+- "List all industries?" -> GET /customers/{customerId}/industries
+- "List all languages?" -> GET /customers/{customerId}/settings/languages
+- "List all offices?" -> GET /customers/{customerId}/offices
+- "List all services?" -> GET /customers/{customerId}/services
+- "Create a file?" -> POST /files
+- "List all license?" -> GET /license
+- "Create a refresh?" -> POST /license/refresh
+- "Create a run?" -> POST /macros/{macroId}/run
+- "Create a client?" -> POST /confidential-groups/sensitiveClients/client
+- "List all sensitiveClients?" -> GET /confidential-groups/sensitiveClients
+- "Get isSensitive details?" -> GET /confidential-groups/sensitiveClients/isSensitive/{clientId}
+- "Delete a client?" -> DELETE /confidential-groups/sensitiveClients/client/{sensitiveClientId}
+- "Create a vendor?" -> POST /confidential-groups/trustedVendors/vendor
+- "List all trustedVendors?" -> GET /confidential-groups/trustedVendors
+- "Delete a vendor?" -> DELETE /confidential-groups/trustedVendors/vendor/{trustedVendorId}
+- "List all projectGroups?" -> GET /projectGroups
+- "Create a projectGroup?" -> POST /projectGroups
+- "Get projectGroup details?" -> GET /projectGroups/{projectGroupId}
+- "Update a projectGroup?" -> PUT /projectGroups/{projectGroupId}
+- "Delete a projectGroup?" -> DELETE /projectGroups/{projectGroupId}
+- "List all invoices?" -> GET /accounting/providers/invoices
+- "Create a invoice?" -> POST /accounting/providers/invoices
+- "List all payments?" -> GET /accounting/providers/invoices/{invoiceId}/payments
+- "Create a payment?" -> POST /accounting/providers/invoices/{invoiceId}/payments
+- "Get invoice details?" -> GET /accounting/providers/invoices/{invoiceId}
+- "Delete a invoice?" -> DELETE /accounting/providers/invoices/{invoiceId}
+- "List all ids?" -> GET /accounting/providers/invoices/ids
+- "List all document?" -> GET /accounting/providers/invoices/{invoiceId}/document
+- "Create a send?" -> POST /accounting/providers/invoices/{invoiceId}/send
+- "Create a status?" -> POST /accounting/providers/invoices/{invoiceId}/status
+- "Delete a payment?" -> DELETE /accounting/providers/payments/{paymentId}
+- "Get person details?" -> GET /providers/persons/{personId}
+- "Delete a person?" -> DELETE /providers/persons/{personId}
+- "List all ids?" -> GET /providers/persons/ids
+- "List all contact?" -> GET /providers/persons/{personId}/contact
+- "List all customFields?" -> GET /providers/persons/{personId}/customFields
+- "Create a invitation?" -> POST /providers/persons/{personId}/notification/invitation
+- "Delete a priceList?" -> DELETE /providers/priceLists/{priceListId}
+- "Get provider details?" -> GET /providers/{providerId}
+- "Delete a provider?" -> DELETE /providers/{providerId}
+- "List all address?" -> GET /providers/{providerId}/address
+- "List all ids?" -> GET /providers/ids
+- "List all competencies?" -> GET /providers/{providerId}/competencies
+- "List all contact?" -> GET /providers/{providerId}/contact
+- "List all correspondenceAddress?" -> GET /providers/{providerId}/correspondenceAddress
+- "List all customFields?" -> GET /providers/{providerId}/customFields
+- "Create a invitation?" -> POST /providers/{providerId}/notification/invitation
+- "Delete a report?" -> DELETE /reports/{reportId}
+- "Create a duplicate?" -> POST /reports/{reportId}/duplicate
+- "Create a xml?" -> POST /reports/export/xml
+- "List all csv?" -> GET /reports/{reportId}/result/csv
+- "List all printerFriendly?" -> GET /reports/{reportId}/result/printerFriendly
+- "Create a xml?" -> POST /reports/import/xml
+- "List all all?" -> GET /services/all
+- "List all active?" -> GET /services/active
+- "List all customFields?" -> GET /settings/customFields
+- "List all supports?" -> GET /subscription/supports
+- "List all subscription?" -> GET /subscription
+- "Create a subscription?" -> POST /subscription
+- "Delete a subscription?" -> DELETE /subscription/{subscriptionId}
+- "List all email?" -> GET /system/configuration/email
+- "List all ftp?" -> GET /system/configuration/ftp
+- "List all configuration?" -> GET /system/configuration
+- "List all timeZone?" -> GET /system/timeZone
+- "List all users?" -> GET /users
+- "Get user details?" -> GET /users/{userId}
+- "Update a user?" -> PUT /users/{userId}
+- "Get customField details?" -> GET /users/{userId}/customFields/{customFieldKey}
+- "Update a customField?" -> PUT /users/{userId}/customFields/{customFieldKey}
+- "List all customFields?" -> GET /users/{userId}/customFields
+- "List all me?" -> GET /users/me
+- "List all timeZone?" -> GET /users/me/timeZone
+- "List all active?" -> GET /dictionaries/active
+- "List all active?" -> GET /dictionaries/{type}/active
+- "List all all?" -> GET /dictionaries/all
+- "List all all?" -> GET /dictionaries/{type}/all
+- "Get dictionary details?" -> GET /dictionaries/{type}/{id}
+- "List all default?" -> GET /dictionaries/{type}/all/default
+- "List all exchangeRate?" -> GET /dictionaries/currency/{isoCode}/exchangeRate
+- "Create a exchangeRate?" -> POST /dictionaries/currency/{isoCode}/exchangeRate
+- "Create a output?" -> POST /jobs/{jobId}/files/output
+- "Get job details?" -> GET /jobs/{jobId}
+- "List all files?" -> GET /jobs/{jobId}/files
+- "Get file details?" -> GET /jobs/{jobId}/files/{fileId}
+- "Create a project?" -> POST /projects
+- "Create a languageCombination?" -> POST /projects/{projectId}/languageCombinations
+- "Create a payable?" -> POST /projects/{projectId}/finance/payables
+- "Create a receivable?" -> POST /projects/{projectId}/finance/receivables
+- "Create a task?" -> POST /projects/{projectId}/tasks
+- "Get project details?" -> GET /projects/{projectId}
+- "Delete a project?" -> DELETE /projects/{projectId}
+- "Update a payable?" -> PUT /projects/{projectId}/finance/payables/{payableId}
+- "Delete a payable?" -> DELETE /projects/{projectId}/finance/payables/{payableId}
+- "Update a receivable?" -> PUT /projects/{projectId}/finance/receivables/{receivableId}
+- "Delete a receivable?" -> DELETE /projects/{projectId}/finance/receivables/{receivableId}
+- "List all ids?" -> GET /projects/ids
+- "List all contacts?" -> GET /projects/{projectId}/contacts
+- "List all customFields?" -> GET /projects/{projectId}/customFields
+- "List all dates?" -> GET /projects/{projectId}/dates
+- "List all download?" -> GET /projects/files/{fileId}/download
+- "List all finance?" -> GET /projects/{projectId}/finance
+- "List all instructions?" -> GET /projects/{projectId}/instructions
+- "Create a languageCombination?" -> POST /quotes/{quoteId}/languageCombinations
+- "Create a payable?" -> POST /quotes/{quoteId}/finance/payables
+- "Create a receivable?" -> POST /quotes/{quoteId}/finance/receivables
+- "Create a task?" -> POST /quotes/{quoteId}/tasks
+- "Get quote details?" -> GET /quotes/{quoteId}
+- "Delete a quote?" -> DELETE /quotes/{quoteId}
+- "Update a payable?" -> PUT /quotes/{quoteId}/finance/payables/{payableId}
+- "Delete a payable?" -> DELETE /quotes/{quoteId}/finance/payables/{payableId}
+- "Update a receivable?" -> PUT /quotes/{quoteId}/finance/receivables/{receivableId}
+- "Delete a receivable?" -> DELETE /quotes/{quoteId}/finance/receivables/{receivableId}
+- "List all ids?" -> GET /quotes/ids
+- "List all customFields?" -> GET /quotes/{quoteId}/customFields
+- "List all dates?" -> GET /quotes/{quoteId}/dates
+- "List all finance?" -> GET /quotes/{quoteId}/finance
+- "List all instructions?" -> GET /quotes/{quoteId}/instructions
+- "Create a send?" -> POST /quotes/{quoteId}/confirmation/send
+- "Create a start?" -> POST /quotes/{quoteId}/start
+- "Create a input?" -> POST /tasks/{taskId}/files/input
+- "Delete a task?" -> DELETE /tasks/{taskId}
+- "List all contacts?" -> GET /tasks/{taskId}/contacts
+- "List all customFields?" -> GET /tasks/{taskId}/customFields
+- "List all dates?" -> GET /tasks/{taskId}/dates
+- "List all instructions?" -> GET /tasks/{taskId}/instructions
+- "List all progress?" -> GET /tasks/{taskId}/progress
+- "List all files?" -> GET /tasks/{taskId}/files
+- "Create a start?" -> POST /tasks/{taskId}/start
+- "Create a language?" -> POST /v2/dictionaries/language
+- "Partially update a language?" -> PATCH /v2/dictionaries/language/{languageId}
+- "Create a specialization?" -> POST /v2/dictionaries/specialization
+- "Partially update a specialization?" -> PATCH /v2/dictionaries/specialization/{specializationId}
+- "Create a addExternalLink?" -> POST /v2/jobs/{jobId}/files/addExternalLink
+- "Create a addLink?" -> POST /v2/jobs/{jobId}/files/delivered/addLink
+- "Get job details?" -> GET /v2/jobs/{jobId}
+- "Delete a job?" -> DELETE /v2/jobs/{jobId}
+- "List all for-external-id?" -> GET /v2/jobs/for-external-id
+- "List all delivered?" -> GET /v2/jobs/{jobId}/files/delivered
+- "List all sharedReferenceFiles?" -> GET /v2/jobs/{jobId}/files/sharedReferenceFiles
+- "List all sharedWorkFiles?" -> GET /v2/jobs/{jobId}/files/sharedWorkFiles
+- "Create a merge?" -> POST /v2/jobs/merge
+- "Create a upload?" -> POST /v2/jobs/{jobId}/files/delivered/upload
+- "Create a uploadFileByVendor?" -> POST /v2/jobs/{jobId}/files/delivered/uploadFileByVendor
+- "Create a addExternalLink?" -> POST /v2/projects/{projectId}/files/addExternalLinks
+- "Create a externalInfo?" -> POST /v2/projects/{projectId}/externalInfo
+- "Create a addLink?" -> POST /v2/projects/{projectId}/files/addLink
+- "Create a addJob?" -> POST /v2/projects/{projectId}/addJob
+- "Create a archive?" -> POST /v2/projects/files/archive
+- "Create a project?" -> POST /v2/projects
+- "Create a createCatToolProject?" -> POST /v2/projects/{projectId}/createCatToolProject
+- "Create a payable?" -> POST /v2/projects/{projectId}/finance/payables
+- "Create a receivable?" -> POST /v2/projects/{projectId}/finance/receivables
+- "Delete a file?" -> DELETE /v2/projects/{projectId}/files/{fileId}
+- "Update a payable?" -> PUT /v2/projects/{projectId}/finance/payables/{payableId}
+- "Delete a payable?" -> DELETE /v2/projects/{projectId}/finance/payables/{payableId}
+- "Update a receivable?" -> PUT /v2/projects/{projectId}/finance/receivables/{receivableId}
+- "Delete a receivable?" -> DELETE /v2/projects/{projectId}/finance/receivables/{receivableId}
+- "Get for-external-id details?" -> GET /v2/projects/for-external-id/{externalProjectId}
+- "Get project details?" -> GET /v2/projects/{projectId}
+- "List all catToolProject?" -> GET /v2/projects/{projectId}/catToolProject
+- "List all catToolProjectTemplates?" -> GET /v2/projects/catToolProjectTemplates
+- "List all clientContacts?" -> GET /v2/projects/{projectId}/clientContacts
+- "List all customFields?" -> GET /v2/projects/{projectId}/customFields
+- "List all deliverable?" -> GET /v2/projects/{projectId}/files/deliverable
+- "Get file details?" -> GET /v2/projects/files/{fileId}
+- "Get download details?" -> GET /v2/projects/files/{fileId}/download/{fileName}
+- "List all files?" -> GET /v2/projects/{projectId}/files
+- "List all finance?" -> GET /v2/projects/{projectId}/finance
+- "List all jobs?" -> GET /v2/projects/{projectId}/jobs
+- "List all process?" -> GET /v2/projects/{projectId}/process
+- "Update a customField?" -> PUT /v2/projects/{projectId}/customFields/{key}
+- "Create a upload?" -> POST /v2/projects/{projectId}/files/upload
+- "Create a addExternalLink?" -> POST /v2/quotes/{quoteId}/files/addExternalLinks
+- "Create a externalInfo?" -> POST /v2/quotes/{quoteId}/externalInfo
+- "Create a addLink?" -> POST /v2/quotes/{quoteId}/files/addLink
+- "Create a addJob?" -> POST /v2/quotes/{quoteId}/addJob
+- "Create a archive?" -> POST /v2/quotes/files/archive
+- "Create a quote?" -> POST /v2/quotes
+- "Create a payable?" -> POST /v2/quotes/{quoteId}/finance/payables
+- "Create a receivable?" -> POST /v2/quotes/{quoteId}/finance/receivables
+- "Delete a file?" -> DELETE /v2/quotes/{quoteId}/files/{fileId}
+- "Update a payable?" -> PUT /v2/quotes/{quoteId}/finance/payables/{payableId}
+- "Delete a payable?" -> DELETE /v2/quotes/{quoteId}/finance/payables/{payableId}
+- "Update a receivable?" -> PUT /v2/quotes/{quoteId}/finance/receivables/{receivableId}
+- "Delete a receivable?" -> DELETE /v2/quotes/{quoteId}/finance/receivables/{receivableId}
+- "Get for-external-id details?" -> GET /v2/quotes/for-external-id/{externalProjectId}
+- "Get quote details?" -> GET /v2/quotes/{quoteId}
+- "List all clientContacts?" -> GET /v2/quotes/{quoteId}/clientContacts
+- "List all customFields?" -> GET /v2/quotes/{quoteId}/customFields
+- "Get file details?" -> GET /v2/quotes/files/{fileId}
+- "Get download details?" -> GET /v2/quotes/files/{fileId}/download/{fileName}
+- "List all files?" -> GET /v2/quotes/{quoteId}/files
+- "List all finance?" -> GET /v2/quotes/{quoteId}/finance
+- "List all jobs?" -> GET /v2/quotes/{quoteId}/jobs
+- "List all process?" -> GET /v2/quotes/{quoteId}/process
+- "Update a customField?" -> PUT /v2/quotes/{quoteId}/customFields/{key}
+- "Create a upload?" -> POST /v2/quotes/{quoteId}/files/upload
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

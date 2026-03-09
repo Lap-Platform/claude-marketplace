@@ -116,92 +116,10 @@ Not specified.
 | POST | / | Updates a self-service action. |
 | POST | / | Updates the specified TagOption. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I provision a new product from the catalog?" -> POST / (ProvisionProduct: ProvisionedProductName, ProvisionToken, ProductId/ProductName, ProvisioningArtifactId)
-- "What portfolios do I have access to?" -> POST / (ListAcceptedPortfolioShares: optional PageToken, PageSize, PortfolioShareType)
-- "How do I search for available products?" -> POST / (SearchProducts: optional Filters, SortBy, SortOrder, PageToken)
-- "What is the status of my provisioned product?" -> POST / (DescribeProvisionedProduct: Id or Name)
-- "How do I terminate a provisioned product?" -> POST / (TerminateProvisionedProduct: TerminateToken, ProvisionedProductId or Name)
-- "How do I share a portfolio with another account or organization?" -> POST / (CreatePortfolioShare: PortfolioId, AccountId or OrganizationNode)
-- "What constraints are applied to a portfolio?" -> POST / (ListConstraintsForPortfolio: PortfolioId, optional ProductId, PageToken)
-- "How do I update a provisioned product to a new artifact version?" -> POST / (UpdateProvisionedProduct: UpdateToken, ProvisionedProductId, ProvisioningArtifactId)
-- "What launch paths are available for a product?" -> POST / (ListLaunchPaths: ProductId)
-- "How do I check if my copy product operation finished?" -> POST / (DescribeCopyProductStatus: CopyProductToken)
-- "What provisioning parameters does an artifact require?" -> POST / (DescribeProvisioningParameters: ProductId/Name, ProvisioningArtifactId/Name)
-- "How do I associate a product with a portfolio?" -> POST / (AssociateProductWithPortfolio: ProductId, PortfolioId)
-- "What are the outputs of my provisioned product?" -> POST / (GetProvisionedProductOutputs: ProvisionedProductId or Name, optional OutputKeys)
-- "How do I find all provisioned products across my organization?" -> POST / (SearchProvisionedProducts: optional AccessLevelFilter, Filters, SortBy)
-- "Can I check my organization's access status for Service Catalog?" -> POST / (GetAWSOrganizationsAccessStatus: no params)
-
-## Response Tips
-
-- **List/Search endpoints**: All paginated via `NextPageToken`/`PageToken` (not `PageSize` offset). Always check for `NextPageToken` in the response and loop until absent. Some endpoints use `PageToken` in the response instead of `NextPageToken` (ListResourcesForTagOption, ListTagOptions) -- handle both field names.
-- **Provisioning/Terminate/Update operations**: Return a `RecordDetail` object -- track the `Status` field (CREATED, IN_PROGRESS, IN_PROGRESS_IN_ERROR, SUCCEEDED, FAILED). Poll via DescribeRecord using the `RecordId` until terminal status. Check `RecordErrors` array for failure details.
-- **Describe endpoints**: Return deeply nested objects (e.g., `ProductViewDetail.ProductViewSummary`, `SourceConnection.LastSync`). Every nested field is nullable (`?`), so defensively access properties.
-- **Create endpoints**: Return the created resource detail plus an `Id` field. Most require an `IdempotencyToken` -- reuse the same token to safely retry without duplication.
-- **Share operations**: Return a `PortfolioShareToken` for async tracking. Use DescribePortfolioShareStatus to poll completion and inspect `ShareDetails.ShareErrors` for partial failures.
-- **Batch operations**: Return `FailedServiceActionAssociations` array -- always check this even on 200 responses, as partial failures are reported inline rather than as HTTP errors.
-
-## Anomaly Flags
-
-- **Partial batch failures**: BatchAssociate/BatchDisassociate return 200 even when some associations fail. Surface any non-empty `FailedServiceActionAssociations` array immediately.
-- **Async operation stalls**: ProvisionProduct, TerminateProvisionedProduct, UpdateProvisionedProduct, and CopyProduct are async. Flag if RecordDetail `Status` stays `IN_PROGRESS` or `IN_PROGRESS_IN_ERROR` across multiple polls.
-- **Portfolio share errors**: DescribePortfolioShareStatus can report partial success. Surface any entries in `ShareDetails.ShareErrors` even when the overall status appears successful.
-- **Provisioning artifact guidance**: ProvisioningArtifactDetail includes a `Guidance` field that can indicate `DEPRECATED`. Proactively warn when a user provisions or updates using an artifact marked deprecated.
-- **Inactive artifacts/tag options**: `Active: false` on ProvisioningArtifactDetail or TagOptionDetail means the resource is disabled. Flag if a user attempts to reference an inactive resource.
-- **Source connection sync failures**: ProductViewDetail contains `LastSync` with `LastSyncStatus` and `LastSyncStatusMessage`. Surface `FAILED` sync status and the error message proactively.
-- **ProvisionedProduct status degradation**: Flag `StatusMessage` content on ProvisionedProductDetail when Status is `ERROR`, `TAINTED`, or `UNDER_CHANGE`, as these indicate infrastructure drift or failed operations.
-- **Missing launch paths**: If ListLaunchPaths returns empty for a product the user wants to provision, surface this -- it means no portfolio-to-product constraint grants the user a valid path.
-
-## Playbook
-
-### 1. Provision a New Product End-to-End
-
-1. Call **SearchProducts** with filters to find the desired product. Note the `ProductId`.
-2. Call **ListLaunchPaths** with `ProductId` to get available launch paths. Pick the appropriate `PathId`.
-3. Call **ListProvisioningArtifacts** with `ProductId` to find the latest active artifact. Note the `ProvisioningArtifactId`.
-4. Call **DescribeProvisioningParameters** with `ProductId`, `ProvisioningArtifactId`, and `PathId` to discover required parameters, constraints, and tag options.
-5. Call **ProvisionProduct** with `ProvisionedProductName`, `ProvisionToken` (unique idempotency token), `ProductId`, `ProvisioningArtifactId`, `PathId`, and `ProvisioningParameters`.
-6. Capture the `RecordId` from the response's `RecordDetail`.
-7. Poll **DescribeRecord** with `RecordId` until `Status` is `SUCCEEDED` or `FAILED`. On failure, inspect `RecordErrors`.
-
-### 2. Share a Portfolio with an AWS Organization Unit
-
-1. Call **CreatePortfolio** (or **DescribePortfolio** if the portfolio already exists) to get the `PortfolioId`.
-2. Call **CreatePortfolioShare** with `PortfolioId` and `OrganizationNode` (Type: `ORGANIZATION` or `ORGANIZATIONAL_UNIT`, Value: the OU ID). Set `ShareTagOptions: true` and `SharePrincipals: true` as needed.
-3. Capture the `PortfolioShareToken` from the response.
-4. Poll **DescribePortfolioShareStatus** with the token until `Status` is `COMPLETED` or `ERROR`.
-5. Inspect `ShareDetails.SuccessfulShares` and `ShareDetails.ShareErrors` for per-account results.
-6. Verify sharing with **DescribePortfolioShares** using `PortfolioId` and `Type: ORGANIZATIONAL_UNIT`.
-
-### 3. Update a Provisioned Product to a New Version
-
-1. Call **DescribeProvisionedProduct** with the product's `Id` or `Name`. Note the current `ProvisioningArtifactId` and `ProductId`.
-2. Call **ListProvisioningArtifacts** with `ProductId` to find the target version. Verify `Active: true` and `Guidance` is not `DEPRECATED`.
-3. Call **DescribeProvisioningParameters** with the new `ProvisioningArtifactId` to check for new or changed parameters.
-4. Call **UpdateProvisionedProduct** with `UpdateToken` (unique idempotency token), `ProvisionedProductId`, and the new `ProvisioningArtifactId`. Include any updated `ProvisioningParameters`.
-5. Poll **DescribeRecord** with the returned `RecordId` until `Status` reaches `SUCCEEDED` or `FAILED`.
-
-### 4. Create and Constrain a Product in a Portfolio
-
-1. Call **CreateProduct** with `Name`, `Owner`, `ProductType`, `IdempotencyToken`, and `ProvisioningArtifactParameters` (the initial template). Capture `ProductId`.
-2. Call **CreatePortfolio** (or use an existing `PortfolioId`).
-3. Call **AssociateProductWithPortfolio** with `ProductId` and `PortfolioId`.
-4. Call **CreateConstraint** with `PortfolioId`, `ProductId`, `Type` (e.g., `LAUNCH`, `TEMPLATE`, `NOTIFICATION`), `Parameters` (JSON string with constraint config), and `IdempotencyToken`.
-5. Call **AssociatePrincipalWithPortfolio** with `PortfolioId`, `PrincipalARN` (IAM role/user), and `PrincipalType` to grant access.
-6. Verify with **DescribeProduct** or **ListConstraintsForPortfolio**.
-
-### 5. Clean Up: Terminate and Decommission
-
-1. Call **SearchProvisionedProducts** with filters to find active provisioned products to terminate.
-2. For each product, call **TerminateProvisionedProduct** with `TerminateToken` and `ProvisionedProductId`. Set `IgnoreErrors: true` only if you want to force-terminate past failures.
-3. Poll **DescribeRecord** for each termination until `Status` is `SUCCEEDED`.
-4. Call **DisassociateProductFromPortfolio** with `ProductId` and `PortfolioId`.
-5. Call **DeleteProduct** with `Id` to remove the product.
-6. If the portfolio is no longer needed, call **DeletePortfolioShare** for each share, then **DeletePortfolio** with `Id`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

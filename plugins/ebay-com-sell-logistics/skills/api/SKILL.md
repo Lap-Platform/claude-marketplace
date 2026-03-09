@@ -12,7 +12,7 @@ API version: v1_beta.0.0
 OAuth2
 
 ## Base URL
-https://api.ebay.com{basePath}
+https://api.ebay.com/sell/logistics/v1_beta
 
 ## Setup
 1. Configure auth: OAuth2
@@ -37,80 +37,16 @@ https://api.ebay.com{basePath}
 | POST | /shipping_quote | The <b>createShippingQuote</b> method returns a <i>shipping quote </i> that contains a list of live "rates."  <br><br>Each rate represents an offer made by a shipping carrier for a specific service and each offer has a live quote for the base service cost. Rates have a time window in which they are "live," and rates expire when their purchase window ends. If offered by the carrier, rates can include shipping options (and their associated prices), and users can add any offered shipping option to the base service should they desire.  Also, depending on the services required, rates can also include pickup and delivery windows.<br><br><span class="tablenote"><b>Note:</b> The Logistics API only supports USPS shipping rates and labels.</span><br>Each rate is for a single package and is based on the following information: <ul><li>The shipping origin</li> <li>The shipping destination</li> <li>The package size (weight and dimensions)</li></ul>  Rates are identified by a unique eBay-assigned <b>rateId</b> and rates are based on price points, pickup and delivery time frames, and other user requirements. Because each rate offered must be compliant with the eBay shipping program, all rates reflect eBay-negotiated prices.  <br><br>The various rates returned in a shipping quote offer the user a choice from which they can choose a shipping service that best fits their needs. Select the rate for your shipment and using the associated <b>rateId</b>, call <b>createFromShippingQuote</b> to create a shipment and generate a shipping label that you can use to ship the package. |
 | GET | /shipping_quote/{shippingQuoteId} | This method retrieves the complete details of the shipping quote associated with the specified <b>shippingQuoteId</b> value.  <br><br>A "shipping quote" pertains to a single specific package and contains a set of shipping "rates" that quote the cost to ship the package by different shipping carriers and services. The quotes are based on the package's origin, destination, and size.  <br><br>Call <b>createShippingQuote</b> to create a <b>shippingQuoteId</b>. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I get a shipping quote for a package?" -> POST /shipping_quote
-- "What shipping rates are available between two addresses?" -> POST /shipping_quote
-- "How do I create a shipment from a quote?" -> POST /shipment/create_from_shipping_quote
-- "How do I cancel a shipment?" -> POST /shipment/{shipmentId}/cancel
-- "Where is my shipment? What's the tracking number?" -> GET /shipment/{shipmentId}
-- "How do I download a shipping label?" -> GET /shipment/{shipmentId}/download_label_file
-- "What carrier was selected for my shipment?" -> GET /shipment/{shipmentId}
-- "When does my shipping quote expire?" -> GET /shipping_quote/{shippingQuoteId}
-- "What's the estimated delivery date for my shipment?" -> GET /shipment/{shipmentId}
-- "How much did shipping cost?" -> GET /shipment/{shipmentId}
-- "What additional shipping options are available?" -> POST /shipping_quote
-- "Was my cancellation request accepted?" -> GET /shipment/{shipmentId}
-- "How do I ship an eBay order I just sold?" -> POST /shipping_quote + POST /shipment/create_from_shipping_quote
-- "Can I customize the label message?" -> POST /shipment/create_from_shipping_quote
-
-## Response Tips
-
-- **Shipment responses**: Deeply nested -- costs live under `rate.baseShippingCost` and `rate.totalShippingCost`; addresses are under `shipFrom.contactAddress`, `shipTo.contactAddress`, and `returnTo.contactAddress`. Check `cancellation.cancellationStatus` for cancel state.
-- **Shipping quote responses**: The `rates` field is an array of available options -- iterate to compare carriers, costs, and delivery windows. Check `expirationDate` before using a `rateId`. The `warnings` array may contain important caveats.
-- **Label download**: Returns raw file content (not JSON). Set the `Accept` header appropriately (e.g., `application/pdf`). A 200 with empty body may indicate the label is not yet generated.
-- **Errors**: 400 = validation failure (bad addresses, missing fields), 404 = invalid shipmentId/quoteId, 409 = conflict (duplicate create or cancel on already-cancelled shipment), 500 = retry-eligible server error.
-
-## Anomaly Flags
-
-- **Quote expiration**: Surface `expirationDate` prominently when retrieving quotes -- an expired quote cannot be used to create a shipment and will return 409.
-- **Cancellation status**: After calling cancel, check `cancellation.cancellationStatus` -- a request does not guarantee immediate cancellation. Flag if status is anything other than confirmed.
-- **409 Conflict on create**: Indicates the quote was already used or the shipment already exists. Surface this clearly rather than retrying.
-- **Missing tracking number**: If `shipmentTrackingNumber` is empty on a created shipment, the label may still be processing. Flag for follow-up.
-- **Warnings array**: Shipping quotes may return `warnings` -- always surface these to the user as they may indicate address corrections, restricted items, or service limitations.
-- **Cost discrepancy**: Compare `baseShippingCost` vs `totalShippingCost` on the rate object. If they differ significantly, surface `additionalOptions` that contributed to the difference.
-- **Marketplace header**: Missing `X-EBAY-C-MARKETPLACE-ID` on create/quote calls will fail with 400. Flag if omitted from request context.
-
-## Playbook
-
-### Ship an eBay Order End-to-End
-
-1. Call `POST /shipping_quote` with the order details, package dimensions/weight, and ship-from/ship-to addresses. Include `X-EBAY-C-MARKETPLACE-ID` header.
-2. Review the `rates` array in the response. Compare `totalShippingCost`, `shippingCarrierName`, and `minEstimatedDeliveryDate`/`maxEstimatedDeliveryDate`.
-3. Select a rate and note its `rateId` and the `shippingQuoteId`.
-4. Call `POST /shipment/create_from_shipping_quote` with the `shippingQuoteId`, `rateId`, optional `labelCustomMessage`, and `labelSize`.
-5. From the response, save `shipmentId`, `shipmentTrackingNumber`, and `labelDownloadUrl`.
-6. Call `GET /shipment/{shipmentId}/download_label_file` with appropriate `Accept` header to retrieve the printable label.
-
-### Cancel a Shipment
-
-1. Call `POST /shipment/{shipmentId}/cancel` with the shipment ID.
-2. Check the response's `cancellation.cancellationStatus` field.
-3. If status is not confirmed, call `GET /shipment/{shipmentId}` periodically to poll for updated cancellation state.
-4. Handle 409 gracefully -- the shipment may already be cancelled or in a non-cancellable state.
-
-### Compare Shipping Options
-
-1. Call `POST /shipping_quote` with your package and address details.
-2. Check `expirationDate` to know how long rates are valid.
-3. Iterate through the `rates` array, extracting `shippingCarrierName`, `shippingServiceName`, `totalShippingCost.value`, and delivery date range.
-4. Review `additionalOptions` within each rate for available add-ons (insurance, signature, etc.).
-5. Surface any entries in the `warnings` array to the user before they decide.
-
-### Retrieve Shipment Details and Label
-
-1. Call `GET /shipment/{shipmentId}` to get full shipment metadata.
-2. Extract `shipmentTrackingNumber` for tracking, `rate.shippingCarrierName` for carrier info, and delivery estimates from `rate.minEstimatedDeliveryDate`/`rate.maxEstimatedDeliveryDate`.
-3. If a label reprint is needed, call `GET /shipment/{shipmentId}/download_label_file` with `Accept: application/pdf`.
-
-### Verify a Quote Before Creating a Shipment
-
-1. Call `GET /shipping_quote/{shippingQuoteId}` with the saved quote ID.
-2. Check `expirationDate` -- if expired, you must create a new quote via `POST /shipping_quote`.
-3. Confirm `shipFrom`/`shipTo` addresses are still correct.
-4. Review `warnings` for any flagged issues before proceeding to shipment creation.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a cancel?" -> POST /shipment/{shipmentId}/cancel
+- "Create a create_from_shipping_quote?" -> POST /shipment/create_from_shipping_quote
+- "List all download_label_file?" -> GET /shipment/{shipmentId}/download_label_file
+- "Get shipment details?" -> GET /shipment/{shipmentId}
+- "Create a shipping_quote?" -> POST /shipping_quote
+- "Get shipping_quote details?" -> GET /shipping_quote/{shippingQuoteId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -94,84 +94,10 @@ Not specified.
 | POST | / | Updates the name, or endpoint type for an inbound or an outbound Resolver endpoint. You can only update between IPV4 and DUALSTACK, IPV6 endpoint type can't be updated to other type. |
 | POST | / | Updates settings for a specified Resolver rule. ResolverRuleId is required, and all other parameters are optional. If you don't specify a parameter, it retains its current value. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a DNS resolver endpoint in my VPC?" -> POST / (CreateResolverEndpoint: SecurityGroupIds, Direction, IpAddresses)
-- "How do I forward DNS queries for a specific domain to an on-prem resolver?" -> POST / (CreateResolverRule: RuleType=FORWARD, DomainName, TargetIps)
-- "How do I associate a resolver rule with a VPC?" -> POST / (AssociateResolverRule: ResolverRuleId, VPCId)
-- "How do I set up DNS query logging?" -> POST / (CreateResolverQueryLogConfig: Name, DestinationArn)
-- "How do I block malicious domains using DNS Firewall?" -> POST / (CreateFirewallDomainList + CreateFirewallRule + AssociateFirewallRuleGroup)
-- "How do I import a blocklist from S3 into a firewall domain list?" -> POST / (ImportFirewallDomains: FirewallDomainListId, Operation, DomainFileUrl)
-- "How do I enable DNSSEC validation on a VPC?" -> POST / (UpdateResolverDnssecConfig: ResourceId, Validation=ENABLE)
-- "How do I list all resolver endpoints and their IP addresses?" -> POST / (ListResolverEndpoints, then ListResolverEndpointIpAddresses per endpoint)
-- "How do I check if DNS Firewall fails open or closed for a VPC?" -> POST / (GetFirewallConfig: ResourceId)
-- "How do I share a resolver rule across accounts using RAM?" -> POST / (PutResolverRulePolicy: Arn, ResolverRulePolicy)
-- "How do I add an IP address to an existing resolver endpoint?" -> POST / (AssociateResolverEndpointIpAddress: ResolverEndpointId, IpAddress)
-- "How do I deploy a Route 53 Resolver on an AWS Outpost?" -> POST / (CreateOutpostResolver: Name, PreferredInstanceType, OutpostArn)
-- "How do I disable reverse DNS auto-definition for a VPC?" -> POST / (UpdateResolverConfig: ResourceId, AutodefinedReverseFlag=DISABLE)
-- "What tags are on my resolver endpoint?" -> POST / (ListTagsForResource: ResourceArn)
-- "How do I update firewall rules to allow instead of block a domain?" -> POST / (UpdateFirewallRule: FirewallRuleGroupId, FirewallDomainListId, Action=ALLOW)
-
-## Response Tips
-
-- **All endpoints** are POST to `/` differentiated by `X-Amz-Target` header (e.g., `Route53Resolver.CreateResolverEndpoint`). Every request needs the correct target header.
-- **List operations** return `NextToken` for pagination; keep calling with the returned token until it is absent or null. `MaxResults` caps at 100 for most operations.
-- **Sorted lists** (QueryLogConfigAssociations, QueryLogConfigs) accept `SortBy` and `SortOrder` and return `TotalCount`/`TotalFilteredCount` alongside the array.
-- **Async resources** (endpoints, domain lists, rule groups) include `Status` (CREATING, COMPLETE, DELETING, FAILED, etc.) and `StatusMessage` -- poll with the Get operation until status reaches a terminal state.
-- **Policy endpoints** (GetResolverRulePolicy, GetFirewallRuleGroupPolicy) return a JSON-encoded IAM policy as a string, not a structured object.
-- **Tag/Untag** operations return empty 200 on success with no body -- absence of error means success.
-
-## Anomaly Flags
-
-- **Status = FAILED or ACTION_NEEDED**: Surface immediately when any resource (endpoint, domain list, rule group, outpost resolver) reports a failure status. Include `StatusMessage` for diagnosis.
-- **DNSSEC ValidationStatus = UPDATING stuck**: If DNSSEC config stays in UPDATING for more than a few minutes, flag as potential propagation issue.
-- **FirewallFailOpen = ENABLED**: Proactively warn that DNS queries will resolve even when firewall cannot inspect them -- this is a security trade-off.
-- **MutationProtection = DISABLED on firewall associations**: Flag when rule group associations lack mutation protection, as this allows uncoordinated changes.
-- **ShareStatus = SHARED_BY_ME or SHARED_WITH_ME**: Surface cross-account sharing status on rules, query log configs, and firewall rule groups so the user knows about external dependencies.
-- **DomainCount = 0 on active firewall domain lists**: A firewall rule referencing an empty domain list is effectively a no-op -- likely a misconfiguration.
-- **IpAddressCount mismatch**: If the reported IP count on an endpoint doesn't match expected subnet assignments, flag as a potential AZ coverage gap.
-- **Throttling (ThrottlingException)**: AWS imposes per-account rate limits on Route 53 Resolver APIs. Surface retryable throttle errors with exponential backoff guidance.
-
-## Playbook
-
-### 1. Set Up Conditional DNS Forwarding to On-Premises
-
-1. Call **CreateResolverEndpoint** with `Direction=OUTBOUND`, specifying at least two `IpAddresses` in different AZs for redundancy.
-2. Poll **GetResolverEndpoint** until `Status=OPERATIONAL`.
-3. Call **CreateResolverRule** with `RuleType=FORWARD`, the target `DomainName` (e.g., `corp.example.com`), `TargetIps` pointing to on-prem DNS servers, and the `ResolverEndpointId` from step 1.
-4. Call **AssociateResolverRule** for each VPC that should use this forwarding rule.
-5. Verify by calling **GetResolverRuleAssociation** and confirming `Status=COMPLETE`.
-
-### 2. Deploy DNS Firewall Domain Blocking
-
-1. Call **CreateFirewallDomainList** with a descriptive name (e.g., `malware-blocklist`).
-2. Call **ImportFirewallDomains** with `Operation=REPLACE` and a `DomainFileUrl` pointing to an S3 object containing one domain per line. Poll **GetFirewallDomainList** until `Status=COMPLETE`.
-3. Call **CreateFirewallRuleGroup** to hold your rules.
-4. Call **CreateFirewallRule** linking the rule group to the domain list, setting `Action=BLOCK`, `BlockResponse=NXDOMAIN`, and an appropriate `Priority`.
-5. Call **AssociateFirewallRuleGroup** to attach the rule group to target VPCs. Set `MutationProtection=ENABLED` to prevent accidental changes.
-
-### 3. Enable DNS Query Logging for a VPC
-
-1. Call **CreateResolverQueryLogConfig** with `DestinationArn` pointing to an S3 bucket, CloudWatch Logs group, or Kinesis Firehose stream.
-2. Call **AssociateResolverQueryLogConfig** with the config ID and the VPC `ResourceId`.
-3. Verify by calling **GetResolverQueryLogConfigAssociation** and checking `Status=ACTIVE` and `Error=NONE`.
-4. To share logging config cross-account, call **PutResolverQueryLogConfigPolicy** with a RAM-style JSON policy.
-
-### 4. Enable DNSSEC Validation
-
-1. Call **UpdateResolverDnssecConfig** with `ResourceId` (VPC ID) and `Validation=ENABLE`.
-2. Poll **GetResolverDnssecConfig** until `ValidationStatus=ENABLED`.
-3. Test by resolving a known DNSSEC-signed domain and verifying success, then a domain with an invalid signature to confirm it returns SERVFAIL.
-4. To audit all VPCs, call **ListResolverDnssecConfigs** and check each entry's `ValidationStatus`.
-
-### 5. Cross-Account Rule Sharing via Resource Policy
-
-1. Call **GetResolverRule** to confirm the rule exists and note its `Arn`.
-2. Call **PutResolverRulePolicy** with the rule `Arn` and a JSON policy granting `route53resolver:AssociateResolverRule` to the target account principal.
-3. In the target account, call **AssociateResolverRule** using the shared rule's ID and the local VPC ID.
-4. Verify with **GetResolverRuleAssociation** in the target account. To revoke, call **PutResolverRulePolicy** with an empty policy string.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

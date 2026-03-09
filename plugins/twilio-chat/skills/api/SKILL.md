@@ -85,83 +85,55 @@ https://chat.twilio.com
 | POST | /v2/Credentials/{Sid} |  |
 | DELETE | /v2/Credentials/{Sid} |  |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new chat service?" -> POST /v2/Services
-- "List all my chat services" -> GET /v2/Services
-- "How do I create a channel in a service?" -> POST /v2/Services/{ServiceSid}/Channels
-- "Show me all members in a channel" -> GET /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Members
-- "How do I send a message to a channel?" -> POST /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Messages
-- "Get the message history for a channel" -> GET /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Messages
-- "How do I invite someone to a channel?" -> POST /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Invites
-- "What push notification bindings does a user have?" -> GET /v2/Services/{ServiceSid}/Users/{UserSid}/Bindings
-- "Which channels has a user joined?" -> GET /v2/Services/{ServiceSid}/Users/{UserSid}/Channels
-- "How do I check a user's unread message count in a channel?" -> GET /v2/Services/{ServiceSid}/Users/{UserSid}/Channels/{ChannelSid}
-- "How do I set up a channel webhook?" -> POST /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Webhooks
-- "How do I delete a credential?" -> DELETE /v2/Credentials/{Sid}
-- "How do I assign a role to a user?" -> POST /v2/Services/{ServiceSid}/Users/{Sid}
-- "List all roles defined in a service" -> GET /v2/Services/{ServiceSid}/Roles
-- "How do I update a service's webhook configuration?" -> POST /v2/Services/{Sid}
-
-## Response Tips
-
-- **List endpoints** (Services, Channels, Members, Messages, etc.): All return a `meta` object with `next_page_url` and `previous_page_url` for cursor-based pagination; follow `next_page_url` until it is `null`. Use `PageSize` (max typically 1000) and `PageToken` for control.
-- **Single-resource GETs**: Return the resource directly at the top level (no wrapper); all fields are nullable except `type`, counters (`members_count`, `messages_count`), and enum-like strings.
-- **DELETE endpoints**: Return 204 with no body -- treat any non-204 as an error.
-- **POST create vs. update**: Creates return 201, updates return 200; both return the full resource. Distinguish by status code, not response shape.
-- **User channels**: The per-user channel view (`/Users/{UserSid}/Channels/{ChannelSid}`) returns `unread_messages_count` and `last_consumed_message_index` -- these are user-scoped, not the same as the channel-level counters.
-- **Credentials**: Flat resources with `type` (gcm, apn, fcm) and optional `sandbox` flag; no nested objects.
-
-## Anomaly Flags
-
-- **Pagination truncation**: If `meta.next_page_url` is present, warn that results are incomplete and offer to fetch remaining pages.
-- **Null identity on bindings or members**: A binding or member with `identity: null` may indicate an orphaned record -- surface for review.
-- **`was_edited: true` on messages**: Flag edited messages when reviewing channel history so the user knows the content may have changed.
-- **User offline status**: When `is_online: false` and `is_notifiable: false` on a user, flag that the user is unreachable for both real-time and push delivery.
-- **Zero members/messages on a channel**: A channel with `members_count: 0` or `messages_count: 0` that is not newly created may indicate a stale or abandoned channel.
-- **Missing webhook URLs on service**: If `pre_webhook_url` and `post_webhook_url` are both empty on a service, note that no event callbacks are configured.
-- **High `unread_messages_count`**: On a user-channel record, a large unread count may signal a disengaged user or a noisy channel worth investigating.
-- **`X-Twilio-Webhook-Enabled` header usage**: When this header is omitted on mutating calls that support it, webhooks fire by default -- flag if the caller might want to suppress them.
-
-## Playbook
-
-### 1. Set Up a New Chat Service with a Channel
-
-1. POST /v2/Services with a `friendly_name` to create the service. Save the returned `sid` as `ServiceSid`.
-2. POST /v2/Services/{ServiceSid}/Channels with `friendly_name`, `unique_name`, and `type` (public or private).
-3. POST /v2/Services/{ServiceSid}/Roles with `friendly_name` and `permissions` to define custom roles (optional).
-4. GET /v2/Services/{ServiceSid} to verify the service configuration, especially `default_service_role_sid` and `default_channel_role_sid`.
-
-### 2. Add Users to a Channel and Send Messages
-
-1. POST /v2/Services/{ServiceSid}/Users with `identity` to create the user. Save `sid` as `UserSid`.
-2. POST /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Members with the user's `identity` to add them to the channel.
-3. POST /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Messages with `body` and `from` (identity) to send a message.
-4. GET /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Messages with `Order=desc` to confirm delivery and retrieve recent history.
-
-### 3. Configure Push Notifications
-
-1. POST /v2/Credentials with `type` (apn, gcm, or fcm) and the platform-specific certificate or API key. Save `sid` as `CredentialSid`.
-2. GET /v2/Services/{ServiceSid}/Bindings to list existing push bindings and verify which users and endpoints are registered.
-3. GET /v2/Services/{ServiceSid}/Users/{UserSid}/Bindings to inspect a specific user's push configuration.
-4. DELETE /v2/Services/{ServiceSid}/Users/{UserSid}/Bindings/{Sid} to remove stale or duplicate bindings.
-
-### 4. Monitor User Engagement Across Channels
-
-1. GET /v2/Services/{ServiceSid}/Users/{UserSid}/Channels to list all channels the user belongs to.
-2. For each channel, check `unread_messages_count` and `last_consumed_message_index` to gauge read status.
-3. GET /v2/Services/{ServiceSid}/Users/{UserSid} to check `is_online` and `is_notifiable` for reachability.
-4. If a user has high unread counts across channels, consider sending a re-engagement notification or reviewing channel noise levels.
-
-### 5. Set Up Channel Webhooks for Event Processing
-
-1. GET /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Webhooks to check for existing webhook configurations.
-2. POST /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Webhooks with `type` (webhook, trigger, or studio) and `configuration` containing the target URL and filters.
-3. POST /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Messages with `X-Twilio-Webhook-Enabled: true` to send a test message and trigger the webhook.
-4. GET /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Webhooks/{Sid} to verify the webhook's `date_updated` changed, confirming it fired.
-5. To disable, DELETE /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Webhooks/{Sid}.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all Bindings?" -> GET /v2/Services/{ServiceSid}/Bindings
+- "Get Binding details?" -> GET /v2/Services/{ServiceSid}/Bindings/{Sid}
+- "Delete a Binding?" -> DELETE /v2/Services/{ServiceSid}/Bindings/{Sid}
+- "Get Channel details?" -> GET /v2/Services/{ServiceSid}/Channels/{Sid}
+- "Delete a Channel?" -> DELETE /v2/Services/{ServiceSid}/Channels/{Sid}
+- "Create a Channel?" -> POST /v2/Services/{ServiceSid}/Channels
+- "List all Channels?" -> GET /v2/Services/{ServiceSid}/Channels
+- "List all Webhooks?" -> GET /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Webhooks
+- "Create a Webhook?" -> POST /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Webhooks
+- "Get Webhook details?" -> GET /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Webhooks/{Sid}
+- "Delete a Webhook?" -> DELETE /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Webhooks/{Sid}
+- "List all Credentials?" -> GET /v2/Credentials
+- "Create a Credential?" -> POST /v2/Credentials
+- "Get Credential details?" -> GET /v2/Credentials/{Sid}
+- "Delete a Credential?" -> DELETE /v2/Credentials/{Sid}
+- "Get Invite details?" -> GET /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Invites/{Sid}
+- "Delete a Invite?" -> DELETE /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Invites/{Sid}
+- "Create a Invite?" -> POST /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Invites
+- "List all Invites?" -> GET /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Invites
+- "Get Member details?" -> GET /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Members/{Sid}
+- "Delete a Member?" -> DELETE /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Members/{Sid}
+- "Create a Member?" -> POST /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Members
+- "List all Members?" -> GET /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Members
+- "Get Message details?" -> GET /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Messages/{Sid}
+- "Delete a Message?" -> DELETE /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Messages/{Sid}
+- "Create a Message?" -> POST /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Messages
+- "List all Messages?" -> GET /v2/Services/{ServiceSid}/Channels/{ChannelSid}/Messages
+- "Get Role details?" -> GET /v2/Services/{ServiceSid}/Roles/{Sid}
+- "Delete a Role?" -> DELETE /v2/Services/{ServiceSid}/Roles/{Sid}
+- "Create a Role?" -> POST /v2/Services/{ServiceSid}/Roles
+- "List all Roles?" -> GET /v2/Services/{ServiceSid}/Roles
+- "Get Service details?" -> GET /v2/Services/{Sid}
+- "Delete a Service?" -> DELETE /v2/Services/{Sid}
+- "Create a Service?" -> POST /v2/Services
+- "List all Services?" -> GET /v2/Services
+- "Get User details?" -> GET /v2/Services/{ServiceSid}/Users/{Sid}
+- "Delete a User?" -> DELETE /v2/Services/{ServiceSid}/Users/{Sid}
+- "Create a User?" -> POST /v2/Services/{ServiceSid}/Users
+- "List all Users?" -> GET /v2/Services/{ServiceSid}/Users
+- "List all Bindings?" -> GET /v2/Services/{ServiceSid}/Users/{UserSid}/Bindings
+- "Get Binding details?" -> GET /v2/Services/{ServiceSid}/Users/{UserSid}/Bindings/{Sid}
+- "Delete a Binding?" -> DELETE /v2/Services/{ServiceSid}/Users/{UserSid}/Bindings/{Sid}
+- "List all Channels?" -> GET /v2/Services/{ServiceSid}/Users/{UserSid}/Channels
+- "Get Channel details?" -> GET /v2/Services/{ServiceSid}/Users/{UserSid}/Channels/{ChannelSid}
+- "Delete a Channel?" -> DELETE /v2/Services/{ServiceSid}/Users/{UserSid}/Channels/{ChannelSid}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

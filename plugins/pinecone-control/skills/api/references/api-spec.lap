@@ -1,0 +1,145 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Pinecone Control Plane API
+@base https://api.pinecone.io
+@version 2025-10
+@auth ApiKey Api-Key in header
+@common_fields {X-Pinecone-Api-Version: str=2025-10 # Required date-based version header}
+@endpoints 18
+@toc indexes(8), collections(4), backups(4), restore-jobs(2)
+
+@group indexes
+@endpoint GET /indexes
+@desc List indexes
+@returns(200) {indexes: [map]} # This operation returns a list of all the indexes that you have previously created, and which are associated with the given project
+@errors {401: Unauthorized. Possible causes: Invalid API key., 500: Internal server error.}
+
+@endpoint POST /indexes
+@desc Create an index
+@required {name: str # The name of the index. Resource name must be 1-45 characters long, start and end with an alphanumeric character, and consist only of lower case alphanumeric characters or '-'., spec: map # The spec object defines how the index should be deployed.  For serverless indexes, you define only the [cloud and region](http://docs.pinecone.io/guides/index-data/create-an-index#cloud-regions) where the index should be hosted. For pod-based indexes, you define the [environment](http://docs.pinecone.io/guides/indexes/pods/understanding-pod-based-indexes#pod-environments) where the index should be hosted, the [pod type and size](http://docs.pinecone.io/guides/indexes/pods/understanding-pod-based-indexes#pod-types) to use, and other index characteristics.}
+@optional {dimension: int(int32) # The dimensions of the vectors to be inserted in the index., metric: str # The distance metric to be used for similarity search. You can use 'euclidean', 'cosine', or 'dotproduct'. If the 'vector_type' is 'sparse', the metric must be 'dotproduct'. If the `vector_type` is `dense`, the metric defaults to 'cosine'. Possible values: `cosine`, `euclidean`, or `dotproduct`., deletion_protection: str=disabled # Whether [deletion protection](http://docs.pinecone.io/guides/manage-data/manage-indexes#configure-deletion-protection) is enabled/disabled for the index. Possible values: `disabled` or `enabled`., tags: map # Custom user tags added to an index. Keys must be 80 characters or less. Values must be 120 characters or less. Keys must be alphanumeric, '_', or '-'.  Values must be alphanumeric, ';', '@', '_', '-', '.', '+', or ' '. To unset a key, set the value to be an empty string., vector_type: str=dense # The index vector type. You can use 'dense' or 'sparse'. If 'dense', the vector dimension must be specified.  If 'sparse', the vector dimension should not be specified.}
+@returns(201) {name: str, dimension: int(int32), metric: str, host: str, private_host: str, deletion_protection: str, tags: map, embed: map{model: str, metric: str, dimension: int(int32), vector_type: str, field_map: map, read_parameters: map, write_parameters: map}, spec: map, status: map{ready: bool, state: str}, vector_type: str} # The index has been successfully created.
+@errors {400: Bad request. The request body included invalid request parameters., 401: Unauthorized. Possible causes: Invalid API key., 402: Payment required. Organization is on a paid plan and is delinquent on payment., 403: You've exceed your pod quota., 404: Unknown cloud or region when creating a serverless index., 422: Unprocessable entity. The request body could not be deserialized., 409: Index of given name already exists., 500: Internal server error.}
+@example_request {"deletion_protection":"enabled","dimension":1536,"metric":"cosine","name":"movie-recommendations","spec":{"serverless":{"cloud":"gcp","read_capacity":{"mode":"OnDemand"},"region":"us-east1","source_collection":"movie-embeddings"}}}
+
+@endpoint GET /indexes/{index_name}
+@desc Describe an index
+@required {index_name: str # The name of the index to be described.}
+@returns(200) {name: str, dimension: int(int32), metric: str, host: str, private_host: str, deletion_protection: str, tags: map, embed: map{model: str, metric: str, dimension: int(int32), vector_type: str, field_map: map, read_parameters: map, write_parameters: map}, spec: map, status: map{ready: bool, state: str}, vector_type: str} # Configuration information and deployment status of the index.
+@errors {401: Unauthorized. Possible causes: Invalid API key., 404: Index not found., 500: Internal server error.}
+
+@endpoint DELETE /indexes/{index_name}
+@desc Delete an index
+@required {index_name: str # The name of the index to delete.}
+@returns(202) The request to delete the index has been accepted.
+@errors {401: Unauthorized. Possible causes: Invalid API key., 403: Forbidden. Deletion protection enabled., 404: Index not found., 412: There is a pending collection created from this index., 500: Internal server error.}
+
+@endpoint PATCH /indexes/{index_name}
+@desc Configure an index
+@required {index_name: str # The name of the index to configure.}
+@optional {spec: any # The spec object defines how the index should be deployed.  Only some attributes of an index's spec may be updated.  In general, you can modify settings related to scaling and  configuration but you cannot change the cloud or region  where the index is hosted., deletion_protection: str=disabled # Whether [deletion protection](http://docs.pinecone.io/guides/manage-data/manage-indexes#configure-deletion-protection) is enabled/disabled for the index. Possible values: `disabled` or `enabled`., tags: map # Custom user tags added to an index. Keys must be 80 characters or less. Values must be 120 characters or less. Keys must be alphanumeric, '_', or '-'.  Values must be alphanumeric, ';', '@', '_', '-', '.', '+', or ' '. To unset a key, set the value to be an empty string., embed: map{model: str, field_map: map, read_parameters: map, write_parameters: map} # Configure the integrated inference embedding settings for this index.  You can convert an existing index to an integrated index by specifying the embedding model and field_map. The index vector type and dimension must match the model vector type and dimension, and the index similarity metric must be supported by the model. Refer to the [model guide](https://docs.pinecone.io/guides/index-data/create-an-index#embedding-models) for available models and model details.  You can later change the embedding configuration to update the field map, read parameters, or write parameters. Once set, the model cannot be changed.}
+@returns(202) {name: str, dimension: int(int32), metric: str, host: str, private_host: str, deletion_protection: str, tags: map, embed: map{model: str, metric: str, dimension: int(int32), vector_type: str, field_map: map, read_parameters: map, write_parameters: map}, spec: map, status: map{ready: bool, state: str}, vector_type: str} # The request to configure the index has been accepted. Check the  index status to see when the change has been applied.
+@errors {400: Bad request. The request body included invalid request parameters., 401: Unauthorized. Possible causes: Invalid API key., 402: Payment required. Organization is on a paid plan and is delinquent on payment., 403: You've exceed your pod quota., 404: Index not found., 422: Unprocessable entity. The request body could not be deserialized., 500: Internal server error.}
+@example_request {"spec":{"pod":{"pod_type":"p1.x2"}}}
+
+@endpoint GET /indexes/{index_name}/backups
+@desc List backups for an index
+@required {index_name: str # Name of the backed up index}
+@optional {limit: int=10 # The number of results to return per page., paginationToken: str # The token to use to retrieve the next page of results.}
+@returns(200) {data: [map], pagination: map{next: str}} # This operation returns a list of all the backups that you have previously created, and which are associated with the given index.
+@errors {401: Unauthorized. Possible causes: Invalid API key., 404: Index not found., 500: Internal server error.}
+
+@endpoint POST /indexes/{index_name}/backups
+@desc Create a backup of an index
+@required {index_name: str # Name of the index to backup}
+@optional {name: str # The name of the backup., description: str # A description of the backup.}
+@returns(201) {backup_id: str, source_index_name: str, source_index_id: str, name: str, description: str, status: str, cloud: str, region: str, dimension: int(int32), metric: str, schema: map{fields: map}, record_count: int, namespace_count: int, size_bytes: int, tags: map, created_at: str} # The backup has been successfully created.
+@errors {400: Bad request. The request body included invalid request parameters., 401: Unauthorized. Possible causes: Invalid API key., 402: Payment required. Organization is on a paid plan and is delinquent on payment., 403: You've exceed your backup quota., 422: Unprocessable entity. The request body could not be deserialized., 500: Internal server error.}
+
+@endgroup
+
+@group collections
+@endpoint GET /collections
+@desc List collections
+@returns(200) {collections: [map]} # List all the collections in your current project.
+@errors {401: Unauthorized. Possible causes: Invalid API key., 500: Internal server error.}
+
+@endpoint POST /collections
+@desc Create a collection
+@required {name: str # The name of the collection to be created. Resource name must be 1-45 characters long, start and end with an alphanumeric character, and consist only of lower case alphanumeric characters or '-'., source: str # The name of the index to be used as the source for the collection.}
+@returns(201) {name: str, size: int(int64), status: str, dimension: int(int32), vector_count: int(int32), environment: str} # The collection has been successfully created.
+@errors {400: Bad request. The request body included invalid request parameters., 401: Unauthorized. Possible causes: Invalid API key., 402: Payment required. Organization is on a paid plan and is delinquent on payment., 403: You've exceed your collections quota., 409: Collection of given name already exists., 422: Unprocessable entity. The request body could not be deserialized., 500: Internal server error.}
+@example_request {"name":"example-collection","source":"example-source-index"}
+
+@endgroup
+
+@group indexes
+@endpoint POST /indexes/create-for-model
+@desc Create an index with integrated embedding
+@required {name: str # The name of the index. Resource name must be 1-45 characters long, start and end with an alphanumeric character, and consist only of lower case alphanumeric characters or '-'., cloud: str # The public cloud where you would like your index hosted. Possible values: `gcp`, `aws`, or `azure`., region: str # The region where you would like your index to be created., embed: map{model!: str, metric: str, field_map!: map, dimension: int, read_parameters: map, write_parameters: map} # Specify the integrated inference embedding configuration for the index.  Once set the model cannot be changed, but you can later update the embedding configuration for an integrated inference index including field map, read parameters, or write parameters.  Refer to the [model guide](https://docs.pinecone.io/guides/index-data/create-an-index#embedding-models) for available models and model details.}
+@optional {deletion_protection: str=disabled # Whether [deletion protection](http://docs.pinecone.io/guides/manage-data/manage-indexes#configure-deletion-protection) is enabled/disabled for the index. Possible values: `disabled` or `enabled`., tags: map # Custom user tags added to an index. Keys must be 80 characters or less. Values must be 120 characters or less. Keys must be alphanumeric, '_', or '-'.  Values must be alphanumeric, ';', '@', '_', '-', '.', '+', or ' '. To unset a key, set the value to be an empty string., schema: map{fields!: map} # Schema for the behavior of Pinecone's internal metadata index. By default, all metadata is indexed; when `schema` is present, only fields which are present in the `fields` object with a `filterable: true` are indexed. Note that `filterable: false` is not currently supported., read_capacity: any # By default the index will be created with read capacity  mode `OnDemand`. If you prefer to allocate dedicated read  nodes for your workload, you must specify mode `Dedicated` and additional configurations for `node_type` and `scaling`.}
+@returns(201) {name: str, dimension: int(int32), metric: str, host: str, private_host: str, deletion_protection: str, tags: map, embed: map{model: str, metric: str, dimension: int(int32), vector_type: str, field_map: map, read_parameters: map, write_parameters: map}, spec: map, status: map{ready: bool, state: str}, vector_type: str} # The index has successfully been created for the embedding model.
+@errors {400: Bad request. The request body included invalid request parameters., 401: Unauthorized. Possible causes: Invalid API key., 404: Unknown cloud or region when creating a serverless index., 409: Index of given name already exists., 422: Unprocessable entity. The request body could not be deserialized., 500: Internal server error.}
+@example_request {"cloud":"gcp","deletion_protection":"enabled","embed":{"field_map":{"text":"your-text-field"},"metric":"cosine","model":"multilingual-e5-large"},"name":"multilingual-e5-large-index","region":"us-east1"}
+
+@endgroup
+
+@group backups
+@endpoint GET /backups
+@desc List backups for all indexes in a project
+@optional {limit: int=10 # The number of results to return per page., paginationToken: str # The token to use to retrieve the next page of results.}
+@returns(200) {data: [map], pagination: map{next: str}} # This operation returns a list of all the backups for the given index that you have previously created.
+@errors {401: Unauthorized. Possible causes: Invalid API key., 500: Internal server error.}
+
+@endpoint GET /backups/{backup_id}
+@desc Describe a backup
+@required {backup_id: str # The ID of the backup to describe.}
+@returns(200) {backup_id: str, source_index_name: str, source_index_id: str, name: str, description: str, status: str, cloud: str, region: str, dimension: int(int32), metric: str, schema: map{fields: map}, record_count: int, namespace_count: int, size_bytes: int, tags: map, created_at: str} # Configuration information and deployment status of the backup.
+@errors {401: Unauthorized. Possible causes: Invalid API key., 404: Backup not found., 500: Internal server error.}
+
+@endpoint DELETE /backups/{backup_id}
+@desc Delete a backup
+@required {backup_id: str # The ID of the backup to delete.}
+@returns(202) The request to delete the backup has been accepted.
+@errors {401: Unauthorized. Possible causes: Invalid API key., 404: Backup not found., 412: There is a pending restore job created from this backup., 500: Internal server error.}
+
+@endpoint POST /backups/{backup_id}/create-index
+@desc Create an index from a backup
+@required {backup_id: str # The ID of the backup to create an index from., name: str # The name of the index. Resource name must be 1-45 characters long, start and end with an alphanumeric character, and consist only of lower case alphanumeric characters or '-'.}
+@optional {tags: map # Custom user tags added to an index. Keys must be 80 characters or less. Values must be 120 characters or less. Keys must be alphanumeric, '_', or '-'.  Values must be alphanumeric, ';', '@', '_', '-', '.', '+', or ' '. To unset a key, set the value to be an empty string., deletion_protection: str=disabled # Whether [deletion protection](http://docs.pinecone.io/guides/manage-data/manage-indexes#configure-deletion-protection) is enabled/disabled for the index. Possible values: `disabled` or `enabled`.}
+@returns(202) {restore_job_id: str, index_id: str} # The request to create the index has been accepted.
+@errors {400: Bad request. The request body included invalid request parameters., 401: Unauthorized. Possible causes: Invalid API key., 402: Payment required. Organization is on a paid plan and is delinquent on payment., 403: You've exceed your pod quota., 404: Backup not found., 409: Index of given name already exists., 422: Unprocessable entity. The request body could not be deserialized., 500: Internal server error.}
+
+@endgroup
+
+@group restore-jobs
+@endpoint GET /restore-jobs
+@desc List restore jobs
+@optional {limit: int=10 # The number of results to return per page., paginationToken: str # The token to use to retrieve the next page of results.}
+@returns(200) {data: [map], pagination: map{next: str}} # This operation returns a list of all the restore jobs that you have previously created.
+@errors {401: Unauthorized. Possible causes: Invalid API key., 500: Internal server error.}
+
+@endpoint GET /restore-jobs/{job_id}
+@desc Describe a restore job
+@required {job_id: str # The ID of the restore job to describe.}
+@returns(200) {restore_job_id: str, backup_id: str, target_index_name: str, target_index_id: str, status: str, created_at: str(date-time), completed_at: str(date-time), percent_complete: num(float)} # Configuration information and deployment status of the restore job.
+@errors {401: Unauthorized. Possible causes: Invalid API key., 404: Restore job not found., 500: Internal server error.}
+
+@endgroup
+
+@group collections
+@endpoint GET /collections/{collection_name}
+@desc Describe a collection
+@required {collection_name: str # The name of the collection to be described.}
+@returns(200) {name: str, size: int(int64), status: str, dimension: int(int32), vector_count: int(int32), environment: str} # Configuration information and status of the collection.
+@errors {401: Unauthorized. Possible causes: Invalid API key., 404: Collection not found., 500: Internal server error.}
+
+@endpoint DELETE /collections/{collection_name}
+@desc Delete a collection
+@required {collection_name: str # The name of the collection.}
+@returns(202) The collection has been successfully deleted.
+@errors {401: Unauthorized. Possible causes: Invalid API key., 404: Collection not found., 500: Internal server error.}
+
+@endgroup
+
+@end

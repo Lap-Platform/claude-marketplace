@@ -316,88 +316,210 @@ https://discord.com/api/v10
 | PATCH | /webhooks/{webhook_id}/{webhook_token}/messages/{message_id} |  |
 | POST | /webhooks/{webhook_id}/{webhook_token}/slack |  |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I get my bot's application info?" -> GET /applications/@me
-- "How do I send a message to a channel?" -> POST /channels/{channel_id}/messages
-- "How do I register a slash command globally?" -> POST /applications/{application_id}/commands
-- "How do I ban a user from a guild?" -> PUT /guilds/{guild_id}/bans/{user_id}
-- "How do I get a list of guild members?" -> GET /guilds/{guild_id}/members
-- "How do I create a webhook for a channel?" -> POST /channels/{channel_id}/webhooks
-- "How do I delete multiple messages at once?" -> POST /channels/{channel_id}/messages/bulk-delete
-- "How do I check my bot's gateway connection limits?" -> GET /gateway/bot
-- "How do I create a role in a guild?" -> POST /guilds/{guild_id}/roles
-- "How do I add a reaction to a message?" -> PUT /channels/{channel_id}/messages/{message_id}/reactions/{emoji_name}/@me
-- "How do I create a thread from a message?" -> POST /channels/{channel_id}/messages/{message_id}/threads
-- "How do I search for guild members by name?" -> GET /guilds/{guild_id}/members/search
-- "How do I set up guild-specific slash commands?" -> POST /applications/{application_id}/guilds/{guild_id}/commands
-- "How do I execute a webhook to post a message?" -> POST /webhooks/{webhook_id}/{webhook_token}
-- "How do I start a stage instance for a voice channel?" -> POST /stage-instances
-
-## Response Tips
-
-- **Messages**: Deeply nested objects -- `author`, `embeds`, `components`, `thread`, `poll`, `message_reference` are all maps with their own subfields. Always check `edited_timestamp` (nullable) and `flags` for suppressed/ephemeral state.
-- **Channels/Guilds**: List endpoints return bare arrays (no wrapper object), so there is no built-in pagination envelope. Use `before`/`after` snowflake params and `limit` (default 50, max 100) for cursor-based paging.
-- **Members**: `GET /guilds/{guild_id}/members` paginates with `after` (int, not snowflake) and `limit`. The response is a flat array; `has_more` is inferred by whether you received `limit` results.
-- **Commands**: `PUT` (bulk overwrite) replaces ALL commands -- it returns an array. `POST` creates one and may return 200 (updated) or 201 (created).
-- **204 responses**: DELETE, PUT (pins/bans/roles/reactions), and consume endpoints return no body. Treat 204 as success with no parsing needed.
-- **Webhooks**: `POST /webhooks/{id}/{token}` returns 204 by default; pass `?wait=true` to get the created message object back.
-- **Threads**: Archived thread listings wrap results in `{threads, members, has_more, first_messages}` -- check `has_more` for pagination.
-- **Snowflakes**: All IDs are string-encoded snowflakes (not integers). Parse with BigInt if doing arithmetic or timestamp extraction.
-
-## Anomaly Flags
-
-- **429 on every endpoint**: Discord rate limits are per-route and global. Surface `Retry-After` header and `X-RateLimit-Remaining` when remaining drops below 3. Every endpoint in this spec can return 429.
-- **Gateway session limits**: `GET /gateway/bot` returns `session_start_limit.remaining` -- alert when below 10% of `total`. Resets tracked via `reset_after` (ms).
-- **Bulk-ban partial failures**: `POST /guilds/{guild_id}/bulk-ban` returns `{banned_users, failed_users}` -- surface `failed_users` if non-empty, as this indicates permission or hierarchy issues.
-- **Missing optional fields**: Many fields are nullable (`icon?`, `banner?`, `accent_color?`). Do not treat null as an error -- it means the resource has no value set.
-- **Discriminator "0"**: The migration to unique usernames means `discriminator` is often `"0"`. Do not use discriminator for display; prefer `global_name` or `username`.
-- **Command version snowflake**: Each command has a `version` snowflake that changes on update. If you cache commands, compare versions to detect stale data.
-- **Entitlement `deleted` flag**: Entitlements can be soft-deleted (`deleted: true`). Filter these out unless explicitly auditing.
-- **`is_dirty` on templates**: Guild templates have `is_dirty` (nullable bool) -- when true, the template is out of sync with the source guild. Surface this proactively.
-
-## Playbook
-
-### 1. Register and deploy a global slash command
-
-1. GET /applications/@me to confirm your application ID
-2. POST /applications/{application_id}/commands with `name`, `description`, and `options` array
-3. Note: if 200 returned, the command was updated (already existed); 201 means newly created
-4. GET /applications/{application_id}/commands to verify the command appears in the list
-5. To restrict permissions per guild: PUT /applications/{application_id}/guilds/{guild_id}/commands/{command_id}/permissions
-
-### 2. Send a rich embed message and pin it
-
-1. POST /channels/{channel_id}/messages with `embeds` array containing title, description, color, and fields
-2. Capture the returned message `id` from the 200 response
-3. PUT /channels/{channel_id}/pins/{message_id} to pin it (returns 204, no body)
-4. To verify: GET /channels/{channel_id}/messages/pins and confirm the message appears in `items`
-
-### 3. Bulk-ban users and clean up messages
-
-1. POST /guilds/{guild_id}/bulk-ban with `user_ids` array (up to 200) and `delete_message_seconds` (max 604800 = 7 days)
-2. Check response: `banned_users` for successes, `failed_users` for failures (permission/hierarchy issues)
-3. For individual follow-up: GET /guilds/{guild_id}/bans/{user_id} to confirm ban status
-4. To unban later: DELETE /guilds/{guild_id}/bans/{user_id}
-
-### 4. Set up a webhook and post via it
-
-1. POST /channels/{channel_id}/webhooks with `name` (and optional `avatar`) to create a webhook
-2. Save the returned `id`, `token`, and `url` from the response
-3. POST /webhooks/{webhook_id}/{webhook_token}?wait=true with message content/embeds to post
-4. To edit a sent message: PATCH /webhooks/{webhook_id}/{webhook_token}/messages/{message_id}
-5. To forward GitHub events: POST /webhooks/{webhook_id}/{webhook_token}/github with the GitHub payload
-
-### 5. Create and manage threads
-
-1. To create from an existing message: POST /channels/{channel_id}/messages/{message_id}/threads with `name` and optional `auto_archive_duration`
-2. To create standalone: POST /channels/{channel_id}/threads with thread configuration
-3. To add a member: PUT /channels/{channel_id}/thread-members/{user_id}
-4. To list members: GET /channels/{channel_id}/thread-members with `?with_member=true` for full guild member data
-5. To browse archived threads: GET /channels/{channel_id}/threads/archived/public (paginate with `before` timestamp and `limit`, check `has_more`)
-6. To search threads by name: GET /channels/{channel_id}/threads/search with `name` query param
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all @me?" -> GET /applications/@me
+- "Get application details?" -> GET /applications/{application_id}
+- "Partially update a application?" -> PATCH /applications/{application_id}
+- "Get activity-instance details?" -> GET /applications/{application_id}/activity-instances/{instance_id}
+- "Create a attachment?" -> POST /applications/{application_id}/attachment
+- "List all commands?" -> GET /applications/{application_id}/commands
+- "Create a command?" -> POST /applications/{application_id}/commands
+- "Get command details?" -> GET /applications/{application_id}/commands/{command_id}
+- "Delete a command?" -> DELETE /applications/{application_id}/commands/{command_id}
+- "Partially update a command?" -> PATCH /applications/{application_id}/commands/{command_id}
+- "List all emojis?" -> GET /applications/{application_id}/emojis
+- "Create a emojis?" -> POST /applications/{application_id}/emojis
+- "Get emojis details?" -> GET /applications/{application_id}/emojis/{emoji_id}
+- "Delete a emojis?" -> DELETE /applications/{application_id}/emojis/{emoji_id}
+- "Partially update a emojis?" -> PATCH /applications/{application_id}/emojis/{emoji_id}
+- "List all entitlements?" -> GET /applications/{application_id}/entitlements
+- "Create a entitlement?" -> POST /applications/{application_id}/entitlements
+- "Get entitlement details?" -> GET /applications/{application_id}/entitlements/{entitlement_id}
+- "Delete a entitlement?" -> DELETE /applications/{application_id}/entitlements/{entitlement_id}
+- "Create a consume?" -> POST /applications/{application_id}/entitlements/{entitlement_id}/consume
+- "List all commands?" -> GET /applications/{application_id}/guilds/{guild_id}/commands
+- "Create a command?" -> POST /applications/{application_id}/guilds/{guild_id}/commands
+- "List all permissions?" -> GET /applications/{application_id}/guilds/{guild_id}/commands/permissions
+- "Get command details?" -> GET /applications/{application_id}/guilds/{guild_id}/commands/{command_id}
+- "Delete a command?" -> DELETE /applications/{application_id}/guilds/{guild_id}/commands/{command_id}
+- "Partially update a command?" -> PATCH /applications/{application_id}/guilds/{guild_id}/commands/{command_id}
+- "List all permissions?" -> GET /applications/{application_id}/guilds/{guild_id}/commands/{command_id}/permissions
+- "List all metadata?" -> GET /applications/{application_id}/role-connections/metadata
+- "Get channel details?" -> GET /channels/{channel_id}
+- "Delete a channel?" -> DELETE /channels/{channel_id}
+- "Partially update a channel?" -> PATCH /channels/{channel_id}
+- "Create a follower?" -> POST /channels/{channel_id}/followers
+- "List all invites?" -> GET /channels/{channel_id}/invites
+- "Create a invite?" -> POST /channels/{channel_id}/invites
+- "List all messages?" -> GET /channels/{channel_id}/messages
+- "Create a message?" -> POST /channels/{channel_id}/messages
+- "Create a bulk-delete?" -> POST /channels/{channel_id}/messages/bulk-delete
+- "List all pins?" -> GET /channels/{channel_id}/messages/pins
+- "Update a pin?" -> PUT /channels/{channel_id}/messages/pins/{message_id}
+- "Delete a pin?" -> DELETE /channels/{channel_id}/messages/pins/{message_id}
+- "Get message details?" -> GET /channels/{channel_id}/messages/{message_id}
+- "Delete a message?" -> DELETE /channels/{channel_id}/messages/{message_id}
+- "Partially update a message?" -> PATCH /channels/{channel_id}/messages/{message_id}
+- "Create a crosspost?" -> POST /channels/{channel_id}/messages/{message_id}/crosspost
+- "Get reaction details?" -> GET /channels/{channel_id}/messages/{message_id}/reactions/{emoji_name}
+- "Delete a reaction?" -> DELETE /channels/{channel_id}/messages/{message_id}/reactions/{emoji_name}
+- "Delete a reaction?" -> DELETE /channels/{channel_id}/messages/{message_id}/reactions/{emoji_name}/{user_id}
+- "Create a thread?" -> POST /channels/{channel_id}/messages/{message_id}/threads
+- "Update a permission?" -> PUT /channels/{channel_id}/permissions/{overwrite_id}
+- "Delete a permission?" -> DELETE /channels/{channel_id}/permissions/{overwrite_id}
+- "List all pins?" -> GET /channels/{channel_id}/pins
+- "Update a pin?" -> PUT /channels/{channel_id}/pins/{message_id}
+- "Delete a pin?" -> DELETE /channels/{channel_id}/pins/{message_id}
+- "Get answer details?" -> GET /channels/{channel_id}/polls/{message_id}/answers/{answer_id}
+- "Create a expire?" -> POST /channels/{channel_id}/polls/{message_id}/expire
+- "Update a recipient?" -> PUT /channels/{channel_id}/recipients/{user_id}
+- "Delete a recipient?" -> DELETE /channels/{channel_id}/recipients/{user_id}
+- "Create a send-soundboard-sound?" -> POST /channels/{channel_id}/send-soundboard-sound
+- "List all thread-members?" -> GET /channels/{channel_id}/thread-members
+- "Get thread-member details?" -> GET /channels/{channel_id}/thread-members/{user_id}
+- "Update a thread-member?" -> PUT /channels/{channel_id}/thread-members/{user_id}
+- "Delete a thread-member?" -> DELETE /channels/{channel_id}/thread-members/{user_id}
+- "Create a thread?" -> POST /channels/{channel_id}/threads
+- "List all private?" -> GET /channels/{channel_id}/threads/archived/private
+- "List all public?" -> GET /channels/{channel_id}/threads/archived/public
+- "List all search?" -> GET /channels/{channel_id}/threads/search
+- "Create a typing?" -> POST /channels/{channel_id}/typing
+- "List all private?" -> GET /channels/{channel_id}/users/@me/threads/archived/private
+- "List all webhooks?" -> GET /channels/{channel_id}/webhooks
+- "Create a webhook?" -> POST /channels/{channel_id}/webhooks
+- "List all gateway?" -> GET /gateway
+- "List all bot?" -> GET /gateway/bot
+- "Get template details?" -> GET /guilds/templates/{code}
+- "Get guild details?" -> GET /guilds/{guild_id}
+- "Partially update a guild?" -> PATCH /guilds/{guild_id}
+- "List all audit-logs?" -> GET /guilds/{guild_id}/audit-logs
+- "List all rules?" -> GET /guilds/{guild_id}/auto-moderation/rules
+- "Create a rule?" -> POST /guilds/{guild_id}/auto-moderation/rules
+- "Get rule details?" -> GET /guilds/{guild_id}/auto-moderation/rules/{rule_id}
+- "Delete a rule?" -> DELETE /guilds/{guild_id}/auto-moderation/rules/{rule_id}
+- "Partially update a rule?" -> PATCH /guilds/{guild_id}/auto-moderation/rules/{rule_id}
+- "List all bans?" -> GET /guilds/{guild_id}/bans
+- "Get ban details?" -> GET /guilds/{guild_id}/bans/{user_id}
+- "Update a ban?" -> PUT /guilds/{guild_id}/bans/{user_id}
+- "Delete a ban?" -> DELETE /guilds/{guild_id}/bans/{user_id}
+- "Create a bulk-ban?" -> POST /guilds/{guild_id}/bulk-ban
+- "List all channels?" -> GET /guilds/{guild_id}/channels
+- "Create a channel?" -> POST /guilds/{guild_id}/channels
+- "List all emojis?" -> GET /guilds/{guild_id}/emojis
+- "Create a emojis?" -> POST /guilds/{guild_id}/emojis
+- "Get emojis details?" -> GET /guilds/{guild_id}/emojis/{emoji_id}
+- "Delete a emojis?" -> DELETE /guilds/{guild_id}/emojis/{emoji_id}
+- "Partially update a emojis?" -> PATCH /guilds/{guild_id}/emojis/{emoji_id}
+- "List all integrations?" -> GET /guilds/{guild_id}/integrations
+- "Delete a integration?" -> DELETE /guilds/{guild_id}/integrations/{integration_id}
+- "List all invites?" -> GET /guilds/{guild_id}/invites
+- "List all members?" -> GET /guilds/{guild_id}/members
+- "Search search?" -> GET /guilds/{guild_id}/members/search
+- "Get member details?" -> GET /guilds/{guild_id}/members/{user_id}
+- "Update a member?" -> PUT /guilds/{guild_id}/members/{user_id}
+- "Delete a member?" -> DELETE /guilds/{guild_id}/members/{user_id}
+- "Partially update a member?" -> PATCH /guilds/{guild_id}/members/{user_id}
+- "Update a role?" -> PUT /guilds/{guild_id}/members/{user_id}/roles/{role_id}
+- "Delete a role?" -> DELETE /guilds/{guild_id}/members/{user_id}/roles/{role_id}
+- "List all new-member-welcome?" -> GET /guilds/{guild_id}/new-member-welcome
+- "List all onboarding?" -> GET /guilds/{guild_id}/onboarding
+- "List all preview?" -> GET /guilds/{guild_id}/preview
+- "List all prune?" -> GET /guilds/{guild_id}/prune
+- "Create a prune?" -> POST /guilds/{guild_id}/prune
+- "List all regions?" -> GET /guilds/{guild_id}/regions
+- "List all roles?" -> GET /guilds/{guild_id}/roles
+- "Create a role?" -> POST /guilds/{guild_id}/roles
+- "List all member-counts?" -> GET /guilds/{guild_id}/roles/member-counts
+- "Get role details?" -> GET /guilds/{guild_id}/roles/{role_id}
+- "Delete a role?" -> DELETE /guilds/{guild_id}/roles/{role_id}
+- "Partially update a role?" -> PATCH /guilds/{guild_id}/roles/{role_id}
+- "List all scheduled-events?" -> GET /guilds/{guild_id}/scheduled-events
+- "Create a scheduled-event?" -> POST /guilds/{guild_id}/scheduled-events
+- "Get scheduled-event details?" -> GET /guilds/{guild_id}/scheduled-events/{guild_scheduled_event_id}
+- "Delete a scheduled-event?" -> DELETE /guilds/{guild_id}/scheduled-events/{guild_scheduled_event_id}
+- "Partially update a scheduled-event?" -> PATCH /guilds/{guild_id}/scheduled-events/{guild_scheduled_event_id}
+- "List all users?" -> GET /guilds/{guild_id}/scheduled-events/{guild_scheduled_event_id}/users
+- "List all soundboard-sounds?" -> GET /guilds/{guild_id}/soundboard-sounds
+- "Create a soundboard-sound?" -> POST /guilds/{guild_id}/soundboard-sounds
+- "Get soundboard-sound details?" -> GET /guilds/{guild_id}/soundboard-sounds/{sound_id}
+- "Delete a soundboard-sound?" -> DELETE /guilds/{guild_id}/soundboard-sounds/{sound_id}
+- "Partially update a soundboard-sound?" -> PATCH /guilds/{guild_id}/soundboard-sounds/{sound_id}
+- "List all stickers?" -> GET /guilds/{guild_id}/stickers
+- "Create a sticker?" -> POST /guilds/{guild_id}/stickers
+- "Get sticker details?" -> GET /guilds/{guild_id}/stickers/{sticker_id}
+- "Delete a sticker?" -> DELETE /guilds/{guild_id}/stickers/{sticker_id}
+- "Partially update a sticker?" -> PATCH /guilds/{guild_id}/stickers/{sticker_id}
+- "List all templates?" -> GET /guilds/{guild_id}/templates
+- "Create a template?" -> POST /guilds/{guild_id}/templates
+- "Update a template?" -> PUT /guilds/{guild_id}/templates/{code}
+- "Delete a template?" -> DELETE /guilds/{guild_id}/templates/{code}
+- "Partially update a template?" -> PATCH /guilds/{guild_id}/templates/{code}
+- "List all active?" -> GET /guilds/{guild_id}/threads/active
+- "List all vanity-url?" -> GET /guilds/{guild_id}/vanity-url
+- "List all @me?" -> GET /guilds/{guild_id}/voice-states/@me
+- "Get voice-state details?" -> GET /guilds/{guild_id}/voice-states/{user_id}
+- "Partially update a voice-state?" -> PATCH /guilds/{guild_id}/voice-states/{user_id}
+- "List all webhooks?" -> GET /guilds/{guild_id}/webhooks
+- "List all welcome-screen?" -> GET /guilds/{guild_id}/welcome-screen
+- "List all widget?" -> GET /guilds/{guild_id}/widget
+- "List all widget.json?" -> GET /guilds/{guild_id}/widget.json
+- "List all widget.png?" -> GET /guilds/{guild_id}/widget.png
+- "Create a callback?" -> POST /interactions/{interaction_id}/{interaction_token}/callback
+- "Get invite details?" -> GET /invites/{code}
+- "Delete a invite?" -> DELETE /invites/{code}
+- "List all target-users?" -> GET /invites/{code}/target-users
+- "List all job-status?" -> GET /invites/{code}/target-users/job-status
+- "Create a lobby?" -> POST /lobbies
+- "Get lobby details?" -> GET /lobbies/{lobby_id}
+- "Partially update a lobby?" -> PATCH /lobbies/{lobby_id}
+- "Create a invite?" -> POST /lobbies/{lobby_id}/members/@me/invites
+- "Create a bulk?" -> POST /lobbies/{lobby_id}/members/bulk
+- "Update a member?" -> PUT /lobbies/{lobby_id}/members/{user_id}
+- "Delete a member?" -> DELETE /lobbies/{lobby_id}/members/{user_id}
+- "Create a invite?" -> POST /lobbies/{lobby_id}/members/{user_id}/invites
+- "List all messages?" -> GET /lobbies/{lobby_id}/messages
+- "Create a message?" -> POST /lobbies/{lobby_id}/messages
+- "List all @me?" -> GET /oauth2/@me
+- "List all @me?" -> GET /oauth2/applications/@me
+- "List all keys?" -> GET /oauth2/keys
+- "List all userinfo?" -> GET /oauth2/userinfo
+- "Create a unmerge?" -> POST /partner-sdk/provisional-accounts/unmerge
+- "Create a bot?" -> POST /partner-sdk/provisional-accounts/unmerge/bot
+- "Create a token?" -> POST /partner-sdk/token
+- "Create a bot?" -> POST /partner-sdk/token/bot
+- "List all soundboard-default-sounds?" -> GET /soundboard-default-sounds
+- "Create a stage-instance?" -> POST /stage-instances
+- "Get stage-instance details?" -> GET /stage-instances/{channel_id}
+- "Delete a stage-instance?" -> DELETE /stage-instances/{channel_id}
+- "Partially update a stage-instance?" -> PATCH /stage-instances/{channel_id}
+- "List all sticker-packs?" -> GET /sticker-packs
+- "Get sticker-pack details?" -> GET /sticker-packs/{pack_id}
+- "Get sticker details?" -> GET /stickers/{sticker_id}
+- "List all @me?" -> GET /users/@me
+- "List all entitlements?" -> GET /users/@me/applications/{application_id}/entitlements
+- "List all role-connection?" -> GET /users/@me/applications/{application_id}/role-connection
+- "Create a channel?" -> POST /users/@me/channels
+- "List all connections?" -> GET /users/@me/connections
+- "List all guilds?" -> GET /users/@me/guilds
+- "Delete a guild?" -> DELETE /users/@me/guilds/{guild_id}
+- "List all member?" -> GET /users/@me/guilds/{guild_id}/member
+- "Get user details?" -> GET /users/{user_id}
+- "List all regions?" -> GET /voice/regions
+- "Get webhook details?" -> GET /webhooks/{webhook_id}
+- "Delete a webhook?" -> DELETE /webhooks/{webhook_id}
+- "Partially update a webhook?" -> PATCH /webhooks/{webhook_id}
+- "Get webhook details?" -> GET /webhooks/{webhook_id}/{webhook_token}
+- "Delete a webhook?" -> DELETE /webhooks/{webhook_id}/{webhook_token}
+- "Partially update a webhook?" -> PATCH /webhooks/{webhook_id}/{webhook_token}
+- "Create a github?" -> POST /webhooks/{webhook_id}/{webhook_token}/github
+- "List all @original?" -> GET /webhooks/{webhook_id}/{webhook_token}/messages/@original
+- "Get message details?" -> GET /webhooks/{webhook_id}/{webhook_token}/messages/{message_id}
+- "Delete a message?" -> DELETE /webhooks/{webhook_id}/{webhook_token}/messages/{message_id}
+- "Partially update a message?" -> PATCH /webhooks/{webhook_id}/{webhook_token}/messages/{message_id}
+- "Create a slack?" -> POST /webhooks/{webhook_id}/{webhook_token}/slack
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

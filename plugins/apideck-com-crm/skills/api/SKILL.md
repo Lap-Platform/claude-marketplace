@@ -77,84 +77,59 @@ https://unify.apideck.com
 | PATCH | /crm/custom-objects/{object_id}/{id} | Update custom object |
 | DELETE | /crm/custom-objects/{object_id}/{id} | Delete custom object |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Show me all companies in the CRM?" -> GET /crm/companies
-- "Create a new company called Acme Corp?" -> POST /crm/companies
-- "What are the details for company {id}?" -> GET /crm/companies/{id}
-- "Update the name or industry of a company?" -> PATCH /crm/companies/{id}
-- "Delete a company from the CRM?" -> DELETE /crm/companies/{id}
-- "List all contacts, filtered by status?" -> GET /crm/contacts
-- "Add a new contact and link them to a company?" -> POST /crm/contacts
-- "What opportunities are in the pipeline right now?" -> GET /crm/opportunities
-- "Create a deal worth $50k in USD?" -> POST /crm/opportunities
-- "Move an opportunity to a different pipeline stage?" -> PATCH /crm/opportunities/{id}
-- "Show me all leads and their sources?" -> GET /crm/leads
-- "Log a call activity for a contact?" -> POST /crm/activities
-- "What notes are attached to this opportunity?" -> GET /crm/notes
-- "List all sales pipelines and their stages?" -> GET /crm/pipelines
-- "Define a custom object schema with specific fields?" -> POST /crm/custom-object-schemas
-
-## Response Tips
-
-- **List endpoints** (companies, contacts, leads, opportunities, activities, notes, users, pipelines): Paginated via cursor. Next page token is at `meta.cursors.next`; follow `links.next` URL. Default page size is 20, adjustable via `limit`.
-- **Single-resource endpoints** (GET by id): Data lives under `data` key. Most fields are nullable (marked `?`). Always check for `null` before accessing nested objects like `addresses`, `phone_numbers`, `emails`.
-- **Create endpoints** (POST): Return only `data.id` of the newly created resource with status 201. Fetch the full record with a follow-up GET if you need the complete object.
-- **Update/Delete endpoints** (PATCH/DELETE): Return only `data.id` confirming which record was affected. Status 200 on success.
-- **Error responses**: All endpoints share error codes 400 (bad request), 401 (unauthorized), 402 (payment required -- likely plan limits), 404 (not found), 422 (validation failure). Parse the response body for `message` details.
-- **Raw responses**: Pass `raw=true` as a query param to get the upstream connector's raw response in the `_raw` field.
-
-## Anomaly Flags
-
-- **402 Payment Required**: The downstream CRM connector may enforce plan limits. Surface this immediately -- it means the user's subscription tier does not support this operation.
-- **Deleted records appearing in lists**: Watch for `deleted: true` on companies, opportunities, and activities. Flag soft-deleted records so the user does not act on stale data.
-- **Null cursors**: If `meta.cursors.next` is `null` but `items_on_page` equals the limit, warn the user -- pagination may have silently ended or the connector may not support it.
-- **Missing required fields on PATCH**: PATCH for companies, leads, opportunities, and pipelines re-requires `name`/`title`. Flag if the user tries to update without including it.
-- **Currency set to UNKNOWN_CURRENCY**: Surface when any monetary record (company, opportunity, lead) has this value -- it likely indicates missing configuration.
-- **Empty `emails` array on user creation/update**: `emails` is required for users. Flag if the array is empty or missing the required `email` field inside each entry.
-- **`pass_through` usage**: When the user sends `pass_through` data, warn that it bypasses Apideck's unified model and goes directly to the downstream connector -- behavior is connector-specific and may break portability.
-
-## Playbook
-
-### 1. Full lead-to-deal conversion
-
-1. Create or retrieve the lead: POST /crm/leads with `name`, `company_name`, `emails`, `phone_numbers`
-2. Create a contact from the lead data: POST /crm/contacts with `first_name`, `last_name`, `company_name`, `lead_id` set to the lead's id
-3. Create a company if one does not exist: POST /crm/companies with `name`
-4. Link the contact to the company: PATCH /crm/contacts/{id} setting `company_id`
-5. Create the opportunity: POST /crm/opportunities with `title`, `contact_id`, `company_id`, `monetary_amount`, `currency`, `pipeline_id`, `pipeline_stage_id`
-6. Delete or update the lead status: PATCH /crm/leads/{id} setting `status` to "converted", or DELETE /crm/leads/{id}
-
-### 2. Pipeline setup with stages
-
-1. List existing pipelines: GET /crm/pipelines to check what already exists
-2. Create a new pipeline: POST /crm/pipelines with `name`, `currency`, `win_probability_enabled: true`, and `stages` array containing objects with `name`, `win_probability`, and `display_order`
-3. Verify creation: GET /crm/pipelines/{id} to confirm stages were saved correctly
-4. Assign opportunities: PATCH /crm/opportunities/{id} setting `pipeline_id` and `pipeline_stage_id` for each deal
-
-### 3. Logging a meeting with attendees
-
-1. Identify the contact: GET /crm/contacts with filter, or GET /crm/contacts/{id}
-2. Create the activity: POST /crm/activities with `type: "meeting"`, `title`, `start_datetime`, `end_datetime`, `contact_id`, `company_id`, and `attendees` array (each with `email_address`, `name`, `status`)
-3. Add a follow-up note: POST /crm/notes with `title`, `content`, `contact_id`, `activity_id` set to the meeting's id
-
-### 4. Bulk export all contacts with pagination
-
-1. Fetch the first page: GET /crm/contacts with `limit=20`
-2. Check `meta.cursors.next` in the response
-3. If non-null, fetch the next page: GET /crm/contacts with `cursor` set to the next cursor value
-4. Repeat until `meta.cursors.next` is `null`
-5. Optionally use the `fields` parameter to limit returned fields and reduce payload size
-
-### 5. Custom object workflow
-
-1. Define the schema: POST /crm/custom-object-schemas with `name`, `description`, and `fields` array (each with `name`, `type`, `required`)
-2. Verify schema: GET /crm/custom-object-schemas/{id} to confirm field definitions
-3. Create records: POST /crm/custom-objects/{object_id} with `name` and `fields` array (each with `name`, `value`)
-4. List records: GET /crm/custom-objects/{object_id} with pagination via `cursor`
-5. Update a record: PATCH /crm/custom-objects/{object_id}/{id} with modified `fields`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all companies?" -> GET /crm/companies
+- "Create a company?" -> POST /crm/companies
+- "Get company details?" -> GET /crm/companies/{id}
+- "Partially update a company?" -> PATCH /crm/companies/{id}
+- "Delete a company?" -> DELETE /crm/companies/{id}
+- "List all contacts?" -> GET /crm/contacts
+- "Create a contact?" -> POST /crm/contacts
+- "Get contact details?" -> GET /crm/contacts/{id}
+- "Partially update a contact?" -> PATCH /crm/contacts/{id}
+- "Delete a contact?" -> DELETE /crm/contacts/{id}
+- "List all opportunities?" -> GET /crm/opportunities
+- "Create a opportunity?" -> POST /crm/opportunities
+- "Get opportunity details?" -> GET /crm/opportunities/{id}
+- "Partially update a opportunity?" -> PATCH /crm/opportunities/{id}
+- "Delete a opportunity?" -> DELETE /crm/opportunities/{id}
+- "List all leads?" -> GET /crm/leads
+- "Create a lead?" -> POST /crm/leads
+- "Get lead details?" -> GET /crm/leads/{id}
+- "Partially update a lead?" -> PATCH /crm/leads/{id}
+- "Delete a lead?" -> DELETE /crm/leads/{id}
+- "List all pipelines?" -> GET /crm/pipelines
+- "Create a pipeline?" -> POST /crm/pipelines
+- "Get pipeline details?" -> GET /crm/pipelines/{id}
+- "Partially update a pipeline?" -> PATCH /crm/pipelines/{id}
+- "Delete a pipeline?" -> DELETE /crm/pipelines/{id}
+- "List all notes?" -> GET /crm/notes
+- "Create a note?" -> POST /crm/notes
+- "Get note details?" -> GET /crm/notes/{id}
+- "Partially update a note?" -> PATCH /crm/notes/{id}
+- "Delete a note?" -> DELETE /crm/notes/{id}
+- "List all users?" -> GET /crm/users
+- "Create a user?" -> POST /crm/users
+- "Get user details?" -> GET /crm/users/{id}
+- "Partially update a user?" -> PATCH /crm/users/{id}
+- "Delete a user?" -> DELETE /crm/users/{id}
+- "List all activities?" -> GET /crm/activities
+- "Create a activity?" -> POST /crm/activities
+- "Get activity details?" -> GET /crm/activities/{id}
+- "Partially update a activity?" -> PATCH /crm/activities/{id}
+- "Delete a activity?" -> DELETE /crm/activities/{id}
+- "List all custom-object-schemas?" -> GET /crm/custom-object-schemas
+- "Create a custom-object-schema?" -> POST /crm/custom-object-schemas
+- "Get custom-object-schema details?" -> GET /crm/custom-object-schemas/{id}
+- "Partially update a custom-object-schema?" -> PATCH /crm/custom-object-schemas/{id}
+- "Delete a custom-object-schema?" -> DELETE /crm/custom-object-schemas/{id}
+- "Get custom-object details?" -> GET /crm/custom-objects/{object_id}
+- "Get custom-object details?" -> GET /crm/custom-objects/{object_id}/{id}
+- "Partially update a custom-object?" -> PATCH /crm/custom-objects/{object_id}/{id}
+- "Delete a custom-object?" -> DELETE /crm/custom-objects/{object_id}/{id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

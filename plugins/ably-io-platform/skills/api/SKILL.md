@@ -65,82 +65,30 @@ https://rest.ably.io
 |--------|------|-------------|
 | GET | /time | Get the service time |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I publish a message to a channel?" -> POST /channels/{channel_id}/messages
-- "What messages were sent on a channel recently?" -> GET /channels/{channel_id}/messages
-- "Who is currently present on a channel?" -> GET /channels/{channel_id}/presence
-- "Show me the presence history for a channel" -> GET /channels/{channel_id}/presence/history
-- "How many subscribers does a channel have?" -> GET /channels/{channel_id}
-- "List all active channels" -> GET /channels
-- "List channels that start with a specific prefix" -> GET /channels
-- "How do I register a device for push notifications?" -> POST /push/deviceRegistrations
-- "Send a push notification to a specific device" -> POST /push/publish
-- "What devices are registered for push for a given client?" -> GET /push/deviceRegistrations
-- "How do I subscribe a device to push on a channel?" -> POST /push/channelSubscriptions
-- "Remove a device's push registration" -> DELETE /push/deviceRegistrations/{device_id}
-- "Generate a temporary auth token for a key?" -> POST /keys/{keyName}/requestToken
-- "What is the current server time?" -> GET /time
-- "Show me usage stats for the past hour" -> GET /stats
-
-## Response Tips
-
-- **Channels (list/messages/presence):** Responses are arrays; use `limit` (max 100) and `direction` for pagination. Pass the timestamp of the last item as `start` or `end` to page through results.
-- **Channel metadata (GET /channels/{id}):** Returns a nested `status.occupancy` object with separate counts for publishers, subscribers, presenceMembers, presenceConnections, and presenceSubscribers -- do not conflate these.
-- **Push device registrations:** Responses nest recipient config under `push.recipient` (dot-notation key, not a nested object path). The `push.state` field is one of Active/Failing/Failed -- check this to determine delivery health.
-- **Push publish:** Returns 2XX with no body on success. Any non-2XX means the notification was not delivered.
-- **Token requests:** The response includes `issued` and `expires` as Unix timestamps (int64). Compute `expires - issued` to know the token TTL.
-- **Stats:** Returns an array of stat objects bucketed by `unit` (minute/hour/day/month). Empty buckets may be omitted rather than returned as zeros.
-- **Time:** Returns a single-element array containing the server time as a Unix timestamp in milliseconds.
-
-## Anomaly Flags
-
-- **push.state = "Failing" or "Failed"**: Surface immediately when reading device registrations -- the device is not receiving push notifications and may need re-registration.
-- **Token expiry approaching**: When a requested token's `expires` timestamp is within 5 minutes of current time, warn that re-authentication will be needed soon.
-- **Empty channel list with prefix filter**: If GET /channels with a `prefix` returns zero results, flag that the prefix may be misspelled or no matching channels are active.
-- **Presence count mismatch**: If `presenceMembers` differs significantly from `presenceConnections` on a channel, flag it -- this may indicate stale presence entries or connection issues.
-- **Limit capping**: When a response returns exactly `limit` items (default 100), warn that results are likely truncated and pagination is needed for complete data.
-- **Device registration without deviceSecret**: If a POST/PUT to device registrations omits `deviceSecret`, flag that the device may not be able to authenticate future updates.
-
-## Playbook
-
-### 1. Send a Push Notification to All Devices for a Client
-
-1. GET /push/deviceRegistrations with `clientId` to list all registered devices for the client.
-2. Verify each device has `push.state` = "Active". Flag any in Failing/Failed state.
-3. POST /push/publish with `recipient.clientId` set to the target client ID, along with the `push.notification` payload (title, body, sound).
-4. Confirm 2XX response. If non-2XX, check error body for details.
-
-### 2. Monitor Channel Activity and Presence
-
-1. GET /channels with optional `prefix` to discover active channels.
-2. For each channel of interest, GET /channels/{channel_id} to check `status.isActive` and `status.occupancy` counts.
-3. GET /channels/{channel_id}/presence to see who is currently connected.
-4. GET /channels/{channel_id}/presence/history with `start`/`end` to review presence changes over a time window.
-
-### 3. Register a Mobile Device for Push and Subscribe to a Channel
-
-1. POST /push/deviceRegistrations with `platform` (ios/android), `formFactor`, and `push.recipient` containing the device token or registration token.
-2. Capture the returned `id` (device ID) and `deviceSecret` from the response.
-3. POST /push/channelSubscriptions with the `deviceId` and target `channel` name.
-4. Verify with GET /push/channelSubscriptions using `deviceId` to confirm the subscription is active.
-
-### 4. Retrieve and Page Through Message History
-
-1. GET /channels/{channel_id}/messages with `direction=backwards` and `limit=100` to get the most recent messages.
-2. If 100 results are returned, extract the timestamp of the oldest message.
-3. Repeat the request with `end` set to that timestamp to fetch the next page.
-4. Continue until fewer than `limit` results are returned, indicating the end of history.
-
-### 5. Generate a Temporary Token for Client-Side Use
-
-1. POST /keys/{keyName}/requestToken with the key name (format: `appId.keyId`).
-2. Extract the `token`, `issued`, and `expires` fields from the response.
-3. Compute remaining TTL: `expires - issued`. Default is typically 60 minutes.
-4. Pass the `token` value to the client application for use as a Bearer token.
-5. Schedule token refresh before `expires` to avoid authentication interruptions.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all messages?" -> GET /channels/{channel_id}/messages
+- "Create a message?" -> POST /channels/{channel_id}/messages
+- "List all presence?" -> GET /channels/{channel_id}/presence
+- "List all history?" -> GET /channels/{channel_id}/presence/history
+- "Get channel details?" -> GET /channels/{channel_id}
+- "List all channels?" -> GET /channels
+- "List all deviceRegistrations?" -> GET /push/deviceRegistrations
+- "Create a deviceRegistration?" -> POST /push/deviceRegistrations
+- "Get deviceRegistration details?" -> GET /push/deviceRegistrations/{device_id}
+- "Update a deviceRegistration?" -> PUT /push/deviceRegistrations/{device_id}
+- "Partially update a deviceRegistration?" -> PATCH /push/deviceRegistrations/{device_id}
+- "Delete a deviceRegistration?" -> DELETE /push/deviceRegistrations/{device_id}
+- "List all resetUpdateToken?" -> GET /push/deviceRegistrations/{device_id}/resetUpdateToken
+- "List all channelSubscriptions?" -> GET /push/channelSubscriptions
+- "Create a channelSubscription?" -> POST /push/channelSubscriptions
+- "List all channels?" -> GET /push/channels
+- "Create a publish?" -> POST /push/publish
+- "Create a requestToken?" -> POST /keys/{keyName}/requestToken
+- "List all stats?" -> GET /stats
+- "List all time?" -> GET /time
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

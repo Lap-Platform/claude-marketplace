@@ -479,92 +479,242 @@ https://api.increase.com
 | POST | /wire_transfers/{wire_transfer_id}/approve | Approve a Wire Transfer |
 | POST | /wire_transfers/{wire_transfer_id}/cancel | Cancel a pending Wire Transfer |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all accounts?" -> GET /accounts
-- "What is the current balance of a specific account?" -> GET /accounts/{account_id}/balance
-- "How do I send money to another Increase account?" -> POST /account_transfers
-- "How do I initiate an ACH payment to an external bank?" -> POST /ach_transfers
-- "How do I send a wire transfer?" -> POST /wire_transfers
-- "What transactions happened on my account this month?" -> GET /transactions
-- "Are there any pending transactions I should know about?" -> GET /pending_transactions
-- "How do I create a new card for an account?" -> POST /cards
-- "How do I dispute a card charge?" -> POST /card_disputes
-- "How do I onboard a new business entity?" -> POST /entities
-- "How do I set up a webhook to receive events?" -> POST /event_subscriptions
-- "How do I send a real-time payment?" -> POST /real_time_payments_transfers
-- "How do I export my transaction history as CSV?" -> POST /exports
-- "How do I cancel a transfer that requires approval?" -> POST /ach_transfers/{ach_transfer_id}/cancel
-- "How do I look up a routing number?" -> GET /routing_numbers
-
-## Response Tips
-
-- **List endpoints** (GET /accounts, GET /transactions, etc.): All return `{data: [...], next_cursor}`. Pass `next_cursor` as `cursor` on the next request to paginate. A null `next_cursor` means no more pages. Use `limit` to control page size.
-- **Transfer objects** (ACH, wire, FedNow, RTP, account, check, SWIFT): Check `status` field for lifecycle state. The `approval`, `cancellation`, `submission`, and `return` sub-objects are null until the corresponding event occurs.
-- **Entity objects**: The response shape is polymorphic -- only the sub-object matching `structure` (corporation, natural_person, joint, trust, government_authority) is populated; others are null.
-- **Transaction/pending_transaction source**: Contains a `category` discriminator field; only the matching sub-object within `source` is non-null.
-- **Error responses** (4XX): All endpoints return 4XX errors. Inspect the response body for structured error details including the specific validation failure.
-- **Amount fields**: All monetary amounts are integers in the smallest currency unit (cents for USD). Divide by 100 for display.
-
-## Anomaly Flags
-
-- **Transfer returned or rejected**: Surface immediately when an ACH transfer's `return` field becomes non-null, a FedNow transfer's `rejection` appears, or an RTP transfer shows a `rejection` -- these indicate failed payments requiring action.
-- **Declined transactions appearing**: Any new entries from GET /declined_transactions signal blocked payments. Check `source.category` (ach_decline, card_decline, wire_decline, check_decline) and surface the decline reason.
-- **Transfers pending approval**: When `status` is `pending_approval` on any transfer type (ACH, wire, check, FedNow, RTP, SWIFT, card push, account transfer), flag it as requiring human action before the `require_approval` deadline.
-- **Inbound ACH auto-resolve deadline**: Inbound ACH transfers have `automatically_resolves_at` -- if this timestamp is approaching and the transfer hasn't been accepted or declined, alert immediately.
-- **Card dispute submission deadline**: `user_submission_required_by` on card disputes is a hard deadline. Surface when within 48 hours.
-- **Real-time decision timeout**: `timeout_at` on real-time decisions is extremely short-lived. Any unactioned decision nearing timeout should be the highest-priority alert.
-- **Entity status changes**: If an entity moves to a non-active status, all associated accounts and cards may be affected. Surface entity `status` changes proactively.
-- **ACH notifications of change**: When `notifications_of_change` array is non-empty on an ACH transfer, the receiving bank is signaling incorrect account details. Update your records.
-- **Check transfer stop payment**: If `stop_payment_request` becomes non-null, the check may have been intercepted or reported. Investigate immediately.
-
-## Playbook
-
-### 1. Open a New Account and Issue a Card
-
-1. Create the entity: POST /entities with `structure: "corporation"` or `"natural_person"` and required identity details
-2. Confirm entity details: POST /entities/{entity_id}/confirm
-3. Create the account: POST /accounts with `name` and `entity_id` from step 1
-4. Create an account number: POST /account_numbers with `account_id` and `name`
-5. Issue a virtual card: POST /cards with `account_id` and optional `billing_address`
-6. (Optional) Order a physical card: POST /physical_cards with `card_id`, `cardholder`, and `shipment` details
-
-### 2. Send an ACH Payment with Approval Flow
-
-1. Register the external account: POST /external_accounts with `account_number`, `routing_number`, `description`
-2. (Optional) Send a prenotification: POST /ach_prenotifications with account details to validate before sending real money
-3. Create the transfer with approval required: POST /ach_transfers with `account_id`, `amount`, `statement_descriptor`, `external_account_id`, and `require_approval: true`
-4. Review and approve: POST /ach_transfers/{ach_transfer_id}/approve
-5. Monitor status: GET /ach_transfers/{ach_transfer_id} -- watch for `status` progressing through submitted, acknowledged, settled
-6. Handle returns: If `return` field becomes non-null, inspect the return reason and take corrective action
-
-### 3. Process an Inbound ACH Transfer
-
-1. Set up an event subscription: POST /event_subscriptions with `url` and `selected_event_category: "inbound_ach_transfer.created"`
-2. When notified, retrieve the transfer: GET /inbound_ach_transfers/{inbound_ach_transfer_id}
-3. Decide: either let it auto-resolve by `automatically_resolves_at`, or explicitly:
-   - Accept by taking no action (auto-accepts), or
-   - Decline: POST /inbound_ach_transfers/{id}/decline with a `reason`, or
-   - Return after acceptance: POST /inbound_ach_transfers/{id}/transfer_return with a `reason`
-4. (Optional) Issue a notification of change if account details need updating: POST /inbound_ach_transfers/{id}/create_notification_of_change
-
-### 4. File and Track a Card Dispute
-
-1. Identify the disputed transaction from GET /transactions or GET /card_payments
-2. Create the dispute: POST /card_disputes with `disputed_transaction_id`, `network`, and category-specific evidence under `visa`
-3. Monitor status: GET /card_disputes/{card_dispute_id} -- watch for `status` changes and check `user_submission_required_by`
-4. If further evidence is requested: POST /card_disputes/{id}/submit_user_submission with additional documentation
-5. Resolution: Check `win`, `loss`, or `withdrawal` fields for the final outcome
-
-### 5. Export Account Data for Reconciliation
-
-1. Create a transaction CSV export: POST /exports with `category: "transaction_csv"` and date filters in `transaction_csv.created_at`
-2. Poll for completion: GET /exports/{export_id} until `status` changes from `pending` to `complete`
-3. Download the file: Retrieve `result.file_id` from the export, then POST /file_links with `file_id` to get a temporary `unauthenticated_url`
-4. (Optional) Create a balance CSV for the same period: POST /exports with `category: "balance_csv"`
-5. (Optional) Generate an account statement: POST /exports with `category: "account_statement_ofx"` or `"account_statement_bai2"` for standard formats
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all account_numbers?" -> GET /account_numbers
+- "Create a account_number?" -> POST /account_numbers
+- "Get account_number details?" -> GET /account_numbers/{account_number_id}
+- "Partially update a account_number?" -> PATCH /account_numbers/{account_number_id}
+- "List all account_statements?" -> GET /account_statements
+- "Get account_statement details?" -> GET /account_statements/{account_statement_id}
+- "List all account_transfers?" -> GET /account_transfers
+- "Create a account_transfer?" -> POST /account_transfers
+- "Get account_transfer details?" -> GET /account_transfers/{account_transfer_id}
+- "Create a approve?" -> POST /account_transfers/{account_transfer_id}/approve
+- "Create a cancel?" -> POST /account_transfers/{account_transfer_id}/cancel
+- "List all accounts?" -> GET /accounts
+- "Create a account?" -> POST /accounts
+- "Get account details?" -> GET /accounts/{account_id}
+- "Partially update a account?" -> PATCH /accounts/{account_id}
+- "List all balance?" -> GET /accounts/{account_id}/balance
+- "Create a close?" -> POST /accounts/{account_id}/close
+- "List all intrafi_balance?" -> GET /accounts/{account_id}/intrafi_balance
+- "List all ach_prenotifications?" -> GET /ach_prenotifications
+- "Create a ach_prenotification?" -> POST /ach_prenotifications
+- "Get ach_prenotification details?" -> GET /ach_prenotifications/{ach_prenotification_id}
+- "List all ach_transfers?" -> GET /ach_transfers
+- "Create a ach_transfer?" -> POST /ach_transfers
+- "Get ach_transfer details?" -> GET /ach_transfers/{ach_transfer_id}
+- "Create a approve?" -> POST /ach_transfers/{ach_transfer_id}/approve
+- "Create a cancel?" -> POST /ach_transfers/{ach_transfer_id}/cancel
+- "List all bookkeeping_accounts?" -> GET /bookkeeping_accounts
+- "Create a bookkeeping_account?" -> POST /bookkeeping_accounts
+- "Partially update a bookkeeping_account?" -> PATCH /bookkeeping_accounts/{bookkeeping_account_id}
+- "List all balance?" -> GET /bookkeeping_accounts/{bookkeeping_account_id}/balance
+- "List all bookkeeping_entries?" -> GET /bookkeeping_entries
+- "Get bookkeeping_entry details?" -> GET /bookkeeping_entries/{bookkeeping_entry_id}
+- "List all bookkeeping_entry_sets?" -> GET /bookkeeping_entry_sets
+- "Create a bookkeeping_entry_set?" -> POST /bookkeeping_entry_sets
+- "Get bookkeeping_entry_set details?" -> GET /bookkeeping_entry_sets/{bookkeeping_entry_set_id}
+- "List all card_disputes?" -> GET /card_disputes
+- "Create a card_dispute?" -> POST /card_disputes
+- "Get card_dispute details?" -> GET /card_disputes/{card_dispute_id}
+- "Create a submit_user_submission?" -> POST /card_disputes/{card_dispute_id}/submit_user_submission
+- "Create a withdraw?" -> POST /card_disputes/{card_dispute_id}/withdraw
+- "List all card_payments?" -> GET /card_payments
+- "Get card_payment details?" -> GET /card_payments/{card_payment_id}
+- "List all card_purchase_supplements?" -> GET /card_purchase_supplements
+- "Get card_purchase_supplement details?" -> GET /card_purchase_supplements/{card_purchase_supplement_id}
+- "List all card_push_transfers?" -> GET /card_push_transfers
+- "Create a card_push_transfer?" -> POST /card_push_transfers
+- "Get card_push_transfer details?" -> GET /card_push_transfers/{card_push_transfer_id}
+- "Create a approve?" -> POST /card_push_transfers/{card_push_transfer_id}/approve
+- "Create a cancel?" -> POST /card_push_transfers/{card_push_transfer_id}/cancel
+- "List all card_tokens?" -> GET /card_tokens
+- "Get card_token details?" -> GET /card_tokens/{card_token_id}
+- "List all capabilities?" -> GET /card_tokens/{card_token_id}/capabilities
+- "List all card_validations?" -> GET /card_validations
+- "Create a card_validation?" -> POST /card_validations
+- "Get card_validation details?" -> GET /card_validations/{card_validation_id}
+- "List all cards?" -> GET /cards
+- "Create a card?" -> POST /cards
+- "Get card details?" -> GET /cards/{card_id}
+- "Partially update a card?" -> PATCH /cards/{card_id}
+- "Create a create_details_iframe?" -> POST /cards/{card_id}/create_details_iframe
+- "List all details?" -> GET /cards/{card_id}/details
+- "Create a update_pin?" -> POST /cards/{card_id}/update_pin
+- "List all check_deposits?" -> GET /check_deposits
+- "Create a check_deposit?" -> POST /check_deposits
+- "Get check_deposit details?" -> GET /check_deposits/{check_deposit_id}
+- "List all check_transfers?" -> GET /check_transfers
+- "Create a check_transfer?" -> POST /check_transfers
+- "Get check_transfer details?" -> GET /check_transfers/{check_transfer_id}
+- "Create a approve?" -> POST /check_transfers/{check_transfer_id}/approve
+- "Create a cancel?" -> POST /check_transfers/{check_transfer_id}/cancel
+- "Create a stop_payment?" -> POST /check_transfers/{check_transfer_id}/stop_payment
+- "List all declined_transactions?" -> GET /declined_transactions
+- "Get declined_transaction details?" -> GET /declined_transactions/{declined_transaction_id}
+- "List all digital_card_profiles?" -> GET /digital_card_profiles
+- "Create a digital_card_profile?" -> POST /digital_card_profiles
+- "Get digital_card_profile details?" -> GET /digital_card_profiles/{digital_card_profile_id}
+- "Create a archive?" -> POST /digital_card_profiles/{digital_card_profile_id}/archive
+- "Create a clone?" -> POST /digital_card_profiles/{digital_card_profile_id}/clone
+- "List all digital_wallet_tokens?" -> GET /digital_wallet_tokens
+- "Get digital_wallet_token details?" -> GET /digital_wallet_tokens/{digital_wallet_token_id}
+- "List all entities?" -> GET /entities
+- "Create a entity?" -> POST /entities
+- "Get entity details?" -> GET /entities/{entity_id}
+- "Partially update a entity?" -> PATCH /entities/{entity_id}
+- "Create a archive?" -> POST /entities/{entity_id}/archive
+- "Create a archive_beneficial_owner?" -> POST /entities/{entity_id}/archive_beneficial_owner
+- "Create a confirm?" -> POST /entities/{entity_id}/confirm
+- "Create a create_beneficial_owner?" -> POST /entities/{entity_id}/create_beneficial_owner
+- "Create a update_address?" -> POST /entities/{entity_id}/update_address
+- "Create a update_beneficial_owner_address?" -> POST /entities/{entity_id}/update_beneficial_owner_address
+- "Create a update_industry_code?" -> POST /entities/{entity_id}/update_industry_code
+- "List all entity_supplemental_documents?" -> GET /entity_supplemental_documents
+- "Create a entity_supplemental_document?" -> POST /entity_supplemental_documents
+- "List all event_subscriptions?" -> GET /event_subscriptions
+- "Create a event_subscription?" -> POST /event_subscriptions
+- "Get event_subscription details?" -> GET /event_subscriptions/{event_subscription_id}
+- "Partially update a event_subscription?" -> PATCH /event_subscriptions/{event_subscription_id}
+- "List all events?" -> GET /events
+- "Get event details?" -> GET /events/{event_id}
+- "List all exports?" -> GET /exports
+- "Create a export?" -> POST /exports
+- "Get export details?" -> GET /exports/{export_id}
+- "List all external_accounts?" -> GET /external_accounts
+- "Create a external_account?" -> POST /external_accounts
+- "Get external_account details?" -> GET /external_accounts/{external_account_id}
+- "Partially update a external_account?" -> PATCH /external_accounts/{external_account_id}
+- "List all fednow_transfers?" -> GET /fednow_transfers
+- "Create a fednow_transfer?" -> POST /fednow_transfers
+- "Get fednow_transfer details?" -> GET /fednow_transfers/{fednow_transfer_id}
+- "Create a approve?" -> POST /fednow_transfers/{fednow_transfer_id}/approve
+- "Create a cancel?" -> POST /fednow_transfers/{fednow_transfer_id}/cancel
+- "Create a file_link?" -> POST /file_links
+- "List all files?" -> GET /files
+- "Create a file?" -> POST /files
+- "Get file details?" -> GET /files/{file_id}
+- "List all current?" -> GET /groups/current
+- "List all inbound_ach_transfers?" -> GET /inbound_ach_transfers
+- "Get inbound_ach_transfer details?" -> GET /inbound_ach_transfers/{inbound_ach_transfer_id}
+- "Create a create_notification_of_change?" -> POST /inbound_ach_transfers/{inbound_ach_transfer_id}/create_notification_of_change
+- "Create a decline?" -> POST /inbound_ach_transfers/{inbound_ach_transfer_id}/decline
+- "Create a transfer_return?" -> POST /inbound_ach_transfers/{inbound_ach_transfer_id}/transfer_return
+- "List all inbound_check_deposits?" -> GET /inbound_check_deposits
+- "Get inbound_check_deposit details?" -> GET /inbound_check_deposits/{inbound_check_deposit_id}
+- "Create a decline?" -> POST /inbound_check_deposits/{inbound_check_deposit_id}/decline
+- "Create a return?" -> POST /inbound_check_deposits/{inbound_check_deposit_id}/return
+- "List all inbound_fednow_transfers?" -> GET /inbound_fednow_transfers
+- "Get inbound_fednow_transfer details?" -> GET /inbound_fednow_transfers/{inbound_fednow_transfer_id}
+- "List all inbound_mail_items?" -> GET /inbound_mail_items
+- "Get inbound_mail_item details?" -> GET /inbound_mail_items/{inbound_mail_item_id}
+- "Create a action?" -> POST /inbound_mail_items/{inbound_mail_item_id}/action
+- "List all inbound_real_time_payments_transfers?" -> GET /inbound_real_time_payments_transfers
+- "Get inbound_real_time_payments_transfer details?" -> GET /inbound_real_time_payments_transfers/{inbound_real_time_payments_transfer_id}
+- "List all inbound_wire_drawdown_requests?" -> GET /inbound_wire_drawdown_requests
+- "Get inbound_wire_drawdown_request details?" -> GET /inbound_wire_drawdown_requests/{inbound_wire_drawdown_request_id}
+- "List all inbound_wire_transfers?" -> GET /inbound_wire_transfers
+- "Get inbound_wire_transfer details?" -> GET /inbound_wire_transfers/{inbound_wire_transfer_id}
+- "Create a reverse?" -> POST /inbound_wire_transfers/{inbound_wire_transfer_id}/reverse
+- "List all intrafi_account_enrollments?" -> GET /intrafi_account_enrollments
+- "Create a intrafi_account_enrollment?" -> POST /intrafi_account_enrollments
+- "Get intrafi_account_enrollment details?" -> GET /intrafi_account_enrollments/{intrafi_account_enrollment_id}
+- "Create a unenroll?" -> POST /intrafi_account_enrollments/{intrafi_account_enrollment_id}/unenroll
+- "List all intrafi_exclusions?" -> GET /intrafi_exclusions
+- "Create a intrafi_exclusion?" -> POST /intrafi_exclusions
+- "Get intrafi_exclusion details?" -> GET /intrafi_exclusions/{intrafi_exclusion_id}
+- "Create a archive?" -> POST /intrafi_exclusions/{intrafi_exclusion_id}/archive
+- "List all lockboxes?" -> GET /lockboxes
+- "Create a lockboxe?" -> POST /lockboxes
+- "Get lockboxe details?" -> GET /lockboxes/{lockbox_id}
+- "Partially update a lockboxe?" -> PATCH /lockboxes/{lockbox_id}
+- "Create a token?" -> POST /oauth/tokens
+- "List all oauth_applications?" -> GET /oauth_applications
+- "Get oauth_application details?" -> GET /oauth_applications/{oauth_application_id}
+- "List all oauth_connections?" -> GET /oauth_connections
+- "Get oauth_connection details?" -> GET /oauth_connections/{oauth_connection_id}
+- "List all pending_transactions?" -> GET /pending_transactions
+- "Create a pending_transaction?" -> POST /pending_transactions
+- "Get pending_transaction details?" -> GET /pending_transactions/{pending_transaction_id}
+- "Create a release?" -> POST /pending_transactions/{pending_transaction_id}/release
+- "List all physical_card_profiles?" -> GET /physical_card_profiles
+- "Create a physical_card_profile?" -> POST /physical_card_profiles
+- "Get physical_card_profile details?" -> GET /physical_card_profiles/{physical_card_profile_id}
+- "Create a archive?" -> POST /physical_card_profiles/{physical_card_profile_id}/archive
+- "Create a clone?" -> POST /physical_card_profiles/{physical_card_profile_id}/clone
+- "List all physical_cards?" -> GET /physical_cards
+- "Create a physical_card?" -> POST /physical_cards
+- "Get physical_card details?" -> GET /physical_cards/{physical_card_id}
+- "Partially update a physical_card?" -> PATCH /physical_cards/{physical_card_id}
+- "List all programs?" -> GET /programs
+- "Get program details?" -> GET /programs/{program_id}
+- "Get real_time_decision details?" -> GET /real_time_decisions/{real_time_decision_id}
+- "Create a action?" -> POST /real_time_decisions/{real_time_decision_id}/action
+- "List all real_time_payments_transfers?" -> GET /real_time_payments_transfers
+- "Create a real_time_payments_transfer?" -> POST /real_time_payments_transfers
+- "Get real_time_payments_transfer details?" -> GET /real_time_payments_transfers/{real_time_payments_transfer_id}
+- "Create a approve?" -> POST /real_time_payments_transfers/{real_time_payments_transfer_id}/approve
+- "Create a cancel?" -> POST /real_time_payments_transfers/{real_time_payments_transfer_id}/cancel
+- "List all routing_numbers?" -> GET /routing_numbers
+- "Create a account_statement?" -> POST /simulations/account_statements
+- "Create a complete?" -> POST /simulations/account_transfers/{account_transfer_id}/complete
+- "Create a acknowledge?" -> POST /simulations/ach_transfers/{ach_transfer_id}/acknowledge
+- "Create a create_notification_of_change?" -> POST /simulations/ach_transfers/{ach_transfer_id}/create_notification_of_change
+- "Create a return?" -> POST /simulations/ach_transfers/{ach_transfer_id}/return
+- "Create a settle?" -> POST /simulations/ach_transfers/{ach_transfer_id}/settle
+- "Create a submit?" -> POST /simulations/ach_transfers/{ach_transfer_id}/submit
+- "Create a card_authorization_expiration?" -> POST /simulations/card_authorization_expirations
+- "Create a card_authorization?" -> POST /simulations/card_authorizations
+- "Create a card_balance_inquiry?" -> POST /simulations/card_balance_inquiries
+- "Create a action?" -> POST /simulations/card_disputes/{card_dispute_id}/action
+- "Create a card_fuel_confirmation?" -> POST /simulations/card_fuel_confirmations
+- "Create a card_increment?" -> POST /simulations/card_increments
+- "Create a card_refund?" -> POST /simulations/card_refunds
+- "Create a card_reversal?" -> POST /simulations/card_reversals
+- "Create a card_settlement?" -> POST /simulations/card_settlements
+- "Create a card_token?" -> POST /simulations/card_tokens
+- "Create a reject?" -> POST /simulations/check_deposits/{check_deposit_id}/reject
+- "Create a return?" -> POST /simulations/check_deposits/{check_deposit_id}/return
+- "Create a submit?" -> POST /simulations/check_deposits/{check_deposit_id}/submit
+- "Create a mail?" -> POST /simulations/check_transfers/{check_transfer_id}/mail
+- "Create a digital_wallet_token_request?" -> POST /simulations/digital_wallet_token_requests
+- "Create a export?" -> POST /simulations/exports
+- "Create a inbound_ach_transfer?" -> POST /simulations/inbound_ach_transfers
+- "Create a inbound_check_deposit?" -> POST /simulations/inbound_check_deposits
+- "Create a inbound_fednow_transfer?" -> POST /simulations/inbound_fednow_transfers
+- "Create a inbound_mail_item?" -> POST /simulations/inbound_mail_items
+- "Create a inbound_real_time_payments_transfer?" -> POST /simulations/inbound_real_time_payments_transfers
+- "Create a inbound_wire_drawdown_request?" -> POST /simulations/inbound_wire_drawdown_requests
+- "Create a inbound_wire_transfer?" -> POST /simulations/inbound_wire_transfers
+- "Create a interest_payment?" -> POST /simulations/interest_payments
+- "Create a release_inbound_funds_hold?" -> POST /simulations/pending_transactions/{pending_transaction_id}/release_inbound_funds_hold
+- "Create a advance_shipment?" -> POST /simulations/physical_cards/{physical_card_id}/advance_shipment
+- "Create a tracking_update?" -> POST /simulations/physical_cards/{physical_card_id}/tracking_updates
+- "Create a program?" -> POST /simulations/programs
+- "Create a complete?" -> POST /simulations/real_time_payments_transfers/{real_time_payments_transfer_id}/complete
+- "Create a refuse?" -> POST /simulations/wire_drawdown_requests/{wire_drawdown_request_id}/refuse
+- "Create a submit?" -> POST /simulations/wire_drawdown_requests/{wire_drawdown_request_id}/submit
+- "Create a reverse?" -> POST /simulations/wire_transfers/{wire_transfer_id}/reverse
+- "Create a submit?" -> POST /simulations/wire_transfers/{wire_transfer_id}/submit
+- "List all swift_transfers?" -> GET /swift_transfers
+- "Create a swift_transfer?" -> POST /swift_transfers
+- "Get swift_transfer details?" -> GET /swift_transfers/{swift_transfer_id}
+- "Create a approve?" -> POST /swift_transfers/{swift_transfer_id}/approve
+- "Create a cancel?" -> POST /swift_transfers/{swift_transfer_id}/cancel
+- "List all transactions?" -> GET /transactions
+- "Get transaction details?" -> GET /transactions/{transaction_id}
+- "List all wire_drawdown_requests?" -> GET /wire_drawdown_requests
+- "Create a wire_drawdown_request?" -> POST /wire_drawdown_requests
+- "Get wire_drawdown_request details?" -> GET /wire_drawdown_requests/{wire_drawdown_request_id}
+- "List all wire_transfers?" -> GET /wire_transfers
+- "Create a wire_transfer?" -> POST /wire_transfers
+- "Get wire_transfer details?" -> GET /wire_transfers/{wire_transfer_id}
+- "Create a approve?" -> POST /wire_transfers/{wire_transfer_id}/approve
+- "Create a cancel?" -> POST /wire_transfers/{wire_transfer_id}/cancel
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

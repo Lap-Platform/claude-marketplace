@@ -8,186 +8,221 @@
 
 @group {{api-host}}
 @endpoint POST /{{api-host}}/v1/subscriptions/plans
+@desc Create plan
 @auth Bearer token
 @required {title: str, interval_day: int, amount: int, currency: str}
-@returns(200) {result: map{id: str, title: str, interval_day: str, ipn_callback_url: any?, success_url: any?, cancel_url: any?, partially_paid_url: any?, amount: num, currency: str, created_at: str, updated_at: str}}
+@returns(200) {result: map{id: str, title: str, interval_day: str, ipn_callback_url: any?, success_url: any?, cancel_url: any?, partially_paid_url: any?, amount: num, currency: str, created_at: str, updated_at: str}} # 200
 
 @endpoint PATCH /{{api-host}}/v1/subscriptions/plans/{plan}-id
+@desc Update plan
 @auth Bearer token
 @required {plan-id: str, title: str, interval_day: int, amount: int, currency: str}
-@returns(200) {result: map{id: str, title: str, interval_day: str, ipn_callback_url: any?, success_url: any?, cancel_url: any?, partially_paid_url: any?, amount: int, currency: str, created_at: str, updated_at: str}}
+@returns(200) {result: map{id: str, title: str, interval_day: str, ipn_callback_url: any?, success_url: any?, cancel_url: any?, partially_paid_url: any?, amount: int, currency: str, created_at: str, updated_at: str}} # 200
 
 @endpoint GET /{{api-host}}/v1/subscriptions/plans/{plan}-id
+@desc Get one plan
 @required {plan-id: str}
 @optional {x-api-key: str}
-@returns(200) {result: map{id: str, title: str, interval_day: str, ipn_callback_url: any?, success_url: any?, cancel_url: any?, partially_paid_url: any?, amount: int, currency: str, created_at: str, updated_at: str}}
-@errors {404}
+@returns(200) {result: map{id: str, title: str, interval_day: str, ipn_callback_url: any?, success_url: any?, cancel_url: any?, partially_paid_url: any?, amount: int, currency: str, created_at: str, updated_at: str}} # 200
+@errors {404: 404}
 
 @endpoint GET /{{api-host}}/v1/subscriptions/plans
-@optional {limit: str, offset: str, x-api-key: str}
-@returns(200) {result: [map], count: int}
+@desc Get many plans
+@optional {limit: str # Number, offset: str # Number, x-api-key: str}
+@returns(200) {result: [map], count: int} # 200
 
 @endpoint POST /{{api-host}}/v1/subscriptions
+@desc Create an email subscription
 @auth Bearer token
 @required {subscription_plan_id: int, email: str}
 @optional {x-api-key: str}
-@returns(200) {result: map{id: str, subscription_plan_id: str, is_active: bool, status: str, expire_date: str, subscriber: map{email: str}, created_at: str, updated_at: str}}
-@errors {400}
+@returns(200) {result: map{id: str, subscription_plan_id: str, is_active: bool, status: str, expire_date: str, subscriber: map{email: str}, created_at: str, updated_at: str}} # 200
+@errors {400: 400 (plan currency is fiat)}
 
 @endpoint GET /{{api-host}}/v1/subscriptions
-@optional {status: str, subscription_plan_id: str, is_active: str, limit: str, offset: str, x-api-key: str}
-@returns(200) {result: [map], count: int}
+@desc Get many recurring payments
+@optional {status: str # "WAITING_PAY" / "PAID" /  "PARTIALLY_PAID" / "EXPIRED", subscription_plan_id: str, is_active: str # true / false, limit: str, offset: str, x-api-key: str}
+@returns(200) {result: [map], count: int} # 200
 
 @endpoint GET /{{api-host}}/v1/subscriptions/{sub_id}
+@desc Get one recurring payment
 @required {sub_id: str}
 @optional {x-api-key: str}
-@returns(200) {result: map{id: str, subscription_plan_id: str, is_active: bool, status: str, expire_date: str, subscriber: map{sub_partner_id: str}, created_at: str, updated_at: str}}
-@errors {404}
+@returns(200) {result: map{id: str, subscription_plan_id: str, is_active: bool, status: str, expire_date: str, subscriber: map{sub_partner_id: str}, created_at: str, updated_at: str}} # 200
+@errors {404: 404}
 
 @endpoint DELETE /{{api-host}}/v1/subscriptions/{sub_id}
+@desc Delete recurring payment
 @auth Bearer token
 @required {sub_id: str}
-@returns(200) {result: str}
-@errors {404}
+@returns(200) {result: str} # 200
+@errors {404: 404}
 
 @endpoint POST /{{api-host}}/v1/sub-partner/balance
+@desc Create new sub-partner
 @auth Bearer token
 @required {name: str}
-@returns(200) {result: map{id: str, name: str, created_at: str, updated_at: str}}
-@errors {400}
+@returns(200) {result: map{id: str, name: str, created_at: str, updated_at: str}} # 200
+@errors {400: 400}
 
 @endpoint POST /{{api-host}}/v1/subscriptions
+@desc Create sub-partner recurring payments
 @auth Bearer token
 @required {subscription_plan_id: int, sub_partner_id: int}
 @optional {x-api-key: str}
-@returns(200) {result: map{id: str, subscription_plan_id: str, is_active: bool, status: str, expire_date: str, subscriber: map{sub_partner_id: str}, created_at: str, updated_at: str}}
+@returns(200) {result: map{id: str, subscription_plan_id: str, is_active: bool, status: str, expire_date: str, subscriber: map{sub_partner_id: str}, created_at: str, updated_at: str}} # 200
 
 @endpoint GET /{{api-host}}/v1/sub-partner/balance/{id}
+@desc Get sub-partner balance
 @required {id: str}
 @optional {x-api-key: str}
-@returns(200) {result: map{subPartnerId: str, balances: map{usddtrc20: map, usdtbsc: map}}}
+@returns(200) {result: map{subPartnerId: str, balances: map{usddtrc20: map, usdtbsc: map}}} # 200
 
 @endgroup
 
 @group {{api-host}}o
 @endpoint GET /{{api-host}}o/v1/sub-partner
+@desc Get sub-partners
 @auth Bearer token
-@required {id: str, offset: str, limit: str, order: str}
-@returns(200) {result: [map], count: int}
+@required {id: str # int or array of int (optional), offset: str # (optional) default 0, limit: str # (optional) default 10, order: str # ASC / DESC (optional) default ASC}
+@returns(200) {result: [map], count: int} # 200
 
 @endgroup
 
 @group {{api-host}}
 @endpoint GET /{{api-host}}/v1/sub-partner/transfers
-@required {id: str, status: str, limit: str, offset: str, order: str}
-@returns(200) {result: [map], count: int}
+@desc Get all transfers
+@required {id: str # int or array of int (optional), status: str # string or array of string  "WAITING"/"CREATED"/"FINISHED"/"REJECTED" (optional), limit: str # (optional) default 10, offset: str # (optional) default 0, order: str # ASC / DESC (optional) default ASC}
+@returns(200) {result: [map], count: int} # 200
 
 @endpoint GET /{{api-host}}/v1/sub-partner/transfer/{id}
+@desc Get transfer
 @required {id: str}
-@returns(200) {result: map{id: str, from_sub_id: str, to_sub_id: str, status: str, created_at: str, updated_at: str, amount: str, currency: str}}
+@returns(200) {result: map{id: str, from_sub_id: str, to_sub_id: str, status: str, created_at: str, updated_at: str, amount: str, currency: str}} # 200
 
 @endpoint POST /{{api-host}}/v1/sub-partner/transfer
+@desc Transfer
 @auth Bearer token
 @required {currency: str, amount: num, from_id: int, to_id: int}
 @optional {x-api-key: str}
-@returns(200)
+@returns(200) Transfer
 
 @endpoint POST /{{api-host}}/v1/sub-partner/payment
+@desc Deposit with payment
 @auth Bearer token
 @required {currency: str, amount: num, sub_partner_id: str, fixed_rate: bool}
 @optional {x-api-key: str}
-@returns(200) {result: map{payment_id: str, payment_status: str, pay_address: str, price_amount: int, price_currency: str, pay_amount: int, amount_received: num, pay_currency: str, order_id: any?, order_description: any?, ipn_callback_url: any?, created_at: str, updated_at: str, purchase_id: str, smart_contract: any?, network: str, network_precision: any?, time_limit: any?, burning_percent: any?, expiration_estimate_date: str}}
+@returns(200) {result: map{payment_id: str, payment_status: str, pay_address: str, price_amount: int, price_currency: str, pay_amount: int, amount_received: num, pay_currency: str, order_id: any?, order_description: any?, ipn_callback_url: any?, created_at: str, updated_at: str, purchase_id: str, smart_contract: any?, network: str, network_precision: any?, time_limit: any?, burning_percent: any?, expiration_estimate_date: str}} # Deposit with payment
 
 @endpoint POST /{{api-host}}/v1/sub-partner/deposit
+@desc Deposit from master account
 @auth Bearer token
 @required {currency: str, amount: num, sub_partner_id: str}
 @optional {x-api-key: str}
-@returns(200)
+@returns(200) 200
 
 @endpoint POST /{{api-host}}/v1/sub-partner/write-off
+@desc Write off on master account
 @auth Bearer token
 @required {currency: str, amount: num, sub_partner_id: str}
 @optional {x-api-key: str}
-@returns(200)
+@returns(200) 200
 
 @endpoint GET /{{api-host}}/v1/estimate
+@desc Get estimated price
 @required {amount: str, currency_from: str, currency_to: str}
 @optional {x-api-key: str}
-@returns(200) {currency_from: str, amount_from: num, currency_to: str, estimated_amount: num}
+@returns(200) {currency_from: str, amount_from: num, currency_to: str, estimated_amount: num} # 200
 
 @endpoint POST /{{api-host}}/v1/payment
+@desc Create payment
 @required {price_amount: num, price_currency: str, pay_currency: str, ipn_callback_url: str, order_id: str, order_description: str, is_fixed_rate: bool, is_fee_paid_by_user: bool}
 @optional {x-api-key: str}
-@returns(201) {payment_id: str, payment_status: str, pay_address: str, price_amount: num, price_currency: str, pay_amount: num, pay_currency: str, order_id: str, order_description: str, ipn_callback_url: str, created_at: str, updated_at: str, purchase_id: str, amount_received: any?, payin_extra_id: any?, smart_contract: str, network: str, network_precision: int, time_limit: any?, burning_percent: any?, expiration_estimate_date: str}
+@returns(201) {payment_id: str, payment_status: str, pay_address: str, price_amount: num, price_currency: str, pay_amount: num, pay_currency: str, order_id: str, order_description: str, ipn_callback_url: str, created_at: str, updated_at: str, purchase_id: str, amount_received: any?, payin_extra_id: any?, smart_contract: str, network: str, network_precision: int, time_limit: any?, burning_percent: any?, expiration_estimate_date: str} # 201
 
 @endpoint POST /{{api-host}}/v1/invoice-payment
+@desc Create payment by invoice
 @optional {x-api-key: str}
-@returns(201) {payment_id: str, payment_status: str, pay_address: str, price_amount: num, price_currency: str, pay_amount: num, pay_currency: str, order_id: str, order_description: str, ipn_callback_url: str, created_at: str, updated_at: str, purchase_id: str, amount_received: any?, payin_extra_id: any?, smart_contract: str, network: str, network_precision: int, time_limit: any?, burning_percent: any?, expiration_estimate_date: str}
+@returns(201) {payment_id: str, payment_status: str, pay_address: str, price_amount: num, price_currency: str, pay_amount: num, pay_currency: str, order_id: str, order_description: str, ipn_callback_url: str, created_at: str, updated_at: str, purchase_id: str, amount_received: any?, payin_extra_id: any?, smart_contract: str, network: str, network_precision: int, time_limit: any?, burning_percent: any?, expiration_estimate_date: str} # 201
 
 @endpoint POST /{{api-host}}/v1/payment/{id}/update-merchant-estimate
-@required {id: str}
+@desc Get/Update payment estimate
+@required {id: str # payment ID, for which you want to get the estimate}
 @optional {x-api-key: str}
-@returns(200) {id: str, token_id: str, pay_amount: num, expiration_estimate_date: str}
+@returns(200) {id: str, token_id: str, pay_amount: num, expiration_estimate_date: str} # 200
 
 @endpoint GET /{{api-host}}/v1/payment/{payment_id}
+@desc Get payment status
 @required {payment_id: str}
 @optional {x-api-key: str}
-@returns(200) {payment_id: int, payment_status: str, pay_address: str, price_amount: int, price_currency: str, pay_amount: num, actually_paid: int, pay_currency: str, order_id: str, order_description: str, purchase_id: str, created_at: str, updated_at: str, outcome_amount: num, outcome_currency: str}
+@returns(200) {payment_id: int, payment_status: str, pay_address: str, price_amount: int, price_currency: str, pay_amount: num, actually_paid: int, pay_currency: str, order_id: str, order_description: str, purchase_id: str, created_at: str, updated_at: str, outcome_amount: num, outcome_currency: str} # 200
 
 @endpoint GET /{{api-host}}/v1/min-amount
+@desc Get the minimum payment amount
 @required {currency_from: str, currency_to: str}
 @optional {x-api-key: str}
-@returns(200) {currency_from: str, currency_to: str, min_amount: num, fiat_equivalent: num}
+@returns(200) {currency_from: str, currency_to: str, min_amount: num, fiat_equivalent: num} # 200
 
 @endpoint GET /{{api-host}}/v1/payment/
+@desc Get list of payments
 @auth Bearer token
 @required {limit: str, page: str, sortBy: str, orderBy: str, dateFrom: str, dateTo: str}
 @optional {x-api-key: str}
-@returns(200) {data: [map], limit: int, page: int, pagesCount: int, total: int}
+@returns(200) {data: [map], limit: int, page: int, pagesCount: int, total: int} # 200
 
 @endpoint POST /{{api-host}}/v1/invoice
+@desc Create invoice
 @required {price_amount: int, price_currency: str, order_id: str, order_description: str, ipn_callback_url: str, success_url: str, cancel_url: str, partially_paid_url: str, is_fixed_rate: bool, is_fee_paid_by_user: bool}
 @optional {x-api-key: str}
-@returns(201) {id: str, order_id: str, order_description: str, price_amount: str, price_currency: str, pay_currency: any?, ipn_callback_url: str, invoice_url: str, success_url: str, cancel_url: str, created_at: str, updated_at: str}
+@returns(201) {id: str, order_id: str, order_description: str, price_amount: str, price_currency: str, pay_currency: any?, ipn_callback_url: str, invoice_url: str, success_url: str, cancel_url: str, created_at: str, updated_at: str} # 201
 
 @endpoint GET /{{api-host}}/v1/currencies
+@desc Get available currencies
 @optional {x-api-key: str}
-@returns(200) {currencies: [str]}
+@returns(200) {currencies: [str]} # 200
 
 @endpoint GET /{{api-host}}/v1/full-currencies
+@desc Get available currencies (2nd method)
 @optional {x-api-key: str}
-@returns(200)
+@returns(200) 200
 
 @endpoint GET /{{api-host}}/v1/merchant/coins
+@desc Get available checked currencies
 @optional {x-api-key: str}
-@returns(200) {currencies: [str]}
+@returns(200) {currencies: [str]} # 200
 
 @endpoint POST /{{api-host}}/v1/payout
+@desc Create payout
 @auth Bearer token
 @required {ipn_callback_url: str, withdrawals: [map]}
 @optional {x-api-key: str}
-@returns(200) {id: str, withdrawals: [map]}
+@returns(200) {id: str, withdrawals: [map]} # 200
 
 @endpoint GET /{{api-host}}/v1/payout/<payout_id>
+@desc Get payout status
 @optional {x-api-key: str}
-@returns(200) {id: str, address: str, currency: str, amount: str, batchWithdrawalId: str, status: str, extra_id: any?, hash: any?, error: any?, createdAt: str, requestedAt: any?, updatedAt: any?}
+@returns(200) {id: str, address: str, currency: str, amount: str, batchWithdrawalId: str, status: str, extra_id: any?, hash: any?, error: any?, createdAt: str, requestedAt: any?, updatedAt: any?} # 200
 
 @endpoint GET /{{api-host}}/v1/balance
+@desc Get balance
 @optional {x-api-key: str}
-@returns(200) {eth: map{amount: num, pendingAmount: int}, trx: map{amount: int, pendingAmount: int}, xmr: map{amount: int, pendingAmount: int}}
+@returns(200) {eth: map{amount: num, pendingAmount: int}, trx: map{amount: int, pendingAmount: int}, xmr: map{amount: int, pendingAmount: int}} # 200
 
 @endpoint POST /{{api-host}}/v1/payout/{withdrawals}-id/verify
+@desc Verify payout
 @auth Bearer token
 @required {withdrawals-id: str, verification_code: str}
 @optional {x-api-key: str}
-@returns(200)
+@returns(200) 200
 
 @endpoint GET /{{api-host}}/v1/status
-@returns(200) {message: str}
+@desc Get API status
+@returns(200) {message: str} # 200
 
 @endpoint POST /{{api-host}}/v1/auth
+@desc Authentication
 @required {email: str, password: str}
-@returns(200) {token: str}
+@returns(200) {token: str} # 200
 
 @endgroup
 

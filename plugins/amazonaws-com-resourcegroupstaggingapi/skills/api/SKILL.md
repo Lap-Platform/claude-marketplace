@@ -34,79 +34,10 @@ Not specified.
 | POST | / | Applies one or more tags to the specified resources. Note the following:   Not all resources can have tags. For a list of services with resources that support tagging using this operation, see Services that support the Resource Groups Tagging API. If the resource doesn't yet support this operation, the resource's service might support tagging using its own API operations. For more information, refer to the documentation for that service.   Each resource can have up to 50 tags. For other limits, see Tag Naming and Usage Conventions in the Amazon Web Services General Reference.    You can only tag resources that are located in the specified Amazon Web Services Region for the Amazon Web Services account.   To add tags to a resource, you need the necessary permissions for the service that the resource belongs to as well as permissions for adding tags. For more information, see the documentation for each service.    Do not store personally identifiable information (PII) or other confidential or sensitive information in tags. We use tags to provide you with billing and administration services. Tags are not intended to be used for private or sensitive data.   Minimum permissions  In addition to the tag:TagResources permission required by this operation, you must also have the tagging permission defined by the service that created the resource. For example, to tag an Amazon EC2 instance using the TagResources operation, you must have both of the following permissions:    tag:TagResource     ec2:CreateTags |
 | POST | / | Removes the specified tags from the specified resources. When you specify a tag key, the action removes both that key and its associated value. The operation succeeds even if you attempt to remove tags from a resource that were already removed. Note the following:   To remove tags from a resource, you need the necessary permissions for the service that the resource belongs to as well as permissions for removing tags. For more information, see the documentation for the service whose resource you want to untag.   You can only tag resources that are located in the specified Amazon Web Services Region for the calling Amazon Web Services account.    Minimum permissions  In addition to the tag:UntagResources permission required by this operation, you must also have the remove tags permission defined by the service that created the resource. For example, to remove the tags from an Amazon EC2 instance using the UntagResources operation, you must have both of the following permissions:    tag:UntagResource     ec2:DeleteTags |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What tags are on my resources?" -> POST / (GetResources)
-- "How do I add tags to multiple resources at once?" -> POST / (TagResources)
-- "How do I remove tags from resources?" -> POST / (UntagResources)
-- "What tag keys exist across my account?" -> POST / (GetTagKeys)
-- "What values are used for a specific tag key?" -> POST / (GetTagValues)
-- "Are my resources compliant with tag policies?" -> POST / (GetComplianceSummary)
-- "How do I generate a compliance report?" -> POST / (StartReportCreation)
-- "What is the status of my compliance report?" -> POST / (GetComplianceReport)
-- "How do I find all resources of a specific type with certain tags?" -> POST / (GetResources with ResourceTypeFilters + TagFilters)
-- "Which resources are missing required tags?" -> POST / (GetResources with ExcludeCompliantResources: true)
-- "How do I tag resources across multiple regions?" -> POST / (TagResources with cross-region ARNs)
-- "Can I filter compliance results by region or resource type?" -> POST / (GetComplianceSummary with RegionFilters/ResourceTypeFilters)
-- "How do I paginate through all tagged resources?" -> POST / (GetResources with PaginationToken)
-
-## Response Tips
-
-- **Resource queries** (GetResources, GetTagKeys, GetTagValues): Always check for `PaginationToken` in the response -- a non-null value means more results exist. Loop until token is absent.
-- **Tagging operations** (TagResources, UntagResources): Check `FailedResourcesMap` even on 200 -- partial failures return success status with per-resource errors in the map. An empty map means full success.
-- **Compliance** (GetComplianceSummary): `SummaryList` entries are grouped by the `GroupBy` dimensions you requested (region, resource type, tag key). Missing groups imply zero non-compliant resources.
-- **Report lifecycle** (StartReportCreation/GetComplianceReport): `Status` cycles through RUNNING -> SUCCEEDED/FAILED. Poll GetComplianceReport until terminal. On success, fetch the CSV from `S3Location`.
-
-## Anomaly Flags
-
-- **Partial tag failures**: Surface any non-empty `FailedResourcesMap` immediately with the specific ARNs and failure reasons -- users often assume 200 means complete success.
-- **Pagination truncation**: Warn if a response contains `PaginationToken` and the user hasn't requested follow-up pages, as results are incomplete.
-- **Report failures**: Flag `Status: "FAILED"` with the `ErrorMessage` content -- common causes are S3 bucket permissions or missing bucket policy.
-- **Empty compliance summaries**: If `SummaryList` is null/empty when filters are broad, flag that tag policies may not be configured in AWS Organizations.
-- **Large ARN lists**: Warn when `ResourceARNList` exceeds 20 items per call, as API throttling becomes likely.
-- **Stale tag values**: If GetTagValues returns values no longer attached to any resource, note that the Tagging API index can lag behind actual resource state.
-
-## Playbook
-
-### Audit All Tags Across Your Account
-
-1. Call GetTagKeys (with pagination) to enumerate every tag key in use
-2. For each key, call GetTagValues to see all values
-3. Call GetResources (no filters) with pagination to get the full resource-to-tag mapping
-4. Cross-reference against your organization's required tag keys to find gaps
-
-### Bulk-Tag Resources by Type
-
-1. Call GetResources with `ResourceTypeFilters` (e.g., `["ec2:instance"]`) to list target ARNs
-2. Paginate until all ARNs are collected
-3. Batch ARNs into groups of 20
-4. Call TagResources for each batch with the desired `Tags` map
-5. Inspect `FailedResourcesMap` in each response and retry failed ARNs
-
-### Generate and Retrieve a Compliance Report
-
-1. Call StartReportCreation with your `S3Bucket` name (bucket must have the correct policy for the Tagging API)
-2. Poll GetComplianceReport every 15-30 seconds
-3. When `Status` is `SUCCEEDED`, download the CSV from the returned `S3Location`
-4. If `Status` is `FAILED`, check `ErrorMessage` for S3 permission or policy issues
-
-### Find and Fix Non-Compliant Resources
-
-1. Call GetComplianceSummary with `GroupBy: ["RESOURCE_TYPE"]` to identify which resource types have compliance gaps
-2. Call GetResources with `ExcludeCompliantResources: true` and `IncludeComplianceDetails: true` to get the specific non-compliant resources
-3. Review the compliance details to determine which tags are missing or have invalid values
-4. Call TagResources with the corrected tags for each batch of non-compliant resource ARNs
-5. Re-run GetComplianceSummary to verify the fixes
-
-### Remove Deprecated Tags at Scale
-
-1. Call GetResources with `TagFilters` matching the deprecated tag key to find all affected resources
-2. Paginate to collect the full list of resource ARNs
-3. Batch ARNs into groups of 20
-4. Call UntagResources for each batch with `TagKeys` set to the deprecated key(s)
-5. Check `FailedResourcesMap` for any resources that could not be untagged (e.g., permission issues)
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

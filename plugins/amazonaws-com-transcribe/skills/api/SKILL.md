@@ -69,84 +69,10 @@ Not specified.
 | POST | / | Updates an existing custom vocabulary with new values. This operation overwrites all existing information with your new values; you cannot append new terms onto an existing custom vocabulary. |
 | POST | / | Updates an existing custom vocabulary filter with a new list of words. The new list you provide overwrites all previous entries; you cannot append new terms onto an existing custom vocabulary filter. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I transcribe an audio file?" -> POST / (StartTranscriptionJob)
-- "How do I check the status of my transcription job?" -> POST / (GetTranscriptionJob)
-- "How do I list all my transcription jobs?" -> POST / (ListTranscriptionJobs)
-- "How do I transcribe a medical conversation?" -> POST / (StartMedicalTranscriptionJob)
-- "How do I run call analytics on a recording?" -> POST / (StartCallAnalyticsJob)
-- "How do I create a custom vocabulary to improve accuracy?" -> POST / (CreateVocabulary)
-- "How do I filter profanity from transcription output?" -> POST / (CreateVocabularyFilter)
-- "How do I train a custom language model?" -> POST / (CreateLanguageModel)
-- "How do I set up categories for call analytics?" -> POST / (CreateCallAnalyticsCategory)
-- "How do I delete a completed transcription job?" -> POST / (DeleteTranscriptionJob)
-- "How do I start a medical scribe job for clinical documentation?" -> POST / (StartMedicalScribeJob)
-- "How do I tag a Transcribe resource for cost tracking?" -> POST / (TagResource)
-- "How do I get the download URI for a custom vocabulary?" -> POST / (GetVocabulary / GetMedicalVocabulary)
-- "How do I find failed transcription jobs?" -> POST / (ListTranscriptionJobs with Status filter)
-- "How do I update an existing vocabulary filter?" -> POST / (UpdateVocabularyFilter)
-
-## Response Tips
-
-- **Job responses** (Start/Get): Check `*JobStatus` field -- values cycle through `QUEUED`, `IN_PROGRESS`, `COMPLETED`, `FAILED`; poll GetJob until terminal state. `FailureReason` is only populated on `FAILED`.
-- **List responses**: All list endpoints return `NextToken` for pagination; pass it back with `MaxResults` (max 100) to fetch the next page. An absent `NextToken` means you have reached the last page.
-- **Vocabulary responses**: `VocabularyState` follows `PENDING` -> `READY` or `FAILED`; `DownloadUri` is only available on Get calls, not Create/Update.
-- **Transcript output**: The actual transcript text is not inline -- `TranscriptFileUri` points to an S3 object you must fetch separately. `RedactedTranscriptFileUri` is present only when content redaction is enabled.
-- **Delete responses**: Delete endpoints return empty bodies on success (no 200 payload). A missing error means success.
-- **Tag responses**: `ListTagsForResource` returns `Tags` as an array of `{Key, Value}` objects keyed by `ResourceArn`.
-
-## Anomaly Flags
-
-- **Job stuck in QUEUED/IN_PROGRESS**: Surface if a job has not reached a terminal state after 30 minutes -- may indicate a service issue or invalid media URI.
-- **FailureReason populated**: Always surface the full `FailureReason` string immediately; common causes include inaccessible S3 URIs, unsupported media formats, and IAM permission errors.
-- **VocabularyState is FAILED**: Alert when a vocabulary create/update lands in `FAILED` state -- the vocabulary cannot be used until recreated.
-- **IdentifiedLanguageScore below 0.5**: When using automatic language identification, a low confidence score suggests the detected language may be wrong; recommend setting `LanguageOptions` explicitly.
-- **Skipped features in CallAnalyticsJob**: `CallAnalyticsJobDetails.Skipped` lists features that could not be applied -- surface these so the user knows their analytics are incomplete.
-- **Deprecated fields**: Flag use of `MediaSampleRateHertz` when not required -- Transcribe auto-detects sample rate for most formats; explicit values can cause failures if mismatched.
-- **Pagination truncation**: Warn when a list response includes `NextToken` but the user only processes the first page -- results are incomplete.
-
-## Playbook
-
-### 1. Transcribe an Audio File End-to-End
-
-1. Call **StartTranscriptionJob** with `TranscriptionJobName`, `Media.MediaFileUri` (S3 URI), and optionally `LanguageCode` or set `IdentifyLanguage: true`.
-2. Poll **GetTranscriptionJob** with the same job name every 15-30 seconds.
-3. When `TranscriptionJobStatus` is `COMPLETED`, retrieve the transcript from `Transcript.TranscriptFileUri` (an S3 presigned URL).
-4. If status is `FAILED`, read `FailureReason` and fix the issue (usually S3 permissions or unsupported format).
-
-### 2. Set Up Custom Vocabulary for Domain-Specific Terms
-
-1. Prepare a vocabulary file (text or table format) and upload it to S3.
-2. Call **CreateVocabulary** with `VocabularyName`, `LanguageCode`, and `VocabularyFileUri`.
-3. Poll **GetVocabulary** until `VocabularyState` is `READY`.
-4. Start a transcription job with `Settings.VocabularyName` set to the vocabulary name.
-5. To update later, call **UpdateVocabulary** with the new file URI -- the vocabulary returns to `PENDING` until reprocessed.
-
-### 3. Run Call Analytics with PII Redaction
-
-1. Call **CreateCallAnalyticsCategory** with rules defining the analytics categories you want to detect (e.g., sentiment, interruptions).
-2. Call **StartCallAnalyticsJob** with `CallAnalyticsJobName`, `Media`, `DataAccessRoleArn`, and `Settings.ContentRedaction` configured with `RedactionType: "PII"` and desired `PiiEntityTypes`.
-3. Poll **GetCallAnalyticsJob** until `CallAnalyticsJobStatus` is `COMPLETED`.
-4. Check `CallAnalyticsJobDetails.Skipped` for any features that were not applied.
-5. Retrieve the redacted transcript from `Transcript.RedactedTranscriptFileUri`.
-
-### 4. Medical Scribe for Clinical Documentation
-
-1. Upload clinician-patient audio to S3 with separate channels per speaker.
-2. Call **StartMedicalScribeJob** with `MedicalScribeJobName`, `Media`, `OutputBucketName`, `DataAccessRoleArn`, `Settings` (enable `ShowSpeakerLabels`), and `ChannelDefinitions` mapping channels to participants.
-3. Poll **GetMedicalScribeJob** until `MedicalScribeJobStatus` is `COMPLETED`.
-4. Retrieve the transcript from `MedicalScribeOutput.TranscriptFileUri` and the clinical document from `ClinicalDocumentUri`.
-
-### 5. Manage Resources with Tags and Cleanup
-
-1. Call **TagResource** with the `ResourceArn` and a list of `Tags` (key-value pairs) for cost allocation or environment labeling.
-2. Verify tags with **ListTagsForResource** using the same ARN.
-3. To clean up old jobs, call **ListTranscriptionJobs** filtered by `Status: "COMPLETED"` and paginate through all results.
-4. For each job you want to remove, call **DeleteTranscriptionJob** with the job name.
-5. To remove tags before deletion, call **UntagResource** with the `TagKeys` to strip.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

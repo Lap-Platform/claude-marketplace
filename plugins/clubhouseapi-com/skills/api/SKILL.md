@@ -228,92 +228,50 @@ https://www.clubhouseapi.com/api/
 |--------|------|-------------|
 | POST | /search_clubs | search clubs. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I log in to Clubhouse?" -> POST /start_phone_number_auth
-- "How do I verify my phone number?" -> POST /complete_phone_number_auth
-- "I didn't get the auth code, can I get a phone call instead?" -> POST /call_phone_number_auth
-- "Can I resend the verification code?" -> POST /resend_phone_number_auth
-- "Am I still on the waitlist?" -> POST /check_waitlist_status
-- "What's my profile info?" -> POST /me
-- "How do I look up another user's profile?" -> POST /get_profile
-- "What rooms are live right now?" -> GET /get_channels
-- "How do I join a live room?" -> POST /join_channel
-- "How do I leave a room I'm in?" -> POST /leave_channel
-- "How do I find users by name?" -> POST /search_users
-- "How do I find clubs by name?" -> POST /search_clubs
-- "How do I follow someone?" -> POST /follow
-- "Who am I following?" -> POST /get_following
-- "How do I create a new room?" -> POST /create_channel
-- "What topics are available to browse?" -> GET /get_all_topics
-- "What events are coming up?" -> GET /get_events
-- "How do I invite someone to Clubhouse?" -> POST /invite_to_app
-- "Which friends are online right now?" -> POST /get_online_friends
-- "How do I check my notifications?" -> GET /get_notifications
-
-## Response Tips
-
-- **Auth endpoints** (start/call/resend/complete_phone_number_auth): Expect token and user object on success; chain these sequentially - start first, then complete with the verification code.
-- **Profile/user endpoints** (me, get_profile, search_users): User objects are nested; look for `user_profile` containing bio, photo_url, follower counts, and club memberships.
-- **Channel endpoints** (get_channels, join_channel, leave_channel, create_channel): Channel objects include `users` arrays with speaker/listener roles; `join_channel` returns the full channel state including current participants.
-- **Paginated endpoints** (get_notifications, get_events, get_users_for_topic, get_suggested_follows_all): Pass `page` and `page_size` params; responses include a `count` or `next` cursor - keep fetching until next is null.
-- **Topic/club discovery** (get_all_topics, get_topic, get_clubs_for_topic): Topics are hierarchical; clubs nest member counts and descriptions inside each result object.
-- **Error responses**: 400 errors typically mean invalid input (bad channel ID, username taken, invalid invite); 401 means expired/missing auth token; 403 on `/me` means the account is banned or suspended.
-
-## Anomaly Flags
-
-- **401 on any endpoint**: Auth token has expired - surface this immediately and suggest calling `POST /refresh_token` before retrying.
-- **403 on /me**: Account may be suspended or banned - alert the user rather than silently retrying.
-- **400 on /join_channel**: Room may have ended, be full, or the user may be blocked from it - surface the error detail.
-- **400 on /update_username**: Username is likely taken or contains invalid characters - show the specific rejection reason.
-- **400 on /invite_to_app or /invite_from_waitlist**: Invite quota may be exhausted or the phone number is already registered - flag which constraint was hit.
-- **Waitlist status not progressing**: If `check_waitlist_status` keeps returning the same position across multiple checks, surface this to the user.
-- **Empty channel list**: If `get_channels` returns zero results during normal hours, it may indicate a network issue or geo-restriction rather than genuinely no live rooms.
-- **Token refresh failure (401 on /refresh_token)**: Full re-authentication is required - do not loop on refresh, escalate to the phone auth flow.
-
-## Playbook
-
-### 1. Authenticate and Set Up a Session
-
-1. Call `POST /start_phone_number_auth` with the user's phone number to trigger an SMS code.
-2. If the SMS doesn't arrive, call `POST /resend_phone_number_auth` or `POST /call_phone_number_auth` for a voice call.
-3. Call `POST /complete_phone_number_auth` with the verification code to receive an auth token.
-4. Call `POST /me` to confirm the session is active and retrieve the authenticated user's profile.
-5. Store the auth token; when it expires, call `POST /refresh_token` before re-authenticating from scratch.
-
-### 2. Browse and Join a Live Room
-
-1. Call `GET /get_channels` to list all currently active rooms.
-2. Optionally call `GET /get_all_topics` and `POST /get_clubs_for_topic` to filter rooms by interest area.
-3. Call `POST /join_channel` with the target channel ID to enter the room.
-4. Call `POST /get_suggested_speakers` to see who might be invited to speak.
-5. When finished, call `POST /leave_channel` to exit cleanly.
-
-### 3. Discover and Follow Users
-
-1. Call `POST /search_users` with a query string to find users by name or handle.
-2. Call `POST /get_profile` with the user ID to view their full profile, bio, and club memberships.
-3. Call `POST /follow` with the user ID to follow them.
-4. Call `POST /get_following` to confirm the follow was recorded and review your full following list.
-5. Call `GET /get_suggested_follows_all` (paginated) or `POST /get_suggested_follows_friends_only` for more recommendations.
-
-### 4. Create and Host a Room
-
-1. Call `POST /get_create_channel_targets` to retrieve valid topic and club targets for room creation.
-2. Call `POST /create_channel` with the desired topic, title, and optional club association.
-3. Call `POST /get_suggested_speakers` to identify users to invite as speakers.
-4. Share the channel with contacts using the channel URL from the creation response.
-5. When the session is over, call `POST /leave_channel` (the room closes when all speakers leave).
-
-### 5. Manage Invites and Onboarding
-
-1. Call `POST /check_waitlist_status` to see if the user has been approved from the waitlist.
-2. Call `POST /get_suggested_invites` to see which contacts are eligible for an invite.
-3. Call `POST /invite_to_app` with a phone number to send an invite (watch for 400 if quota is exhausted).
-4. For waitlisted users you can approve, call `POST /invite_from_waitlist` with their user ID.
-5. Call `POST /get_suggested_club_invites` to recommend clubs to newly onboarded users.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a start_phone_number_auth?" -> POST /start_phone_number_auth
+- "Create a call_phone_number_auth?" -> POST /call_phone_number_auth
+- "Create a resend_phone_number_auth?" -> POST /resend_phone_number_auth
+- "Create a complete_phone_number_auth?" -> POST /complete_phone_number_auth
+- "Create a check_waitlist_status?" -> POST /check_waitlist_status
+- "Create a me?" -> POST /me
+- "Create a get_release_note?" -> POST /get_release_notes
+- "List all get_all_topics?" -> GET /get_all_topics
+- "Create a get_topic?" -> POST /get_topic
+- "Create a get_clubs_for_topic?" -> POST /get_clubs_for_topic
+- "Create a get_profile?" -> POST /get_profile
+- "List all get_users_for_topic?" -> GET /get_users_for_topic
+- "List all get_channels?" -> GET /get_channels
+- "Create a join_channel?" -> POST /join_channel
+- "Create a leave_channel?" -> POST /leave_channel
+- "Create a update_username?" -> POST /update_username
+- "Create a follow?" -> POST /follow
+- "Create a refresh_token?" -> POST /refresh_token
+- "Create a get_suggested_invite?" -> POST /get_suggested_invites
+- "Create a get_suggested_club_invite?" -> POST /get_suggested_club_invites
+- "Create a get_club?" -> POST /get_club
+- "List all check_for_update?" -> GET /check_for_update
+- "Create a invite_to_app?" -> POST /invite_to_app
+- "Create a invite_from_waitlist?" -> POST /invite_from_waitlist
+- "Create a get_following?" -> POST /get_following
+- "Create a get_suggested_follows_friends_only?" -> POST /get_suggested_follows_friends_only
+- "List all get_suggested_follows_all?" -> GET /get_suggested_follows_all
+- "Create a update_notification?" -> POST /update_notifications
+- "Create a get_online_friend?" -> POST /get_online_friends
+- "List all get_events?" -> GET /get_events
+- "List all get_settings?" -> GET /get_settings
+- "List all get_welcome_channel?" -> GET /get_welcome_channel
+- "Create a record_action_trail?" -> POST /record_action_trails
+- "List all get_notifications?" -> GET /get_notifications
+- "List all get_actionable_notifications?" -> GET /get_actionable_notifications
+- "Create a get_create_channel_target?" -> POST /get_create_channel_targets
+- "Create a create_channel?" -> POST /create_channel
+- "Create a get_suggested_speaker?" -> POST /get_suggested_speakers
+- "Create a search_user?" -> POST /search_users
+- "Create a get_suggested_follows_similar?" -> POST /get_suggested_follows_similar
+- "Create a search_club?" -> POST /search_clubs
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

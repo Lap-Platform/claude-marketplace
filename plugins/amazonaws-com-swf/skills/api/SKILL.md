@@ -65,91 +65,10 @@ Not specified.
 | POST | / | Undeprecates a previously deprecated workflow type. After a workflow type has been undeprecated, you can create new executions of that type.   This operation is eventually consistent. The results are best effort and may not exactly reflect recent updates and changes.   Access Control  You can use IAM policies to control this action's access to Amazon SWF resources as follows:   Use a Resource element with the domain name to limit the action to only specified domains.   Use an Action element to allow or deny permission to call this action.   Constrain the following parameters by using a Condition element with the appropriate keys.    workflowType.name: String constraint. The key is swf:workflowType.name.    workflowType.version: String constraint. The key is swf:workflowType.version.     If the caller doesn't have sufficient permissions to invoke the action, or the parameter values fall outside the specified constraints, the action fails. The associated event attribute's cause parameter is set to OPERATION_NOT_PERMITTED. For details and example IAM policies, see Using IAM to Manage Access to Amazon SWF Workflows in the Amazon SWF Developer Guide. |
 | POST | / | Remove a tag from a Amazon SWF domain. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How many workflow executions have closed in my domain?" -> POST / (CountClosedWorkflowExecutions: domain + closeTimeFilter/startTimeFilter)
-- "How many workflows are currently running?" -> POST / (CountOpenWorkflowExecutions: domain + startTimeFilter)
-- "Are there activity tasks waiting in a task list?" -> POST / (CountPendingActivityTasks: domain + taskList)
-- "How many decision tasks are queued up?" -> POST / (CountPendingDecisionTasks: domain + taskList)
-- "Start a new workflow execution" -> POST / (StartWorkflowExecution: domain + workflowId + workflowType)
-- "What happened during a workflow run?" -> POST / (GetWorkflowExecutionHistory: domain + execution)
-- "Show me details of a running workflow" -> POST / (DescribeWorkflowExecution: domain + execution)
-- "What activity types are registered in my domain?" -> POST / (ListActivityTypes: domain + registrationStatus)
-- "List all my SWF domains" -> POST / (ListDomains: registrationStatus)
-- "Register a new activity type for my workers" -> POST / (RegisterActivityType: domain + name + version)
-- "Send a signal to a running workflow" -> POST / (SignalWorkflowExecution: domain + workflowId + signalName)
-- "Cancel a workflow that is stuck" -> POST / (RequestCancelWorkflowExecution: domain + workflowId)
-- "Force-terminate a misbehaving workflow" -> POST / (TerminateWorkflowExecution: domain + workflowId)
-- "Deprecate an old activity type we no longer use" -> POST / (DeprecateActivityType: domain + activityType)
-- "Bring back a previously deprecated workflow type" -> POST / (UndeprecateWorkflowType: domain + workflowType)
-
-## Response Tips
-
-- **Count endpoints** (CountClosed/Open/PendingActivity/PendingDecision): Returns `{count, truncated?}`. When `truncated` is true, the actual count exceeds SWF limits -- treat the number as a lower bound, not exact.
-- **List endpoints** (ListDomains, ListActivityTypes, ListWorkflowTypes, ListOpen/ClosedWorkflowExecutions): Paginated via `nextPageToken`. Keep calling with the returned token until it is absent. Use `maximumPageSize` (default 100, max 1000) and `reverseOrder` to control iteration direction.
-- **Describe endpoints** (DescribeActivityType, DescribeDomain, DescribeWorkflowExecution, DescribeWorkflowType): Return deeply nested objects. The outer structure always separates `*Info` (identity + status) from `configuration` (defaults and settings). Timestamps are Unix epoch seconds as strings.
-- **Poll endpoints** (PollForActivityTask, PollForDecisionTask): Long-poll calls. An empty `taskToken` (empty string) means no task was available -- do not attempt to respond with it. Decision task responses include a full `events` history that is itself paginated via `nextPageToken`.
-- **Respond endpoints** (RespondActivityTask*, RespondDecisionTaskCompleted): No response body on success. A non-200 status means the token expired or the task was already handled. `RespondDecisionTaskCompleted` accepts an array of `Decision` objects -- each must specify exactly one decision type.
-- **History endpoint** (GetWorkflowExecutionHistory): Paginated event stream. Events are ordered by `eventId`. Use `reverseOrder: true` to read most recent events first. Page through fully to reconstruct the complete execution timeline.
-- **Tag endpoints** (TagResource, UntagResource, ListTagsForResource): Operate on ARNs. `ListTagsForResource` may return `null` for `tags` if no tags exist -- handle gracefully.
-
-## Anomaly Flags
-
-- **Truncated counts**: When any Count endpoint returns `truncated: true`, surface this immediately -- the domain may have runaway executions or a backlog that needs attention.
-- **Empty poll responses**: Repeated empty `taskToken` from PollForActivityTask or PollForDecisionTask suggests no workers are scheduling tasks, or the task list name is misspelled. Flag after 3+ consecutive empty polls.
-- **Deprecated type usage**: If a DescribeActivityType or DescribeWorkflowType returns `status: "DEPRECATED"` with a `deprecationDate`, warn the caller that new executions using this type will fail.
-- **Open counts imbalance**: In DescribeWorkflowExecution, if `openCounts.openDecisionTasks` is 0 while `openCounts.openActivityTasks` is high, the workflow may be stuck waiting for a decision. Conversely, high `openTimers` with no activity suggests a long wait state.
-- **Execution close status**: When listing or describing closed executions, flag any with `closeStatus` of `TERMINATED`, `TIMED_OUT`, or `CONTINUED_AS_NEW` -- these often indicate problems rather than normal completion (`COMPLETED`).
-- **Retention period mismatch**: When DescribeDomain returns a short `workflowExecutionRetentionPeriodInDays` (e.g., "1"), warn that execution history will be purged quickly, which may hinder debugging.
-- **Long-running executions**: If DescribeWorkflowExecution shows `executionStatus: "OPEN"` with a `startTimestamp` older than the configured `executionStartToCloseTimeout`, the execution may be approaching timeout.
-
-## Playbook
-
-### 1. Start and Monitor a Workflow Execution
-
-1. Call **RegisterDomain** with `name` and `workflowExecutionRetentionPeriodInDays` (skip if domain already exists).
-2. Call **RegisterWorkflowType** with `domain`, `name`, `version`, and desired defaults (task list, timeouts, child policy).
-3. Call **RegisterActivityType** for each activity the workflow will use.
-4. Call **StartWorkflowExecution** with `domain`, `workflowId` (your unique ID), `workflowType`, and optional `input`. Save the returned `runId`.
-5. Call **DescribeWorkflowExecution** with `domain` and `execution: {workflowId, runId}` to check `executionStatus` and `openCounts`.
-6. Call **GetWorkflowExecutionHistory** to inspect events. Page through using `nextPageToken` until all events are retrieved.
-
-### 2. Implement an Activity Worker Poll Loop
-
-1. Call **PollForActivityTask** with `domain`, `taskList`, and a worker `identity` string.
-2. If `taskToken` is empty, loop back to step 1 (no work available).
-3. Periodically call **RecordActivityTaskHeartbeat** with the `taskToken` to prevent timeout. Check the returned `cancelRequested` flag.
-4. If `cancelRequested` is true, clean up and call **RespondActivityTaskCanceled** with the `taskToken`.
-5. On success, call **RespondActivityTaskCompleted** with `taskToken` and `result`.
-6. On failure, call **RespondActivityTaskFailed** with `taskToken`, `reason`, and `details`.
-7. Return to step 1.
-
-### 3. Investigate a Stuck Workflow
-
-1. Call **DescribeWorkflowExecution** to check `executionStatus` and `openCounts`.
-2. If `openCounts.openDecisionTasks` > 0 but no decider is processing, check that deciders are polling the correct `taskList`.
-3. Call **GetWorkflowExecutionHistory** with `reverseOrder: true` to see the most recent events first. Look for `DecisionTaskTimedOut` or `ActivityTaskTimedOut` events.
-4. If the workflow is unrecoverable, call **TerminateWorkflowExecution** with a descriptive `reason`. Set `childPolicy` to control what happens to child workflows.
-5. Alternatively, call **SignalWorkflowExecution** to nudge the workflow with corrective data if the decider logic supports signal handling.
-
-### 4. Deprecate and Replace a Workflow Type
-
-1. Call **DescribeWorkflowType** on the old version to confirm its configuration and current status.
-2. Call **RegisterWorkflowType** with the same `name` but a new `version`, along with updated defaults.
-3. Call **ListOpenWorkflowExecutions** filtered by `typeFilter` on the old version to check for in-flight executions.
-4. Wait for or terminate remaining open executions of the old type.
-5. Call **DeprecateWorkflowType** on the old version. No new executions can be started with it after this.
-6. If deprecation was premature, call **UndeprecateWorkflowType** to restore it.
-
-### 5. Audit Domain Health and Backlog
-
-1. Call **ListDomains** with `registrationStatus: "REGISTERED"` to enumerate all active domains.
-2. For each domain, call **CountOpenWorkflowExecutions** with a broad `startTimeFilter` to gauge active load.
-3. Call **CountPendingActivityTasks** and **CountPendingDecisionTasks** for each critical task list. Flag any with `truncated: true`.
-4. Call **ListClosedWorkflowExecutions** filtered by `closeStatusFilter: {status: "TIMED_OUT"}` to find executions that failed due to timeouts.
-5. Call **DescribeDomain** to verify `workflowExecutionRetentionPeriodInDays` is sufficient for your debugging and compliance needs.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

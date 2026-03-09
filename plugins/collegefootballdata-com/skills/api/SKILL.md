@@ -182,88 +182,70 @@ https://api.collegefootballdata.com/
 |--------|------|-------------|
 | GET | /game/box/advanced | Retrieves an advanced box score for a game |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What's the all-time record between Alabama and Auburn?" -> GET /teams/matchup
-- "Show me the current scoreboard for today's games" -> GET /scoreboard
-- "Who are the top recruiting prospects from Texas?" -> GET /recruiting/players
-- "What are the SP+ ratings for Ohio State this year?" -> GET /ratings/sp
-- "Find me a player named Travis Hunter" -> GET /player/search
-- "What was the win probability during game 401520101?" -> GET /metrics/wp
-- "Show me live play-by-play for the current game" -> GET /live/plays
-- "What are the betting lines for Week 5?" -> GET /lines
-- "How did Clemson perform in advanced stats last season?" -> GET /stats/season/advanced
-- "Who entered the transfer portal this year?" -> GET /player/portal
-- "What's the expected points value on 3rd and 7?" -> GET /ppa/predicted
-- "Show me the AP rankings for Week 8" -> GET /rankings
-- "What NFL draft picks came from the SEC?" -> GET /draft/picks
-- "What's the weather forecast for Saturday's games?" -> GET /games/weather
-- "Show me all drives from the Michigan vs Ohio State game" -> GET /drives
-
-## Response Tips
-
-- **Teams/Conferences/Venues**: Flat arrays of objects; no pagination. Cache these reference lists locally since they rarely change.
-- **Stats/Ratings/Rankings**: Nested category objects are common. Stats endpoints group by `category` field; always check `statType` or `category` to find the metric you need.
-- **Games/Plays/Drives**: Large result sets filtered by required `year` + `week`. If responses are empty, verify `seasonType` (defaults to "regular" -- use "postseason" for bowl games).
-- **Recruiting**: Results vary by `classification` (HighSchool, JUCO, PrepSchool). Omitting it returns all types mixed together.
-- **Player endpoints**: `player/search` returns basic info only; cross-reference with `stats/player/season` or `player/usage` for performance data using the returned player ID.
-- **Live/Scoreboard**: Responses include nullable fields (`period`, `down`, `distance`) when games are in intermission or haven't started. Check `status` before reading play state.
-- **Matchup**: The `games` array inside the response contains per-game detail; `team1Wins`/`team2Wins`/`ties` are the rollup totals.
-- **Advanced box score** (`game/box/advanced`): Deeply nested -- `teams` contains keyed arrays (ppa, rushing, successRates, etc.) and `players` has separate ppa and usage sub-arrays.
-
-## Anomaly Flags
-
-- **Empty responses on valid queries**: Surface when a year/week combination returns no data -- likely the season hasn't started or the week number is wrong. Suggest checking `/calendar` for valid weeks.
-- **Nullable play state fields**: When `/live/plays` returns `down: null` or `distance: null`, flag that the game may be in halftime, a timeout, or not yet started.
-- **seasonType mismatch**: If a user asks about a bowl game or playoff and gets no results, proactively suggest switching `seasonType` from "regular" to "postseason".
-- **Stale scoreboard data**: `/scoreboard` reflects a point-in-time snapshot. Flag if a user appears to be polling for live updates -- suggest `/live/plays` with a specific `gameId` instead.
-- **Missing WEPA data**: WEPA endpoints may return empty for non-FBS teams or older seasons. Surface this when results are unexpectedly empty and suggest checking `/teams/fbs` to confirm FBS status.
-- **Bearer auth failures**: All endpoints require authentication. If a 401 or 403 is returned, flag immediately and confirm the Bearer token is set before retrying other calls.
-- **Large play-by-play responses**: `/plays` for a full week can return thousands of records. Flag when a broad query (no team filter) is issued and suggest narrowing by team, offense, or defense.
-
-## Playbook
-
-### Compare Two Rival Teams Historically
-
-1. Call `GET /teams/matchup?team1=Alabama&team2=Auburn` to get the all-time series record, win counts, and per-game results.
-2. Call `GET /ratings/sp?year=2025&team=Alabama` and `GET /ratings/sp?year=2025&team=Auburn` to compare current SP+ ratings.
-3. Call `GET /stats/season/advanced?year=2025&team=Alabama` and the same for Auburn to compare advanced offensive and defensive metrics.
-4. Optionally call `GET /teams/ats?year=2025&team=Alabama` and for Auburn to see against-the-spread records.
-5. Summarize head-to-head record, current ratings gap, and statistical advantages.
-
-### Scout a Recruit or Transfer Portal Player
-
-1. Call `GET /player/search?searchTerm=<name>` to find the player and get their ID.
-2. If they're a recruit, call `GET /recruiting/players?year=<year>&team=<team>` to get their recruiting rating and ranking.
-3. If they're a transfer, call `GET /player/portal?year=<year>` and filter for the player to see origin/destination.
-4. Call `GET /stats/player/season?year=<year>&team=<team>` to pull their on-field production stats.
-5. Call `GET /player/usage?year=<year>&playerId=<id>` to see snap counts and usage rates by play type.
-
-### Analyze a Specific Game in Depth
-
-1. Call `GET /games?year=<year>&week=<week>&team=<team>` to find the game and get its `id`.
-2. Call `GET /game/box/advanced?id=<gameId>` for the full advanced box score including PPA, success rates, havoc, and explosiveness.
-3. Call `GET /drives?year=<year>&week=<week>&team=<team>` to review drive-level outcomes.
-4. Call `GET /plays?year=<year>&week=<week>&team=<team>` for full play-by-play detail.
-5. Call `GET /metrics/wp?gameId=<gameId>` to chart win probability swings throughout the game.
-
-### Build a Weekly Preview with Betting Context
-
-1. Call `GET /calendar?year=<year>` to confirm the current week number and date range.
-2. Call `GET /games?year=<year>&week=<week>` to get all matchups for the week.
-3. Call `GET /lines?year=<year>&week=<week>` to pull spread, over/under, and moneyline from available providers.
-4. Call `GET /metrics/wp/pregame?year=<year>&week=<week>` to get model-based pregame win probabilities.
-5. Call `GET /games/weather?year=<year>&week=<week>` to check for weather factors that could affect totals or game plans.
-
-### Evaluate Team Recruiting Trajectory
-
-1. Call `GET /recruiting/teams?year=<year>&team=<team>` for the current class ranking and point total.
-2. Call `GET /recruiting/groups?team=<team>&startYear=<start>&endYear=<end>` to see multi-year recruiting trends by position group.
-3. Call `GET /talent?year=<year>` to see where the team ranks in overall composite talent.
-4. Call `GET /player/returning?year=<year>&team=<team>` to assess how much production is coming back.
-5. Cross-reference with `GET /ratings/sp?year=<year>&team=<team>` to see if recruiting talent is translating to on-field performance.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all season?" -> GET /wepa/team/season
+- "List all passing?" -> GET /wepa/players/passing
+- "List all rushing?" -> GET /wepa/players/rushing
+- "List all kicking?" -> GET /wepa/players/kicking
+- "List all teams?" -> GET /teams
+- "List all fbs?" -> GET /teams/fbs
+- "List all matchup?" -> GET /teams/matchup
+- "List all ats?" -> GET /teams/ats
+- "List all roster?" -> GET /roster
+- "List all conferences?" -> GET /conferences
+- "List all talent?" -> GET /talent
+- "List all venues?" -> GET /venues
+- "List all season?" -> GET /stats/player/season
+- "List all season?" -> GET /stats/season
+- "List all categories?" -> GET /stats/categories
+- "List all advanced?" -> GET /stats/season/advanced
+- "List all advanced?" -> GET /stats/game/advanced
+- "List all havoc?" -> GET /stats/game/havoc
+- "List all players?" -> GET /recruiting/players
+- "List all teams?" -> GET /recruiting/teams
+- "List all groups?" -> GET /recruiting/groups
+- "List all sp?" -> GET /ratings/sp
+- "List all conferences?" -> GET /ratings/sp/conferences
+- "List all srs?" -> GET /ratings/srs
+- "List all elo?" -> GET /ratings/elo
+- "List all fpi?" -> GET /ratings/fpi
+- "List all rankings?" -> GET /rankings
+- "List all plays?" -> GET /plays
+- "List all types?" -> GET /plays/types
+- "List all stats?" -> GET /plays/stats
+- "List all types?" -> GET /plays/stats/types
+- "List all search?" -> GET /player/search
+- "List all usage?" -> GET /player/usage
+- "List all returning?" -> GET /player/returning
+- "List all portal?" -> GET /player/portal
+- "List all predicted?" -> GET /ppa/predicted
+- "List all teams?" -> GET /ppa/teams
+- "List all games?" -> GET /ppa/games
+- "List all games?" -> GET /ppa/players/games
+- "List all season?" -> GET /ppa/players/season
+- "List all wp?" -> GET /metrics/wp
+- "List all pregame?" -> GET /metrics/wp/pregame
+- "List all ep?" -> GET /metrics/fg/ep
+- "List all plays?" -> GET /live/plays
+- "List all lines?" -> GET /lines
+- "List all info?" -> GET /info
+- "List all games?" -> GET /games
+- "List all teams?" -> GET /games/teams
+- "List all players?" -> GET /games/players
+- "List all media?" -> GET /games/media
+- "List all weather?" -> GET /games/weather
+- "List all records?" -> GET /records
+- "List all calendar?" -> GET /calendar
+- "List all scoreboard?" -> GET /scoreboard
+- "List all drives?" -> GET /drives
+- "List all teams?" -> GET /draft/teams
+- "List all positions?" -> GET /draft/positions
+- "List all picks?" -> GET /draft/picks
+- "List all coaches?" -> GET /coaches
+- "List all advanced?" -> GET /game/box/advanced
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

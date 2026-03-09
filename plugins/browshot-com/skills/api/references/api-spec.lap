@@ -9,93 +9,110 @@
 
 @group screenshot
 @endpoint GET /screenshot/create
-@required {url: any, instance_id: any}
-@optional {size: any, cache: any, delay: any, flash_delay: any, screen_width: any, screen_height: any, priority: any, referer: any, post_data: any, cookie: any, script: any, details: any, html: any, max_wait: any, headers: any, shots: any, shot_interval: any, hosting: any, hosting_height: any, hosting_width: any, hosting_scale: any, hosting_bucket: any, hosting_file: any, hosting_headers: any}
-@returns(200)
-@errors {403}
+@desc Request a screenshot
+@required {url: any # URL of the page to get a screenshot for, instance_id: any # instance ID to use}
+@optional {size: any # screenshot size - "screen" (default) or "page", cache: any # use a previous screenshot (same URL, same instance) if it was done within <cache_value> seconds. The default value is 24hours. Specify cache=0 if you want a new screenshot., delay: any # number of seconds to wait after the page has loaded. This is used to let JavaScript run longer before taking the screenshot. Use delay=0 to take screenshots faster., flash_delay: any # number of seconds to wait after the page has loaded if Flash elements are present. Use flash_delay=0 to take screenshots faster., screen_width: any # width of the browser window. For desktop browsers only., screen_height: any # height of the browser window. For desktop browsers only. (Note: full-page screenshots can have a height of up to 15,000px), priority: any # assign priority to the screenshot (for private instances only), referer: any # use a custom referrer header - paid screenshots only, post_data: any # send a POST requests with post_data, useful for filling out forms - paid screenshots only, cookie: any # set a cookie for the URL requested (see Custom POST Data, Referer and Cookie) Cookies should be separated by a ; - paid screenshots only, script: any # URL of javascript file to execute after the page load event, details: any # level of information available with screenshot/info, html: any # saves the HTML of the rendered page which can be retrieved by the API call screenshot/html. This feature costs *1 credit* per screenshot., max_wait: any # maximum number of seconds to wait before triggering the PageLoad event. Note that delay will still be used. (default: 0 = disabled), headers: any # any custom HTTP headers. (Not supported with Internet Explorer), shots: any # take multiple screenshots of the same page. This costs 1 additional credit for every 2 additional screenshots., shot_interval: any # number of seconds between 2 screenshots, hosting: any # hosting option - s3 or browshot, hosting_height: any # maximum height of the thumbnail to host, hosting_width: any # maximum height of the thumbnail to host, hosting_scale: any # scale of the thumbnail to host, hosting_bucket: any # S3 bucket to upload the screenshot or thumbnail (required for S3), hosting_file: any # file name to use (for S3 only), hosting_headers: any # list of headers to add to the S3 object (for S3 only)}
+@returns(200) Request accepted
+@errors {403: Error}
 
 @endpoint GET /screenshot/multiple
-@required {url: any, instance_id: any}
-@optional {size: any, cache: any, delay: any, flash_delay: any, screen_width: any, screen_height: any, priority: any, referer: any, post_data: any, cookie: any, script: any, details: any, html: any, max_wait: any, headers: any, hosting: any, hosting_height: any, hosting_width: any, hosting_scale: any, hosting_bucket: any, hosting_file: any, hosting_headers: any}
-@returns(200)
-@errors {403}
+@desc Request multiple screenshots
+@required {url: any # URL of the page to get a screenshot for. You can specify multiple url parameters (up to 10)., instance_id: any # instance ID to use. You can specify multiple instance_id parameters (up to 10).}
+@optional {size: any # screenshot size - "screen" (default) or "page", cache: any # use a previous screenshot (same URL, same instance) if it was done within <cache_value> seconds. The default value is 24hours. Specify cache=0 if you want a new screenshot., delay: any # number of seconds to wait after the page has loaded. This is used to let JavaScript run longer before taking the screenshot. Use delay=0 to take screenshots faster., flash_delay: any # number of seconds to wait after the page has loaded if Flash elements are present. Use flash_delay=0 to take screenshots faster., screen_width: any # width of the browser window. For desktop browsers only., screen_height: any # height of the browser window. For desktop browsers only. (Note: full-page screenshots can have a height of up to 15,000px), priority: any # assign priority to the screenshot (for private instances only), referer: any # use a custom referrer header - paid screenshots only, post_data: any # send a POST requests with post_data, useful for filling out forms - paid screenshots only, cookie: any # set a cookie for the URL requested (see Custom POST Data, Referer and Cookie) Cookies should be separated by a ; - paid screenshots only, script: any # URL of javascript file to execute after the page load event, details: any # level of information available with screenshot/info, html: any # saves the HTML of the rendered page which can be retrieved by the API call screenshot/html. This feature costs *1 credit* per screenshot., max_wait: any # maximum number of seconds to wait before triggering the PageLoad event. Note that delay will still be used. (default: 0 = disabled), headers: any # any custom HTTP headers. (Not supported with Internet Explorer), hosting: any # hosting option - s3 or browshot, hosting_height: any # maximum height of the thumbnail to host, hosting_width: any # maximum height of the thumbnail to host, hosting_scale: any # scale of the thumbnail to host, hosting_bucket: any # S3 bucket to upload the screenshot or thumbnail (required for S3), hosting_file: any # file name to use (for S3 only), hosting_headers: any # list of headers to add to the S3 object (for S3 only)}
+@returns(200) Request accepted
+@errors {403: Error}
 
 @endpoint GET /screenshot/info
-@required {id: any}
-@optional {details: any}
-@returns(200)
+@desc Query screenshot status
+@required {id: any # screenshot ID received from /api/v1/screenshot/create}
+@optional {details: any # level of details about the screenshot and the page}
+@returns(200) Screenshot found
 
 @endpoint GET /screenshot/list
-@optional {limit: any, status: any}
-@returns(200)
+@desc Get information about screenshots
+@optional {limit: any # maximum number of screenshots' information to return, status: any # get list of screenshot in a given status (error, finished, in_process)}
+@returns(200) list of screenshot information
 
 @endpoint GET /screenshot/search
-@required {url: any}
-@optional {limit: any, status: any}
-@returns(200)
+@desc Search for screenshots
+@required {url: any # look for a string matching the URL requested}
+@optional {limit: any # maximum number of screenshots' information to return, status: any # get list of screenshot in a given status (error, finished, in_process)}
+@returns(200) list of screenshot information
 
 @endpoint GET /screenshot/host
-@required {id: any, hosting: any}
-@optional {width: any, height: any, scale: any, bucket: any, file: any, headers: any}
-@returns(200)
+@desc Host thumbnails on your own S3 account or on Browshot.
+@required {id: any # screenshot ID, hosting: any # hosting option: s3 or browshot}
+@optional {width: any # width of the thumbnail, height: any # height of the thumbnail, scale: any # scale of the thumbnail, bucket: any # S3 bucket to upload the screenshot or thumbnail - required with hosting=s3, file: any # file name to use - optional, used with hosting=s3, headers: any # HTTP headers to add to your S3 object - optional, used with hosting=s3}
+@returns(200) list of screenshot information
 
 @endpoint GET /screenshot/thumbnail
-@required {id: any}
-@optional {width: any, height: any, scale: any, zoom: any, ratio: any, left: any, right: any, top: any, bottom: any, format: any, shot: any, quality: any}
-@returns(200)
-@errors {404}
+@desc Retrieve a thumbnail image
+@required {id: any # screenshot ID}
+@optional {width: any # width of the thumbnail, height: any # height of the thumbnail, scale: any # scale of the thumbnail, zoom: any # zoom 1 to 100 percent, ratio: any # Use fit to keep the original page ration, and fill to get a thumbnail for the exact width and height.  specified. If you provide both width and height, you need to specify the ratio: fit to keep the original width/height ratio (the thumbnail might be smaller than the specified width and height), or fill to crop the image if necessary., left: any # left edge of the area to be cropped, right: any # right edge of the area to be cropped, top: any # top edge of the area to be cropped, bottom: any # bottom edge of the area to be cropped, format: any # image as PNG or JPEG, shot: any # get the second or third screenshot if multiple screenshots were requested, quality: any # JPEG quality factor (for JPEG thumbnails only)}
+@returns(200) thumbnail
+@errors {404: Screenshot not found}
 
 @endpoint GET /screenshot/share
-@required {id: any}
-@optional {note: any}
-@returns(200)
+@desc Share a screenshot
+@required {id: any # screenshot ID}
+@optional {note: any # note to add on the sharing page}
+@returns(200) list of screenshot information
 
 @endpoint GET /screenshot/delete
-@required {id: any}
-@optional {data: any}
-@returns(200)
+@desc Delete screenshot data
+@required {id: any # screenshot ID}
+@optional {data: any # data to remove. You can specify multiple of them (separated by a ,): *image* (image files), *url* (url requested), *metadata* (time added, time finished, post data, cookie and referer used for the screenshot), *all* (all data and files)}
+@returns(200) list of screenshot information
 
 @endpoint GET /screenshot/html
-@required {id: any}
+@desc Get the HTML code
+@required {id: any # screenshot ID}
 
 @endgroup
 
 @group batch
 @endpoint POST /batch/ceate
-@required {instance_id: any}
-@optional {file: any, size: any, name: any, width: any, height: any, delay: any, flash_delay: any, screen_width: any, screen_height: any, priority: any, referer: any, post_data: any, cookie: any, script: any, details: any, html: any, max_wait: any, headers: any, format: any, hosting: any, hosting_height: any, hosting_width: any, hosting_scale: any, hosting_bucket: any, hosting_file: any, hosting_headers: any}
-@returns(200)
+@desc Requests thousands of screenshtos at once
+@required {instance_id: any # instance ID to use}
+@optional {file: any # text file to use, size: any # screenshots size - "screen" (default) or "page", name: any # name of the batch, width: any # thumbnail width., height: any # thumbnail height, delay: any # number of seconds to wait after the page has loaded. This is used to let JavaScript run longer before taking the screenshot. Use delay=0 to take screenshots faster., flash_delay: any # number of seconds to wait after the page has loaded if Flash elements are present. Use flash_delay=0 to take screenshots faster., screen_width: any # width of the browser window. For desktop browsers only., screen_height: any # height of the browser window. For desktop browsers only. (Note: full-page screenshots can have a height of up to 15,000px), priority: any # assign priority to the screenshot (for private instances only), referer: any # use a custom referrer header - paid screenshots only, post_data: any # send a POST requests with post_data, useful for filling out forms - paid screenshots only, cookie: any # set a cookie for the URL requested (see Custom POST Data, Referer and Cookie) Cookies should be separated by a ; - paid screenshots only, script: any # URL of javascript file to execute after the page load event, details: any # level of information available with screenshot/info, html: any # saves the HTML of the rendered page which can be retrieved by the API call screenshot/html. This feature costs *1 credit* per screenshot., max_wait: any # maximum number of seconds to wait before triggering the PageLoad event. Note that delay will still be used. (default: 0 = disabled), headers: any # any custom HTTP headers. (Not supported with Internet Explorer), format: any # image as PNG or JPEG, hosting: any # hosting option - s3 or browshot, hosting_height: any # maximum height of the thumbnail to host, hosting_width: any # maximum height of the thumbnail to host, hosting_scale: any # scale of the thumbnail to host, hosting_bucket: any # S3 bucket to upload the screenshot or thumbnail (required for S3), hosting_file: any # file name to use (for S3 only), hosting_headers: any # list of headers to add to the S3 object (for S3 only)}
+@returns(200) batch information
 
 @endpoint GET /batch/info
-@required {id: any}
-@returns(200)
+@desc Get the batch status
+@required {id: any # batch ID}
+@returns(200) batch information
 
 @endgroup
 
 @group account
 @endpoint GET /account/info
-@optional {details: any}
-@returns(200)
+@desc Get information about your account
+@optional {details: any # level of information returned}
+@returns(200) Account information
 
 @endgroup
 
 @group instance
 @endpoint GET /instance/info
-@required {id: any}
-@returns(200)
+@desc Get information about an instance
+@required {id: any # instance ID}
+@returns(200) Instance information
 
 @endpoint GET /instance/list
-@returns(200)
+@desc Get all instances
+@returns(200) Instance information
 
 @endgroup
 
 @group browser
 @endpoint GET /browser/info
-@required {id: any}
-@returns(200)
+@desc Get information about a browser
+@required {id: any # browser ID}
+@returns(200) Browser information
 
 @endpoint GET /browser/list
-@returns(200)
+@desc Get all browsers
+@returns(200) Instance information
 
 @endgroup
 

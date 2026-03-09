@@ -41,81 +41,23 @@ Not specified.
 | POST | /applications/{applicationId}/unshare | Unshares an application from an AWS Organization.This operation can be called only from the organization's master account. |
 | PATCH | /applications/{applicationId} | Updates the specified application. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I publish a new serverless application?" -> POST /applications
-- "How do I deploy an application to my AWS account?" -> POST /applications/{applicationId}/changesets
-- "What applications are available in the repository?" -> GET /applications
-- "How do I get details about a specific application?" -> GET /applications/{applicationId}
-- "How do I update my application's description or labels?" -> PATCH /applications/{applicationId}
-- "How do I delete an application I no longer need?" -> DELETE /applications/{applicationId}
-- "How do I create a new version of my application?" -> PUT /applications/{applicationId}/versions/{semanticVersion}
-- "What versions exist for this application?" -> GET /applications/{applicationId}/versions
-- "Who can access my application and what are the sharing policies?" -> GET /applications/{applicationId}/policy
-- "How do I share or restrict access to my application?" -> PUT /applications/{applicationId}/policy
-- "How do I stop sharing an application with an organization?" -> POST /applications/{applicationId}/unshare
-- "What nested applications does this app depend on?" -> GET /applications/{applicationId}/dependencies
-- "How do I get a CloudFormation template for an application?" -> POST /applications/{applicationId}/templates
-- "What is the status of my template creation request?" -> GET /applications/{applicationId}/templates/{templateId}
-- "How do I deploy a specific older version of an application?" -> POST /applications/{applicationId}/changesets (with SemanticVersion parameter)
-
-## Response Tips
-
-- **Application listings** (GET /applications, GET .../versions, GET .../dependencies): Paginated via `NextToken` -- keep calling with the returned `NextToken` until it is absent or empty. Use `maxItems` to control page size.
-- **Application detail** (GET/POST/PATCH .../applications): The nested `Version` object contains `ParameterDefinitions` and `RequiredCapabilities` -- inspect these before deploying to understand what inputs and IAM capabilities are needed.
-- **Changeset creation** (POST .../changesets): Returns IDs only (`ChangeSetId`, `StackId`) -- use AWS CloudFormation APIs to monitor the actual deployment progress.
-- **Template creation** (POST/GET .../templates): The `Status` field progresses through states (PREPARING, ACTIVE, EXPIRED) -- poll GET .../templates/{templateId} until `Status` is ACTIVE, then use the `TemplateUrl`.
-- **Policy endpoints** (GET/PUT .../policy): `Statements` is an array of policy statements -- an empty array means the application is private.
-- **Delete and unshare** (DELETE, POST .../unshare): Return no body on success -- a 204 or empty 200 indicates the operation succeeded.
-
-## Anomaly Flags
-
-- **Template stuck in PREPARING**: If GET .../templates/{templateId} returns `Status: PREPARING` for more than 60 seconds, surface a warning -- template generation may have failed silently.
-- **ExpirationTime approaching**: Template URLs expire. If `ExpirationTime` is within 15 minutes of the current time, warn the user to download or use the template immediately.
-- **RequiredCapabilities non-empty**: When deploying via changesets, if the application version lists `RequiredCapabilities` (e.g., CAPABILITY_IAM, CAPABILITY_RESOURCE_POLICY), the user must explicitly acknowledge these -- flag them before creating the changeset.
-- **IsVerifiedAuthor is false**: When retrieving third-party applications, surface that the author is unverified so the user can assess trustworthiness.
-- **Empty Statements in policy**: If GET .../policy returns an empty `Statements` array, note that the application is currently private and not shared with anyone.
-- **Pagination truncation**: If a list response includes `NextToken` but the user did not request all pages, flag that results are incomplete.
-- **ResourcesSupported is false**: If a version reports `ResourcesSupported: false`, warn that the template contains resources not yet supported by the service and deployment may fail.
-
-## Playbook
-
-### 1. Publish and share a new serverless application
-
-1. POST /applications with `Name`, `Author`, `Description`, and either `TemplateBody`/`TemplateUrl` plus `ReadmeBody`/`ReadmeUrl`.
-2. Note the returned `ApplicationId`.
-3. PUT /applications/{applicationId}/policy with `Statements` granting access (use principal `*` for public, or specific account IDs for private sharing).
-4. Verify with GET /applications/{applicationId}/policy to confirm the policy is set correctly.
-
-### 2. Deploy an application from the repository
-
-1. GET /applications to browse available applications (paginate with `nextToken` if needed).
-2. GET /applications/{applicationId} to review details, checking `Version.ParameterDefinitions` for required inputs and `Version.RequiredCapabilities` for IAM acknowledgments.
-3. POST /applications/{applicationId}/changesets with `StackName`, any `ParameterOverrides`, and the required `Capabilities`.
-4. Use the returned `ChangeSetId` and `StackId` with AWS CloudFormation APIs to monitor and execute the deployment.
-
-### 3. Release a new version of an existing application
-
-1. GET /applications/{applicationId} to confirm the current version and application state.
-2. PUT /applications/{applicationId}/versions/{semanticVersion} with the new `SemanticVersion` and either `TemplateBody`/`TemplateUrl`.
-3. Verify the new version appears with GET /applications/{applicationId}/versions.
-4. Optionally PATCH /applications/{applicationId} to update the description or labels to reflect the new release.
-
-### 4. Audit dependencies before deploying a nested application
-
-1. GET /applications/{applicationId}/dependencies (paginate with `nextToken` until all dependencies are retrieved).
-2. For each dependency, GET /applications/{dependencyApplicationId} to review its author, verification status, and required capabilities.
-3. Check `IsVerifiedAuthor` and `RequiredCapabilities` for each dependency to assess risk.
-4. Once satisfied, proceed with POST /applications/{applicationId}/changesets, ensuring all nested capabilities are included in `Capabilities`.
-
-### 5. Generate and retrieve a CloudFormation template
-
-1. POST /applications/{applicationId}/templates, optionally specifying `SemanticVersion` to target a specific version.
-2. Note the returned `TemplateId` and `Status`.
-3. Poll GET /applications/{applicationId}/templates/{templateId} until `Status` is `ACTIVE`.
-4. Use the `TemplateUrl` from the response to download or reference the template -- act before `ExpirationTime` passes.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a application?" -> POST /applications
+- "Update a version?" -> PUT /applications/{applicationId}/versions/{semanticVersion}
+- "Create a changeset?" -> POST /applications/{applicationId}/changesets
+- "Create a template?" -> POST /applications/{applicationId}/templates
+- "Delete a application?" -> DELETE /applications/{applicationId}
+- "Get application details?" -> GET /applications/{applicationId}
+- "List all policy?" -> GET /applications/{applicationId}/policy
+- "Get template details?" -> GET /applications/{applicationId}/templates/{templateId}
+- "List all dependencies?" -> GET /applications/{applicationId}/dependencies
+- "List all versions?" -> GET /applications/{applicationId}/versions
+- "List all applications?" -> GET /applications
+- "Create a unshare?" -> POST /applications/{applicationId}/unshare
+- "Partially update a application?" -> PATCH /applications/{applicationId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

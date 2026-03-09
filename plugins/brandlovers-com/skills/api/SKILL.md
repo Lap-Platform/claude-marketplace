@@ -83,90 +83,39 @@ https://api.brandlovers.com/marketplace/v1
 | POST | /ticket/{ticketId}/message | Add new message to trouble ticket |
 | PUT | /ticket/{ticketId}/status | Update trouble ticket status |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all my products?" -> GET /products
-- "How do I add a new product to the marketplace?" -> POST /product
-- "How do I bulk upload multiple products at once?" -> POST /products
-- "How do I check the status of my products?" -> GET /products/status
-- "Which of my products are currently selling?" -> GET /products/status/selling
-- "How do I update a specific product's details?" -> PUT /product/{skuSellerId}
-- "How do I change the price of a single product?" -> PUT /product/{skuSellerId}/prices
-- "How do I update stock for multiple products at once?" -> PUT /products/stocks
-- "How do I bulk update prices across my catalog?" -> PUT /products/prices
-- "How do I see all new orders waiting to be processed?" -> GET /orders/status/new
-- "How do I mark an order as shipped?" -> POST /order/{orderId}/shipment/sent
-- "How do I process a return for an order?" -> POST /order/{orderId}/shipment/return
-- "How do I get the details of a specific order?" -> GET /order/{orderId}
-- "How do I open a support ticket?" -> POST /ticket
-- "How do I reply to an existing support ticket?" -> POST /ticket/{ticketId}/message
-
-## Response Tips
-
-- **Product listings** (`GET /products`, `/products/status`, `/products/status/selling`): Paginated via `offset`/`limit` params. Always check if result count equals `limit` to determine if more pages exist.
-- **Order listings** (`GET /orders`, `/orders/status/*`, `/orders/shipments/*`): Same `offset`/`limit` pagination. Filter by status using the specific status endpoints rather than filtering client-side.
-- **Single resource lookups** (`GET /product/{skuSellerId}`, `GET /order/{orderId}`): Return 404 when the resource does not exist. Distinguish from 403 (valid resource, no permission).
-- **Bulk mutations** (`PUT /products/prices`, `/products/stocks`, `/products/status`): Accept arrays in the body. Check individual item results in the response for partial failures.
-- **Shipment actions** (`POST /order/{orderId}/shipment/*`): Each action is a state transition. A 400 typically means the order is not in a valid state for that transition.
-- **Tickets** (`GET /tickets`, `/ticket/{ticketId}/messages`): Support `status` filtering and `offset`/`limit` pagination. Message threads are per-ticket.
-
-## Anomaly Flags
-
-- **401 on any endpoint**: API key is missing, expired, or malformed. Surface immediately -- all subsequent calls will also fail.
-- **403 on read endpoints**: The authenticated seller does not have permission to access this resource. May indicate a misconfigured account or attempting to access another seller's data.
-- **404 on known SKU or order**: The resource may have been deleted or the ID format is wrong. Flag if a previously valid ID starts returning 404.
-- **400 on bulk operations**: Likely partial validation failure. Surface which items in the batch were rejected so the user can fix and retry only the failures.
-- **Repeated 400 on shipment state transitions**: The order is stuck in an unexpected state. Surface the current order status (via `GET /order/{orderId}`) so the user can understand why the transition is blocked.
-- **Pagination returning zero results unexpectedly**: If `GET /orders/status/new` returns empty when orders are expected, flag a possible filter or date range issue.
-- **Mixed partial delivery states**: If orders appear in both `partiallyDelivered` and `partiallySent`, surface these as needing attention -- they may require manual resolution.
-
-## Playbook
-
-### 1. Onboard a New Product Catalog
-
-1. Prepare product data as an array of product objects.
-2. Call `POST /products` with the full batch in `{products: [...]}`.
-3. Check the response for any rejected items (400 errors per item).
-4. Call `GET /products/status` to confirm all products are in the system.
-5. Call `PUT /products/prices` to set initial pricing for all SKUs.
-6. Call `PUT /products/stocks` to set initial inventory levels.
-7. Call `PUT /products/status` to activate products for selling.
-8. Verify with `GET /products/status/selling` that products are live.
-
-### 2. Fulfill an Order End-to-End
-
-1. Call `GET /orders/status/new` to retrieve unprocessed orders.
-2. For each order, call `GET /order/{orderId}` to get full details (items, shipping address).
-3. Prepare the shipment, then call `POST /order/{orderId}/shipment/sent` with tracking info.
-4. Confirm the shipment appears via `GET /orders/shipments/shipped`.
-5. Once delivery is confirmed, call `POST /order/{orderId}/shipment/delivered`.
-6. Verify final state via `GET /orders/status/delivered`.
-
-### 3. Handle a Return or Exchange
-
-1. Call `GET /order/{orderId}` to review the order details and current status.
-2. For a return: call `POST /order/{orderId}/shipment/return` with the return reason and items.
-3. For an exchange: call `POST /order/{orderId}/shipment/exchange` with exchange details.
-4. If the order must be canceled instead, call `POST /order/{orderId}/shipment/cancel`.
-5. Monitor status via `GET /orders/status/canceled` or `GET /orders/status/delivered` as appropriate.
-
-### 4. Monitor Order Pipeline Health
-
-1. Call `GET /orders/status/new` to check the backlog of unprocessed orders.
-2. Call `GET /orders/status/sent` and `GET /orders/shipments/shipped` to track in-transit orders.
-3. Call `GET /orders/status/partiallySent` and `GET /orders/status/partiallyDelivered` to find orders needing attention.
-4. Call `GET /orders/status/canceled` to review recent cancellations for patterns.
-5. For any flagged orders, call `GET /order/{orderId}` for full details before taking action.
-
-### 5. Manage Support Tickets
-
-1. Call `GET /tickets` with `status` filter to see open tickets.
-2. For each ticket needing attention, call `GET /ticket/{ticketId}/messages` to read the thread.
-3. Reply with `POST /ticket/{ticketId}/message` including the response body.
-4. When resolved, call `PUT /ticket/{ticketId}/status` to close the ticket.
-5. To escalate or create a new issue, call `POST /ticket` with the details.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a product?" -> POST /products
+- "List all products?" -> GET /products
+- "Get product details?" -> GET /product/{skuSellerId}
+- "Update a product?" -> PUT /product/{skuSellerId}
+- "Create a product?" -> POST /product
+- "List all status?" -> GET /products/status
+- "List all selling?" -> GET /products/status/selling
+- "List all orders?" -> GET /orders
+- "Create a delivered?" -> POST /orders/shipments/delivered
+- "List all delivered?" -> GET /orders/shipments/delivered
+- "Create a shipped?" -> POST /orders/shipments/shipped
+- "List all shipped?" -> GET /orders/shipments/shipped
+- "List all approved?" -> GET /orders/status/approved
+- "List all canceled?" -> GET /orders/status/canceled
+- "List all delivered?" -> GET /orders/status/delivered
+- "List all new?" -> GET /orders/status/new
+- "List all partiallyDelivered?" -> GET /orders/status/partiallyDelivered
+- "List all partiallySent?" -> GET /orders/status/partiallySent
+- "List all sent?" -> GET /orders/status/sent
+- "Get order details?" -> GET /order/{orderId}
+- "Create a cancel?" -> POST /order/{orderId}/shipment/cancel
+- "Create a delivered?" -> POST /order/{orderId}/shipment/delivered
+- "Create a exchange?" -> POST /order/{orderId}/shipment/exchange
+- "Create a return?" -> POST /order/{orderId}/shipment/return
+- "Create a sent?" -> POST /order/{orderId}/shipment/sent
+- "List all tickets?" -> GET /tickets
+- "Create a ticket?" -> POST /ticket
+- "List all messages?" -> GET /ticket/{ticketId}/messages
+- "Create a message?" -> POST /ticket/{ticketId}/message
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

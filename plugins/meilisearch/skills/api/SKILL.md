@@ -144,90 +144,55 @@ Bearer bearer
 |--------|------|-------------|
 | GET | /metrics | (EXPERIMENTAL) Get prometheus format metrics for observability and monitoring |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Is Meilisearch running?" -> GET /health
-- "What indexes exist?" -> GET /indexes
-- "How do I create a new index?" -> POST /indexes
-- "How do I search for documents?" -> POST /indexes/{indexUid}/search
-- "How do I add documents to an index?" -> POST /indexes/{indexUid}/documents
-- "What is the status of my task?" -> GET /tasks/:taskUid
-- "How do I delete an index?" -> DELETE /indexes/{indexUid}
-- "How do I filter search results by a field?" -> POST /indexes/{indexUid}/search (set `filter` and ensure field is in filterable-attributes)
-- "How do I search across multiple indexes at once?" -> POST /multi-search
-- "How do I create an API key with limited permissions?" -> POST /keys
-- "What are the current settings for my index?" -> GET /indexes/{indexUid}/settings
-- "How do I make a field sortable?" -> PUT /indexes/{indexUid}/settings/sortable-attributes
-- "How do I get facet counts for a search?" -> POST /indexes/{indexUid}/search (include `facets` parameter)
-- "How do I cancel a running task?" -> POST /tasks/cancel
-- "How do I swap two indexes with zero downtime?" -> POST /swap-indexes
-
-## Response Tips
-
-- **Search endpoints**: `estimatedTotalHits` is approximate when using offset/limit pagination; switch to `page`/`hitsPerPage` for exact `totalHits` and `totalPages`. Check `processingTimeMs` for performance.
-- **List endpoints** (indexes, documents, keys): All return `{results, limit, offset, total}` -- paginate by incrementing `offset` by `limit` until `offset >= total`.
-- **Tasks**: Use `from`/`next` cursor pagination (not offset). The `next` field gives the `from` value for the next page; `null` means no more results. Task `status` is one of: `enqueued`, `processing`, `succeeded`, `failed`, `canceled`.
-- **Write operations**: Nearly all mutating endpoints return `202 Accepted` with a `taskUid` -- the operation is async. Always poll `GET /tasks/:taskUid` to confirm completion.
-- **Errors**: All errors return `{message, code, type, link}`. The `link` field points to Meilisearch docs for that specific error code.
-- **Keys**: `POST /keys` returns `200` (not `202`) because key creation is synchronous, unlike index/document operations.
-
-## Anomaly Flags
-
-- **202 without follow-up**: Any write operation returns a `taskUid` -- surface a reminder to poll the task status if the caller does not check it.
-- **Task failures**: When polling a task, flag `status: "failed"` immediately and extract `error.message` and `error.code` for the user.
-- **Index not found (404)**: Common when the `indexUid` is misspelled or the index creation task has not completed yet. Suggest checking pending tasks.
-- **413 Payload Too Large**: Returned when document batch exceeds the configured limit. Suggest splitting the payload into smaller batches.
-- **Slow search**: If `processingTimeMs` exceeds 500ms, suggest reviewing ranking rules, filterable attributes, and dataset size.
-- **Pagination ceiling**: The default `maxTotalHits` is 1000. If users report missing results beyond offset 1000, surface that the pagination setting needs updating via `PATCH /indexes/{indexUid}/settings/pagination`.
-- **Experimental features enabled**: Flag when `vectorStore` or `exportPuffinReports` is enabled, as these may change or be removed in future versions.
-- **Key expiration**: When listing or inspecting API keys, flag any key where `expiresAt` is approaching or already past.
-
-## Playbook
-
-### 1. Set Up a New Searchable Index
-
-1. `POST /indexes` with `{"uid": "movies", "primaryKey": "id"}` -- note the returned `taskUid`
-2. `GET /tasks/:taskUid` -- poll until `status` is `succeeded`
-3. `PUT /indexes/movies/settings/filterable-attributes` with `["genre", "year"]`
-4. `PUT /indexes/movies/settings/sortable-attributes` with `["year", "rating"]`
-5. `POST /indexes/movies/documents` with your JSON document array
-6. `GET /tasks/:taskUid` -- poll the document indexing task until `succeeded`
-7. `POST /indexes/movies/search` with `{"q": "test"}` to verify
-
-### 2. Perform a Filtered, Faceted Search
-
-1. Confirm the field is filterable: `GET /indexes/{indexUid}/settings/filterable-attributes`
-2. If not listed, add it: `PUT /indexes/{indexUid}/settings/filterable-attributes` and wait for the task to complete
-3. `POST /indexes/{indexUid}/search` with `{"q": "action", "filter": "year > 2020", "facets": ["genre"], "sort": ["rating:desc"], "limit": 10}`
-4. Read `facetDistribution` from the response for sidebar counts
-5. Paginate with `page` and `hitsPerPage` for exact total counts
-
-### 3. Zero-Downtime Index Rebuild
-
-1. `POST /indexes` to create a temporary index (e.g., `movies-v2`) with the same primary key
-2. Configure settings on `movies-v2` to match production: `PATCH /indexes/movies-v2/settings`
-3. `POST /indexes/movies-v2/documents` -- index the full updated dataset
-4. Poll the task until `succeeded`
-5. `POST /swap-indexes` with `[{"indexes": ["movies", "movies-v2"]}]` -- atomic swap
-6. Poll the swap task until `succeeded`
-7. `DELETE /indexes/movies-v2` to clean up the old data (now in the temp name)
-
-### 4. Manage API Keys with Least Privilege
-
-1. `GET /keys` to list existing keys and audit their `actions` and `indexes` scopes
-2. `POST /keys` with `{"actions": ["search"], "indexes": ["movies"], "expiresAt": "2027-01-01T00:00:00Z", "description": "Frontend search only"}` for a read-only key
-3. Store the returned `key` value securely -- it cannot be retrieved again
-4. To rotate: create a new key, update clients, then `DELETE /keys/{uid_or_key}` the old one
-
-### 5. Monitor and Troubleshoot Async Operations
-
-1. `GET /tasks?statuses=failed&limit=5` to find recent failures
-2. For each failed task, inspect `error.code` and `error.message` for root cause
-3. `GET /tasks?statuses=processing` to check for long-running tasks that may be blocking the queue
-4. `POST /tasks/cancel?statuses=enqueued&beforeEnqueuedAt=2026-01-01T00:00:00Z` to clear stale queued tasks
-5. `DELETE /tasks?statuses=succeeded,canceled&beforeFinishedAt=2026-01-01T00:00:00Z` to clean up old task history
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a dump?" -> POST /dumps
+- "Create a snapshot?" -> POST /snapshots
+- "List all health?" -> GET /health
+- "List all indexes?" -> GET /indexes
+- "Create a indexe?" -> POST /indexes
+- "Get indexe details?" -> GET /indexes/{indexUid}
+- "Partially update a indexe?" -> PATCH /indexes/{indexUid}
+- "Delete a indexe?" -> DELETE /indexes/{indexUid}
+- "List all documents?" -> GET /indexes/{indexUid}/documents
+- "Create a document?" -> POST /indexes/{indexUid}/documents
+- "Create a fetch?" -> POST /indexes/{indexUid}/documents/fetch
+- "Create a delete-batch?" -> POST /indexes/{indexUid}/documents/delete-batch
+- "Create a delete?" -> POST /indexes/{indexUid}/documents/delete
+- "Get document details?" -> GET /indexes/{indexUid}/documents/{documentId}
+- "Delete a document?" -> DELETE /indexes/{indexUid}/documents/{documentId}
+- "Search search?" -> GET /indexes/{indexUid}/search
+- "Create a search?" -> POST /indexes/{indexUid}/search
+- "Create a facet-search?" -> POST /indexes/{indexUid}/facet-search
+- "List all settings?" -> GET /indexes/{indexUid}/settings
+- "List all synonyms?" -> GET /indexes/{indexUid}/settings/synonyms
+- "List all sortable-attributes?" -> GET /indexes/{indexUid}/settings/sortable-attributes
+- "List all stop-words?" -> GET /indexes/{indexUid}/settings/stop-words
+- "List all ranking-rules?" -> GET /indexes/{indexUid}/settings/ranking-rules
+- "List all typo-tolerance?" -> GET /indexes/{indexUid}/settings/typo-tolerance
+- "List all pagination?" -> GET /indexes/{indexUid}/settings/pagination
+- "List all faceting?" -> GET /indexes/{indexUid}/settings/faceting
+- "List all filterable-attributes?" -> GET /indexes/{indexUid}/settings/filterable-attributes
+- "List all distinct-attribute?" -> GET /indexes/{indexUid}/settings/distinct-attribute
+- "List all searchable-attributes?" -> GET /indexes/{indexUid}/settings/searchable-attributes
+- "List all displayed-attributes?" -> GET /indexes/{indexUid}/settings/displayed-attributes
+- "List all stats?" -> GET /indexes/{indexUid}/stats
+- "Create a multi-search?" -> POST /multi-search
+- "List all keys?" -> GET /keys
+- "Create a key?" -> POST /keys
+- "Get key details?" -> GET /keys/{uid_or_key}
+- "Delete a key?" -> DELETE /keys/{uid_or_key}
+- "Partially update a key?" -> PATCH /keys/{uid_or_key}
+- "List all stats?" -> GET /stats
+- "List all version?" -> GET /version
+- "List all tasks?" -> GET /tasks
+- "List all :taskUid?" -> GET /tasks/:taskUid
+- "Create a cancel?" -> POST /tasks/cancel
+- "Create a swap-indexe?" -> POST /swap-indexes
+- "List all experimental-features?" -> GET /experimental-features
+- "List all metrics?" -> GET /metrics
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

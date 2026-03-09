@@ -177,93 +177,154 @@ https://api.x.com
 | DELETE | /2/webhooks/{webhook_id} | Delete webhook |
 | PUT | /2/webhooks/{webhook_id} | Validate webhook |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I post a tweet?" -> POST /2/tweets
-- "How do I look up a user by their handle?" -> GET /2/users/by/username/{username}
-- "How do I search for recent tweets about a topic?" -> GET /2/tweets/search/recent
-- "How do I get my own profile info?" -> GET /2/users/me
-- "How do I send a direct message to someone?" -> POST /2/dm_conversations/with/{participant_id}/messages
-- "Who liked a specific tweet?" -> GET /2/tweets/{id}/liking_users
-- "How do I follow or unfollow someone?" -> POST /2/users/{id}/following | DELETE /2/users/{source_user_id}/following/{target_user_id}
-- "How do I get a user's timeline?" -> GET /2/users/{id}/timelines/reverse_chronological
-- "How do I create a list and add members?" -> POST /2/lists then POST /2/lists/{id}/members
-- "How do I upload media and attach it to a tweet?" -> POST /2/media/upload/initialize then POST /2/media/upload/{id}/append then POST /2/media/upload/{id}/finalize then POST /2/tweets
-- "How do I set up filtered stream rules?" -> POST /2/tweets/search/stream/rules then GET /2/tweets/search/stream
-- "What are the trending topics for a location?" -> GET /2/trends/by/woeid/{woeid}
-- "How do I check my API usage and quota?" -> GET /2/usage/tweets
-- "How do I bookmark or unbookmark a tweet?" -> POST /2/users/{id}/bookmarks | DELETE /2/users/{id}/bookmarks/{tweet_id}
-- "How do I get tweet engagement analytics?" -> GET /2/tweets/analytics
-
-## Response Tips
-
-- **Tweets & Users**: Core data lives in `data`; related objects (authors, media, polls, places) are in `includes` -- join on IDs manually. Always request `expansions` and relevant `.fields` params or you get minimal fields back.
-- **Paginated lists** (followers, timelines, search, DM events, lists): Use `meta.next_token` as `pagination_token` in the next request. Stop when `next_token` is absent. `meta.result_count` tells you how many items arrived in the current page.
-- **Errors**: Non-fatal errors appear in the `errors` array alongside `data` (e.g., a deleted tweet in a batch lookup). Fatal errors return HTTP 4xx/5xx with a top-level `errors` array and no `data`.
-- **Streaming endpoints** (firehose, sample, filtered stream, compliance): Return newline-delimited JSON. Heartbeat blank lines keep the connection alive -- do not parse them as data.
-- **Media upload**: Response includes `processing_info` with `state` (pending/in_progress/succeeded/failed) and `check_after_secs` -- poll GET /2/media/upload until state is `succeeded` before attaching to a tweet.
-- **Write operations** (like, retweet, follow, bookmark, mute, block): Return a simple boolean confirmation object (e.g., `{data: {liked: true}}`). A `false` value means the action was reversed (unlike, unfollow, etc.).
-- **Compliance & webhooks**: Job-based endpoints return `status` (created/in_progress/failed/complete) and expiring `download_url`/`upload_url` -- check expiration timestamps before downloading.
-
-## Anomaly Flags
-
-- **Rate limit headers**: Surface `x-rate-limit-remaining` and `x-rate-limit-reset` from response headers. Alert when remaining drops below 10% of the limit.
-- **HTTP 429 Too Many Requests**: Back off using the `x-rate-limit-reset` timestamp. Flag to user with reset time.
-- **Partial errors in batch lookups**: When `errors` array is non-empty alongside `data`, surface which IDs failed and why (suspended, deleted, not found).
-- **Media processing failures**: If `processing_info.state` is `failed`, surface immediately with the error message rather than continuing to poll.
-- **Usage cap approaching**: From GET /2/usage/tweets, alert when `project_usage` exceeds 80% of `project_cap`.
-- **Stream disconnections**: If a streaming endpoint closes unexpectedly, flag the disconnect and suggest using `backfill_minutes` (up to 5) on reconnect to recover missed data.
-- **Withheld content**: When `withheld` object appears on tweets or users, surface the `country_codes` and `scope` so the caller understands content restrictions.
-- **Edit controls**: When `edit_controls.edits_remaining` is 0 or `editable_until` has passed, flag that the tweet can no longer be edited.
-- **Pending follows**: When POST /2/users/{id}/following returns `pending_follow: true`, surface that the target account is protected and the follow is awaiting approval.
-- **Deprecated fields**: Flag `nullcast`, `for_super_followers_only`, and any field returning null that previously had values -- these may indicate deprecated functionality.
-
-## Playbook
-
-### 1. Post a Tweet with Media
-
-1. Initialize the upload: POST /2/media/upload/initialize with `total_bytes`, `media_type`, and `media_category` (e.g., `tweet_image`).
-2. Upload chunks: POST /2/media/upload/{id}/append with binary segments (each up to 5MB).
-3. Finalize: POST /2/media/upload/{id}/finalize. Note the `id` from the response.
-4. Poll for processing: GET /2/media/upload?media_id={id} -- repeat every `check_after_secs` until `processing_info.state` is `succeeded`.
-5. Optionally set alt text: POST /2/media/metadata with `alt_text`.
-6. Post the tweet: POST /2/tweets with `media: {media_ids: ["{id}"]}` and your `text`.
-
-### 2. Set Up a Filtered Stream
-
-1. Check existing rules: GET /2/tweets/search/stream/rules.
-2. Add rules: POST /2/tweets/search/stream/rules with body `{add: [{value: "keyword", tag: "my-label"}]}`. Use `dry_run: true` to validate first.
-3. Verify rule counts: GET /2/tweets/search/stream/rules/counts to confirm you are within your cap.
-4. Connect to the stream: GET /2/tweets/search/stream with desired `tweet.fields`, `expansions`, and `user.fields`.
-5. Process each line of JSON. Ignore blank heartbeat lines. Use `matching_rules` in each payload to identify which rule triggered the match.
-
-### 3. Monitor Tweet Performance
-
-1. Post or identify the tweet ID.
-2. For near-real-time metrics (last 28 hours): GET /2/insights/28hr with `tweet_ids`, `granularity: Hourly`, and `requested_metrics`.
-3. For historical analytics: GET /2/tweets/analytics with `ids`, `start_time`, `end_time`, and `granularity: daily`.
-4. For engagement breakdown: GET /2/tweets/{id} with `tweet.fields=public_metrics,non_public_metrics,organic_metrics`.
-5. To see who engaged: GET /2/tweets/{id}/liking_users, GET /2/tweets/{id}/retweeted_by, and GET /2/tweets/{id}/quote_tweets. Paginate through all using `next_token`.
-
-### 4. Build a User Profile Dashboard
-
-1. Resolve username to user object: GET /2/users/by/username/{username} with `user.fields=public_metrics,created_at,description,profile_image_url,verified,verified_type`.
-2. Get their recent tweets: GET /2/users/{id}/tweets with `max_results=100` and `tweet.fields=public_metrics,created_at`.
-3. Get their followers: GET /2/users/{id}/followers -- paginate to build a full list or sample.
-4. Get their following: GET /2/users/{id}/following.
-5. Get lists they own: GET /2/users/{id}/owned_lists.
-6. Check their mentions: GET /2/users/{id}/mentions with a time window via `start_time`/`end_time`.
-
-### 5. Manage Webhooks for Real-Time Events
-
-1. Register a webhook URL: POST /2/webhooks with your publicly accessible `url`. Save the returned `id`.
-2. Verify it is valid: the response includes `valid: true`. If not, check your CRC implementation.
-3. Subscribe to activity events: POST /2/activity/subscriptions with an `event_type` (e.g., `FollowFollow`) and optional `filter`.
-4. List active subscriptions: GET /2/activity/subscriptions to confirm everything is wired up.
-5. If you missed events, replay them: POST /2/webhooks/replay with `webhook_id`, `from_date`, and `to_date`.
-6. To tear down: DELETE /2/activity/subscriptions/{subscription_id} then DELETE /2/webhooks/{webhook_id}.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a all?" -> POST /2/account_activity/replay/webhooks/{webhook_id}/subscriptions/all
+- "List all count?" -> GET /2/account_activity/subscriptions/count
+- "List all all?" -> GET /2/account_activity/webhooks/{webhook_id}/subscriptions/all
+- "Create a all?" -> POST /2/account_activity/webhooks/{webhook_id}/subscriptions/all
+- "List all list?" -> GET /2/account_activity/webhooks/{webhook_id}/subscriptions/all/list
+- "List all stream?" -> GET /2/activity/stream
+- "List all subscriptions?" -> GET /2/activity/subscriptions
+- "Create a subscription?" -> POST /2/activity/subscriptions
+- "Delete a subscription?" -> DELETE /2/activity/subscriptions/{subscription_id}
+- "Update a subscription?" -> PUT /2/activity/subscriptions/{subscription_id}
+- "List all conversations?" -> GET /2/chat/conversations
+- "Get conversation details?" -> GET /2/chat/conversations/{conversation_id}
+- "Create a message?" -> POST /2/chat/conversations/{conversation_id}/messages
+- "Search search?" -> GET /2/communities/search
+- "Get community details?" -> GET /2/communities/{id}
+- "List all jobs?" -> GET /2/compliance/jobs
+- "Create a job?" -> POST /2/compliance/jobs
+- "Get job details?" -> GET /2/compliance/jobs/{id}
+- "List all connections?" -> GET /2/connections
+- "Delete a connection?" -> DELETE /2/connections/{endpoint_id}
+- "Create a dm_conversation?" -> POST /2/dm_conversations
+- "List all dm_events?" -> GET /2/dm_conversations/with/{participant_id}/dm_events
+- "Create a message?" -> POST /2/dm_conversations/with/{participant_id}/messages
+- "Create a message?" -> POST /2/dm_conversations/{dm_conversation_id}/messages
+- "List all dm_events?" -> GET /2/dm_conversations/{id}/dm_events
+- "List all dm_events?" -> GET /2/dm_events
+- "Delete a dm_event?" -> DELETE /2/dm_events/{event_id}
+- "Get dm_event details?" -> GET /2/dm_events/{event_id}
+- "Create a evaluate_note?" -> POST /2/evaluate_note
+- "List all 28hr?" -> GET /2/insights/28hr
+- "List all historical?" -> GET /2/insights/historical
+- "List all stream?" -> GET /2/likes/compliance/stream
+- "List all stream?" -> GET /2/likes/firehose/stream
+- "List all stream?" -> GET /2/likes/sample10/stream
+- "Create a list?" -> POST /2/lists
+- "Delete a list?" -> DELETE /2/lists/{id}
+- "Get list details?" -> GET /2/lists/{id}
+- "Update a list?" -> PUT /2/lists/{id}
+- "List all followers?" -> GET /2/lists/{id}/followers
+- "List all members?" -> GET /2/lists/{id}/members
+- "Create a member?" -> POST /2/lists/{id}/members
+- "Delete a member?" -> DELETE /2/lists/{id}/members/{user_id}
+- "List all tweets?" -> GET /2/lists/{id}/tweets
+- "List all media?" -> GET /2/media
+- "List all analytics?" -> GET /2/media/analytics
+- "Create a metadata?" -> POST /2/media/metadata
+- "Create a subtitle?" -> POST /2/media/subtitles
+- "List all upload?" -> GET /2/media/upload
+- "Create a upload?" -> POST /2/media/upload
+- "Create a initialize?" -> POST /2/media/upload/initialize
+- "Create a append?" -> POST /2/media/upload/{id}/append
+- "Create a finalize?" -> POST /2/media/upload/{id}/finalize
+- "Get media details?" -> GET /2/media/{media_key}
+- "Search search?" -> GET /2/news/search
+- "Get new details?" -> GET /2/news/{id}
+- "Create a note?" -> POST /2/notes
+- "List all notes_written?" -> GET /2/notes/search/notes_written
+- "List all posts_eligible_for_notes?" -> GET /2/notes/search/posts_eligible_for_notes
+- "Delete a note?" -> DELETE /2/notes/{id}
+- "List all openapi.json?" -> GET /2/openapi.json
+- "List all spaces?" -> GET /2/spaces
+- "List all creator_ids?" -> GET /2/spaces/by/creator_ids
+- "Search search?" -> GET /2/spaces/search
+- "Get space details?" -> GET /2/spaces/{id}
+- "List all buyers?" -> GET /2/spaces/{id}/buyers
+- "List all tweets?" -> GET /2/spaces/{id}/tweets
+- "Get woeid details?" -> GET /2/trends/by/woeid/{woeid}
+- "List all tweets?" -> GET /2/tweets
+- "Create a tweet?" -> POST /2/tweets
+- "List all analytics?" -> GET /2/tweets/analytics
+- "List all stream?" -> GET /2/tweets/compliance/stream
+- "Search all?" -> GET /2/tweets/counts/all
+- "Search recent?" -> GET /2/tweets/counts/recent
+- "List all stream?" -> GET /2/tweets/firehose/stream
+- "List all en?" -> GET /2/tweets/firehose/stream/lang/en
+- "List all ja?" -> GET /2/tweets/firehose/stream/lang/ja
+- "List all ko?" -> GET /2/tweets/firehose/stream/lang/ko
+- "List all pt?" -> GET /2/tweets/firehose/stream/lang/pt
+- "List all stream?" -> GET /2/tweets/label/stream
+- "List all stream?" -> GET /2/tweets/sample/stream
+- "List all stream?" -> GET /2/tweets/sample10/stream
+- "Search all?" -> GET /2/tweets/search/all
+- "Search recent?" -> GET /2/tweets/search/recent
+- "List all stream?" -> GET /2/tweets/search/stream
+- "List all rules?" -> GET /2/tweets/search/stream/rules
+- "Create a rule?" -> POST /2/tweets/search/stream/rules
+- "List all counts?" -> GET /2/tweets/search/stream/rules/counts
+- "List all webhooks?" -> GET /2/tweets/search/webhooks
+- "Delete a webhook?" -> DELETE /2/tweets/search/webhooks/{webhook_id}
+- "Delete a tweet?" -> DELETE /2/tweets/{id}
+- "Get tweet details?" -> GET /2/tweets/{id}
+- "List all liking_users?" -> GET /2/tweets/{id}/liking_users
+- "List all quote_tweets?" -> GET /2/tweets/{id}/quote_tweets
+- "List all retweeted_by?" -> GET /2/tweets/{id}/retweeted_by
+- "List all retweets?" -> GET /2/tweets/{id}/retweets
+- "List all tweets?" -> GET /2/usage/tweets
+- "List all users?" -> GET /2/users
+- "List all by?" -> GET /2/users/by
+- "Get username details?" -> GET /2/users/by/username/{username}
+- "List all stream?" -> GET /2/users/compliance/stream
+- "List all me?" -> GET /2/users/me
+- "List all personalized_trends?" -> GET /2/users/personalized_trends
+- "List all reposts_of_me?" -> GET /2/users/reposts_of_me
+- "Search search?" -> GET /2/users/search
+- "Get user details?" -> GET /2/users/{id}
+- "List all affiliates?" -> GET /2/users/{id}/affiliates
+- "List all blocking?" -> GET /2/users/{id}/blocking
+- "List all bookmarks?" -> GET /2/users/{id}/bookmarks
+- "Create a bookmark?" -> POST /2/users/{id}/bookmarks
+- "List all folders?" -> GET /2/users/{id}/bookmarks/folders
+- "Get folder details?" -> GET /2/users/{id}/bookmarks/folders/{folder_id}
+- "Delete a bookmark?" -> DELETE /2/users/{id}/bookmarks/{tweet_id}
+- "Create a block?" -> POST /2/users/{id}/dm/block
+- "Create a unblock?" -> POST /2/users/{id}/dm/unblock
+- "List all followed_lists?" -> GET /2/users/{id}/followed_lists
+- "Create a followed_list?" -> POST /2/users/{id}/followed_lists
+- "Delete a followed_list?" -> DELETE /2/users/{id}/followed_lists/{list_id}
+- "List all followers?" -> GET /2/users/{id}/followers
+- "List all following?" -> GET /2/users/{id}/following
+- "Create a following?" -> POST /2/users/{id}/following
+- "List all liked_tweets?" -> GET /2/users/{id}/liked_tweets
+- "Create a like?" -> POST /2/users/{id}/likes
+- "Delete a like?" -> DELETE /2/users/{id}/likes/{tweet_id}
+- "List all list_memberships?" -> GET /2/users/{id}/list_memberships
+- "List all mentions?" -> GET /2/users/{id}/mentions
+- "List all muting?" -> GET /2/users/{id}/muting
+- "Create a muting?" -> POST /2/users/{id}/muting
+- "List all owned_lists?" -> GET /2/users/{id}/owned_lists
+- "List all pinned_lists?" -> GET /2/users/{id}/pinned_lists
+- "Create a pinned_list?" -> POST /2/users/{id}/pinned_lists
+- "Delete a pinned_list?" -> DELETE /2/users/{id}/pinned_lists/{list_id}
+- "List all public_keys?" -> GET /2/users/{id}/public_keys
+- "Create a public_key?" -> POST /2/users/{id}/public_keys
+- "Create a retweet?" -> POST /2/users/{id}/retweets
+- "Delete a retweet?" -> DELETE /2/users/{id}/retweets/{source_tweet_id}
+- "List all reverse_chronological?" -> GET /2/users/{id}/timelines/reverse_chronological
+- "List all tweets?" -> GET /2/users/{id}/tweets
+- "Delete a following?" -> DELETE /2/users/{source_user_id}/following/{target_user_id}
+- "Delete a muting?" -> DELETE /2/users/{source_user_id}/muting/{target_user_id}
+- "List all webhooks?" -> GET /2/webhooks
+- "Create a webhook?" -> POST /2/webhooks
+- "Create a replay?" -> POST /2/webhooks/replay
+- "Delete a webhook?" -> DELETE /2/webhooks/{webhook_id}
+- "Update a webhook?" -> PUT /2/webhooks/{webhook_id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

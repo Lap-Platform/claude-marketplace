@@ -45,81 +45,24 @@ https://management.azure.com
 | GET | /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/communications/{communicationName} | Returns details of a specific communication in a support ticket. |
 | PUT | /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/communications/{communicationName} | Adds a new customer communication to an Azure support ticket. Adding attachments are not currently supported via the API. <br/>To add a file to a support ticket, visit the <a target='_blank' href='https://portal.azure.com/#blade/Microsoft_Azure_Support/HelpAndSupportBlade/managesupportrequest'>Manage support ticket</a> page in the Azure portal, select the support ticket, and use the file upload control to add a new file. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What operations are available in the Microsoft Support API?" -> GET /providers/Microsoft.Support/operations
-- "What Azure support services can I use?" -> GET /providers/Microsoft.Support/services
-- "Get details about a specific support service" -> GET /providers/Microsoft.Support/services/{serviceName}
-- "What problem categories exist for a given service?" -> GET /providers/Microsoft.Support/services/{serviceName}/problemClassifications
-- "Look up a specific problem classification" -> GET /providers/Microsoft.Support/services/{serviceName}/problemClassifications/{problemClassificationName}
-- "List all support tickets in my subscription" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets
-- "Show me details for a specific support ticket" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}
-- "Create a new Azure support ticket" -> PUT /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}
-- "Update the severity or status of a support ticket" -> PATCH /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}
-- "Check if a support ticket name is available before creating one" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Support/checkNameAvailability
-- "Check if a communication name is available on a ticket" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/checkNameAvailability
-- "List all communications on a support ticket" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/communications
-- "Read a specific communication message on a ticket" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/communications/{communicationName}
-- "Add a reply or communication to an existing support ticket" -> PUT /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/communications/{communicationName}
-
-## Response Tips
-
-- **Operations/Services/ProblemClassifications** (provider group): Responses are flat lists under a `value` array; no pagination -- iterate the full array directly.
-- **Support Tickets listing**: Supports `$top` and `$filter` query params; look for `nextLink` in the response body to paginate through large result sets.
-- **Single Ticket / Communication GET**: Returns a single resource object; key fields are nested under `properties` (status, severity, contactDetails, serviceId).
-- **PUT (create) endpoints**: May return 200 (created synchronously) or 202 (accepted, long-running); on 202, check the `Azure-AsyncOperation` or `Location` header to poll for completion.
-- **PATCH (update)**: Returns 200 with the updated resource; only fields included in `updateSupportTicket` are modified.
-- **Communications listing**: Also supports `$top`/`$filter`; paginate via `nextLink` the same way as tickets.
-- **Name availability checks (POST)**: Response contains `nameAvailable` (boolean) and, if false, a `reason` and `message` explaining the conflict.
-
-## Anomaly Flags
-
-- **202 Accepted on PUT**: Ticket or communication creation is async -- surface the polling URL and remind the user to check status before assuming completion.
-- **Missing `api-version` query param**: All endpoints require `api-version=2019-05-01-preview`; flag immediately if omitted, as Azure returns opaque 400 errors.
-- **Preview API version**: This spec uses `2019-05-01-preview` -- flag that this is a preview version and behavior may change or be deprecated without notice.
-- **`$filter` syntax errors**: OData filter expressions on ticket/communication listings often fail silently or return unfiltered results; flag when filter returns unexpectedly large or empty sets.
-- **Name conflicts on PUT**: If `checkNameAvailability` returns `nameAvailable: false` but the user proceeds with PUT, surface the conflict reason proactively.
-- **Subscription-level auth failures**: 401/403 on subscription endpoints usually means the OAuth token lacks the `Microsoft.Support/*` RBAC role -- flag with remediation steps.
-- **Empty problem classifications**: If a service returns zero problem classifications, flag it as the service may not support ticket creation through the API.
-
-## Playbook
-
-### 1. Create a new support ticket
-
-1. Call GET `/providers/Microsoft.Support/services` to list available services
-2. Pick the relevant service and call GET `/providers/Microsoft.Support/services/{serviceName}/problemClassifications` to get valid categories
-3. Call POST `/subscriptions/{subscriptionId}/providers/Microsoft.Support/checkNameAvailability` with your desired ticket name
-4. If available, call PUT `/subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}` with `createSupportTicketParameters` including serviceId, problemClassificationId, severity, contactDetails, title, and description
-5. If response is 202, poll the `Azure-AsyncOperation` URL until the ticket is provisioned
-
-### 2. Reply to an existing support ticket
-
-1. Call GET `/subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}` to confirm the ticket exists and check its status
-2. Call POST `.../supportTickets/{supportTicketName}/checkNameAvailability` to validate your communication name
-3. Call PUT `.../supportTickets/{supportTicketName}/communications/{communicationName}` with `createCommunicationParameters` containing subject and body
-4. If response is 202, poll for completion before confirming the reply was posted
-
-### 3. List and filter open support tickets
-
-1. Call GET `/subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets` with `$filter=status eq 'Open'` and optionally `$top=10`
-2. Iterate through the `value` array in the response
-3. If `nextLink` is present, follow it to fetch the next page
-4. Repeat until `nextLink` is absent
-
-### 4. Escalate a support ticket's severity
-
-1. Call GET `.../supportTickets/{supportTicketName}` to read the current severity and status
-2. Call PATCH `.../supportTickets/{supportTicketName}` with `updateSupportTicket` containing the new `severity` value (e.g., `"critical"`)
-3. Verify the 200 response reflects the updated severity in `properties.severity`
-
-### 5. Audit all communications on a ticket
-
-1. Call GET `.../supportTickets/{supportTicketName}/communications` with no filter to get all messages
-2. Page through results using `nextLink` if present
-3. For each communication, note `properties.communicationType` (web or phone), `properties.createdDate`, and `properties.sender`
-4. To inspect a specific message in full, call GET `.../communications/{communicationName}`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all operations?" -> GET /providers/Microsoft.Support/operations
+- "List all services?" -> GET /providers/Microsoft.Support/services
+- "Get service details?" -> GET /providers/Microsoft.Support/services/{serviceName}
+- "List all problemClassifications?" -> GET /providers/Microsoft.Support/services/{serviceName}/problemClassifications
+- "Get problemClassification details?" -> GET /providers/Microsoft.Support/services/{serviceName}/problemClassifications/{problemClassificationName}
+- "Create a checkNameAvailability?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Support/checkNameAvailability
+- "List all supportTickets?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets
+- "Get supportTicket details?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}
+- "Partially update a supportTicket?" -> PATCH /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}
+- "Update a supportTicket?" -> PUT /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}
+- "Create a checkNameAvailability?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/checkNameAvailability
+- "List all communications?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/communications
+- "Get communication details?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/communications/{communicationName}
+- "Update a communication?" -> PUT /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/communications/{communicationName}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

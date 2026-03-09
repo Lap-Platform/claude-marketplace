@@ -53,89 +53,10 @@ Not specified.
 | POST | / | Updates the state when a shipment state changes to a different state. |
 | POST | / | Updates the long-term pricing type. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I order a new Snowball device?" -> POST / (CreateJob)
-- "How do I create a cluster of Snowball devices?" -> POST / (CreateCluster)
-- "What is the current status of my job?" -> POST / (DescribeJob)
-- "How many Snowballs am I currently using vs my limit?" -> POST / (GetSnowballUsage)
-- "Where is my Snowball shipment right now?" -> POST / (DescribeJob, check ShippingDetails.InboundShipment/OutboundShipment)
-- "How do I cancel a job I no longer need?" -> POST / (CancelJob)
-- "How do I get the unlock code for my device?" -> POST / (GetJobUnlockCode)
-- "How do I download the manifest for my job?" -> POST / (GetJobManifest)
-- "What jobs belong to my cluster?" -> POST / (ListClusterJobs)
-- "How do I set up long-term pricing for Snowball?" -> POST / (CreateLongTermPricing)
-- "How do I create a return shipping label?" -> POST / (CreateReturnShippingLabel)
-- "What AMIs are compatible with my Snowball Edge?" -> POST / (ListCompatibleImages)
-- "How do I update the notification settings on an existing job?" -> POST / (UpdateJob)
-- "How do I register a new shipping address?" -> POST / (CreateAddress)
-- "What software updates are available for my device?" -> POST / (GetSoftwareUpdates)
-
-## Response Tips
-
-- **Describe endpoints** (DescribeJob, DescribeCluster): Deeply nested metadata objects -- always drill into sub-objects like `ShippingDetails.InboundShipment`, `DataTransferProgress`, and `OnDeviceServiceConfiguration` for the fields you need.
-- **List endpoints** (ListJobs, ListClusters, ListClusterJobs, ListLongTermPricingEntries, ListCompatibleImages, ListPickupLocations): All use `MaxResults`/`NextToken` cursor-based pagination -- keep calling with the returned `NextToken` until it is null.
-- **Create endpoints** (CreateJob, CreateCluster, CreateAddress): Return only the new resource ID (e.g., `JobId`, `ClusterId`, `AddressId`) -- follow up with the matching Describe call for full details.
-- **Update/Cancel endpoints**: Return no body on success (HTTP 200 with empty JSON) -- treat any non-error response as confirmation.
-- **URI endpoints** (GetJobManifest, GetSoftwareUpdates, DescribeReturnShippingLabel): Return pre-signed S3 URIs that expire -- download promptly and do not cache long-term.
-- **Error responses**: AWS errors come as JSON with `__type` and `message` fields; watch for `InvalidJobStateException` when operating on jobs in terminal states.
-
-## Anomaly Flags
-
-- **Snowball usage nearing limit**: After `GetSnowballUsage`, surface a warning when `SnowballsInUse` exceeds 80% of `SnowballLimit`.
-- **Job stuck in non-terminal state**: If `DescribeJob` returns `JobState` of `InProgress` or `Listing` for an extended period with zero `DataTransferProgress.BytesTransferred`, flag as potentially stalled.
-- **Return shipping label expiring**: `DescribeReturnShippingLabel` returns `ExpirationDate` -- alert if expiration is within 7 days.
-- **Inbound/outbound shipment status mismatch**: If `OutboundShipment.Status` shows delivered but `JobState` has not advanced, flag for investigation.
-- **Long-term pricing auto-renew off**: When listing long-term pricing entries, surface any that are approaching expiration without auto-renew enabled.
-- **Cluster in partially degraded state**: If `ListClusterJobs` returns jobs with mixed states (some failed, some active), flag the cluster for review.
-- **Data transfer incomplete at job completion**: If `JobState` is `Complete` but `TotalBytes` does not equal `BytesTransferred`, surface the discrepancy.
-
-## Playbook
-
-### 1. Order and Track a New Snowball Device
-
-1. Call **CreateAddress** with your shipping address to get an `AddressId`.
-2. Call **CreateJob** with `JobType`, `AddressId`, `SnowballType`, `ShippingOption`, and any S3/Lambda resources.
-3. Note the returned `JobId`.
-4. Call **DescribeJob** with the `JobId` to monitor `JobState` and `ShippingDetails.OutboundShipment`.
-5. Once `JobState` reaches `WithCustomer`, call **GetJobUnlockCode** and **GetJobManifest** to prepare the device.
-6. After data transfer, call **CreateReturnShippingLabel** and ship the device back.
-7. Monitor with **DescribeJob** until `JobState` reaches `Complete`.
-
-### 2. Set Up a Multi-Device Cluster
-
-1. Call **CreateAddress** if you need a new shipping destination.
-2. Call **CreateCluster** with `JobType`, `AddressId`, `SnowballType`, `ShippingOption`, and `InitialClusterSize`.
-3. Note the returned `ClusterId` and any `JobListEntries`.
-4. Call **ListClusterJobs** with `ClusterId` to see all member jobs and their states.
-5. Call **DescribeJob** on each member job to track individual device progress.
-6. Use **UpdateCluster** to modify resources, notifications, or forwarding address as needed.
-
-### 3. Manage Long-Term Pricing
-
-1. Call **CreateLongTermPricing** with `LongTermPricingType` (one-year or three-year) and `SnowballType`.
-2. Note the returned `LongTermPricingId`.
-3. Call **ListLongTermPricingEntries** periodically to review all active pricing agreements.
-4. To assign a replacement job, call **UpdateLongTermPricing** with `ReplacementJob`.
-5. To toggle auto-renewal, call **UpdateLongTermPricing** with `IsLongTermPricingAutoRenew`.
-
-### 4. Cancel and Clean Up Resources
-
-1. Call **DescribeJob** to verify the job is in a cancellable state (not yet `InProgress` with data).
-2. Call **CancelJob** with the `JobId`.
-3. If the job belongs to a cluster, call **DescribeCluster** to check remaining cluster health.
-4. If all cluster jobs are cancelled or failed, call **CancelCluster** with the `ClusterId`.
-5. Confirm cleanup by calling **GetSnowballUsage** to verify device counts have decremented.
-
-### 5. Retrieve Device Credentials and Updates
-
-1. Call **DescribeJob** to confirm `JobState` is `WithCustomer`.
-2. Call **GetJobManifest** to get the `ManifestURI` -- download the manifest file immediately.
-3. Call **GetJobUnlockCode** to get the `UnlockCode` for the device.
-4. Call **GetSoftwareUpdates** to get `UpdatesURI` and apply any available firmware updates.
-5. Use the manifest and unlock code together to authenticate to the Snowball device locally.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -12,7 +12,7 @@ API version: 1.0
 ApiKey X-Bunq-Client-Authentication in header
 
 ## Base URL
-https://public-api.sandbox.bunq.com/{basePath}
+https://public-api.sandbox.bunq.com/v1
 
 ## Setup
 1. Set your API key in the appropriate header
@@ -567,89 +567,490 @@ https://public-api.sandbox.bunq.com/{basePath}
 | GET | /user-person/{itemId} | Get a specific person. |
 | PUT | /user-person/{itemId} | Modify a specific person object's data. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I set up a new API session?" -> POST /installation then POST /device-server then POST /session-server
-- "What bank accounts do I have?" -> GET /user/{userID}/monetary-account
-- "How do I send money to someone?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/payment
-- "What is my account balance?" -> GET /user/{userID}/monetary-account-bank/{itemId}
-- "How do I request money from someone?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry
-- "What cards are linked to my account?" -> GET /user/{userID}/card
-- "How do I freeze or cancel a card?" -> PUT /user/{userID}/card/{itemId} (set status)
-- "How do I create a bunq.me payment link?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/bunqme-tab
-- "What happened on my account recently?" -> GET /user/{userID}/event
-- "How do I schedule a recurring payment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment
-- "How do I send money internationally via TransferWise?" -> POST /user/{userID}/transferwise-quote then POST .../transferwise-transfer
-- "How do I get a bank statement?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/customer-statement
-- "How do I share account access with someone?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/share-invite-monetary-account-inquiry
-- "How do I convert currencies?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/currency-conversion-quote then PUT to accept
-- "How do I add a note to a transaction?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/payment/{paymentID}/note-text
-
-## Response Tips
-
-- **Payments & transactions**: Amounts are always nested as `{value: str, currency: str}` -- parse both fields. The `balance_after_mutation` field shows the running balance. Check `type` and `sub_type` to distinguish incoming vs outgoing.
-- **Monetary accounts**: Responses are polymorphic -- the top-level key (`MonetaryAccountBank`, `MonetaryAccountSavings`, `MonetaryAccountJoint`, etc.) indicates the account type. Always check which variant is returned.
-- **List endpoints**: Most GET list endpoints return bare `@returns(200)` with no schema -- expect an array of the same object type as the single-item GET. Pagination uses `older_id` and `newer_id` query parameters (not in spec but standard bunq pattern).
-- **Events**: The `object` field in events is a union type -- exactly one key will be populated (e.g., `Payment`, `MasterCardAction`, `RequestInquiry`). Switch on the key name.
-- **Cards**: Card details include deeply nested `monetary_account` with all account subtypes inlined. Extract only the fields you need.
-- **Errors**: All endpoints return `{400}` uniformly -- the actual error body contains `error_description` and `error_description_translated` in a nested array.
-- **Notes (text/attachment)**: Both follow identical CRUD patterns. The `label_user_creator` field identifies who authored the note.
-- **Identity**: `alias` and `counterparty_alias` contain IBAN, display name, avatar, and bunq.me pointer. The `label_user` sub-object has the user UUID.
-
-## Anomaly Flags
-
-- **Card status changes**: Surface when `card.status` is `DEACTIVATED`, `LOST`, `STOLEN`, or `order_status` is `CARD_REQUEST_PENDING` -- the user may not realize a card is inactive.
-- **Payment suspended outgoing**: Flag `payment_suspended_outgoing` with non-null `status` -- indicates a payment is being held and may need action.
-- **Session timeout approaching**: The `session_timeout` value from session-server response indicates seconds until expiry. Warn when nearing the limit; a new session-server call is needed.
-- **Challenge requests pending**: When `challenge-request` returns status `PENDING`, the user must approve or deny -- surface this as an action item.
-- **bunqto expiry**: Payments with `bunqto_status` of `WAITING_FOR_PAYMENT` and `bunqto_expiry` approaching should be flagged -- the recipient link will expire.
-- **Scheduled payment errors**: `schedule-instance` responses with `error_message` populated indicate a failed execution -- surface with the translated description.
-- **Card limit thresholds**: Compare `card_limit` and `card_limit_atm` values against spending patterns. Flag when `spent_amount_monthly` approaches `limit_amount_monthly` in company accounts.
-- **Currency conversion quote expiry**: `time_expiry` on currency-conversion-quote responses -- warn before quote expires so the user can accept in time.
-- **Account sub_status changes**: Flag when `sub_status` shifts to values like `REDEMPTION_INVOLUNTARY` or `UNDER_REVIEW` on any monetary account.
-
-## Playbook
-
-### 1. Initial API Setup (Installation + Device + Session)
-
-1. Generate an RSA key pair locally.
-2. Call `POST /installation` with `client_public_key` -- save the returned `Token.token` (installation token) and `ServerPublicKey.server_public_key`.
-3. Call `POST /device-server` with your API key as `secret`, a `description`, and optionally `permitted_ips`. Use the installation token for auth.
-4. Call `POST /session-server` with your API key as `secret` -- save the returned `Token.token` (session token) and the `UserPerson` or `UserCompany` object for your `userID`.
-5. Use the session token as `X-Bunq-Client-Authentication` for all subsequent requests.
-
-### 2. Making a Payment
-
-1. Call `GET /user/{userID}/monetary-account` to list accounts and pick the source `monetary-accountID`.
-2. Call `POST /user/{userID}/monetary-account/{monetary-accountID}/payment` with `amount` (`{value, currency}`), `counterparty_alias` (IBAN + name), and `description`.
-3. The response returns the payment `id`. Call `GET .../payment/{id}` to verify `type`, `sub_type`, and `balance_after_mutation`.
-4. Optionally add a note via `POST .../payment/{id}/note-text` with `content`.
-
-### 3. International Transfer via TransferWise
-
-1. Call `GET /user/{userID}/transferwise-currency` to check supported currencies.
-2. Call `POST /user/{userID}/transferwise-quote` with `currency_source`, `currency_target`, and either `amount_source` or `amount_target` -- save the quote `id`.
-3. Call `GET .../transferwise-quote/{id}/transferwise-recipient-requirement` to learn required recipient fields.
-4. Call `POST .../transferwise-quote/{id}/transferwise-recipient` with `name_account_holder`, `type`, `country`, and `detail` (key-value pairs from requirements).
-5. Call `POST .../transferwise-quote/{id}/transferwise-transfer` with `monetary_account_id` and `recipient_id` to execute the transfer.
-6. Monitor status via `GET .../transferwise-transfer/{id}` -- watch `status_transferwise` for completion or issues.
-
-### 4. Splitting a Bill
-
-1. Call `POST /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch` with an array of `request_inquiries`, each containing `amount_inquired`, `counterparty_alias`, `description`, and `allow_bunqme: true`.
-2. The batch returns an `id`. Monitor via `GET .../request-inquiry-batch/{id}` -- check each inquiry's `status` (ACCEPTED, REJECTED, EXPIRED).
-3. The `total_amount_inquired` field gives the aggregate. Individual `amount_responded` fields show what each person actually paid.
-4. Attach a receipt as context via `POST .../request-inquiry-batch/{id}/note-attachment` with the `attachment_id`.
-
-### 5. Generating an Account Statement
-
-1. Call `GET /user/{userID}/monetary-account` to find the target `monetary-accountID`.
-2. Call `POST /user/{userID}/monetary-account/{monetary-accountID}/customer-statement` with `statement_format` (CSV, MT940, PDF), `date_start`, and `date_end`.
-3. Poll `GET .../customer-statement/{id}` until `status` is `STATEMENT_AVAILABLE`.
-4. Download the file via `GET .../customer-statement/{id}/content` -- this returns the raw file bytes.
-5. To clean up, call `DELETE .../customer-statement/{id}` after downloading.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all additional-transaction-information-category?" -> GET /user/{userID}/additional-transaction-information-category
+- "Create a additional-transaction-information-category-user-defined?" -> POST /user/{userID}/additional-transaction-information-category-user-defined
+- "Create a attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/attachment
+- "Get attachment details?" -> GET /user/{userID}/attachment/{itemId}
+- "Create a attachment-public?" -> POST /attachment-public
+- "Get attachment-public details?" -> GET /attachment-public/{itemId}
+- "Create a avatar?" -> POST /avatar
+- "Get avatar details?" -> GET /avatar/{itemId}
+- "List all billing-contract-subscription?" -> GET /user/{userID}/billing-contract-subscription
+- "Get bunqme-fundraiser-profile details?" -> GET /user/{userID}/bunqme-fundraiser-profile/{itemId}
+- "List all bunqme-fundraiser-profile?" -> GET /user/{userID}/bunqme-fundraiser-profile
+- "Get bunqme-fundraiser-result details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/bunqme-fundraiser-result/{itemId}
+- "Create a bunqme-tab?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/bunqme-tab
+- "List all bunqme-tab?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/bunqme-tab
+- "Update a bunqme-tab?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/bunqme-tab/{itemId}
+- "Get bunqme-tab details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/bunqme-tab/{itemId}
+- "Get bunqme-tab-result-response details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/bunqme-tab-result-response/{itemId}
+- "Get callback-url details?" -> GET /user/{userID}/oauth-client/{oauth-clientID}/callback-url/{itemId}
+- "Update a callback-url?" -> PUT /user/{userID}/oauth-client/{oauth-clientID}/callback-url/{itemId}
+- "Delete a callback-url?" -> DELETE /user/{userID}/oauth-client/{oauth-clientID}/callback-url/{itemId}
+- "Create a callback-url?" -> POST /user/{userID}/oauth-client/{oauth-clientID}/callback-url
+- "List all callback-url?" -> GET /user/{userID}/oauth-client/{oauth-clientID}/callback-url
+- "Update a card?" -> PUT /user/{userID}/card/{itemId}
+- "Get card details?" -> GET /user/{userID}/card/{itemId}
+- "List all card?" -> GET /user/{userID}/card
+- "Create a card-batch?" -> POST /user/{userID}/card-batch
+- "Create a card-batch-replace?" -> POST /user/{userID}/card-batch-replace
+- "Create a card-credit?" -> POST /user/{userID}/card-credit
+- "Create a card-debit?" -> POST /user/{userID}/card-debit
+- "List all card-name?" -> GET /user/{userID}/card-name
+- "Create a certificate-pinned?" -> POST /user/{userID}/certificate-pinned
+- "List all certificate-pinned?" -> GET /user/{userID}/certificate-pinned
+- "Delete a certificate-pinned?" -> DELETE /user/{userID}/certificate-pinned/{itemId}
+- "Get certificate-pinned details?" -> GET /user/{userID}/certificate-pinned/{itemId}
+- "Get challenge-request details?" -> GET /user/{userID}/challenge-request/{itemId}
+- "Update a challenge-request?" -> PUT /user/{userID}/challenge-request/{itemId}
+- "Create a company?" -> POST /user/{userID}/company
+- "List all company?" -> GET /user/{userID}/company
+- "Get company details?" -> GET /user/{userID}/company/{itemId}
+- "Update a company?" -> PUT /user/{userID}/company/{itemId}
+- "Create a confirmation-of-fund?" -> POST /user/{userID}/confirmation-of-funds
+- "List all content?" -> GET /user/{userID}/chat-conversation/{chat-conversationID}/attachment/{attachmentID}/content
+- "List all content?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/attachment/{attachmentID}/content
+- "List all content?" -> GET /attachment-public/{attachment-publicUUID}/content
+- "List all content?" -> GET /user/{userID}/attachment/{attachmentID}/content
+- "List all content?" -> GET /user/{userID}/export-annual-overview/{export-annual-overviewID}/content
+- "List all content?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/export-rib/{export-ribID}/content
+- "List all content?" -> GET /user/{userID}/card/{cardID}/export-statement-card/{export-statement-cardID}/content
+- "List all content?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/customer-statement/{customer-statementID}/content
+- "List all content?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/event/{eventID}/statement/{statementID}/content
+- "Get credential-password-ip details?" -> GET /user/{userID}/credential-password-ip/{itemId}
+- "List all credential-password-ip?" -> GET /user/{userID}/credential-password-ip
+- "Create a currency-cloud-beneficiary?" -> POST /user/{userID}/currency-cloud-beneficiary
+- "List all currency-cloud-beneficiary?" -> GET /user/{userID}/currency-cloud-beneficiary
+- "Get currency-cloud-beneficiary details?" -> GET /user/{userID}/currency-cloud-beneficiary/{itemId}
+- "List all currency-cloud-beneficiary-requirement?" -> GET /user/{userID}/currency-cloud-beneficiary-requirement
+- "Create a currency-cloud-payment-quote?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/currency-cloud-payment-quote
+- "List all currency-conversion?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/currency-conversion
+- "Get currency-conversion details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/currency-conversion/{itemId}
+- "Create a currency-conversion-quote?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/currency-conversion-quote
+- "Get currency-conversion-quote details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/currency-conversion-quote/{itemId}
+- "Update a currency-conversion-quote?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/currency-conversion-quote/{itemId}
+- "Create a customer-statement?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/customer-statement
+- "List all customer-statement?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/customer-statement
+- "Get customer-statement details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/customer-statement/{itemId}
+- "Delete a customer-statement?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/customer-statement/{itemId}
+- "List all definition?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-auto-allocate/{payment-auto-allocateID}/definition
+- "Get device details?" -> GET /device/{itemId}
+- "List all device?" -> GET /device
+- "Create a device-server?" -> POST /device-server
+- "List all device-server?" -> GET /device-server
+- "Get device-server details?" -> GET /device-server/{itemId}
+- "Create a draft-payment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/draft-payment
+- "List all draft-payment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/draft-payment
+- "Update a draft-payment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/draft-payment/{itemId}
+- "Get draft-payment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/draft-payment/{itemId}
+- "Get event details?" -> GET /user/{userID}/event/{itemId}
+- "List all event?" -> GET /user/{userID}/event
+- "Create a export-annual-overview?" -> POST /user/{userID}/export-annual-overview
+- "List all export-annual-overview?" -> GET /user/{userID}/export-annual-overview
+- "Get export-annual-overview details?" -> GET /user/{userID}/export-annual-overview/{itemId}
+- "Delete a export-annual-overview?" -> DELETE /user/{userID}/export-annual-overview/{itemId}
+- "Create a export-rib?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/export-rib
+- "List all export-rib?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/export-rib
+- "Get export-rib details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/export-rib/{itemId}
+- "Delete a export-rib?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/export-rib/{itemId}
+- "Get export-statement-card details?" -> GET /user/{userID}/card/{cardID}/export-statement-card/{itemId}
+- "List all export-statement-card?" -> GET /user/{userID}/card/{cardID}/export-statement-card
+- "Create a export-statement-card-csv?" -> POST /user/{userID}/card/{cardID}/export-statement-card-csv
+- "List all export-statement-card-csv?" -> GET /user/{userID}/card/{cardID}/export-statement-card-csv
+- "Get export-statement-card-csv details?" -> GET /user/{userID}/card/{cardID}/export-statement-card-csv/{itemId}
+- "Delete a export-statement-card-csv?" -> DELETE /user/{userID}/card/{cardID}/export-statement-card-csv/{itemId}
+- "Create a export-statement-card-pdf?" -> POST /user/{userID}/card/{cardID}/export-statement-card-pdf
+- "List all export-statement-card-pdf?" -> GET /user/{userID}/card/{cardID}/export-statement-card-pdf
+- "Get export-statement-card-pdf details?" -> GET /user/{userID}/card/{cardID}/export-statement-card-pdf/{itemId}
+- "Delete a export-statement-card-pdf?" -> DELETE /user/{userID}/card/{cardID}/export-statement-card-pdf/{itemId}
+- "Get feature-announcement details?" -> GET /user/{userID}/feature-announcement/{itemId}
+- "Create a generated-cvc2?" -> POST /user/{userID}/card/{cardID}/generated-cvc2
+- "List all generated-cvc2?" -> GET /user/{userID}/card/{cardID}/generated-cvc2
+- "Get generated-cvc2 details?" -> GET /user/{userID}/card/{cardID}/generated-cvc2/{itemId}
+- "Update a generated-cvc2?" -> PUT /user/{userID}/card/{cardID}/generated-cvc2/{itemId}
+- "List all health-check?" -> GET /health-check
+- "Create a ideal-merchant-transaction?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/ideal-merchant-transaction
+- "List all ideal-merchant-transaction?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/ideal-merchant-transaction
+- "Get ideal-merchant-transaction details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/ideal-merchant-transaction/{itemId}
+- "List all insight-preference-date?" -> GET /user/{userID}/insight-preference-date
+- "List all insights?" -> GET /user/{userID}/insights
+- "List all insights-search?" -> GET /user/{userID}/insights-search
+- "Create a installation?" -> POST /installation
+- "List all installation?" -> GET /installation
+- "Get installation details?" -> GET /installation/{itemId}
+- "List all instance?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-auto-allocate/{payment-auto-allocateID}/instance
+- "Get instance details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-auto-allocate/{payment-auto-allocateID}/instance/{itemId}
+- "List all invoice?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/invoice
+- "Get invoice details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/invoice/{itemId}
+- "List all invoice?" -> GET /user/{userID}/invoice
+- "Get invoice details?" -> GET /user/{userID}/invoice/{itemId}
+- "Get invoice-export details?" -> GET /user/{userID}/invoice/{invoiceID}/invoice-export/{itemId}
+- "Update a invoice-export?" -> PUT /user/{userID}/invoice/{invoiceID}/invoice-export/{itemId}
+- "Delete a invoice-export?" -> DELETE /user/{userID}/invoice/{invoiceID}/invoice-export/{itemId}
+- "Create a invoice-export?" -> POST /user/{userID}/invoice/{invoiceID}/invoice-export
+- "Get ip details?" -> GET /user/{userID}/credential-password-ip/{credential-password-ipID}/ip/{itemId}
+- "Update a ip?" -> PUT /user/{userID}/credential-password-ip/{credential-password-ipID}/ip/{itemId}
+- "Create a ip?" -> POST /user/{userID}/credential-password-ip/{credential-password-ipID}/ip
+- "List all ip?" -> GET /user/{userID}/credential-password-ip/{credential-password-ipID}/ip
+- "List all legal-name?" -> GET /user/{userID}/legal-name
+- "List all limit?" -> GET /user/{userID}/limit
+- "Get mastercard-action details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/mastercard-action/{itemId}
+- "List all mastercard-action?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/mastercard-action
+- "Get monetary-account details?" -> GET /user/{userID}/monetary-account/{itemId}
+- "List all monetary-account?" -> GET /user/{userID}/monetary-account
+- "Create a monetary-account-bank?" -> POST /user/{userID}/monetary-account-bank
+- "List all monetary-account-bank?" -> GET /user/{userID}/monetary-account-bank
+- "Get monetary-account-bank details?" -> GET /user/{userID}/monetary-account-bank/{itemId}
+- "Update a monetary-account-bank?" -> PUT /user/{userID}/monetary-account-bank/{itemId}
+- "Get monetary-account-card details?" -> GET /user/{userID}/monetary-account-card/{itemId}
+- "Update a monetary-account-card?" -> PUT /user/{userID}/monetary-account-card/{itemId}
+- "List all monetary-account-card?" -> GET /user/{userID}/monetary-account-card
+- "Create a monetary-account-external?" -> POST /user/{userID}/monetary-account-external
+- "List all monetary-account-external?" -> GET /user/{userID}/monetary-account-external
+- "Get monetary-account-external details?" -> GET /user/{userID}/monetary-account-external/{itemId}
+- "Update a monetary-account-external?" -> PUT /user/{userID}/monetary-account-external/{itemId}
+- "Create a monetary-account-external-saving?" -> POST /user/{userID}/monetary-account-external-savings
+- "List all monetary-account-external-savings?" -> GET /user/{userID}/monetary-account-external-savings
+- "Get monetary-account-external-saving details?" -> GET /user/{userID}/monetary-account-external-savings/{itemId}
+- "Update a monetary-account-external-saving?" -> PUT /user/{userID}/monetary-account-external-savings/{itemId}
+- "Create a monetary-account-joint?" -> POST /user/{userID}/monetary-account-joint
+- "List all monetary-account-joint?" -> GET /user/{userID}/monetary-account-joint
+- "Get monetary-account-joint details?" -> GET /user/{userID}/monetary-account-joint/{itemId}
+- "Update a monetary-account-joint?" -> PUT /user/{userID}/monetary-account-joint/{itemId}
+- "Create a monetary-account-saving?" -> POST /user/{userID}/monetary-account-savings
+- "List all monetary-account-savings?" -> GET /user/{userID}/monetary-account-savings
+- "Get monetary-account-saving details?" -> GET /user/{userID}/monetary-account-savings/{itemId}
+- "Update a monetary-account-saving?" -> PUT /user/{userID}/monetary-account-savings/{itemId}
+- "List all name?" -> GET /user-company/{user-companyID}/name
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/adyen-card-transaction/{adyen-card-transactionID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/adyen-card-transaction/{adyen-card-transactionID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/adyen-card-transaction/{adyen-card-transactionID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/adyen-card-transaction/{adyen-card-transactionID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/adyen-card-transaction/{adyen-card-transactionID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/switch-service-payment/{switch-service-paymentID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/switch-service-payment/{switch-service-paymentID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/switch-service-payment/{switch-service-paymentID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/switch-service-payment/{switch-service-paymentID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/switch-service-payment/{switch-service-paymentID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/bunqme-fundraiser-result/{bunqme-fundraiser-resultID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/bunqme-fundraiser-result/{bunqme-fundraiser-resultID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/bunqme-fundraiser-result/{bunqme-fundraiser-resultID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/bunqme-fundraiser-result/{bunqme-fundraiser-resultID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/bunqme-fundraiser-result/{bunqme-fundraiser-resultID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/draft-payment/{draft-paymentID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/draft-payment/{draft-paymentID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/draft-payment/{draft-paymentID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/draft-payment/{draft-paymentID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/draft-payment/{draft-paymentID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/ideal-merchant-transaction/{ideal-merchant-transactionID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/ideal-merchant-transaction/{ideal-merchant-transactionID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/ideal-merchant-transaction/{ideal-merchant-transactionID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/ideal-merchant-transaction/{ideal-merchant-transactionID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/ideal-merchant-transaction/{ideal-merchant-transactionID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/mastercard-action/{mastercard-actionID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/mastercard-action/{mastercard-actionID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/mastercard-action/{mastercard-actionID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/mastercard-action/{mastercard-actionID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/mastercard-action/{mastercard-actionID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/open-banking-merchant-transaction/{open-banking-merchant-transactionID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/open-banking-merchant-transaction/{open-banking-merchant-transactionID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/open-banking-merchant-transaction/{open-banking-merchant-transactionID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/open-banking-merchant-transaction/{open-banking-merchant-transactionID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/open-banking-merchant-transaction/{open-banking-merchant-transactionID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/payment-batch/{payment-batchID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-batch/{payment-batchID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/payment-batch/{payment-batchID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/payment-batch/{payment-batchID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-batch/{payment-batchID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/payment-delayed/{payment-delayedID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-delayed/{payment-delayedID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/payment-delayed/{payment-delayedID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/payment-delayed/{payment-delayedID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-delayed/{payment-delayedID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/payment/{paymentID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment/{paymentID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/payment/{paymentID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/payment/{paymentID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment/{paymentID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch/{request-inquiry-batchID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch/{request-inquiry-batchID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch/{request-inquiry-batchID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch/{request-inquiry-batchID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch/{request-inquiry-batchID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry/{request-inquiryID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry/{request-inquiryID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry/{request-inquiryID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry/{request-inquiryID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry/{request-inquiryID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/request-response/{request-responseID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-response/{request-responseID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/request-response/{request-responseID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/request-response/{request-responseID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-response/{request-responseID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/schedule/{scheduleID}/schedule-instance/{schedule-instanceID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule/{scheduleID}/schedule-instance/{schedule-instanceID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/schedule/{scheduleID}/schedule-instance/{schedule-instanceID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/schedule/{scheduleID}/schedule-instance/{schedule-instanceID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule/{scheduleID}/schedule-instance/{schedule-instanceID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch/{schedule-payment-batchID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch/{schedule-payment-batchID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch/{schedule-payment-batchID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch/{schedule-payment-batchID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch/{schedule-payment-batchID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment/{schedule-paymentID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment/{schedule-paymentID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment/{schedule-paymentID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment/{schedule-paymentID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment/{schedule-paymentID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry-batch/{schedule-request-inquiry-batchID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry-batch/{schedule-request-inquiry-batchID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry-batch/{schedule-request-inquiry-batchID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry-batch/{schedule-request-inquiry-batchID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry-batch/{schedule-request-inquiry-batchID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry/{schedule-request-inquiryID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry/{schedule-request-inquiryID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry/{schedule-request-inquiryID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry/{schedule-request-inquiryID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry/{schedule-request-inquiryID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/sofort-merchant-transaction/{sofort-merchant-transactionID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/sofort-merchant-transaction/{sofort-merchant-transactionID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/sofort-merchant-transaction/{sofort-merchant-transactionID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/sofort-merchant-transaction/{sofort-merchant-transactionID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/sofort-merchant-transaction/{sofort-merchant-transactionID}/note-attachment/{itemId}
+- "Create a note-attachment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/whitelist/{whitelistID}/whitelist-result/{whitelist-resultID}/note-attachment
+- "List all note-attachment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/whitelist/{whitelistID}/whitelist-result/{whitelist-resultID}/note-attachment
+- "Update a note-attachment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/whitelist/{whitelistID}/whitelist-result/{whitelist-resultID}/note-attachment/{itemId}
+- "Delete a note-attachment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/whitelist/{whitelistID}/whitelist-result/{whitelist-resultID}/note-attachment/{itemId}
+- "Get note-attachment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/whitelist/{whitelistID}/whitelist-result/{whitelist-resultID}/note-attachment/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/adyen-card-transaction/{adyen-card-transactionID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/adyen-card-transaction/{adyen-card-transactionID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/adyen-card-transaction/{adyen-card-transactionID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/adyen-card-transaction/{adyen-card-transactionID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/adyen-card-transaction/{adyen-card-transactionID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/switch-service-payment/{switch-service-paymentID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/switch-service-payment/{switch-service-paymentID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/switch-service-payment/{switch-service-paymentID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/switch-service-payment/{switch-service-paymentID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/switch-service-payment/{switch-service-paymentID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/bunqme-fundraiser-result/{bunqme-fundraiser-resultID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/bunqme-fundraiser-result/{bunqme-fundraiser-resultID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/bunqme-fundraiser-result/{bunqme-fundraiser-resultID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/bunqme-fundraiser-result/{bunqme-fundraiser-resultID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/bunqme-fundraiser-result/{bunqme-fundraiser-resultID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/draft-payment/{draft-paymentID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/draft-payment/{draft-paymentID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/draft-payment/{draft-paymentID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/draft-payment/{draft-paymentID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/draft-payment/{draft-paymentID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/ideal-merchant-transaction/{ideal-merchant-transactionID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/ideal-merchant-transaction/{ideal-merchant-transactionID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/ideal-merchant-transaction/{ideal-merchant-transactionID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/ideal-merchant-transaction/{ideal-merchant-transactionID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/ideal-merchant-transaction/{ideal-merchant-transactionID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/mastercard-action/{mastercard-actionID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/mastercard-action/{mastercard-actionID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/mastercard-action/{mastercard-actionID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/mastercard-action/{mastercard-actionID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/mastercard-action/{mastercard-actionID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/open-banking-merchant-transaction/{open-banking-merchant-transactionID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/open-banking-merchant-transaction/{open-banking-merchant-transactionID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/open-banking-merchant-transaction/{open-banking-merchant-transactionID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/open-banking-merchant-transaction/{open-banking-merchant-transactionID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/open-banking-merchant-transaction/{open-banking-merchant-transactionID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/payment-batch/{payment-batchID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-batch/{payment-batchID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/payment-batch/{payment-batchID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/payment-batch/{payment-batchID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-batch/{payment-batchID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/payment-delayed/{payment-delayedID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-delayed/{payment-delayedID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/payment-delayed/{payment-delayedID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/payment-delayed/{payment-delayedID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-delayed/{payment-delayedID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/payment/{paymentID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment/{paymentID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/payment/{paymentID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/payment/{paymentID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment/{paymentID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch/{request-inquiry-batchID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch/{request-inquiry-batchID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch/{request-inquiry-batchID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch/{request-inquiry-batchID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch/{request-inquiry-batchID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry/{request-inquiryID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry/{request-inquiryID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry/{request-inquiryID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry/{request-inquiryID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry/{request-inquiryID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/request-response/{request-responseID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-response/{request-responseID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/request-response/{request-responseID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/request-response/{request-responseID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-response/{request-responseID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/schedule/{scheduleID}/schedule-instance/{schedule-instanceID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule/{scheduleID}/schedule-instance/{schedule-instanceID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/schedule/{scheduleID}/schedule-instance/{schedule-instanceID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/schedule/{scheduleID}/schedule-instance/{schedule-instanceID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule/{scheduleID}/schedule-instance/{schedule-instanceID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch/{schedule-payment-batchID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch/{schedule-payment-batchID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch/{schedule-payment-batchID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch/{schedule-payment-batchID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch/{schedule-payment-batchID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment/{schedule-paymentID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment/{schedule-paymentID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment/{schedule-paymentID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment/{schedule-paymentID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment/{schedule-paymentID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry-batch/{schedule-request-inquiry-batchID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry-batch/{schedule-request-inquiry-batchID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry-batch/{schedule-request-inquiry-batchID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry-batch/{schedule-request-inquiry-batchID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry-batch/{schedule-request-inquiry-batchID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry/{schedule-request-inquiryID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry/{schedule-request-inquiryID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry/{schedule-request-inquiryID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry/{schedule-request-inquiryID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-request-inquiry/{schedule-request-inquiryID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/sofort-merchant-transaction/{sofort-merchant-transactionID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/sofort-merchant-transaction/{sofort-merchant-transactionID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/sofort-merchant-transaction/{sofort-merchant-transactionID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/sofort-merchant-transaction/{sofort-merchant-transactionID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/sofort-merchant-transaction/{sofort-merchant-transactionID}/note-text/{itemId}
+- "Create a note-text?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/whitelist/{whitelistID}/whitelist-result/{whitelist-resultID}/note-text
+- "List all note-text?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/whitelist/{whitelistID}/whitelist-result/{whitelist-resultID}/note-text
+- "Update a note-text?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/whitelist/{whitelistID}/whitelist-result/{whitelist-resultID}/note-text/{itemId}
+- "Delete a note-text?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/whitelist/{whitelistID}/whitelist-result/{whitelist-resultID}/note-text/{itemId}
+- "Get note-text details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/whitelist/{whitelistID}/whitelist-result/{whitelist-resultID}/note-text/{itemId}
+- "Create a notification-filter-email?" -> POST /user/{userID}/notification-filter-email
+- "List all notification-filter-email?" -> GET /user/{userID}/notification-filter-email
+- "Create a notification-filter-failure?" -> POST /user/{userID}/notification-filter-failure
+- "List all notification-filter-failure?" -> GET /user/{userID}/notification-filter-failure
+- "Create a notification-filter-push?" -> POST /user/{userID}/notification-filter-push
+- "List all notification-filter-push?" -> GET /user/{userID}/notification-filter-push
+- "Create a notification-filter-url?" -> POST /user/{userID}/notification-filter-url
+- "List all notification-filter-url?" -> GET /user/{userID}/notification-filter-url
+- "Create a notification-filter-url?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/notification-filter-url
+- "List all notification-filter-url?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/notification-filter-url
+- "Get oauth-client details?" -> GET /user/{userID}/oauth-client/{itemId}
+- "Update a oauth-client?" -> PUT /user/{userID}/oauth-client/{itemId}
+- "Create a oauth-client?" -> POST /user/{userID}/oauth-client
+- "List all oauth-client?" -> GET /user/{userID}/oauth-client
+- "Create a payment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/payment
+- "List all payment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment
+- "Get payment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment/{itemId}
+- "List all payment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/mastercard-action/{mastercard-actionID}/payment
+- "Create a payment-auto-allocate?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/payment-auto-allocate
+- "List all payment-auto-allocate?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-auto-allocate
+- "Get payment-auto-allocate details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-auto-allocate/{itemId}
+- "Update a payment-auto-allocate?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/payment-auto-allocate/{itemId}
+- "Delete a payment-auto-allocate?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/payment-auto-allocate/{itemId}
+- "List all payment-auto-allocate?" -> GET /user/{userID}/payment-auto-allocate
+- "Create a payment-batch?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/payment-batch
+- "List all payment-batch?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-batch
+- "Update a payment-batch?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/payment-batch/{itemId}
+- "Get payment-batch details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/payment-batch/{itemId}
+- "Get payment-service-provider-credential details?" -> GET /payment-service-provider-credential/{itemId}
+- "Create a payment-service-provider-credential?" -> POST /payment-service-provider-credential
+- "Create a payment-service-provider-draft-payment?" -> POST /user/{userID}/payment-service-provider-draft-payment
+- "List all payment-service-provider-draft-payment?" -> GET /user/{userID}/payment-service-provider-draft-payment
+- "Update a payment-service-provider-draft-payment?" -> PUT /user/{userID}/payment-service-provider-draft-payment/{itemId}
+- "Get payment-service-provider-draft-payment details?" -> GET /user/{userID}/payment-service-provider-draft-payment/{itemId}
+- "Create a payment-service-provider-issuer-transaction?" -> POST /user/{userID}/payment-service-provider-issuer-transaction
+- "List all payment-service-provider-issuer-transaction?" -> GET /user/{userID}/payment-service-provider-issuer-transaction
+- "Get payment-service-provider-issuer-transaction details?" -> GET /user/{userID}/payment-service-provider-issuer-transaction/{itemId}
+- "Update a payment-service-provider-issuer-transaction?" -> PUT /user/{userID}/payment-service-provider-issuer-transaction/{itemId}
+- "List all pdf-content?" -> GET /user/{userID}/invoice/{invoiceID}/pdf-content
+- "Create a replace?" -> POST /user/{userID}/card/{cardID}/replace
+- "Create a request-inquiry?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry
+- "List all request-inquiry?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry
+- "Update a request-inquiry?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry/{itemId}
+- "Get request-inquiry details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry/{itemId}
+- "Create a request-inquiry-batch?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch
+- "List all request-inquiry-batch?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch
+- "Update a request-inquiry-batch?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch/{itemId}
+- "Get request-inquiry-batch details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-inquiry-batch/{itemId}
+- "Update a request-response?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/request-response/{itemId}
+- "Get request-response details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-response/{itemId}
+- "List all request-response?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/request-response
+- "Create a sandbox-user-company?" -> POST /sandbox-user-company
+- "Create a sandbox-user-person?" -> POST /sandbox-user-person
+- "Get schedule details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule/{itemId}
+- "List all schedule?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule
+- "List all schedule?" -> GET /user/{userID}/schedule
+- "Get schedule-instance details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule/{scheduleID}/schedule-instance/{itemId}
+- "Update a schedule-instance?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/schedule/{scheduleID}/schedule-instance/{itemId}
+- "List all schedule-instance?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule/{scheduleID}/schedule-instance
+- "Create a schedule-payment?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment
+- "List all schedule-payment?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment
+- "Delete a schedule-payment?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment/{itemId}
+- "Get schedule-payment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment/{itemId}
+- "Update a schedule-payment?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment/{itemId}
+- "Get schedule-payment-batch details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch/{itemId}
+- "Update a schedule-payment-batch?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch/{itemId}
+- "Delete a schedule-payment-batch?" -> DELETE /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch/{itemId}
+- "Create a schedule-payment-batch?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/schedule-payment-batch
+- "Create a server-error?" -> POST /server-error
+- "List all server-public-key?" -> GET /installation/{installationID}/server-public-key
+- "Delete a session?" -> DELETE /session/{itemId}
+- "Create a session-server?" -> POST /session-server
+- "Create a share-invite-monetary-account-inquiry?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/share-invite-monetary-account-inquiry
+- "List all share-invite-monetary-account-inquiry?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/share-invite-monetary-account-inquiry
+- "Get share-invite-monetary-account-inquiry details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/share-invite-monetary-account-inquiry/{itemId}
+- "Update a share-invite-monetary-account-inquiry?" -> PUT /user/{userID}/monetary-account/{monetary-accountID}/share-invite-monetary-account-inquiry/{itemId}
+- "Get share-invite-monetary-account-response details?" -> GET /user/{userID}/share-invite-monetary-account-response/{itemId}
+- "Update a share-invite-monetary-account-response?" -> PUT /user/{userID}/share-invite-monetary-account-response/{itemId}
+- "List all share-invite-monetary-account-response?" -> GET /user/{userID}/share-invite-monetary-account-response
+- "Get sofort-merchant-transaction details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/sofort-merchant-transaction/{itemId}
+- "List all sofort-merchant-transaction?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/sofort-merchant-transaction
+- "Create a statement?" -> POST /user/{userID}/monetary-account/{monetary-accountID}/event/{eventID}/statement
+- "Get statement details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/event/{eventID}/statement/{itemId}
+- "Get switch-service-payment details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/switch-service-payment/{itemId}
+- "Create a token-qr-request-ideal?" -> POST /user/{userID}/token-qr-request-ideal
+- "Create a token-qr-request-sofort?" -> POST /user/{userID}/token-qr-request-sofort
+- "List all transferwise-currency?" -> GET /user/{userID}/transferwise-currency
+- "Create a transferwise-quote?" -> POST /user/{userID}/transferwise-quote
+- "Get transferwise-quote details?" -> GET /user/{userID}/transferwise-quote/{itemId}
+- "Create a transferwise-quote-temporary?" -> POST /user/{userID}/transferwise-quote-temporary
+- "Get transferwise-quote-temporary details?" -> GET /user/{userID}/transferwise-quote-temporary/{itemId}
+- "Create a transferwise-recipient?" -> POST /user/{userID}/transferwise-quote/{transferwise-quoteID}/transferwise-recipient
+- "List all transferwise-recipient?" -> GET /user/{userID}/transferwise-quote/{transferwise-quoteID}/transferwise-recipient
+- "Get transferwise-recipient details?" -> GET /user/{userID}/transferwise-quote/{transferwise-quoteID}/transferwise-recipient/{itemId}
+- "Delete a transferwise-recipient?" -> DELETE /user/{userID}/transferwise-quote/{transferwise-quoteID}/transferwise-recipient/{itemId}
+- "Create a transferwise-recipient-requirement?" -> POST /user/{userID}/transferwise-quote/{transferwise-quoteID}/transferwise-recipient-requirement
+- "List all transferwise-recipient-requirement?" -> GET /user/{userID}/transferwise-quote/{transferwise-quoteID}/transferwise-recipient-requirement
+- "Create a transferwise-transfer?" -> POST /user/{userID}/transferwise-quote/{transferwise-quoteID}/transferwise-transfer
+- "List all transferwise-transfer?" -> GET /user/{userID}/transferwise-quote/{transferwise-quoteID}/transferwise-transfer
+- "Get transferwise-transfer details?" -> GET /user/{userID}/transferwise-quote/{transferwise-quoteID}/transferwise-transfer/{itemId}
+- "Create a transferwise-transfer-requirement?" -> POST /user/{userID}/transferwise-quote/{transferwise-quoteID}/transferwise-transfer-requirement
+- "Create a transferwise-user?" -> POST /user/{userID}/transferwise-user
+- "List all transferwise-user?" -> GET /user/{userID}/transferwise-user
+- "List all tree-progress?" -> GET /user/{userID}/tree-progress
+- "Get user details?" -> GET /user/{itemId}
+- "List all user?" -> GET /user
+- "Get user-company details?" -> GET /user-company/{itemId}
+- "Update a user-company?" -> PUT /user-company/{itemId}
+- "Get user-payment-service-provider details?" -> GET /user-payment-service-provider/{itemId}
+- "Get user-person details?" -> GET /user-person/{itemId}
+- "Update a user-person?" -> PUT /user-person/{itemId}
+- "Get whitelist-sdd details?" -> GET /user/{userID}/whitelist-sdd/{itemId}
+- "List all whitelist-sdd?" -> GET /user/{userID}/whitelist-sdd
+- "Get whitelist-sdd details?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/whitelist-sdd/{itemId}
+- "List all whitelist-sdd?" -> GET /user/{userID}/monetary-account/{monetary-accountID}/whitelist-sdd
+- "Get whitelist-sdd-one-off details?" -> GET /user/{userID}/whitelist-sdd-one-off/{itemId}
+- "Update a whitelist-sdd-one-off?" -> PUT /user/{userID}/whitelist-sdd-one-off/{itemId}
+- "Delete a whitelist-sdd-one-off?" -> DELETE /user/{userID}/whitelist-sdd-one-off/{itemId}
+- "Create a whitelist-sdd-one-off?" -> POST /user/{userID}/whitelist-sdd-one-off
+- "List all whitelist-sdd-one-off?" -> GET /user/{userID}/whitelist-sdd-one-off
+- "Get whitelist-sdd-recurring details?" -> GET /user/{userID}/whitelist-sdd-recurring/{itemId}
+- "Update a whitelist-sdd-recurring?" -> PUT /user/{userID}/whitelist-sdd-recurring/{itemId}
+- "Delete a whitelist-sdd-recurring?" -> DELETE /user/{userID}/whitelist-sdd-recurring/{itemId}
+- "Create a whitelist-sdd-recurring?" -> POST /user/{userID}/whitelist-sdd-recurring
+- "List all whitelist-sdd-recurring?" -> GET /user/{userID}/whitelist-sdd-recurring
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

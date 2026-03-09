@@ -7,61 +7,76 @@
 @toc root(15)
 
 @endpoint POST /
+@desc Cancels a query that has been issued. Cancellation is provided only if the query has not completed running before the cancellation request was issued. Because cancellation is an idempotent operation, subsequent cancellation requests will return a CancellationMessage, indicating that the query has already been canceled. See code sample for details.
 @required {QueryId: str}
 @returns(200) {CancellationMessage: str?}
 
 @endpoint POST /
+@desc Create a scheduled query that will be run on your behalf at the configured schedule. Timestream assumes the execution role provided as part of the ScheduledQueryExecutionRoleArn parameter to run the query. You can use the NotificationConfiguration parameter to configure notification for your scheduled query operations.
 @required {Name: str, QueryString: str, ScheduleConfiguration: ScheduleConfiguration, NotificationConfiguration: NotificationConfiguration, ScheduledQueryExecutionRoleArn: str, ErrorReportConfiguration: ErrorReportConfiguration}
 @optional {TargetConfiguration: TargetConfiguration, ClientToken: str, Tags: [Tag], KmsKeyId: str}
 @returns(200) {Arn: str}
 
 @endpoint POST /
+@desc Deletes a given scheduled query. This is an irreversible operation.
 @required {ScheduledQueryArn: str}
 
 @endpoint POST /
+@desc Describes the settings for your account that include the query pricing model and the configured maximum TCUs the service can use for your query workload. You're charged only for the duration of compute units used for your workloads.
 @returns(200) {MaxQueryTCU: int?, QueryPricingModel: str?}
 
 @endpoint POST /
+@desc DescribeEndpoints returns a list of available endpoints to make Timestream API calls against. This API is available through both Write and Query. Because the Timestream SDKs are designed to transparently work with the service’s architecture, including the management and mapping of the service endpoints, it is not recommended that you use this API unless:   You are using VPC endpoints (Amazon Web Services PrivateLink) with Timestream     Your application uses a programming language that does not yet have SDK support   You require better control over the client-side implementation   For detailed information on how and when to use and implement DescribeEndpoints, see The Endpoint Discovery Pattern.
 @returns(200) {Endpoints: [Endpoint]}
 
 @endpoint POST /
+@desc Provides detailed information about a scheduled query.
 @required {ScheduledQueryArn: str}
 @returns(200) {ScheduledQuery: ScheduledQueryDescription{Arn: str, Name: str, QueryString: str, CreationTime: str(timestamp)?, State: str, PreviousInvocationTime: str(timestamp)?, NextInvocationTime: str(timestamp)?, ScheduleConfiguration: ScheduleConfiguration{ScheduleExpression: str}, NotificationConfiguration: NotificationConfiguration{SnsConfiguration: SnsConfiguration{TopicArn: str}}, TargetConfiguration: TargetConfiguration?{TimestreamConfiguration: TimestreamConfiguration{DatabaseName: str, TableName: str, TimeColumn: str, DimensionMappings: [DimensionMapping], MultiMeasureMappings: MultiMeasureMappings?, MixedMeasureMappings: [MixedMeasureMapping]?, MeasureNameColumn: str?}}, ScheduledQueryExecutionRoleArn: str?, KmsKeyId: str?, ErrorReportConfiguration: ErrorReportConfiguration?{S3Configuration: S3Configuration{BucketName: str, ObjectKeyPrefix: str?, EncryptionOption: str?}}, LastRunSummary: ScheduledQueryRunSummary?{InvocationTime: str(timestamp)?, TriggerTime: str(timestamp)?, RunStatus: str?, ExecutionStats: ExecutionStats?{ExecutionTimeInMillis: int(i64)?, DataWrites: int(i64)?, BytesMetered: int(i64)?, CumulativeBytesScanned: int(i64)?, RecordsIngested: int(i64)?, QueryResultRows: int(i64)?}, ErrorReportLocation: ErrorReportLocation?{S3ReportLocation: S3ReportLocation?}, FailureReason: str?}, RecentlyFailedRuns: [ScheduledQueryRunSummary]?}}
 
 @endpoint POST /
+@desc You can use this API to run a scheduled query manually.
 @required {ScheduledQueryArn: str, InvocationTime: str(timestamp)}
 @optional {ClientToken: str}
 
 @endpoint POST /
+@desc Gets a list of all scheduled queries in the caller's Amazon account and Region. ListScheduledQueries is eventually consistent.
 @optional {MaxResults: int, NextToken: str}
 @returns(200) {ScheduledQueries: [ScheduledQuery], NextToken: str?}
 
 @endpoint POST /
+@desc List all tags on a Timestream query resource.
 @required {ResourceARN: str}
 @optional {MaxResults: int, NextToken: str}
 @returns(200) {Tags: [Tag], NextToken: str?}
 
 @endpoint POST /
+@desc A synchronous operation that allows you to submit a query with parameters to be stored by Timestream for later running. Timestream only supports using this operation with ValidateOnly set to true.
 @required {QueryString: str}
 @optional {ValidateOnly: bool}
 @returns(200) {QueryString: str, Columns: [SelectColumn], Parameters: [ParameterMapping]}
 
 @endpoint POST /
+@desc Query is a synchronous operation that enables you to run a query against your Amazon Timestream data. Query will time out after 60 seconds. You must update the default timeout in the SDK to support a timeout of 60 seconds. See the code sample for details.  Your query request will fail in the following cases:    If you submit a Query request with the same client token outside of the 5-minute idempotency window.     If you submit a Query request with the same client token, but change other parameters, within the 5-minute idempotency window.     If the size of the row (including the query metadata) exceeds 1 MB, then the query will fail with the following error message:   Query aborted as max page response size has been exceeded by the output result row     If the IAM principal of the query initiator and the result reader are not the same and/or the query initiator and the result reader do not have the same query string in the query requests, the query will fail with an Invalid pagination token error.
 @required {QueryString: str}
 @optional {ClientToken: str, NextToken: str, MaxRows: int}
 @returns(200) {QueryId: str, NextToken: str?, Rows: [Row], ColumnInfo: [ColumnInfo], QueryStatus: QueryStatus?{ProgressPercentage: num(f64)?, CumulativeBytesScanned: int(i64)?, CumulativeBytesMetered: int(i64)?}}
 
 @endpoint POST /
+@desc Associate a set of tags with a Timestream resource. You can then activate these user-defined tags so that they appear on the Billing and Cost Management console for cost allocation tracking.
 @required {ResourceARN: str, Tags: [Tag]}
 
 @endpoint POST /
+@desc Removes the association of tags from a Timestream query resource.
 @required {ResourceARN: str, TagKeys: [str]}
 
 @endpoint POST /
+@desc Transitions your account to use TCUs for query pricing and modifies the maximum query compute units that you've configured. If you reduce the value of MaxQueryTCU to a desired configuration, the new value can take up to 24 hours to be effective.  After you've transitioned your account to use TCUs for query pricing, you can't transition to using bytes scanned for query pricing.
 @optional {MaxQueryTCU: int, QueryPricingModel: str}
 @returns(200) {MaxQueryTCU: int?, QueryPricingModel: str?}
 
 @endpoint POST /
+@desc Update a scheduled query.
 @required {ScheduledQueryArn: str, State: str}
 
 @end

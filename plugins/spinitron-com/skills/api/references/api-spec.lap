@@ -9,58 +9,67 @@
 
 @group personas
 @endpoint GET /personas
-@optional {name: str, count: int=20, page: int, fields: [str], expand: [str]}
-@returns(200)
+@desc Get Personas
+@optional {name: str # Filter by Persona name, count: int=20 # Amount of items to return, page: int # Offset, used together with count, fields: [str] # Allows to select only needed fields, expand: [str] # Allows to select extra fields}
+@returns(200) The personas
 
 @endpoint GET /personas/{id}
+@desc Get Persona by id
 @required {id: int}
-@optional {fields: [str], expand: [str]}
-@returns(200) {id: int, name: str, bio: str, since: int(year), email: str(email), website: str(url), image: str(url), _links: map{self: map{href: str}, shows: [map]}}
-@errors {404}
+@optional {fields: [str] # Allows to select only needed fields, expand: [str] # Allows to select extra fields}
+@returns(200) {id: int, name: str, bio: str, since: int(year), email: str(email), website: str(url), image: str(url), _links: map{self: map{href: str}, shows: [map]}} # The Persona
+@errors {404: Persona not found}
 
 @endgroup
 
 @group shows
 @endpoint GET /shows
-@optional {start: str(date-time), end: str(date-time), count: int=20, page: int, fields: [str], expand: [str]}
-@returns(200)
-@errors {422}
+@desc Returns scheduled shows optionally filtered by {start} and/or {end} datetimes
+@optional {start: str(date-time) # The datetime starting from items must be returned. Maximum 1 hour in past., end: str(date-time) # The ending datetime. Maximum 1 hour in past., count: int=20 # Amount of items to return, page: int # Offset, used together with count, fields: [str] # Allows to select only needed fields, expand: [str] # Allows to select extra fields}
+@returns(200) The shows
+@errors {422: Invalid datetimes in filter: either too old or {end} is less than {start}.}
 
 @endpoint GET /shows/{id}
+@desc Get a Show by id
 @required {id: int}
-@optional {fields: [str], expand: [str]}
-@returns(200) {id: int, start: str(date-time), end: str(date-time), duration: int, timezone: str, one_off: bool, category: str, title: str, description: str, since: int(year), url: str(url), hide_dj: bool, image: str(url), _links: map{self: map{href: str}, personas: [map], playlists: map{href: str}}}
-@errors {404}
+@optional {fields: [str] # Allows to select only needed fields, expand: [str] # Allows to select extra fields}
+@returns(200) {id: int, start: str(date-time), end: str(date-time), duration: int, timezone: str, one_off: bool, category: str, title: str, description: str, since: int(year), url: str(url), hide_dj: bool, image: str(url), _links: map{self: map{href: str}, personas: [map], playlists: map{href: str}}} # The Show
+@errors {404: Show not found or too old}
 
 @endgroup
 
 @group playlists
 @endpoint GET /playlists
-@optional {start: str(date-time), end: str(date-time), show_id: int, persona_id: int, count: int=20, page: int, fields: [str], expand: [str]}
-@returns(200)
+@desc Returns playlists optionally filtered by {start} and/or {end} datetimes
+@optional {start: str(date-time) # The datetime starting from items must be returned. Maximum 1 hour in future., end: str(date-time) # The ending datetime. Maximum 1 hour in future., show_id: int # Filter by show, persona_id: int # Filter by persona, count: int=20 # Amount of items to return, page: int # Offset, used together with count, fields: [str] # Allows to select only needed fields, expand: [str] # Allows to select extra fields}
+@returns(200) The playlists
 
 @endpoint GET /playlists/{id}
+@desc Get a Playlist by id
 @required {id: int}
-@optional {fields: [str], expand: [str]}
-@returns(200) {id: int, persona_id: int, show_id: int, start: str(date-time), end: str(date-time), duration: int, timezone: str, category: str, title: str, description: str, since: int(year), url: str(url), hide_dj: bool, image: str(url), automation: bool, episode_name: str, episode_description: str, _links: map{self: map{href: str}, persona: map{href: str}, show: map{href: str}, spins: map{href: str}}}
-@errors {404}
+@optional {fields: [str] # Allows to select only needed fields, expand: [str] # Allows to select extra fields}
+@returns(200) {id: int, persona_id: int, show_id: int, start: str(date-time), end: str(date-time), duration: int, timezone: str, category: str, title: str, description: str, since: int(year), url: str(url), hide_dj: bool, image: str(url), automation: bool, episode_name: str, episode_description: str, _links: map{self: map{href: str}, persona: map{href: str}, show: map{href: str}, spins: map{href: str}}} # The playlist
+@errors {404: Playlist not found or is in the future}
 
 @endgroup
 
 @group spins
 @endpoint GET /spins
-@optional {start: str(date-time), end: str(date-time), playlist_id: int, show_id: int, count: int=20, page: int, fields: [str], expand: [str]}
-@returns(200)
+@desc Returns spins optionally filtered by {start} and/or {end} datetimes
+@optional {start: str(date-time) # The datetime starting from items must be returned., end: str(date-time) # The ending datetime., playlist_id: int # Filter by playlist, show_id: int # Filter by show, count: int=20 # Amount of items to return, page: int # Offset, used together with count, fields: [str] # Allows to select only needed fields, expand: [str] # Allows to select extra fields}
+@returns(200) The spins
 
 @endpoint POST /spins
-@returns(201) {id: int, playlist_id: int, start: str(date-time), end: str(date-time), duration: int, timezone: str, image: str(url), classical: bool, artist: str, artist-custom: str, composer: str, release: str, release-custom: str, va: bool, label: str, label-custom: str, released: int, medium: str, genre: str, song: str, note: str, request: bool, local: bool, new: bool, work: str, conductor: str, performers: str, ensemble: str, catalog-number: str, isrc: str, upc: str, iswc: str, _links: map{self: map{href: str}, playlist: map{href: str}}}
-@errors {422}
+@desc Log a Spin
+@returns(201) {id: int, playlist_id: int, start: str(date-time), end: str(date-time), duration: int, timezone: str, image: str(url), classical: bool, artist: str, artist-custom: str, composer: str, release: str, release-custom: str, va: bool, label: str, label-custom: str, released: int, medium: str, genre: str, song: str, note: str, request: bool, local: bool, new: bool, work: str, conductor: str, performers: str, ensemble: str, catalog-number: str, isrc: str, upc: str, iswc: str, _links: map{self: map{href: str}, playlist: map{href: str}}} # The new created Spin.
+@errors {422: Validation failed.}
 
 @endpoint GET /spins/{id}
+@desc Get a Spin by id
 @required {id: int}
-@optional {fields: [str], expand: [str]}
-@returns(200) {id: int, playlist_id: int, start: str(date-time), end: str(date-time), duration: int, timezone: str, image: str(url), classical: bool, artist: str, artist-custom: str, composer: str, release: str, release-custom: str, va: bool, label: str, label-custom: str, released: int, medium: str, genre: str, song: str, note: str, request: bool, local: bool, new: bool, work: str, conductor: str, performers: str, ensemble: str, catalog-number: str, isrc: str, upc: str, iswc: str, _links: map{self: map{href: str}, playlist: map{href: str}}}
-@errors {404}
+@optional {fields: [str] # Allows to select only needed fields, expand: [str] # Allows to select extra fields}
+@returns(200) {id: int, playlist_id: int, start: str(date-time), end: str(date-time), duration: int, timezone: str, image: str(url), classical: bool, artist: str, artist-custom: str, composer: str, release: str, release-custom: str, va: bool, label: str, label-custom: str, released: int, medium: str, genre: str, song: str, note: str, request: bool, local: bool, new: bool, work: str, conductor: str, performers: str, ensemble: str, catalog-number: str, isrc: str, upc: str, iswc: str, _links: map{self: map{href: str}, playlist: map{href: str}}} # The spin
+@errors {404: Spin not found}
 
 @endgroup
 

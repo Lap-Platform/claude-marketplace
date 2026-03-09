@@ -2,359 +2,437 @@
 # Machine-readable API spec. Each @endpoint block is one API call.
 @api KeyVaultClient
 @version 7.0-preview
-@common_fields {api-version: any}
+@common_fields {api-version: any # Client API version.}
 @endpoints 78
 @hint download_for_search
 @toc keys(15), deletedkeys(4), secrets(8), deletedsecrets(4), certificates(23), deletedcertificates(4), storage(13), deletedstorage(7)
 
 @group keys
 @endpoint POST /keys/{key-name}/create
-@required {key-name: any, parameters: any}
-@returns(200)
+@desc Creates a new key, stores it, then returns key parameters and attributes to the client.
+@required {key-name: any # The name for the new key. The system will generate the version name for the new key., parameters: any # The parameters to create a key.}
+@returns(200) A key bundle containing the result of the create key request.
 
 @endpoint PUT /keys/{key-name}
-@required {key-name: any, parameters: any}
-@returns(200)
+@desc Imports an externally created key, stores it, and returns key parameters and attributes to the client.
+@required {key-name: any # Name for the imported key., parameters: any # The parameters to import a key.}
+@returns(200) Imported key bundle to the vault.
 
 @endpoint DELETE /keys/{key-name}
-@required {key-name: any}
-@returns(200)
+@desc Deletes a key of any type from storage in Azure Key Vault.
+@required {key-name: any # The name of the key to delete.}
+@returns(200) The public part of the deleted key and deletion information on when the key will be purged.
 
 @endpoint PATCH /keys/{key-name}/{key-version}
-@required {key-name: any, key-version: any, parameters: any}
-@returns(200)
+@desc The update key operation changes specified attributes of a stored key and can be applied to any key type and key version stored in Azure Key Vault.
+@required {key-name: any # The name of key to update., key-version: any # The version of the key to update., parameters: any # The parameters of the key to update.}
+@returns(200) The updated key.
 
 @endpoint GET /keys/{key-name}/{key-version}
-@required {key-name: any, key-version: any}
-@returns(200)
+@desc Gets the public part of a stored key.
+@required {key-name: any # The name of the key to get., key-version: any # Adding the version parameter retrieves a specific version of a key.}
+@returns(200) A key bundle containing the key and its attributes.
 
 @endpoint GET /keys/{key-name}/versions
-@required {key-name: any}
-@optional {maxresults: any}
-@returns(200)
+@desc Retrieves a list of individual key versions with the same key name.
+@required {key-name: any # The name of the key.}
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null.}
+@returns(200) A response message containing a list of keys along with a link to the next page of keys.
 
 @endpoint GET /keys
-@optional {maxresults: any}
-@returns(200)
+@desc List keys in the specified vault.
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null.}
+@returns(200) A response message containing a list of keys in the vault along with a link to the next page of keys.
 
 @endpoint POST /keys/{key-name}/backup
-@required {key-name: any}
-@returns(200)
+@desc Requests that a backup of the specified key be downloaded to the client.
+@required {key-name: any # The name of the key.}
+@returns(200) The backup blob containing the backed up key.
 
 @endpoint POST /keys/restore
-@required {parameters: any}
-@returns(200)
+@desc Restores a backed up key to a vault.
+@required {parameters: any # The parameters to restore the key.}
+@returns(200) Restored key bundle in the vault.
 
 @endpoint POST /keys/{key-name}/{key-version}/encrypt
-@required {key-name: any, key-version: any, parameters: any}
-@returns(200)
+@desc Encrypts an arbitrary sequence of bytes using an encryption key that is stored in a key vault.
+@required {key-name: any # The name of the key., key-version: any # The version of the key., parameters: any # The parameters for the encryption operation.}
+@returns(200) The encryption result.
 
 @endpoint POST /keys/{key-name}/{key-version}/decrypt
-@required {key-name: any, key-version: any, parameters: any}
-@returns(200)
+@desc Decrypts a single block of encrypted data.
+@required {key-name: any # The name of the key., key-version: any # The version of the key., parameters: any # The parameters for the decryption operation.}
+@returns(200) The decryption result.
 
 @endpoint POST /keys/{key-name}/{key-version}/sign
-@required {key-name: any, key-version: any, parameters: any}
-@returns(200)
+@desc Creates a signature from a digest using the specified key.
+@required {key-name: any # The name of the key., key-version: any # The version of the key., parameters: any # The parameters for the signing operation.}
+@returns(200) The signature value.
 
 @endpoint POST /keys/{key-name}/{key-version}/verify
-@required {key-name: any, key-version: any, parameters: any}
-@returns(200)
+@desc Verifies a signature using a specified key.
+@required {key-name: any # The name of the key., key-version: any # The version of the key., parameters: any # The parameters for verify operations.}
+@returns(200) The verification result.
 
 @endpoint POST /keys/{key-name}/{key-version}/wrapkey
-@required {key-name: any, key-version: any, parameters: any}
-@returns(200)
+@desc Wraps a symmetric key using a specified key.
+@required {key-name: any # The name of the key., key-version: any # The version of the key., parameters: any # The parameters for wrap operation.}
+@returns(200) The wrapped symmetric key.
 
 @endpoint POST /keys/{key-name}/{key-version}/unwrapkey
-@required {key-name: any, key-version: any, parameters: any}
-@returns(200)
+@desc Unwraps a symmetric key using the specified key that was initially used for wrapping that key.
+@required {key-name: any # The name of the key., key-version: any # The version of the key., parameters: any # The parameters for the key operation.}
+@returns(200) The unwrapped symmetric key.
 
 @endgroup
 
 @group deletedkeys
 @endpoint GET /deletedkeys
-@optional {maxresults: any}
-@returns(200)
+@desc Lists the deleted keys in the specified vault.
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null.}
+@returns(200) A response message containing a list of deleted keys in the vault along with a link to the next page of deleted keys.
 
 @endpoint GET /deletedkeys/{key-name}
-@required {key-name: any}
-@returns(200)
+@desc Gets the public part of a deleted key.
+@required {key-name: any # The name of the key.}
+@returns(200) A DeletedKeyBundle consisting of a WebKey plus its Attributes and deletion information.
 
 @endpoint DELETE /deletedkeys/{key-name}
-@required {key-name: any}
-@returns(204)
+@desc Permanently deletes the specified key.
+@required {key-name: any # The name of the key}
+@returns(204) No content, signaling that the key was permanently purged.
 
 @endpoint POST /deletedkeys/{key-name}/recover
-@required {key-name: any}
-@returns(200)
+@desc Recovers the deleted key to its latest version.
+@required {key-name: any # The name of the deleted key.}
+@returns(200) A Key bundle of the original key and its attributes
 
 @endgroup
 
 @group secrets
 @endpoint PUT /secrets/{secret-name}
-@required {secret-name: any, parameters: any}
-@returns(200)
+@desc Sets a secret in a specified key vault.
+@required {secret-name: any # The name of the secret., parameters: any # The parameters for setting the secret.}
+@returns(200) A secret bundle containing the result of the set secret request.
 
 @endpoint DELETE /secrets/{secret-name}
-@required {secret-name: any}
-@returns(200)
+@desc Deletes a secret from a specified key vault.
+@required {secret-name: any # The name of the secret.}
+@returns(200) The deleted secret and information on when the secret will be deleted, and how to recover the deleted secret.
 
 @endpoint PATCH /secrets/{secret-name}/{secret-version}
-@required {secret-name: any, secret-version: any, parameters: any}
-@returns(200)
+@desc Updates the attributes associated with a specified secret in a given key vault.
+@required {secret-name: any # The name of the secret., secret-version: any # The version of the secret., parameters: any # The parameters for update secret operation.}
+@returns(200) The updated secret.
 
 @endpoint GET /secrets/{secret-name}/{secret-version}
-@required {secret-name: any, secret-version: any}
-@returns(200)
+@desc Get a specified secret from a given key vault.
+@required {secret-name: any # The name of the secret., secret-version: any # The version of the secret.}
+@returns(200) The retrieved secret.
 
 @endpoint GET /secrets
-@optional {maxresults: any}
-@returns(200)
+@desc List secrets in a specified key vault.
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null.}
+@returns(200) A response message containing a list of secrets in the vault along with a link to the next page of secrets.
 
 @endpoint GET /secrets/{secret-name}/versions
-@required {secret-name: any}
-@optional {maxresults: any}
-@returns(200)
+@desc List all versions of the specified secret.
+@required {secret-name: any # The name of the secret.}
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null.}
+@returns(200) A response message containing a list of secrets along with a link to the next page of secrets.
 
 @endgroup
 
 @group deletedsecrets
 @endpoint GET /deletedsecrets
-@optional {maxresults: any}
-@returns(200)
+@desc Lists deleted secrets for the specified vault.
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null.}
+@returns(200) A response message containing a list of deleted secrets in the vault, along with a link to the next page of deleted secrets.
 
 @endpoint GET /deletedsecrets/{secret-name}
-@required {secret-name: any}
-@returns(200)
+@desc Gets the specified deleted secret.
+@required {secret-name: any # The name of the secret.}
+@returns(200) A secret bundle of the secret and its attributes.
 
 @endpoint DELETE /deletedsecrets/{secret-name}
-@required {secret-name: any}
-@returns(204)
+@desc Permanently deletes the specified secret.
+@required {secret-name: any # The name of the secret.}
+@returns(204) No content signaling that the secret was purged forever.
 
 @endpoint POST /deletedsecrets/{secret-name}/recover
-@required {secret-name: any}
-@returns(200)
+@desc Recovers the deleted secret to the latest version.
+@required {secret-name: any # The name of the deleted secret.}
+@returns(200) A Secret bundle of the original secret and its attributes.
 
 @endgroup
 
 @group secrets
 @endpoint POST /secrets/{secret-name}/backup
-@required {secret-name: any}
-@returns(200)
+@desc Backs up the specified secret.
+@required {secret-name: any # The name of the secret.}
+@returns(200) The backup blob containing the backed up secret.
 
 @endpoint POST /secrets/restore
-@required {parameters: any}
-@returns(200)
+@desc Restores a backed up secret to a vault.
+@required {parameters: any # The parameters to restore the secret.}
+@returns(200) Restored secret bundle in the vault.
 
 @endgroup
 
 @group certificates
 @endpoint GET /certificates
-@optional {maxresults: any, includePending: any}
-@returns(200)
+@desc List certificates in a specified key vault
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null., includePending: any # Specifies whether to include certificates which are not completely provisioned.}
+@returns(200) A response message containing a list of certificates along with a link to the next page of certificates.
 
 @endpoint DELETE /certificates/{certificate-name}
-@required {certificate-name: any}
-@returns(200)
+@desc Deletes a certificate from a specified key vault.
+@required {certificate-name: any # The name of the certificate.}
+@returns(200) The deleted certificate.
 
 @endpoint PUT /certificates/contacts
-@required {contacts: any}
-@returns(200)
+@desc Sets the certificate contacts for the specified key vault.
+@required {contacts: any # The contacts for the key vault certificate.}
+@returns(200) The contacts for the key vault certificate.
 
 @endpoint GET /certificates/contacts
-@returns(200)
+@desc Lists the certificate contacts for a specified key vault.
+@returns(200) The contacts for the key vault certificate.
 
 @endpoint DELETE /certificates/contacts
-@returns(200)
+@desc Deletes the certificate contacts for a specified key vault.
+@returns(200) The contacts for the key vault certificate.
 
 @endpoint GET /certificates/issuers
-@optional {maxresults: any}
-@returns(200)
+@desc List certificate issuers for a specified key vault.
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null.}
+@returns(200) A response message containing a list of certificate issuers in a key vault along with a link to the next page of certificate issuers.
 
 @endpoint PUT /certificates/issuers/{issuer-name}
-@required {issuer-name: any, parameter: any}
-@returns(200)
+@desc Sets the specified certificate issuer.
+@required {issuer-name: any # The name of the issuer., parameter: any # Certificate issuer set parameter.}
+@returns(200) The issuer for the key vault certificate.
 
 @endpoint PATCH /certificates/issuers/{issuer-name}
-@required {issuer-name: any, parameter: any}
-@returns(200)
+@desc Updates the specified certificate issuer.
+@required {issuer-name: any # The name of the issuer., parameter: any # Certificate issuer update parameter.}
+@returns(200) The issuer for the key vault certificate.
 
 @endpoint GET /certificates/issuers/{issuer-name}
-@required {issuer-name: any}
-@returns(200)
+@desc Lists the specified certificate issuer.
+@required {issuer-name: any # The name of the issuer.}
+@returns(200) The issuer for the key vault certificate.
 
 @endpoint DELETE /certificates/issuers/{issuer-name}
-@required {issuer-name: any}
-@returns(200)
+@desc Deletes the specified certificate issuer.
+@required {issuer-name: any # The name of the issuer.}
+@returns(200) The issuer for the key vault certificate.
 
 @endpoint POST /certificates/{certificate-name}/create
-@required {certificate-name: any, parameters: any}
-@returns(202)
+@desc Creates a new certificate.
+@required {certificate-name: any # The name of the certificate., parameters: any # The parameters to create a certificate.}
+@returns(202) Created certificate bundle.
 
 @endpoint POST /certificates/{certificate-name}/import
-@required {certificate-name: any, parameters: any}
-@returns(200)
+@desc Imports a certificate into a specified key vault.
+@required {certificate-name: any # The name of the certificate., parameters: any # The parameters to import the certificate.}
+@returns(200) Imported certificate bundle to the vault.
 
 @endpoint GET /certificates/{certificate-name}/versions
-@required {certificate-name: any}
-@optional {maxresults: any}
-@returns(200)
+@desc List the versions of a certificate.
+@required {certificate-name: any # The name of the certificate.}
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null.}
+@returns(200) A response message containing a list of certificates in the key vault along with a link to the next page of keys.
 
 @endpoint GET /certificates/{certificate-name}/policy
-@required {certificate-name: any}
-@returns(200)
+@desc Lists the policy for a certificate.
+@required {certificate-name: any # The name of the certificate in a given key vault.}
+@returns(200) The certificate policy.
 
 @endpoint PATCH /certificates/{certificate-name}/policy
-@required {certificate-name: any, certificatePolicy: any}
-@returns(200)
+@desc Updates the policy for a certificate.
+@required {certificate-name: any # The name of the certificate in the given vault., certificatePolicy: any # The policy for the certificate.}
+@returns(200) The certificate policy
 
 @endpoint PATCH /certificates/{certificate-name}/{certificate-version}
-@required {certificate-name: any, certificate-version: any, parameters: any}
-@returns(200)
+@desc Updates the specified attributes associated with the given certificate.
+@required {certificate-name: any # The name of the certificate in the given key vault., certificate-version: any # The version of the certificate., parameters: any # The parameters for certificate update.}
+@returns(200) The updated certificate.
 
 @endpoint GET /certificates/{certificate-name}/{certificate-version}
-@required {certificate-name: any, certificate-version: any}
-@returns(200)
+@desc Gets information about a certificate.
+@required {certificate-name: any # The name of the certificate in the given vault., certificate-version: any # The version of the certificate.}
+@returns(200) The retrieved certificate.
 
 @endpoint PATCH /certificates/{certificate-name}/pending
-@required {certificate-name: any, certificateOperation: any}
-@returns(200)
+@desc Updates a certificate operation.
+@required {certificate-name: any # The name of the certificate., certificateOperation: any # The certificate operation response.}
+@returns(200) A message containing the certificate operation response.
 
 @endpoint GET /certificates/{certificate-name}/pending
-@required {certificate-name: any}
-@returns(200)
+@desc Gets the creation operation of a certificate.
+@required {certificate-name: any # The name of the certificate.}
+@returns(200) The certificate operation response.
 
 @endpoint DELETE /certificates/{certificate-name}/pending
-@required {certificate-name: any}
-@returns(200)
+@desc Deletes the creation operation for a specific certificate.
+@required {certificate-name: any # The name of the certificate.}
+@returns(200) A message containing the certificate operation response.
 
 @endpoint POST /certificates/{certificate-name}/pending/merge
-@required {certificate-name: any, parameters: any}
-@returns(201)
+@desc Merges a certificate or a certificate chain with a key pair existing on the server.
+@required {certificate-name: any # The name of the certificate., parameters: any # The parameters to merge certificate.}
+@returns(201) Merged certificate bundle to the vault.
 
 @endpoint POST /certificates/{certificate-name}/backup
-@required {certificate-name: any}
-@returns(200)
+@desc Backs up the specified certificate.
+@required {certificate-name: any # The name of the certificate.}
+@returns(200) The backup blob containing the backed up certificate.
 
 @endpoint POST /certificates/restore
-@required {parameters: any}
-@returns(200)
+@desc Restores a backed up certificate to a vault.
+@required {parameters: any # The parameters to restore the certificate.}
+@returns(200) Restored certificate bundle in the vault.
 
 @endgroup
 
 @group deletedcertificates
 @endpoint GET /deletedcertificates
-@optional {maxresults: any, includePending: any}
-@returns(200)
+@desc Lists the deleted certificates in the specified vault currently available for recovery.
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null., includePending: any # Specifies whether to include certificates which are not completely provisioned.}
+@returns(200) A response message containing a list of deleted certificates in the vault along with a link to the next page of deleted certificates
 
 @endpoint GET /deletedcertificates/{certificate-name}
-@required {certificate-name: any}
-@returns(200)
+@desc Retrieves information about the specified deleted certificate.
+@required {certificate-name: any # The name of the certificate}
+@returns(200) A Certificate bundle of the certificate and its attributes
 
 @endpoint DELETE /deletedcertificates/{certificate-name}
-@required {certificate-name: any}
-@returns(204)
+@desc Permanently deletes the specified deleted certificate.
+@required {certificate-name: any # The name of the certificate}
+@returns(204) No content signaling that the certificate was purged forever.
 
 @endpoint POST /deletedcertificates/{certificate-name}/recover
-@required {certificate-name: any}
-@returns(200)
+@desc Recovers the deleted certificate back to its current version under /certificates.
+@required {certificate-name: any # The name of the deleted certificate}
+@returns(200) A Certificate bundle of the original certificate and its attributes
 
 @endgroup
 
 @group storage
 @endpoint GET /storage
-@optional {maxresults: any}
-@returns(200)
+@desc List storage accounts managed by the specified key vault. This operation requires the storage/list permission.
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null.}
+@returns(200) A response message containing a list of storage accounts along with a link to the next page of storage accounts.
 
 @endgroup
 
 @group deletedstorage
 @endpoint GET /deletedstorage
-@optional {maxresults: any}
-@returns(200)
+@desc Lists deleted storage accounts for the specified vault.
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null.}
+@returns(200) A response message containing a list of deleted storage accounts in the vault, along with a link to the next page of deleted storage accounts.
 
 @endpoint GET /deletedstorage/{storage-account-name}
-@required {storage-account-name: any}
-@returns(200)
+@desc Gets the specified deleted storage account.
+@required {storage-account-name: any # The name of the storage account.}
+@returns(200) The deleted storage account and information on when it will be purged, and how to recover the deleted storage account.
 
 @endpoint DELETE /deletedstorage/{storage-account-name}
-@required {storage-account-name: any}
-@returns(204)
+@desc Permanently deletes the specified storage account.
+@required {storage-account-name: any # The name of the storage account.}
+@returns(204) No content signaling that the storage account was purged forever.
 
 @endpoint POST /deletedstorage/{storage-account-name}/recover
-@required {storage-account-name: any}
-@returns(200)
+@desc Recovers the deleted storage account.
+@required {storage-account-name: any # The name of the storage account.}
+@returns(200) A storage bundle of the original storage account and its attributes.
 
 @endgroup
 
 @group storage
 @endpoint POST /storage/{storage-account-name}/backup
-@required {storage-account-name: any}
-@returns(200)
+@desc Backs up the specified storage account.
+@required {storage-account-name: any # The name of the storage account.}
+@returns(200) The backup blob containing the backed up storage account.
 
 @endpoint POST /storage/restore
-@required {parameters: any}
-@returns(200)
+@desc Restores a backed up storage account to a vault.
+@required {parameters: any # The parameters to restore the storage account.}
+@returns(200) Restored storage account bundle in the vault.
 
 @endpoint DELETE /storage/{storage-account-name}
-@required {storage-account-name: any}
-@returns(200)
+@desc Deletes a storage account. This operation requires the storage/delete permission.
+@required {storage-account-name: any # The name of the storage account.}
+@returns(200) The deleted storage account and information on when the storage account will be deleted, and how to recover the deleted storage account.
 
 @endpoint GET /storage/{storage-account-name}
-@required {storage-account-name: any}
-@returns(200)
+@desc Gets information about a specified storage account. This operation requires the storage/get permission.
+@required {storage-account-name: any # The name of the storage account.}
+@returns(200) The retrieved storage account.
 
 @endpoint PUT /storage/{storage-account-name}
-@required {storage-account-name: any, parameters: any}
-@returns(200)
+@desc Creates or updates a new storage account. This operation requires the storage/set permission.
+@required {storage-account-name: any # The name of the storage account., parameters: any # The parameters to create a storage account.}
+@returns(200) The created storage account.
 
 @endpoint PATCH /storage/{storage-account-name}
-@required {storage-account-name: any, parameters: any}
-@returns(200)
+@desc Updates the specified attributes associated with the given storage account. This operation requires the storage/set/update permission.
+@required {storage-account-name: any # The name of the storage account., parameters: any # The parameters to update a storage account.}
+@returns(200) The updated storage account.
 
 @endpoint POST /storage/{storage-account-name}/regeneratekey
-@required {storage-account-name: any, parameters: any}
-@returns(200)
+@desc Regenerates the specified key value for the given storage account. This operation requires the storage/regeneratekey permission.
+@required {storage-account-name: any # The name of the storage account., parameters: any # The parameters to regenerate storage account key.}
+@returns(200) The updated storage account.
 
 @endpoint GET /storage/{storage-account-name}/sas
-@required {storage-account-name: any}
-@optional {maxresults: any}
-@returns(200)
+@desc List storage SAS definitions for the given storage account. This operation requires the storage/listsas permission.
+@required {storage-account-name: any # The name of the storage account.}
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null.}
+@returns(200) A response message containing a list of SAS definitions along with a link to the next page of SAS definitions.
 
 @endgroup
 
 @group deletedstorage
 @endpoint GET /deletedstorage/{storage-account-name}/sas
-@required {storage-account-name: any}
-@optional {maxresults: any}
-@returns(200)
+@desc Lists deleted SAS definitions for the specified vault and storage account.
+@required {storage-account-name: any # The name of the storage account.}
+@optional {maxresults: any # Specifies the maximum number of results to return in a page. Setting maxresults to a value less than 1 or greater than 25 results in error response code 400 (Bad Request). If there are additional results to return, then the service returns a nextLink containing a skip token for pagination. In certain cases, the service might return fewer results than specified by maxresults (even 0 results) and also return a nextLink. Clients should not make any assumptions on the minimum number of results per page, and should enumerate all pages until the nextLink becomes null.}
+@returns(200) A response message containing a list of deleted SAS definitions for the storage account, along with a link to the next page of deleted SAS definitions.
 
 @endpoint GET /deletedstorage/{storage-account-name}/sas/{sas-definition-name}
-@required {storage-account-name: any, sas-definition-name: any}
-@returns(200)
+@desc Gets the specified deleted sas definition.
+@required {storage-account-name: any # The name of the storage account., sas-definition-name: any # The name of the SAS definition.}
+@returns(200) The deleted SAS definition and information on when the it will be purged, and how to recover the deleted SAS definition.
 
 @endpoint POST /deletedstorage/{storage-account-name}/sas/{sas-definition-name}/recover
-@required {storage-account-name: any, sas-definition-name: any}
-@returns(200)
+@desc Recovers the deleted SAS definition.
+@required {storage-account-name: any # The name of the storage account., sas-definition-name: any # The name of the SAS definition.}
+@returns(200) A SAS definition bundle of the original SAS definition and its attributes.
 
 @endgroup
 
 @group storage
 @endpoint DELETE /storage/{storage-account-name}/sas/{sas-definition-name}
-@required {storage-account-name: any, sas-definition-name: any}
-@returns(200)
+@desc Deletes a SAS definition from a specified storage account. This operation requires the storage/deletesas permission.
+@required {storage-account-name: any # The name of the storage account., sas-definition-name: any # The name of the SAS definition.}
+@returns(200) The deleted SAS definition and information on when the SAS definition will be deleted, and how to recover the deleted SAS definition.
 
 @endpoint GET /storage/{storage-account-name}/sas/{sas-definition-name}
-@required {storage-account-name: any, sas-definition-name: any}
-@returns(200)
+@desc Gets information about a SAS definition for the specified storage account. This operation requires the storage/getsas permission.
+@required {storage-account-name: any # The name of the storage account., sas-definition-name: any # The name of the SAS definition.}
+@returns(200) The retrieved SAS definition.
 
 @endpoint PUT /storage/{storage-account-name}/sas/{sas-definition-name}
-@required {storage-account-name: any, sas-definition-name: any, parameters: any}
-@returns(200)
+@desc Creates or updates a new SAS definition for the specified storage account. This operation requires the storage/setsas permission.
+@required {storage-account-name: any # The name of the storage account., sas-definition-name: any # The name of the SAS definition., parameters: any # The parameters to create a SAS definition.}
+@returns(200) The created SAS definition.
 
 @endpoint PATCH /storage/{storage-account-name}/sas/{sas-definition-name}
-@required {storage-account-name: any, sas-definition-name: any, parameters: any}
-@returns(200)
+@desc Updates the specified attributes associated with the given SAS definition. This operation requires the storage/setsas permission.
+@required {storage-account-name: any # The name of the storage account., sas-definition-name: any # The name of the SAS definition., parameters: any # The parameters to update a SAS definition.}
+@returns(200) The updated SAS definition.
 
 @endgroup
 

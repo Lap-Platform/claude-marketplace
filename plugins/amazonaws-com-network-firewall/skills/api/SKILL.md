@@ -62,88 +62,10 @@ Not specified.
 | POST | / |  |
 | POST | / | Updates the TLS inspection configuration settings for the specified TLS inspection configuration. You use a TLS inspection configuration by referencing it in one or more firewall policies. When you modify a TLS inspection configuration, you modify all firewall policies that use the TLS inspection configuration.  To update a TLS inspection configuration, first call DescribeTLSInspectionConfiguration to retrieve the current TLSInspectionConfiguration object, update the object as needed, and then provide the updated object to this call. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new network firewall in my VPC?" -> POST / (CreateFirewall)
-- "How do I list all my firewalls or filter by VPC?" -> POST / (ListFirewalls with optional VpcIds filter)
-- "What is the current status and configuration of my firewall?" -> POST / (DescribeFirewall)
-- "How do I create a firewall policy with stateful and stateless rules?" -> POST / (CreateFirewallPolicy)
-- "How do I create a rule group for domain filtering or IPS?" -> POST / (CreateRuleGroup)
-- "How do I attach a firewall policy to an existing firewall?" -> POST / (AssociateFirewallPolicy)
-- "How do I add or remove subnets from my firewall?" -> POST / (AssociateSubnets or DisassociateSubnets)
-- "How do I enable TLS inspection on my firewall?" -> POST / (CreateTLSInspectionConfiguration, then reference its ARN in the firewall policy)
-- "How do I set up logging for my firewall to S3 or CloudWatch?" -> POST / (UpdateLoggingConfiguration)
-- "How do I protect my firewall from accidental deletion?" -> POST / (UpdateFirewallDeleteProtection with DeleteProtection: true)
-- "How do I check how much rule capacity I have left?" -> POST / (DescribeFirewallPolicy -- check ConsumedStatelessRuleCapacity / ConsumedStatefulRuleCapacity)
-- "How do I share a rule group or firewall policy across accounts?" -> POST / (PutResourcePolicy)
-- "How do I find all AWS-managed rule groups available?" -> POST / (ListRuleGroups with Scope: "MANAGED")
-- "How do I validate a rule group change without applying it?" -> POST / (UpdateRuleGroup or CreateRuleGroup with DryRun: true)
-- "How do I check CIDR capacity usage on my firewall?" -> POST / (DescribeFirewall -- inspect FirewallStatus.CapacityUsageSummary.CIDRs)
-
-## Response Tips
-
-- **List endpoints** (ListFirewalls, ListFirewallPolicies, ListRuleGroups, ListTLSInspectionConfigurations, ListTagsForResource): Paginated via `NextToken`/`MaxResults`. Keep calling with the returned `NextToken` until it is null. MaxResults caps per-page count, not total.
-- **Describe endpoints** (DescribeFirewall, DescribeFirewallPolicy, DescribeRuleGroup, DescribeTLSInspectionConfiguration): Always return an `UpdateToken` -- you must pass this token on subsequent update calls for optimistic concurrency control.
-- **Create endpoints**: Return an `UpdateToken` and a response object with generated IDs (FirewallId, RuleGroupId, etc.) and an ARN -- capture these for downstream operations.
-- **Update endpoints**: Require `UpdateToken` from the most recent Describe or prior Update; a stale token causes a conflict error. Response includes a fresh `UpdateToken`.
-- **Delete endpoints**: Return the deleted resource's final state. If the resource has `NumberOfAssociations > 0`, the delete will fail -- disassociate first.
-- **Tag endpoints** (TagResource, UntagResource): Return no body on success. Use ListTagsForResource to verify.
-- **Resource policy endpoints** (PutResourcePolicy, DescribeResourcePolicy, DeleteResourcePolicy): Policy is a JSON string, not an object. Parse it separately.
-
-## Anomaly Flags
-
-- **Stale UpdateToken**: If an update call fails with a conflict/validation error, the UpdateToken is outdated. Re-describe the resource and retry with the fresh token.
-- **ConfigurationSyncStateSummary != "IN_SYNC"**: After changes, the firewall's sync state may show "PENDING" or "CAPACITY_CONSTRAINED". Surface this -- traffic rules are not yet active across all availability zones.
-- **FirewallStatus.Status != "READY"**: Firewall is provisioning, deleting, or in an error state. Operations may be rejected or have no effect until status returns to READY.
-- **Capacity approaching limits**: Compare `ConsumedStatelessRuleCapacity` / `ConsumedStatefulRuleCapacity` against the policy's allocated capacity. Alert when utilization exceeds 80%.
-- **CIDR capacity exhaustion**: Check `CapacityUsageSummary.CIDRs.AvailableCIDRCount` -- if zero or near-zero, IP set references will fail to resolve new entries.
-- **TLS certificate status != "ACTIVE"**: Surface `Certificates[].Status` and `CertificateAuthority.Status` values that are not active, along with their `StatusMessage`.
-- **RuleGroupStatus == "DELETING"**: A rule group stuck in DELETING state indicates a dependency issue. Check `NumberOfAssociations`.
-- **AnalysisResults present**: When `AnalyzeRuleGroup: true` is used, non-empty `AnalysisResults` in the response signals rule conflicts or redundancies -- surface these warnings.
-- **DryRun rejected**: If a CreateRuleGroup or UpdateFirewallPolicy with `DryRun: true` returns errors, the planned change would exceed capacity or violate constraints.
-
-## Playbook
-
-### 1. Deploy a New Firewall End-to-End
-
-1. **Create a rule group**: POST / (CreateRuleGroup) with your Suricata rules or domain list. Note the returned `RuleGroupArn`.
-2. **Create a firewall policy**: POST / (CreateFirewallPolicy) referencing the rule group ARN in `StatefulRuleGroupReferences` or `StatelessRuleGroupReferences`. Note the returned `FirewallPolicyArn`.
-3. **Create the firewall**: POST / (CreateFirewall) with `FirewallName`, `VpcId`, `SubnetMappings` (one per AZ), and the `FirewallPolicyArn`.
-4. **Wait for READY**: POST / (DescribeFirewall) repeatedly until `FirewallStatus.Status` is `READY` and `ConfigurationSyncStateSummary` is `IN_SYNC`.
-5. **Configure logging**: POST / (UpdateLoggingConfiguration) to send ALERT and FLOW logs to S3, CloudWatch, or Kinesis.
-6. **Update VPC route tables**: Point traffic through the firewall endpoint IDs found in `FirewallStatus.SyncStates[az].Attachment.EndpointId`.
-
-### 2. Update a Rule Group Safely
-
-1. **Describe current state**: POST / (DescribeRuleGroup) to get the current `UpdateToken` and rule definitions.
-2. **Dry run the change**: POST / (UpdateRuleGroup) with `DryRun: true`, your modified `RuleGroup` or `Rules` string, and the `UpdateToken`. Check for capacity or validation errors.
-3. **Apply the update**: POST / (UpdateRuleGroup) with `DryRun: false` (or omit it) and the same `UpdateToken`.
-4. **Verify sync**: POST / (DescribeFirewall) for each associated firewall. Confirm `ConfigurationSyncStateSummary` returns to `IN_SYNC`.
-5. **Review analysis**: If `AnalyzeRuleGroup: true` was set, inspect `AnalysisResults` for rule conflicts.
-
-### 3. Enable TLS Inspection
-
-1. **Provision certificates**: Ensure your ACM certificates (server cert + CA cert) are in the same region.
-2. **Create TLS config**: POST / (CreateTLSInspectionConfiguration) with `ServerCertificateConfigurations` referencing your ACM certificate ARNs.
-3. **Update firewall policy**: POST / (DescribeFirewallPolicy) to get the current `UpdateToken`, then POST / (UpdateFirewallPolicy) adding `TLSInspectionConfigurationArn` to the policy.
-4. **Verify certificates**: POST / (DescribeTLSInspectionConfiguration) and confirm all `Certificates[].Status` values are `ACTIVE`.
-
-### 4. Cross-Account Rule Group Sharing
-
-1. **Create a resource policy**: POST / (PutResourcePolicy) on the rule group ARN with a JSON policy granting `network-firewall:ListRuleGroups` and `network-firewall:DescribeRuleGroup` to the target account principals.
-2. **Verify the policy**: POST / (DescribeResourcePolicy) to confirm the policy is attached.
-3. **Reference from other account**: In the consuming account, reference the shared rule group ARN in a firewall policy's `StatefulRuleGroupReferences` using `SourceMetadata.SourceArn`.
-4. **To revoke access**: POST / (DeleteResourcePolicy) on the source account's rule group ARN.
-
-### 5. Safely Decommission a Firewall
-
-1. **Check associations**: POST / (DescribeFirewall) and note `FirewallPolicyArn`, subnet mappings, and any logging config.
-2. **Update route tables**: Remove or redirect routes that point to the firewall endpoints before deleting.
-3. **Disable protections**: POST / (UpdateFirewallDeleteProtection) with `DeleteProtection: false`. Also disable `SubnetChangeProtection` and `FirewallPolicyChangeProtection` if enabled.
-4. **Delete the firewall**: POST / (DeleteFirewall) using the firewall name or ARN.
-5. **Clean up orphaned resources**: Delete unused firewall policies (POST / DeleteFirewallPolicy), rule groups (POST / DeleteRuleGroup), and TLS configs (POST / DeleteTLSInspectionConfiguration) after confirming `NumberOfAssociations` is 0 for each.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

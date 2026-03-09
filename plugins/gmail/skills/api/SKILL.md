@@ -106,88 +106,81 @@ https://gmail.googleapis.com/
 | POST | /gmail/v1/users/{userId}/threads/{id}/untrash | Removes the specified thread from the trash. Any messages that belong to the thread are also removed from the trash. |
 | POST | /gmail/v1/users/{userId}/watch | Set up or update a push notification watch on the given user mailbox. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I search for emails matching a query?" -> GET /gmail/v1/users/{userId}/messages (use `q` parameter with Gmail search syntax)
-- "How do I send an email?" -> POST /gmail/v1/users/{userId}/messages/send
-- "How do I read a specific email?" -> GET /gmail/v1/users/{userId}/messages/{id} (use `format` to control detail level)
-- "How do I download an attachment?" -> GET /gmail/v1/users/{userId}/messages/{messageId}/attachments/{id}
-- "How do I delete multiple emails at once?" -> POST /gmail/v1/users/{userId}/messages/batchDelete
-- "How do I move emails to trash?" -> POST /gmail/v1/users/{userId}/messages/{id}/trash
-- "How do I create a label and apply it to messages?" -> POST /gmail/v1/users/{userId}/labels then POST /gmail/v1/users/{userId}/messages/{id}/modify with `addLabelIds`
-- "How do I list all drafts?" -> GET /gmail/v1/users/{userId}/drafts
-- "How do I get my mailbox stats?" -> GET /gmail/v1/users/{userId}/profile
-- "How do I set up a vacation auto-reply?" -> PUT /gmail/v1/users/{userId}/settings/vacation
-- "How do I create a filter to auto-label incoming mail?" -> POST /gmail/v1/users/{userId}/settings/filters
-- "How do I check what changed since my last sync?" -> GET /gmail/v1/users/{userId}/history (provide `startHistoryId`)
-- "How do I get all messages in a thread?" -> GET /gmail/v1/users/{userId}/threads/{id}
-- "How do I add a delegate to my account?" -> POST /gmail/v1/users/{userId}/settings/delegates
-- "How do I set up push notifications for new mail?" -> POST /gmail/v1/users/{userId}/watch (requires a Pub/Sub `topicName`)
-
-## Response Tips
-
-- **Messages & Drafts lists**: Paginated via `nextPageToken`; pass it as `pageToken` to get the next page. `resultSizeEstimate` is approximate, not exact -- do not use it as a total count.
-- **Message detail**: The `payload` object is recursive -- `parts` contains nested `parts` for multipart MIME. Body `data` is base64url-encoded. Use `format=metadata` with `metadataHeaders` to cheaply fetch only specific headers (Subject, From, Date).
-- **Threads**: The `messages` array contains full message objects in chronological order. The thread-level `snippet` reflects the latest message.
-- **History**: Returns change records (messagesAdded, labelsAdded, etc.) as maps inside the `history` array. An empty `history` array with a new `historyId` means no changes.
-- **Labels**: System labels (INBOX, SENT, TRASH, SPAM) have `type: "system"` and cannot be deleted or renamed. Only user-created labels are mutable.
-- **Settings (sendAs, delegates, forwarding)**: `verificationStatus` must be `"accepted"` before the resource becomes active. Pending resources are non-functional.
-- **Batch operations**: `batchDelete` and `batchModify` return empty 200 responses -- success is implied by absence of error. Invalid IDs are silently ignored.
-- **Attachments**: The `data` field is base64url-encoded (not standard base64). Decode with URL-safe alphabet before writing to disk.
-
-## Anomaly Flags
-
-- **Rate limit errors (HTTP 429)**: Gmail enforces per-user and per-project quotas. Surface 429 responses immediately and suggest exponential backoff. Batch endpoints count as one quota unit per message, not per call.
-- **History gap (HTTP 404 on history)**: If `startHistoryId` is too old, the API returns 404. Surface this and advise the agent to do a full resync instead of incremental.
-- **Delegation verification stuck**: If `verificationStatus` remains `"pending"` after delegate creation, flag that the delegate must accept from their own account.
-- **Watch expiration approaching**: The `expiration` field from `/watch` is a Unix timestamp (ms). Proactively warn when it is within 24 hours of expiry -- push notifications will silently stop.
-- **Oversized batch requests**: `batchDelete` and `batchModify` accept up to 1000 IDs. If the caller passes more, flag it before the call fails.
-- **Permanent delete vs trash**: `DELETE /messages/{id}` is irreversible (permanent delete). If the intent seems to be "move to trash," flag the difference and suggest `/messages/{id}/trash` instead.
-- **S/MIME certificate expiration**: When `expiration` on an S/MIME info object is in the past, surface that the certificate is expired and encryption will fail.
-- **Label count limits**: Gmail allows up to ~500 user labels. If label creation fails, surface this as a likely quota issue.
-
-## Playbook
-
-### 1. Search and Read Emails
-
-1. Call `GET /gmail/v1/users/me/messages` with `q` set to a Gmail search query (e.g., `from:alice@example.com after:2025/01/01 has:attachment`).
-2. Iterate through `messages` array; each entry contains only `id` and `threadId`.
-3. For each message of interest, call `GET /gmail/v1/users/me/messages/{id}` with `format=full` to get headers, body, and attachments.
-4. If `nextPageToken` is present, repeat step 1 with `pageToken` to fetch the next page.
-5. To download attachments, extract `attachmentId` from the message `payload.parts` and call `GET /gmail/v1/users/me/messages/{messageId}/attachments/{id}`.
-
-### 2. Compose, Draft, and Send an Email
-
-1. Build a base64url-encoded RFC 2822 message with To, From, Subject, and body.
-2. Call `POST /gmail/v1/users/me/drafts` with the `raw` field containing the encoded message to save as draft.
-3. Optionally update the draft via `PUT /gmail/v1/users/me/drafts/{id}` with revised content.
-4. When ready, call `POST /gmail/v1/users/me/drafts/send` with the draft `id` to send it.
-5. Alternatively, skip drafting and call `POST /gmail/v1/users/me/messages/send` directly with the `raw` message.
-
-### 3. Organize with Labels and Filters
-
-1. Call `GET /gmail/v1/users/me/labels` to list existing labels and check if the target label exists.
-2. If not, call `POST /gmail/v1/users/me/labels` with `name`, `labelListVisibility`, and optionally `color`.
-3. Apply the label to existing messages: call `POST /gmail/v1/users/me/messages/batchModify` with `ids` and `addLabelIds`.
-4. To auto-label future messages, call `POST /gmail/v1/users/me/settings/filters` with `criteria` (e.g., `from`, `subject`, `query`) and `action.addLabelIds`.
-
-### 4. Incremental Sync with History
-
-1. On first sync, call `GET /gmail/v1/users/me/profile` and store the returned `historyId`.
-2. On subsequent syncs, call `GET /gmail/v1/users/me/history` with `startHistoryId` set to the stored value.
-3. Process the `history` array -- each record describes messages added, deleted, or labels changed.
-4. Update `startHistoryId` to the `historyId` from the response for the next sync cycle.
-5. If the API returns 404 (history too old), fall back to a full `GET /messages` listing and store the fresh `historyId`.
-
-### 5. Set Up Push Notifications
-
-1. Create a Google Cloud Pub/Sub topic and grant `gmail-api-push@system.gserviceaccount.com` publish permissions.
-2. Call `POST /gmail/v1/users/me/watch` with `topicName` set to `projects/{project}/topics/{topic}` and optionally `labelIds` + `labelFilterAction` to filter.
-3. Store the returned `expiration` timestamp and schedule a renewal before it lapses (typically every 7 days).
-4. When a Pub/Sub notification arrives, extract `historyId` from the payload and run the incremental sync playbook (above) to fetch changes.
-5. To stop notifications, call `POST /gmail/v1/users/me/stop`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Search drafts?" -> GET /gmail/v1/users/{userId}/drafts
+- "Create a draft?" -> POST /gmail/v1/users/{userId}/drafts
+- "Create a send?" -> POST /gmail/v1/users/{userId}/drafts/send
+- "Delete a draft?" -> DELETE /gmail/v1/users/{userId}/drafts/{id}
+- "Get draft details?" -> GET /gmail/v1/users/{userId}/drafts/{id}
+- "Update a draft?" -> PUT /gmail/v1/users/{userId}/drafts/{id}
+- "List all history?" -> GET /gmail/v1/users/{userId}/history
+- "List all labels?" -> GET /gmail/v1/users/{userId}/labels
+- "Create a label?" -> POST /gmail/v1/users/{userId}/labels
+- "Delete a label?" -> DELETE /gmail/v1/users/{userId}/labels/{id}
+- "Get label details?" -> GET /gmail/v1/users/{userId}/labels/{id}
+- "Partially update a label?" -> PATCH /gmail/v1/users/{userId}/labels/{id}
+- "Update a label?" -> PUT /gmail/v1/users/{userId}/labels/{id}
+- "Search messages?" -> GET /gmail/v1/users/{userId}/messages
+- "Create a message?" -> POST /gmail/v1/users/{userId}/messages
+- "Create a batchDelete?" -> POST /gmail/v1/users/{userId}/messages/batchDelete
+- "Create a batchModify?" -> POST /gmail/v1/users/{userId}/messages/batchModify
+- "Create a import?" -> POST /gmail/v1/users/{userId}/messages/import
+- "Create a send?" -> POST /gmail/v1/users/{userId}/messages/send
+- "Delete a message?" -> DELETE /gmail/v1/users/{userId}/messages/{id}
+- "Get message details?" -> GET /gmail/v1/users/{userId}/messages/{id}
+- "Create a modify?" -> POST /gmail/v1/users/{userId}/messages/{id}/modify
+- "Create a trash?" -> POST /gmail/v1/users/{userId}/messages/{id}/trash
+- "Create a untrash?" -> POST /gmail/v1/users/{userId}/messages/{id}/untrash
+- "Get attachment details?" -> GET /gmail/v1/users/{userId}/messages/{messageId}/attachments/{id}
+- "List all profile?" -> GET /gmail/v1/users/{userId}/profile
+- "List all autoForwarding?" -> GET /gmail/v1/users/{userId}/settings/autoForwarding
+- "List all identities?" -> GET /gmail/v1/users/{userId}/settings/cse/identities
+- "Create a identity?" -> POST /gmail/v1/users/{userId}/settings/cse/identities
+- "Delete a identity?" -> DELETE /gmail/v1/users/{userId}/settings/cse/identities/{cseEmailAddress}
+- "Get identity details?" -> GET /gmail/v1/users/{userId}/settings/cse/identities/{cseEmailAddress}
+- "Partially update a identity?" -> PATCH /gmail/v1/users/{userId}/settings/cse/identities/{emailAddress}
+- "List all keypairs?" -> GET /gmail/v1/users/{userId}/settings/cse/keypairs
+- "Create a keypair?" -> POST /gmail/v1/users/{userId}/settings/cse/keypairs
+- "Get keypair details?" -> GET /gmail/v1/users/{userId}/settings/cse/keypairs/{keyPairId}
+- "List all delegates?" -> GET /gmail/v1/users/{userId}/settings/delegates
+- "Create a delegate?" -> POST /gmail/v1/users/{userId}/settings/delegates
+- "Delete a delegate?" -> DELETE /gmail/v1/users/{userId}/settings/delegates/{delegateEmail}
+- "Get delegate details?" -> GET /gmail/v1/users/{userId}/settings/delegates/{delegateEmail}
+- "List all filters?" -> GET /gmail/v1/users/{userId}/settings/filters
+- "Create a filter?" -> POST /gmail/v1/users/{userId}/settings/filters
+- "Delete a filter?" -> DELETE /gmail/v1/users/{userId}/settings/filters/{id}
+- "Get filter details?" -> GET /gmail/v1/users/{userId}/settings/filters/{id}
+- "List all forwardingAddresses?" -> GET /gmail/v1/users/{userId}/settings/forwardingAddresses
+- "Create a forwardingAddress?" -> POST /gmail/v1/users/{userId}/settings/forwardingAddresses
+- "Delete a forwardingAddress?" -> DELETE /gmail/v1/users/{userId}/settings/forwardingAddresses/{forwardingEmail}
+- "Get forwardingAddress details?" -> GET /gmail/v1/users/{userId}/settings/forwardingAddresses/{forwardingEmail}
+- "List all imap?" -> GET /gmail/v1/users/{userId}/settings/imap
+- "List all language?" -> GET /gmail/v1/users/{userId}/settings/language
+- "List all pop?" -> GET /gmail/v1/users/{userId}/settings/pop
+- "List all sendAs?" -> GET /gmail/v1/users/{userId}/settings/sendAs
+- "Create a sendA?" -> POST /gmail/v1/users/{userId}/settings/sendAs
+- "Delete a sendA?" -> DELETE /gmail/v1/users/{userId}/settings/sendAs/{sendAsEmail}
+- "Get sendA details?" -> GET /gmail/v1/users/{userId}/settings/sendAs/{sendAsEmail}
+- "Partially update a sendA?" -> PATCH /gmail/v1/users/{userId}/settings/sendAs/{sendAsEmail}
+- "Update a sendA?" -> PUT /gmail/v1/users/{userId}/settings/sendAs/{sendAsEmail}
+- "List all smimeInfo?" -> GET /gmail/v1/users/{userId}/settings/sendAs/{sendAsEmail}/smimeInfo
+- "Create a smimeInfo?" -> POST /gmail/v1/users/{userId}/settings/sendAs/{sendAsEmail}/smimeInfo
+- "Delete a smimeInfo?" -> DELETE /gmail/v1/users/{userId}/settings/sendAs/{sendAsEmail}/smimeInfo/{id}
+- "Get smimeInfo details?" -> GET /gmail/v1/users/{userId}/settings/sendAs/{sendAsEmail}/smimeInfo/{id}
+- "Create a setDefault?" -> POST /gmail/v1/users/{userId}/settings/sendAs/{sendAsEmail}/smimeInfo/{id}/setDefault
+- "Create a verify?" -> POST /gmail/v1/users/{userId}/settings/sendAs/{sendAsEmail}/verify
+- "List all vacation?" -> GET /gmail/v1/users/{userId}/settings/vacation
+- "Create a stop?" -> POST /gmail/v1/users/{userId}/stop
+- "Search threads?" -> GET /gmail/v1/users/{userId}/threads
+- "Delete a thread?" -> DELETE /gmail/v1/users/{userId}/threads/{id}
+- "Get thread details?" -> GET /gmail/v1/users/{userId}/threads/{id}
+- "Create a modify?" -> POST /gmail/v1/users/{userId}/threads/{id}/modify
+- "Create a trash?" -> POST /gmail/v1/users/{userId}/threads/{id}/trash
+- "Create a untrash?" -> POST /gmail/v1/users/{userId}/threads/{id}/untrash
+- "Create a watch?" -> POST /gmail/v1/users/{userId}/watch
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

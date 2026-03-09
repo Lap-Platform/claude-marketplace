@@ -92,87 +92,45 @@ https://api.storecove.com/api/v2
 | POST | /api/v2/legal_entities/{legal_entity_id}/c5_activation/activate | DEPRECATED. Request a new C5 Activation |
 | POST | /api/v2/legal_entities/{legal_entity_id}/c5_deactivation/deactivate | DEPRECATED. Request a new C5 Deactivation |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I send an invoice to a customer?" -> POST /invoice_submissions
-- "Can I check if a recipient can receive invoices before sending?" -> POST /invoice_submissions/preflight
-- "How do I get proof that an invoice was delivered?" -> GET /invoice_submissions/{guid}/evidence
-- "How do I submit a raw document (UBL, CII) instead of using the invoice model?" -> POST /document_submissions
-- "How do I retrieve a purchase invoice I received?" -> GET /purchase_invoices/{guid}
-- "How do I download a received invoice in a specific format like UBL or CII?" -> GET /purchase_invoices/{guid}/{packaging}
-- "How do I register a new legal entity for sending or receiving invoices?" -> POST /legal_entities
-- "How do I add a PEPPOL identifier to my legal entity so it can receive e-invoices?" -> POST /legal_entities/{legal_entity_id}/peppol_identifiers
-- "How do I look up whether a trading partner exists on a network like PEPPOL?" -> POST /discovery/exists
-- "What document types can a recipient accept?" -> POST /discovery/receives
-- "What identifier schemes are supported for discovery?" -> GET /discovery/identifiers
-- "How do I list pending webhook deliveries?" -> GET /webhook_instances/
-- "How do I delete a failed or stale webhook instance?" -> DELETE /webhook_instances/{guid}
-- "How do I activate Singapore IRAS e-invoicing via email for a legal entity?" -> POST /api/v2/legal_entities/{legal_entity_id}/c5/iras/email/activate
-- "How do I remove a legal entity and all its identifiers?" -> DELETE /legal_entities/{id}
-
-## Response Tips
-
-- **Invoice/document submissions**: 200 returns a `guid` -- store it immediately; you need it for evidence retrieval and tracking. 422 means validation failed; inspect the `errors` array for field-level detail.
-- **Legal entities & sub-resources** (PEPPOL identifiers, administrations, tax identifiers): 200 returns the full updated object. 204 on DELETE means success with no body. 404 usually means the parent entity ID is wrong, not just the child.
-- **Purchase invoices**: The `{packaging}` and `{package_version}` path segments control output format (e.g., UBL 2.1 vs CII). The response content type changes accordingly (XML vs JSON).
-- **Discovery**: `receives` and `exists` both take a `discoverable_participant` body and return capability or boolean results. A 422 means the identifier scheme or value is invalid.
-- **Webhook instances**: 200 returns a list; 204 means the list is empty (no pending instances). This is unusual -- check status code before parsing body.
-- **C5/IRAS endpoints**: 204 means the activation/deactivation was accepted. 422 errors here often indicate the legal entity is not eligible for the requested tax authority integration.
-
-## Anomaly Flags
-
-- **422 on invoice submission**: Surface the full validation error list -- these often contain multiple issues that need fixing before retry.
-- **404 on legal entity sub-resources**: Flag when a legal_entity_id returns 404 -- the entity may have been deleted, which cascades to all PEPPOL identifiers, administrations, and tax identifiers.
-- **Preflight rejection**: If `/invoice_submissions/preflight` returns a negative result, alert the user before they attempt the actual submission -- it will fail.
-- **Webhook 204 vs 200**: The dual return codes (200 with data, 204 empty) are non-standard. Flag if code assumes a body is always present.
-- **Evidence 404**: If evidence is not yet available for a submitted invoice, it may still be processing. Surface this with a suggestion to retry after a delay.
-- **PEPPOL identifier deletion path complexity**: The DELETE requires four path segments (legal_entity_id, superscheme, scheme, identifier). Flag if any segment looks malformed or URL-encoded incorrectly.
-- **C5 activation without prior legal entity setup**: Flag if a user attempts IRAS activation on a legal entity that lacks required fields (tax identifiers, administrations).
-- **401/403 on any endpoint**: Distinguish between missing API key (401) and insufficient permissions (403) -- the fix is different for each.
-
-## Playbook
-
-### 1. Send Your First Invoice
-
-1. Create a legal entity: `POST /legal_entities` with company details (name, address, tax number).
-2. Run a preflight check: `POST /invoice_submissions/preflight` with the recipient's identifier to confirm deliverability.
-3. Submit the invoice: `POST /invoice_submissions` with the full `invoice_submission` object including line items, tax, and recipient.
-4. Store the returned `guid` from the submission response.
-5. Retrieve delivery evidence: `GET /invoice_submissions/{guid}/evidence` (may require polling if processing is async).
-
-### 2. Register for PEPPOL e-Invoicing
-
-1. Create or retrieve your legal entity: `POST /legal_entities` or `GET /legal_entities/{id}`.
-2. Add a PEPPOL identifier: `POST /legal_entities/{legal_entity_id}/peppol_identifiers` with scheme and identifier (e.g., `0106` for Dutch KvK).
-3. Set up an administration: `POST /legal_entities/{legal_entity_id}/administrations` to configure how received invoices are handled.
-4. Verify discoverability: `POST /discovery/exists` with your own identifier to confirm registration on the network.
-
-### 3. Retrieve and Process Received Invoices
-
-1. Receive a webhook notification indicating a new purchase invoice (configure webhooks separately).
-2. Fetch the invoice: `GET /purchase_invoices/{guid}` for the default JSON representation.
-3. If you need a specific format: `GET /purchase_invoices/{guid}/{packaging}` (e.g., `ubl` or `cii`).
-4. For a pinned version: `GET /purchase_invoices/{guid}/{packaging}/{package_version}`.
-5. Clear the webhook instance: `DELETE /webhook_instances/{guid}` after successful processing.
-
-### 4. Activate Singapore IRAS InvoiceNow
-
-1. Ensure your legal entity exists: `GET /legal_entities/{id}` and verify it has a Singapore tax identifier.
-2. Add an additional tax identifier if needed: `POST /legal_entities/{legal_entity_id}/additional_tax_identifiers`.
-3. Choose delivery method and activate:
-   - Email: `POST /api/v2/legal_entities/{legal_entity_id}/c5/iras/email/activate`
-   - Redirect: `POST /api/v2/legal_entities/{legal_entity_id}/c5/iras/redirect/activate`
-4. To deactivate later, use the corresponding `/deactivate` endpoint.
-5. To cancel a pending activation/deactivation: `PUT .../cancel` with the cancellation request body.
-
-### 5. Discover Trading Partner Capabilities
-
-1. Get the list of supported identifier schemes: `GET /discovery/identifiers`.
-2. Check if the partner exists on the network: `POST /discovery/exists` with their identifier (scheme + value).
-3. If they exist, check what they can receive: `POST /discovery/receives` with the same identifier.
-4. Use the capabilities response to determine which document types and profiles to use when submitting invoices.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all evidence?" -> GET /invoice_submissions/{guid}/evidence
+- "Create a invoice_submission?" -> POST /invoice_submissions
+- "Create a document_submission?" -> POST /document_submissions
+- "Get evidence details?" -> GET /document_submissions/{guid}/evidence/{evidence_type}
+- "Create a preflight?" -> POST /invoice_submissions/preflight
+- "Create a legal_entity?" -> POST /legal_entities
+- "Get legal_entity details?" -> GET /legal_entities/{id}
+- "Delete a legal_entity?" -> DELETE /legal_entities/{id}
+- "Partially update a legal_entity?" -> PATCH /legal_entities/{id}
+- "Create a peppol_identifier?" -> POST /legal_entities/{legal_entity_id}/peppol_identifiers
+- "Delete a peppol_identifier?" -> DELETE /legal_entities/{legal_entity_id}/peppol_identifiers/{superscheme}/{scheme}/{identifier}
+- "Create a administration?" -> POST /legal_entities/{legal_entity_id}/administrations
+- "Get administration details?" -> GET /legal_entities/{legal_entity_id}/administrations/{id}
+- "Delete a administration?" -> DELETE /legal_entities/{legal_entity_id}/administrations/{id}
+- "Partially update a administration?" -> PATCH /legal_entities/{legal_entity_id}/administrations/{id}
+- "Create a additional_tax_identifier?" -> POST /legal_entities/{legal_entity_id}/additional_tax_identifiers
+- "Get additional_tax_identifier details?" -> GET /legal_entities/{legal_entity_id}/additional_tax_identifiers/{id}
+- "Delete a additional_tax_identifier?" -> DELETE /legal_entities/{legal_entity_id}/additional_tax_identifiers/{id}
+- "Partially update a additional_tax_identifier?" -> PATCH /legal_entities/{legal_entity_id}/additional_tax_identifiers/{id}
+- "Get purchase_invoice details?" -> GET /purchase_invoices/{guid}
+- "Get purchase_invoice details?" -> GET /purchase_invoices/{guid}/{packaging}
+- "Get purchase_invoice details?" -> GET /purchase_invoices/{guid}/{packaging}/{package_version}
+- "List all webhook_instances?" -> GET /webhook_instances/
+- "Delete a webhook_instance?" -> DELETE /webhook_instances/{guid}
+- "Create a receive?" -> POST /discovery/receives
+- "Create a exist?" -> POST /discovery/exists
+- "List all identifiers?" -> GET /discovery/identifiers
+- "Create a received_document?" -> POST /legal_entities/{legal_entity_id}/received_documents
+- "Get received_document details?" -> GET /received_documents/{guid}/{format}
+- "Create a activate?" -> POST /api/v2/legal_entities/{legal_entity_id}/c5/iras/email/activate
+- "Create a deactivate?" -> POST /api/v2/legal_entities/{legal_entity_id}/c5/iras/email/deactivate
+- "Create a activate?" -> POST /api/v2/legal_entities/{legal_entity_id}/c5/iras/redirect/activate
+- "Create a deactivate?" -> POST /api/v2/legal_entities/{legal_entity_id}/c5/iras/redirect/deactivate
+- "Create a activate?" -> POST /api/v2/legal_entities/{legal_entity_id}/c5_activation/activate
+- "Create a deactivate?" -> POST /api/v2/legal_entities/{legal_entity_id}/c5_deactivation/deactivate
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

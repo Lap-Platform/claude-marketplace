@@ -55,83 +55,32 @@ https://api.frontegg.com/team
 | GET | /resources/sso/v1/oidc/configurations | Get OIDC configuration |
 | POST | /resources/sso/v1/oidc/configurations | Configure OIDC |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I set up SSO for a tenant?" -> POST /resources/sso/v1/configurations
-- "What SSO configurations exist for my tenant?" -> GET /resources/sso/v1/configurations
-- "How do I update an existing SSO configuration?" -> PATCH /resources/sso/v1/configurations/{configurationId}
-- "How do I delete an SSO configuration?" -> DELETE /resources/sso/v1/configurations/{configurationId}
-- "How do I add a domain to an SSO configuration?" -> POST /resources/sso/v1/configurations/{configurationId}/domains
-- "How do I validate a domain for SSO?" -> PUT /resources/sso/v2/configurations/{configurationId}/domains/{domainId}/validate
-- "How do I validate a domain via email?" -> PUT /resources/sso/v1/configurations/{configurationId}/domains/{domainId}/validate/email
-- "How do I assign roles to an SSO configuration?" -> PUT /resources/sso/v1/configurations/{configurationId}/roles
-- "What roles are mapped to my SSO configuration?" -> GET /resources/sso/v1/configurations/{configurationId}/roles
-- "How do I create a group mapping for SSO?" -> POST /resources/sso/v1/configurations/{configurationId}/groups
-- "How do I exclude an email from SSO enforcement?" -> POST /resources/sso/v1/configurations/excluded-emails
-- "How do I configure SSO using a metadata XML file?" -> POST /resources/sso/v1/configurations/metadata
-- "What is my service provider certificate?" -> GET /resources/sso/v1/saml/configurations/sp-certificate
-- "How do I enable multiple SSO providers per domain?" -> PUT /resources/sso/v1/configurations/multiple-sso-per-domain
-- "How do I configure OIDC-based SSO?" -> POST /resources/sso/v1/oidc/configurations
-
-## Response Tips
-
-- **SAML metadata/certificate endpoints** (GET sp-certificate, sp-metadata, vendor-config): Return raw XML or PEM content; parse as text, not JSON.
-- **Configuration CRUD** (POST/GET/PATCH/DELETE configurations): Responses include the full configuration object with `configurationId` needed for all sub-resource operations.
-- **Domain operations**: POST returns the created domain with a `domainId`; validation endpoints return status but may require async DNS or email confirmation before the domain is fully verified.
-- **Role and group mappings**: Role PUT is idempotent (replaces entire role set); group POST is additive. Both return the updated mapping list.
-- **Excluded emails**: Flat list responses; the DELETE path takes the email directly as a URL segment (URL-encode `@` and dots).
-- **Multi-SSO and domain settings**: GET returns current policy flags; PUT returns the updated policy. These are environment-wide, not per-tenant.
-
-## Anomaly Flags
-
-- **Missing `frontegg-tenant-id` header**: Most endpoints require it; omitting it returns ambiguous 401/403 errors. Surface this if the user forgets tenant context.
-- **SAML vs OIDC type mismatch**: The POST/PATCH configuration `type` field determines which fields matter. Flag if OIDC fields (`oidcClientId`, `oidcSecret`) are set on a SAML-type config or vice versa.
-- **Domain validation pending**: After adding a domain, it is unverified. Proactively remind the user to call the validate endpoint before expecting SSO login to work.
-- **Overriding active tenant**: The `overrideActiveTenant` flag can silently redirect users between tenants. Warn when this is enabled.
-- **`subAccountAccessLimit` set to 0**: This may unintentionally block all sub-account access. Flag if set to zero or a very low value.
-- **Excluded emails accumulation**: Large excluded-email lists can create security blind spots. Surface if the list grows beyond a reasonable threshold.
-- **Multiple SSO per domain active with no strategy**: If `active: true` but `unspecifiedTenantStrategy` is empty or missing, users hitting that domain will get undefined behavior.
-
-## Playbook
-
-### 1. Set Up SAML SSO for a Tenant
-
-1. GET /resources/sso/v1/saml/configurations/sp-metadata with `frontegg-tenant-id` to retrieve the SP metadata XML.
-2. Provide the SP metadata to the identity provider (IdP) and obtain the IdP's SSO endpoint URL, public certificate, and entity ID.
-3. POST /resources/sso/v1/configurations with `type: "saml"`, `ssoEndpoint`, `publicCertificate`, `acsUrl`, `spEntityId`, and `enabled: true`.
-4. Note the `configurationId` from the response.
-5. POST /resources/sso/v1/configurations/{configurationId}/domains to link the tenant's email domain.
-6. PUT /resources/sso/v1/configurations/{configurationId}/domains/{domainId}/validate/email or the v2 validate endpoint to verify domain ownership.
-7. PUT /resources/sso/v1/configurations/{configurationId}/roles with the default `roleIds` for SSO users.
-
-### 2. Configure OIDC SSO
-
-1. POST /resources/sso/v1/oidc/configurations with `active: true` and optionally a `redirectUri`.
-2. POST /resources/sso/v1/configurations with `type: "oidc"`, `oidcClientId`, `oidcSecret`, and `enabled: true`.
-3. Note the `configurationId` and add domains via POST /resources/sso/v1/configurations/{configurationId}/domains.
-4. Validate the domain using PUT /resources/sso/v2/configurations/{configurationId}/domains/{domainId}/validate.
-
-### 3. Map IdP Groups to Application Roles
-
-1. GET /resources/sso/v1/configurations to find the target `configurationId`.
-2. POST /resources/sso/v1/configurations/{configurationId}/groups with the IdP `group` name and desired `roleIds`.
-3. Repeat for each group mapping needed.
-4. GET /resources/sso/v1/configurations/{configurationId}/groups to verify all mappings are correct.
-
-### 4. Exclude Specific Users from SSO Enforcement
-
-1. GET /resources/sso/v1/configurations/excluded-emails to review currently excluded addresses.
-2. POST /resources/sso/v1/configurations/excluded-emails with the `email` to exclude (e.g., a break-glass admin account).
-3. To remove an exclusion later, DELETE /resources/sso/v1/configurations/excluded-emails/{email}.
-
-### 5. Enable Multiple SSO Providers on a Single Domain
-
-1. GET /resources/sso/v1/configurations/multiple-sso-per-domain to check current status.
-2. PUT /resources/sso/v1/configurations/multiple-sso-per-domain with `active: true`, `unspecifiedTenantStrategy` (e.g., `"prompt"`), and `useActiveTenant` as needed.
-3. Ensure each tenant has its own SSO configuration (POST /resources/sso/v1/configurations) with the shared domain added and validated.
-4. PUT /resources/sso/v1/configurations/domains with `skipDomainVerification` or `bypassDomainCrossValidation` if the same domain is intentionally shared across tenants.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all vendor-config?" -> GET /resources/sso/v1/saml/configurations/vendor-config
+- "List all sp-certificate?" -> GET /resources/sso/v1/saml/configurations/sp-certificate
+- "List all sp-metadata?" -> GET /resources/sso/v1/saml/configurations/sp-metadata
+- "Create a configuration?" -> POST /resources/sso/v1/configurations
+- "List all configurations?" -> GET /resources/sso/v1/configurations
+- "Delete a configuration?" -> DELETE /resources/sso/v1/configurations/{configurationId}
+- "Partially update a configuration?" -> PATCH /resources/sso/v1/configurations/{configurationId}
+- "Create a metadata?" -> POST /resources/sso/v1/configurations/metadata
+- "Create a domain?" -> POST /resources/sso/v1/configurations/{configurationId}/domains
+- "Delete a domain?" -> DELETE /resources/sso/v1/configurations/{configurationId}/domains/{domainId}
+- "List all roles?" -> GET /resources/sso/v1/configurations/{configurationId}/roles
+- "Create a group?" -> POST /resources/sso/v1/configurations/{configurationId}/groups
+- "List all groups?" -> GET /resources/sso/v1/configurations/{configurationId}/groups
+- "Partially update a group?" -> PATCH /resources/sso/v1/configurations/{configurationId}/groups/{groupId}
+- "Delete a group?" -> DELETE /resources/sso/v1/configurations/{configurationId}/groups/{groupId}
+- "Create a excluded-email?" -> POST /resources/sso/v1/configurations/excluded-emails
+- "List all excluded-emails?" -> GET /resources/sso/v1/configurations/excluded-emails
+- "Delete a excluded-email?" -> DELETE /resources/sso/v1/configurations/excluded-emails/{email}
+- "List all multiple-sso-per-domain?" -> GET /resources/sso/v1/configurations/multiple-sso-per-domain
+- "List all domains?" -> GET /resources/sso/v1/configurations/domains
+- "List all configurations?" -> GET /resources/sso/v1/oidc/configurations
+- "Create a configuration?" -> POST /resources/sso/v1/oidc/configurations
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

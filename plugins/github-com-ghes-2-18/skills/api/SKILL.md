@@ -672,85 +672,468 @@ Requires API key (access_token parameter)
 |--------|------|-------------|
 | GET | /zen | Get the Zen of GitHub |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What repos does a user have?" -> GET /users/{username}/repos
-- "How do I create a new issue?" -> POST /repos/{owner}/{repo}/issues
-- "What are the open pull requests on this repo?" -> GET /repos/{owner}/{repo}/pulls
-- "How do I merge a pull request?" -> PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge
-- "Am I hitting rate limits?" -> GET /rate_limit
-- "What branches does this repo have?" -> GET /repos/{owner}/{repo}/branches
-- "How do I search for repositories by topic?" -> GET /search/repositories
-- "Who are the collaborators on this repo?" -> GET /repos/{owner}/{repo}/collaborators
-- "How do I create a release with assets?" -> POST /repos/{owner}/{repo}/releases + POST /repos/{owner}/{repo}/releases/{release_id}/assets
-- "What labels exist on this repo?" -> GET /repos/{owner}/{repo}/labels
-- "How do I add a reviewer to a PR?" -> POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers
-- "What are my unread notifications?" -> GET /notifications
-- "How do I fork a repository?" -> POST /repos/{owner}/{repo}/forks
-- "What files changed in a PR?" -> GET /repos/{owner}/{repo}/pulls/{pull_number}/files
-- "How do I compare two branches?" -> GET /repos/{owner}/{repo}/compare/{basehead}
-
-## Response Tips
-
-- **List endpoints** (repos, issues, PRs, users): Paginated via `per_page` (max 30) and `page` params; follow `Link` headers for next/prev pages.
-- **Search endpoints** (`/search/*`): Return `{total_count, incomplete_results, items}`; check `incomplete_results: true` to know if results were truncated by timeout.
-- **Repo objects**: Deeply nested -- `owner`, `license`, `organization`, `parent`, `source`, and `template_repository` are all inline maps; extract only the fields you need.
-- **Issue vs PR**: Issues list includes PRs; differentiate by presence of the `pull_request` key on the object.
-- **Mutations** (POST/PUT/PATCH): Return the full created/updated object on success; 204 means success with no body.
-- **Error responses** (4xx): Return `{message, documentation_url}` and sometimes `{errors: [{resource, field, code}]}` for 422 validation failures.
-- **Stats endpoints** (`/repos/{owner}/{repo}/stats/*`): May return 202 with empty body while GitHub computes results; retry after a short delay.
-
-## Anomaly Flags
-
-- **Rate limit depletion**: After any response, check `X-RateLimit-Remaining` header; surface a warning when below 100 requests remaining. Proactively call `GET /rate_limit` to inspect per-category limits (core, search, graphql).
-- **202 Accepted responses**: Several endpoints (stats, forks, deployments, repo transfers) return 202 meaning the operation is queued, not completed. Flag these so the user knows to poll.
-- **410 Gone on issues/projects**: Indicates the resource was permanently deleted or the feature is disabled; do not retry.
-- **422 Validation errors**: Surface the nested `errors` array with specific `field` and `code` values rather than just the top-level message.
-- **Preview headers required**: Many endpoints (apps, check-runs, team discussions, projects) require `Accept: application/vnd.github.*-preview+json`; flag 415 errors as missing preview header.
-- **301/307 redirects on repos**: Indicates the repo was renamed or transferred; surface the new location from the `Location` header.
-- **503 Service Unavailable on search**: GitHub throttles search queries under heavy load; back off and retry.
-- **Suspended users**: `suspended_at` field on user objects is non-null for suspended accounts; flag when encountered.
-
-## Playbook
-
-### 1. Create an Issue, Assign It, and Add Labels
-
-1. `POST /repos/{owner}/{repo}/issues` with `title`, `body`, `assignees`, and `labels` in the request body
-2. If you need to add labels after creation: `POST /repos/{owner}/{repo}/issues/{issue_number}/labels`
-3. If you need to add more assignees: `POST /repos/{owner}/{repo}/issues/{issue_number}/assignees` with `{"assignees": ["username"]}`
-4. Verify the issue state: `GET /repos/{owner}/{repo}/issues/{issue_number}`
-
-### 2. Open a Pull Request, Request Review, and Merge
-
-1. `POST /repos/{owner}/{repo}/pulls` with `head` (your branch), `base` (target branch), `title`, and `body`
-2. Note the returned `pull_number`
-3. `POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers` with `{"reviewers": ["username"]}`
-4. Wait for review approval, then check mergeability: `GET /repos/{owner}/{repo}/pulls/{pull_number}` -- inspect `mergeable` and `mergeable_state`
-5. `PUT /repos/{owner}/{repo}/pulls/{pull_number}/merge` with preferred `merge_method` (merge, squash, or rebase)
-
-### 3. Create a Release with Downloadable Assets
-
-1. `POST /repos/{owner}/{repo}/releases` with `tag_name`, `name`, `body`, and optionally `target_commitish`
-2. Note the returned `release_id` and `upload_url`
-3. `POST /repos/{owner}/{repo}/releases/{release_id}/assets?name=artifact.zip` with the binary file as the request body and `Content-Type` set appropriately
-4. Verify: `GET /repos/{owner}/{repo}/releases/{release_id}/assets` to confirm the asset was uploaded
-
-### 4. Set Up Branch Protection Rules
-
-1. `GET /repos/{owner}/{repo}/branches/{branch}` to confirm the branch exists
-2. `PUT /repos/{owner}/{repo}/branches/{branch}/protection` with `required_status_checks` (contexts and strict mode), `enforce_admins`, `required_pull_request_reviews` (approving count, dismiss stale), and `restrictions` (users/teams allowed to push)
-3. Optionally enable signed commits: `POST /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures`
-4. Verify: `GET /repos/{owner}/{repo}/branches/{branch}/protection`
-
-### 5. Search Issues Across Repos and Export Results
-
-1. `GET /search/issues?q=label:bug+state:open+org:myorg&sort=updated&order=desc&per_page=30`
-2. Check `total_count` and `incomplete_results` in the response
-3. If `total_count` exceeds 30, paginate with `page=2`, `page=3`, etc.
-4. For each item, extract `html_url`, `title`, `assignee.login`, `labels`, and `created_at`
-5. Note: search API has a stricter rate limit (30 req/min authenticated); check `GET /rate_limit` under `resources.search`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all hooks?" -> GET /admin/hooks
+- "Create a hook?" -> POST /admin/hooks
+- "Get hook details?" -> GET /admin/hooks/{hook_id}
+- "Partially update a hook?" -> PATCH /admin/hooks/{hook_id}
+- "Delete a hook?" -> DELETE /admin/hooks/{hook_id}
+- "Create a ping?" -> POST /admin/hooks/{hook_id}/pings
+- "List all keys?" -> GET /admin/keys
+- "Delete a key?" -> DELETE /admin/keys/{key_ids}
+- "Create a sync?" -> POST /admin/ldap/teams/{team_id}/sync
+- "Create a sync?" -> POST /admin/ldap/users/{username}/sync
+- "Create a organization?" -> POST /admin/organizations
+- "Partially update a organization?" -> PATCH /admin/organizations/{org}
+- "List all pre-receive-environments?" -> GET /admin/pre-receive-environments
+- "Create a pre-receive-environment?" -> POST /admin/pre-receive-environments
+- "Get pre-receive-environment details?" -> GET /admin/pre-receive-environments/{pre_receive_environment_id}
+- "Partially update a pre-receive-environment?" -> PATCH /admin/pre-receive-environments/{pre_receive_environment_id}
+- "Delete a pre-receive-environment?" -> DELETE /admin/pre-receive-environments/{pre_receive_environment_id}
+- "Create a download?" -> POST /admin/pre-receive-environments/{pre_receive_environment_id}/downloads
+- "List all latest?" -> GET /admin/pre-receive-environments/{pre_receive_environment_id}/downloads/latest
+- "List all pre-receive-hooks?" -> GET /admin/pre-receive-hooks
+- "Create a pre-receive-hook?" -> POST /admin/pre-receive-hooks
+- "Get pre-receive-hook details?" -> GET /admin/pre-receive-hooks/{pre_receive_hook_id}
+- "Partially update a pre-receive-hook?" -> PATCH /admin/pre-receive-hooks/{pre_receive_hook_id}
+- "Delete a pre-receive-hook?" -> DELETE /admin/pre-receive-hooks/{pre_receive_hook_id}
+- "List all tokens?" -> GET /admin/tokens
+- "Delete a token?" -> DELETE /admin/tokens/{token_id}
+- "Create a user?" -> POST /admin/users
+- "Partially update a user?" -> PATCH /admin/users/{username}
+- "Delete a user?" -> DELETE /admin/users/{username}
+- "Create a authorization?" -> POST /admin/users/{username}/authorizations
+- "List all app?" -> GET /app
+- "Create a conversion?" -> POST /app-manifests/{code}/conversions
+- "List all installations?" -> GET /app/installations
+- "Get installation details?" -> GET /app/installations/{installation_id}
+- "Delete a installation?" -> DELETE /app/installations/{installation_id}
+- "Create a access_token?" -> POST /app/installations/{installation_id}/access_tokens
+- "List all grants?" -> GET /applications/grants
+- "Get grant details?" -> GET /applications/grants/{grant_id}
+- "Delete a grant?" -> DELETE /applications/grants/{grant_id}
+- "Delete a grant?" -> DELETE /applications/{client_id}/grants/{access_token}
+- "Get token details?" -> GET /applications/{client_id}/tokens/{access_token}
+- "Delete a token?" -> DELETE /applications/{client_id}/tokens/{access_token}
+- "Get app details?" -> GET /apps/{app_slug}
+- "List all authorizations?" -> GET /authorizations
+- "Create a authorization?" -> POST /authorizations
+- "Update a client?" -> PUT /authorizations/clients/{client_id}
+- "Update a client?" -> PUT /authorizations/clients/{client_id}/{fingerprint}
+- "Get authorization details?" -> GET /authorizations/{authorization_id}
+- "Partially update a authorization?" -> PATCH /authorizations/{authorization_id}
+- "Delete a authorization?" -> DELETE /authorizations/{authorization_id}
+- "List all codes_of_conduct?" -> GET /codes_of_conduct
+- "Get codes_of_conduct details?" -> GET /codes_of_conduct/{key}
+- "List all emojis?" -> GET /emojis
+- "List all license?" -> GET /enterprise/settings/license
+- "List all all?" -> GET /enterprise/stats/all
+- "List all comments?" -> GET /enterprise/stats/comments
+- "List all gists?" -> GET /enterprise/stats/gists
+- "List all hooks?" -> GET /enterprise/stats/hooks
+- "List all issues?" -> GET /enterprise/stats/issues
+- "List all milestones?" -> GET /enterprise/stats/milestones
+- "List all orgs?" -> GET /enterprise/stats/orgs
+- "List all pages?" -> GET /enterprise/stats/pages
+- "List all pulls?" -> GET /enterprise/stats/pulls
+- "List all repos?" -> GET /enterprise/stats/repos
+- "List all users?" -> GET /enterprise/stats/users
+- "List all events?" -> GET /events
+- "List all feeds?" -> GET /feeds
+- "List all gists?" -> GET /gists
+- "Create a gist?" -> POST /gists
+- "List all public?" -> GET /gists/public
+- "List all starred?" -> GET /gists/starred
+- "Get gist details?" -> GET /gists/{gist_id}
+- "Partially update a gist?" -> PATCH /gists/{gist_id}
+- "Delete a gist?" -> DELETE /gists/{gist_id}
+- "List all comments?" -> GET /gists/{gist_id}/comments
+- "Create a comment?" -> POST /gists/{gist_id}/comments
+- "Get comment details?" -> GET /gists/{gist_id}/comments/{comment_id}
+- "Partially update a comment?" -> PATCH /gists/{gist_id}/comments/{comment_id}
+- "Delete a comment?" -> DELETE /gists/{gist_id}/comments/{comment_id}
+- "List all commits?" -> GET /gists/{gist_id}/commits
+- "List all forks?" -> GET /gists/{gist_id}/forks
+- "Create a fork?" -> POST /gists/{gist_id}/forks
+- "List all star?" -> GET /gists/{gist_id}/star
+- "Get gist details?" -> GET /gists/{gist_id}/{sha}
+- "List all templates?" -> GET /gitignore/templates
+- "Get template details?" -> GET /gitignore/templates/{name}
+- "List all repositories?" -> GET /installation/repositories
+- "List all issues?" -> GET /issues
+- "List all licenses?" -> GET /licenses
+- "Get license details?" -> GET /licenses/{license}
+- "Create a markdown?" -> POST /markdown
+- "Create a raw?" -> POST /markdown/raw
+- "List all meta?" -> GET /meta
+- "List all events?" -> GET /networks/{owner}/{repo}/events
+- "List all notifications?" -> GET /notifications
+- "Get thread details?" -> GET /notifications/threads/{thread_id}
+- "Partially update a thread?" -> PATCH /notifications/threads/{thread_id}
+- "List all subscription?" -> GET /notifications/threads/{thread_id}/subscription
+- "List all octocat?" -> GET /octocat
+- "List all organizations?" -> GET /organizations
+- "Get org details?" -> GET /orgs/{org}
+- "Partially update a org?" -> PATCH /orgs/{org}
+- "List all events?" -> GET /orgs/{org}/events
+- "List all hooks?" -> GET /orgs/{org}/hooks
+- "Create a hook?" -> POST /orgs/{org}/hooks
+- "Get hook details?" -> GET /orgs/{org}/hooks/{hook_id}
+- "Partially update a hook?" -> PATCH /orgs/{org}/hooks/{hook_id}
+- "Delete a hook?" -> DELETE /orgs/{org}/hooks/{hook_id}
+- "Create a ping?" -> POST /orgs/{org}/hooks/{hook_id}/pings
+- "List all installation?" -> GET /orgs/{org}/installation
+- "List all issues?" -> GET /orgs/{org}/issues
+- "List all members?" -> GET /orgs/{org}/members
+- "Get member details?" -> GET /orgs/{org}/members/{username}
+- "Delete a member?" -> DELETE /orgs/{org}/members/{username}
+- "Get membership details?" -> GET /orgs/{org}/memberships/{username}
+- "Update a membership?" -> PUT /orgs/{org}/memberships/{username}
+- "Delete a membership?" -> DELETE /orgs/{org}/memberships/{username}
+- "List all outside_collaborators?" -> GET /orgs/{org}/outside_collaborators
+- "Update a outside_collaborator?" -> PUT /orgs/{org}/outside_collaborators/{username}
+- "Delete a outside_collaborator?" -> DELETE /orgs/{org}/outside_collaborators/{username}
+- "List all pre-receive-hooks?" -> GET /orgs/{org}/pre-receive-hooks
+- "Get pre-receive-hook details?" -> GET /orgs/{org}/pre-receive-hooks/{pre_receive_hook_id}
+- "Partially update a pre-receive-hook?" -> PATCH /orgs/{org}/pre-receive-hooks/{pre_receive_hook_id}
+- "Delete a pre-receive-hook?" -> DELETE /orgs/{org}/pre-receive-hooks/{pre_receive_hook_id}
+- "List all projects?" -> GET /orgs/{org}/projects
+- "Create a project?" -> POST /orgs/{org}/projects
+- "List all public_members?" -> GET /orgs/{org}/public_members
+- "Get public_member details?" -> GET /orgs/{org}/public_members/{username}
+- "Update a public_member?" -> PUT /orgs/{org}/public_members/{username}
+- "Delete a public_member?" -> DELETE /orgs/{org}/public_members/{username}
+- "List all repos?" -> GET /orgs/{org}/repos
+- "Create a repo?" -> POST /orgs/{org}/repos
+- "List all teams?" -> GET /orgs/{org}/teams
+- "Create a team?" -> POST /orgs/{org}/teams
+- "Get team details?" -> GET /orgs/{org}/teams/{team_slug}
+- "Get card details?" -> GET /projects/columns/cards/{card_id}
+- "Partially update a card?" -> PATCH /projects/columns/cards/{card_id}
+- "Delete a card?" -> DELETE /projects/columns/cards/{card_id}
+- "Create a move?" -> POST /projects/columns/cards/{card_id}/moves
+- "Get column details?" -> GET /projects/columns/{column_id}
+- "Partially update a column?" -> PATCH /projects/columns/{column_id}
+- "Delete a column?" -> DELETE /projects/columns/{column_id}
+- "List all cards?" -> GET /projects/columns/{column_id}/cards
+- "Create a card?" -> POST /projects/columns/{column_id}/cards
+- "Create a move?" -> POST /projects/columns/{column_id}/moves
+- "Get project details?" -> GET /projects/{project_id}
+- "Partially update a project?" -> PATCH /projects/{project_id}
+- "Delete a project?" -> DELETE /projects/{project_id}
+- "List all collaborators?" -> GET /projects/{project_id}/collaborators
+- "Update a collaborator?" -> PUT /projects/{project_id}/collaborators/{username}
+- "Delete a collaborator?" -> DELETE /projects/{project_id}/collaborators/{username}
+- "List all permission?" -> GET /projects/{project_id}/collaborators/{username}/permission
+- "List all columns?" -> GET /projects/{project_id}/columns
+- "Create a column?" -> POST /projects/{project_id}/columns
+- "List all rate_limit?" -> GET /rate_limit
+- "Delete a reaction?" -> DELETE /reactions/{reaction_id}
+- "Get repo details?" -> GET /repos/{owner}/{repo}
+- "Partially update a repo?" -> PATCH /repos/{owner}/{repo}
+- "Delete a repo?" -> DELETE /repos/{owner}/{repo}
+- "List all assignees?" -> GET /repos/{owner}/{repo}/assignees
+- "Get assignee details?" -> GET /repos/{owner}/{repo}/assignees/{assignee}
+- "List all branches?" -> GET /repos/{owner}/{repo}/branches
+- "Get branche details?" -> GET /repos/{owner}/{repo}/branches/{branch}
+- "List all protection?" -> GET /repos/{owner}/{repo}/branches/{branch}/protection
+- "List all enforce_admins?" -> GET /repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins
+- "Create a enforce_admin?" -> POST /repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins
+- "List all required_pull_request_reviews?" -> GET /repos/{owner}/{repo}/branches/{branch}/protection/required_pull_request_reviews
+- "List all required_signatures?" -> GET /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures
+- "Create a required_signature?" -> POST /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures
+- "List all required_status_checks?" -> GET /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks
+- "List all contexts?" -> GET /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts
+- "Create a context?" -> POST /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts
+- "List all restrictions?" -> GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions
+- "List all teams?" -> GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams
+- "Create a team?" -> POST /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/teams
+- "List all users?" -> GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users
+- "Create a user?" -> POST /repos/{owner}/{repo}/branches/{branch}/protection/restrictions/users
+- "Create a check-run?" -> POST /repos/{owner}/{repo}/check-runs
+- "Get check-run details?" -> GET /repos/{owner}/{repo}/check-runs/{check_run_id}
+- "Partially update a check-run?" -> PATCH /repos/{owner}/{repo}/check-runs/{check_run_id}
+- "List all annotations?" -> GET /repos/{owner}/{repo}/check-runs/{check_run_id}/annotations
+- "Create a check-suite?" -> POST /repos/{owner}/{repo}/check-suites
+- "Get check-suite details?" -> GET /repos/{owner}/{repo}/check-suites/{check_suite_id}
+- "List all check-runs?" -> GET /repos/{owner}/{repo}/check-suites/{check_suite_id}/check-runs
+- "Create a rerequest?" -> POST /repos/{owner}/{repo}/check-suites/{check_suite_id}/rerequest
+- "List all collaborators?" -> GET /repos/{owner}/{repo}/collaborators
+- "Get collaborator details?" -> GET /repos/{owner}/{repo}/collaborators/{username}
+- "Update a collaborator?" -> PUT /repos/{owner}/{repo}/collaborators/{username}
+- "Delete a collaborator?" -> DELETE /repos/{owner}/{repo}/collaborators/{username}
+- "List all permission?" -> GET /repos/{owner}/{repo}/collaborators/{username}/permission
+- "List all comments?" -> GET /repos/{owner}/{repo}/comments
+- "Get comment details?" -> GET /repos/{owner}/{repo}/comments/{comment_id}
+- "Partially update a comment?" -> PATCH /repos/{owner}/{repo}/comments/{comment_id}
+- "Delete a comment?" -> DELETE /repos/{owner}/{repo}/comments/{comment_id}
+- "List all reactions?" -> GET /repos/{owner}/{repo}/comments/{comment_id}/reactions
+- "Create a reaction?" -> POST /repos/{owner}/{repo}/comments/{comment_id}/reactions
+- "List all commits?" -> GET /repos/{owner}/{repo}/commits
+- "List all branches-where-head?" -> GET /repos/{owner}/{repo}/commits/{commit_sha}/branches-where-head
+- "List all comments?" -> GET /repos/{owner}/{repo}/commits/{commit_sha}/comments
+- "Create a comment?" -> POST /repos/{owner}/{repo}/commits/{commit_sha}/comments
+- "List all pulls?" -> GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls
+- "Get commit details?" -> GET /repos/{owner}/{repo}/commits/{ref}
+- "List all check-runs?" -> GET /repos/{owner}/{repo}/commits/{ref}/check-runs
+- "List all check-suites?" -> GET /repos/{owner}/{repo}/commits/{ref}/check-suites
+- "List all status?" -> GET /repos/{owner}/{repo}/commits/{ref}/status
+- "List all statuses?" -> GET /repos/{owner}/{repo}/commits/{ref}/statuses
+- "Get compare details?" -> GET /repos/{owner}/{repo}/compare/{basehead}
+- "Create a attachment?" -> POST /repos/{owner}/{repo}/content_references/{content_reference_id}/attachments
+- "Get content details?" -> GET /repos/{owner}/{repo}/contents/{path}
+- "Update a content?" -> PUT /repos/{owner}/{repo}/contents/{path}
+- "Delete a content?" -> DELETE /repos/{owner}/{repo}/contents/{path}
+- "List all contributors?" -> GET /repos/{owner}/{repo}/contributors
+- "List all deployments?" -> GET /repos/{owner}/{repo}/deployments
+- "Create a deployment?" -> POST /repos/{owner}/{repo}/deployments
+- "Get deployment details?" -> GET /repos/{owner}/{repo}/deployments/{deployment_id}
+- "List all statuses?" -> GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses
+- "Create a statuse?" -> POST /repos/{owner}/{repo}/deployments/{deployment_id}/statuses
+- "Get statuse details?" -> GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses/{status_id}
+- "List all events?" -> GET /repos/{owner}/{repo}/events
+- "List all forks?" -> GET /repos/{owner}/{repo}/forks
+- "Create a fork?" -> POST /repos/{owner}/{repo}/forks
+- "Create a blob?" -> POST /repos/{owner}/{repo}/git/blobs
+- "Get blob details?" -> GET /repos/{owner}/{repo}/git/blobs/{file_sha}
+- "Create a commit?" -> POST /repos/{owner}/{repo}/git/commits
+- "Get commit details?" -> GET /repos/{owner}/{repo}/git/commits/{commit_sha}
+- "Create a ref?" -> POST /repos/{owner}/{repo}/git/refs
+- "Get ref details?" -> GET /repos/{owner}/{repo}/git/refs/{namespace}
+- "Partially update a ref?" -> PATCH /repos/{owner}/{repo}/git/refs/{ref}
+- "Delete a ref?" -> DELETE /repos/{owner}/{repo}/git/refs/{ref}
+- "Create a tag?" -> POST /repos/{owner}/{repo}/git/tags
+- "Get tag details?" -> GET /repos/{owner}/{repo}/git/tags/{tag_sha}
+- "Create a tree?" -> POST /repos/{owner}/{repo}/git/trees
+- "Get tree details?" -> GET /repos/{owner}/{repo}/git/trees/{tree_sha}
+- "List all hooks?" -> GET /repos/{owner}/{repo}/hooks
+- "Create a hook?" -> POST /repos/{owner}/{repo}/hooks
+- "Get hook details?" -> GET /repos/{owner}/{repo}/hooks/{hook_id}
+- "Partially update a hook?" -> PATCH /repos/{owner}/{repo}/hooks/{hook_id}
+- "Delete a hook?" -> DELETE /repos/{owner}/{repo}/hooks/{hook_id}
+- "Create a ping?" -> POST /repos/{owner}/{repo}/hooks/{hook_id}/pings
+- "Create a test?" -> POST /repos/{owner}/{repo}/hooks/{hook_id}/tests
+- "List all installation?" -> GET /repos/{owner}/{repo}/installation
+- "List all invitations?" -> GET /repos/{owner}/{repo}/invitations
+- "Partially update a invitation?" -> PATCH /repos/{owner}/{repo}/invitations/{invitation_id}
+- "Delete a invitation?" -> DELETE /repos/{owner}/{repo}/invitations/{invitation_id}
+- "List all issues?" -> GET /repos/{owner}/{repo}/issues
+- "Create a issue?" -> POST /repos/{owner}/{repo}/issues
+- "List all comments?" -> GET /repos/{owner}/{repo}/issues/comments
+- "Get comment details?" -> GET /repos/{owner}/{repo}/issues/comments/{comment_id}
+- "Partially update a comment?" -> PATCH /repos/{owner}/{repo}/issues/comments/{comment_id}
+- "Delete a comment?" -> DELETE /repos/{owner}/{repo}/issues/comments/{comment_id}
+- "List all reactions?" -> GET /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions
+- "Create a reaction?" -> POST /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions
+- "List all events?" -> GET /repos/{owner}/{repo}/issues/events
+- "Get event details?" -> GET /repos/{owner}/{repo}/issues/events/{event_id}
+- "Get issue details?" -> GET /repos/{owner}/{repo}/issues/{issue_number}
+- "Partially update a issue?" -> PATCH /repos/{owner}/{repo}/issues/{issue_number}
+- "Create a assignee?" -> POST /repos/{owner}/{repo}/issues/{issue_number}/assignees
+- "List all comments?" -> GET /repos/{owner}/{repo}/issues/{issue_number}/comments
+- "Create a comment?" -> POST /repos/{owner}/{repo}/issues/{issue_number}/comments
+- "List all events?" -> GET /repos/{owner}/{repo}/issues/{issue_number}/events
+- "List all labels?" -> GET /repos/{owner}/{repo}/issues/{issue_number}/labels
+- "Create a label?" -> POST /repos/{owner}/{repo}/issues/{issue_number}/labels
+- "Delete a label?" -> DELETE /repos/{owner}/{repo}/issues/{issue_number}/labels/{name}
+- "List all reactions?" -> GET /repos/{owner}/{repo}/issues/{issue_number}/reactions
+- "Create a reaction?" -> POST /repos/{owner}/{repo}/issues/{issue_number}/reactions
+- "List all timeline?" -> GET /repos/{owner}/{repo}/issues/{issue_number}/timeline
+- "List all keys?" -> GET /repos/{owner}/{repo}/keys
+- "Create a key?" -> POST /repos/{owner}/{repo}/keys
+- "Get key details?" -> GET /repos/{owner}/{repo}/keys/{key_id}
+- "Delete a key?" -> DELETE /repos/{owner}/{repo}/keys/{key_id}
+- "List all labels?" -> GET /repos/{owner}/{repo}/labels
+- "Create a label?" -> POST /repos/{owner}/{repo}/labels
+- "Get label details?" -> GET /repos/{owner}/{repo}/labels/{name}
+- "Delete a label?" -> DELETE /repos/{owner}/{repo}/labels/{name}
+- "List all languages?" -> GET /repos/{owner}/{repo}/languages
+- "List all license?" -> GET /repos/{owner}/{repo}/license
+- "Create a merge?" -> POST /repos/{owner}/{repo}/merges
+- "List all milestones?" -> GET /repos/{owner}/{repo}/milestones
+- "Create a milestone?" -> POST /repos/{owner}/{repo}/milestones
+- "Get milestone details?" -> GET /repos/{owner}/{repo}/milestones/{milestone_number}
+- "Partially update a milestone?" -> PATCH /repos/{owner}/{repo}/milestones/{milestone_number}
+- "Delete a milestone?" -> DELETE /repos/{owner}/{repo}/milestones/{milestone_number}
+- "List all labels?" -> GET /repos/{owner}/{repo}/milestones/{milestone_number}/labels
+- "List all notifications?" -> GET /repos/{owner}/{repo}/notifications
+- "List all pages?" -> GET /repos/{owner}/{repo}/pages
+- "Create a page?" -> POST /repos/{owner}/{repo}/pages
+- "List all builds?" -> GET /repos/{owner}/{repo}/pages/builds
+- "Create a build?" -> POST /repos/{owner}/{repo}/pages/builds
+- "List all latest?" -> GET /repos/{owner}/{repo}/pages/builds/latest
+- "Get build details?" -> GET /repos/{owner}/{repo}/pages/builds/{build_id}
+- "List all pre-receive-hooks?" -> GET /repos/{owner}/{repo}/pre-receive-hooks
+- "Get pre-receive-hook details?" -> GET /repos/{owner}/{repo}/pre-receive-hooks/{pre_receive_hook_id}
+- "Partially update a pre-receive-hook?" -> PATCH /repos/{owner}/{repo}/pre-receive-hooks/{pre_receive_hook_id}
+- "Delete a pre-receive-hook?" -> DELETE /repos/{owner}/{repo}/pre-receive-hooks/{pre_receive_hook_id}
+- "List all projects?" -> GET /repos/{owner}/{repo}/projects
+- "Create a project?" -> POST /repos/{owner}/{repo}/projects
+- "List all pulls?" -> GET /repos/{owner}/{repo}/pulls
+- "Create a pull?" -> POST /repos/{owner}/{repo}/pulls
+- "List all comments?" -> GET /repos/{owner}/{repo}/pulls/comments
+- "Get comment details?" -> GET /repos/{owner}/{repo}/pulls/comments/{comment_id}
+- "Partially update a comment?" -> PATCH /repos/{owner}/{repo}/pulls/comments/{comment_id}
+- "Delete a comment?" -> DELETE /repos/{owner}/{repo}/pulls/comments/{comment_id}
+- "List all reactions?" -> GET /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions
+- "Create a reaction?" -> POST /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions
+- "Get pull details?" -> GET /repos/{owner}/{repo}/pulls/{pull_number}
+- "Partially update a pull?" -> PATCH /repos/{owner}/{repo}/pulls/{pull_number}
+- "List all comments?" -> GET /repos/{owner}/{repo}/pulls/{pull_number}/comments
+- "Create a comment?" -> POST /repos/{owner}/{repo}/pulls/{pull_number}/comments
+- "Create a reply?" -> POST /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies
+- "List all commits?" -> GET /repos/{owner}/{repo}/pulls/{pull_number}/commits
+- "List all files?" -> GET /repos/{owner}/{repo}/pulls/{pull_number}/files
+- "List all merge?" -> GET /repos/{owner}/{repo}/pulls/{pull_number}/merge
+- "List all requested_reviewers?" -> GET /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers
+- "Create a requested_reviewer?" -> POST /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers
+- "List all reviews?" -> GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews
+- "Create a review?" -> POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews
+- "Get review details?" -> GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}
+- "Update a review?" -> PUT /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}
+- "Delete a review?" -> DELETE /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}
+- "List all comments?" -> GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/comments
+- "Create a event?" -> POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/events
+- "List all readme?" -> GET /repos/{owner}/{repo}/readme
+- "Get readme details?" -> GET /repos/{owner}/{repo}/readme/{dir}
+- "List all releases?" -> GET /repos/{owner}/{repo}/releases
+- "Create a release?" -> POST /repos/{owner}/{repo}/releases
+- "Get asset details?" -> GET /repos/{owner}/{repo}/releases/assets/{asset_id}
+- "Partially update a asset?" -> PATCH /repos/{owner}/{repo}/releases/assets/{asset_id}
+- "Delete a asset?" -> DELETE /repos/{owner}/{repo}/releases/assets/{asset_id}
+- "List all latest?" -> GET /repos/{owner}/{repo}/releases/latest
+- "Get tag details?" -> GET /repos/{owner}/{repo}/releases/tags/{tag}
+- "Get release details?" -> GET /repos/{owner}/{repo}/releases/{release_id}
+- "Partially update a release?" -> PATCH /repos/{owner}/{repo}/releases/{release_id}
+- "Delete a release?" -> DELETE /repos/{owner}/{repo}/releases/{release_id}
+- "List all assets?" -> GET /repos/{owner}/{repo}/releases/{release_id}/assets
+- "Create a asset?" -> POST /repos/{owner}/{repo}/releases/{release_id}/assets
+- "List all stargazers?" -> GET /repos/{owner}/{repo}/stargazers
+- "List all code_frequency?" -> GET /repos/{owner}/{repo}/stats/code_frequency
+- "List all commit_activity?" -> GET /repos/{owner}/{repo}/stats/commit_activity
+- "List all contributors?" -> GET /repos/{owner}/{repo}/stats/contributors
+- "List all participation?" -> GET /repos/{owner}/{repo}/stats/participation
+- "List all punch_card?" -> GET /repos/{owner}/{repo}/stats/punch_card
+- "List all subscribers?" -> GET /repos/{owner}/{repo}/subscribers
+- "List all subscription?" -> GET /repos/{owner}/{repo}/subscription
+- "List all tags?" -> GET /repos/{owner}/{repo}/tags
+- "Get tarball details?" -> GET /repos/{owner}/{repo}/tarball/{ref}
+- "List all teams?" -> GET /repos/{owner}/{repo}/teams
+- "List all topics?" -> GET /repos/{owner}/{repo}/topics
+- "Create a transfer?" -> POST /repos/{owner}/{repo}/transfer
+- "Get zipball details?" -> GET /repos/{owner}/{repo}/zipball/{ref}
+- "Create a generate?" -> POST /repos/{template_owner}/{template_repo}/generate
+- "List all repositories?" -> GET /repositories
+- "Search code?" -> GET /search/code
+- "Search commits?" -> GET /search/commits
+- "Search issues?" -> GET /search/issues
+- "Search labels?" -> GET /search/labels
+- "Search repositories?" -> GET /search/repositories
+- "Search topics?" -> GET /search/topics
+- "Search users?" -> GET /search/users
+- "List all configcheck?" -> GET /setup/api/configcheck
+- "Create a configure?" -> POST /setup/api/configure
+- "List all maintenance?" -> GET /setup/api/maintenance
+- "Create a maintenance?" -> POST /setup/api/maintenance
+- "List all settings?" -> GET /setup/api/settings
+- "List all authorized-keys?" -> GET /setup/api/settings/authorized-keys
+- "Create a authorized-key?" -> POST /setup/api/settings/authorized-keys
+- "Create a start?" -> POST /setup/api/start
+- "Create a upgrade?" -> POST /setup/api/upgrade
+- "Get team details?" -> GET /teams/{team_id}
+- "Partially update a team?" -> PATCH /teams/{team_id}
+- "Delete a team?" -> DELETE /teams/{team_id}
+- "List all discussions?" -> GET /teams/{team_id}/discussions
+- "Create a discussion?" -> POST /teams/{team_id}/discussions
+- "Get discussion details?" -> GET /teams/{team_id}/discussions/{discussion_number}
+- "Partially update a discussion?" -> PATCH /teams/{team_id}/discussions/{discussion_number}
+- "Delete a discussion?" -> DELETE /teams/{team_id}/discussions/{discussion_number}
+- "List all comments?" -> GET /teams/{team_id}/discussions/{discussion_number}/comments
+- "Create a comment?" -> POST /teams/{team_id}/discussions/{discussion_number}/comments
+- "Get comment details?" -> GET /teams/{team_id}/discussions/{discussion_number}/comments/{comment_number}
+- "Partially update a comment?" -> PATCH /teams/{team_id}/discussions/{discussion_number}/comments/{comment_number}
+- "Delete a comment?" -> DELETE /teams/{team_id}/discussions/{discussion_number}/comments/{comment_number}
+- "List all reactions?" -> GET /teams/{team_id}/discussions/{discussion_number}/comments/{comment_number}/reactions
+- "Create a reaction?" -> POST /teams/{team_id}/discussions/{discussion_number}/comments/{comment_number}/reactions
+- "List all reactions?" -> GET /teams/{team_id}/discussions/{discussion_number}/reactions
+- "Create a reaction?" -> POST /teams/{team_id}/discussions/{discussion_number}/reactions
+- "List all members?" -> GET /teams/{team_id}/members
+- "Get member details?" -> GET /teams/{team_id}/members/{username}
+- "Update a member?" -> PUT /teams/{team_id}/members/{username}
+- "Delete a member?" -> DELETE /teams/{team_id}/members/{username}
+- "Get membership details?" -> GET /teams/{team_id}/memberships/{username}
+- "Update a membership?" -> PUT /teams/{team_id}/memberships/{username}
+- "Delete a membership?" -> DELETE /teams/{team_id}/memberships/{username}
+- "List all projects?" -> GET /teams/{team_id}/projects
+- "Get project details?" -> GET /teams/{team_id}/projects/{project_id}
+- "Update a project?" -> PUT /teams/{team_id}/projects/{project_id}
+- "Delete a project?" -> DELETE /teams/{team_id}/projects/{project_id}
+- "List all repos?" -> GET /teams/{team_id}/repos
+- "Get repo details?" -> GET /teams/{team_id}/repos/{owner}/{repo}
+- "Update a repo?" -> PUT /teams/{team_id}/repos/{owner}/{repo}
+- "Delete a repo?" -> DELETE /teams/{team_id}/repos/{owner}/{repo}
+- "List all teams?" -> GET /teams/{team_id}/teams
+- "List all user?" -> GET /user
+- "List all emails?" -> GET /user/emails
+- "Create a email?" -> POST /user/emails
+- "List all followers?" -> GET /user/followers
+- "List all following?" -> GET /user/following
+- "Get following details?" -> GET /user/following/{username}
+- "Update a following?" -> PUT /user/following/{username}
+- "Delete a following?" -> DELETE /user/following/{username}
+- "List all gpg_keys?" -> GET /user/gpg_keys
+- "Create a gpg_key?" -> POST /user/gpg_keys
+- "Get gpg_key details?" -> GET /user/gpg_keys/{gpg_key_id}
+- "Delete a gpg_key?" -> DELETE /user/gpg_keys/{gpg_key_id}
+- "List all installations?" -> GET /user/installations
+- "List all repositories?" -> GET /user/installations/{installation_id}/repositories
+- "Update a repository?" -> PUT /user/installations/{installation_id}/repositories/{repository_id}
+- "Delete a repository?" -> DELETE /user/installations/{installation_id}/repositories/{repository_id}
+- "List all issues?" -> GET /user/issues
+- "List all keys?" -> GET /user/keys
+- "Create a key?" -> POST /user/keys
+- "Get key details?" -> GET /user/keys/{key_id}
+- "Delete a key?" -> DELETE /user/keys/{key_id}
+- "List all orgs?" -> GET /user/memberships/orgs
+- "Get org details?" -> GET /user/memberships/orgs/{org}
+- "Partially update a org?" -> PATCH /user/memberships/orgs/{org}
+- "List all orgs?" -> GET /user/orgs
+- "Create a project?" -> POST /user/projects
+- "List all public_emails?" -> GET /user/public_emails
+- "List all repos?" -> GET /user/repos
+- "Create a repo?" -> POST /user/repos
+- "List all repository_invitations?" -> GET /user/repository_invitations
+- "Partially update a repository_invitation?" -> PATCH /user/repository_invitations/{invitation_id}
+- "Delete a repository_invitation?" -> DELETE /user/repository_invitations/{invitation_id}
+- "List all starred?" -> GET /user/starred
+- "Get starred details?" -> GET /user/starred/{owner}/{repo}
+- "Update a starred?" -> PUT /user/starred/{owner}/{repo}
+- "Delete a starred?" -> DELETE /user/starred/{owner}/{repo}
+- "List all subscriptions?" -> GET /user/subscriptions
+- "List all teams?" -> GET /user/teams
+- "List all users?" -> GET /users
+- "Get user details?" -> GET /users/{username}
+- "List all events?" -> GET /users/{username}/events
+- "Get org details?" -> GET /users/{username}/events/orgs/{org}
+- "List all public?" -> GET /users/{username}/events/public
+- "List all followers?" -> GET /users/{username}/followers
+- "List all following?" -> GET /users/{username}/following
+- "Get following details?" -> GET /users/{username}/following/{target_user}
+- "List all gists?" -> GET /users/{username}/gists
+- "List all gpg_keys?" -> GET /users/{username}/gpg_keys
+- "List all hovercard?" -> GET /users/{username}/hovercard
+- "List all installation?" -> GET /users/{username}/installation
+- "List all keys?" -> GET /users/{username}/keys
+- "List all orgs?" -> GET /users/{username}/orgs
+- "List all projects?" -> GET /users/{username}/projects
+- "List all received_events?" -> GET /users/{username}/received_events
+- "List all public?" -> GET /users/{username}/received_events/public
+- "List all repos?" -> GET /users/{username}/repos
+- "List all starred?" -> GET /users/{username}/starred
+- "List all subscriptions?" -> GET /users/{username}/subscriptions
+- "List all zen?" -> GET /zen
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -60,88 +60,10 @@ Not specified.
 | POST | / | This operation adds or updates tags for a specified domain. All tag operations are eventually consistent; subsequent operations might not immediately represent all issued operations. |
 | POST | / | Returns all the domain-related billing records for the current Amazon Web Services account for a specified period |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Is example.com available to register?" -> POST / (CheckDomainAvailability)
-- "Can I transfer example.com to my account?" -> POST / (CheckDomainTransferability)
-- "Register example.com for 2 years" -> POST / (RegisterDomain)
-- "Transfer example.com from another registrar" -> POST / (TransferDomain)
-- "What are the details for my domain example.com?" -> POST / (GetDomainDetail)
-- "Show me all my domains" -> POST / (ListDomains)
-- "What domain names are similar to example.com?" -> POST / (GetDomainSuggestions)
-- "Renew example.com for another year" -> POST / (RenewDomain)
-- "Update the nameservers for example.com" -> POST / (UpdateDomainNameservers)
-- "What is the status of operation abc-123?" -> POST / (GetOperationDetail)
-- "Show my billing records for last month" -> POST / (ViewBilling)
-- "Enable WHOIS privacy for example.com" -> POST / (UpdateDomainContactPrivacy)
-- "Transfer example.com to another AWS account" -> POST / (TransferDomainToAnotherAwsAccount)
-- "Get the auth code for example.com so I can transfer it out" -> POST / (RetrieveDomainAuthCode)
-- "How much does a .io domain cost?" -> POST / (ListPrices with Tld filter)
-
-## Response Tips
-
-- **Domain checks** (Availability, Transferability): Return a single status string -- `AVAILABLE`/`UNAVAILABLE` or `TRANSFERABLE`/`UNTRANSFERABLE`; always check the string value, not just presence.
-- **Mutation operations** (Register, Transfer, Renew, Update, Enable/Disable): Return an `OperationId` -- treat these as async; poll GetOperationDetail until `Status` is `SUCCESSFUL` or `FAILED`.
-- **List endpoints** (ListDomains, ListOperations, ListPrices, ViewBilling): Paginated via `Marker`/`NextPageMarker` with `MaxItems` cap; keep requesting with the returned `NextPageMarker` until it is absent.
-- **GetDomainDetail**: Returns deeply nested `ContactDetail` objects (Admin, Registrant, Tech, Billing) with `ExtraParams` arrays for TLD-specific fields; privacy booleans are siblings to their contacts.
-- **Tag operations**: DeleteTagsForDomain takes `TagsToDelete` (string array of keys), while UpdateTagsForDomain takes `TagsToUpdate` (Tag objects with key-value pairs) -- do not confuse the two shapes.
-- **Account transfers** (TransferDomainToAnotherAwsAccount): Returns a `Password` that the receiving account needs for AcceptDomainTransferFromAnotherAwsAccount -- surface this clearly to the user.
-
-## Anomaly Flags
-
-- **Operation stuck in SUBMITTED/IN_PROGRESS**: If GetOperationDetail shows no status change for over 15 minutes, flag it -- domain operations rarely take that long unless manual review is involved.
-- **Domain expiration approaching**: When GetDomainDetail returns `ExpirationDate` within 30 days, proactively warn the user and suggest RenewDomain.
-- **Auto-renew disabled**: Flag when `AutoRenew` is `false` on GetDomainDetail -- the user may lose the domain unintentionally.
-- **Transfer lock disabled**: If EnableDomainTransferLock has not been called or the domain shows unlocked status, warn about unauthorized transfer risk.
-- **WHOIS privacy inconsistency**: If some contact privacy flags are `true` and others `false` within the same domain, surface this mismatch.
-- **Deprecated or unusual StatusList entries**: If GetDomainDetail returns status codes beyond the standard set (clientTransferProhibited, etc.), flag for user review.
-- **Billing spikes**: When ViewBilling returns records with unexpected charges or domain counts that differ from ListDomains, proactively surface the discrepancy.
-
-## Playbook
-
-### 1. Register a New Domain
-
-1. Call CheckDomainAvailability with the desired `DomainName` to confirm `Availability` is `AVAILABLE`.
-2. If unavailable, call GetDomainSuggestions with `SuggestionCount: 10, OnlyAvailable: true` to find alternatives.
-3. Optionally call ListPrices with the target TLD to confirm pricing before committing.
-4. Call RegisterDomain with `DomainName`, `DurationInYears`, and all three required contacts (Admin, Registrant, Tech). Set `PrivacyProtect*` flags to `true` for WHOIS privacy.
-5. Capture the returned `OperationId` and poll GetOperationDetail until `Status` is `SUCCESSFUL`.
-6. Call EnableDomainTransferLock to protect the new domain from unauthorized transfers.
-
-### 2. Transfer a Domain Into Your Account
-
-1. Call CheckDomainTransferability to verify the domain is `TRANSFERABLE`.
-2. Obtain the auth code from your current registrar (or call RetrieveDomainAuthCode if it is already in another Route 53 account).
-3. Call TransferDomain with `DomainName`, `DurationInYears`, `AuthCode`, and all three required contacts.
-4. Poll GetOperationDetail with the returned `OperationId` until the transfer completes -- this can take several days.
-5. Once successful, call GetDomainDetail to verify settings, then EnableDomainTransferLock.
-
-### 3. Transfer a Domain Between AWS Accounts
-
-1. From the source account, call TransferDomainToAnotherAwsAccount with the `DomainName` and target `AccountId`.
-2. Save the returned `Password` -- the receiving account needs it.
-3. From the target account, call AcceptDomainTransferFromAnotherAwsAccount with `DomainName` and the `Password`.
-4. Poll GetOperationDetail from the target account until the operation completes.
-5. If the transfer should be cancelled, the source account can call RejectDomainTransferFromAnotherAwsAccount (or CancelDomainTransferToAnotherAwsAccount) before acceptance.
-
-### 4. Update Domain Configuration
-
-1. Call GetDomainDetail to review the current state of the domain (contacts, nameservers, privacy, auto-renew).
-2. To change contacts, call UpdateDomainContact with only the contact fields you want to change (Admin, Registrant, Tech, or Billing).
-3. To toggle WHOIS privacy, call UpdateDomainContactPrivacy with the desired boolean flags.
-4. To change nameservers, call UpdateDomainNameservers with the new `Nameservers` array.
-5. To enable/disable auto-renew, call EnableDomainAutoRenew or DisableDomainAutoRenew.
-6. Poll each returned `OperationId` to confirm changes applied successfully.
-
-### 5. Monitor and Audit Your Domains
-
-1. Call ListDomains (with optional `FilterConditions` and `SortCondition`) to get all domains -- paginate with `Marker`/`MaxItems` until `NextPageMarker` is absent.
-2. For each domain, call GetDomainDetail and check `ExpirationDate`, `AutoRenew`, and transfer lock status.
-3. Call ListOperations with `SubmittedSince` to review recent activity and catch any failed or pending operations.
-4. Call ViewBilling with `Start`/`End` timestamps to audit costs for the period.
-5. Call ListTagsForDomain on key domains to verify cost-allocation tags are correct; use UpdateTagsForDomain to fix any gaps.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -136,88 +136,73 @@ https://www.gitlab.com/api/v4
 |--------|------|-------------|
 | GET | /version | Retrieves version information for the GitLab instance |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What badges does this group have?" -> GET /groups/{id}/badges
-- "How do I add a badge to my project?" -> POST /projects/{id}/badges
-- "Who has requested access to my group?" -> GET /groups/{id}/access_requests
-- "How do I approve someone's access request for a project?" -> PUT /projects/{id}/access_requests/{user_id}/approve
-- "What branches exist in my project?" -> GET /projects/{id}/repository/branches
-- "How do I create a new branch from main?" -> POST /projects/{id}/repository/branches
-- "How do I protect a branch?" -> PUT /projects/{id}/repository/branches/{branch}/protect
-- "Delete all merged branches from a project" -> DELETE /projects/{id}/repository/merged_branches
-- "What version of GitLab is running?" -> GET /version
-- "Show me all CI/CD variables set at the admin level" -> GET /admin/ci/variables
-- "What are the plan limits for the free tier?" -> GET /application/plan_limits
-- "How do I create a new OAuth application?" -> POST /applications
-- "What's the status of a bulk import?" -> GET /bulk_imports/{import_id}
-- "Get the avatar URL for a user's email" -> GET /avatar
-- "List all active broadcast messages" -> GET /broadcast_messages
-
-## Response Tips
-
-- **Paginated lists** (badges, branches, access requests, bulk imports, variables, broadcast messages): Check `page` and `per_page` params; defaults are page=1, per_page=20. Iterate by incrementing `page` until response array is shorter than `per_page`.
-- **Branch operations**: Responses include a nested `commit` map with full commit metadata (author, committer, dates, trailers); the branch-level `protected`, `merged`, and `default` booleans indicate state.
-- **Access requests**: The `access_level` field on approve defaults to 30 (Developer); valid GitLab levels are 10=Guest, 20=Reporter, 30=Developer, 40=Maintainer, 50=Owner.
-- **Admin endpoints**: Expect 401/403 errors if the token lacks admin scope; batched migration responses include `progress` as a float (0.0 to 1.0).
-- **Badges**: Distinguish `rendered_link_url` / `rendered_image_url` (with variable substitution applied) from the raw `link_url` / `image_url` templates.
-- **Bulk imports**: Entity `status` is one of created/started/finished/timeout/failed; the `failures` array inside entities contains error details.
-- **204 responses**: DELETE and HEAD calls return no body; treat any 2xx as success.
-- **Jobs**: The `scope` filter on GET /projects/{id}/jobs accepts an array of statuses (created, pending, running, failed, success, canceled, skipped, manual).
-
-## Anomaly Flags
-
-- **202 on merged branch cleanup**: `DELETE /projects/{id}/repository/merged_branches` returns 202 (accepted, not completed) -- the operation runs asynchronously. Surface this to avoid premature follow-up calls.
-- **503 on bulk imports**: All bulk import endpoints can return 503 (service unavailable), indicating the feature is disabled or the instance is under load. Retry with backoff.
-- **422 on migration mark/pause/resume**: Indicates the migration is in a state that cannot be transitioned (e.g., pausing an already-paused migration). Surface the current `status` field.
-- **Masked CI variables**: When `masked: true`, the `value` field is redacted in GET responses. Flag when a user tries to read a masked variable and gets a placeholder.
-- **Branch protection conflicts**: If `developers_can_push` and `developers_can_merge` are both false after a protect call, flag that the branch may be inaccessible to non-maintainers.
-- **Stale access requests**: If `requested_at` on an access request is older than 30 days, surface it as potentially forgotten.
-- **Bulk import timeout status**: If an entity shows `status: timeout`, flag it -- the import stalled and may need manual intervention.
-- **Admin cluster with no management project**: If `management_project` is null in a cluster response, flag that GitOps features will not work for that cluster.
-
-## Playbook
-
-### 1. Create and Protect a New Branch
-
-1. Create the branch: `POST /projects/{id}/repository/branches` with `branch` (name) and `ref` (source branch or commit SHA)
-2. Verify creation succeeded (201 response, check `name` and `default` fields)
-3. Protect the branch: `PUT /projects/{id}/repository/branches/{branch}/protect` with optional `developers_can_push` and `developers_can_merge`
-4. Confirm protection: check that `protected: true` in the response
-
-### 2. Manage Group Access Requests
-
-1. List pending requests: `GET /groups/{id}/access_requests` (paginate if needed)
-2. Review each request's `username`, `state`, and `requested_at`
-3. Approve: `PUT /groups/{id}/access_requests/{user_id}/approve` with desired `access_level` (default 30 = Developer)
-4. Or deny: `DELETE /groups/{id}/access_requests/{user_id}`
-5. Verify the user no longer appears in the pending list
-
-### 3. Set Up Admin-Level CI/CD Variables
-
-1. Check existing variables: `GET /admin/ci/variables` (paginate with `page`/`per_page`)
-2. Create a new variable: `POST /admin/ci/variables` with `key`, `value`, and optionally `protected`, `masked`, `variable_type`
-3. Verify creation (201 response, check `masked` and `protected` flags)
-4. To update later: `PUT /admin/ci/variables/{key}` with new values
-5. To remove: `DELETE /admin/ci/variables/{key}` (returns 204)
-
-### 4. Monitor a Bulk Import
-
-1. Start the import: `POST /bulk_imports` (returns import ID and initial status)
-2. Poll status: `GET /bulk_imports/{import_id}` -- watch the `status` field transition from `created` to `started` to `finished`
-3. List entities: `GET /bulk_imports/{import_id}/entities` to see per-project/group progress
-4. For failed entities: inspect the `failures` array in `GET /bulk_imports/{import_id}/entities/{entity_id}`
-5. If status is `timeout`, consider re-triggering or investigating server load (check for 503s)
-
-### 5. Add Badges to a Project with Preview
-
-1. Preview the badge rendering: `GET /projects/{id}/badges/render` with `link_url` and `image_url` templates
-2. Inspect `rendered_link_url` and `rendered_image_url` to confirm variable substitution looks correct
-3. Create the badge: `POST /projects/{id}/badges` with `link_url`, `image_url`, and optional `name`
-4. List all badges: `GET /projects/{id}/badges` to verify it appears
-5. Update if needed: `PUT /projects/{id}/badges/{badge_id}` to change URL or name
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get badge details?" -> GET /groups/{id}/badges/{badge_id}
+- "Update a badge?" -> PUT /groups/{id}/badges/{badge_id}
+- "Delete a badge?" -> DELETE /groups/{id}/badges/{badge_id}
+- "List all badges?" -> GET /groups/{id}/badges
+- "Create a badge?" -> POST /groups/{id}/badges
+- "List all render?" -> GET /groups/{id}/badges/render
+- "Delete a access_request?" -> DELETE /groups/{id}/access_requests/{user_id}
+- "List all access_requests?" -> GET /groups/{id}/access_requests
+- "Create a access_request?" -> POST /groups/{id}/access_requests
+- "Get branche details?" -> GET /projects/{id}/repository/branches/{branch}
+- "Delete a branche?" -> DELETE /projects/{id}/repository/branches/{branch}
+- "Search branches?" -> GET /projects/{id}/repository/branches
+- "Create a branche?" -> POST /projects/{id}/repository/branches
+- "Get badge details?" -> GET /projects/{id}/badges/{badge_id}
+- "Update a badge?" -> PUT /projects/{id}/badges/{badge_id}
+- "Delete a badge?" -> DELETE /projects/{id}/badges/{badge_id}
+- "List all badges?" -> GET /projects/{id}/badges
+- "Create a badge?" -> POST /projects/{id}/badges
+- "List all render?" -> GET /projects/{id}/badges/render
+- "Delete a access_request?" -> DELETE /projects/{id}/access_requests/{user_id}
+- "List all access_requests?" -> GET /projects/{id}/access_requests
+- "Create a access_request?" -> POST /projects/{id}/access_requests
+- "Update a metric_image?" -> PUT /projects/{id}/alert_management_alerts/{alert_iid}/metric_images/{metric_image_id}
+- "Delete a metric_image?" -> DELETE /projects/{id}/alert_management_alerts/{alert_iid}/metric_images/{metric_image_id}
+- "List all metric_images?" -> GET /projects/{id}/alert_management_alerts/{alert_iid}/metric_images
+- "Create a metric_image?" -> POST /projects/{id}/alert_management_alerts/{alert_iid}/metric_images
+- "Create a authorize?" -> POST /projects/{id}/alert_management_alerts/{alert_iid}/metric_images/authorize
+- "Get batched_background_migration details?" -> GET /admin/batched_background_migrations/{id}
+- "List all batched_background_migrations?" -> GET /admin/batched_background_migrations
+- "Get variable details?" -> GET /admin/ci/variables/{key}
+- "Update a variable?" -> PUT /admin/ci/variables/{key}
+- "Delete a variable?" -> DELETE /admin/ci/variables/{key}
+- "List all variables?" -> GET /admin/ci/variables
+- "Create a variable?" -> POST /admin/ci/variables
+- "Get table details?" -> GET /admin/databases/{database_name}/dictionary/tables/{table_name}
+- "Get cluster details?" -> GET /admin/clusters/{cluster_id}
+- "Update a cluster?" -> PUT /admin/clusters/{cluster_id}
+- "Delete a cluster?" -> DELETE /admin/clusters/{cluster_id}
+- "Create a add?" -> POST /admin/clusters/add
+- "List all clusters?" -> GET /admin/clusters
+- "Create a mark?" -> POST /admin/migrations/{timestamp}/mark
+- "Delete a application?" -> DELETE /applications/{id}
+- "List all applications?" -> GET /applications
+- "Create a application?" -> POST /applications
+- "List all avatar?" -> GET /avatar
+- "Get broadcast_message details?" -> GET /broadcast_messages/{id}
+- "Update a broadcast_message?" -> PUT /broadcast_messages/{id}
+- "Delete a broadcast_message?" -> DELETE /broadcast_messages/{id}
+- "List all broadcast_messages?" -> GET /broadcast_messages
+- "Create a broadcast_message?" -> POST /broadcast_messages
+- "Get entity details?" -> GET /bulk_imports/{import_id}/entities/{entity_id}
+- "List all entities?" -> GET /bulk_imports/{import_id}/entities
+- "Get bulk_import details?" -> GET /bulk_imports/{import_id}
+- "List all entities?" -> GET /bulk_imports/entities
+- "List all bulk_imports?" -> GET /bulk_imports
+- "Create a bulk_import?" -> POST /bulk_imports
+- "List all appearance?" -> GET /application/appearance
+- "List all plan_limits?" -> GET /application/plan_limits
+- "List all metadata?" -> GET /metadata
+- "List all version?" -> GET /version
+- "List all jobs?" -> GET /projects/{id}/jobs
+- "Get job details?" -> GET /projects/{id}/jobs/{job_id}
+- "Create a play?" -> POST /projects/{id}/jobs/{job_id}/play
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

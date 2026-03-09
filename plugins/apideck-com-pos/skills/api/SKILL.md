@@ -73,87 +73,56 @@ https://unify.apideck.com
 | PATCH | /pos/tenders/{id} | Update Tender |
 | DELETE | /pos/tenders/{id} | Delete Tender |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all orders?" -> GET /pos/orders
-- "How do I create a new order for a specific location?" -> POST /pos/orders
-- "How do I look up a specific order by ID?" -> GET /pos/orders/{id}
-- "How do I mark an order as paid?" -> POST /pos/orders/{id}/pay
-- "How do I void or cancel an order?" -> PATCH /pos/orders/{id} (set status to `voided`)
-- "How do I delete an order?" -> DELETE /pos/orders/{id}
-- "How do I record a payment against an order?" -> POST /pos/payments
-- "How do I check payment details including card info?" -> GET /pos/payments/{id}
-- "How do I add a new menu item with a price?" -> POST /pos/items
-- "How do I set up modifier options like toppings or sizes?" -> POST /pos/modifiers (requires modifier_group_id from POST /pos/modifier-groups)
-- "How do I list all store locations for a merchant?" -> GET /pos/locations
-- "How do I configure which tender types accept tips?" -> POST /pos/tenders (set `allows_tipping`)
-- "How do I paginate through a large list of items?" -> GET /pos/items (use `cursor` from `meta.cursors.next`)
-- "How do I refund a payment?" -> PATCH /pos/payments/{id} (update `refunded` amount and `status`)
-- "How do I hide a menu item without deleting it?" -> PATCH /pos/items/{id} (set `hidden: true`)
-
-## Response Tips
-
-- **List endpoints** (orders, payments, items, etc.): Data is in `data[]` array; paginate using `meta.cursors.next` as the `cursor` param on the next request; `links.next` is `null` when you've reached the last page.
-- **Create endpoints** (POST): Return only `data.id` on 201; fetch the full record with a subsequent GET if you need the complete object.
-- **Single-resource GET**: Full object is in `data`; nullable fields (marked `?`) may be absent -- always null-check `currency`, `custom_mappings`, timestamps, and address sub-fields.
-- **Update/Delete endpoints**: Return only `data.id` on 200; a successful PATCH does not echo the updated fields back.
-- **Errors**: All endpoints share error codes 400 (bad request), 401 (unauthorized), 402 (payment required -- check Apideck subscription), 404 (not found), 422 (unprocessable entity -- validation failure); inspect the response body for `message` and `detail` fields.
-
-## Anomaly Flags
-
-- **402 Payment Required**: Surface immediately -- indicates the Apideck connector or plan does not cover this operation; user action required.
-- **Voided orders**: If `voided: true` or `status: "voided"` appears on a fetched order, warn the user before attempting modifications or payments.
-- **Currency mismatch**: Flag when an order's `currency` differs from the merchant or location default currency -- may indicate a data entry error.
-- **Empty cursors on large datasets**: If `meta.items_on_page` equals the `limit` but `meta.cursors.next` is null, the upstream POS connector may be truncating results silently.
-- **Missing `x-apideck-consumer-id` or `x-apideck-app-id`**: These common headers are required on every call; surface auth errors early if either is absent from the request context.
-- **Refund exceeds payment**: When `refunded` on a payment exceeds `amount`, flag as a potential accounting anomaly.
-- **Stale version conflicts**: If a PATCH returns 422, check for `version` field conflicts -- the upstream POS may require optimistic concurrency control.
-
-## Playbook
-
-### 1. Place and Pay for a New Order
-
-1. GET /pos/merchants to find your `merchant_id`
-2. GET /pos/locations to find the target `location_id`
-3. GET /pos/items to browse the menu and collect item IDs and prices
-4. POST /pos/orders with `merchant_id`, `location_id`, and `line_items` array containing selected items, quantities, and unit prices
-5. Note the returned order `id`
-6. POST /pos/orders/{id}/pay with payment and tender details to mark the order as paid
-7. GET /pos/orders/{id} to confirm `payment_status` is `paid`
-
-### 2. Set Up a Menu with Modifiers
-
-1. POST /pos/modifier-groups to create a group (e.g., "Size" with `selection_type: "single"`, `minimum_required: 1`, `maximum_allowed: 1`)
-2. Note the returned modifier group `id`
-3. POST /pos/modifiers for each option (e.g., "Small", "Medium", "Large") using the `modifier_group_id` and a `price_amount`
-4. POST /pos/items with `name`, `price_amount`, `pricing_type: "fixed"`, and link the modifier group via `modifier_groups`
-5. GET /pos/items/{id} to verify the item shows the linked modifiers
-
-### 3. Process a Refund
-
-1. GET /pos/orders/{id} to review the order, its `tenders`, and `payments`
-2. GET /pos/payments/{id} to confirm the original payment amount and status
-3. PATCH /pos/payments/{id} with updated `refunded` amount and `status: "refunded"` (or `"partially_refunded"`)
-4. PATCH /pos/orders/{id} with `payment_status: "refunded"` and add an entry to the `refunds` array with `amount`, `reason`, and `status`
-5. GET /pos/orders/{id} to verify `total_refund` and `payment_status` reflect the change
-
-### 4. Onboard a New Location
-
-1. GET /pos/merchants to identify (or POST /pos/merchants to create) the parent merchant
-2. POST /pos/locations with `name`, `business_name`, `address`, `merchant_id`, `currency`, and `status: "active"`
-3. POST /pos/order-types to define order types for this location (e.g., "Dine-in", "Takeout") if not already configured
-4. POST /pos/tenders to configure accepted payment methods (e.g., cash with `opens_cash_drawer: true`, card with `allows_tipping: true`)
-5. GET /pos/items and PATCH any items to remove the new location ID from `absent_at_location_ids` or set `present_at_all_locations: true`
-
-### 5. Daily Sales Reconciliation
-
-1. GET /pos/orders with `location_id` filter, paginating through all results using `cursor`
-2. For each order, sum `total_amount`, `total_tax`, `total_tip`, `total_discount`, and `total_refund`
-3. GET /pos/payments, paginating through all results, and cross-reference each payment's `order_id` against collected orders
-4. Flag any orders where `payment_status` is not `paid` or `refunded`
-5. Compare tender-level breakdowns (`tenders[].total_amount`) against payment records to identify discrepancies
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all orders?" -> GET /pos/orders
+- "Create a order?" -> POST /pos/orders
+- "Get order details?" -> GET /pos/orders/{id}
+- "Partially update a order?" -> PATCH /pos/orders/{id}
+- "Delete a order?" -> DELETE /pos/orders/{id}
+- "Create a pay?" -> POST /pos/orders/{id}/pay
+- "List all payments?" -> GET /pos/payments
+- "Create a payment?" -> POST /pos/payments
+- "Get payment details?" -> GET /pos/payments/{id}
+- "Partially update a payment?" -> PATCH /pos/payments/{id}
+- "Delete a payment?" -> DELETE /pos/payments/{id}
+- "List all merchants?" -> GET /pos/merchants
+- "Create a merchant?" -> POST /pos/merchants
+- "Get merchant details?" -> GET /pos/merchants/{id}
+- "Partially update a merchant?" -> PATCH /pos/merchants/{id}
+- "Delete a merchant?" -> DELETE /pos/merchants/{id}
+- "List all locations?" -> GET /pos/locations
+- "Create a location?" -> POST /pos/locations
+- "Get location details?" -> GET /pos/locations/{id}
+- "Partially update a location?" -> PATCH /pos/locations/{id}
+- "Delete a location?" -> DELETE /pos/locations/{id}
+- "List all items?" -> GET /pos/items
+- "Create a item?" -> POST /pos/items
+- "Get item details?" -> GET /pos/items/{id}
+- "Partially update a item?" -> PATCH /pos/items/{id}
+- "Delete a item?" -> DELETE /pos/items/{id}
+- "List all modifiers?" -> GET /pos/modifiers
+- "Create a modifier?" -> POST /pos/modifiers
+- "Get modifier details?" -> GET /pos/modifiers/{id}
+- "Partially update a modifier?" -> PATCH /pos/modifiers/{id}
+- "Delete a modifier?" -> DELETE /pos/modifiers/{id}
+- "List all modifier-groups?" -> GET /pos/modifier-groups
+- "Create a modifier-group?" -> POST /pos/modifier-groups
+- "Get modifier-group details?" -> GET /pos/modifier-groups/{id}
+- "Partially update a modifier-group?" -> PATCH /pos/modifier-groups/{id}
+- "Delete a modifier-group?" -> DELETE /pos/modifier-groups/{id}
+- "List all order-types?" -> GET /pos/order-types
+- "Create a order-type?" -> POST /pos/order-types
+- "Get order-type details?" -> GET /pos/order-types/{id}
+- "Partially update a order-type?" -> PATCH /pos/order-types/{id}
+- "Delete a order-type?" -> DELETE /pos/order-types/{id}
+- "List all tenders?" -> GET /pos/tenders
+- "Create a tender?" -> POST /pos/tenders
+- "Get tender details?" -> GET /pos/tenders/{id}
+- "Partially update a tender?" -> PATCH /pos/tenders/{id}
+- "Delete a tender?" -> DELETE /pos/tenders/{id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

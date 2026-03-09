@@ -7,54 +7,60 @@
 
 @group ?Operation=CancelJob
 @endpoint POST /?Operation=CancelJob
+@desc This operation cancels a specified job. Only the job owner can cancel it. The operation fails if the job has already started or is complete.
 @required {JobId: str}
 @optional {APIVersion: str}
 @returns(200) {Success: bool?}
-@errors {500:InvalidJobIdException, 500:ExpiredJobIdException, 500:CanceledJobIdException, 500:UnableToCancelJobIdException, 500:InvalidAccessKeyIdException, 500:InvalidVersionException}
+@errors {500:InvalidJobIdException: The JOBID was missing, not found, or not associated with the AWS account., 500:ExpiredJobIdException: Indicates that the specified job has expired out of the system., 500:CanceledJobIdException: The specified job ID has been canceled and is no longer valid., 500:UnableToCancelJobIdException: AWS Import/Export cannot cancel the job, 500:InvalidAccessKeyIdException: The AWS Access Key ID specified in the request did not match the manifest's accessKeyId value. The manifest and the request authentication must use the same AWS Access Key ID., 500:InvalidVersionException: The client tool version is invalid.}
 
 @endgroup
 
 @group ?Operation=CreateJob
 @endpoint POST /?Operation=CreateJob
+@desc This operation initiates the process of scheduling an upload or download of your data. You include in the request a manifest that describes the data transfer specifics. The response to the request includes a job ID, which you can use in other operations, a signature that you use to identify your storage device, and the address where you should ship your storage device.
 @required {JobType: str, Manifest: str, ValidateOnly: bool}
 @optional {ManifestAddendum: str, APIVersion: str}
 @returns(200) {JobId: str?, JobType: str?, Signature: str?, SignatureFileContents: str?, WarningMessage: str?, ArtifactList: [Artifact]?}
-@errors {500:MissingParameterException, 500:InvalidParameterException, 500:InvalidAccessKeyIdException, 500:InvalidAddressException, 500:InvalidManifestFieldException, 500:MissingManifestFieldException, 500:NoSuchBucketException, 500:MissingCustomsException, 500:InvalidCustomsException, 500:InvalidFileSystemException, 500:MultipleRegionsException, 500:BucketPermissionException, 500:MalformedManifestException, 500:CreateJobQuotaExceededException, 500:InvalidJobIdException, 500:InvalidVersionException}
+@errors {500:MissingParameterException: One or more required parameters was missing from the request., 500:InvalidParameterException: One or more parameters had an invalid value., 500:InvalidAccessKeyIdException: The AWS Access Key ID specified in the request did not match the manifest's accessKeyId value. The manifest and the request authentication must use the same AWS Access Key ID., 500:InvalidAddressException: The address specified in the manifest is invalid., 500:InvalidManifestFieldException: One or more manifest fields was invalid. Please correct and resubmit., 500:MissingManifestFieldException: One or more required fields were missing from the manifest file. Please correct and resubmit., 500:NoSuchBucketException: The specified bucket does not exist. Create the specified bucket or change the manifest's bucket, exportBucket, or logBucket field to a bucket that the account, as specified by the manifest's Access Key ID, has write permissions to., 500:MissingCustomsException: One or more required customs parameters was missing from the manifest., 500:InvalidCustomsException: One or more customs parameters was invalid. Please correct and resubmit., 500:InvalidFileSystemException: File system specified in export manifest is invalid., 500:MultipleRegionsException: Your manifest file contained buckets from multiple regions. A job is restricted to buckets from one region. Please correct and resubmit., 500:BucketPermissionException: The account specified does not have the appropriate bucket permissions., 500:MalformedManifestException: Your manifest is not well-formed., 500:CreateJobQuotaExceededException: Each account can create only a certain number of jobs per day. If you need to create more than this, please contact awsimportexport@amazon.com to explain your particular use case., 500:InvalidJobIdException: The JOBID was missing, not found, or not associated with the AWS account., 500:InvalidVersionException: The client tool version is invalid.}
 
 @endgroup
 
 @group ?Operation=GetShippingLabel
 @endpoint POST /?Operation=GetShippingLabel
+@desc This operation generates a pre-paid UPS shipping label that you will use to ship your device to AWS for processing.
 @required {jobIds: [str]}
 @optional {name: str, company: str, phoneNumber: str, country: str, stateOrProvince: str, city: str, postalCode: str, street1: str, street2: str, street3: str, APIVersion: str}
 @returns(200) {ShippingLabelURL: str?, Warning: str?}
-@errors {500:InvalidJobIdException, 500:ExpiredJobIdException, 500:CanceledJobIdException, 500:InvalidAccessKeyIdException, 500:InvalidAddressException, 500:InvalidVersionException, 500:InvalidParameterException}
+@errors {500:InvalidJobIdException: The JOBID was missing, not found, or not associated with the AWS account., 500:ExpiredJobIdException: Indicates that the specified job has expired out of the system., 500:CanceledJobIdException: The specified job ID has been canceled and is no longer valid., 500:InvalidAccessKeyIdException: The AWS Access Key ID specified in the request did not match the manifest's accessKeyId value. The manifest and the request authentication must use the same AWS Access Key ID., 500:InvalidAddressException: The address specified in the manifest is invalid., 500:InvalidVersionException: The client tool version is invalid., 500:InvalidParameterException: One or more parameters had an invalid value.}
 
 @endgroup
 
 @group ?Operation=GetStatus
 @endpoint POST /?Operation=GetStatus
+@desc This operation returns information about a job, including where the job is in the processing pipeline, the status of the results, and the signature value associated with the job. You can only return information about jobs you own.
 @required {JobId: str}
 @optional {APIVersion: str}
 @returns(200) {JobId: str?, JobType: str?, LocationCode: str?, LocationMessage: str?, ProgressCode: str?, ProgressMessage: str?, Carrier: str?, TrackingNumber: str?, LogBucket: str?, LogKey: str?, ErrorCount: int?, Signature: str?, SignatureFileContents: str?, CurrentManifest: str?, CreationDate: str(timestamp)?, ArtifactList: [Artifact]?}
-@errors {500:InvalidJobIdException, 500:ExpiredJobIdException, 500:CanceledJobIdException, 500:InvalidAccessKeyIdException, 500:InvalidVersionException}
+@errors {500:InvalidJobIdException: The JOBID was missing, not found, or not associated with the AWS account., 500:ExpiredJobIdException: Indicates that the specified job has expired out of the system., 500:CanceledJobIdException: The specified job ID has been canceled and is no longer valid., 500:InvalidAccessKeyIdException: The AWS Access Key ID specified in the request did not match the manifest's accessKeyId value. The manifest and the request authentication must use the same AWS Access Key ID., 500:InvalidVersionException: The client tool version is invalid.}
 
 @endgroup
 
 @group ?Operation=ListJobs
 @endpoint POST /?Operation=ListJobs
+@desc This operation returns the jobs associated with the requester. AWS Import/Export lists the jobs in reverse chronological order based on the date of creation. For example if Job Test1 was created 2009Dec30 and Test2 was created 2010Feb05, the ListJobs operation would return Test2 followed by Test1.
 @optional {MaxJobs: int, Marker: str, APIVersion: str}
 @returns(200) {Jobs: [Job]?, IsTruncated: bool?}
-@errors {500:InvalidParameterException, 500:InvalidAccessKeyIdException, 500:InvalidVersionException}
+@errors {500:InvalidParameterException: One or more parameters had an invalid value., 500:InvalidAccessKeyIdException: The AWS Access Key ID specified in the request did not match the manifest's accessKeyId value. The manifest and the request authentication must use the same AWS Access Key ID., 500:InvalidVersionException: The client tool version is invalid.}
 
 @endgroup
 
 @group ?Operation=UpdateJob
 @endpoint POST /?Operation=UpdateJob
+@desc You use this operation to change the parameters specified in the original manifest file by supplying a new manifest file. The manifest file attached to this request replaces the original manifest file. You can only use the operation after a CreateJob request but before the data transfer starts and you can only use it on jobs you own.
 @required {JobId: str, Manifest: str, JobType: str, ValidateOnly: bool}
 @optional {APIVersion: str}
 @returns(200) {Success: bool?, WarningMessage: str?, ArtifactList: [Artifact]?}
-@errors {500:MissingParameterException, 500:InvalidParameterException, 500:InvalidAccessKeyIdException, 500:InvalidAddressException, 500:InvalidManifestFieldException, 500:InvalidJobIdException, 500:MissingManifestFieldException, 500:NoSuchBucketException, 500:ExpiredJobIdException, 500:CanceledJobIdException, 500:MissingCustomsException, 500:InvalidCustomsException, 500:InvalidFileSystemException, 500:MultipleRegionsException, 500:BucketPermissionException, 500:MalformedManifestException, 500:UnableToUpdateJobIdException, 500:InvalidVersionException}
+@errors {500:MissingParameterException: One or more required parameters was missing from the request., 500:InvalidParameterException: One or more parameters had an invalid value., 500:InvalidAccessKeyIdException: The AWS Access Key ID specified in the request did not match the manifest's accessKeyId value. The manifest and the request authentication must use the same AWS Access Key ID., 500:InvalidAddressException: The address specified in the manifest is invalid., 500:InvalidManifestFieldException: One or more manifest fields was invalid. Please correct and resubmit., 500:InvalidJobIdException: The JOBID was missing, not found, or not associated with the AWS account., 500:MissingManifestFieldException: One or more required fields were missing from the manifest file. Please correct and resubmit., 500:NoSuchBucketException: The specified bucket does not exist. Create the specified bucket or change the manifest's bucket, exportBucket, or logBucket field to a bucket that the account, as specified by the manifest's Access Key ID, has write permissions to., 500:ExpiredJobIdException: Indicates that the specified job has expired out of the system., 500:CanceledJobIdException: The specified job ID has been canceled and is no longer valid., 500:MissingCustomsException: One or more required customs parameters was missing from the manifest., 500:InvalidCustomsException: One or more customs parameters was invalid. Please correct and resubmit., 500:InvalidFileSystemException: File system specified in export manifest is invalid., 500:MultipleRegionsException: Your manifest file contained buckets from multiple regions. A job is restricted to buckets from one region. Please correct and resubmit., 500:BucketPermissionException: The account specified does not have the appropriate bucket permissions., 500:MalformedManifestException: Your manifest is not well-formed., 500:UnableToUpdateJobIdException: AWS Import/Export cannot update the job, 500:InvalidVersionException: The client tool version is invalid.}
 
 @endgroup
 

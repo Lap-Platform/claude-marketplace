@@ -169,97 +169,91 @@ Not specified.
 | POST | /tags/{resourceARN} | Adds the specified tags to the specified resource. If a tag key already exists, the existing value is replaced with the new value. |
 | DELETE | /tags/{resourceARN} | Removes tags from a bot, bot alias, or bot channel. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new Lex bot?" -> PUT /bots/
-- "What bots do I have in my account?" -> POST /bots/
-- "How do I check the status of my bot?" -> GET /bots/{botId}/
-- "How do I add a new intent to my bot?" -> PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/
-- "What intents are configured for my bot?" -> POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/
-- "How do I create a slot for an intent?" -> PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/slots/
-- "How do I build my bot locale so changes take effect?" -> POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/
-- "How do I publish a new bot version?" -> PUT /bots/{botId}/botversions/
-- "How do I create or update a bot alias for deployment?" -> PUT /bots/{botId}/botaliases/
-- "How do I export my bot for backup or migration?" -> PUT /exports/ then GET /exports/{exportId}/
-- "How do I import a bot from a zip file?" -> POST /createuploadurl/ then PUT /imports/
-- "What are my bot's utterance analytics for the last week?" -> POST /bots/{botId}/analytics/utterancemetrics
-- "How do I run a test execution against my bot?" -> POST /testsets/{testSetId}/testexecutions
-- "How do I add custom vocabulary words to my bot?" -> PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/customvocabulary/DEFAULT/batchcreate
-- "How do I replicate my bot to another region?" -> PUT /bots/{botId}/replicas/
-
-## Response Tips
-
-- **Bot/alias/locale CRUD**: All mutating calls return the created/updated resource. Check `botStatus` / `botLocaleStatus` / `botAliasStatus` for async state (`Creating`, `Building`, `Available`, `Failed`). A 200 does not mean the resource is ready to use.
-- **List endpoints** (POST to plural paths): Paginated via `nextToken` / `maxResults`. Always check for `nextToken` in the response and loop until absent. Summary arrays may be null instead of empty.
-- **Analytics endpoints**: Results are nested under `results[]` with metric-specific grouping. `binBy` controls time bucketing. Empty time ranges return null arrays, not empty ones.
-- **Export/Import**: These are async workflows. After creating, poll GET /exports/{exportId}/ or GET /imports/{importId}/ until `exportStatus` / `importStatus` reaches `Completed` or `Failed`. The `downloadUrl` only appears on completion.
-- **Test executions**: Also async. Poll GET /testexecutions/{testExecutionId} for status. Results are deeply nested under `testExecutionResults` with separate result types (overall, conversation-level, intent classification, slot resolution, utterance-level).
-- **Tags**: GET returns `tags` as a flat key-value map. POST (tag) and DELETE (untag) use different shapes: POST takes `tags` map, DELETE takes `tagKeys` array.
-- **Policy**: `policy` is returned as a JSON string, not an object. Parse it separately. Track `revisionId` for optimistic concurrency via `expectedRevisionId`.
-
-## Anomaly Flags
-
-- **Bot stuck in non-terminal status**: Surface when `botStatus`, `botLocaleStatus`, or `botAliasStatus` remains in `Creating`, `Building`, `Updating`, or `Deleting` for an extended period. Suggest checking `failureReasons`.
-- **failureReasons present**: Any response containing a non-empty `failureReasons` array should be surfaced immediately with the full list of reasons.
-- **recommendedActions returned**: When `describeBotLocale` returns `recommendedActions`, proactively display them as they indicate AWS-suggested fixes.
-- **Export/Import stuck**: If polling shows `exportStatus` or `importStatus` not reaching terminal state after multiple checks, flag the stall.
-- **Empty bot locale build**: If `intentsCount` or `slotTypesCount` is 0 after a describe, warn that building the locale will produce a non-functional bot.
-- **Custom vocabulary batch errors**: The `errors` array in batch create/update/delete responses should always be checked. Surface any `FailedCustomVocabularyItem` entries with their error details.
-- **NLU confidence threshold extremes**: If `nluIntentConfidenceThreshold` is set very low (< 0.2) or very high (> 0.9), flag it as potentially causing false positives or excessive fallback behavior.
-- **childDirected data privacy**: When creating or updating a bot, always confirm the `childDirected` flag is set correctly as it has COPPA compliance implications.
-
-## Playbook
-
-### 1. Create and deploy a new bot end-to-end
-
-1. Create the bot: `PUT /bots/` with name, role ARN, data privacy, and idle TTL
-2. Add a locale: `PUT /bots/{botId}/botversions/DRAFT/botlocales/` with locale ID and NLU threshold
-3. Create a slot type (if custom): `PUT /bots/{botId}/botversions/DRAFT/botlocales/{localeId}/slottypes/`
-4. Create an intent: `PUT /bots/{botId}/botversions/DRAFT/botlocales/{localeId}/intents/` with sample utterances
-5. Add slots to the intent: `PUT /bots/{botId}/botversions/DRAFT/botlocales/{localeId}/intents/{intentId}/slots/`
-6. Build the locale: `POST /bots/{botId}/botversions/DRAFT/botlocales/{localeId}/` and poll `GET .../botlocales/{localeId}/` until `botLocaleStatus` is `Built`
-7. Create a version: `PUT /bots/{botId}/botversions/` with locale specification
-8. Create an alias pointing to the version: `PUT /bots/{botId}/botaliases/` with `botVersion` set
-
-### 2. Export a bot, modify offline, and re-import
-
-1. Create the export: `PUT /exports/` with `botExportSpecification` containing bot ID and version, and `fileFormat` (LexJson or TSV)
-2. Poll: `GET /exports/{exportId}/` until `exportStatus` is `Completed`
-3. Download the bot archive from `downloadUrl`
-4. Modify the archive files as needed
-5. Get an upload URL: `POST /createuploadurl/` (returns `importId` and `uploadUrl`)
-6. Upload the modified archive to `uploadUrl` via HTTP PUT
-7. Start the import: `PUT /imports/` with the `importId`, resource spec, and merge strategy (`Overwrite` or `FailOnConflict`)
-8. Poll: `GET /imports/{importId}/` until `importStatus` is `Completed`
-
-### 3. Analyze bot performance with utterance metrics
-
-1. Query utterance metrics: `POST /bots/{botId}/analytics/utterancemetrics` with time range and metrics (e.g., `Count`, `Missed`, `Detected`)
-2. Add `binBy` with `IntervalInHours` or `IntervalInDays` for time-series breakdown
-3. Add `groupBy` with `UtteranceState` to segment by detected vs. missed
-4. Review `results[]` for metric values per bin/group
-5. For deeper investigation, list raw utterances: `POST /bots/{botId}/analytics/utterances` with filters on specific intents or states
-6. Cross-reference with intent metrics: `POST /bots/{botId}/analytics/intentmetrics` to correlate utterance miss rates with intent success rates
-
-### 4. Run automated test sets against a bot
-
-1. Create or identify a test set: `POST /testsets` to list, or `PUT /testsetgenerations` to auto-generate from conversation logs
-2. If generating, poll: `GET /testsetgenerations/{testSetGenerationId}` until status is `Available`
-3. Start execution: `POST /testsets/{testSetId}/testexecutions` with target bot alias, API mode (`Streaming` or `NonStreaming`), and optionally `testExecutionModality`
-4. Poll: `GET /testexecutions/{testExecutionId}` until `testExecutionStatus` reaches `Completed` or `Failed`
-5. Retrieve results: `POST /testexecutions/{testExecutionId}/results` with `resultFilterBy` specifying which result type to retrieve
-6. Optionally download full artifacts: `GET /testexecutions/{testExecutionId}/artifacturl`
-
-### 5. Set up multi-region bot replication
-
-1. Verify the source bot exists: `GET /bots/{botId}/`
-2. Create a replica: `PUT /bots/{botId}/replicas/` with the target `replicaRegion`
-3. Poll replica status: `GET /bots/{botId}/replicas/{replicaRegion}/` until `botReplicaStatus` is `Enabled`
-4. List replica aliases: `POST /bots/{botId}/replicas/{replicaRegion}/botaliases/` to verify alias replication
-5. List replica versions: `POST /bots/{botId}/replicas/{replicaRegion}/botversions/` to confirm version availability
-6. To remove: `DELETE /bots/{botId}/replicas/{replicaRegion}/` and confirm `botReplicaStatus` transitions to `Deleting`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a batchdelete?" -> POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/customvocabulary/DEFAULT/batchdelete
+- "Create a statement?" -> POST /policy/{resourceArn}/statements/
+- "Create a testsetdiscrepancy?" -> POST /testsets/{testSetId}/testsetdiscrepancy
+- "Create a createuploadurl?" -> POST /createuploadurl/
+- "Delete a bot?" -> DELETE /bots/{botId}/
+- "Delete a botaliase?" -> DELETE /bots/{botId}/botaliases/{botAliasId}/
+- "Delete a botlocale?" -> DELETE /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/
+- "Delete a replica?" -> DELETE /bots/{botId}/replicas/{replicaRegion}/
+- "Delete a botversion?" -> DELETE /bots/{botId}/botversions/{botVersion}/
+- "Delete a export?" -> DELETE /exports/{exportId}/
+- "Delete a import?" -> DELETE /imports/{importId}/
+- "Delete a intent?" -> DELETE /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/
+- "Delete a policy?" -> DELETE /policy/{resourceArn}/
+- "Delete a statement?" -> DELETE /policy/{resourceArn}/statements/{statementId}/
+- "Delete a slot?" -> DELETE /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/slots/{slotId}/
+- "Delete a slottype?" -> DELETE /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/slottypes/{slotTypeId}/
+- "Delete a testset?" -> DELETE /testsets/{testSetId}
+- "Get bot details?" -> GET /bots/{botId}/
+- "Get botaliase details?" -> GET /bots/{botId}/botaliases/{botAliasId}/
+- "Get botlocale details?" -> GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/
+- "Get botrecommendation details?" -> GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/botrecommendations/{botRecommendationId}/
+- "Get replica details?" -> GET /bots/{botId}/replicas/{replicaRegion}/
+- "Get generation details?" -> GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/generations/{generationId}
+- "Get botversion details?" -> GET /bots/{botId}/botversions/{botVersion}/
+- "List all metadata?" -> GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/customvocabulary/DEFAULT/metadata
+- "Get export details?" -> GET /exports/{exportId}/
+- "Get import details?" -> GET /imports/{importId}/
+- "Get intent details?" -> GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/
+- "Get policy details?" -> GET /policy/{resourceArn}/
+- "Get slot details?" -> GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/slots/{slotId}/
+- "Get slottype details?" -> GET /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/slottypes/{slotTypeId}/
+- "Get testexecution details?" -> GET /testexecutions/{testExecutionId}
+- "Get testset details?" -> GET /testsets/{testSetId}
+- "Get testsetdiscrepancy details?" -> GET /testsetdiscrepancy/{testSetDiscrepancyReportId}
+- "Get testsetgeneration details?" -> GET /testsetgenerations/{testSetGenerationId}
+- "Create a generate?" -> POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/generate
+- "List all artifacturl?" -> GET /testexecutions/{testExecutionId}/artifacturl
+- "Create a aggregatedutterance?" -> POST /bots/{botId}/aggregatedutterances/
+- "Create a botaliase?" -> POST /bots/{botId}/replicas/{replicaRegion}/botaliases/
+- "Create a botaliase?" -> POST /bots/{botId}/botaliases/
+- "Create a botlocale?" -> POST /bots/{botId}/botversions/{botVersion}/botlocales/
+- "Create a botrecommendation?" -> POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/botrecommendations/
+- "Create a replica?" -> POST /bots/{botId}/replicas/
+- "Create a generation?" -> POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/generations
+- "Create a botversion?" -> POST /bots/{botId}/replicas/{replicaRegion}/botversions/
+- "Create a botversion?" -> POST /bots/{botId}/botversions/
+- "Create a bot?" -> POST /bots/
+- "Create a intent?" -> POST /builtins/locales/{localeId}/intents/
+- "Create a slottype?" -> POST /builtins/locales/{localeId}/slottypes/
+- "Create a list?" -> POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/customvocabulary/DEFAULT/list
+- "Create a export?" -> POST /exports/
+- "Create a import?" -> POST /imports/
+- "Create a intentmetric?" -> POST /bots/{botId}/analytics/intentmetrics
+- "Create a intentpath?" -> POST /bots/{botId}/analytics/intentpaths
+- "Create a intentstagemetric?" -> POST /bots/{botId}/analytics/intentstagemetrics
+- "Create a intent?" -> POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/
+- "Create a intent?" -> POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/botrecommendations/{botRecommendationId}/intents
+- "Create a session?" -> POST /bots/{botId}/analytics/sessions
+- "Create a sessionmetric?" -> POST /bots/{botId}/analytics/sessionmetrics
+- "Create a slottype?" -> POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/slottypes/
+- "Create a slot?" -> POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/slots/
+- "Get tag details?" -> GET /tags/{resourceARN}
+- "Create a result?" -> POST /testexecutions/{testExecutionId}/results
+- "Create a testexecution?" -> POST /testexecutions
+- "Create a record?" -> POST /testsets/{testSetId}/records
+- "Create a testset?" -> POST /testsets
+- "Create a utterance?" -> POST /bots/{botId}/analytics/utterances
+- "Create a utterancemetric?" -> POST /bots/{botId}/analytics/utterancemetrics
+- "Create a associatedtranscript?" -> POST /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/botrecommendations/{botRecommendationId}/associatedtranscripts
+- "Create a testexecution?" -> POST /testsets/{testSetId}/testexecutions
+- "Delete a tag?" -> DELETE /tags/{resourceARN}
+- "Update a bot?" -> PUT /bots/{botId}/
+- "Update a botaliase?" -> PUT /bots/{botId}/botaliases/{botAliasId}/
+- "Update a botlocale?" -> PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/
+- "Update a botrecommendation?" -> PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/botrecommendations/{botRecommendationId}/
+- "Update a export?" -> PUT /exports/{exportId}/
+- "Update a intent?" -> PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/
+- "Update a policy?" -> PUT /policy/{resourceArn}/
+- "Update a slot?" -> PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/intents/{intentId}/slots/{slotId}/
+- "Update a slottype?" -> PUT /bots/{botId}/botversions/{botVersion}/botlocales/{localeId}/slottypes/{slotTypeId}/
+- "Update a testset?" -> PUT /testsets/{testSetId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -201,95 +201,141 @@ Not specified.
 | GET | /v1/snippets | Lists SQL snippets for the logged in user |
 | GET | /v1/snippets/{id} | Gets a specific SQL snippet |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all my Supabase projects?" -> GET /v1/projects
-- "How do I create a new Supabase project?" -> POST /v1/projects
-- "What regions are available for my organization?" -> GET /v1/projects/available-regions
-- "How do I check if my project database upgrade is eligible?" -> GET /v1/projects/{ref}/upgrade/eligibility
-- "How do I enable Google OAuth for my project?" -> PATCH /v1/projects/{ref}/config/auth
-- "How do I create a database branch for preview environments?" -> POST /v1/projects/{ref}/branches
-- "How do I deploy an Edge Function?" -> POST /v1/projects/{ref}/functions
-- "How do I run a SQL query against my project database?" -> POST /v1/projects/{ref}/database/query
-- "How do I set up a custom domain for my project?" -> POST /v1/projects/{ref}/custom-hostname/initialize
-- "How do I check my project's health status?" -> GET /v1/projects/{ref}/health
-- "How do I rotate my project's API keys?" -> POST /v1/projects/{ref}/api-keys + DELETE /v1/projects/{ref}/api-keys/{id}
-- "How do I restore my database from a point-in-time backup?" -> POST /v1/projects/{ref}/database/backups/restore-pitr
-- "How do I merge a database branch back into production?" -> POST /v1/branches/{branch_id_or_ref}/merge
-- "How do I configure network restrictions to allow only specific IPs?" -> POST /v1/projects/{ref}/network-restrictions/apply
-- "How do I generate TypeScript types from my database schema?" -> GET /v1/projects/{ref}/types/typescript
-
-## Response Tips
-
-- **Projects**: `GET /v1/projects` returns a flat array; individual project responses nest database info under `database.host`, `database.version`. Deletion returns minimal `{id, ref, name}` -- not the full object.
-- **Branches**: Branch status flows through `CREATING_PROJECT` -> `RUNNING_MIGRATIONS` -> `MIGRATIONS_PASSED` -> `FUNCTIONS_DEPLOYED`. Async operations (push/merge/reset) return a `workflow_run_id` -- poll via `GET /v1/projects/{ref}/actions/{run_id}` for completion.
-- **Auth config**: The `GET /config/auth` response is an extremely large flat object (100+ fields). Filter client-side by prefix (`external_github_*`, `sms_*`, `hook_*`) to extract relevant provider or feature config.
-- **Organizations**: `GET /v1/organizations/{slug}/projects` is the only paginated endpoint -- uses `offset`/`limit` with a `pagination` envelope containing `count`. All other list endpoints return bare arrays.
-- **Snippets**: Uses cursor-based pagination with `cursor` and `limit` params; response includes `data` array and next `cursor` value.
-- **Edge Functions**: Timestamps (`created_at`, `updated_at`) are Unix int64, not ISO strings -- unlike every other resource which uses ISO date-time.
-- **Errors**: All project-scoped endpoints share a consistent error pattern: 401 (bad token), 403 (insufficient permissions), 429 (rate limited), 500 (server error). Branch-only endpoints skip 401/403/429 and only return 500.
-- **OAuth**: Token endpoint returns `expires_in` as seconds; revoke returns 204 with no body.
-
-## Anomaly Flags
-
-- **429 Rate Limit**: Nearly all project endpoints can return 429. Surface rate limit responses immediately and suggest backing off before retrying.
-- **Branch migration failures**: If branch status is `MIGRATIONS_FAILED` or `FUNCTIONS_FAILED`, alert the user -- the branch is in a broken state and needs manual intervention or reset.
-- **Upgrade eligibility warnings**: When `GET /upgrade/eligibility` returns `eligible: false`, surface `unsupported_extensions`, `objects_to_be_dropped`, and `legacy_auth_custom_roles` -- these are blocking issues the user must resolve.
-- **SSL not enforced**: If `GET /ssl-enforcement` returns `database: false`, flag this as a security concern.
-- **Security advisor lints**: If `GET /advisors/security` returns non-empty `lints`, proactively summarize the findings.
-- **Disk utilization**: If `GET /config/disk/util` shows `fs_used_bytes` approaching `fs_size_bytes` (>85%), alert about impending storage pressure.
-- **Readonly mode active**: If `GET /readonly` returns `enabled: true`, warn that writes are blocked and surface `override_active_until` if a temporary disable is in effect.
-- **Network bans**: If `POST /network-bans/retrieve` returns a non-empty `banned_ipv4_addresses` list, surface this -- legitimate clients may be getting blocked.
-- **Custom hostname verification errors**: If `GET /custom-hostname` response includes non-empty `verification_errors` or SSL `validation_errors`, flag that the domain is not yet active.
-- **Branch scheduled for deletion**: If a branch response includes a non-null `deletion_scheduled_at`, alert the user with the deadline.
-
-## Playbook
-
-### 1. Set Up a New Project with GitHub OAuth
-
-1. List organizations: `GET /v1/organizations`
-2. Check available regions: `GET /v1/projects/available-regions` with `organization_slug`
-3. Create the project: `POST /v1/projects` with `name`, `db_pass`, `organization_slug`, `region`, and `plan`
-4. Wait for project status to become active: poll `GET /v1/projects/{ref}` until `status` is ready
-5. Enable GitHub OAuth: `PATCH /v1/projects/{ref}/config/auth` with `external_github_enabled: true`, `external_github_client_id`, and `external_github_secret`
-6. Set the site URL and redirect allowlist: include `site_url` and `uri_allow_list` in the same PATCH call
-
-### 2. Create and Merge a Database Branch
-
-1. Create a branch: `POST /v1/projects/{ref}/branches` with `branch_name` and optional `git_branch`
-2. Get branch connection details: `GET /v1/branches/{branch_id}` -- use `db_host`, `db_port`, `db_user`, `db_pass` to connect
-3. Run migrations against the branch database using the connection details
-4. Check the diff against production: `GET /v1/branches/{branch_id}/diff`
-5. Merge the branch: `POST /v1/branches/{branch_id}/merge` -- capture `workflow_run_id`
-6. Monitor merge progress: poll `GET /v1/projects/{ref}/actions/{workflow_run_id}` until all `run_steps` show completion
-7. Clean up: `DELETE /v1/branches/{branch_id}`
-
-### 3. Deploy and Update an Edge Function
-
-1. List existing functions: `GET /v1/projects/{ref}/functions`
-2. Deploy a new function: `POST /v1/projects/{ref}/functions` with `slug`, `name`, and `body` (the bundled source)
-3. Verify deployment: `GET /v1/projects/{ref}/functions/{function_slug}` -- confirm `status` is active
-4. To update: `PATCH /v1/projects/{ref}/functions/{function_slug}` with new `body`; optionally toggle `verify_jwt`
-5. To roll back or remove: `DELETE /v1/projects/{ref}/functions/{function_slug}`
-
-### 4. Point-in-Time Database Recovery
-
-1. Check backup availability: `GET /v1/projects/{ref}/database/backups` -- note `pitr_enabled` and `earliest_physical_backup_date_unix`/`latest_physical_backup_date_unix`
-2. If PITR is not enabled, enable it via addon: `PATCH /v1/projects/{ref}/billing/addons` with `addon_type: "pitr"`
-3. Initiate recovery: `POST /v1/projects/{ref}/database/backups/restore-pitr` with `recovery_time_target_unix` (must be within the backup window)
-4. Monitor project status: poll `GET /v1/projects/{ref}` until status returns to active
-5. If recovery was wrong, undo: `POST /v1/projects/{ref}/database/backups/undo` with the restore point name
-
-### 5. Secure a Project (Network + Auth Hardening)
-
-1. Run security advisor: `GET /v1/projects/{ref}/advisors/security` -- review all lints
-2. Enforce SSL: `PUT /v1/projects/{ref}/ssl-enforcement` with `requestedConfig: { database: true }`
-3. Restrict database access by IP: `POST /v1/projects/{ref}/network-restrictions/apply` with `dbAllowedCidrs` containing your trusted CIDRs
-4. Check for network bans: `POST /v1/projects/{ref}/network-bans/retrieve` and unban any legitimate IPs with `DELETE /v1/projects/{ref}/network-bans`
-5. Harden auth settings: `PATCH /v1/projects/{ref}/config/auth` -- set `disable_signup: true` (if invite-only), enable `security_captcha_enabled` with provider and secret, set `password_min_length` to 10+, and enable `password_hibp_enabled`
-6. Rotate API keys: create a new key with `POST /v1/projects/{ref}/api-keys`, update your application config, then delete the old key with `DELETE /v1/projects/{ref}/api-keys/{id}`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get branche details?" -> GET /v1/branches/{branch_id_or_ref}
+- "Partially update a branche?" -> PATCH /v1/branches/{branch_id_or_ref}
+- "Delete a branche?" -> DELETE /v1/branches/{branch_id_or_ref}
+- "Create a push?" -> POST /v1/branches/{branch_id_or_ref}/push
+- "Create a merge?" -> POST /v1/branches/{branch_id_or_ref}/merge
+- "Create a reset?" -> POST /v1/branches/{branch_id_or_ref}/reset
+- "Create a restore?" -> POST /v1/branches/{branch_id_or_ref}/restore
+- "List all diff?" -> GET /v1/branches/{branch_id_or_ref}/diff
+- "List all projects?" -> GET /v1/projects
+- "Create a project?" -> POST /v1/projects
+- "List all available-regions?" -> GET /v1/projects/available-regions
+- "List all organizations?" -> GET /v1/organizations
+- "Create a organization?" -> POST /v1/organizations
+- "List all authorize?" -> GET /v1/oauth/authorize
+- "Create a token?" -> POST /v1/oauth/token
+- "Create a revoke?" -> POST /v1/oauth/revoke
+- "List all project-claim?" -> GET /v1/oauth/authorize/project-claim
+- "List all snippets?" -> GET /v1/snippets
+- "Get snippet details?" -> GET /v1/snippets/{id}
+- "List all actions?" -> GET /v1/projects/{ref}/actions
+- "Get action details?" -> GET /v1/projects/{ref}/actions/{run_id}
+- "List all logs?" -> GET /v1/projects/{ref}/actions/{run_id}/logs
+- "List all api-keys?" -> GET /v1/projects/{ref}/api-keys
+- "Create a api-key?" -> POST /v1/projects/{ref}/api-keys
+- "List all legacy?" -> GET /v1/projects/{ref}/api-keys/legacy
+- "Partially update a api-key?" -> PATCH /v1/projects/{ref}/api-keys/{id}
+- "Get api-key details?" -> GET /v1/projects/{ref}/api-keys/{id}
+- "Delete a api-key?" -> DELETE /v1/projects/{ref}/api-keys/{id}
+- "List all branches?" -> GET /v1/projects/{ref}/branches
+- "Create a branche?" -> POST /v1/projects/{ref}/branches
+- "Get branche details?" -> GET /v1/projects/{ref}/branches/{name}
+- "List all custom-hostname?" -> GET /v1/projects/{ref}/custom-hostname
+- "Create a initialize?" -> POST /v1/projects/{ref}/custom-hostname/initialize
+- "Create a reverify?" -> POST /v1/projects/{ref}/custom-hostname/reverify
+- "Create a activate?" -> POST /v1/projects/{ref}/custom-hostname/activate
+- "List all jit-access?" -> GET /v1/projects/{ref}/jit-access
+- "Create a retrieve?" -> POST /v1/projects/{ref}/network-bans/retrieve
+- "Create a enriched?" -> POST /v1/projects/{ref}/network-bans/retrieve/enriched
+- "List all network-restrictions?" -> GET /v1/projects/{ref}/network-restrictions
+- "Create a apply?" -> POST /v1/projects/{ref}/network-restrictions/apply
+- "List all pgsodium?" -> GET /v1/projects/{ref}/pgsodium
+- "List all postgrest?" -> GET /v1/projects/{ref}/postgrest
+- "Get project details?" -> GET /v1/projects/{ref}
+- "Delete a project?" -> DELETE /v1/projects/{ref}
+- "Partially update a project?" -> PATCH /v1/projects/{ref}
+- "List all secrets?" -> GET /v1/projects/{ref}/secrets
+- "Create a secret?" -> POST /v1/projects/{ref}/secrets
+- "List all ssl-enforcement?" -> GET /v1/projects/{ref}/ssl-enforcement
+- "List all typescript?" -> GET /v1/projects/{ref}/types/typescript
+- "List all vanity-subdomain?" -> GET /v1/projects/{ref}/vanity-subdomain
+- "Create a check-availability?" -> POST /v1/projects/{ref}/vanity-subdomain/check-availability
+- "Create a activate?" -> POST /v1/projects/{ref}/vanity-subdomain/activate
+- "Create a upgrade?" -> POST /v1/projects/{ref}/upgrade
+- "List all eligibility?" -> GET /v1/projects/{ref}/upgrade/eligibility
+- "List all status?" -> GET /v1/projects/{ref}/upgrade/status
+- "List all readonly?" -> GET /v1/projects/{ref}/readonly
+- "Create a temporary-disable?" -> POST /v1/projects/{ref}/readonly/temporary-disable
+- "Create a setup?" -> POST /v1/projects/{ref}/read-replicas/setup
+- "Create a remove?" -> POST /v1/projects/{ref}/read-replicas/remove
+- "List all health?" -> GET /v1/projects/{ref}/health
+- "Create a legacy?" -> POST /v1/projects/{ref}/config/auth/signing-keys/legacy
+- "List all legacy?" -> GET /v1/projects/{ref}/config/auth/signing-keys/legacy
+- "Create a signing-key?" -> POST /v1/projects/{ref}/config/auth/signing-keys
+- "List all signing-keys?" -> GET /v1/projects/{ref}/config/auth/signing-keys
+- "Get signing-key details?" -> GET /v1/projects/{ref}/config/auth/signing-keys/{id}
+- "Delete a signing-key?" -> DELETE /v1/projects/{ref}/config/auth/signing-keys/{id}
+- "Partially update a signing-key?" -> PATCH /v1/projects/{ref}/config/auth/signing-keys/{id}
+- "List all auth?" -> GET /v1/projects/{ref}/config/auth
+- "Create a third-party-auth?" -> POST /v1/projects/{ref}/config/auth/third-party-auth
+- "List all third-party-auth?" -> GET /v1/projects/{ref}/config/auth/third-party-auth
+- "Delete a third-party-auth?" -> DELETE /v1/projects/{ref}/config/auth/third-party-auth/{tpa_id}
+- "Get third-party-auth details?" -> GET /v1/projects/{ref}/config/auth/third-party-auth/{tpa_id}
+- "Create a pause?" -> POST /v1/projects/{ref}/pause
+- "List all restore?" -> GET /v1/projects/{ref}/restore
+- "Create a restore?" -> POST /v1/projects/{ref}/restore
+- "Create a cancel?" -> POST /v1/projects/{ref}/restore/cancel
+- "List all addons?" -> GET /v1/projects/{ref}/billing/addons
+- "Delete a addon?" -> DELETE /v1/projects/{ref}/billing/addons/{addon_variant}
+- "List all claim-token?" -> GET /v1/projects/{ref}/claim-token
+- "Create a claim-token?" -> POST /v1/projects/{ref}/claim-token
+- "List all performance?" -> GET /v1/projects/{ref}/advisors/performance
+- "List all security?" -> GET /v1/projects/{ref}/advisors/security
+- "List all logs.all?" -> GET /v1/projects/{ref}/analytics/endpoints/logs.all
+- "List all usage.api-counts?" -> GET /v1/projects/{ref}/analytics/endpoints/usage.api-counts
+- "List all usage.api-requests-count?" -> GET /v1/projects/{ref}/analytics/endpoints/usage.api-requests-count
+- "List all functions.combined-stats?" -> GET /v1/projects/{ref}/analytics/endpoints/functions.combined-stats
+- "Create a login-role?" -> POST /v1/projects/{ref}/cli/login-role
+- "List all migrations?" -> GET /v1/projects/{ref}/database/migrations
+- "Create a migration?" -> POST /v1/projects/{ref}/database/migrations
+- "Get migration details?" -> GET /v1/projects/{ref}/database/migrations/{version}
+- "Partially update a migration?" -> PATCH /v1/projects/{ref}/database/migrations/{version}
+- "Create a query?" -> POST /v1/projects/{ref}/database/query
+- "Create a read-only?" -> POST /v1/projects/{ref}/database/query/read-only
+- "Create a enable?" -> POST /v1/projects/{ref}/database/webhooks/enable
+- "List all context?" -> GET /v1/projects/{ref}/database/context
+- "List all jit?" -> GET /v1/projects/{ref}/database/jit
+- "Create a jit?" -> POST /v1/projects/{ref}/database/jit
+- "List all list?" -> GET /v1/projects/{ref}/database/jit/list
+- "Delete a jit?" -> DELETE /v1/projects/{ref}/database/jit/{user_id}
+- "List all functions?" -> GET /v1/projects/{ref}/functions
+- "Create a function?" -> POST /v1/projects/{ref}/functions
+- "Create a deploy?" -> POST /v1/projects/{ref}/functions/deploy
+- "Get function details?" -> GET /v1/projects/{ref}/functions/{function_slug}
+- "Partially update a function?" -> PATCH /v1/projects/{ref}/functions/{function_slug}
+- "Delete a function?" -> DELETE /v1/projects/{ref}/functions/{function_slug}
+- "List all body?" -> GET /v1/projects/{ref}/functions/{function_slug}/body
+- "List all buckets?" -> GET /v1/projects/{ref}/storage/buckets
+- "List all disk?" -> GET /v1/projects/{ref}/config/disk
+- "Create a disk?" -> POST /v1/projects/{ref}/config/disk
+- "List all util?" -> GET /v1/projects/{ref}/config/disk/util
+- "List all autoscale?" -> GET /v1/projects/{ref}/config/disk/autoscale
+- "List all storage?" -> GET /v1/projects/{ref}/config/storage
+- "List all pgbouncer?" -> GET /v1/projects/{ref}/config/database/pgbouncer
+- "List all pooler?" -> GET /v1/projects/{ref}/config/database/pooler
+- "List all postgres?" -> GET /v1/projects/{ref}/config/database/postgres
+- "List all realtime?" -> GET /v1/projects/{ref}/config/realtime
+- "Create a shutdown?" -> POST /v1/projects/{ref}/config/realtime/shutdown
+- "Create a provider?" -> POST /v1/projects/{ref}/config/auth/sso/providers
+- "List all providers?" -> GET /v1/projects/{ref}/config/auth/sso/providers
+- "Get provider details?" -> GET /v1/projects/{ref}/config/auth/sso/providers/{provider_id}
+- "Update a provider?" -> PUT /v1/projects/{ref}/config/auth/sso/providers/{provider_id}
+- "Delete a provider?" -> DELETE /v1/projects/{ref}/config/auth/sso/providers/{provider_id}
+- "List all backups?" -> GET /v1/projects/{ref}/database/backups
+- "Create a restore-pitr?" -> POST /v1/projects/{ref}/database/backups/restore-pitr
+- "Create a restore-point?" -> POST /v1/projects/{ref}/database/backups/restore-point
+- "List all restore-point?" -> GET /v1/projects/{ref}/database/backups/restore-point
+- "Create a undo?" -> POST /v1/projects/{ref}/database/backups/undo
+- "List all members?" -> GET /v1/organizations/{slug}/members
+- "Get organization details?" -> GET /v1/organizations/{slug}
+- "Get project-claim details?" -> GET /v1/organizations/{slug}/project-claim/{token}
+- "Search projects?" -> GET /v1/organizations/{slug}/projects
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

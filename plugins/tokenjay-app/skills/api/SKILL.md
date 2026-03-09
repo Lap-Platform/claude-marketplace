@@ -85,78 +85,36 @@ https://api.tokenjay.app/
 |--------|------|-------------|
 | GET | /ageusd/info | Returns state of AgeUSD at this moment |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What is the current price of a specific token?" -> GET /tokens/prices/{tokenId}
-- "Show me all token prices at once" -> GET /tokens/prices/all
-- "Which tokens are verified as genuine?" -> GET /tokens/listGenuine
-- "Which tokens are blocked or flagged?" -> GET /tokens/listBlocked
-- "Is this token legitimate?" -> GET /tokens/check/{tokenId}/{tokenName}
-- "What is the current SigUSD price?" -> GET /sigusd/price
-- "How much SigUSD would I get for X nanoErgs?" -> GET /sigusd/exchange/{amount}/info
-- "What is the current SigRSV price?" -> GET /sigrsv/price
-- "How do I create a payment request?" -> POST /payment/addrequest
-- "What is the status of my payment?" -> GET /payment/state/{requestId}
-- "How do I create a babel fee offer?" -> POST /mosaik/babelfee/newoffer/doit
-- "How do I cancel a babel fee box?" -> GET /cancelbabel/{boxId}
-- "Show me the AgeUSD protocol info" -> GET /ageusd/info
-- "List available network peers" -> GET /peers/list
-- "How do I consolidate my UTXOs?" -> GET /mosaik/boxconsolidation/consolidate/{p2pkaddress}
-
-## Response Tips
-
-- **Tokens**: Prices return numeric values in nanoErg scale; divide by 1e9 for ERG. The genuine/blocked lists return arrays -- cross-reference tokenId before transacting.
-- **SigUSD/SigRSV**: The `/exchange/{amount}/info` endpoint returns rate previews without executing; the `/exchange/` endpoint initiates the actual swap. Watch for int64 overflow on large amounts.
-- **Payment**: `addrequest` returns a requestId used to poll `/payment/state/{requestId}`. States progress through pending to completed or expired.
-- **Mosaik**: Babel fee and token burn flows are multi-step -- POST endpoints return intermediate transaction data that must be signed client-side.
-- **Errors**: All endpoints share the same error code set (400 bad input, 401 unauthorized, 404 not found, 409 conflict/duplicate). Error bodies typically contain a message string.
-
-## Anomaly Flags
-
-- **409 Conflict on payment**: A duplicate payment request was submitted -- surface the existing requestId rather than retrying.
-- **Token blocked status**: If a tokenId appears on `/tokens/listBlocked`, warn the user before any transaction involving that token.
-- **Exchange rate drift**: When using `checkRate` on SigUSD/SigRSV exchange, a 400 may indicate the rate moved beyond tolerance -- flag this as market volatility rather than an error.
-- **Empty peer list**: If `/peers/list` returns zero results even with `unreachable=true`, the network may be experiencing connectivity issues -- surface this proactively.
-- **Token check mismatch**: If `/tokens/check/{tokenId}/{tokenName}` returns a negative result, flag a potential scam or impersonation token before proceeding.
-
-## Playbook
-
-### 1. Accept a Token Payment
-
-1. Call `POST /payment/addrequest` with `nanoErg`, `receiverAddress`, `tokenId`, and `tokenRawAmount`.
-2. Store the returned `requestId`.
-3. Poll `GET /payment/state/{requestId}` until the state indicates completion or expiration.
-4. On success, confirm the transaction to the user.
-
-### 2. Exchange ERG for SigUSD
-
-1. Call `GET /sigusd/price` to show the user the current rate.
-2. Call `GET /sigusd/exchange/{amount}/info` with the desired nanoErg amount to preview the exchange.
-3. If the rate is acceptable, call `GET /sigusd/exchange/` with `amount`, `address`, and optionally `checkRate` to set a slippage tolerance.
-4. Sign and submit the returned transaction.
-
-### 3. Verify a Token Before Transacting
-
-1. Call `GET /tokens/listBlocked` and check if the tokenId appears in the blocked list.
-2. Call `GET /tokens/check/{tokenId}/{tokenName}` to validate the token's identity.
-3. Call `GET /tokens/prices/{tokenId}` to confirm it has market activity.
-4. Proceed with the transaction only if all checks pass.
-
-### 4. Create and Manage a Babel Fee Offer
-
-1. Call `GET /mosaik/babelfee/newoffer` to load the offer creation form data.
-2. Call `POST /mosaik/babelfee/newoffer/new-input` to prepare the input for the offer.
-3. Call `POST /mosaik/babelfee/newoffer/doit` to finalize and submit the babel fee offer.
-4. To cancel later, call `GET /cancelbabel/{boxId}` with the offer's box ID.
-
-### 5. Consolidate Wallet UTXOs
-
-1. Call `GET /mosaik/boxconsolidation/` to check consolidation service availability.
-2. Call `GET /mosaik/boxconsolidation/consolidate/{p2pkaddress}` with the wallet address.
-3. Sign and submit the returned consolidation transaction.
-4. Verify the wallet now has fewer, larger UTXOs.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a addrequest?" -> POST /payment/addrequest
+- "Create a prepare?" -> POST /mosaik/tokenburn/prepare
+- "Create a new-input?" -> POST /mosaik/babelfee/newoffer/new-input
+- "Create a doit?" -> POST /mosaik/babelfee/newoffer/doit
+- "Get price details?" -> GET /tokens/prices/{tokenId}
+- "List all all?" -> GET /tokens/prices/all
+- "List all listGenuine?" -> GET /tokens/listGenuine
+- "List all listBlocked?" -> GET /tokens/listBlocked
+- "Get check details?" -> GET /tokens/check/{tokenId}/{tokenName}
+- "List all price?" -> GET /sigusd/price
+- "List all info?" -> GET /sigusd/exchange/{amount}/info
+- "List all exchange?" -> GET /sigusd/exchange/
+- "List all price?" -> GET /sigrsv/price
+- "List all info?" -> GET /sigrsv/exchange/{amount}/info
+- "List all exchange?" -> GET /sigrsv/exchange/
+- "List all list?" -> GET /peers/list
+- "Get state details?" -> GET /payment/state/{requestId}
+- "List all tokenburn?" -> GET /mosaik/tokenburn
+- "Get get details?" -> GET /mosaik/tokenburn/get/{uuid}
+- "Get consolidate details?" -> GET /mosaik/boxconsolidation/consolidate/{p2pkaddress}
+- "List all boxconsolidation?" -> GET /mosaik/boxconsolidation/
+- "List all notificationcheck?" -> GET /mosaik/babelfee/notificationcheck
+- "List all newoffer?" -> GET /mosaik/babelfee/newoffer
+- "List all babelfee?" -> GET /mosaik/babelfee/
+- "Get createbabel details?" -> GET /createbabel/{address}
+- "Get cancelbabel details?" -> GET /cancelbabel/{boxId}
+- "List all info?" -> GET /ageusd/info
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

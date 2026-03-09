@@ -144,89 +144,82 @@ https://batch.core.windows.net
 | GET | /jobschedules | Lists all of the job schedules in the specified account. |
 | GET | /jobschedules/{jobScheduleId}/jobs | Lists the jobs that have been created under the specified job schedule. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What applications are available in my Batch account?" -> GET /applications
-- "Get details about a specific application" -> GET /applications/{applicationId}
-- "How do I create a new Batch job?" -> POST /jobs
-- "What is the status of my job?" -> GET /jobs/{jobId}
-- "How do I add a task to a job?" -> POST /jobs/{jobId}/tasks
-- "How many tasks are in each state for my job?" -> GET /jobs/{jobId}/taskcounts
-- "How do I create a pool of compute nodes?" -> POST /pools
-- "How do I resize an existing pool?" -> POST /pools/{poolId}/resize
-- "How do I download a task's output file?" -> GET /jobs/{jobId}/tasks/{taskId}/files/{filePath}
-- "What compute node agent SKUs are available?" -> GET /nodeagentskus
-- "How do I set up a recurring job schedule?" -> POST /jobschedules
-- "How do I stop an autoscale-enabled pool from scaling?" -> POST /pools/{poolId}/disableautoscale
-- "How do I reboot a specific compute node?" -> POST /pools/{poolId}/nodes/{nodeId}/reboot
-- "How do I add multiple tasks to a job at once?" -> POST /jobs/{jobId}/addtaskcollection
-- "What are the lifetime statistics for all my pools?" -> GET /lifetimepoolstats
-
-## Response Tips
-
-- **List endpoints** (jobs, pools, tasks, certificates, schedules): Responses are paged; use `maxresults` to control page size and follow `odata.nextLink` for subsequent pages.
-- **Async operations** (delete, resize, terminate returning 202): The 202 means accepted, not completed; poll the resource with GET or HEAD to confirm the operation finished.
-- **Create endpoints** (returning 201): Response headers include the resource URL in the `Location` or `DataServiceId` header.
-- **File content** (GET .../files/{filePath}): Returns raw file bytes, not JSON; use the `ocp-range` header for partial downloads and check `Content-Length` in HEAD responses before downloading.
-- **Conditional headers** (If-Match, If-Modified-Since): Use ETag and Last-Modified values from GET/HEAD responses; a 412 Precondition Failed means the resource was modified since you last read it.
-- **Node counts and usage metrics**: Aggregated data may lag a few minutes behind real-time state; treat as approximate.
-
-## Anomaly Flags
-
-- **202 responses lingering**: If a delete, resize, or terminate operation was accepted (202) but the resource still shows unchanged state after several minutes, surface a warning that the operation may be stuck.
-- **Pool resize errors**: After POST /pools/{poolId}/resize, if a subsequent GET shows `resizeErrors` in the pool object, flag these immediately as they often indicate quota limits or image availability issues.
-- **Task failures in bulk add**: POST /jobs/{jobId}/addtaskcollection returns per-task status; flag any tasks with non-success status codes as they are easy to miss in a large collection response.
-- **Certificate deletion in "deletefailed" state**: If DELETE /certificates returns 202 but the certificate enters a `deletefailed` state (visible via GET), prompt the user to run POST .../canceldelete before retrying.
-- **Job preparation/release task failures**: GET /jobs/{jobId}/jobpreparationandreleasetaskstatus may reveal nodes where prep tasks failed, which blocks task execution on those nodes -- surface these proactively.
-- **Deprecated OS versions**: When POST /pools/{poolId}/upgradeos is used, flag if the target OS version is close to end-of-support based on the cloudServiceConfiguration.
-- **Conditional update conflicts**: Any 412 Precondition Failed response should be surfaced with guidance to re-fetch the resource and retry with the updated ETag.
-
-## Playbook
-
-### 1. Submit a Job with Tasks and Monitor to Completion
-
-1. Create a pool if one does not exist: POST /pools with desired VM size and node count.
-2. Wait for pool allocation by polling GET /pools/{poolId} until `allocationState` is `steady`.
-3. Create a job targeting the pool: POST /jobs with `poolInfo.poolId` set.
-4. Add tasks to the job: POST /jobs/{jobId}/addtaskcollection for bulk or POST /jobs/{jobId}/tasks for individual tasks.
-5. Monitor progress: GET /jobs/{jobId}/taskcounts to check active, completed, and failed counts.
-6. When all tasks complete, retrieve output: GET /jobs/{jobId}/tasks/{taskId}/files/{filePath} for each task's stdout/stderr.
-7. Clean up: DELETE /jobs/{jobId} (the job and its tasks are removed; pool remains).
-
-### 2. Set Up a Recurring Job Schedule
-
-1. Define the schedule and job specification: POST /jobschedules with a `schedule` (recurrence interval, start/end times) and `jobSpecification` (pool, task factory, constraints).
-2. Verify it was created: GET /jobschedules/{jobScheduleId} and confirm `state` is `active`.
-3. List jobs spawned by the schedule: GET /jobschedules/{jobScheduleId}/jobs.
-4. To pause temporarily: POST /jobschedules/{jobScheduleId}/disable.
-5. To resume: POST /jobschedules/{jobScheduleId}/enable.
-6. To stop permanently: POST /jobschedules/{jobScheduleId}/terminate, then DELETE /jobschedules/{jobScheduleId}.
-
-### 3. Autoscale a Pool Based on Workload
-
-1. Create a pool with autoscale disabled: POST /pools (set `enableAutoScale` to false initially).
-2. Enable autoscale with a formula: POST /pools/{poolId}/enableautoscale with `autoScaleFormula` and `autoScaleEvaluationInterval`.
-3. Test a formula before applying: POST /pools/{poolId}/evaluateautoscale with candidate formula to see projected results without changing the pool.
-4. Monitor: GET /pools/{poolId} and inspect `autoScaleRun` for the last evaluation result and any formula errors.
-5. To revert to manual sizing: POST /pools/{poolId}/disableautoscale, then POST /pools/{poolId}/resize with a fixed `targetDedicatedNodes` value.
-
-### 4. Manage Certificates for Secure Task Execution
-
-1. Add a certificate: POST /certificates with the PFX/CER data, thumbprint, and thumbprint algorithm.
-2. List certificates: GET /certificates to confirm it was added and check its `state`.
-3. Reference the certificate in a pool: PATCH /pools/{poolId} to add it to `certificateReferences`.
-4. If deletion fails (state = `deletefailed`): POST /certificates(thumbprintAlgorithm=sha1,thumbprint={thumbprint})/canceldelete, fix the dependency (remove from pool references), then retry DELETE.
-
-### 5. Troubleshoot a Failing Compute Node
-
-1. List nodes in the pool: GET /pools/{poolId}/nodes and identify nodes with `state` = `unusable` or `startTaskFailed`.
-2. Get node details: GET /pools/{poolId}/nodes/{nodeId} to check `errors`, `startTaskInfo`, and scheduling state.
-3. Retrieve startup task logs: GET /pools/{poolId}/nodes/{nodeId}/files/startup/stdout.txt (and stderr.txt).
-4. If the node is stuck, reboot it: POST /pools/{poolId}/nodes/{nodeId}/reboot.
-5. If reboot does not help, reimage: POST /pools/{poolId}/nodes/{nodeId}/reimage to reset it to a clean OS state.
-6. Upload Batch service logs for Microsoft support: POST /pools/{poolId}/nodes/{nodeId}/uploadbatchservicelogs with a container URL and time range.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all applications?" -> GET /applications
+- "Get application details?" -> GET /applications/{applicationId}
+- "List all poolusagemetrics?" -> GET /poolusagemetrics
+- "List all nodeagentskus?" -> GET /nodeagentskus
+- "List all nodecounts?" -> GET /nodecounts
+- "List all lifetimepoolstats?" -> GET /lifetimepoolstats
+- "List all lifetimejobstats?" -> GET /lifetimejobstats
+- "Create a certificate?" -> POST /certificates
+- "List all certificates?" -> GET /certificates
+- "Create a canceldelete?" -> POST /certificates(thumbprintAlgorithm={thumbprintAlgorithm},thumbprint={thumbprint})/canceldelete
+- "Delete a certificates(thumbprintAlgorithm={thumbprintAlgorithm},thumbprint={thumbprint})?" -> DELETE /certificates(thumbprintAlgorithm={thumbprintAlgorithm},thumbprint={thumbprint})
+- "Get certificates(thumbprintAlgorithm={thumbprintAlgorithm},thumbprint={thumbprint}) details?" -> GET /certificates(thumbprintAlgorithm={thumbprintAlgorithm},thumbprint={thumbprint})
+- "Delete a file?" -> DELETE /jobs/{jobId}/tasks/{taskId}/files/{filePath}
+- "Get file details?" -> GET /jobs/{jobId}/tasks/{taskId}/files/{filePath}
+- "Delete a file?" -> DELETE /pools/{poolId}/nodes/{nodeId}/files/{filePath}
+- "Get file details?" -> GET /pools/{poolId}/nodes/{nodeId}/files/{filePath}
+- "List all files?" -> GET /jobs/{jobId}/tasks/{taskId}/files
+- "List all files?" -> GET /pools/{poolId}/nodes/{nodeId}/files
+- "Delete a jobschedule?" -> DELETE /jobschedules/{jobScheduleId}
+- "Get jobschedule details?" -> GET /jobschedules/{jobScheduleId}
+- "Partially update a jobschedule?" -> PATCH /jobschedules/{jobScheduleId}
+- "Update a jobschedule?" -> PUT /jobschedules/{jobScheduleId}
+- "Create a disable?" -> POST /jobschedules/{jobScheduleId}/disable
+- "Create a enable?" -> POST /jobschedules/{jobScheduleId}/enable
+- "Create a terminate?" -> POST /jobschedules/{jobScheduleId}/terminate
+- "Create a jobschedule?" -> POST /jobschedules
+- "List all jobschedules?" -> GET /jobschedules
+- "Delete a job?" -> DELETE /jobs/{jobId}
+- "Get job details?" -> GET /jobs/{jobId}
+- "Partially update a job?" -> PATCH /jobs/{jobId}
+- "Update a job?" -> PUT /jobs/{jobId}
+- "Create a disable?" -> POST /jobs/{jobId}/disable
+- "Create a enable?" -> POST /jobs/{jobId}/enable
+- "Create a terminate?" -> POST /jobs/{jobId}/terminate
+- "Create a job?" -> POST /jobs
+- "List all jobs?" -> GET /jobs
+- "List all jobs?" -> GET /jobschedules/{jobScheduleId}/jobs
+- "List all jobpreparationandreleasetaskstatus?" -> GET /jobs/{jobId}/jobpreparationandreleasetaskstatus
+- "List all taskcounts?" -> GET /jobs/{jobId}/taskcounts
+- "Create a pool?" -> POST /pools
+- "List all pools?" -> GET /pools
+- "Delete a pool?" -> DELETE /pools/{poolId}
+- "Get pool details?" -> GET /pools/{poolId}
+- "Partially update a pool?" -> PATCH /pools/{poolId}
+- "Create a disableautoscale?" -> POST /pools/{poolId}/disableautoscale
+- "Create a enableautoscale?" -> POST /pools/{poolId}/enableautoscale
+- "Create a evaluateautoscale?" -> POST /pools/{poolId}/evaluateautoscale
+- "Create a resize?" -> POST /pools/{poolId}/resize
+- "Create a stopresize?" -> POST /pools/{poolId}/stopresize
+- "Create a updateproperty?" -> POST /pools/{poolId}/updateproperties
+- "Create a upgradeo?" -> POST /pools/{poolId}/upgradeos
+- "Create a removenode?" -> POST /pools/{poolId}/removenodes
+- "Create a task?" -> POST /jobs/{jobId}/tasks
+- "List all tasks?" -> GET /jobs/{jobId}/tasks
+- "Create a addtaskcollection?" -> POST /jobs/{jobId}/addtaskcollection
+- "Delete a task?" -> DELETE /jobs/{jobId}/tasks/{taskId}
+- "Get task details?" -> GET /jobs/{jobId}/tasks/{taskId}
+- "Update a task?" -> PUT /jobs/{jobId}/tasks/{taskId}
+- "List all subtasksinfo?" -> GET /jobs/{jobId}/tasks/{taskId}/subtasksinfo
+- "Create a terminate?" -> POST /jobs/{jobId}/tasks/{taskId}/terminate
+- "Create a reactivate?" -> POST /jobs/{jobId}/tasks/{taskId}/reactivate
+- "Create a user?" -> POST /pools/{poolId}/nodes/{nodeId}/users
+- "Delete a user?" -> DELETE /pools/{poolId}/nodes/{nodeId}/users/{userName}
+- "Update a user?" -> PUT /pools/{poolId}/nodes/{nodeId}/users/{userName}
+- "Get node details?" -> GET /pools/{poolId}/nodes/{nodeId}
+- "Create a reboot?" -> POST /pools/{poolId}/nodes/{nodeId}/reboot
+- "Create a reimage?" -> POST /pools/{poolId}/nodes/{nodeId}/reimage
+- "Create a disablescheduling?" -> POST /pools/{poolId}/nodes/{nodeId}/disablescheduling
+- "Create a enablescheduling?" -> POST /pools/{poolId}/nodes/{nodeId}/enablescheduling
+- "List all remoteloginsettings?" -> GET /pools/{poolId}/nodes/{nodeId}/remoteloginsettings
+- "List all rdp?" -> GET /pools/{poolId}/nodes/{nodeId}/rdp
+- "Create a uploadbatchservicelog?" -> POST /pools/{poolId}/nodes/{nodeId}/uploadbatchservicelogs
+- "List all nodes?" -> GET /pools/{poolId}/nodes
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -10,159 +10,181 @@
 
 @group getpublicdata
 @endpoint GET /getpublicdata
-@required {lat_ne: any, lon_ne: any, lat_sw: any, lon_sw: any}
-@optional {required_data: any, filter: any}
-@returns(200)
+@desc Retrieves publicly shared weather data from Outdoor Modules within a predefined area.
+@required {lat_ne: any # Latitude of the north east corner of the requested area. -85 <= lat_ne <= 85 and lat_ne>lat_sw, lon_ne: any # Longitude of the north east corner of the requested area. -180 <= lon_ne <= 180 and lon_ne>lon_sw, lat_sw: any # Latitude of the south west corner of the requested area. -85 <= lat_sw <= 85, lon_sw: any # Longitude of the south west corner of the requested area. -180 <= lon_sw <= 180}
+@optional {required_data: any # To filter stations based on relevant measurements you want (e.g. rain will only return stations with rain gauges). Default is no filter. You can find all measurements available on the Thermostat page., filter: any # True to exclude stations with abnormal temperature measures. Default is false.}
+@returns(200) Successful response
 
 @endgroup
 
 @group getuser
 @endpoint GET /getuser
-@returns(200)
+@desc The method getuser returns information about a user such as prefered language, prefered units, and list of devices.
+@returns(200) Successful response
 
 @endgroup
 
 @group devicelist
 @endpoint GET /devicelist
-@optional {app_type: any, device_id: any, get_favorites: any}
-@returns(200)
+@desc The method devicelist returns the list of devices owned by the user, and their modules.
+@optional {app_type: any # Defines which device type will be returned by devicelist. It could be app_thermostat or app_station (by default if not provided), device_id: any # Specify a device_id if you want to retrieve only this device informations., get_favorites: any # When set to "true", the favorite devices of the user are returned. This flag is available only if the devices requested are Weather Stations.}
+@returns(200) Successful response
 
 @endgroup
 
 @group getmeasure
 @endpoint GET /getmeasure
-@required {device_id: any, scale: any, type: any}
-@optional {module_id: any, date_begin: any, date_end: any, limit: any, optimize: any, real_time: any}
-@returns(200)
+@desc The method getmeasure returns the measurements of a device or a module.
+@required {device_id: any # Id of the device whose module's measurements you want to retrieve. This _id can be found in the user's devices field., scale: any # Defines the time interval between two measurements. Possible values : max -> every value stored will be returned 30min -> 1 value every 30 minutes 1hour -> 1 value every hour 3hours -> 1 value every 3 hours 1day -> 1 value per day 1week -> 1 value per week 1month -> 1 value per month, type: any # Measures you are interested in. Data you can request depends on the scale. **For Weather Station:**   * max -> Temperature (°C), CO2 (ppm), Humidity (%), Pressure (mbar), Noise (db), Rain (mm), WindStrength (km/h), WindAngle (angles), Guststrength (km/h), GustAngle (angles)   * 30min, 1hour, 3hours -> Same as above + min_temp, max_temp, min_hum, max_hum, min_pressure, max_pressure, min_noise, max_noise, sum_rain, date_max_gust   * 1day, 1week, 1month -> Same as above + date_min_temp, date_max_temp, date_min_hum, date_max_hum, date_min_pressure, date_max_pressure, date_min_noise, date_max_noise, date_min_co2, date_max_co2  **For Thermostat:**   * max -> temperature (°C), sp_temperature (°C), boileron (sec), boileroff (sec)   * 30min, 1hour, 3hours -> temperature, sp_temperature, min_temp, max_temp, sum_boiler_on, sum_boiler_off   * 1day, 1week, 1month -> temperature, min_temp, date_min_temp, max_temp, sum_boiler_on, sum_boiler_off}
+@optional {module_id: any # If you don't specify any module_id you will retrieve the device's measurements. If you specify a module_id you will retrieve the module's measurements., date_begin: any # Starting timestamp (utc) of the requested measurements. Please note measurement retrieving is limited to 1024 measurements., date_end: any # Ending timestamp (utc) of the request measurements. If you want only the last measurement, do not provide date_begin, and set date_end to `last`., limit: any # Limits the number of measurements returned (default & max is 1024), optimize: any # Allows you to choose the format of the answer. If you build a mobile app and bandwith usage is an issue, use `optimize = true`. Use `optimize = false`, for an easier parse. In this case, values are indexed by sorted timestamp. Example of un-optimized response : ```json {"status": "ok",    "body": {     "1347575400": [18.3,39],     "1347586200": [20.6,48]   }, "time_exec": 0.012136936187744} ``` If optimize is set true, measurements are returned as an array of series of regularly spaced measurements. Each series is defined by a beginning time beg_time and a step between measurements, step_time: ```json {"status": "ok",   "body": [     {"beg_time": 1347575400,      "step_time": 10800,      "value":          [[18.3,39],         [ 20.6,48]]     }], "time_exec": 0.014238119125366} ``` Default value is `true`., real_time: any # In scales higher than max, since the data is aggregated, the timestamps returned are by default offset by +(scale/2). For instance, if you ask for measurements at a daily scale, you will receive data timestamped at 12:00 if real_time is set to `false` (default case), and timestamped at 00:00 if real_time is set to `true`. NB : The servers always store data with real_time set to `true` and data are offset by this parameter AFTER having being time-filtered, thus you could have data after date_end if real_time is set to `false`.}
+@returns(200) Successful response
 
 @endgroup
 
 @group getthermostatsdata
 @endpoint GET /getthermostatsdata
-@optional {device_id: any}
-@returns(200)
+@desc The method getthermostatsdata returns information about user's thermostats such as their last measurements.
+@optional {device_id: any # Id of the device you want to retrieve information of}
+@returns(200) Successful response
 
 @endgroup
 
 @group getstationsdata
 @endpoint GET /getstationsdata
-@optional {device_id: any, get_favorites: any}
-@returns(200)
+@desc The method getstationsdata Returns data from a user's Weather Stations (measures and device specific data).
+@optional {device_id: any # Id of the device you want to retrieve information of, get_favorites: any # Whether to include the user's favorite Weather Stations in addition to the user's own Weather Stations}
+@returns(200) Successful response
 
 @endgroup
 
 @group gethomecoachsdata
 @endpoint GET /gethomecoachsdata
-@optional {device_id: any}
-@returns(200)
+@desc The method gethomecoachsdata Returns data from a user Healthy Home Coach Station (measures and device specific data).
+@optional {device_id: any # Id of the device you want to retrieve information of}
+@returns(200) Successful response
 
 @endgroup
 
 @group getthermstate
 @endpoint GET /getthermstate
-@required {device_id: any, module_id: any}
-@returns(200)
+@desc The method getthermstate returns the last Thermostat measurements, its current weekly schedule, and, if present, its current manual temperature setpoint.
+@required {device_id: any # The relay id, module_id: any # The thermostat id}
+@returns(200) Successful response
 
 @endgroup
 
 @group syncschedule
 @endpoint POST /syncschedule
-@required {device_id: any, module_id: any, therm_program: any}
-@returns(200)
+@desc The method syncschedule changes the Thermostat weekly schedule.
+@required {device_id: any # The relay id, module_id: any # The thermostat id, therm_program: any # The thermostat program (zones, timetable and name)}
+@returns(200) Successful response
 
 @endgroup
 
 @group setthermpoint
 @endpoint POST /setthermpoint
-@required {device_id: any, module_id: any, setpoint_mode: any}
-@optional {setpoint_endtime: any, setpoint_temp: any}
-@returns(200)
+@desc The method setthermpoint changes the Thermostat manual temperature setpoint.
+@required {device_id: any # The relay id, module_id: any # The thermostat id, setpoint_mode: any # Chosen setpoint_mode}
+@optional {setpoint_endtime: any # When using the manual or max setpoint_mode, this parameter defines when the setpoint expires., setpoint_temp: any # When using the manual setpoint_mode, this parameter defines the temperature setpoint (in Celcius) to use.}
+@returns(200) Successful response
 
 @endgroup
 
 @group switchschedule
 @endpoint POST /switchschedule
-@required {device_id: any, module_id: any, schedule_id: any}
-@returns(200)
+@desc The method switchschedule switches the Thermostat's schedule to another existing schedule.
+@required {device_id: any # The relay id, module_id: any # The thermostat id, schedule_id: any # The schedule id. It can be found in the getthermstate response, under the keys `therm_program_backup` and `therm_program`.}
+@returns(200) Successful response
 
 @endgroup
 
 @group createnewschedule
 @endpoint POST /createnewschedule
-@required {device_id: any, module_id: any, therm_program: any}
-@returns(200)
+@desc The method createnewschedule creates a new schedule stored in the backup list.
+@required {device_id: any # The relay id, module_id: any # The thermostat id, therm_program: any # The thermostat program (zones and timetable)}
+@returns(200) Successful response
 
 @endgroup
 
 @group partnerdevices
 @endpoint GET /partnerdevices
-@returns(200)
+@desc The method partnerdevices returns the list of device_id to which your partner application has access to.
+@returns(200) Successful response
 
 @endgroup
 
 @group gethomedata
 @endpoint GET /gethomedata
-@optional {home_id: any, size: any}
-@returns(200)
+@desc Returns information about users homes and cameras.
+@optional {home_id: any # Specify if you're looking for the events of a specific Home., size: any # Number of events to retrieve. Default is `30`.}
+@returns(200) Successful response
 
 @endgroup
 
 @group getcamerapicture
 @endpoint GET /getcamerapicture
-@required {image_id: any, key: any}
-@returns(200)
+@desc Returns the snapshot associated to an event.
+@required {image_id: any # id of the image (can be retrieved as 'id' in 'face' in Gethomedata, or as 'id' in 'snapshot' in Getnextevents, Getlasteventof and Geteventsuntil), key: any # Security key to access snapshots.}
+@returns(200) Successful response
 
 @endgroup
 
 @group geteventsuntil
 @endpoint GET /geteventsuntil
-@required {home_id: any, event_id: any}
-@returns(200)
+@desc Returns the snapshot associated to an event.
+@required {home_id: any # ID of the Home you're interested in, event_id: any # Your request will retrieve all the events until this one}
+@returns(200) Successful response
 
 @endgroup
 
 @group getlasteventof
 @endpoint GET /getlasteventof
-@required {home_id: any, person_id: any}
-@optional {offset: any}
-@returns(200)
+@desc Returns most recent events.
+@required {home_id: any # ID of the Home you're interested in, person_id: any # Your request will retrieve all events of the given home until the most recent event of the given person}
+@optional {offset: any # Number of events to retrieve. Default is 30.}
+@returns(200) Successful response
 
 @endgroup
 
 @group getnextevents
 @endpoint GET /getnextevents
-@required {home_id: any, event_id: any}
-@optional {size: any}
-@returns(200)
+@desc Returns previous events.
+@required {home_id: any # ID of the Home you're interested in, event_id: any # Your request will retrieve events occured before this one}
+@optional {size: any # Number of events to retrieve. Default is 30.}
+@returns(200) Successful response
 
 @endgroup
 
 @group setpersonsaway
 @endpoint POST /setpersonsaway
-@required {home_id: any}
-@optional {person_id: any}
-@returns(200)
+@desc Sets a person as 'Away' or the Home as 'Empty'. The event will be added to the user’s timeline.
+@required {home_id: any # ID of the Home you're interested in}
+@optional {person_id: any # If a person_id is specified, that person will be set as 'Away'. If no person_id is specified, the Home will be set as 'Empty'.}
+@returns(200) Successful response
 
 @endgroup
 
 @group setpersonshome
 @endpoint POST /setpersonshome
-@required {home_id: any, person_ids: any}
-@returns(200)
+@desc Sets a person as 'At home'.
+@required {home_id: any # ID of the Home you're interested in, person_ids: any # List of persons IDs}
+@returns(200) Successful response
 
 @endgroup
 
 @group addwebhook
 @endpoint GET /addwebhook
-@required {url: any, app_type: any}
-@returns(200)
+@desc Links a callback url to a user.
+@required {url: any # Your webhook callback url, app_type: any # Webhooks are only available for Welcome, enter app_camera.}
+@returns(200) Successful response
 
 @endgroup
 
 @group dropwebhook
 @endpoint GET /dropwebhook
-@required {app_type: any}
-@returns(200)
+@desc Dissociates a webhook from a user.
+@required {app_type: any # For Welcome, use app_camera}
+@returns(200) Successful response
 
 @endgroup
 

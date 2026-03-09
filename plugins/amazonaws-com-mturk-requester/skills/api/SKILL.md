@@ -65,84 +65,10 @@ Not specified.
 | POST | / | The UpdateNotificationSettings operation creates, updates, disables or re-enables notifications for a HIT type. If you call the UpdateNotificationSettings operation for a HIT type that already has a notification specification, the operation replaces the old specification with a new one. You can call the UpdateNotificationSettings operation to enable or disable notifications for the HIT type, without having to modify the notification specification itself by providing updates to the Active status without specifying a new notification specification. To change the Active status of a HIT type's notifications, the HIT type must already have a notification specification, or one must be provided in the same call to UpdateNotificationSettings. |
 | POST | / | The UpdateQualificationType operation modifies the attributes of an existing Qualification type, which is represented by a QualificationType data structure. Only the owner of a Qualification type can modify its attributes.   Most attributes of a Qualification type can be changed after the type has been created. However, the Name and Keywords fields cannot be modified. The RetryDelayInSeconds parameter can be modified or added to change the delay or to enable retries, but RetryDelayInSeconds cannot be used to disable retries.   You can use this operation to update the test for a Qualification type. The test is updated based on the values specified for the Test, TestDurationInSeconds and AnswerKey parameters. All three parameters specify the updated test. If you are updating the test for a type, you must specify the Test and TestDurationInSeconds parameters. The AnswerKey parameter is optional; omitting it specifies that the updated test does not have an answer key.   If you omit the Test parameter, the test for the Qualification type is unchanged. There is no way to remove a test from a Qualification type that has one. If the type already has a test, you cannot update it to be AutoGranted. If the Qualification type does not have a test and one is provided by an update, the type will henceforth have a test.   If you want to update the test duration or answer key for an existing test without changing the questions, you must specify a Test parameter with the original questions, along with the updated values.   If you provide an updated Test but no AnswerKey, the new test will not have an answer key. Requests for such Qualifications must be granted manually.   You can also update the AutoGranted and AutoGrantedValue attributes of the Qualification type. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new HIT for workers to complete?" -> POST / (CreateHIT: LifetimeInSeconds, AssignmentDurationInSeconds, Reward, Title, Description)
-- "What is my current account balance?" -> POST / (GetAccountBalance: no required params)
-- "How do I approve a worker's assignment?" -> POST / (ApproveAssignment: AssignmentId)
-- "How do I reject a submitted assignment?" -> POST / (RejectAssignment: AssignmentId, RequesterFeedback)
-- "How do I list all my active HITs?" -> POST / (ListHITs: NextToken?, MaxResults?)
-- "How do I get the details of a specific HIT?" -> POST / (GetHIT: HITId)
-- "How do I send a bonus payment to a worker?" -> POST / (SendBonus: WorkerId, BonusAmount, AssignmentId, Reason)
-- "How do I block a worker from my tasks?" -> POST / (CreateWorkerBlock: WorkerId, Reason)
-- "How do I create a qualification type for filtering workers?" -> POST / (CreateQualificationType: Name, Description, QualificationTypeStatus)
-- "How do I list all assignments submitted for a HIT?" -> POST / (ListAssignmentsForHIT: HITId, AssignmentStatuses?)
-- "How do I message a group of workers?" -> POST / (NotifyWorkers: Subject, MessageText, WorkerIds)
-- "How do I add more assignments to an existing HIT?" -> POST / (CreateAdditionalAssignmentsForHIT: HITId, NumberOfAdditionalAssignments)
-- "How do I check a worker's qualification score?" -> POST / (GetQualificationScore: QualificationTypeId, WorkerId)
-- "How do I expire a HIT early so no new workers can accept it?" -> POST / (UpdateExpirationForHIT: HITId, ExpireAt)
-- "How do I search for available qualification types?" -> POST / (ListQualificationTypes: MustBeRequestable, Query?)
-
-## Response Tips
-
-- **HIT responses**: The `HIT` object is deeply nested; key fields are `HITId`, `HITStatus` (Assignable, Unassignable, Reviewable, Reviewing, Disposed), and `Reward` (string formatted as currency, not a number).
-- **Paginated lists** (ListHITs, ListAssignmentsForHIT, ListBonusPayments, etc.): Use `NextToken` to page through results; `NumResults` gives the count for the current page, not the total. Max page size is controlled by `MaxResults`.
-- **Assignment responses**: `AssignmentStatus` is one of Submitted, Approved, Rejected. The `Answer` field contains XML-encoded worker responses that require parsing.
-- **Balance responses**: `AvailableBalance` and `OnHoldBalance` are string-formatted currency values (e.g., "10000.00"), not numeric types.
-- **NotifyWorkers**: Returns `NotifyWorkersFailureStatuses` only for failed deliveries; an empty or absent array means all messages succeeded.
-- **Void actions** (ApproveAssignment, RejectAssignment, CreateWorkerBlock, DeleteHIT): Return empty 200 responses on success. Any non-200 indicates failure.
-
-## Anomaly Flags
-
-- **AvailableBalance dropping low**: After GetAccountBalance, surface a warning if the available balance is below the total cost of pending HITs (Reward x remaining assignments).
-- **OnHoldBalance non-zero**: Funds are reserved for pending assignments; flag if this is unexpectedly high, suggesting stuck or abandoned HITs.
-- **HITStatus = Disposed**: The HIT has been permanently deleted. Any operations on it will fail. Surface this when GetHIT returns a disposed status.
-- **OverrideRejection = true**: Flag when a caller approves a previously rejected assignment, as this reverses payment decisions and affects worker statistics.
-- **NotifyWorkersFailureStatuses non-empty**: Some worker notifications failed to deliver. Surface each failed WorkerId and reason immediately.
-- **Assignment auto-approval approaching**: If `AutoApprovalDelayInSeconds` is set and `SubmitTime` plus the delay is near, warn that unreviewed assignments will auto-approve.
-- **UniqueRequestToken reuse**: If a create operation returns a previously created resource without error, the token was a duplicate. Flag that no new resource was created.
-- **QualificationTypeStatus = Inactive**: Qualification types marked inactive cannot be used in new HITs. Surface when returned from GetQualificationType or UpdateQualificationType.
-
-## Playbook
-
-### 1. Create and Launch a HIT
-
-1. Call **CreateHITType** with `AssignmentDurationInSeconds`, `Reward`, `Title`, and `Description` to define reusable HIT settings. Note the returned `HITTypeId`.
-2. Call **CreateHITWithHITType** using the `HITTypeId`, providing `LifetimeInSeconds` and the `Question` (HTML or ExternalQuestion XML). Set `MaxAssignments` for the number of workers needed.
-3. Call **GetHIT** with the returned `HITId` to confirm `HITStatus` is `Assignable`.
-4. Optionally call **UpdateNotificationSettings** with the `HITTypeId` to receive SQS/SNS notifications when assignments are submitted.
-
-### 2. Review and Pay for Completed Work
-
-1. Call **ListAssignmentsForHIT** with the `HITId` and `AssignmentStatuses: ["Submitted"]` to get pending work.
-2. For each assignment, parse the `Answer` XML to evaluate the worker's response.
-3. Call **ApproveAssignment** with `AssignmentId` (and optional `RequesterFeedback`) for acceptable work.
-4. Call **RejectAssignment** with `AssignmentId` and `RequesterFeedback` for unacceptable work.
-5. For exceptional work, call **SendBonus** with the `WorkerId`, `BonusAmount`, `AssignmentId`, and `Reason`.
-
-### 3. Manage Worker Quality with Qualifications
-
-1. Call **CreateQualificationType** with `Name`, `Description`, and `QualificationTypeStatus: "Active"`. Optionally include a `Test` (QuestionForm XML) and `AnswerKey`.
-2. Call **ListQualificationRequests** with the `QualificationTypeId` to see workers who requested the qualification.
-3. Call **AcceptQualificationRequest** with `QualificationRequestId` to grant, or **RejectQualificationRequest** to deny.
-4. To manually assign a score, call **AssociateQualificationWithWorker** with `QualificationTypeId`, `WorkerId`, and `IntegerValue`.
-5. Add the qualification as a `QualificationRequirement` when creating future HITs to restrict worker eligibility.
-
-### 4. Clean Up Expired or Unwanted HITs
-
-1. Call **ListHITs** to identify HITs you want to remove. Page through results using `NextToken`.
-2. For HITs still accepting work, call **UpdateExpirationForHIT** with `ExpireAt` set to a past timestamp to force-expire them.
-3. Call **ListAssignmentsForHIT** for each HIT to approve or reject any remaining submitted assignments (HITs with pending assignments cannot be deleted).
-4. Call **DeleteHIT** with the `HITId` once all assignments are resolved. Verify deletion with **GetHIT** (status should be `Disposed`).
-
-### 5. Investigate Bonus Payment History
-
-1. Call **ListBonusPayments** with either a `HITId` (to see all bonuses for a HIT) or an `AssignmentId` (to see bonuses for a specific assignment).
-2. Page through results using `NextToken` and `MaxResults` if there are many payments.
-3. Cross-reference with **GetAssignment** to pull the associated worker and HIT details for each bonus.
-4. Call **GetAccountBalance** to confirm remaining funds after bonus payouts.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

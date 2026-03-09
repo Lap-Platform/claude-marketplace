@@ -112,88 +112,64 @@ Not specified.
 |--------|------|-------------|
 | GET | /users/me | Get current user |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What artifacts exist in the registry?" -> GET /search/artifacts
-- "Show me the content of a specific artifact" -> GET /groups/{groupId}/artifacts/{artifactId}
-- "How do I register a new schema or API definition?" -> POST /groups/{groupId}/artifacts
-- "What versions does this artifact have?" -> GET /groups/{groupId}/artifacts/{artifactId}/versions
-- "What global rules are configured?" -> GET /admin/rules
-- "Who am I logged in as and what permissions do I have?" -> GET /users/me
-- "How do I deprecate an artifact version?" -> PUT /groups/{groupId}/artifacts/{artifactId}/versions/{version}/state
-- "What are the system limits for schema size and count?" -> GET /system/limits
-- "How do I export the entire registry for backup?" -> GET /admin/export
-- "How do I assign a role to a new team member?" -> POST /admin/roleMappings
-- "What groups are defined in the registry?" -> GET /groups
-- "How do I look up an artifact by its global ID?" -> GET /ids/globalIds/{globalId}
-- "What comments exist on a specific version?" -> GET /groups/{groupId}/artifacts/{artifactId}/versions/{version}/comments
-- "How do I set a compatibility rule on a single artifact?" -> POST /groups/{groupId}/artifacts/{artifactId}/rules
-- "What artifact types does this registry support?" -> GET /admin/artifactTypes
-
-## Response Tips
-
-- **Search endpoints** (`/search/artifacts`): Responses include `count` (total matches) and `artifacts` array; use `offset`/`limit` for pagination (default 0/20). Always check `count` against array length to know if more pages exist.
-- **Artifact CRUD** (`/groups/{groupId}/artifacts/*`): Successful creates/updates return full metadata including `globalId`, `contentId`, `state`, and `references` array. 409 means a conflict (duplicate ID or rule violation).
-- **Rules endpoints** (`/admin/rules`, artifact rules): GET returns an array of rule type strings, not full objects. Fetch individual rules by type to get `config` and `type` detail.
-- **State changes** (artifact/version state): Returns 204 with no body on success. Valid states are ENABLED, DISABLED, DEPRECATED only.
-- **Role mappings**: GET individual returns `{principalId, role, principalName}`. Roles are READ_ONLY, DEVELOPER, or ADMIN.
-- **System info/limits**: Flat objects with no nesting. Limit values are int64; treat -1 or 0 as "unlimited" depending on server config.
-- **ID lookups** (`/ids/*`): Return raw artifact content (not JSON metadata). Use the `dereference` param on globalId to resolve `$ref` pointers inline.
-- **Export/Import** (`/admin/export`, `/admin/import`): Export returns a download link object; import accepts binary ZIP body with optional header flags to preserve IDs.
-
-## Anomaly Flags
-
-- **Rate limit proximity**: Surface `maxRequestsPerSecondCount` from `GET /system/limits` proactively when making bulk operations; warn if planned batch size may exceed it.
-- **Deprecated artifacts**: When retrieving artifact or version metadata, flag `state: "DEPRECATED"` immediately so the user knows they are working with a sunset schema.
-- **Schema count approaching limits**: Compare artifact count from search results (`count`) against `maxTotalSchemasCount` and `maxArtifactsCount` from `/system/limits`; warn at 80% capacity.
-- **409 Conflict on publish**: Surface the conflict reason (duplicate artifact ID, rule violation, content hash mismatch) rather than silently failing; suggest `ifExists` parameter options (FAIL, UPDATE, RETURN, RETURN_OR_UPDATE).
-- **405 on version delete**: Version deletion may be disabled server-side; if 405 is returned, inform the user this is a server policy, not a client error.
-- **Missing global rules**: If `GET /admin/rules` returns an empty array, proactively suggest setting COMPATIBILITY or VALIDITY rules to prevent breaking changes.
-- **Unusual auth errors**: A 401 on read endpoints (which are typically open) indicates the server is running in authenticated-read mode; surface this configuration difference.
-
-## Playbook
-
-### 1. Register a New Schema and Set Compatibility Rules
-
-1. Create a group if needed: `POST /groups` with `{id: "my-team"}`.
-2. Publish the artifact: `POST /groups/my-team/artifacts` with the schema content in the body, setting `X-Registry-ArtifactId`, `X-Registry-ArtifactType`, and `X-Registry-Version` headers.
-3. Confirm creation by checking the returned metadata (note the `globalId` and `contentId`).
-4. Add a compatibility rule: `POST /groups/my-team/artifacts/{artifactId}/rules` with `{type: "COMPATIBILITY", config: "BACKWARD"}`.
-5. Verify rule is active: `GET /groups/my-team/artifacts/{artifactId}/rules/{COMPATIBILITY}`.
-
-### 2. Search, Inspect, and Download an Artifact
-
-1. Search by name: `GET /search/artifacts?name=my-schema&limit=10`.
-2. Pick the artifact from results and note its `groupId` and `id`.
-3. Get full metadata: `GET /groups/{groupId}/artifacts/{artifactId}/meta`.
-4. Download the content: `GET /groups/{groupId}/artifacts/{artifactId}` (optionally with `?dereference=true` to inline references).
-5. List all versions if needed: `GET /groups/{groupId}/artifacts/{artifactId}/versions`.
-
-### 3. Evolve a Schema with a New Version
-
-1. Fetch current metadata: `GET /groups/{groupId}/artifacts/{artifactId}/meta` to see current version and state.
-2. Post the new version: `POST /groups/{groupId}/artifacts/{artifactId}/versions` with updated schema in the body and `X-Registry-Version` header.
-3. If a 409 is returned, the compatibility rule rejected the change; review the diff and adjust the schema.
-4. Once accepted, deprecate the old version: `PUT /groups/{groupId}/artifacts/{artifactId}/versions/{oldVersion}/state` with `{state: "DEPRECATED"}`.
-5. Verify the version list: `GET /groups/{groupId}/artifacts/{artifactId}/versions` to confirm ordering and states.
-
-### 4. Export Registry and Import to Another Instance
-
-1. Check current user permissions: `GET /users/me` (must be admin).
-2. Trigger export: `GET /admin/export?forBrowser=false` to get a download link.
-3. Download the ZIP file from the returned `href`.
-4. On the target instance, import: `POST /admin/import` with the ZIP as the request body.
-5. Optionally set `X-Registry-Preserve-GlobalId: true` and `X-Registry-Preserve-ContentId: true` headers to maintain ID continuity.
-
-### 5. Manage Team Access with Role Mappings
-
-1. Check existing role mappings: `GET /admin/roleMappings`.
-2. Add a new developer: `POST /admin/roleMappings` with `{principalId: "jane", role: "DEVELOPER", principalName: "Jane Smith"}`.
-3. Promote to admin if needed: `PUT /admin/roleMappings/jane` with `{role: "ADMIN"}`.
-4. Remove access: `DELETE /admin/roleMappings/jane`.
-5. Have the user verify their own role: `GET /users/me` to confirm `admin`, `developer`, or `viewer` flags.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get globalId details?" -> GET /ids/globalIds/{globalId}
+- "List all artifactTypes?" -> GET /admin/artifactTypes
+- "List all rules?" -> GET /admin/rules
+- "Create a rule?" -> POST /admin/rules
+- "Get rule details?" -> GET /admin/rules/{rule}
+- "Update a rule?" -> PUT /admin/rules/{rule}
+- "Delete a rule?" -> DELETE /admin/rules/{rule}
+- "List all info?" -> GET /system/info
+- "List all artifacts?" -> GET /search/artifacts
+- "Create a artifact?" -> POST /search/artifacts
+- "List all export?" -> GET /admin/export
+- "Create a import?" -> POST /admin/import
+- "List all meta?" -> GET /groups/{groupId}/artifacts/{artifactId}/versions/{version}/meta
+- "Get version details?" -> GET /groups/{groupId}/artifacts/{artifactId}/versions/{version}
+- "Delete a version?" -> DELETE /groups/{groupId}/artifacts/{artifactId}/versions/{version}
+- "List all rules?" -> GET /groups/{groupId}/artifacts/{artifactId}/rules
+- "Create a rule?" -> POST /groups/{groupId}/artifacts/{artifactId}/rules
+- "Get rule details?" -> GET /groups/{groupId}/artifacts/{artifactId}/rules/{rule}
+- "Update a rule?" -> PUT /groups/{groupId}/artifacts/{artifactId}/rules/{rule}
+- "Delete a rule?" -> DELETE /groups/{groupId}/artifacts/{artifactId}/rules/{rule}
+- "Get roleMapping details?" -> GET /admin/roleMappings/{principalId}
+- "Update a roleMapping?" -> PUT /admin/roleMappings/{principalId}
+- "Delete a roleMapping?" -> DELETE /admin/roleMappings/{principalId}
+- "List all roleMappings?" -> GET /admin/roleMappings
+- "Create a roleMapping?" -> POST /admin/roleMappings
+- "List all me?" -> GET /users/me
+- "List all references?" -> GET /ids/contentHashes/{contentHash}/references
+- "List all references?" -> GET /ids/contentIds/{contentId}/references
+- "List all references?" -> GET /ids/globalIds/{globalId}/references
+- "List all references?" -> GET /groups/{groupId}/artifacts/{artifactId}/versions/{version}/references
+- "List all properties?" -> GET /admin/config/properties
+- "Get property details?" -> GET /admin/config/properties/{propertyName}
+- "Update a property?" -> PUT /admin/config/properties/{propertyName}
+- "Delete a property?" -> DELETE /admin/config/properties/{propertyName}
+- "List all limits?" -> GET /system/limits
+- "Get artifact details?" -> GET /groups/{groupId}/artifacts/{artifactId}
+- "Update a artifact?" -> PUT /groups/{groupId}/artifacts/{artifactId}
+- "Delete a artifact?" -> DELETE /groups/{groupId}/artifacts/{artifactId}
+- "List all artifacts?" -> GET /groups/{groupId}/artifacts
+- "Create a artifact?" -> POST /groups/{groupId}/artifacts
+- "List all versions?" -> GET /groups/{groupId}/artifacts/{artifactId}/versions
+- "Create a version?" -> POST /groups/{groupId}/artifacts/{artifactId}/versions
+- "List all owner?" -> GET /groups/{groupId}/artifacts/{artifactId}/owner
+- "Get group details?" -> GET /groups/{groupId}
+- "Delete a group?" -> DELETE /groups/{groupId}
+- "List all groups?" -> GET /groups
+- "Create a group?" -> POST /groups
+- "List all meta?" -> GET /groups/{groupId}/artifacts/{artifactId}/meta
+- "Create a meta?" -> POST /groups/{groupId}/artifacts/{artifactId}/meta
+- "List all comments?" -> GET /groups/{groupId}/artifacts/{artifactId}/versions/{version}/comments
+- "Create a comment?" -> POST /groups/{groupId}/artifacts/{artifactId}/versions/{version}/comments
+- "Update a comment?" -> PUT /groups/{groupId}/artifacts/{artifactId}/versions/{version}/comments/{commentId}
+- "Delete a comment?" -> DELETE /groups/{groupId}/artifacts/{artifactId}/versions/{version}/comments/{commentId}
+- "Get contentId details?" -> GET /ids/contentIds/{contentId}
+- "Get contentHashe details?" -> GET /ids/contentHashes/{contentHash}
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

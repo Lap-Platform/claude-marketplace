@@ -1161,93 +1161,706 @@ Not specified.
 | GET | /_xpack | Get information |
 | GET | /_xpack/usage | Get usage information |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I search for documents in an index?" -> POST /{index}/_search
-- "How do I check if my cluster is healthy?" -> GET /_cluster/health
-- "How do I index a new document?" -> PUT /{index}/_doc/{id}
-- "How do I delete documents matching a query?" -> POST /{index}/_delete_by_query
-- "How do I create a new index with mappings?" -> PUT /{index}
-- "How do I get the mapping for an index?" -> GET /{index}/_mapping
-- "How do I run a bulk insert of documents?" -> POST /_bulk
-- "How do I count documents in an index?" -> GET /{index}/_count
-- "How do I update a document by ID?" -> POST /{index}/_update/{id}
-- "How do I create or manage an ingest pipeline?" -> PUT /_ingest/pipeline/{id}
-- "How do I run an async search for large result sets?" -> POST /_async_search
-- "How do I manage index lifecycle policies?" -> PUT /_ilm/policy/{policy}
-- "How do I reindex data from one index to another?" -> POST /_reindex
-- "How do I create an API key for authentication?" -> POST /_security/api_key
-- "How do I check which nodes are in my cluster?" -> GET /_cat/nodes
-
-## Response Tips
-
-- **Search responses** (`_search`, `_async_search`): Results are in `hits.hits[]`; total count is in `hits.total.value`. Use `from`/`size` for pagination or `search_after` for deep pagination. Check `timed_out` and `_shards.failed` for partial results.
-- **Bulk responses** (`_bulk`): Always check `errors: true` before assuming success; iterate `items[]` for per-document status codes and error details.
-- **Cat responses** (`_cat/*`): Return plain text by default; use `?format=json` for structured data. Use `h=` to select columns and `s=` to sort.
-- **Cluster/node responses** (`_cluster/*`, `_nodes/*`): Deeply nested by node ID; `status` field uses green/yellow/red. Check `_nodes.failed` for unreachable nodes.
-- **Acknowledged responses** (create/delete/update): Check both `acknowledged: true` and `shards_acknowledged: true` for index operations; acknowledged alone does not guarantee all shards are ready.
-- **Async responses** (`_async_search`, `_query/async`): Check `is_running` and `is_partial`; poll with the returned `id` until complete.
-- **ML responses** (`_ml/*`): Most list endpoints return `count` plus an array (`jobs`, `datafeeds`, `trained_model_configs`); use `from`/`size` for pagination.
-
-## Anomaly Flags
-
-- **Cluster health degraded**: Surface immediately when `GET /_cluster/health` returns `status: yellow` or `status: red`, or when `unassigned_shards > 0`.
-- **Shard failures in search**: Flag when `_shards.failed > 0` in any search response, indicating partial or unreliable results.
-- **Bulk errors**: Alert when `errors: true` in a `_bulk` response; extract and summarize failing items from `items[]`.
-- **Async search timeout**: Warn when `is_partial: true` persists after polling `_async_search/status/{id}`, or when `timed_out: true`.
-- **ILM policy errors**: Flag when `GET /{index}/_ilm/explain` shows a managed index stuck in an error step.
-- **Deprecated migration warnings**: Surface results from `GET /_migration/deprecations` proactively before version upgrades.
-- **Task queue buildup**: Alert when `GET /_cat/pending_tasks` returns a growing list, or when `GET /_cluster/health` shows high `number_of_pending_tasks`.
-- **License expiration**: Flag when `GET /_license` shows an approaching `expiry_date_in_millis`.
-- **ML job anomalies**: Surface when `GET /_ml/anomaly_detectors/{job_id}/_stats` shows `state: failed` or high `data_counts.out_of_order_timestamp_count`.
-
-## Playbook
-
-### 1. Create an Index, Define Mappings, and Index Documents
-
-1. Create the index with settings and mappings: `PUT /{index}` with `settings` (shards, replicas) and `mappings` (properties with field types).
-2. Verify creation: `HEAD /{index}` (expect 200).
-3. Index documents individually: `PUT /{index}/_doc/{id}` with the document body, or use `POST /{index}/_doc` for auto-generated IDs.
-4. For bulk loading, use `POST /_bulk` with NDJSON body containing `index` actions.
-5. Refresh the index to make documents searchable: `POST /{index}/_refresh`.
-6. Verify document count: `GET /{index}/_count`.
-
-### 2. Run a Search with Aggregations and Pagination
-
-1. Start with a basic query: `POST /{index}/_search` with a `query` object (e.g., `match`, `bool`, `range`).
-2. Add aggregations in the `aggregations` field to compute metrics alongside results.
-3. For the first page, use `size: 10, from: 0`. For subsequent pages, increment `from`.
-4. For deep pagination (beyond 10,000), switch to `search_after` with a `sort` field and pass the last document's sort values.
-5. If the query is long-running, use `POST /{index}/_async_search` with `keep_alive` and `wait_for_completion_timeout`, then poll `GET /_async_search/{id}`.
-6. Clean up: `DELETE /_async_search/{id}` when done.
-
-### 3. Set Up an Ingest Pipeline and Reindex Data
-
-1. Create the ingest pipeline: `PUT /_ingest/pipeline/{id}` with `processors` (e.g., `set`, `rename`, `grok`, `date`).
-2. Test it: `POST /_ingest/pipeline/{id}/_simulate` with sample `docs`.
-3. Reindex existing data through the pipeline: `POST /_reindex` with `source.index`, `dest.index`, and `dest.pipeline`.
-4. Monitor the reindex task: `GET /_tasks/{task_id}` (use the task ID from the reindex response).
-5. Throttle if needed: `POST /_reindex/{task_id}/_rethrottle` with a lower `requests_per_second`.
-
-### 4. Monitor Cluster Health and Diagnose Issues
-
-1. Check overall health: `GET /_cluster/health`. Note `status`, `unassigned_shards`, and `number_of_pending_tasks`.
-2. Drill into index-level health: `GET /_cluster/health/{index}?level=shards`.
-3. Identify unassigned shard reasons: `POST /_cluster/allocation/explain` (optionally specify `index` and `shard`).
-4. Review node resource usage: `GET /_cat/nodes?h=name,heap.percent,cpu,disk.used_percent&s=cpu:desc`.
-5. Check hot threads on busy nodes: `GET /_nodes/{node_id}/hot_threads`.
-6. Review pending tasks: `GET /_cat/pending_tasks`.
-
-### 5. Manage Security: Users, Roles, and API Keys
-
-1. Create a role with index privileges: `PUT /_security/role/{name}` with `indices` (names, privileges) and optional `cluster` permissions.
-2. Create a user assigned to that role: `PUT /_security/user/{username}` with `password`, `roles`, and optional `metadata`.
-3. Verify access: `POST /_security/user/{username}/_has_privileges` with the intended operations.
-4. Generate an API key for programmatic access: `POST /_security/api_key` with `name`, `role_descriptors`, and optional `expiration`.
-5. List and audit existing keys: `GET /_security/api_key?owner=true`.
-6. Revoke a compromised key: `DELETE /_security/api_key` with the key `id`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get _async_search details?" -> GET /_async_search/{id}
+- "Delete a _async_search?" -> DELETE /_async_search/{id}
+- "Get status details?" -> GET /_async_search/status/{id}
+- "Create a _async_search?" -> POST /_async_search
+- "Create a _async_search?" -> POST /{index}/_async_search
+- "Create a _bulk?" -> POST /_bulk
+- "Create a _bulk?" -> POST /{index}/_bulk
+- "List all aliases?" -> GET /_cat/aliases
+- "Get aliase details?" -> GET /_cat/aliases/{name}
+- "List all allocation?" -> GET /_cat/allocation
+- "Get allocation details?" -> GET /_cat/allocation/{node_id}
+- "List all circuit_breaker?" -> GET /_cat/circuit_breaker
+- "Get circuit_breaker details?" -> GET /_cat/circuit_breaker/{circuit_breaker_patterns}
+- "List all component_templates?" -> GET /_cat/component_templates
+- "Get component_template details?" -> GET /_cat/component_templates/{name}
+- "List all count?" -> GET /_cat/count
+- "Create a count?" -> POST /_cat/count
+- "Get count details?" -> GET /_cat/count/{index}
+- "List all fielddata?" -> GET /_cat/fielddata
+- "Get fielddata details?" -> GET /_cat/fielddata/{fields}
+- "List all health?" -> GET /_cat/health
+- "List all _cat?" -> GET /_cat
+- "List all indices?" -> GET /_cat/indices
+- "Get indice details?" -> GET /_cat/indices/{index}
+- "List all master?" -> GET /_cat/master
+- "List all analytics?" -> GET /_cat/ml/data_frame/analytics
+- "Get analytic details?" -> GET /_cat/ml/data_frame/analytics/{id}
+- "List all datafeeds?" -> GET /_cat/ml/datafeeds
+- "Get datafeed details?" -> GET /_cat/ml/datafeeds/{datafeed_id}
+- "List all anomaly_detectors?" -> GET /_cat/ml/anomaly_detectors
+- "Get anomaly_detector details?" -> GET /_cat/ml/anomaly_detectors/{job_id}
+- "List all trained_models?" -> GET /_cat/ml/trained_models
+- "Get trained_model details?" -> GET /_cat/ml/trained_models/{model_id}
+- "List all nodeattrs?" -> GET /_cat/nodeattrs
+- "List all nodes?" -> GET /_cat/nodes
+- "List all pending_tasks?" -> GET /_cat/pending_tasks
+- "List all plugins?" -> GET /_cat/plugins
+- "List all recovery?" -> GET /_cat/recovery
+- "Get recovery details?" -> GET /_cat/recovery/{index}
+- "List all repositories?" -> GET /_cat/repositories
+- "List all segments?" -> GET /_cat/segments
+- "Get segment details?" -> GET /_cat/segments/{index}
+- "List all shards?" -> GET /_cat/shards
+- "Get shard details?" -> GET /_cat/shards/{index}
+- "List all snapshots?" -> GET /_cat/snapshots
+- "Get snapshot details?" -> GET /_cat/snapshots/{repository}
+- "List all tasks?" -> GET /_cat/tasks
+- "List all templates?" -> GET /_cat/templates
+- "Get template details?" -> GET /_cat/templates/{name}
+- "List all thread_pool?" -> GET /_cat/thread_pool
+- "Get thread_pool details?" -> GET /_cat/thread_pool/{thread_pool_patterns}
+- "List all transforms?" -> GET /_cat/transforms
+- "Get transform details?" -> GET /_cat/transforms/{transform_id}
+- "Get auto_follow details?" -> GET /_ccr/auto_follow/{name}
+- "Update a auto_follow?" -> PUT /_ccr/auto_follow/{name}
+- "Delete a auto_follow?" -> DELETE /_ccr/auto_follow/{name}
+- "List all info?" -> GET /{index}/_ccr/info
+- "List all stats?" -> GET /{index}/_ccr/stats
+- "Create a forget_follower?" -> POST /{index}/_ccr/forget_follower
+- "List all auto_follow?" -> GET /_ccr/auto_follow
+- "Create a pause?" -> POST /_ccr/auto_follow/{name}/pause
+- "Create a pause_follow?" -> POST /{index}/_ccr/pause_follow
+- "Create a resume?" -> POST /_ccr/auto_follow/{name}/resume
+- "Create a resume_follow?" -> POST /{index}/_ccr/resume_follow
+- "List all stats?" -> GET /_ccr/stats
+- "Create a unfollow?" -> POST /{index}/_ccr/unfollow
+- "List all scroll?" -> GET /_search/scroll
+- "Create a scroll?" -> POST /_search/scroll
+- "Get scroll details?" -> GET /_search/scroll/{scroll_id}
+- "Delete a scroll?" -> DELETE /_search/scroll/{scroll_id}
+- "List all explain?" -> GET /_cluster/allocation/explain
+- "Create a explain?" -> POST /_cluster/allocation/explain
+- "Get _component_template details?" -> GET /_component_template/{name}
+- "Update a _component_template?" -> PUT /_component_template/{name}
+- "Delete a _component_template?" -> DELETE /_component_template/{name}
+- "Create a voting_config_exclusion?" -> POST /_cluster/voting_config_exclusions
+- "List all _component_template?" -> GET /_component_template
+- "List all settings?" -> GET /_cluster/settings
+- "List all health?" -> GET /_cluster/health
+- "Get health details?" -> GET /_cluster/health/{index}
+- "Get _info details?" -> GET /_info/{target}
+- "List all pending_tasks?" -> GET /_cluster/pending_tasks
+- "List all info?" -> GET /_remote/info
+- "Create a reroute?" -> POST /_cluster/reroute
+- "List all state?" -> GET /_cluster/state
+- "Get state details?" -> GET /_cluster/state/{metric}
+- "Get state details?" -> GET /_cluster/state/{metric}/{index}
+- "List all stats?" -> GET /_cluster/stats
+- "Get node details?" -> GET /_cluster/stats/nodes/{node_id}
+- "Get _connector details?" -> GET /_connector/{connector_id}
+- "Update a _connector?" -> PUT /_connector/{connector_id}
+- "Delete a _connector?" -> DELETE /_connector/{connector_id}
+- "Search _connector?" -> GET /_connector
+- "Create a _connector?" -> POST /_connector
+- "Get _sync_job details?" -> GET /_connector/_sync_job/{connector_sync_job_id}
+- "Delete a _sync_job?" -> DELETE /_connector/_sync_job/{connector_sync_job_id}
+- "List all _sync_job?" -> GET /_connector/_sync_job
+- "Create a _sync_job?" -> POST /_connector/_sync_job
+- "Search _count?" -> GET /_count
+- "Create a _count?" -> POST /_count
+- "Search _count?" -> GET /{index}/_count
+- "Create a _count?" -> POST /{index}/_count
+- "Update a _create?" -> PUT /{index}/_create/{id}
+- "Delete a _dangling?" -> DELETE /_dangling/{index_uuid}
+- "List all _dangling?" -> GET /_dangling
+- "Get _doc details?" -> GET /{index}/_doc/{id}
+- "Update a _doc?" -> PUT /{index}/_doc/{id}
+- "Delete a _doc?" -> DELETE /{index}/_doc/{id}
+- "Create a _delete_by_query?" -> POST /{index}/_delete_by_query
+- "Create a _rethrottle?" -> POST /_delete_by_query/{task_id}/_rethrottle
+- "Get _script details?" -> GET /_scripts/{id}
+- "Update a _script?" -> PUT /_scripts/{id}
+- "Delete a _script?" -> DELETE /_scripts/{id}
+- "Get policy details?" -> GET /_enrich/policy/{name}
+- "Update a policy?" -> PUT /_enrich/policy/{name}
+- "Delete a policy?" -> DELETE /_enrich/policy/{name}
+- "List all policy?" -> GET /_enrich/policy
+- "List all _stats?" -> GET /_enrich/_stats
+- "Get search details?" -> GET /_eql/search/{id}
+- "Delete a search?" -> DELETE /_eql/search/{id}
+- "Get status details?" -> GET /_eql/search/status/{id}
+- "Search search?" -> GET /{index}/_eql/search
+- "Create a search?" -> POST /{index}/_eql/search
+- "Create a async?" -> POST /_query/async
+- "Get async details?" -> GET /_query/async/{id}
+- "Delete a async?" -> DELETE /_query/async/{id}
+- "Create a stop?" -> POST /_query/async/{id}/stop
+- "Get query details?" -> GET /_query/queries/{id}
+- "List all queries?" -> GET /_query/queries
+- "Create a _query?" -> POST /_query
+- "Get _source details?" -> GET /{index}/_source/{id}
+- "Search _explain?" -> GET /{index}/_explain/{id}
+- "List all _features?" -> GET /_features
+- "Create a _reset?" -> POST /_features/_reset
+- "List all _field_caps?" -> GET /_field_caps
+- "Create a _field_cap?" -> POST /_field_caps
+- "List all _field_caps?" -> GET /{index}/_field_caps
+- "Create a _field_cap?" -> POST /{index}/_field_caps
+- "List all global_checkpoints?" -> GET /{index}/_fleet/global_checkpoints
+- "List all _fleet_msearch?" -> GET /_fleet/_fleet_msearch
+- "Create a _fleet_msearch?" -> POST /_fleet/_fleet_msearch
+- "List all _fleet_msearch?" -> GET /{index}/_fleet/_fleet_msearch
+- "Create a _fleet_msearch?" -> POST /{index}/_fleet/_fleet_msearch
+- "Search _fleet_search?" -> GET /{index}/_fleet/_fleet_search
+- "Create a _fleet_search?" -> POST /{index}/_fleet/_fleet_search
+- "List all _script_context?" -> GET /_script_context
+- "List all _script_language?" -> GET /_script_language
+- "Search explore?" -> GET /{index}/_graph/explore
+- "Create a explore?" -> POST /{index}/_graph/explore
+- "List all _health_report?" -> GET /_health_report
+- "Get _health_report details?" -> GET /_health_report/{feature}
+- "Get policy details?" -> GET /_ilm/policy/{policy}
+- "Update a policy?" -> PUT /_ilm/policy/{policy}
+- "Delete a policy?" -> DELETE /_ilm/policy/{policy}
+- "List all explain?" -> GET /{index}/_ilm/explain
+- "List all policy?" -> GET /_ilm/policy
+- "List all status?" -> GET /_ilm/status
+- "Create a migrate_to_data_tier?" -> POST /_ilm/migrate_to_data_tiers
+- "Create a remove?" -> POST /{index}/_ilm/remove
+- "Create a retry?" -> POST /{index}/_ilm/retry
+- "Create a start?" -> POST /_ilm/start
+- "Create a stop?" -> POST /_ilm/stop
+- "Create a _doc?" -> POST /{index}/_doc
+- "Update a _block?" -> PUT /{index}/_block/{block}
+- "Delete a _block?" -> DELETE /{index}/_block/{block}
+- "List all _analyze?" -> GET /_analyze
+- "Create a _analyze?" -> POST /_analyze
+- "List all _analyze?" -> GET /{index}/_analyze
+- "Create a _analyze?" -> POST /{index}/_analyze
+- "Create a _cancel?" -> POST /_migration/reindex/{index}/_cancel
+- "Create a clear?" -> POST /_cache/clear
+- "Create a clear?" -> POST /{index}/_cache/clear
+- "Update a _clone?" -> PUT /{index}/_clone/{target}
+- "Create a _close?" -> POST /{index}/_close
+- "Get _data_stream details?" -> GET /_data_stream/{name}
+- "Update a _data_stream?" -> PUT /_data_stream/{name}
+- "Delete a _data_stream?" -> DELETE /_data_stream/{name}
+- "Update a _create_from?" -> PUT /_create_from/{source}/{dest}
+- "List all _stats?" -> GET /_data_stream/_stats
+- "List all _stats?" -> GET /_data_stream/{name}/_stats
+- "Get _alia details?" -> GET /{index}/_alias/{name}
+- "Update a _alia?" -> PUT /{index}/_alias/{name}
+- "Delete a _alia?" -> DELETE /{index}/_alias/{name}
+- "Update a _aliase?" -> PUT /{index}/_aliases/{name}
+- "Delete a _aliase?" -> DELETE /{index}/_aliases/{name}
+- "List all _lifecycle?" -> GET /_data_stream/{name}/_lifecycle
+- "List all _options?" -> GET /_data_stream/{name}/_options
+- "Get _index_template details?" -> GET /_index_template/{name}
+- "Update a _index_template?" -> PUT /_index_template/{name}
+- "Delete a _index_template?" -> DELETE /_index_template/{name}
+- "Get _template details?" -> GET /_template/{name}
+- "Update a _template?" -> PUT /_template/{name}
+- "Delete a _template?" -> DELETE /_template/{name}
+- "Create a _disk_usage?" -> POST /{index}/_disk_usage
+- "Get _alia details?" -> GET /_alias/{name}
+- "List all explain?" -> GET /{index}/_lifecycle/explain
+- "List all _field_usage_stats?" -> GET /{index}/_field_usage_stats
+- "List all _flush?" -> GET /_flush
+- "Create a _flush?" -> POST /_flush
+- "List all _flush?" -> GET /{index}/_flush
+- "Create a _flush?" -> POST /{index}/_flush
+- "Create a _forcemerge?" -> POST /_forcemerge
+- "Create a _forcemerge?" -> POST /{index}/_forcemerge
+- "List all _alias?" -> GET /_alias
+- "List all _alias?" -> GET /{index}/_alias
+- "List all stats?" -> GET /_lifecycle/stats
+- "List all _data_stream?" -> GET /_data_stream
+- "List all _mappings?" -> GET /_data_stream/{name}/_mappings
+- "List all _settings?" -> GET /_data_stream/{name}/_settings
+- "Get field details?" -> GET /_mapping/field/{fields}
+- "Get field details?" -> GET /{index}/_mapping/field/{fields}
+- "List all _index_template?" -> GET /_index_template
+- "List all _mapping?" -> GET /_mapping
+- "List all _mapping?" -> GET /{index}/_mapping
+- "Create a _mapping?" -> POST /{index}/_mapping
+- "List all _status?" -> GET /_migration/reindex/{index}/_status
+- "List all _settings?" -> GET /_settings
+- "List all _settings?" -> GET /{index}/_settings
+- "Get _setting details?" -> GET /{index}/_settings/{name}
+- "Get _setting details?" -> GET /_settings/{name}
+- "List all _template?" -> GET /_template
+- "Create a reindex?" -> POST /_migration/reindex
+- "Create a _modify?" -> POST /_data_stream/_modify
+- "Create a _open?" -> POST /{index}/_open
+- "List all _recovery?" -> GET /_recovery
+- "List all _recovery?" -> GET /{index}/_recovery
+- "List all _refresh?" -> GET /_refresh
+- "Create a _refresh?" -> POST /_refresh
+- "List all _refresh?" -> GET /{index}/_refresh
+- "Create a _refresh?" -> POST /{index}/_refresh
+- "List all _reload_search_analyzers?" -> GET /{index}/_reload_search_analyzers
+- "Create a _reload_search_analyzer?" -> POST /{index}/_reload_search_analyzers
+- "List all cluster?" -> GET /_resolve/cluster
+- "Get cluster details?" -> GET /_resolve/cluster/{name}
+- "Get index details?" -> GET /_resolve/index/{name}
+- "Create a _rollover?" -> POST /{alias}/_rollover
+- "List all _segments?" -> GET /_segments
+- "List all _segments?" -> GET /{index}/_segments
+- "List all _shard_stores?" -> GET /_shard_stores
+- "List all _shard_stores?" -> GET /{index}/_shard_stores
+- "Update a _shrink?" -> PUT /{index}/_shrink/{target}
+- "Create a _simulate?" -> POST /_index_template/_simulate
+- "Update a _split?" -> PUT /{index}/_split/{target}
+- "List all _stats?" -> GET /_stats
+- "Get _stat details?" -> GET /_stats/{metric}
+- "List all _stats?" -> GET /{index}/_stats
+- "Get _stat details?" -> GET /{index}/_stats/{metric}
+- "Create a _aliase?" -> POST /_aliases
+- "Search query?" -> GET /_validate/query
+- "Create a query?" -> POST /_validate/query
+- "Search query?" -> GET /{index}/_validate/query
+- "Create a query?" -> POST /{index}/_validate/query
+- "Create a _stream?" -> POST /_inference/chat_completion/{inference_id}/_stream
+- "Get _inference details?" -> GET /_inference/{inference_id}
+- "Update a _inference?" -> PUT /_inference/{inference_id}
+- "Delete a _inference?" -> DELETE /_inference/{inference_id}
+- "Get _inference details?" -> GET /_inference/{task_type}/{inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{inference_id}
+- "Delete a _inference?" -> DELETE /_inference/{task_type}/{inference_id}
+- "List all _inference?" -> GET /_inference
+- "List all _all?" -> GET /_inference/{task_type}/_all
+- "Update a _inference?" -> PUT /_inference/{task_type}/{ai21_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{alibabacloud_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{amazonbedrock_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{amazonsagemaker_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{anthropic_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{azureaistudio_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{azureopenai_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{cohere_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{contextualai_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{custom_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{deepseek_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{elasticsearch_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{elser_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{googleaistudio_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{googlevertexai_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{groq_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{huggingface_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{jinaai_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{llama_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{mistral_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{nvidia_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{openai_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{openshiftai_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{voyageai_inference_id}
+- "Update a _inference?" -> PUT /_inference/{task_type}/{watsonx_inference_id}
+- "Create a _stream?" -> POST /_inference/completion/{inference_id}/_stream
+- "Get database details?" -> GET /_ingest/geoip/database/{id}
+- "Update a database?" -> PUT /_ingest/geoip/database/{id}
+- "Delete a database?" -> DELETE /_ingest/geoip/database/{id}
+- "Get database details?" -> GET /_ingest/ip_location/database/{id}
+- "Update a database?" -> PUT /_ingest/ip_location/database/{id}
+- "Delete a database?" -> DELETE /_ingest/ip_location/database/{id}
+- "Get pipeline details?" -> GET /_ingest/pipeline/{id}
+- "Update a pipeline?" -> PUT /_ingest/pipeline/{id}
+- "Delete a pipeline?" -> DELETE /_ingest/pipeline/{id}
+- "List all stats?" -> GET /_ingest/geoip/stats
+- "List all database?" -> GET /_ingest/geoip/database
+- "List all database?" -> GET /_ingest/ip_location/database
+- "List all pipeline?" -> GET /_ingest/pipeline
+- "List all grok?" -> GET /_ingest/processor/grok
+- "List all _simulate?" -> GET /_ingest/pipeline/_simulate
+- "Create a _simulate?" -> POST /_ingest/pipeline/_simulate
+- "List all _simulate?" -> GET /_ingest/pipeline/{id}/_simulate
+- "Create a _simulate?" -> POST /_ingest/pipeline/{id}/_simulate
+- "List all _license?" -> GET /_license
+- "Create a _license?" -> POST /_license
+- "List all basic_status?" -> GET /_license/basic_status
+- "List all trial_status?" -> GET /_license/trial_status
+- "Create a start_basic?" -> POST /_license/start_basic
+- "Create a start_trial?" -> POST /_license/start_trial
+- "Get pipeline details?" -> GET /_logstash/pipeline/{id}
+- "Update a pipeline?" -> PUT /_logstash/pipeline/{id}
+- "Delete a pipeline?" -> DELETE /_logstash/pipeline/{id}
+- "List all pipeline?" -> GET /_logstash/pipeline
+- "List all _mget?" -> GET /_mget
+- "Create a _mget?" -> POST /_mget
+- "List all _mget?" -> GET /{index}/_mget
+- "Create a _mget?" -> POST /{index}/_mget
+- "List all deprecations?" -> GET /_migration/deprecations
+- "List all deprecations?" -> GET /{index}/_migration/deprecations
+- "List all system_features?" -> GET /_migration/system_features
+- "Create a system_feature?" -> POST /_migration/system_features
+- "Create a _clear?" -> POST /_ml/trained_models/{model_id}/deployment/cache/_clear
+- "Create a _close?" -> POST /_ml/anomaly_detectors/{job_id}/_close
+- "Get calendar details?" -> GET /_ml/calendars/{calendar_id}
+- "Update a calendar?" -> PUT /_ml/calendars/{calendar_id}
+- "Delete a calendar?" -> DELETE /_ml/calendars/{calendar_id}
+- "Delete a event?" -> DELETE /_ml/calendars/{calendar_id}/events/{event_id}
+- "Update a job?" -> PUT /_ml/calendars/{calendar_id}/jobs/{job_id}
+- "Delete a job?" -> DELETE /_ml/calendars/{calendar_id}/jobs/{job_id}
+- "Get analytic details?" -> GET /_ml/data_frame/analytics/{id}
+- "Update a analytic?" -> PUT /_ml/data_frame/analytics/{id}
+- "Delete a analytic?" -> DELETE /_ml/data_frame/analytics/{id}
+- "Get datafeed details?" -> GET /_ml/datafeeds/{datafeed_id}
+- "Update a datafeed?" -> PUT /_ml/datafeeds/{datafeed_id}
+- "Delete a datafeed?" -> DELETE /_ml/datafeeds/{datafeed_id}
+- "Delete a _delete_expired_data?" -> DELETE /_ml/_delete_expired_data/{job_id}
+- "Get filter details?" -> GET /_ml/filters/{filter_id}
+- "Update a filter?" -> PUT /_ml/filters/{filter_id}
+- "Delete a filter?" -> DELETE /_ml/filters/{filter_id}
+- "Create a _forecast?" -> POST /_ml/anomaly_detectors/{job_id}/_forecast
+- "Delete a _forecast?" -> DELETE /_ml/anomaly_detectors/{job_id}/_forecast/{forecast_id}
+- "Get anomaly_detector details?" -> GET /_ml/anomaly_detectors/{job_id}
+- "Update a anomaly_detector?" -> PUT /_ml/anomaly_detectors/{job_id}
+- "Delete a anomaly_detector?" -> DELETE /_ml/anomaly_detectors/{job_id}
+- "Get model_snapshot details?" -> GET /_ml/anomaly_detectors/{job_id}/model_snapshots/{snapshot_id}
+- "Delete a model_snapshot?" -> DELETE /_ml/anomaly_detectors/{job_id}/model_snapshots/{snapshot_id}
+- "Get trained_model details?" -> GET /_ml/trained_models/{model_id}
+- "Update a trained_model?" -> PUT /_ml/trained_models/{model_id}
+- "Delete a trained_model?" -> DELETE /_ml/trained_models/{model_id}
+- "Update a model_aliase?" -> PUT /_ml/trained_models/{model_id}/model_aliases/{model_alias}
+- "Delete a model_aliase?" -> DELETE /_ml/trained_models/{model_id}/model_aliases/{model_alias}
+- "Create a _estimate_model_memory?" -> POST /_ml/anomaly_detectors/_estimate_model_memory
+- "Create a _evaluate?" -> POST /_ml/data_frame/_evaluate
+- "List all _explain?" -> GET /_ml/data_frame/analytics/_explain
+- "Create a _explain?" -> POST /_ml/data_frame/analytics/_explain
+- "List all _explain?" -> GET /_ml/data_frame/analytics/{id}/_explain
+- "Create a _explain?" -> POST /_ml/data_frame/analytics/{id}/_explain
+- "Create a _flush?" -> POST /_ml/anomaly_detectors/{job_id}/_flush
+- "Get bucket details?" -> GET /_ml/anomaly_detectors/{job_id}/results/buckets/{timestamp}
+- "List all buckets?" -> GET /_ml/anomaly_detectors/{job_id}/results/buckets
+- "Create a bucket?" -> POST /_ml/anomaly_detectors/{job_id}/results/buckets
+- "List all events?" -> GET /_ml/calendars/{calendar_id}/events
+- "Create a event?" -> POST /_ml/calendars/{calendar_id}/events
+- "List all calendars?" -> GET /_ml/calendars
+- "Create a calendar?" -> POST /_ml/calendars
+- "Get category details?" -> GET /_ml/anomaly_detectors/{job_id}/results/categories/{category_id}
+- "List all categories?" -> GET /_ml/anomaly_detectors/{job_id}/results/categories
+- "Create a category?" -> POST /_ml/anomaly_detectors/{job_id}/results/categories
+- "List all analytics?" -> GET /_ml/data_frame/analytics
+- "List all _stats?" -> GET /_ml/data_frame/analytics/_stats
+- "List all _stats?" -> GET /_ml/data_frame/analytics/{id}/_stats
+- "List all _stats?" -> GET /_ml/datafeeds/{datafeed_id}/_stats
+- "List all _stats?" -> GET /_ml/datafeeds/_stats
+- "List all datafeeds?" -> GET /_ml/datafeeds
+- "List all filters?" -> GET /_ml/filters
+- "List all influencers?" -> GET /_ml/anomaly_detectors/{job_id}/results/influencers
+- "Create a influencer?" -> POST /_ml/anomaly_detectors/{job_id}/results/influencers
+- "List all _stats?" -> GET /_ml/anomaly_detectors/_stats
+- "List all _stats?" -> GET /_ml/anomaly_detectors/{job_id}/_stats
+- "List all anomaly_detectors?" -> GET /_ml/anomaly_detectors
+- "List all _stats?" -> GET /_ml/memory/_stats
+- "List all _stats?" -> GET /_ml/memory/{node_id}/_stats
+- "List all _stats?" -> GET /_ml/anomaly_detectors/{job_id}/model_snapshots/{snapshot_id}/_upgrade/_stats
+- "List all model_snapshots?" -> GET /_ml/anomaly_detectors/{job_id}/model_snapshots
+- "Create a model_snapshot?" -> POST /_ml/anomaly_detectors/{job_id}/model_snapshots
+- "List all overall_buckets?" -> GET /_ml/anomaly_detectors/{job_id}/results/overall_buckets
+- "Create a overall_bucket?" -> POST /_ml/anomaly_detectors/{job_id}/results/overall_buckets
+- "List all records?" -> GET /_ml/anomaly_detectors/{job_id}/results/records
+- "Create a record?" -> POST /_ml/anomaly_detectors/{job_id}/results/records
+- "List all trained_models?" -> GET /_ml/trained_models
+- "List all _stats?" -> GET /_ml/trained_models/{model_id}/_stats
+- "List all _stats?" -> GET /_ml/trained_models/_stats
+- "Create a _infer?" -> POST /_ml/trained_models/{model_id}/_infer
+- "List all info?" -> GET /_ml/info
+- "Create a _open?" -> POST /_ml/anomaly_detectors/{job_id}/_open
+- "Create a _data?" -> POST /_ml/anomaly_detectors/{job_id}/_data
+- "List all _preview?" -> GET /_ml/data_frame/analytics/_preview
+- "Create a _preview?" -> POST /_ml/data_frame/analytics/_preview
+- "List all _preview?" -> GET /_ml/data_frame/analytics/{id}/_preview
+- "Create a _preview?" -> POST /_ml/data_frame/analytics/{id}/_preview
+- "List all _preview?" -> GET /_ml/datafeeds/{datafeed_id}/_preview
+- "Create a _preview?" -> POST /_ml/datafeeds/{datafeed_id}/_preview
+- "List all _preview?" -> GET /_ml/datafeeds/_preview
+- "Create a _preview?" -> POST /_ml/datafeeds/_preview
+- "Update a definition?" -> PUT /_ml/trained_models/{model_id}/definition/{part}
+- "Create a _reset?" -> POST /_ml/anomaly_detectors/{job_id}/_reset
+- "Create a _revert?" -> POST /_ml/anomaly_detectors/{job_id}/model_snapshots/{snapshot_id}/_revert
+- "Create a set_upgrade_mode?" -> POST /_ml/set_upgrade_mode
+- "Create a _start?" -> POST /_ml/data_frame/analytics/{id}/_start
+- "Create a _start?" -> POST /_ml/datafeeds/{datafeed_id}/_start
+- "Create a _start?" -> POST /_ml/trained_models/{model_id}/deployment/_start
+- "Create a _stop?" -> POST /_ml/data_frame/analytics/{id}/_stop
+- "Create a _stop?" -> POST /_ml/datafeeds/{datafeed_id}/_stop
+- "Create a _stop?" -> POST /_ml/trained_models/{model_id}/deployment/_stop
+- "Create a _update?" -> POST /_ml/data_frame/analytics/{id}/_update
+- "Create a _update?" -> POST /_ml/datafeeds/{datafeed_id}/_update
+- "Create a _update?" -> POST /_ml/filters/{filter_id}/_update
+- "Create a _update?" -> POST /_ml/anomaly_detectors/{job_id}/_update
+- "Create a _update?" -> POST /_ml/anomaly_detectors/{job_id}/model_snapshots/{snapshot_id}/_update
+- "Create a _update?" -> POST /_ml/trained_models/{model_id}/deployment/_update
+- "Create a _upgrade?" -> POST /_ml/anomaly_detectors/{job_id}/model_snapshots/{snapshot_id}/_upgrade
+- "List all _msearch?" -> GET /_msearch
+- "Create a _msearch?" -> POST /_msearch
+- "List all _msearch?" -> GET /{index}/_msearch
+- "Create a _msearch?" -> POST /{index}/_msearch
+- "List all template?" -> GET /_msearch/template
+- "Create a template?" -> POST /_msearch/template
+- "List all template?" -> GET /{index}/_msearch/template
+- "Create a template?" -> POST /{index}/_msearch/template
+- "List all _mtermvectors?" -> GET /_mtermvectors
+- "Create a _mtermvector?" -> POST /_mtermvectors
+- "List all _mtermvectors?" -> GET /{index}/_mtermvectors
+- "Create a _mtermvector?" -> POST /{index}/_mtermvectors
+- "Delete a _repositories_metering?" -> DELETE /_nodes/{node_id}/_repositories_metering/{max_archive_version}
+- "List all _repositories_metering?" -> GET /_nodes/{node_id}/_repositories_metering
+- "List all hot_threads?" -> GET /_nodes/hot_threads
+- "List all hot_threads?" -> GET /_nodes/{node_id}/hot_threads
+- "List all _nodes?" -> GET /_nodes
+- "Get _node details?" -> GET /_nodes/{node_id}
+- "Get _node details?" -> GET /_nodes/{metric}
+- "Get _node details?" -> GET /_nodes/{node_id}/{metric}
+- "Create a reload_secure_setting?" -> POST /_nodes/reload_secure_settings
+- "Create a reload_secure_setting?" -> POST /_nodes/{node_id}/reload_secure_settings
+- "List all stats?" -> GET /_nodes/stats
+- "List all stats?" -> GET /_nodes/{node_id}/stats
+- "Get stat details?" -> GET /_nodes/stats/{metric}
+- "Get stat details?" -> GET /_nodes/{node_id}/stats/{metric}
+- "Get stat details?" -> GET /_nodes/stats/{metric}/{index_metric}
+- "Get stat details?" -> GET /_nodes/{node_id}/stats/{metric}/{index_metric}
+- "List all usage?" -> GET /_nodes/usage
+- "List all usage?" -> GET /_nodes/{node_id}/usage
+- "Get usage details?" -> GET /_nodes/usage/{metric}
+- "Get usage details?" -> GET /_nodes/{node_id}/usage/{metric}
+- "Create a _pit?" -> POST /{index}/_pit
+- "Update a _script?" -> PUT /_scripts/{id}/{context}
+- "Get _rule details?" -> GET /_query_rules/{ruleset_id}/_rule/{rule_id}
+- "Update a _rule?" -> PUT /_query_rules/{ruleset_id}/_rule/{rule_id}
+- "Delete a _rule?" -> DELETE /_query_rules/{ruleset_id}/_rule/{rule_id}
+- "Get _query_rule details?" -> GET /_query_rules/{ruleset_id}
+- "Update a _query_rule?" -> PUT /_query_rules/{ruleset_id}
+- "Delete a _query_rule?" -> DELETE /_query_rules/{ruleset_id}
+- "List all _query_rules?" -> GET /_query_rules
+- "Create a _test?" -> POST /_query_rules/{ruleset_id}/_test
+- "List all _rank_eval?" -> GET /_rank_eval
+- "Create a _rank_eval?" -> POST /_rank_eval
+- "List all _rank_eval?" -> GET /{index}/_rank_eval
+- "Create a _rank_eval?" -> POST /{index}/_rank_eval
+- "Create a _reindex?" -> POST /_reindex
+- "Create a _rethrottle?" -> POST /_reindex/{task_id}/_rethrottle
+- "List all template?" -> GET /_render/template
+- "Create a template?" -> POST /_render/template
+- "Get template details?" -> GET /_render/template/{id}
+- "Get job details?" -> GET /_rollup/job/{id}
+- "Update a job?" -> PUT /_rollup/job/{id}
+- "Delete a job?" -> DELETE /_rollup/job/{id}
+- "List all job?" -> GET /_rollup/job
+- "Get data details?" -> GET /_rollup/data/{id}
+- "List all data?" -> GET /_rollup/data
+- "List all data?" -> GET /{index}/_rollup/data
+- "Search _rollup_search?" -> GET /{index}/_rollup_search
+- "Create a _rollup_search?" -> POST /{index}/_rollup_search
+- "Create a _start?" -> POST /_rollup/job/{id}/_start
+- "Create a _stop?" -> POST /_rollup/job/{id}/_stop
+- "List all _execute?" -> GET /_scripts/painless/_execute
+- "Create a _execute?" -> POST /_scripts/painless/_execute
+- "Search _search?" -> GET /_search
+- "Create a _search?" -> POST /_search
+- "Search _search?" -> GET /{index}/_search
+- "Create a _search?" -> POST /{index}/_search
+- "Get search_application details?" -> GET /_application/search_application/{name}
+- "Update a search_application?" -> PUT /_application/search_application/{name}
+- "Delete a search_application?" -> DELETE /_application/search_application/{name}
+- "Get analytic details?" -> GET /_application/analytics/{name}
+- "Update a analytic?" -> PUT /_application/analytics/{name}
+- "Delete a analytic?" -> DELETE /_application/analytics/{name}
+- "List all analytics?" -> GET /_application/analytics
+- "Search search_application?" -> GET /_application/search_application
+- "Create a _render_query?" -> POST /_application/search_application/{name}/_render_query
+- "List all _search?" -> GET /_application/search_application/{name}/_search
+- "Create a _search?" -> POST /_application/search_application/{name}/_search
+- "Search _mvt?" -> GET /{index}/_mvt/{field}/{zoom}/{x}/{y}
+- "List all _search_shards?" -> GET /_search_shards
+- "Create a _search_shard?" -> POST /_search_shards
+- "List all _search_shards?" -> GET /{index}/_search_shards
+- "Create a _search_shard?" -> POST /{index}/_search_shards
+- "List all template?" -> GET /_search/template
+- "Create a template?" -> POST /_search/template
+- "List all template?" -> GET /{index}/_search/template
+- "Create a template?" -> POST /{index}/_search/template
+- "List all stats?" -> GET /_searchable_snapshots/cache/stats
+- "List all stats?" -> GET /_searchable_snapshots/{node_id}/cache/stats
+- "Create a clear?" -> POST /_searchable_snapshots/cache/clear
+- "Create a clear?" -> POST /{index}/_searchable_snapshots/cache/clear
+- "Create a _mount?" -> POST /_snapshot/{repository}/{snapshot}/_mount
+- "List all stats?" -> GET /_searchable_snapshots/stats
+- "List all stats?" -> GET /{index}/_searchable_snapshots/stats
+- "Create a _activate?" -> POST /_security/profile/_activate
+- "List all _authenticate?" -> GET /_security/_authenticate
+- "List all role?" -> GET /_security/role
+- "Create a role?" -> POST /_security/role
+- "Create a _bulk_update?" -> POST /_security/api_key/_bulk_update
+- "Create a _password?" -> POST /_security/user/{username}/_password
+- "Create a _password?" -> POST /_security/user/_password
+- "Create a _clear_cache?" -> POST /_security/api_key/{ids}/_clear_cache
+- "Create a _clear_cache?" -> POST /_security/privilege/{application}/_clear_cache
+- "Create a _clear_cache?" -> POST /_security/realm/{realms}/_clear_cache
+- "Create a _clear_cache?" -> POST /_security/role/{name}/_clear_cache
+- "Create a _clear_cache?" -> POST /_security/service/{namespace}/{service}/credential/token/{name}/_clear_cache
+- "List all api_key?" -> GET /_security/api_key
+- "Create a api_key?" -> POST /_security/api_key
+- "Create a api_key?" -> POST /_security/cross_cluster/api_key
+- "Update a token?" -> PUT /_security/service/{namespace}/{service}/credential/token/{name}
+- "Delete a token?" -> DELETE /_security/service/{namespace}/{service}/credential/token/{name}
+- "Create a token?" -> POST /_security/service/{namespace}/{service}/credential/token
+- "Create a delegate_pki?" -> POST /_security/delegate_pki
+- "Get privilege details?" -> GET /_security/privilege/{application}/{name}
+- "Delete a privilege?" -> DELETE /_security/privilege/{application}/{name}
+- "Get role details?" -> GET /_security/role/{name}
+- "Update a role?" -> PUT /_security/role/{name}
+- "Delete a role?" -> DELETE /_security/role/{name}
+- "Get role_mapping details?" -> GET /_security/role_mapping/{name}
+- "Update a role_mapping?" -> PUT /_security/role_mapping/{name}
+- "Delete a role_mapping?" -> DELETE /_security/role_mapping/{name}
+- "Get user details?" -> GET /_security/user/{username}
+- "Update a user?" -> PUT /_security/user/{username}
+- "Delete a user?" -> DELETE /_security/user/{username}
+- "Create a _disable?" -> POST /_security/user/{username}/_disable
+- "Create a _disable?" -> POST /_security/profile/{uid}/_disable
+- "Create a _enable?" -> POST /_security/user/{username}/_enable
+- "Create a _enable?" -> POST /_security/profile/{uid}/_enable
+- "List all kibana?" -> GET /_security/enroll/kibana
+- "List all node?" -> GET /_security/enroll/node
+- "List all _builtin?" -> GET /_security/privilege/_builtin
+- "List all privilege?" -> GET /_security/privilege
+- "Create a privilege?" -> POST /_security/privilege
+- "Get privilege details?" -> GET /_security/privilege/{application}
+- "List all role_mapping?" -> GET /_security/role_mapping
+- "Get service details?" -> GET /_security/service/{namespace}/{service}
+- "Get service details?" -> GET /_security/service/{namespace}
+- "List all service?" -> GET /_security/service
+- "List all credential?" -> GET /_security/service/{namespace}/{service}/credential
+- "List all settings?" -> GET /_security/settings
+- "List all stats?" -> GET /_security/stats
+- "Create a token?" -> POST /_security/oauth2/token
+- "List all user?" -> GET /_security/user
+- "List all _privileges?" -> GET /_security/user/_privileges
+- "Get profile details?" -> GET /_security/profile/{uid}
+- "Create a grant?" -> POST /_security/api_key/grant
+- "List all _has_privileges?" -> GET /_security/user/_has_privileges
+- "Create a _has_privilege?" -> POST /_security/user/_has_privileges
+- "List all _has_privileges?" -> GET /_security/user/{user}/_has_privileges
+- "Create a _has_privilege?" -> POST /_security/user/{user}/_has_privileges
+- "List all _has_privileges?" -> GET /_security/profile/_has_privileges
+- "Create a _has_privilege?" -> POST /_security/profile/_has_privileges
+- "Create a authenticate?" -> POST /_security/oidc/authenticate
+- "Create a logout?" -> POST /_security/oidc/logout
+- "Create a prepare?" -> POST /_security/oidc/prepare
+- "Search api_key?" -> GET /_security/_query/api_key
+- "Create a api_key?" -> POST /_security/_query/api_key
+- "Search role?" -> GET /_security/_query/role
+- "Create a role?" -> POST /_security/_query/role
+- "Search user?" -> GET /_security/_query/user
+- "Create a user?" -> POST /_security/_query/user
+- "Create a authenticate?" -> POST /_security/saml/authenticate
+- "Create a complete_logout?" -> POST /_security/saml/complete_logout
+- "Create a invalidate?" -> POST /_security/saml/invalidate
+- "Create a logout?" -> POST /_security/saml/logout
+- "Create a prepare?" -> POST /_security/saml/prepare
+- "Get metadata details?" -> GET /_security/saml/metadata/{realm_name}
+- "List all _suggest?" -> GET /_security/profile/_suggest
+- "Create a _suggest?" -> POST /_security/profile/_suggest
+- "Update a api_key?" -> PUT /_security/api_key/{id}
+- "Update a api_key?" -> PUT /_security/cross_cluster/api_key/{id}
+- "Create a _data?" -> POST /_security/profile/{uid}/_data
+- "List all _simulate?" -> GET /_ingest/_simulate
+- "Create a _simulate?" -> POST /_ingest/_simulate
+- "List all _simulate?" -> GET /_ingest/{index}/_simulate
+- "Create a _simulate?" -> POST /_ingest/{index}/_simulate
+- "Get policy details?" -> GET /_slm/policy/{policy_id}
+- "Update a policy?" -> PUT /_slm/policy/{policy_id}
+- "Delete a policy?" -> DELETE /_slm/policy/{policy_id}
+- "Create a _execute_retention?" -> POST /_slm/_execute_retention
+- "List all policy?" -> GET /_slm/policy
+- "List all stats?" -> GET /_slm/stats
+- "List all status?" -> GET /_slm/status
+- "Create a start?" -> POST /_slm/start
+- "Create a stop?" -> POST /_slm/stop
+- "Create a _cleanup?" -> POST /_snapshot/{repository}/_cleanup
+- "Update a _clone?" -> PUT /_snapshot/{repository}/{snapshot}/_clone/{target_snapshot}
+- "Get _snapshot details?" -> GET /_snapshot/{repository}/{snapshot}
+- "Update a _snapshot?" -> PUT /_snapshot/{repository}/{snapshot}
+- "Delete a _snapshot?" -> DELETE /_snapshot/{repository}/{snapshot}
+- "Get _snapshot details?" -> GET /_snapshot/{repository}
+- "Update a _snapshot?" -> PUT /_snapshot/{repository}
+- "Delete a _snapshot?" -> DELETE /_snapshot/{repository}
+- "List all _snapshot?" -> GET /_snapshot
+- "Create a _analyze?" -> POST /_snapshot/{repository}/_analyze
+- "Create a _verify_integrity?" -> POST /_snapshot/{repository}/_verify_integrity
+- "Create a _restore?" -> POST /_snapshot/{repository}/{snapshot}/_restore
+- "List all _status?" -> GET /_snapshot/_status
+- "List all _status?" -> GET /_snapshot/{repository}/_status
+- "List all _status?" -> GET /_snapshot/{repository}/{snapshot}/_status
+- "Create a _verify?" -> POST /_snapshot/{repository}/_verify
+- "Create a close?" -> POST /_sql/close
+- "Delete a delete?" -> DELETE /_sql/async/delete/{id}
+- "Get async details?" -> GET /_sql/async/{id}
+- "Get status details?" -> GET /_sql/async/status/{id}
+- "Search _sql?" -> GET /_sql
+- "Create a _sql?" -> POST /_sql
+- "Search translate?" -> GET /_sql/translate
+- "Create a translate?" -> POST /_sql/translate
+- "List all certificates?" -> GET /_ssl/certificates
+- "Create a _disable?" -> POST /_streams/{name}/_disable
+- "Create a _enable?" -> POST /_streams/{name}/_enable
+- "List all status?" -> GET /_streams/status
+- "Get _synonym details?" -> GET /_synonyms/{id}
+- "Update a _synonym?" -> PUT /_synonyms/{id}
+- "Delete a _synonym?" -> DELETE /_synonyms/{id}
+- "Get _synonym details?" -> GET /_synonyms/{set_id}/{rule_id}
+- "Update a _synonym?" -> PUT /_synonyms/{set_id}/{rule_id}
+- "Delete a _synonym?" -> DELETE /_synonyms/{set_id}/{rule_id}
+- "List all _synonyms?" -> GET /_synonyms
+- "Create a _cancel?" -> POST /_tasks/_cancel
+- "Create a _cancel?" -> POST /_tasks/{task_id}/_cancel
+- "Get _task details?" -> GET /_tasks/{task_id}
+- "List all _tasks?" -> GET /_tasks
+- "List all _terms_enum?" -> GET /{index}/_terms_enum
+- "Create a _terms_enum?" -> POST /{index}/_terms_enum
+- "Get _termvector details?" -> GET /{index}/_termvectors/{id}
+- "List all _termvectors?" -> GET /{index}/_termvectors
+- "Create a _termvector?" -> POST /{index}/_termvectors
+- "List all find_field_structure?" -> GET /_text_structure/find_field_structure
+- "List all find_message_structure?" -> GET /_text_structure/find_message_structure
+- "Create a find_message_structure?" -> POST /_text_structure/find_message_structure
+- "Create a find_structure?" -> POST /_text_structure/find_structure
+- "List all test_grok_pattern?" -> GET /_text_structure/test_grok_pattern
+- "Create a test_grok_pattern?" -> POST /_text_structure/test_grok_pattern
+- "Get _transform details?" -> GET /_transform/{transform_id}
+- "Update a _transform?" -> PUT /_transform/{transform_id}
+- "Delete a _transform?" -> DELETE /_transform/{transform_id}
+- "List all _node_stats?" -> GET /_transform/_node_stats
+- "List all _transform?" -> GET /_transform
+- "List all _stats?" -> GET /_transform/{transform_id}/_stats
+- "List all _preview?" -> GET /_transform/{transform_id}/_preview
+- "Create a _preview?" -> POST /_transform/{transform_id}/_preview
+- "List all _preview?" -> GET /_transform/_preview
+- "Create a _preview?" -> POST /_transform/_preview
+- "Create a _reset?" -> POST /_transform/{transform_id}/_reset
+- "Create a _schedule_now?" -> POST /_transform/{transform_id}/_schedule_now
+- "Create a set_upgrade_mode?" -> POST /_transform/set_upgrade_mode
+- "Create a _start?" -> POST /_transform/{transform_id}/_start
+- "Create a _stop?" -> POST /_transform/{transform_id}/_stop
+- "Create a _update?" -> POST /_transform/{transform_id}/_update
+- "Create a _upgrade?" -> POST /_transform/_upgrade
+- "Create a _update_by_query?" -> POST /{index}/_update_by_query
+- "Create a _rethrottle?" -> POST /_update_by_query/{task_id}/_rethrottle
+- "Create a _ack?" -> POST /_watcher/watch/{watch_id}/_ack
+- "Update a _ack?" -> PUT /_watcher/watch/{watch_id}/_ack/{action_id}
+- "Create a _activate?" -> POST /_watcher/watch/{watch_id}/_activate
+- "Create a _deactivate?" -> POST /_watcher/watch/{watch_id}/_deactivate
+- "Get watch details?" -> GET /_watcher/watch/{id}
+- "Update a watch?" -> PUT /_watcher/watch/{id}
+- "Delete a watch?" -> DELETE /_watcher/watch/{id}
+- "Create a _execute?" -> POST /_watcher/watch/{id}/_execute
+- "Create a _execute?" -> POST /_watcher/watch/_execute
+- "List all settings?" -> GET /_watcher/settings
+- "Search watches?" -> GET /_watcher/_query/watches
+- "Create a watche?" -> POST /_watcher/_query/watches
+- "Create a _start?" -> POST /_watcher/_start
+- "List all stats?" -> GET /_watcher/stats
+- "Get stat details?" -> GET /_watcher/stats/{metric}
+- "Create a _stop?" -> POST /_watcher/_stop
+- "List all _xpack?" -> GET /_xpack
+- "List all usage?" -> GET /_xpack/usage
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

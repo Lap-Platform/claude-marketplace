@@ -65,88 +65,44 @@ https://management.azure.com
 |--------|------|-------------|
 | GET | /providers/Microsoft.Kusto/operations | Lists available operations for the Microsoft.Kusto provider. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I get details about my Kusto cluster?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}
-- "How do I create a new Azure Data Explorer cluster?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}
-- "How do I update an existing Kusto cluster configuration?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}
-- "How do I delete a Kusto cluster?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}
-- "How do I stop a running cluster to save costs?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/stop
-- "How do I restart a stopped cluster?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/start
-- "How do I list all clusters in my subscription?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Kusto/clusters
-- "How do I check if a cluster name is available before creating one?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Kusto/locations/{location}/checkNameAvailability
-- "How do I list databases in a cluster?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases
-- "How do I add a principal (user/group) to a database?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}/addPrincipals
-- "How do I set up a data connection (Event Hub, IoT Hub) for ingestion?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}/dataConnections/{dataConnectionName}
-- "How do I validate a data connection before creating it?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}/dataConnectionValidation
-- "How do I see which databases are following my cluster?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/listFollowerDatabases
-- "How do I attach a follower database from another cluster?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/attachedDatabaseConfigurations/{attachedDatabaseConfigurationName}
-- "What SKUs (VM sizes) are available for my cluster?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/skus
-
-## Response Tips
-
-- **Cluster operations (GET/PUT/PATCH):** Response contains a `properties` object with `state`, `provisioningState`, `uri`, and `dataIngestionUri`. Check `provisioningState` for async operation progress -- values include `Running`, `Creating`, `Deleting`, `Succeeded`, `Failed`.
-- **Long-running operations (POST stop/start, PUT/PATCH/DELETE returning 202):** A 202 means the operation is accepted but not complete. Poll the `Azure-AsyncOperation` or `Location` header URL until the operation reaches a terminal state.
-- **List endpoints (clusters, databases, data connections):** Results are returned in a `value` array. There is no cursor-based pagination for most Kusto list endpoints; all items are returned in a single response.
-- **Name availability checks:** Response includes `nameAvailable` (boolean), `name`, and `message`. Always check `nameAvailable` before attempting a create.
-- **SKU listings:** Returns a `value` array of SKU objects. Subscription-level SKUs differ from cluster-level SKUs (cluster-level shows what the specific cluster can scale to).
-- **Database principals (list/add/remove):** Returns a `value` array of principal objects with `role`, `name`, `type`, and `fqn` (fully qualified name).
-- **Error responses:** Azure returns `{ "error": { "code": "...", "message": "..." } }` with standard codes like `ResourceNotFound`, `ResourceGroupNotFound`, `BadRequest`.
-
-## Anomaly Flags
-
-- **Cluster in `Stopped` state:** Surface when a GET cluster returns `properties.state: "Stopped"` -- most database and data connection operations will fail against a stopped cluster.
-- **provisioningState not `Succeeded`:** Flag when any resource shows `provisioningState` of `Failed`, `Deleting`, or `Canceled` -- indicates the resource is in an unhealthy or transitional state.
-- **202 without async tracking header:** If a long-running operation returns 202 but no `Azure-AsyncOperation` or `Location` header, the agent cannot poll for completion. Surface this immediately.
-- **Follower database inconsistencies:** When `listFollowerDatabases` returns entries that don't match expected attached configurations, flag potential replication issues.
-- **Data connection validation failures:** When `dataConnectionValidation` returns errors in the response body (even with 200 status), surface these before the user attempts to create the connection.
-- **Deprecated API version:** The spec uses `2019-09-07`. If Azure returns warnings about API version deprecation in response headers (`x-ms-warning`), surface this and suggest upgrading.
-- **Throttling (429 responses):** Azure ARM has rate limits per subscription. If a 429 is returned, extract `Retry-After` header and surface the wait time to the user.
-
-## Playbook
-
-### 1. Create a New Kusto Cluster and Database
-
-1. Check name availability: POST `/subscriptions/{subscriptionId}/providers/Microsoft.Kusto/locations/{location}/checkNameAvailability` with `{ "name": "mycluster", "type": "Microsoft.Kusto/clusters" }`.
-2. Confirm `nameAvailable` is `true` in the response.
-3. Create the cluster: PUT `/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}` with SKU, location, and desired configuration in `parameters`.
-4. Poll the `Azure-AsyncOperation` URL from the 201 response until `provisioningState` is `Succeeded`.
-5. Create a database: PUT `.../clusters/{clusterName}/databases/{databaseName}` with `kind` (e.g., `ReadWrite`), `location`, and retention policies in `parameters`.
-6. Poll until the database `provisioningState` is `Succeeded`.
-
-### 2. Set Up Data Ingestion from Event Hub
-
-1. List existing data connections: GET `.../databases/{databaseName}/dataConnections` to check for conflicts.
-2. Check data connection name availability: POST `.../databases/{databaseName}/checkNameAvailability` with the desired name.
-3. Validate the connection: POST `.../databases/{databaseName}/dataConnectionValidation` with Event Hub connection details (resource ID, consumer group, table, mapping, data format).
-4. Review validation response for any errors or warnings.
-5. Create the data connection: PUT `.../databases/{databaseName}/dataConnections/{dataConnectionName}` with the validated parameters.
-6. Poll the 201/202 response until provisioning completes.
-
-### 3. Manage Database Access (Principals)
-
-1. List current principals: POST `.../databases/{databaseName}/listPrincipals` to see who has access.
-2. Add new principals: POST `.../databases/{databaseName}/addPrincipals` with `{ "value": [{ "role": "Admin", "name": "user@domain.com", "type": "User", "fqn": "aaduser=..." }] }`.
-3. To revoke access: POST `.../databases/{databaseName}/removePrincipals` with the same principal structure.
-4. Verify changes by listing principals again.
-
-### 4. Stop and Restart a Cluster (Cost Optimization)
-
-1. Verify cluster state: GET `.../clusters/{clusterName}` and confirm `properties.state` is `Running`.
-2. Stop the cluster: POST `.../clusters/{clusterName}/stop`. Expect 202.
-3. Poll until the cluster `state` transitions to `Stopped`.
-4. When ready to resume: POST `.../clusters/{clusterName}/start`. Expect 202.
-5. Poll until `state` returns to `Running` before running any queries or managing databases.
-
-### 5. Configure a Follower (Read-Only) Database
-
-1. On the leader cluster, list follower databases: POST `.../clusters/{leaderClusterName}/listFollowerDatabases` to see current followers.
-2. On the follower cluster, create an attached database configuration: PUT `.../clusters/{followerClusterName}/attachedDatabaseConfigurations/{configName}` with the leader cluster resource ID, database name, and default principals modification kind.
-3. Poll the 201/202 response until provisioning succeeds.
-4. Verify the attachment: GET `.../clusters/{followerClusterName}/attachedDatabaseConfigurations/{configName}`.
-5. To detach later: on the leader, POST `.../clusters/{leaderClusterName}/detachFollowerDatabases` with `{ "clusterResourceId": "...", "attachedDatabaseConfigurationName": "..." }`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get cluster details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}
+- "Update a cluster?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}
+- "Partially update a cluster?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}
+- "Delete a cluster?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}
+- "Create a stop?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/stop
+- "Create a start?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/start
+- "Create a listFollowerDatabase?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/listFollowerDatabases
+- "Create a detachFollowerDatabase?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/detachFollowerDatabases
+- "List all clusters?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters
+- "List all clusters?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Kusto/clusters
+- "List all skus?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Kusto/skus
+- "Create a checkNameAvailability?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Kusto/locations/{location}/checkNameAvailability
+- "Create a checkNameAvailability?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/checkNameAvailability
+- "List all skus?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/skus
+- "List all databases?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases
+- "Get database details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}
+- "Update a database?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}
+- "Partially update a database?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}
+- "Delete a database?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}
+- "Create a listPrincipal?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}/listPrincipals
+- "Create a addPrincipal?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}/addPrincipals
+- "List all attachedDatabaseConfigurations?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/attachedDatabaseConfigurations
+- "Get attachedDatabaseConfiguration details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/attachedDatabaseConfigurations/{attachedDatabaseConfigurationName}
+- "Update a attachedDatabaseConfiguration?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/attachedDatabaseConfigurations/{attachedDatabaseConfigurationName}
+- "Delete a attachedDatabaseConfiguration?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/attachedDatabaseConfigurations/{attachedDatabaseConfigurationName}
+- "Create a removePrincipal?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}/removePrincipals
+- "List all dataConnections?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}/dataConnections
+- "Create a dataConnectionValidation?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}/dataConnectionValidation
+- "Create a checkNameAvailability?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}/checkNameAvailability
+- "Get dataConnection details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}/dataConnections/{dataConnectionName}
+- "Update a dataConnection?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}/dataConnections/{dataConnectionName}
+- "Partially update a dataConnection?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}/dataConnections/{dataConnectionName}
+- "Delete a dataConnection?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Kusto/clusters/{clusterName}/databases/{databaseName}/dataConnections/{dataConnectionName}
+- "List all operations?" -> GET /providers/Microsoft.Kusto/operations
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

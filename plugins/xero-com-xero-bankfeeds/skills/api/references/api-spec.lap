@@ -9,42 +9,52 @@
 
 @group FeedConnections
 @endpoint GET /FeedConnections
-@optional {page: int, pageSize: int}
-@returns(202) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]}
-@errors {400}
+@desc Searches for feed connections
+@optional {page: int # Page number which specifies the set of records to retrieve. By default the number of the records per set is 10. Example - https://api.xero.com/bankfeeds.xro/1.0/FeedConnections?page=1 to get the second set of the records. When page value is not a number or a negative number, by default, the first set of records is returned., pageSize: int # Page size which specifies how many records per page will be returned (default 10). Example - https://api.xero.com/bankfeeds.xro/1.0/FeedConnections?pageSize=100 to specify page size of 100.}
+@returns(202) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]} # search results matching criteria returned with pagination and items array
+@errors {400: validation error response}
 
 @endpoint POST /FeedConnections
-@optional {Idempotency-Key: str, pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map{id: str(uuid), accountToken: str, accountNumber: str, accountName: str, accountId: str(uuid), accountType: any, currency: str, country: str, status: str, error: map{title: str, status: int, detail: str, type: str}}]}
-@returns(202) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]}
-@errors {400}
+@desc Create one or more new feed connection
+@optional {Idempotency-Key: str # This allows you to safely retry requests without the risk of duplicate processing. 128 character max., pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map{id: str(uuid), accountToken: str, accountNumber: str, accountName: str, accountId: str(uuid), accountType: any, currency: str, country: str, status: str, error: map{title: str, status: int, detail: str, type: str}}]}
+@returns(202) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]} # success new feed connection(s)response
+@errors {400: failed to create new feed connection(s)response}
+@example_request {"items":[{"accountToken":"foobar71760","accountNumber":"123458637","accountName":"SDK Bank 90861","accountType":"BANK","currency":"GBP"}]}
 
 @endpoint GET /FeedConnections/{id}
-@required {id: str(uuid)}
-@returns(200) {id: str(uuid), accountToken: str, accountNumber: str, accountName: str, accountId: str(uuid), accountType: any, currency: str, country: str, status: str, error: map{title: str, status: int, detail: str, type: str}}
-@errors {400}
+@desc Retrieve single feed connection based on a unique id provided
+@required {id: str(uuid) # Unique identifier for retrieving single object}
+@returns(200) {id: str(uuid), accountToken: str, accountNumber: str, accountName: str, accountId: str(uuid), accountType: any, currency: str, country: str, status: str, error: map{title: str, status: int, detail: str, type: str}} # success returns a FeedConnection object matching the id in response
+@errors {400: bad input parameter}
 
 @endpoint POST /FeedConnections/DeleteRequests
-@optional {Idempotency-Key: str, pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map{id: str(uuid), accountToken: str, accountNumber: str, accountName: str, accountId: str(uuid), accountType: any, currency: str, country: str, status: str, error: map{title: str, status: int, detail: str, type: str}}]}
-@returns(202) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]}
-@errors {400}
+@desc Delete an existing feed connection
+@optional {Idempotency-Key: str # This allows you to safely retry requests without the risk of duplicate processing. 128 character max., pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map{id: str(uuid), accountToken: str, accountNumber: str, accountName: str, accountId: str(uuid), accountType: any, currency: str, country: str, status: str, error: map{title: str, status: int, detail: str, type: str}}]}
+@returns(202) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]} # Success response for deleted feed connection
+@errors {400: bad input parameter}
+@example_request {"items":[{"id":"b4cc693b-24d9-42ec-a6d4-2943d253ff63"}]}
 
 @endgroup
 
 @group Statements
 @endpoint GET /Statements
-@optional {page: int(int32), pageSize: int(int32), Xero-Application-Id: str=00000000-0000-0000-0000-0000000010000, Xero-User-Id: str=00000000-0000-0000-0000-0000030000000}
-@returns(200) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]}
-@errors {400}
+@desc Retrieve all statements
+@optional {page: int(int32) # unique id for single object, pageSize: int(int32) # Page size which specifies how many records per page will be returned (default 10). Example - https://api.xero.com/bankfeeds.xro/1.0/Statements?pageSize=100 to specify page size of 100., Xero-Application-Id: str=00000000-0000-0000-0000-0000000010000, Xero-User-Id: str=00000000-0000-0000-0000-0000030000000}
+@returns(200) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]} # success returns Statements array of objects response
+@errors {400: bad input parameter}
 
 @endpoint POST /Statements
-@optional {Idempotency-Key: str, pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map{id: str(uuid), feedConnectionId: str(uuid), status: any, startDate: str(date), endDate: str(date), startBalance: map{amount: num(double), creditDebitIndicator: str}, endBalance: map{amount: num(double), creditDebitIndicator: str}, statementLines: [map{postedDate: str(date), description: str, amount: num(double), creditDebitIndicator: str, transactionId: str, payeeName: str, reference: str, chequeNumber: str, transactionType: str}], errors: [map{title: str, status: int, detail: str, type: str}], statementLineCount: int}]}
-@returns(202) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]}
-@errors {400, 403, 409, 413, 422, 500}
+@desc Creates one or more new statements
+@optional {Idempotency-Key: str # This allows you to safely retry requests without the risk of duplicate processing. 128 character max., pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map{id: str(uuid), feedConnectionId: str(uuid), status: any, startDate: str(date), endDate: str(date), startBalance: map{amount: num(double), creditDebitIndicator: str}, endBalance: map{amount: num(double), creditDebitIndicator: str}, statementLines: [map{postedDate: str(date), description: str, amount: num(double), creditDebitIndicator: str, transactionId: str, payeeName: str, reference: str, chequeNumber: str, transactionType: str}], errors: [map{title: str, status: int, detail: str, type: str}], statementLineCount: int}]}
+@returns(202) {pagination: map{page: int, pageSize: int, pageCount: int, itemCount: int}, items: [map]} # Success returns Statements array of objects in response
+@errors {400: Statement failed validation, 403: Invalid application or feed connection, 409: Duplicate statement received, 413: Statement exceeds size limit, 422: Unprocessable Entity, 500: Intermittent Xero Error}
+@example_request {"items":[{"feedConnectionId":"6a4b9ff5-3a5f-4321-936b-4796163550f6","startDate":"2019-08-11","endDate":"2019-08-11","startBalance":{"amount":"100","creditDebitIndicator":"CREDIT"},"endBalance":{"amount":"150","creditDebitIndicator":"CREDIT"},"statementLines":[{"postedDate":"2019-08-11","description":"My new line","amount":"50","creditDebitIndicator":"CREDIT","transactionId":"123446422","payeeName":"StarLord90315","reference":"Foobar95578","chequeNumber":"12379009","transactionType":"Refund"}]},{"feedConnectionId":"2ebe6393-f3bb-48ab-9a0e-b04fa8585a70","startDate":"2019-08-11","endDate":"2019-08-11","startBalance":{"amount":"100","creditDebitIndicator":"CREDIT"},"endBalance":{"amount":"150","creditDebitIndicator":"CREDIT"},"statementLines":[{"postedDate":"2019-08-11","description":"My new line","amount":"50","creditDebitIndicator":"CREDIT","transactionId":"123449402","payeeName":"StarLord56705","reference":"Foobar67355","chequeNumber":"12379350","transactionType":"Currency Conversion Fee"}]}]}
 
 @endpoint GET /Statements/{statementId}
-@required {statementId: str(uuid)}
-@returns(200) {id: str(uuid), feedConnectionId: str(uuid), status: any, startDate: str(date), endDate: str(date), startBalance: map{amount: num(double), creditDebitIndicator: str}, endBalance: map{amount: num(double), creditDebitIndicator: str}, statementLines: [map], errors: [map], statementLineCount: int}
-@errors {404}
+@desc Retrieve single statement based on unique id provided
+@required {statementId: str(uuid) # statement id for single object}
+@returns(200) {id: str(uuid), feedConnectionId: str(uuid), status: any, startDate: str(date), endDate: str(date), startBalance: map{amount: num(double), creditDebitIndicator: str}, endBalance: map{amount: num(double), creditDebitIndicator: str}, statementLines: [map], errors: [map], statementLineCount: int} # search results matching id for single statement
+@errors {404: Statement not found}
 
 @endgroup
 

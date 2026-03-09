@@ -543,91 +543,280 @@ https://api.box.com/2.0
 | PATCH | /metadata_taxonomies/{namespace}/{taxonomy_key}/nodes/{node_id} | Update metadata taxonomy node |
 | DELETE | /metadata_taxonomies/{namespace}/{taxonomy_key}/nodes/{node_id} | Remove metadata taxonomy node |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I upload a file to Box?" -> POST /files/content
-- "How do I download a file?" -> GET /files/{file_id}/content
-- "How do I search for files or folders?" -> GET /search
-- "How do I create a new folder?" -> POST /folders
-- "How do I share a file with someone?" -> POST /collaborations
-- "How do I get info about the current user?" -> GET /users/me
-- "How do I move a file to a different folder?" -> PUT /files/{file_id} (update parent)
-- "How do I create a shared link for a file?" -> PUT /files/{file_id}#add_shared_link
-- "How do I set up a webhook for file changes?" -> POST /webhooks
-- "How do I ask Box AI a question about a document?" -> POST /ai/ask
-- "How do I list all items in a folder?" -> GET /folders/{folder_id}/items
-- "How do I restore a file from trash?" -> POST /files/{file_id}/versions/current
-- "How do I create a sign request?" -> POST /sign_requests
-- "How do I add metadata to a file?" -> POST /files/{file_id}/metadata/{scope}/{template_key}
-- "How do I upload a large file in chunks?" -> POST /files/upload_sessions then PUT parts then POST commit
-
-## Response Tips
-
-- **Files/Folders listings**: Paginated via `offset`/`limit` or `marker`-based. Check `total_count` and `entries[]` array. Use `fields` param to limit response size.
-- **Search**: Returns relevance-sorted results by default. Use `offset`/`limit` for paging (max 30 default). Empty `entries` means no matches, not an error.
-- **Collaborations**: Nested `accessible_by`, `item`, and `acceptance_requirements_status` objects. Role field is one of editor/viewer/previewer/uploader/co-owner/owner.
-- **Upload sessions (chunked)**: 201 on session create, 200 on each part upload. Commit may return 202 (still processing) -- poll until 201.
-- **Events**: Uses `next_stream_position` for long-polling. `chunk_size` indicates entries returned, not total available.
-- **Sign requests**: 201 on creation, but actual signing is async. Poll the sign request ID for status updates.
-- **AI endpoints**: May return 204 (no content) if the model has no answer. 500 errors indicate AI processing failures, not auth issues.
-- **Metadata**: Uses JSON Patch operations for PUT updates. 409 means metadata instance already exists -- use PUT to update instead of POST.
-- **Shared items**: Requires `boxapi` header in format `shared_link=URL&shared_link_password=PASSWORD`, not a query parameter.
-
-## Anomaly Flags
-
-- **412 Precondition Failed**: ETags are stale. Surface when `if-match` fails -- the item was modified by another client since last fetch.
-- **409 Conflict with `operation_blocked_temporary`**: Box is temporarily blocking the operation (e.g., during a move/copy). Retry after a short delay. Surface this distinctly from permanent 409s.
-- **202 Accepted on downloads**: File content isn't ready yet (e.g., newly uploaded). Agent should advise polling or waiting before retrying.
-- **302 on file content GET**: Box redirects to the actual download URL. If the client doesn't follow redirects, surface the Location header.
-- **429 Rate Limit**: Zip downloads and session termination endpoints explicitly return 429. Surface the Retry-After header value.
-- **401 on shared items**: Token may have expired. Surface OAuth refresh flow before retrying.
-- **Chunked upload session expiry**: `session_expires_at` is returned on creation. Flag if upload is taking long relative to expiry.
-- **Legal hold 202 on delete**: Deletion is async and queued. Surface that the policy isn't immediately removed.
-- **AI 500 errors**: These indicate AI model failures, not server errors. Surface as "AI processing unavailable" rather than generic server error.
-
-## Playbook
-
-### 1. Upload a Large File via Chunked Upload
-
-1. Call `POST /files/upload_sessions` with `folder_id`, `file_name`, and `file_size` to create a session
-2. Note the returned `part_size` and `total_parts` from the 201 response
-3. Split the file into chunks of `part_size` bytes
-4. For each chunk, call `PUT /files/upload_sessions/{upload_session_id}` with the `digest` (SHA1) and `content-range` header
-5. After all parts upload, call `POST /files/upload_sessions/{upload_session_id}/commit` with the `digest` of the full file and array of `parts`
-6. If commit returns 202, poll `GET /files/upload_sessions/{upload_session_id}` until `num_parts_processed` equals `total_parts`, then retry commit
-7. On 201, the file is ready in `entries[0]`
-
-### 2. Share a File Externally with Expiring Link
-
-1. Call `GET /files/{file_id}` to confirm the file exists and you have access
-2. Call `PUT /files/{file_id}#add_shared_link` with `fields=shared_link` and body: `shared_link: { access: "open", unshared_at: "<expiry_datetime>", permissions: { can_download: true } }`
-3. Extract the shared link URL from `shared_link.url` in the response
-4. To later revoke access, call `PUT /files/{file_id}#remove_shared_link` with `fields=shared_link` and body: `shared_link: null`
-
-### 3. Set Up Metadata-Driven Search
-
-1. Create a metadata template: `POST /metadata_templates/schema` with `scope: "enterprise"`, `displayName`, and `fields` array defining your custom attributes
-2. Apply metadata to files: `POST /files/{file_id}/metadata/enterprise/{template_key}` with field values in the body
-3. Optionally set a cascade policy: `POST /metadata_cascade_policies` with `folder_id`, `scope: "enterprise"`, and `templateKey` to auto-apply to folder contents
-4. Query using `POST /metadata_queries/execute_read` with `from: "enterprise_{template_key}"`, `ancestor_folder_id`, and a `query` string using SQL-like syntax against your metadata fields
-
-### 4. Assign and Track a Review Task
-
-1. Create a task on a file: `POST /tasks` with `item: { id: "<file_id>", type: "file" }`, `action: "review"`, `message`, and optional `due_at`
-2. Assign the task: `POST /task_assignments` with `task: { id: "<task_id>", type: "task" }` and `assign_to: { login: "user@example.com" }`
-3. Check assignment status: `GET /tasks/{task_id}/assignments` and inspect each entry's `resolution_state`
-4. Assignee completes their review: `PUT /task_assignments/{task_assignment_id}` with `resolution_state: "approved"` or `"rejected"`
-5. Verify completion: `GET /tasks/{task_id}` and check `is_completed` flag
-
-### 5. Use Box AI to Summarize Documents
-
-1. Identify target files by searching or listing: `GET /search?query=quarterly+report&file_extensions=pdf,docx`
-2. Gather file IDs from `entries[].id` in the search results
-3. Call `POST /ai/ask` with `mode: "multiple_item_qa"`, `prompt: "Summarize the key findings"`, and `items` array containing each file's `id` and `type: "file"`
-4. If the response is 204, the AI had insufficient content -- try with fewer or different files
-5. For follow-up questions, include the previous exchange in `dialogue_history` to maintain conversational context
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all authorize?" -> GET /authorize
+- "Create a token?" -> POST /oauth2/token
+- "Create a token#refresh?" -> POST /oauth2/token#refresh
+- "Create a revoke?" -> POST /oauth2/revoke
+- "Get file details?" -> GET /files/{file_id}
+- "Update a file?" -> PUT /files/{file_id}
+- "Delete a file?" -> DELETE /files/{file_id}
+- "List all app_item_associations?" -> GET /files/{file_id}/app_item_associations
+- "List all content?" -> GET /files/{file_id}/content
+- "Create a content?" -> POST /files/{file_id}/content
+- "Create a content?" -> POST /files/content
+- "Create a upload_session?" -> POST /files/upload_sessions
+- "Create a upload_session?" -> POST /files/{file_id}/upload_sessions
+- "Get upload_session details?" -> GET /files/upload_sessions/{upload_session_id}
+- "Update a upload_session?" -> PUT /files/upload_sessions/{upload_session_id}
+- "Delete a upload_session?" -> DELETE /files/upload_sessions/{upload_session_id}
+- "List all parts?" -> GET /files/upload_sessions/{upload_session_id}/parts
+- "Create a commit?" -> POST /files/upload_sessions/{upload_session_id}/commit
+- "Create a copy?" -> POST /files/{file_id}/copy
+- "Get thumbnail.{extension} details?" -> GET /files/{file_id}/thumbnail.{extension}
+- "List all collaborations?" -> GET /files/{file_id}/collaborations
+- "List all comments?" -> GET /files/{file_id}/comments
+- "List all tasks?" -> GET /files/{file_id}/tasks
+- "List all trash?" -> GET /files/{file_id}/trash
+- "List all versions?" -> GET /files/{file_id}/versions
+- "Get version details?" -> GET /files/{file_id}/versions/{file_version_id}
+- "Delete a version?" -> DELETE /files/{file_id}/versions/{file_version_id}
+- "Update a version?" -> PUT /files/{file_id}/versions/{file_version_id}
+- "Create a current?" -> POST /files/{file_id}/versions/current
+- "List all metadata?" -> GET /files/{file_id}/metadata
+- "List all securityClassification-6VMVochwUWo?" -> GET /files/{file_id}/metadata/enterprise/securityClassification-6VMVochwUWo
+- "Create a securityClassification-6VMVochwUWo?" -> POST /files/{file_id}/metadata/enterprise/securityClassification-6VMVochwUWo
+- "Get metadata details?" -> GET /files/{file_id}/metadata/{scope}/{template_key}
+- "Update a metadata?" -> PUT /files/{file_id}/metadata/{scope}/{template_key}
+- "Delete a metadata?" -> DELETE /files/{file_id}/metadata/{scope}/{template_key}
+- "List all boxSkillsCards?" -> GET /files/{file_id}/metadata/global/boxSkillsCards
+- "Create a boxSkillsCard?" -> POST /files/{file_id}/metadata/global/boxSkillsCards
+- "List all watermark?" -> GET /files/{file_id}/watermark
+- "Get file_request details?" -> GET /file_requests/{file_request_id}
+- "Update a file_request?" -> PUT /file_requests/{file_request_id}
+- "Delete a file_request?" -> DELETE /file_requests/{file_request_id}
+- "Create a copy?" -> POST /file_requests/{file_request_id}/copy
+- "Get folder details?" -> GET /folders/{folder_id}
+- "Update a folder?" -> PUT /folders/{folder_id}
+- "Delete a folder?" -> DELETE /folders/{folder_id}
+- "List all app_item_associations?" -> GET /folders/{folder_id}/app_item_associations
+- "List all items?" -> GET /folders/{folder_id}/items
+- "Create a folder?" -> POST /folders
+- "Create a copy?" -> POST /folders/{folder_id}/copy
+- "List all collaborations?" -> GET /folders/{folder_id}/collaborations
+- "List all trash?" -> GET /folders/{folder_id}/trash
+- "List all metadata?" -> GET /folders/{folder_id}/metadata
+- "List all securityClassification-6VMVochwUWo?" -> GET /folders/{folder_id}/metadata/enterprise/securityClassification-6VMVochwUWo
+- "Create a securityClassification-6VMVochwUWo?" -> POST /folders/{folder_id}/metadata/enterprise/securityClassification-6VMVochwUWo
+- "Get metadata details?" -> GET /folders/{folder_id}/metadata/{scope}/{template_key}
+- "Update a metadata?" -> PUT /folders/{folder_id}/metadata/{scope}/{template_key}
+- "Delete a metadata?" -> DELETE /folders/{folder_id}/metadata/{scope}/{template_key}
+- "List all items?" -> GET /folders/trash/items
+- "List all watermark?" -> GET /folders/{folder_id}/watermark
+- "List all folder_locks?" -> GET /folder_locks
+- "Create a folder_lock?" -> POST /folder_locks
+- "Delete a folder_lock?" -> DELETE /folder_locks/{folder_lock_id}
+- "List all metadata_templates?" -> GET /metadata_templates
+- "List all schema?" -> GET /metadata_templates/enterprise/securityClassification-6VMVochwUWo/schema
+- "List all schema?" -> GET /metadata_templates/{scope}/{template_key}/schema
+- "Get metadata_template details?" -> GET /metadata_templates/{template_id}
+- "List all global?" -> GET /metadata_templates/global
+- "List all enterprise?" -> GET /metadata_templates/enterprise
+- "Create a schema?" -> POST /metadata_templates/schema
+- "Create a schema#classification?" -> POST /metadata_templates/schema#classifications
+- "List all metadata_cascade_policies?" -> GET /metadata_cascade_policies
+- "Create a metadata_cascade_policy?" -> POST /metadata_cascade_policies
+- "Get metadata_cascade_policy details?" -> GET /metadata_cascade_policies/{metadata_cascade_policy_id}
+- "Delete a metadata_cascade_policy?" -> DELETE /metadata_cascade_policies/{metadata_cascade_policy_id}
+- "Create a apply?" -> POST /metadata_cascade_policies/{metadata_cascade_policy_id}/apply
+- "Create a execute_read?" -> POST /metadata_queries/execute_read
+- "Get comment details?" -> GET /comments/{comment_id}
+- "Update a comment?" -> PUT /comments/{comment_id}
+- "Delete a comment?" -> DELETE /comments/{comment_id}
+- "Create a comment?" -> POST /comments
+- "Get collaboration details?" -> GET /collaborations/{collaboration_id}
+- "Update a collaboration?" -> PUT /collaborations/{collaboration_id}
+- "Delete a collaboration?" -> DELETE /collaborations/{collaboration_id}
+- "List all collaborations?" -> GET /collaborations
+- "Create a collaboration?" -> POST /collaborations
+- "Search search?" -> GET /search
+- "Create a task?" -> POST /tasks
+- "Get task details?" -> GET /tasks/{task_id}
+- "Update a task?" -> PUT /tasks/{task_id}
+- "Delete a task?" -> DELETE /tasks/{task_id}
+- "List all assignments?" -> GET /tasks/{task_id}/assignments
+- "Create a task_assignment?" -> POST /task_assignments
+- "Get task_assignment details?" -> GET /task_assignments/{task_assignment_id}
+- "Update a task_assignment?" -> PUT /task_assignments/{task_assignment_id}
+- "Delete a task_assignment?" -> DELETE /task_assignments/{task_assignment_id}
+- "List all shared_items?" -> GET /shared_items
+- "Get file details?" -> GET /files/{file_id}#get_shared_link
+- "Update a file?" -> PUT /files/{file_id}#add_shared_link
+- "Update a file?" -> PUT /files/{file_id}#update_shared_link
+- "Update a file?" -> PUT /files/{file_id}#remove_shared_link
+- "List all shared_items#folders?" -> GET /shared_items#folders
+- "Get folder details?" -> GET /folders/{folder_id}#get_shared_link
+- "Update a folder?" -> PUT /folders/{folder_id}#add_shared_link
+- "Update a folder?" -> PUT /folders/{folder_id}#update_shared_link
+- "Update a folder?" -> PUT /folders/{folder_id}#remove_shared_link
+- "Create a web_link?" -> POST /web_links
+- "Get web_link details?" -> GET /web_links/{web_link_id}
+- "Update a web_link?" -> PUT /web_links/{web_link_id}
+- "Delete a web_link?" -> DELETE /web_links/{web_link_id}
+- "List all trash?" -> GET /web_links/{web_link_id}/trash
+- "List all shared_items#web_links?" -> GET /shared_items#web_links
+- "Get web_link details?" -> GET /web_links/{web_link_id}#get_shared_link
+- "Update a web_link?" -> PUT /web_links/{web_link_id}#add_shared_link
+- "Update a web_link?" -> PUT /web_links/{web_link_id}#update_shared_link
+- "Update a web_link?" -> PUT /web_links/{web_link_id}#remove_shared_link
+- "List all shared_items#app_items?" -> GET /shared_items#app_items
+- "List all users?" -> GET /users
+- "Create a user?" -> POST /users
+- "List all me?" -> GET /users/me
+- "Create a terminate_session?" -> POST /users/terminate_sessions
+- "Get user details?" -> GET /users/{user_id}
+- "Update a user?" -> PUT /users/{user_id}
+- "Delete a user?" -> DELETE /users/{user_id}
+- "List all avatar?" -> GET /users/{user_id}/avatar
+- "Create a avatar?" -> POST /users/{user_id}/avatar
+- "List all email_aliases?" -> GET /users/{user_id}/email_aliases
+- "Create a email_aliase?" -> POST /users/{user_id}/email_aliases
+- "Delete a email_aliase?" -> DELETE /users/{user_id}/email_aliases/{email_alias_id}
+- "List all memberships?" -> GET /users/{user_id}/memberships
+- "Create a invite?" -> POST /invites
+- "Get invite details?" -> GET /invites/{invite_id}
+- "List all groups?" -> GET /groups
+- "Create a group?" -> POST /groups
+- "Create a terminate_session?" -> POST /groups/terminate_sessions
+- "Get group details?" -> GET /groups/{group_id}
+- "Update a group?" -> PUT /groups/{group_id}
+- "Delete a group?" -> DELETE /groups/{group_id}
+- "List all memberships?" -> GET /groups/{group_id}/memberships
+- "List all collaborations?" -> GET /groups/{group_id}/collaborations
+- "Create a group_membership?" -> POST /group_memberships
+- "Get group_membership details?" -> GET /group_memberships/{group_membership_id}
+- "Update a group_membership?" -> PUT /group_memberships/{group_membership_id}
+- "Delete a group_membership?" -> DELETE /group_memberships/{group_membership_id}
+- "List all webhooks?" -> GET /webhooks
+- "Create a webhook?" -> POST /webhooks
+- "Get webhook details?" -> GET /webhooks/{webhook_id}
+- "Update a webhook?" -> PUT /webhooks/{webhook_id}
+- "Delete a webhook?" -> DELETE /webhooks/{webhook_id}
+- "Update a skill_invocation?" -> PUT /skill_invocations/{skill_id}
+- "List all events?" -> GET /events
+- "List all collections?" -> GET /collections
+- "List all items?" -> GET /collections/{collection_id}/items
+- "Get collection details?" -> GET /collections/{collection_id}
+- "List all recent_items?" -> GET /recent_items
+- "List all retention_policies?" -> GET /retention_policies
+- "Create a retention_policy?" -> POST /retention_policies
+- "Get retention_policy details?" -> GET /retention_policies/{retention_policy_id}
+- "Update a retention_policy?" -> PUT /retention_policies/{retention_policy_id}
+- "Delete a retention_policy?" -> DELETE /retention_policies/{retention_policy_id}
+- "List all assignments?" -> GET /retention_policies/{retention_policy_id}/assignments
+- "Create a retention_policy_assignment?" -> POST /retention_policy_assignments
+- "Get retention_policy_assignment details?" -> GET /retention_policy_assignments/{retention_policy_assignment_id}
+- "Delete a retention_policy_assignment?" -> DELETE /retention_policy_assignments/{retention_policy_assignment_id}
+- "List all files_under_retention?" -> GET /retention_policy_assignments/{retention_policy_assignment_id}/files_under_retention
+- "List all file_versions_under_retention?" -> GET /retention_policy_assignments/{retention_policy_assignment_id}/file_versions_under_retention
+- "List all legal_hold_policies?" -> GET /legal_hold_policies
+- "Create a legal_hold_policy?" -> POST /legal_hold_policies
+- "Get legal_hold_policy details?" -> GET /legal_hold_policies/{legal_hold_policy_id}
+- "Update a legal_hold_policy?" -> PUT /legal_hold_policies/{legal_hold_policy_id}
+- "Delete a legal_hold_policy?" -> DELETE /legal_hold_policies/{legal_hold_policy_id}
+- "List all legal_hold_policy_assignments?" -> GET /legal_hold_policy_assignments
+- "Create a legal_hold_policy_assignment?" -> POST /legal_hold_policy_assignments
+- "Get legal_hold_policy_assignment details?" -> GET /legal_hold_policy_assignments/{legal_hold_policy_assignment_id}
+- "Delete a legal_hold_policy_assignment?" -> DELETE /legal_hold_policy_assignments/{legal_hold_policy_assignment_id}
+- "List all files_on_hold?" -> GET /legal_hold_policy_assignments/{legal_hold_policy_assignment_id}/files_on_hold
+- "List all file_version_retentions?" -> GET /file_version_retentions
+- "List all file_versions_on_hold?" -> GET /legal_hold_policy_assignments/{legal_hold_policy_assignment_id}/file_versions_on_hold
+- "Get file_version_retention details?" -> GET /file_version_retentions/{file_version_retention_id}
+- "Get file_version_legal_hold details?" -> GET /file_version_legal_holds/{file_version_legal_hold_id}
+- "List all file_version_legal_holds?" -> GET /file_version_legal_holds
+- "Get shield_information_barrier details?" -> GET /shield_information_barriers/{shield_information_barrier_id}
+- "Create a change_status?" -> POST /shield_information_barriers/change_status
+- "List all shield_information_barriers?" -> GET /shield_information_barriers
+- "Create a shield_information_barrier?" -> POST /shield_information_barriers
+- "List all shield_information_barrier_reports?" -> GET /shield_information_barrier_reports
+- "Create a shield_information_barrier_report?" -> POST /shield_information_barrier_reports
+- "Get shield_information_barrier_report details?" -> GET /shield_information_barrier_reports/{shield_information_barrier_report_id}
+- "Get shield_information_barrier_segment details?" -> GET /shield_information_barrier_segments/{shield_information_barrier_segment_id}
+- "Delete a shield_information_barrier_segment?" -> DELETE /shield_information_barrier_segments/{shield_information_barrier_segment_id}
+- "Update a shield_information_barrier_segment?" -> PUT /shield_information_barrier_segments/{shield_information_barrier_segment_id}
+- "List all shield_information_barrier_segments?" -> GET /shield_information_barrier_segments
+- "Create a shield_information_barrier_segment?" -> POST /shield_information_barrier_segments
+- "Get shield_information_barrier_segment_member details?" -> GET /shield_information_barrier_segment_members/{shield_information_barrier_segment_member_id}
+- "Delete a shield_information_barrier_segment_member?" -> DELETE /shield_information_barrier_segment_members/{shield_information_barrier_segment_member_id}
+- "List all shield_information_barrier_segment_members?" -> GET /shield_information_barrier_segment_members
+- "Create a shield_information_barrier_segment_member?" -> POST /shield_information_barrier_segment_members
+- "Get shield_information_barrier_segment_restriction details?" -> GET /shield_information_barrier_segment_restrictions/{shield_information_barrier_segment_restriction_id}
+- "Delete a shield_information_barrier_segment_restriction?" -> DELETE /shield_information_barrier_segment_restrictions/{shield_information_barrier_segment_restriction_id}
+- "List all shield_information_barrier_segment_restrictions?" -> GET /shield_information_barrier_segment_restrictions
+- "Create a shield_information_barrier_segment_restriction?" -> POST /shield_information_barrier_segment_restrictions
+- "Get device_pinner details?" -> GET /device_pinners/{device_pinner_id}
+- "Delete a device_pinner?" -> DELETE /device_pinners/{device_pinner_id}
+- "List all device_pinners?" -> GET /enterprises/{enterprise_id}/device_pinners
+- "List all terms_of_services?" -> GET /terms_of_services
+- "Create a terms_of_service?" -> POST /terms_of_services
+- "Get terms_of_service details?" -> GET /terms_of_services/{terms_of_service_id}
+- "Update a terms_of_service?" -> PUT /terms_of_services/{terms_of_service_id}
+- "List all terms_of_service_user_statuses?" -> GET /terms_of_service_user_statuses
+- "Create a terms_of_service_user_statuse?" -> POST /terms_of_service_user_statuses
+- "Update a terms_of_service_user_statuse?" -> PUT /terms_of_service_user_statuses/{terms_of_service_user_status_id}
+- "List all collaboration_whitelist_entries?" -> GET /collaboration_whitelist_entries
+- "Create a collaboration_whitelist_entry?" -> POST /collaboration_whitelist_entries
+- "Get collaboration_whitelist_entry details?" -> GET /collaboration_whitelist_entries/{collaboration_whitelist_entry_id}
+- "Delete a collaboration_whitelist_entry?" -> DELETE /collaboration_whitelist_entries/{collaboration_whitelist_entry_id}
+- "List all collaboration_whitelist_exempt_targets?" -> GET /collaboration_whitelist_exempt_targets
+- "Create a collaboration_whitelist_exempt_target?" -> POST /collaboration_whitelist_exempt_targets
+- "Get collaboration_whitelist_exempt_target details?" -> GET /collaboration_whitelist_exempt_targets/{collaboration_whitelist_exempt_target_id}
+- "Delete a collaboration_whitelist_exempt_target?" -> DELETE /collaboration_whitelist_exempt_targets/{collaboration_whitelist_exempt_target_id}
+- "List all storage_policies?" -> GET /storage_policies
+- "Get storage_policy details?" -> GET /storage_policies/{storage_policy_id}
+- "List all storage_policy_assignments?" -> GET /storage_policy_assignments
+- "Create a storage_policy_assignment?" -> POST /storage_policy_assignments
+- "Get storage_policy_assignment details?" -> GET /storage_policy_assignments/{storage_policy_assignment_id}
+- "Update a storage_policy_assignment?" -> PUT /storage_policy_assignments/{storage_policy_assignment_id}
+- "Delete a storage_policy_assignment?" -> DELETE /storage_policy_assignments/{storage_policy_assignment_id}
+- "Create a zip_download?" -> POST /zip_downloads
+- "List all content?" -> GET /zip_downloads/{zip_download_id}/content
+- "List all status?" -> GET /zip_downloads/{zip_download_id}/status
+- "Create a cancel?" -> POST /sign_requests/{sign_request_id}/cancel
+- "Create a resend?" -> POST /sign_requests/{sign_request_id}/resend
+- "Get sign_request details?" -> GET /sign_requests/{sign_request_id}
+- "List all sign_requests?" -> GET /sign_requests
+- "Create a sign_request?" -> POST /sign_requests
+- "List all workflows?" -> GET /workflows
+- "Create a start?" -> POST /workflows/{workflow_id}/start
+- "List all sign_templates?" -> GET /sign_templates
+- "Get sign_template details?" -> GET /sign_templates/{template_id}
+- "List all slack?" -> GET /integration_mappings/slack
+- "Create a slack?" -> POST /integration_mappings/slack
+- "Update a slack?" -> PUT /integration_mappings/slack/{integration_mapping_id}
+- "Delete a slack?" -> DELETE /integration_mappings/slack/{integration_mapping_id}
+- "List all teams?" -> GET /integration_mappings/teams
+- "Create a team?" -> POST /integration_mappings/teams
+- "Update a team?" -> PUT /integration_mappings/teams/{integration_mapping_id}
+- "Delete a team?" -> DELETE /integration_mappings/teams/{integration_mapping_id}
+- "Create a ask?" -> POST /ai/ask
+- "Create a text_gen?" -> POST /ai/text_gen
+- "List all ai_agent_default?" -> GET /ai_agent_default
+- "Create a extract?" -> POST /ai/extract
+- "Create a extract_structured?" -> POST /ai/extract_structured
+- "List all ai_agents?" -> GET /ai_agents
+- "Create a ai_agent?" -> POST /ai_agents
+- "Update a ai_agent?" -> PUT /ai_agents/{agent_id}
+- "Get ai_agent details?" -> GET /ai_agents/{agent_id}
+- "Delete a ai_agent?" -> DELETE /ai_agents/{agent_id}
+- "Create a metadata_taxonomy?" -> POST /metadata_taxonomies
+- "Get metadata_taxonomy details?" -> GET /metadata_taxonomies/{namespace}
+- "Get metadata_taxonomy details?" -> GET /metadata_taxonomies/{namespace}/{taxonomy_key}
+- "Partially update a metadata_taxonomy?" -> PATCH /metadata_taxonomies/{namespace}/{taxonomy_key}
+- "Delete a metadata_taxonomy?" -> DELETE /metadata_taxonomies/{namespace}/{taxonomy_key}
+- "Create a level?" -> POST /metadata_taxonomies/{namespace}/{taxonomy_key}/levels
+- "Partially update a level?" -> PATCH /metadata_taxonomies/{namespace}/{taxonomy_key}/levels/{level_index}
+- "Create a levels:append?" -> POST /metadata_taxonomies/{namespace}/{taxonomy_key}/levels:append
+- "Create a levels:trim?" -> POST /metadata_taxonomies/{namespace}/{taxonomy_key}/levels:trim
+- "Search nodes?" -> GET /metadata_taxonomies/{namespace}/{taxonomy_key}/nodes
+- "Create a node?" -> POST /metadata_taxonomies/{namespace}/{taxonomy_key}/nodes
+- "Get node details?" -> GET /metadata_taxonomies/{namespace}/{taxonomy_key}/nodes/{node_id}
+- "Partially update a node?" -> PATCH /metadata_taxonomies/{namespace}/{taxonomy_key}/nodes/{node_id}
+- "Delete a node?" -> DELETE /metadata_taxonomies/{namespace}/{taxonomy_key}/nodes/{node_id}
+- "Search options?" -> GET /metadata_templates/{namespace}/{template_key}/fields/{field_key}/options
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

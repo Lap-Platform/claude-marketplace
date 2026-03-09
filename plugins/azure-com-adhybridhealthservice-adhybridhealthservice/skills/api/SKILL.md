@@ -104,88 +104,82 @@ https://management.azure.com
 | GET | /providers/Microsoft.ADHybridHealthService/services/{serviceName}/ipAddressAggregateSettings | Gets the IP address aggregate settings. |
 | PATCH | /providers/Microsoft.ADHybridHealthService/services/{serviceName}/ipAddressAggregateSettings | Updates the IP address aggregate settings alert thresholds. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What AD DS services are registered?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices
-- "Show me details for a specific ADDS service" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}
-- "Are there any active alerts for my sync service?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/alerts
-- "What servers are members of this service?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers
-- "Register a new health monitoring service" -> POST /providers/Microsoft.ADHybridHealthService/services
-- "Remove a decommissioned service member" -> DELETE /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers/{serviceMemberId}
-- "What is the AD replication status across domain controllers?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/replicationstatus
-- "Show replication details with error info" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/replicationdetails
-- "Get the forest summary for my AD DS environment" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/forestsummary
-- "Are there sync export errors in my service?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/exporterrors/counts
-- "Which users had bad password attempts?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/reports/badpassword/details/user
-- "Download risky IP report blobs" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/reports/riskyIp/blobUris
-- "Is my tenant on the premium tier?" -> GET /providers/Microsoft.ADHybridHealthService/services/premiumCheck
-- "What metrics are available for a service?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/metricmetadata
-- "Check if data from a service member is fresh" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers/{serviceMemberId}/datafreshness
-
-## Response Tips
-
-- **Service listings** (`/services`, `/addsservices`): Support `$filter`, `skipCount`, and `takeCount` for pagination -- always pass `takeCount` to avoid unbounded results.
-- **Alerts** (`/alerts`): Filter by `state` (active/resolved), `from`/`to` date range; results may be nested under a value array with continuation tokens.
-- **Metrics** (`/metrics/{metricName}/groups/{groupName}`): Require `fromDate`/`toDate` for time-scoped data; `/average` and `/sum` variants return aggregated scalars instead of series.
-- **Replication** (`/replicationdetails`, `/replicationsummary`): Use `nextPartitionKey` and `nextRowKey` for server-side pagination across large AD topologies.
-- **Deletes**: Service deletion returns 204 (no body); service member deletion returns 200 -- check status code, not response body.
-- **Export errors** (`/exporterrors/listV2`): Requires `errorBucket` to scope which error category to retrieve.
-- **IP aggregates** (`/ipAddressAggregates`): Uses `skiptoken` for continuation-style pagination, not offset-based.
-
-## Anomaly Flags
-
-- **Stale data freshness**: Surface proactively when `/datafreshness` indicates a service member has not reported in over 24 hours -- likely agent offline or network issue.
-- **Replication failures**: Flag non-zero error counts in `/replicationdetails` (especially with `withDetails=true`) as these indicate AD replication topology problems.
-- **Export error spikes**: Alert when `/exporterrors/counts` shows increasing error counts, which signal sync pipeline failures.
-- **Premium check failures**: If `/premiumCheck` returns a non-premium status, warn that advanced features (risky IP reports, certain metrics) may be unavailable.
-- **Risky IP activity**: Proactively surface when `/ipAddressAggregates` returns entries, as these represent potentially malicious login sources.
-- **Bad password reports**: Flag when `/reports/badpassword/details/user` returns results -- may indicate brute-force or credential-stuffing attacks.
-- **Deprecated api-version**: If the `api-version` parameter uses `2014-01-01`, note that newer API versions may be available and this version may be deprecated.
-- **Service member deletion without confirm**: Warn when calling DELETE on a service member without the `confirm` parameter, as behavior may vary.
-
-## Playbook
-
-### Investigate AD Replication Health
-
-1. List all ADDS services: `GET /addsservices`
-2. For each service, check replication status: `GET /addsservices/{serviceName}/replicationstatus`
-3. If issues found, pull detailed replication info: `GET /addsservices/{serviceName}/replicationdetails?withDetails=true`
-4. Review the replication summary by site: `GET /addsservices/{serviceName}/replicationsummary?isGroupbySite=true`
-5. Check forest-level overview: `GET /addsservices/{serviceName}/forestsummary`
-
-### Triage Service Alerts
-
-1. List all monitored services: `GET /services`
-2. Pull active alerts for a service: `GET /services/{serviceName}/alerts?state=active`
-3. Drill into per-member alerts: `GET /services/{serviceName}/servicemembers/{serviceMemberId}/alerts?state=active`
-4. Submit feedback on an alert: `POST /services/{serviceName}/feedbacktype/alerts/feedback` with alert feedback payload
-5. Review historical feedback: `GET /services/{serviceName}/feedbacktype/alerts/{shortName}/alertfeedback`
-
-### Onboard a New Service and Members
-
-1. Register the service: `POST /services` with service configuration map
-2. Verify registration: `GET /services/{serviceName}`
-3. Add service members (agents): `POST /services/{serviceName}/servicemembers` with member details
-4. Confirm member connectivity: `GET /services/{serviceName}/servicemembers/{serviceMemberId}/datafreshness`
-5. Review available metrics: `GET /services/{serviceName}/metricmetadata`
-
-### Analyze Risky IP and Bad Password Activity
-
-1. Check IP address aggregates: `GET /services/{serviceName}/ipAddressAggregates`
-2. Review aggregate settings: `GET /services/{serviceName}/ipAddressAggregateSettings`
-3. Pull bad password reports: `GET /services/{serviceName}/reports/badpassword/details/user`
-4. Generate risky IP report blob: `POST /services/{serviceName}/reports/riskyIp/generateBlobUri`
-5. Download report: `GET /services/{serviceName}/reports/riskyIp/blobUris`
-
-### Monitor Sync Export Health
-
-1. Get export status overview: `GET /services/{serviceName}/exportstatus`
-2. Check error counts by category: `GET /services/{serviceName}/exporterrors/counts`
-3. List specific errors: `GET /services/{serviceName}/exporterrors/listV2?errorBucket={bucket}`
-4. Check per-member export status: `GET /services/{serviceName}/servicemembers/{serviceMemberId}/exportstatus`
-5. Verify connector health: `GET /service/{serviceName}/servicemembers/{serviceMemberId}/connectors`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all addsservices?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices
+- "Create a addsservice?" -> POST /providers/Microsoft.ADHybridHealthService/addsservices
+- "Get addsservice details?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}
+- "Delete a addsservice?" -> DELETE /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}
+- "Partially update a addsservice?" -> PATCH /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}
+- "List all alerts?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/alerts
+- "List all configuration?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/configuration
+- "Get dimension details?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/dimensions/{dimension}
+- "List all addsservicemembers?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/addsservicemembers
+- "Search addomainservicemembers?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/addomainservicemembers
+- "List all userpreference?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/features/{featureName}/userpreference
+- "Create a userpreference?" -> POST /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/features/{featureName}/userpreference
+- "List all forestsummary?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/forestsummary
+- "Get group details?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/metrics/{metricName}/groups/{groupName}
+- "List all average?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/metrics/{metricName}/groups/{groupName}/average
+- "List all sum?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/metrics/{metricName}/groups/{groupName}/sum
+- "List all metricmetadata?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/metricmetadata
+- "Get metricmetadata details?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/metricmetadata/{metricName}
+- "Get group details?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/metricmetadata/{metricName}/groups/{groupName}
+- "List all replicationdetails?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/replicationdetails
+- "List all replicationstatus?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/replicationstatus
+- "Search replicationsummary?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/replicationsummary
+- "List all servicemembers?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/servicemembers
+- "Create a servicemember?" -> POST /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/servicemembers
+- "Get servicemember details?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/servicemembers/{serviceMemberId}
+- "Delete a servicemember?" -> DELETE /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/servicemembers/{serviceMemberId}
+- "List all alerts?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/servicemembers/{serviceMemberId}/alerts
+- "List all credentials?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/{serviceName}/servicemembers/{serviceMemberId}/credentials
+- "List all premiumCheck?" -> GET /providers/Microsoft.ADHybridHealthService/addsservices/premiumCheck
+- "List all operations?" -> GET /providers/Microsoft.ADHybridHealthService/operations
+- "Create a configuration?" -> POST /providers/Microsoft.ADHybridHealthService/configuration
+- "List all configuration?" -> GET /providers/Microsoft.ADHybridHealthService/configuration
+- "List all IsDevOps?" -> GET /providers/Microsoft.ADHybridHealthService/reports/DevOps/IsDevOps
+- "List all services?" -> GET /providers/Microsoft.ADHybridHealthService/services
+- "Create a service?" -> POST /providers/Microsoft.ADHybridHealthService/services
+- "List all premiumCheck?" -> GET /providers/Microsoft.ADHybridHealthService/services/premiumCheck
+- "Get service details?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}
+- "Delete a service?" -> DELETE /providers/Microsoft.ADHybridHealthService/services/{serviceName}
+- "Partially update a service?" -> PATCH /providers/Microsoft.ADHybridHealthService/services/{serviceName}
+- "List all alerts?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/alerts
+- "Get checkServiceFeatureAvailibility details?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/checkServiceFeatureAvailibility/{featureName}
+- "List all counts?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/exporterrors/counts
+- "List all listV2?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/exporterrors/listV2
+- "List all exportstatus?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/exportstatus
+- "Create a feedback?" -> POST /providers/Microsoft.ADHybridHealthService/services/{serviceName}/feedbacktype/alerts/feedback
+- "List all alertfeedback?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/feedbacktype/alerts/{shortName}/alertfeedback
+- "Get group details?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/metrics/{metricName}/groups/{groupName}
+- "List all average?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/metrics/{metricName}/groups/{groupName}/average
+- "List all sum?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/metrics/{metricName}/groups/{groupName}/sum
+- "List all metricmetadata?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/metricmetadata
+- "Get metricmetadata details?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/metricmetadata/{metricName}
+- "Get group details?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/metricmetadata/{metricName}/groups/{groupName}
+- "List all monitoringconfigurations?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/monitoringconfigurations
+- "List all user?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/reports/badpassword/details/user
+- "List all servicemembers?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers
+- "Create a servicemember?" -> POST /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers
+- "Get servicemember details?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers/{serviceMemberId}
+- "Delete a servicemember?" -> DELETE /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers/{serviceMemberId}
+- "List all alerts?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers/{serviceMemberId}/alerts
+- "List all connectors?" -> GET /providers/Microsoft.ADHybridHealthService/service/{serviceName}/servicemembers/{serviceMemberId}/connectors
+- "List all credentials?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers/{serviceMemberId}/credentials
+- "List all datafreshness?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers/{serviceMemberId}/datafreshness
+- "List all exportstatus?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers/{serviceMemberId}/exportstatus
+- "List all globalconfiguration?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers/{serviceMemberId}/globalconfiguration
+- "Get group details?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers/{serviceMemberId}/metrics/{metricName}/groups/{groupName}
+- "List all serviceconfiguration?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers/{serviceMemberId}/serviceconfiguration
+- "Get TenantWhitelisting details?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/TenantWhitelisting/{featureName}
+- "List all blobUris?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/reports/riskyIp/blobUris
+- "Create a generateBlobUri?" -> POST /providers/Microsoft.ADHybridHealthService/services/{serviceName}/reports/riskyIp/generateBlobUri
+- "Get metric details?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/servicemembers/{serviceMemberId}/metrics/{metricName}
+- "List all ipAddressAggregates?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/ipAddressAggregates
+- "List all ipAddressAggregateSettings?" -> GET /providers/Microsoft.ADHybridHealthService/services/{serviceName}/ipAddressAggregateSettings
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

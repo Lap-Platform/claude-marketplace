@@ -366,92 +366,187 @@ https://api.clerk.com/v1
 | POST | /m2m_tokens/{m2m_token_id}/revoke | Revoke a M2M Token |
 | POST | /m2m_tokens/verify | Verify a M2M Token |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I look up a user by email address?" -> GET /users (with `email_address` filter)
-- "How can I ban a user from my application?" -> POST /users/{user_id}/ban
-- "How do I create a new organization and invite members?" -> POST /organizations, then POST /organizations/{organization_id}/invitations
-- "How do I verify a client session token?" -> POST /clients/verify
-- "How can I revoke all sessions for a user?" -> GET /sessions (with `user_id` filter), then POST /sessions/{session_id}/revoke for each
-- "How do I set up a SAML SSO connection with Okta?" -> POST /saml_connections (with `provider: saml_okta`)
-- "How do I check if a user's password has been compromised?" -> POST /users/{user_id}/password/set_compromised
-- "How do I create a JWT template for custom claims?" -> POST /jwt_templates
-- "How can I add a user to an allowlist?" -> POST /allowlist_identifiers
-- "How do I manage billing subscriptions for an organization?" -> GET /organizations/{organization_id}/billing/subscription
-- "How do I rotate an OAuth application's client secret?" -> POST /oauth_applications/{oauth_application_id}/rotate_secret
-- "How can I create a sign-in token for passwordless login?" -> POST /sign_in_tokens
-- "How do I create a machine-to-machine credential?" -> POST /machines, then GET /machines/{machine_id}/secret_key
-- "How do I change a member's role in an organization?" -> PATCH /organizations/{organization_id}/memberships/{user_id}
-- "How do I issue an M2M token for service authentication?" -> POST /m2m_tokens
-
-## Response Tips
-
-- **Users/Organizations/Members**: Responses embed nested maps for `email_addresses`, `phone_numbers`, `external_accounts`, `organization_memberships`, and `public_user_data` -- always traverse these arrays rather than expecting flat fields.
-- **Paginated lists** (users, sessions, invitations, orgs, billing): Use `limit` (default 10) and `offset` for paging; look for `total_count` in the response to calculate remaining pages. Some endpoints return `{data: [], total_count: N}`, others return a bare array.
-- **Delete responses**: All deletions return a uniform `{object, id, slug, deleted, external_id}` shape -- check `deleted: true` to confirm success.
-- **Timestamps**: All `created_at`, `updated_at`, `expire_at`, `abandon_at` fields are Unix epoch integers (int64 milliseconds) -- not ISO strings.
-- **Billing/Subscriptions**: Money amounts are nested as `{amount, amount_formatted, currency, currency_symbol}` maps -- use `amount_formatted` for display, raw `amount` for calculations (in smallest currency unit).
-- **Error responses**: Status 422 indicates validation failures (bad input shape), 402 means a paid feature is required, 403 means insufficient permissions, 409 signals a conflict (duplicate resource).
-
-## Anomaly Flags
-
-- **402 Payment Required**: Surface immediately when any endpoint returns 402 -- the instance lacks the required plan tier for the feature (allowlists, blocklists, SAML, actor tokens, JWT templates, domains).
-- **409 Conflict**: Flag when creating email addresses, machine scopes, or API keys -- indicates a duplicate resource that the user likely needs to resolve before retrying.
-- **User locked/banned state**: After fetching a user, proactively flag if `banned: true`, `locked: true`, or `lockout_expires_in_seconds` is present -- these affect the user's ability to authenticate.
-- **Session status anomalies**: When listing sessions, surface any with status `abandoned`, `expired`, or `replaced` alongside `active` ones -- may indicate session hijacking or token reuse.
-- **MFA disabled unexpectedly**: If `two_factor_enabled` was true and a subsequent read shows it as false, flag this as a potential security event.
-- **Compromised passwords**: When `password_last_updated_at` is null or very old on a password-enabled account, flag as a credential hygiene risk.
-- **Template flagged as suspicious**: The `flagged_as_suspicious` field on email/SMS templates should be surfaced immediately -- it means Clerk has flagged content for review.
-- **Missing elevated permissions**: When `missing_member_with_elevated_permissions` is true on an organization, flag it -- the org may lack an admin.
-- **Token/key expiration**: For API keys, M2M tokens, sign-in tokens, and actor tokens, proactively check `expiration`/`expires_at` and warn if expiring within 24 hours.
-
-## Playbook
-
-### 1. Onboard a New User with Organization
-
-1. `POST /users` with `email_address`, `first_name`, `last_name`, and any `public_metadata`
-2. Note the returned `id` (user_id)
-3. `POST /organizations` with `name` and `created_by` set to the user_id
-4. Confirm the user is automatically an admin via `GET /organizations/{org_id}/memberships`
-5. `POST /organizations/{org_id}/invitations` for each additional team member with `email_address` and `role`
-6. Optionally `POST /invitations` to send a platform-level invitation email
-
-### 2. Set Up Enterprise SSO (SAML)
-
-1. `POST /saml_connections` with `name`, `provider` (e.g., `saml_okta`), `domain`, and IdP metadata fields (`idp_entity_id`, `idp_sso_url`, `idp_certificate` or `idp_metadata_url`)
-2. From the response, copy `acs_url` and `sp_entity_id` into your IdP's configuration
-3. `PATCH /saml_connections/{id}` with `active: true` once IdP setup is confirmed
-4. `POST /organizations/{org_id}/domains` with the verified domain and `enrollment_mode` to auto-enroll SSO users
-5. Test by signing in with a domain email; verify the connection with `GET /saml_connections/{id}` and check `user_count`
-
-### 3. Investigate and Lock a Suspicious Account
-
-1. `GET /users` with `email_address` or `query` filter to find the suspect user
-2. `GET /sessions?user_id={id}&status=active` to list all active sessions -- inspect `latest_activity` for suspicious IPs or devices
-3. `POST /users/{user_id}/password/set_compromised` with `revoke_all_sessions: true` to force password reset and kill all sessions
-4. `POST /users/{user_id}/lock` to prevent new sign-ins
-5. Review `GET /users/{user_id}/organization_memberships` to assess blast radius across orgs
-6. Once resolved, `POST /users/{user_id}/unlock` and `POST /users/{user_id}/password/unset_compromised`
-
-### 4. Configure Machine-to-Machine Authentication
-
-1. `POST /machines` with a descriptive `name` and optional `default_token_ttl`
-2. `GET /machines/{machine_id}/secret_key` to retrieve the client secret for the service
-3. `POST /machines/{machine_id}/scopes` with `to_machine_id` to grant cross-service access if needed
-4. `POST /m2m_tokens` with desired `token_format` (opaque or JWT) and `claims` to issue a token
-5. Verify tokens on the receiving service with `POST /m2m_tokens/verify`
-6. Rotate secrets periodically via `POST /machines/{machine_id}/secret_key/rotate` with a `previous_token_ttl` grace period
-
-### 5. Manage Billing Plans and Subscriptions
-
-1. `GET /billing/plans` to list available plans; note each plan's `id` and `payer_type`
-2. `POST /billing/prices` to create pricing tiers for a plan (set `amount` in smallest currency unit)
-3. `GET /billing/subscription_items` to list all active subscriptions across users and orgs
-4. To upgrade/downgrade: `POST /billing/subscription_items/{id}/price_transition` with `from_price_id` and `to_price_id`
-5. To cancel: `DELETE /billing/subscription_items/{id}` (use `end_now: true` for immediate cancellation)
-6. Review invoices via `GET /billing/statements` and drill into `GET /billing/statements/{id}/payment_attempts` for failed payments
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all interstitial?" -> GET /public/interstitial
+- "List all jwks?" -> GET /jwks
+- "List all clients?" -> GET /clients
+- "Create a verify?" -> POST /clients/verify
+- "Get client details?" -> GET /clients/{client_id}
+- "Create a email_address?" -> POST /email_addresses
+- "Get email_address details?" -> GET /email_addresses/{email_address_id}
+- "Delete a email_address?" -> DELETE /email_addresses/{email_address_id}
+- "Partially update a email_address?" -> PATCH /email_addresses/{email_address_id}
+- "Create a phone_number?" -> POST /phone_numbers
+- "Get phone_number details?" -> GET /phone_numbers/{phone_number_id}
+- "Delete a phone_number?" -> DELETE /phone_numbers/{phone_number_id}
+- "Partially update a phone_number?" -> PATCH /phone_numbers/{phone_number_id}
+- "List all sessions?" -> GET /sessions
+- "Create a session?" -> POST /sessions
+- "Get session details?" -> GET /sessions/{session_id}
+- "Create a refresh?" -> POST /sessions/{session_id}/refresh
+- "Create a revoke?" -> POST /sessions/{session_id}/revoke
+- "Create a token?" -> POST /sessions/{session_id}/tokens
+- "Get template details?" -> GET /templates/{template_type}
+- "Get template details?" -> GET /templates/{template_type}/{slug}
+- "Update a template?" -> PUT /templates/{template_type}/{slug}
+- "Create a revert?" -> POST /templates/{template_type}/{slug}/revert
+- "Create a preview?" -> POST /templates/{template_type}/{slug}/preview
+- "Create a toggle_delivery?" -> POST /templates/{template_type}/{slug}/toggle_delivery
+- "Search users?" -> GET /users
+- "Create a user?" -> POST /users
+- "Search count?" -> GET /users/count
+- "Get user details?" -> GET /users/{user_id}
+- "Partially update a user?" -> PATCH /users/{user_id}
+- "Delete a user?" -> DELETE /users/{user_id}
+- "Create a ban?" -> POST /users/{user_id}/ban
+- "Create a unban?" -> POST /users/{user_id}/unban
+- "Create a ban?" -> POST /users/ban
+- "Create a unban?" -> POST /users/unban
+- "Create a lock?" -> POST /users/{user_id}/lock
+- "Create a unlock?" -> POST /users/{user_id}/unlock
+- "Create a profile_image?" -> POST /users/{user_id}/profile_image
+- "List all subscription?" -> GET /users/{user_id}/billing/subscription
+- "Get oauth_access_token details?" -> GET /users/{user_id}/oauth_access_tokens/{provider}
+- "List all organization_memberships?" -> GET /users/{user_id}/organization_memberships
+- "List all organization_invitations?" -> GET /users/{user_id}/organization_invitations
+- "Create a verify_password?" -> POST /users/{user_id}/verify_password
+- "Create a verify_totp?" -> POST /users/{user_id}/verify_totp
+- "Delete a passkey?" -> DELETE /users/{user_id}/passkeys/{passkey_identification_id}
+- "Delete a web3_wallet?" -> DELETE /users/{user_id}/web3_wallets/{web3_wallet_identification_id}
+- "Delete a external_account?" -> DELETE /users/{user_id}/external_accounts/{external_account_id}
+- "Create a set_compromised?" -> POST /users/{user_id}/password/set_compromised
+- "Create a unset_compromised?" -> POST /users/{user_id}/password/unset_compromised
+- "Create a invitation?" -> POST /invitations
+- "Search invitations?" -> GET /invitations
+- "Create a bulk?" -> POST /invitations/bulk
+- "Create a revoke?" -> POST /invitations/{invitation_id}/revoke
+- "Search organization_invitations?" -> GET /organization_invitations
+- "List all allowlist_identifiers?" -> GET /allowlist_identifiers
+- "Create a allowlist_identifier?" -> POST /allowlist_identifiers
+- "Delete a allowlist_identifier?" -> DELETE /allowlist_identifiers/{identifier_id}
+- "List all blocklist_identifiers?" -> GET /blocklist_identifiers
+- "Create a blocklist_identifier?" -> POST /blocklist_identifiers
+- "Delete a blocklist_identifier?" -> DELETE /blocklist_identifiers/{identifier_id}
+- "Create a actor_token?" -> POST /actor_tokens
+- "Create a revoke?" -> POST /actor_tokens/{actor_token_id}/revoke
+- "List all domains?" -> GET /domains
+- "Create a domain?" -> POST /domains
+- "Delete a domain?" -> DELETE /domains/{domain_id}
+- "Partially update a domain?" -> PATCH /domains/{domain_id}
+- "List all instance?" -> GET /instance
+- "List all protect?" -> GET /instance/protect
+- "Create a change_domain?" -> POST /instance/change_domain
+- "Create a svix?" -> POST /webhooks/svix
+- "Create a svix_url?" -> POST /webhooks/svix_url
+- "List all jwt_templates?" -> GET /jwt_templates
+- "Create a jwt_template?" -> POST /jwt_templates
+- "Get jwt_template details?" -> GET /jwt_templates/{template_id}
+- "Partially update a jwt_template?" -> PATCH /jwt_templates/{template_id}
+- "Delete a jwt_template?" -> DELETE /jwt_templates/{template_id}
+- "Search machines?" -> GET /machines
+- "Create a machine?" -> POST /machines
+- "Get machine details?" -> GET /machines/{machine_id}
+- "Partially update a machine?" -> PATCH /machines/{machine_id}
+- "Delete a machine?" -> DELETE /machines/{machine_id}
+- "List all secret_key?" -> GET /machines/{machine_id}/secret_key
+- "Create a rotate?" -> POST /machines/{machine_id}/secret_key/rotate
+- "Create a scope?" -> POST /machines/{machine_id}/scopes
+- "Delete a scope?" -> DELETE /machines/{machine_id}/scopes/{other_machine_id}
+- "Search organizations?" -> GET /organizations
+- "Create a organization?" -> POST /organizations
+- "Get organization details?" -> GET /organizations/{organization_id}
+- "Partially update a organization?" -> PATCH /organizations/{organization_id}
+- "Delete a organization?" -> DELETE /organizations/{organization_id}
+- "List all subscription?" -> GET /organizations/{organization_id}/billing/subscription
+- "Create a invitation?" -> POST /organizations/{organization_id}/invitations
+- "List all invitations?" -> GET /organizations/{organization_id}/invitations
+- "Create a bulk?" -> POST /organizations/{organization_id}/invitations/bulk
+- "List all pending?" -> GET /organizations/{organization_id}/invitations/pending
+- "Get invitation details?" -> GET /organizations/{organization_id}/invitations/{invitation_id}
+- "Create a revoke?" -> POST /organizations/{organization_id}/invitations/{invitation_id}/revoke
+- "Search organization_roles?" -> GET /organization_roles
+- "Create a organization_role?" -> POST /organization_roles
+- "Get organization_role details?" -> GET /organization_roles/{organization_role_id}
+- "Partially update a organization_role?" -> PATCH /organization_roles/{organization_role_id}
+- "Delete a organization_role?" -> DELETE /organization_roles/{organization_role_id}
+- "Delete a permission?" -> DELETE /organization_roles/{organization_role_id}/permissions/{permission_id}
+- "Create a membership?" -> POST /organizations/{organization_id}/memberships
+- "Search memberships?" -> GET /organizations/{organization_id}/memberships
+- "Partially update a membership?" -> PATCH /organizations/{organization_id}/memberships/{user_id}
+- "Delete a membership?" -> DELETE /organizations/{organization_id}/memberships/{user_id}
+- "Create a domain?" -> POST /organizations/{organization_id}/domains
+- "List all domains?" -> GET /organizations/{organization_id}/domains
+- "Partially update a domain?" -> PATCH /organizations/{organization_id}/domains/{domain_id}
+- "Delete a domain?" -> DELETE /organizations/{organization_id}/domains/{domain_id}
+- "Search organization_domains?" -> GET /organization_domains
+- "Create a proxy_check?" -> POST /proxy_checks
+- "List all redirect_urls?" -> GET /redirect_urls
+- "Create a redirect_url?" -> POST /redirect_urls
+- "Get redirect_url details?" -> GET /redirect_urls/{id}
+- "Delete a redirect_url?" -> DELETE /redirect_urls/{id}
+- "Create a sign_in_token?" -> POST /sign_in_tokens
+- "Create a revoke?" -> POST /sign_in_tokens/{sign_in_token_id}/revoke
+- "Get sign_up details?" -> GET /sign_ups/{id}
+- "Partially update a sign_up?" -> PATCH /sign_ups/{id}
+- "List all oauth_applications?" -> GET /oauth_applications
+- "Create a oauth_application?" -> POST /oauth_applications
+- "Get oauth_application details?" -> GET /oauth_applications/{oauth_application_id}
+- "Partially update a oauth_application?" -> PATCH /oauth_applications/{oauth_application_id}
+- "Delete a oauth_application?" -> DELETE /oauth_applications/{oauth_application_id}
+- "Create a rotate_secret?" -> POST /oauth_applications/{oauth_application_id}/rotate_secret
+- "Search saml_connections?" -> GET /saml_connections
+- "Create a saml_connection?" -> POST /saml_connections
+- "Get saml_connection details?" -> GET /saml_connections/{saml_connection_id}
+- "Partially update a saml_connection?" -> PATCH /saml_connections/{saml_connection_id}
+- "Delete a saml_connection?" -> DELETE /saml_connections/{saml_connection_id}
+- "Create a testing_token?" -> POST /testing_tokens
+- "Create a task?" -> POST /agents/tasks
+- "Create a revoke?" -> POST /agents/tasks/{agent_task_id}/revoke
+- "List all organization_memberships?" -> GET /organization_memberships
+- "Search waitlist_entries?" -> GET /waitlist_entries
+- "Create a waitlist_entry?" -> POST /waitlist_entries
+- "Create a bulk?" -> POST /waitlist_entries/bulk
+- "Delete a waitlist_entry?" -> DELETE /waitlist_entries/{waitlist_entry_id}
+- "Create a invite?" -> POST /waitlist_entries/{waitlist_entry_id}/invite
+- "Create a reject?" -> POST /waitlist_entries/{waitlist_entry_id}/reject
+- "List all plans?" -> GET /billing/plans
+- "List all prices?" -> GET /billing/prices
+- "Create a price?" -> POST /billing/prices
+- "Search subscription_items?" -> GET /billing/subscription_items
+- "Delete a subscription_item?" -> DELETE /billing/subscription_items/{subscription_item_id}
+- "Create a extend_free_trial?" -> POST /billing/subscription_items/{subscription_item_id}/extend_free_trial
+- "Create a price_transition?" -> POST /billing/subscription_items/{subscription_item_id}/price_transition
+- "List all statements?" -> GET /billing/statements
+- "Get statement details?" -> GET /billing/statements/{statementID}
+- "List all payment_attempts?" -> GET /billing/statements/{statementID}/payment_attempts
+- "Search organization_permissions?" -> GET /organization_permissions
+- "Create a organization_permission?" -> POST /organization_permissions
+- "Get organization_permission details?" -> GET /organization_permissions/{permission_id}
+- "Partially update a organization_permission?" -> PATCH /organization_permissions/{permission_id}
+- "Delete a organization_permission?" -> DELETE /organization_permissions/{permission_id}
+- "Search role_sets?" -> GET /role_sets
+- "Create a role_set?" -> POST /role_sets
+- "Get role_set details?" -> GET /role_sets/{role_set_key_or_id}
+- "Partially update a role_set?" -> PATCH /role_sets/{role_set_key_or_id}
+- "Create a replace?" -> POST /role_sets/{role_set_key_or_id}/replace
+- "Create a role?" -> POST /role_sets/{role_set_key_or_id}/roles
+- "Create a replace?" -> POST /role_sets/{role_set_key_or_id}/roles/replace
+- "Create a api_key?" -> POST /api_keys
+- "Search api_keys?" -> GET /api_keys
+- "Get api_key details?" -> GET /api_keys/{apiKeyID}
+- "Partially update a api_key?" -> PATCH /api_keys/{apiKeyID}
+- "Delete a api_key?" -> DELETE /api_keys/{apiKeyID}
+- "List all secret?" -> GET /api_keys/{apiKeyID}/secret
+- "Create a revoke?" -> POST /api_keys/{apiKeyID}/revoke
+- "Create a verify?" -> POST /api_keys/verify
+- "Create a m2m_token?" -> POST /m2m_tokens
+- "List all m2m_tokens?" -> GET /m2m_tokens
+- "Create a revoke?" -> POST /m2m_tokens/{m2m_token_id}/revoke
+- "Create a verify?" -> POST /m2m_tokens/verify
+- "Create a verify?" -> POST /oauth_applications/access_tokens/verify
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

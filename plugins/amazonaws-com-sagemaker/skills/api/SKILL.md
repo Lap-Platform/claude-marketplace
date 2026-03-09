@@ -361,89 +361,10 @@ Not specified.
 | POST | / | Use this operation to update your workforce. You can use this operation to require that workers use specific IP addresses to work on tasks and to update your OpenID Connect (OIDC) Identity Provider (IdP) workforce configuration. The worker portal is now supported in VPC and public internet.  Use SourceIpConfig to restrict worker access to tasks to a specific range of IP addresses. You specify allowed IP addresses by creating a list of up to ten CIDRs. By default, a workforce isn't restricted to specific IP addresses. If you specify a range of IP addresses, workers who attempt to access tasks using any IP address outside the specified range are denied and get a Not Found error message on the worker portal. To restrict access to all the workers in public internet, add the SourceIpConfig CIDR value as "10.0.0.0/16".  Amazon SageMaker does not support Source Ip restriction for worker portals in VPC.  Use OidcConfig to update the configuration of a workforce created using your own OIDC IdP.   You can only update your OIDC IdP configuration when there are no work teams associated with your workforce. You can delete work teams using the DeleteWorkteam operation.  After restricting access to a range of IP addresses or updating your OIDC IdP configuration with this operation, you can view details about your update workforce using the DescribeWorkforce operation.  This operation only applies to private workforces. |
 | POST | / | Updates an existing work team with new member definitions or description. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I deploy a model to an endpoint?" -> POST / (CreateEndpoint: requires EndpointName, EndpointConfigName)
-- "What is the status of my training job?" -> POST / (DescribeTrainingJob: requires TrainingJobName)
-- "How do I create a notebook instance?" -> POST / (CreateNotebookInstance: requires NotebookInstanceName, InstanceType, RoleArn)
-- "How do I list all my endpoints and their health?" -> POST / (ListEndpoints: optional filters StatusEquals, NameContains, with pagination)
-- "How do I tune hyperparameters automatically?" -> POST / (CreateHyperParameterTuningJob: requires HyperParameterTuningJobName, HyperParameterTuningJobConfig)
-- "How do I check if my model has bias?" -> POST / (CreateModelBiasJobDefinition: requires JobDefinitionName, ModelBiasAppSpecification, ModelBiasJobInput, RoleArn)
-- "How do I run a batch transform on my data?" -> POST / (CreateTransformJob: requires TransformJobName, ModelName, TransformInput, TransformOutput, TransformResources)
-- "How do I stop a running training job?" -> POST / (StopTrainingJob: requires TrainingJobName)
-- "How do I set up a monitoring schedule for data quality?" -> POST / (CreateMonitoringSchedule: requires MonitoringScheduleName, MonitoringScheduleConfig)
-- "How do I create a feature store for my ML features?" -> POST / (CreateFeatureGroup: requires FeatureGroupName, RecordIdentifierFeatureName, EventTimeFeatureName, FeatureDefinitions)
-- "How do I search across all my SageMaker resources?" -> POST / (Search: requires Resource, optional SearchExpression, supports pagination)
-- "How do I create an MLflow tracking server?" -> POST / (CreateMlflowTrackingServer: requires TrackingServerName, ArtifactStoreUri, RoleArn)
-- "How do I get a presigned URL for a notebook?" -> POST / (CreatePresignedNotebookInstanceUrl: requires NotebookInstanceName)
-- "How do I set up an AutoML job for tabular data?" -> POST / (CreateAutoMLJobV2: requires AutoMLJobName, AutoMLJobInputDataConfig, OutputDataConfig, AutoMLProblemTypeConfig, RoleArn)
-- "How do I tag my SageMaker resources?" -> POST / (AddTags: requires ResourceArn, Tags)
-
-## Response Tips
-
-- **Create operations**: Return the resource ARN on success (e.g., `EndpointArn`, `TrainingJobArn`). Always capture and store these for subsequent Describe/Delete calls.
-- **Describe operations**: Return deeply nested objects with nullable fields marked `?`. Check `Status`, `FailureReason`, and timestamp fields to determine resource health. `UserContext` sub-objects track who created/modified the resource.
-- **List operations**: All return `NextToken` for pagination -- keep calling with the returned `NextToken` until it is absent or null. Use `MaxResults` (typically capped at 100) to control page size. Most support `SortBy`, `SortOrder`, and time-range filters.
-- **Delete operations**: Most return no body or just the resource ARN. Some resources (Domains, FeatureGroups) have async deletion -- poll with the corresponding Describe until a `ResourceNotFoundException` is thrown.
-- **Update operations**: Return the updated resource ARN. Changes may be async (endpoints, clusters) -- poll `DescribeEndpoint` for `EndpointStatus` to confirm completion.
-- **Error responses**: All actions share a single `POST /` path differentiated by the `X-Amz-Target` header. Errors return standard AWS error codes (`ValidationException`, `ResourceNotFound`, `ResourceLimitExceeded`).
-
-## Anomaly Flags
-
-- **Job failures**: Surface `FailureReason` immediately whenever `Status` is `Failed` on any Describe response (training jobs, processing jobs, endpoints, AutoML jobs, compilation jobs).
-- **Endpoint rollback**: Flag when `DescribeEndpoint` shows `PendingDeploymentSummary` is present or `EndpointStatus` is `RollingBack` or `SystemUpdating` -- the endpoint is mid-deployment.
-- **Warm pool reuse**: If `WarmPoolStatus.Status` is `Reused` on a training job, note cost savings; if `Available`, flag that idle warm pool instances are accruing charges.
-- **Spot training interruptions**: When `EnableManagedSpotTraining` is true, compare `TrainingTimeInSeconds` vs `BillableTimeInSeconds` to surface savings, and flag if `BillableTimeInSeconds` is unexpectedly high (spot was not granted).
-- **Tuning job stalls**: In `DescribeHyperParameterTuningJob`, flag if `TrainingJobStatusCounters.InProgress` is 0 but `ObjectiveStatusCounters.Pending` is high, or if `TuningJobCompletionDetails.NumberOfTrainingJobsObjectiveNotImproving` exceeds a threshold.
-- **Data quality drift**: When `DescribeMonitoringSchedule` shows `LastMonitoringExecutionSummary.MonitoringExecutionStatus` as `CompletedWithViolations`, surface the constraint violations.
-- **Deprecated image versions**: Flag `VendorGuidance` values of `NOT_PROVIDED` or `ARCHIVED` in `DescribeImageVersion` responses.
-- **Async endpoint failures**: If `AsyncInferenceConfig` is present on an endpoint, surface `S3FailurePath` for debugging failed async invocations.
-- **Network isolation risk**: Flag when `EnableNetworkIsolation` is `false` on training jobs or models handling sensitive data, or when VpcConfig is missing.
-
-## Playbook
-
-### 1. Train and Deploy a Model End-to-End
-
-1. **Create a training job**: Call CreateTrainingJob with `AlgorithmSpecification`, `InputDataConfig` (S3 training data), `OutputDataConfig` (S3 model artifacts), `ResourceConfig`, and `StoppingCondition`.
-2. **Monitor training**: Poll DescribeTrainingJob until `TrainingJobStatus` is `Completed`. Check `SecondaryStatusTransitions` for stage-by-stage progress. Inspect `FinalMetricDataList` for final metrics.
-3. **Create a model**: Call CreateModel referencing the `S3ModelArtifacts` from the training job output.
-4. **Create endpoint config**: Call CreateEndpointConfig with `ProductionVariants` specifying instance type, count, and the model name.
-5. **Create endpoint**: Call CreateEndpoint with the endpoint config name. Poll DescribeEndpoint until `EndpointStatus` is `InService`.
-6. **Verify**: Check `ProductionVariants` in the Describe response for `CurrentWeight` and `CurrentInstanceCount`.
-
-### 2. Run Hyperparameter Tuning and Pick the Best Model
-
-1. **Create tuning job**: Call CreateHyperParameterTuningJob with `Strategy` (Bayesian/Random), `ParameterRanges`, `ResourceLimits`, and a `TrainingJobDefinition`.
-2. **Monitor progress**: Poll DescribeHyperParameterTuningJob. Check `TrainingJobStatusCounters` for completed/in-progress/failed counts and `ObjectiveStatusCounters`.
-3. **List training jobs**: Call ListTrainingJobsForHyperParameterTuningJob to see individual trial results sorted by objective metric.
-4. **Extract best**: Read `BestTrainingJob` or `OverallBestTrainingJob` from the Describe response. Note the `TunedHyperParameters` and `FinalHyperParameterTuningJobObjectiveMetric`.
-5. **Deploy**: Follow the Train and Deploy playbook from step 3, using the best training job's model artifacts.
-
-### 3. Set Up Continuous Model Monitoring
-
-1. **Create baseline**: Call CreateDataQualityJobDefinition with your baseline dataset, a monitoring image URI, and output config for constraint/statistics files in S3.
-2. **Create schedule**: Call CreateMonitoringSchedule with a `ScheduleConfig` (e.g., cron expression for hourly/daily) referencing the job definition.
-3. **Start schedule**: Call StartMonitoringSchedule to activate.
-4. **Check execution results**: Poll ListMonitoringExecutions filtered by schedule name. For each execution, check `MonitoringExecutionStatus`.
-5. **Set up alerts**: Call ListMonitoringAlerts and UpdateMonitoringAlert to configure `DatapointsToAlert` and `EvaluationPeriod` thresholds.
-
-### 4. Manage SageMaker Studio Domains and User Profiles
-
-1. **Create domain**: Call CreateDomain with `AuthMode` (SSO or IAM), `DefaultUserSettings`, `SubnetIds`, and `VpcId`. Capture the returned `DomainId`.
-2. **Create user profile**: Call CreateUserProfile with the `DomainId` and `UserProfileName`. Optionally customize `UserSettings` (JupyterLab, CodeEditor, Canvas apps).
-3. **Generate presigned URL**: Call CreatePresignedDomainUrl with `DomainId` and `UserProfileName` to get a login URL.
-4. **Create shared space**: Call CreateSpace with `DomainId`, `SpaceName`, and `SpaceSharingSettings` for collaborative work.
-5. **Update settings**: Call UpdateDomain or UpdateUserProfile to modify default resource specs, security groups, or app settings as needs evolve.
-
-### 5. Build and Manage ML Pipelines
-
-1. **Create pipeline**: Call CreatePipeline with `PipelineName`, `PipelineDefinition` (JSON DAG or S3 reference), and `RoleArn`.
-2. **Start execution**: Call StartPipelineExecution with the pipeline name. Optionally pass `PipelineParameters` to override defaults. Capture `PipelineExecutionArn`.
-3. **Monitor steps**: Call ListPipelineExecutionSteps with the execution ARN. Check each step's `StepStatus` and `FailureReason`.
-4. **Handle callbacks**: For callback steps, call SendPipelineExecutionStepSuccess (with `OutputParameters`) or SendPipelineExecutionStepFailure (with `FailureReason`) using the `CallbackToken`.
-5. **Iterate**: Call UpdatePipeline to modify the definition, then re-execute. Use ListPipelineExecutions to compare runs and RetryPipelineExecution for transient failures.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

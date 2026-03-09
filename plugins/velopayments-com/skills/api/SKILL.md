@@ -212,92 +212,114 @@ https://api.sandbox.velopayments.com/
 | POST | /v1/webhooks/{webhookId} | Update Webhook |
 | POST | /v1/webhooks/{webhookId}/ping |  |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I authenticate with the Velo API?" -> POST /v1/authenticate
-- "How do I log out of my session?" -> POST /v1/logout
-- "How do I reset a user's password?" -> POST /v1/password/reset
-- "How do I list all payees for a payor?" -> GET /v4/payees
-- "How do I onboard a new payee?" -> POST /v4/payees
-- "What is the status of a payee batch import?" -> GET /v4/payees/batch/{batchId}
-- "How do I create and submit a payout?" -> POST /v3/payouts, then POST /v3/payouts/{payoutId}/quote, then POST /v3/payouts/{payoutId}
-- "How do I check the status of a payment?" -> GET /v4/paymentaudit/payments/{paymentId}
-- "How do I see my source account balances?" -> GET /v3/sourceAccounts
-- "How do I transfer funds between source accounts?" -> POST /v3/sourceAccounts/{sourceAccountId}/transfers
-- "How do I invite a user to the platform?" -> POST /v2/users/invite
-- "How do I set up a webhook for payment notifications?" -> POST /v1/webhooks
-- "What payee records changed since yesterday?" -> GET /v4/payees/deltas
-- "How do I withdraw a payment before it settles?" -> POST /v1/payments/{paymentId}/withdraw
-- "How do I get payout statistics for this month?" -> GET /v4/paymentaudit/payoutStatistics
-
-## Response Tips
-
-- **Paginated lists** (users, payees, payments, payouts, source accounts, fundings, webhooks): Response contains `page` (numberOfElements, totalElements, totalPages, page, pageSize), `links` for HATEOAS navigation, and `content` array with the actual records. Always check `totalPages` to determine if more pages exist.
-- **Batch operations** (POST payees): Returns a `batchId` and `rejectedCsvRows` array immediately; poll GET /v4/payees/batch/{batchId} for `status`, `failureCount`, `pendingCount`, and `failures` array until processing completes.
-- **Authentication**: POST /v1/authenticate returns `access_token`, `expires_in` (seconds), and `entityIds` (array of payor/payee UUIDs the token grants access to). Use the access token as `Bearer` in subsequent requests.
-- **Payouts**: GET /v3/payouts/{payoutId} nests `fxSummaries`, `accounts`, `acceptedPayments`, `rejectedPayments`, and `schedule` -- inspect `rejectedPayments` for failures before submitting.
-- **204 responses**: Most mutation endpoints (update, delete, disable, enable) return empty 204 bodies -- success is indicated by status code alone.
-- **Sensitive data**: Payee and payment channel endpoints accept `sensitive=true` to include masked account numbers and routing numbers; defaults to redacted.
-- **Delta endpoints**: Return records changed since `updatedSince` (ISO 8601 datetime) -- use these for incremental sync rather than full list pulls.
-
-## Anomaly Flags
-
-- **Token expiry approaching**: Surface a warning when `expires_in` from authentication is below 300 seconds; prompt for re-authentication.
-- **Batch import failures**: Flag immediately when GET /v4/payees/batch/{batchId} shows `failureCount > 0` and list the failure reasons.
-- **Rejected payments in payout**: After creating a payout, if GET /v3/payouts/{payoutId} shows `paymentsRejected > 0`, surface the rejected payment details before the user attempts to submit.
-- **Low source account balance**: When GET /v3/sourceAccounts/{id} returns a `balance` near or below the `notifications.minimumBalance` threshold, warn the user and suggest a funding request.
-- **Payout status INCOMPLETE or WITHDRAWN**: Flag payouts with unexpected terminal states and surface the reason.
-- **Failed payments count rising**: If GET /v4/paymentaudit/payoutStatistics shows `thisMonthFailedPaymentsCount` increasing across calls, alert the user to investigate.
-- **409 Conflict errors**: These indicate concurrent modification or duplicate operations (duplicate payee invite, payment channel already exists) -- surface the conflict detail and suggest corrective action.
-- **User locked out**: When GET /v2/users/{userId} returns `lockedOut: true`, proactively note the `lockedOutTimestamp` and suggest using POST /v2/users/{userId}/unlock.
-- **Deprecated v3 endpoints**: When v4 equivalents exist (payees, payment audit), flag usage of v3 endpoints and recommend migration.
-
-## Playbook
-
-### 1. Authenticate and Set Up a Session
-
-1. POST /v1/authenticate with `grant_type=client_credentials` (uses HTTP Basic Auth with API key and secret)
-2. Store the returned `access_token` and note `expires_in` for refresh timing
-3. If MFA is required, POST /v1/validate with the OTP code to get a fully scoped token
-4. Use the `entityIds` array to determine which payor/payee contexts are available
-5. Set `Authorization: Bearer {access_token}` on all subsequent requests
-
-### 2. Onboard Payees and Verify Batch Status
-
-1. POST /v4/payees with the `payorId` and array of payee objects (email, remoteId, type, address, payment channel, individual/company details)
-2. Capture the returned `batchId` from the 201 response
-3. Poll GET /v4/payees/batch/{batchId} until `status` is no longer processing
-4. Review `failures` array for any rejected records and correct the data
-5. For successfully created payees, POST /v4/payees/{payeeId}/invite to send onboarding invitations
-6. Monitor invitation status via GET /v4/payees/payors/{payorId}/invitationStatus
-
-### 3. Create, Quote, and Submit a Payout
-
-1. Ensure the source account has sufficient funds: GET /v3/sourceAccounts to check balances
-2. If funds are low, POST /v3/sourceAccounts/{sourceAccountId}/fundingRequest to request a top-up
-3. POST /v3/payouts with the payments array (each payment needs `remoteId`, `currency`, `amount`)
-4. POST /v3/payouts/{payoutId}/quote to get FX rates and summaries
-5. Review the quote: GET /v3/payouts/{payoutId} to inspect accepted vs rejected payments
-6. POST /v3/payouts/{payoutId} to submit (optionally set `fxRateDegradationThresholdPercentage`)
-7. Optionally schedule instead: POST /v3/payouts/{payoutId}/schedule with `scheduledFor` datetime
-
-### 4. Monitor Payments and Handle Issues
-
-1. GET /v4/paymentaudit/payments with date range and status filters to find payments of interest
-2. For a specific payment, GET /v4/paymentaudit/payments/{paymentId} with `sensitive=true` for full details
-3. Check the `events` array for the payment lifecycle timeline
-4. If a payment is in ACCEPTED or AWAITING_FUNDS status and needs to be cancelled, POST /v1/payments/{paymentId}/withdraw with a reason
-5. For ongoing monitoring, use GET /v4/payments/deltas with `updatedSince` to catch status changes incrementally
-
-### 5. Configure Webhooks for Real-Time Notifications
-
-1. POST /v1/webhooks with `payorId`, `webhookUrl`, `enabled: true`, and desired `categories`
-2. Optionally set `authorizationHeader` for your endpoint to verify incoming calls
-3. POST /v1/webhooks/{webhookId}/ping to test delivery and confirm your endpoint responds correctly
-4. GET /v1/webhooks/{webhookId} to verify the configuration is saved
-5. To pause notifications, POST /v1/webhooks/{webhookId} with `enabled: false`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a authenticate?" -> POST /v1/authenticate
+- "Create a logout?" -> POST /v1/logout
+- "Create a reset?" -> POST /v1/password/reset
+- "Create a validate?" -> POST /v1/validate
+- "List all users?" -> GET /v2/users
+- "Delete a user?" -> DELETE /v2/users/{userId}
+- "Get user details?" -> GET /v2/users/{userId}
+- "Create a disable?" -> POST /v2/users/{userId}/disable
+- "Create a enable?" -> POST /v2/users/{userId}/enable
+- "Create a invite?" -> POST /v2/users/invite
+- "Create a roleUpdate?" -> POST /v2/users/{userId}/roleUpdate
+- "Create a unregister?" -> POST /v2/users/{userId}/mfa/unregister
+- "Create a token?" -> POST /v2/users/{userId}/tokens
+- "Create a unlock?" -> POST /v2/users/{userId}/unlock
+- "Create a userDetailsUpdate?" -> POST /v2/users/{userId}/userDetailsUpdate
+- "Create a sm?" -> POST /v2/users/registration/sms
+- "List all self?" -> GET /v2/users/self
+- "Create a userDetailsUpdate?" -> POST /v2/users/self/userDetailsUpdate
+- "Create a unregister?" -> POST /v2/users/self/mfa/unregister
+- "Create a password?" -> POST /v2/users/self/password
+- "Create a validate?" -> POST /v2/users/self/password/validate
+- "Get payor details?" -> GET /v2/payors/{payorId}
+- "Create a application?" -> POST /v1/payors/{payorId}/applications
+- "Create a key?" -> POST /v1/payors/{payorId}/applications/{applicationId}/keys
+- "Create a reminderEmailsUpdate?" -> POST /v1/payors/{payorId}/reminderEmailsUpdate
+- "Create a logo?" -> POST /v1/payors/{payorId}/branding/logos
+- "List all branding?" -> GET /v1/payors/{payorId}/branding
+- "List all payorLinks?" -> GET /v1/payorLinks
+- "Create a payorLink?" -> POST /v1/payorLinks
+- "Delete a payee?" -> DELETE /v3/payees/{payeeId}
+- "Get payee details?" -> GET /v3/payees/{payeeId}
+- "List all payees?" -> GET /v3/payees
+- "Create a payee?" -> POST /v3/payees
+- "Get batch details?" -> GET /v3/payees/batch/{batchId}
+- "Create a invite?" -> POST /v3/payees/{payeeId}/invite
+- "List all invitationStatus?" -> GET /v3/payees/payors/{payorId}/invitationStatus
+- "List all deltas?" -> GET /v3/payees/deltas
+- "Create a remoteIdUpdate?" -> POST /v3/payees/{payeeId}/remoteIdUpdate
+- "Create a payeeDetailsUpdate?" -> POST /v3/payees/{payeeId}/payeeDetailsUpdate
+- "Delete a payee?" -> DELETE /v4/payees/{payeeId}
+- "Get payee details?" -> GET /v4/payees/{payeeId}
+- "Create a payeeDetailsUpdate?" -> POST /v4/payees/{payeeId}/payeeDetailsUpdate
+- "Create a remoteIdUpdate?" -> POST /v4/payees/{payeeId}/remoteIdUpdate
+- "List all payees?" -> GET /v4/payees
+- "Create a payee?" -> POST /v4/payees
+- "Get batch details?" -> GET /v4/payees/batch/{batchId}
+- "Create a invite?" -> POST /v4/payees/{payeeId}/invite
+- "List all invitationStatus?" -> GET /v4/payees/payors/{payorId}/invitationStatus
+- "List all deltas?" -> GET /v4/payees/deltas
+- "List all paymentChannels?" -> GET /v4/payees/{payeeId}/paymentChannels/
+- "Create a paymentChannel?" -> POST /v4/payees/{payeeId}/paymentChannels/
+- "Delete a paymentChannel?" -> DELETE /v4/payees/{payeeId}/paymentChannels/{paymentChannelId}
+- "Get paymentChannel details?" -> GET /v4/payees/{payeeId}/paymentChannels/{paymentChannelId}
+- "Create a enable?" -> POST /v4/payees/{payeeId}/paymentChannels/{paymentChannelId}/enable
+- "Create a notification?" -> POST /v1/sourceAccounts/{sourceAccountId}/notifications
+- "Create a fundingRequest?" -> POST /v2/sourceAccounts/{sourceAccountId}/fundingRequest
+- "List all sourceAccounts?" -> GET /v2/sourceAccounts
+- "Get sourceAccount details?" -> GET /v2/sourceAccounts/{sourceAccountId}
+- "Create a transfer?" -> POST /v2/sourceAccounts/{sourceAccountId}/transfers
+- "Create a fundingRequest?" -> POST /v3/sourceAccounts/{sourceAccountId}/fundingRequest
+- "List all sourceAccounts?" -> GET /v3/sourceAccounts
+- "Delete a sourceAccount?" -> DELETE /v3/sourceAccounts/{sourceAccountId}
+- "Get sourceAccount details?" -> GET /v3/sourceAccounts/{sourceAccountId}
+- "Create a transfer?" -> POST /v3/sourceAccounts/{sourceAccountId}/transfers
+- "Create a notification?" -> POST /v3/sourceAccounts/{sourceAccountId}/notifications
+- "List all fundingAccounts?" -> GET /v2/fundingAccounts
+- "Create a fundingAccount?" -> POST /v2/fundingAccounts
+- "Get fundingAccount details?" -> GET /v2/fundingAccounts/{fundingAccountId}
+- "List all fundings?" -> GET /v1/deltas/fundings
+- "Get funding details?" -> GET /v1/fundings/{fundingId}
+- "List all transactions?" -> GET /v1/transactions
+- "Create a transaction?" -> POST /v1/transactions
+- "Get transaction details?" -> GET /v1/transactions/{transactionId}
+- "List all fundings?" -> GET /v1/paymentaudit/fundings
+- "List all payoutStatistics?" -> GET /v1/paymentaudit/payoutStatistics
+- "List all payments?" -> GET /v1/deltas/payments
+- "List all payouts?" -> GET /v3/paymentaudit/payouts
+- "Get payout details?" -> GET /v3/paymentaudit/payouts/{payoutId}
+- "List all payments?" -> GET /v3/paymentaudit/payments
+- "Get payment details?" -> GET /v3/paymentaudit/payments/{paymentId}
+- "List all transactions?" -> GET /v3/paymentaudit/transactions
+- "List all payouts?" -> GET /v4/paymentaudit/payouts
+- "Get payout details?" -> GET /v4/paymentaudit/payouts/{payoutId}
+- "List all payments?" -> GET /v4/paymentaudit/payments
+- "Get payment details?" -> GET /v4/paymentaudit/payments/{paymentId}
+- "List all fundings?" -> GET /v4/paymentaudit/fundings
+- "List all payoutStatistics?" -> GET /v4/paymentaudit/payoutStatistics
+- "List all deltas?" -> GET /v4/payments/deltas
+- "List all transactions?" -> GET /v4/paymentaudit/transactions
+- "Create a payout?" -> POST /v3/payouts
+- "Delete a payout?" -> DELETE /v3/payouts/{payoutId}
+- "Get payout details?" -> GET /v3/payouts/{payoutId}
+- "Create a quote?" -> POST /v3/payouts/{payoutId}/quote
+- "List all payments?" -> GET /v3/payouts/{payoutId}/payments
+- "Create a schedule?" -> POST /v3/payouts/{payoutId}/schedule
+- "List all paymentChannelRules?" -> GET /v1/paymentChannelRules
+- "Create a withdraw?" -> POST /v1/payments/{paymentId}/withdraw
+- "List all supportedCountries?" -> GET /v1/supportedCountries
+- "List all supportedCountries?" -> GET /v2/supportedCountries
+- "List all currencies?" -> GET /v2/currencies
+- "List all webhooks?" -> GET /v1/webhooks
+- "Create a webhook?" -> POST /v1/webhooks
+- "Get webhook details?" -> GET /v1/webhooks/{webhookId}
+- "Create a ping?" -> POST /v1/webhooks/{webhookId}/ping
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

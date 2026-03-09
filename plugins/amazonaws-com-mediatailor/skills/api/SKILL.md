@@ -107,89 +107,39 @@ Not specified.
 | POST | /tags/{ResourceArn} | The resource to tag. Tags are key-value pairs that you can associate with Amazon resources to help with organization, access control, and cost tracking. For more information, see Tagging AWS Elemental MediaTailor Resources. |
 | DELETE | /tags/{ResourceArn} | The resource to untag. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new channel?" -> POST /channel/{ChannelName}
-- "How do I list all my channels?" -> GET /channels
-- "What is the current state of my channel?" -> GET /channel/{ChannelName}
-- "How do I start or stop a channel?" -> PUT /channel/{ChannelName}/start, PUT /channel/{ChannelName}/stop
-- "How do I set up a playback configuration for ad insertion?" -> PUT /playbackConfiguration
-- "How do I add a program to a channel schedule?" -> POST /channel/{ChannelName}/program/{ProgramName}
-- "How do I create a source location for my content origin?" -> POST /sourceLocation/{SourceLocationName}
-- "How do I register a VOD source under a source location?" -> POST /sourceLocation/{SourceLocationName}/vodSource/{VodSourceName}
-- "How do I register a live source under a source location?" -> POST /sourceLocation/{SourceLocationName}/liveSource/{LiveSourceName}
-- "How do I schedule ad prefetching for a playback configuration?" -> POST /prefetchSchedule/{PlaybackConfigurationName}/{Name}
-- "How do I check alerts for a specific resource?" -> GET /alerts
-- "How do I view or update the channel policy?" -> GET /channel/{ChannelName}/policy, PUT /channel/{ChannelName}/policy
-- "How do I configure logging for a channel?" -> PUT /configureLogs/channel
-- "How do I tag or untag a MediaTailor resource?" -> POST /tags/{ResourceArn}, DELETE /tags/{ResourceArn}
-- "How do I view the schedule for a channel?" -> GET /channel/{ChannelName}/schedule
-
-## Response Tips
-
-- **Channels & Programs:** Responses include `ChannelState` (RUNNING/STOPPED) and timestamps as ISO 8601 strings. `Outputs` is an array of output configurations -- iterate to find specific manifest URLs. `DurationMillis` and `ClipRange` offsets are in milliseconds (i64).
-- **Source Locations:** `AccessConfiguration` nests `SecretsManagerAccessTokenConfiguration` three levels deep -- drill into it for secret ARN and header details. `HttpConfiguration.BaseUrl` is the only non-optional field.
-- **Playback Configurations:** Deeply nested response with `AvailSuppression`, `Bumper`, `CdnConfiguration`, `DashConfiguration`, `HlsConfiguration`, and `ManifestProcessingRules` sub-objects. Check `PlaybackEndpointPrefix` and `SessionInitializationEndpointPrefix` for the actual streaming URLs.
-- **Prefetch Schedules:** `Consumption` and `Retrieval` each contain `StartTime`/`EndTime` timestamps defining the prefetch window. `DynamicVariables` in `Retrieval` is a loosely-typed map.
-- **Paginated Lists:** All list endpoints (`GET /channels`, `/alerts`, `/playbackConfigurations`, `/sourceLocations`, channel schedule, live/VOD sources, prefetch schedules) return `Items` + `NextToken`. Pass `NextToken` back as `nextToken` (note: casing varies -- `MaxResults`/`NextToken` for playback configs and prefetch schedules, `maxResults`/`nextToken` for the rest).
-- **Tags:** Returned as flat `map<str,str>` on both resource responses and `GET /tags/{ResourceArn}`. `DELETE /tags` requires `tagKeys` as a query string array, not a body.
-
-## Anomaly Flags
-
-- **Channel in unexpected state:** Surface when `ChannelState` is STOPPED but the user expects it running, or vice versa. Start/stop are async -- a GET right after PUT may still show the old state.
-- **Missing outputs:** Flag if a created or updated channel returns an empty `Outputs` array, as this means no manifest endpoints are configured.
-- **Pagination truncation:** Warn when `NextToken` is present in a list response but the user has not paginated further -- results are incomplete.
-- **Prefetch window already expired:** Flag when a prefetch schedule's `Consumption.EndTime` or `Retrieval.EndTime` is in the past.
-- **Empty HttpPackageConfigurations:** Warn if a live or VOD source is created/updated with an empty `HttpPackageConfigurations` array -- the source will have no usable package types.
-- **Log percentage at 0:** If `PUT /configureLogs/playbackConfiguration` sets `PercentEnabled` to 0, surface that no logs will actually be emitted.
-- **AccessType mismatch:** If a source location's `AccessConfiguration.AccessType` references Secrets Manager but `SecretsManagerAccessTokenConfiguration` fields are null, flag the incomplete setup.
-- **Parameter casing inconsistency:** `maxResults` vs `MaxResults` and `nextToken` vs `NextToken` vary across endpoints -- flag if the wrong casing is used (request will silently ignore the parameter).
-
-## Playbook
-
-### 1. Set Up a Linear Channel with VOD Content
-
-1. Create a source location: `POST /sourceLocation/{SourceLocationName}` with `HttpConfiguration.BaseUrl` pointing to your content origin.
-2. Register a VOD source: `POST /sourceLocation/{SourceLocationName}/vodSource/{VodSourceName}` with `HttpPackageConfigurations` for HLS/DASH.
-3. Create the channel: `POST /channel/{ChannelName}` with `PlaybackMode: "LINEAR"`, desired `Outputs`, and optionally a `FillerSlate`.
-4. Add programs to the schedule: `POST /channel/{ChannelName}/program/{ProgramName}` with `SourceLocationName`, `VodSourceName`, and `ScheduleConfiguration` for each program.
-5. Start the channel: `PUT /channel/{ChannelName}/start`.
-6. Verify: `GET /channel/{ChannelName}` and confirm `ChannelState` is RUNNING, then check `GET /channel/{ChannelName}/schedule` to see scheduled entries.
-
-### 2. Configure Server-Side Ad Insertion (SSAI)
-
-1. Create or update a playback configuration: `PUT /playbackConfiguration` with `Name`, `AdDecisionServerUrl` (your ADS endpoint), and `VideoContentSourceUrl`.
-2. Optionally set `CdnConfiguration` with `AdSegmentUrlPrefix` and `ContentSegmentUrlPrefix` for CDN integration.
-3. Optionally enable ad marker passthrough: set `ManifestProcessingRules.AdMarkerPassthrough.Enabled` to true.
-4. Enable logging: `PUT /configureLogs/playbackConfiguration` with a non-zero `PercentEnabled`.
-5. Retrieve the configuration: `GET /playbackConfiguration/{Name}` and use `SessionInitializationEndpointPrefix` to initialize player sessions.
-
-### 3. Set Up Ad Prefetching
-
-1. Identify the playback configuration name from `GET /playbackConfigurations`.
-2. Create a prefetch schedule: `POST /prefetchSchedule/{PlaybackConfigurationName}/{Name}` with `Consumption` (time window and optional `AvailMatchingCriteria`) and `Retrieval` (time window and optional `DynamicVariables`).
-3. Verify: `GET /prefetchSchedule/{PlaybackConfigurationName}/{Name}` to confirm the schedule is active.
-4. List all prefetch schedules: `POST /prefetchSchedule/{PlaybackConfigurationName}` to review existing schedules.
-5. Clean up expired schedules: `DELETE /prefetchSchedule/{PlaybackConfigurationName}/{Name}` for any with past `EndTime`.
-
-### 4. Manage Live Sources and Go Live
-
-1. Create the source location: `POST /sourceLocation/{SourceLocationName}` with `HttpConfiguration` pointing to your live origin.
-2. If origin requires auth, include `AccessConfiguration` with `AccessType` and `SecretsManagerAccessTokenConfiguration`.
-3. Register the live source: `POST /sourceLocation/{SourceLocationName}/liveSource/{LiveSourceName}` with `HttpPackageConfigurations`.
-4. Create a channel with `PlaybackMode: "LOOP"` or `"LINEAR"`: `POST /channel/{ChannelName}`.
-5. Add a program referencing the live source: `POST /channel/{ChannelName}/program/{ProgramName}` with `LiveSourceName` set.
-6. Start the channel: `PUT /channel/{ChannelName}/start`.
-
-### 5. Monitor and Troubleshoot a Channel
-
-1. Check channel status: `GET /channel/{ChannelName}` -- look at `ChannelState` and `LastModifiedTime`.
-2. Review the schedule: `GET /channel/{ChannelName}/schedule` -- paginate with `nextToken` to see all entries. Use `durationMinutes` to scope the window.
-3. Pull alerts: `GET /alerts?resourceArn={channelArn}` -- paginate with `nextToken` and `maxResults`.
-4. Check log configuration: `GET /channel/{ChannelName}` and inspect `LogConfiguration.LogTypes` to ensure logging is enabled.
-5. Review tags for cost tracking or ownership: `GET /tags/{channelArn}`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Delete a channel?" -> DELETE /channel/{ChannelName}
+- "Delete a liveSource?" -> DELETE /sourceLocation/{SourceLocationName}/liveSource/{LiveSourceName}
+- "Delete a playbackConfiguration?" -> DELETE /playbackConfiguration/{Name}
+- "Delete a prefetchSchedule?" -> DELETE /prefetchSchedule/{PlaybackConfigurationName}/{Name}
+- "Delete a program?" -> DELETE /channel/{ChannelName}/program/{ProgramName}
+- "Delete a sourceLocation?" -> DELETE /sourceLocation/{SourceLocationName}
+- "Delete a vodSource?" -> DELETE /sourceLocation/{SourceLocationName}/vodSource/{VodSourceName}
+- "Get channel details?" -> GET /channel/{ChannelName}
+- "Get liveSource details?" -> GET /sourceLocation/{SourceLocationName}/liveSource/{LiveSourceName}
+- "Get program details?" -> GET /channel/{ChannelName}/program/{ProgramName}
+- "Get sourceLocation details?" -> GET /sourceLocation/{SourceLocationName}
+- "Get vodSource details?" -> GET /sourceLocation/{SourceLocationName}/vodSource/{VodSourceName}
+- "List all policy?" -> GET /channel/{ChannelName}/policy
+- "List all schedule?" -> GET /channel/{ChannelName}/schedule
+- "Get playbackConfiguration details?" -> GET /playbackConfiguration/{Name}
+- "Get prefetchSchedule details?" -> GET /prefetchSchedule/{PlaybackConfigurationName}/{Name}
+- "List all alerts?" -> GET /alerts
+- "List all channels?" -> GET /channels
+- "List all liveSources?" -> GET /sourceLocation/{SourceLocationName}/liveSources
+- "List all playbackConfigurations?" -> GET /playbackConfigurations
+- "List all sourceLocations?" -> GET /sourceLocations
+- "Get tag details?" -> GET /tags/{ResourceArn}
+- "List all vodSources?" -> GET /sourceLocation/{SourceLocationName}/vodSources
+- "Delete a tag?" -> DELETE /tags/{ResourceArn}
+- "Update a channel?" -> PUT /channel/{ChannelName}
+- "Update a liveSource?" -> PUT /sourceLocation/{SourceLocationName}/liveSource/{LiveSourceName}
+- "Update a program?" -> PUT /channel/{ChannelName}/program/{ProgramName}
+- "Update a sourceLocation?" -> PUT /sourceLocation/{SourceLocationName}
+- "Update a vodSource?" -> PUT /sourceLocation/{SourceLocationName}/vodSource/{VodSourceName}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

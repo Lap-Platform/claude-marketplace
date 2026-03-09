@@ -64,82 +64,34 @@ https://www.exacttargetapis.com
 | POST | /messaging/v1/sms/messages/{messageKey} | sendSmsToSingleRecipient |
 | GET | /messaging/v1/sms/messages/{messageKey} | getSmsSendStatusForRecipient |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I retrieve a content asset by ID?" -> GET /asset/v1/content/assets/{id}
-- "How do I update an existing content asset?" -> PATCH /asset/v1/content/assets/{id}
-- "How do I delete a content asset?" -> DELETE /asset/v1/content/assets/{id}
-- "How do I create a new content asset?" -> POST /asset/v1/content/assets
-- "How do I create a new marketing campaign?" -> POST /hub/v1/campaigns
-- "How do I get details for a specific campaign?" -> GET /hub/v1/campaigns/{id}
-- "How do I set up a new email send definition?" -> POST /messaging/v1/email/definitions/
-- "How do I list all email definitions with filtering?" -> GET /messaging/v1/email/definitions/
-- "How do I send a transactional email to a recipient?" -> POST /messaging/v1/email/messages/
-- "How do I check the status of a sent email?" -> GET /messaging/v1/email/messages/{messageKey}
-- "How do I view what's queued for an email definition?" -> GET /messaging/v1/email/definitions/{definitionKey}/queue
-- "How do I clear the send queue for an SMS definition?" -> DELETE /messaging/v1/sms/definitions/{definitionKey}/queue
-- "How do I create a new SMS send definition?" -> POST /messaging/v1/sms/definitions
-- "How do I send an SMS message?" -> POST /messaging/v1/sms/messages/
-- "How do I check delivery status of an SMS message?" -> GET /messaging/v1/sms/messages/{messageKey}
-
-## Response Tips
-
-- **Asset endpoints**: Returns the full asset object on GET/PATCH/POST (200). Watch for 403 on permission issues -- verify your token scope covers asset operations.
-- **Hub/Campaign endpoints**: Campaign GET returns a single campaign object (200). DELETE returns no body on success but may return 400/403 with error detail.
-- **Email/SMS definitions**: List endpoints support OData-style pagination via `$pageSize`, `$page`, `$orderBy`, and `$filter` query params. POST returns 201 on creation; watch for 409 (conflict) indicating a duplicate definitionKey.
-- **Email/SMS messages**: Send endpoints return 202 (accepted, not completed) -- delivery is async. Status polling via GET uses `type` (required) plus `$pageSize` and `lastEventId` for cursor-based pagination.
-- **Queue endpoints**: Queue GET/DELETE operate on pending sends for a definition. Useful for pausing or inspecting a backlog before it processes.
-
-## Anomaly Flags
-
-- **409 Conflict on definition creation**: A definition with that key already exists. Surface this immediately -- the caller likely needs to PATCH instead of POST, or choose a different definitionKey.
-- **401 on message endpoints**: Message status/send endpoints return 401 (unlike most other endpoints which return 403). This signals an expired or invalid OAuth token -- prompt for re-authentication.
-- **202 vs 200 responses**: Email/SMS send operations return 202, meaning the message is queued, not delivered. Flag if a caller assumes synchronous delivery.
-- **500 errors on messaging endpoints**: All messaging definition and message endpoints can return 500. If encountered, surface as a platform-side issue and recommend retry with backoff.
-- **Missing queue items**: If a queue GET returns empty but sends are expected, flag that messages may have already processed or the definition is paused.
-- **404 on definition GET/DELETE**: The definitionKey does not exist. Surface this proactively when it follows a recent creation attempt (possible typo or propagation delay).
-
-## Playbook
-
-### 1. Send a Transactional Email End-to-End
-
-1. Create a content asset for the email body: POST /asset/v1/content/assets
-2. Create an email send definition referencing the asset: POST /messaging/v1/email/definitions/
-3. Trigger the email send with recipient data: POST /messaging/v1/email/messages/
-4. Poll for delivery status using the returned messageKey: GET /messaging/v1/email/messages/{messageKey}
-
-### 2. Set Up and Launch an SMS Campaign
-
-1. Create a campaign in the hub: POST /hub/v1/campaigns
-2. Create an SMS send definition: POST /messaging/v1/sms/definitions
-3. Send the SMS message with subscriber data: POST /messaging/v1/sms/messages/
-4. Check delivery status: GET /messaging/v1/sms/messages/{messageKey}
-5. If issues arise, inspect the queue: GET /messaging/v1/sms/definitions/{definitionKey}/queue
-
-### 3. Update and Republish an Email Definition
-
-1. Retrieve the current definition: GET /messaging/v1/email/definitions/{definitionKey}
-2. Clear any pending queued sends: DELETE /messaging/v1/email/definitions/{definitionKey}/queue
-3. Update the definition with new settings: PATCH /messaging/v1/email/definitions/{definitionKey}
-4. Verify the update took effect: GET /messaging/v1/email/definitions/{definitionKey}
-
-### 4. Audit All Email and SMS Definitions
-
-1. List all email definitions with pagination: GET /messaging/v1/email/definitions/?$pageSize=50&$page=1
-2. Iterate through pages, incrementing `$page` until results are empty
-3. Repeat for SMS definitions: GET /messaging/v1/sms/definitions?$pageSize=50&$page=1
-4. For each definition, check its queue depth: GET /messaging/v1/email/definitions/{definitionKey}/queue
-5. Flag any definitions with large queues or error states
-
-### 5. Clean Up Unused Assets and Campaigns
-
-1. Retrieve the asset to confirm it is unused: GET /asset/v1/content/assets/{id}
-2. Delete the asset: DELETE /asset/v1/content/assets/{id}
-3. Retrieve the campaign to verify status: GET /hub/v1/campaigns/{id}
-4. Delete the campaign: DELETE /hub/v1/campaigns/{id}
-5. Remove any associated email/SMS definitions: DELETE /messaging/v1/email/definitions/{definitionKey} and DELETE /messaging/v1/sms/definitions/{definitionKey}
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get asset details?" -> GET /asset/v1/content/assets/{id}
+- "Partially update a asset?" -> PATCH /asset/v1/content/assets/{id}
+- "Delete a asset?" -> DELETE /asset/v1/content/assets/{id}
+- "Create a asset?" -> POST /asset/v1/content/assets
+- "Create a campaign?" -> POST /hub/v1/campaigns
+- "Get campaign details?" -> GET /hub/v1/campaigns/{id}
+- "Delete a campaign?" -> DELETE /hub/v1/campaigns/{id}
+- "Create a definition?" -> POST /messaging/v1/email/definitions/
+- "List all definitions?" -> GET /messaging/v1/email/definitions/
+- "Delete a definition?" -> DELETE /messaging/v1/email/definitions/{definitionKey}
+- "Partially update a definition?" -> PATCH /messaging/v1/email/definitions/{definitionKey}
+- "Get definition details?" -> GET /messaging/v1/email/definitions/{definitionKey}
+- "List all queue?" -> GET /messaging/v1/email/definitions/{definitionKey}/queue
+- "Create a message?" -> POST /messaging/v1/email/messages/
+- "List all messages?" -> GET /messaging/v1/email/messages/
+- "Get message details?" -> GET /messaging/v1/email/messages/{messageKey}
+- "Get definition details?" -> GET /messaging/v1/sms/definitions/{definitionKey}
+- "Partially update a definition?" -> PATCH /messaging/v1/sms/definitions/{definitionKey}
+- "Delete a definition?" -> DELETE /messaging/v1/sms/definitions/{definitionKey}
+- "Create a definition?" -> POST /messaging/v1/sms/definitions
+- "List all definitions?" -> GET /messaging/v1/sms/definitions
+- "List all queue?" -> GET /messaging/v1/sms/definitions/{definitionKey}/queue
+- "Create a message?" -> POST /messaging/v1/sms/messages/
+- "List all messages?" -> GET /messaging/v1/sms/messages/
+- "Get message details?" -> GET /messaging/v1/sms/messages/{messageKey}
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

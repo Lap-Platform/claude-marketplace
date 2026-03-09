@@ -9,6 +9,7 @@
 
 @group BatchGetChannel
 @endpoint POST /BatchGetChannel
+@desc Performs GetChannel on multiple ARNs simultaneously.
 @required {arns: [str]}
 @returns(200) {channels: [Channel]?, errors: [BatchError]?}
 
@@ -16,6 +17,7 @@
 
 @group BatchGetStreamKey
 @endpoint POST /BatchGetStreamKey
+@desc Performs GetStreamKey on multiple ARNs simultaneously.
 @required {arns: [str]}
 @returns(200) {streamKeys: [StreamKey]?, errors: [BatchError]?}
 
@@ -23,6 +25,7 @@
 
 @group BatchStartViewerSessionRevocation
 @endpoint POST /BatchStartViewerSessionRevocation
+@desc Performs StartViewerSessionRevocation on multiple channel ARN and viewer ID pairs simultaneously.
 @required {viewerSessions: [BatchStartViewerSessionRevocationViewerSession]}
 @returns(200) {errors: [BatchStartViewerSessionRevocationError]?}
 
@@ -30,94 +33,108 @@
 
 @group CreateChannel
 @endpoint POST /CreateChannel
+@desc Creates a new channel and an associated stream key to start streaming.
 @optional {name: str, latencyMode: str, type: str, authorized: bool, recordingConfigurationArn: str, tags: map<str,str>, insecureIngest: bool, preset: str, playbackRestrictionPolicyArn: str}
-@returns(200) {channel: Channel?{arn: str?, name: str?, latencyMode: str?, type: str?, recordingConfigurationArn: str?, ingestEndpoint: str?, playbackUrl: str?, authorized: bool?, tags: map<str,str>?, insecureIngest: bool?, preset: str?, srt: Srt?{endpoint: str?, passphrase: str?}, playbackRestrictionPolicyArn: str?}, streamKey: StreamKey?{arn: str?, value: str?, channelArn: str?, tags: map<str,str>?}}
+@returns(200) {channel: Channel?{arn: str?, name: str?, latencyMode: str?, type: str?, recordingConfigurationArn: str?, ingestEndpoint: str?, playbackUrl: str?, authorized: bool?, tags: map<str, str>?: any, insecureIngest: bool?, preset: str?, srt: Srt?{endpoint: str?, passphrase: str?}, playbackRestrictionPolicyArn: str?}, streamKey: StreamKey?{arn: str?, value: str?, channelArn: str?, tags: map<str, str>?: any}}
 
 @endgroup
 
 @group CreatePlaybackRestrictionPolicy
 @endpoint POST /CreatePlaybackRestrictionPolicy
+@desc Creates a new playback restriction policy, for constraining playback by countries and/or origins.
 @optional {allowedCountries: [str], allowedOrigins: [str], enableStrictOriginEnforcement: bool, name: str, tags: map<str,str>}
-@returns(200) {playbackRestrictionPolicy: PlaybackRestrictionPolicy?{arn: str, allowedCountries: [str], allowedOrigins: [str], enableStrictOriginEnforcement: bool?, name: str?, tags: map<str,str>?}}
+@returns(200) {playbackRestrictionPolicy: PlaybackRestrictionPolicy?{arn: str, allowedCountries: [str], allowedOrigins: [str], enableStrictOriginEnforcement: bool?, name: str?, tags: map<str, str>?: any}}
 
 @endgroup
 
 @group CreateRecordingConfiguration
 @endpoint POST /CreateRecordingConfiguration
+@desc Creates a new recording configuration, used to enable recording to Amazon S3.  Known issue: In the us-east-1 region, if you use the Amazon Web Services CLI to create a recording configuration, it returns success even if the S3 bucket is in a different region. In this case, the state of the recording configuration is CREATE_FAILED (instead of ACTIVE). (In other regions, the CLI correctly returns failure if the bucket is in a different region.)  Workaround: Ensure that your S3 bucket is in the same region as the recording configuration. If you create a recording configuration in a different region as your S3 bucket, delete that recording configuration and create a new one with an S3 bucket from the correct region.
 @required {destinationConfiguration: DestinationConfiguration}
 @optional {name: str, tags: map<str,str>, thumbnailConfiguration: ThumbnailConfiguration, recordingReconnectWindowSeconds: int, renditionConfiguration: RenditionConfiguration}
-@returns(200) {recordingConfiguration: RecordingConfiguration?{arn: str, name: str?, destinationConfiguration: DestinationConfiguration{s3: S3DestinationConfiguration?{bucketName: str}}, state: str, tags: map<str,str>?, thumbnailConfiguration: ThumbnailConfiguration?{recordingMode: str?, targetIntervalSeconds: int(i64)?, resolution: str?, storage: [str]?}, recordingReconnectWindowSeconds: int?, renditionConfiguration: RenditionConfiguration?{renditionSelection: str?, renditions: [str]?}}}
+@returns(200) {recordingConfiguration: RecordingConfiguration?{arn: str, name: str?, destinationConfiguration: DestinationConfiguration{s3: S3DestinationConfiguration?{bucketName: str}}, state: str, tags: map<str, str>?: any, thumbnailConfiguration: ThumbnailConfiguration?{recordingMode: str?, targetIntervalSeconds: int(i64)?, resolution: str?, storage: [str]?}, recordingReconnectWindowSeconds: int?, renditionConfiguration: RenditionConfiguration?{renditionSelection: str?, renditions: [str]?}}}
 
 @endgroup
 
 @group CreateStreamKey
 @endpoint POST /CreateStreamKey
+@desc Creates a stream key, used to initiate a stream, for the specified channel ARN. Note that CreateChannel creates a stream key. If you subsequently use CreateStreamKey on the same channel, it will fail because a stream key already exists and there is a limit of 1 stream key per channel. To reset the stream key on a channel, use DeleteStreamKey and then CreateStreamKey.
 @required {channelArn: str}
 @optional {tags: map<str,str>}
-@returns(200) {streamKey: StreamKey?{arn: str?, value: str?, channelArn: str?, tags: map<str,str>?}}
+@returns(200) {streamKey: StreamKey?{arn: str?, value: str?, channelArn: str?, tags: map<str, str>?: any}}
 
 @endgroup
 
 @group DeleteChannel
 @endpoint POST /DeleteChannel
+@desc Deletes the specified channel and its associated stream keys. If you try to delete a live channel, you will get an error (409 ConflictException). To delete a channel that is live, call StopStream, wait for the Amazon EventBridge "Stream End" event (to verify that the stream's state is no longer Live), then call DeleteChannel. (See  Using EventBridge with Amazon IVS.)
 @required {arn: str}
 
 @endgroup
 
 @group DeletePlaybackKeyPair
 @endpoint POST /DeletePlaybackKeyPair
+@desc Deletes a specified authorization key pair. This invalidates future viewer tokens generated using the key pair’s privateKey. For more information, see Setting Up Private Channels in the Amazon IVS User Guide.
 @required {arn: str}
 
 @endgroup
 
 @group DeletePlaybackRestrictionPolicy
 @endpoint POST /DeletePlaybackRestrictionPolicy
+@desc Deletes the specified playback restriction policy.
 @required {arn: str}
 
 @endgroup
 
 @group DeleteRecordingConfiguration
 @endpoint POST /DeleteRecordingConfiguration
+@desc Deletes the recording configuration for the specified ARN. If you try to delete a recording configuration that is associated with a channel, you will get an error (409 ConflictException). To avoid this, for all channels that reference the recording configuration, first use UpdateChannel to set the recordingConfigurationArn field to an empty string, then use DeleteRecordingConfiguration.
 @required {arn: str}
 
 @endgroup
 
 @group DeleteStreamKey
 @endpoint POST /DeleteStreamKey
+@desc Deletes the stream key for the specified ARN, so it can no longer be used to stream.
 @required {arn: str}
 
 @endgroup
 
 @group GetChannel
 @endpoint POST /GetChannel
+@desc Gets the channel configuration for the specified channel ARN. See also BatchGetChannel.
 @required {arn: str}
-@returns(200) {channel: Channel?{arn: str?, name: str?, latencyMode: str?, type: str?, recordingConfigurationArn: str?, ingestEndpoint: str?, playbackUrl: str?, authorized: bool?, tags: map<str,str>?, insecureIngest: bool?, preset: str?, srt: Srt?{endpoint: str?, passphrase: str?}, playbackRestrictionPolicyArn: str?}}
+@returns(200) {channel: Channel?{arn: str?, name: str?, latencyMode: str?, type: str?, recordingConfigurationArn: str?, ingestEndpoint: str?, playbackUrl: str?, authorized: bool?, tags: map<str, str>?: any, insecureIngest: bool?, preset: str?, srt: Srt?{endpoint: str?, passphrase: str?}, playbackRestrictionPolicyArn: str?}}
 
 @endgroup
 
 @group GetPlaybackKeyPair
 @endpoint POST /GetPlaybackKeyPair
+@desc Gets a specified playback authorization key pair and returns the arn and fingerprint. The privateKey held by the caller can be used to generate viewer authorization tokens, to grant viewers access to private channels. For more information, see Setting Up Private Channels in the Amazon IVS User Guide.
 @required {arn: str}
-@returns(200) {keyPair: PlaybackKeyPair?{arn: str?, name: str?, fingerprint: str?, tags: map<str,str>?}}
+@returns(200) {keyPair: PlaybackKeyPair?{arn: str?, name: str?, fingerprint: str?, tags: map<str, str>?: any}}
 
 @endgroup
 
 @group GetPlaybackRestrictionPolicy
 @endpoint POST /GetPlaybackRestrictionPolicy
+@desc Gets the specified playback restriction policy.
 @required {arn: str}
-@returns(200) {playbackRestrictionPolicy: PlaybackRestrictionPolicy?{arn: str, allowedCountries: [str], allowedOrigins: [str], enableStrictOriginEnforcement: bool?, name: str?, tags: map<str,str>?}}
+@returns(200) {playbackRestrictionPolicy: PlaybackRestrictionPolicy?{arn: str, allowedCountries: [str], allowedOrigins: [str], enableStrictOriginEnforcement: bool?, name: str?, tags: map<str, str>?: any}}
 
 @endgroup
 
 @group GetRecordingConfiguration
 @endpoint POST /GetRecordingConfiguration
+@desc Gets the recording configuration for the specified ARN.
 @required {arn: str}
-@returns(200) {recordingConfiguration: RecordingConfiguration?{arn: str, name: str?, destinationConfiguration: DestinationConfiguration{s3: S3DestinationConfiguration?{bucketName: str}}, state: str, tags: map<str,str>?, thumbnailConfiguration: ThumbnailConfiguration?{recordingMode: str?, targetIntervalSeconds: int(i64)?, resolution: str?, storage: [str]?}, recordingReconnectWindowSeconds: int?, renditionConfiguration: RenditionConfiguration?{renditionSelection: str?, renditions: [str]?}}}
+@returns(200) {recordingConfiguration: RecordingConfiguration?{arn: str, name: str?, destinationConfiguration: DestinationConfiguration{s3: S3DestinationConfiguration?{bucketName: str}}, state: str, tags: map<str, str>?: any, thumbnailConfiguration: ThumbnailConfiguration?{recordingMode: str?, targetIntervalSeconds: int(i64)?, resolution: str?, storage: [str]?}, recordingReconnectWindowSeconds: int?, renditionConfiguration: RenditionConfiguration?{renditionSelection: str?, renditions: [str]?}}}
 
 @endgroup
 
 @group GetStream
 @endpoint POST /GetStream
+@desc Gets information about the active (live) stream on a specified channel.
 @required {channelArn: str}
 @returns(200) {stream: Stream?{channelArn: str?, streamId: str?, playbackUrl: str?, startTime: str(timestamp)?, state: str?, health: str?, viewerCount: int(i64)?}}
 
@@ -125,29 +142,33 @@
 
 @group GetStreamKey
 @endpoint POST /GetStreamKey
+@desc Gets stream-key information for a specified ARN.
 @required {arn: str}
-@returns(200) {streamKey: StreamKey?{arn: str?, value: str?, channelArn: str?, tags: map<str,str>?}}
+@returns(200) {streamKey: StreamKey?{arn: str?, value: str?, channelArn: str?, tags: map<str, str>?: any}}
 
 @endgroup
 
 @group GetStreamSession
 @endpoint POST /GetStreamSession
+@desc Gets metadata on a specified stream.
 @required {channelArn: str}
 @optional {streamId: str}
-@returns(200) {streamSession: StreamSession?{streamId: str?, startTime: str(timestamp)?, endTime: str(timestamp)?, channel: Channel?{arn: str?, name: str?, latencyMode: str?, type: str?, recordingConfigurationArn: str?, ingestEndpoint: str?, playbackUrl: str?, authorized: bool?, tags: map<str,str>?, insecureIngest: bool?, preset: str?, srt: Srt?{endpoint: str?, passphrase: str?}, playbackRestrictionPolicyArn: str?}, ingestConfiguration: IngestConfiguration?{video: VideoConfiguration?{avcProfile: str?, avcLevel: str?, codec: str?, encoder: str?, targetBitrate: int(i64)?, targetFramerate: int(i64)?, videoHeight: int(i64)?, videoWidth: int(i64)?}, audio: AudioConfiguration?{codec: str?, targetBitrate: int(i64)?, sampleRate: int(i64)?, channels: int(i64)?}}, recordingConfiguration: RecordingConfiguration?{arn: str, name: str?, destinationConfiguration: DestinationConfiguration{s3: S3DestinationConfiguration?}, state: str, tags: map<str,str>?, thumbnailConfiguration: ThumbnailConfiguration?{recordingMode: str?, targetIntervalSeconds: int(i64)?, resolution: str?, storage: [str]?}, recordingReconnectWindowSeconds: int?, renditionConfiguration: RenditionConfiguration?{renditionSelection: str?, renditions: [str]?}}, truncatedEvents: [StreamEvent]?}}
+@returns(200) {streamSession: StreamSession?{streamId: str?, startTime: str(timestamp)?, endTime: str(timestamp)?, channel: Channel?{arn: str?, name: str?, latencyMode: str?, type: str?, recordingConfigurationArn: str?, ingestEndpoint: str?, playbackUrl: str?, authorized: bool?, tags: map<str, str>?: any, insecureIngest: bool?, preset: str?, srt: Srt?{endpoint: str?, passphrase: str?}, playbackRestrictionPolicyArn: str?}, ingestConfiguration: IngestConfiguration?{video: VideoConfiguration?{avcProfile: str?, avcLevel: str?, codec: str?, encoder: str?, targetBitrate: int(i64)?, targetFramerate: int(i64)?, videoHeight: int(i64)?, videoWidth: int(i64)?}, audio: AudioConfiguration?{codec: str?, targetBitrate: int(i64)?, sampleRate: int(i64)?, channels: int(i64)?}}, recordingConfiguration: RecordingConfiguration?{arn: str, name: str?, destinationConfiguration: DestinationConfiguration{s3: S3DestinationConfiguration?}, state: str, tags: map<str, str>?: any, thumbnailConfiguration: ThumbnailConfiguration?{recordingMode: str?, targetIntervalSeconds: int(i64)?, resolution: str?, storage: [str]?}, recordingReconnectWindowSeconds: int?, renditionConfiguration: RenditionConfiguration?{renditionSelection: str?, renditions: [str]?}}, truncatedEvents: [StreamEvent]?}}
 
 @endgroup
 
 @group ImportPlaybackKeyPair
 @endpoint POST /ImportPlaybackKeyPair
+@desc Imports the public portion of a new key pair and returns its arn and fingerprint. The privateKey can then be used to generate viewer authorization tokens, to grant viewers access to private channels. For more information, see Setting Up Private Channels in the Amazon IVS User Guide.
 @required {publicKeyMaterial: str}
 @optional {name: str, tags: map<str,str>}
-@returns(200) {keyPair: PlaybackKeyPair?{arn: str?, name: str?, fingerprint: str?, tags: map<str,str>?}}
+@returns(200) {keyPair: PlaybackKeyPair?{arn: str?, name: str?, fingerprint: str?, tags: map<str, str>?: any}}
 
 @endgroup
 
 @group ListChannels
 @endpoint POST /ListChannels
+@desc Gets summary information about all channels in your account, in the Amazon Web Services region where the API request is processed. This list can be filtered to match a specified name or recording-configuration ARN. Filters are mutually exclusive and cannot be used together. If you try to use both filters, you will get an error (409 ConflictException).
 @optional {filterByName: str, filterByRecordingConfigurationArn: str, filterByPlaybackRestrictionPolicyArn: str, nextToken: str, maxResults: int}
 @returns(200) {channels: [ChannelSummary], nextToken: str?}
 
@@ -155,6 +176,7 @@
 
 @group ListPlaybackKeyPairs
 @endpoint POST /ListPlaybackKeyPairs
+@desc Gets summary information about playback key pairs. For more information, see Setting Up Private Channels in the Amazon IVS User Guide.
 @optional {nextToken: str, maxResults: int}
 @returns(200) {keyPairs: [PlaybackKeyPairSummary], nextToken: str?}
 
@@ -162,6 +184,7 @@
 
 @group ListPlaybackRestrictionPolicies
 @endpoint POST /ListPlaybackRestrictionPolicies
+@desc Gets summary information about playback restriction policies.
 @optional {nextToken: str, maxResults: int}
 @returns(200) {playbackRestrictionPolicies: [PlaybackRestrictionPolicySummary], nextToken: str?}
 
@@ -169,6 +192,7 @@
 
 @group ListRecordingConfigurations
 @endpoint POST /ListRecordingConfigurations
+@desc Gets summary information about all recording configurations in your account, in the Amazon Web Services region where the API request is processed.
 @optional {nextToken: str, maxResults: int}
 @returns(200) {recordingConfigurations: [RecordingConfigurationSummary], nextToken: str?}
 
@@ -176,6 +200,7 @@
 
 @group ListStreamKeys
 @endpoint POST /ListStreamKeys
+@desc Gets summary information about stream keys for the specified channel.
 @required {channelArn: str}
 @optional {nextToken: str, maxResults: int}
 @returns(200) {streamKeys: [StreamKeySummary], nextToken: str?}
@@ -184,6 +209,7 @@
 
 @group ListStreamSessions
 @endpoint POST /ListStreamSessions
+@desc Gets a summary of current and previous streams for a specified channel in your account, in the AWS region where the API request is processed.
 @required {channelArn: str}
 @optional {nextToken: str, maxResults: int}
 @returns(200) {streamSessions: [StreamSessionSummary], nextToken: str?}
@@ -192,6 +218,7 @@
 
 @group ListStreams
 @endpoint POST /ListStreams
+@desc Gets summary information about live streams in your account, in the Amazon Web Services region where the API request is processed.
 @optional {filterBy: StreamFilters, nextToken: str, maxResults: int}
 @returns(200) {streams: [StreamSummary], nextToken: str?}
 
@@ -199,6 +226,7 @@
 
 @group tags
 @endpoint GET /tags/{resourceArn}
+@desc Gets information about Amazon Web Services tags for the specified ARN.
 @required {resourceArn: str}
 @returns(200) {tags: map<str,str>}
 
@@ -206,12 +234,14 @@
 
 @group PutMetadata
 @endpoint POST /PutMetadata
+@desc Inserts metadata into the active stream of the specified channel. At most 5 requests per second per channel are allowed, each with a maximum 1 KB payload. (If 5 TPS is not sufficient for your needs, we recommend batching your data into a single PutMetadata call.) At most 155 requests per second per account are allowed. Also see Embedding Metadata within a Video Stream in the Amazon IVS User Guide.
 @required {channelArn: str, metadata: str}
 
 @endgroup
 
 @group StartViewerSessionRevocation
 @endpoint POST /StartViewerSessionRevocation
+@desc Starts the process of revoking the viewer session associated with a specified channel ARN and viewer ID. Optionally, you can provide a version to revoke viewer sessions less than and including that version. For instructions on associating a viewer ID with a viewer session, see Setting Up Private Channels.
 @required {channelArn: str, viewerId: str}
 @optional {viewerSessionVersionsLessThanOrEqualTo: int}
 
@@ -219,32 +249,37 @@
 
 @group StopStream
 @endpoint POST /StopStream
+@desc Disconnects the incoming RTMPS stream for the specified channel. Can be used in conjunction with DeleteStreamKey to prevent further streaming to a channel.  Many streaming client-software libraries automatically reconnect a dropped RTMPS session, so to stop the stream permanently, you may want to first revoke the streamKey attached to the channel.
 @required {channelArn: str}
 
 @endgroup
 
 @group tags
 @endpoint POST /tags/{resourceArn}
+@desc Adds or updates tags for the Amazon Web Services resource with the specified ARN.
 @required {resourceArn: str, tags: map<str,str>}
 
 @endpoint DELETE /tags/{resourceArn}
+@desc Removes tags from the resource with the specified ARN.
 @required {resourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group UpdateChannel
 @endpoint POST /UpdateChannel
+@desc Updates a channel's configuration. Live channels cannot be updated. You must stop the ongoing stream, update the channel, and restart the stream for the changes to take effect.
 @required {arn: str}
 @optional {name: str, latencyMode: str, type: str, authorized: bool, recordingConfigurationArn: str, insecureIngest: bool, preset: str, playbackRestrictionPolicyArn: str}
-@returns(200) {channel: Channel?{arn: str?, name: str?, latencyMode: str?, type: str?, recordingConfigurationArn: str?, ingestEndpoint: str?, playbackUrl: str?, authorized: bool?, tags: map<str,str>?, insecureIngest: bool?, preset: str?, srt: Srt?{endpoint: str?, passphrase: str?}, playbackRestrictionPolicyArn: str?}}
+@returns(200) {channel: Channel?{arn: str?, name: str?, latencyMode: str?, type: str?, recordingConfigurationArn: str?, ingestEndpoint: str?, playbackUrl: str?, authorized: bool?, tags: map<str, str>?: any, insecureIngest: bool?, preset: str?, srt: Srt?{endpoint: str?, passphrase: str?}, playbackRestrictionPolicyArn: str?}}
 
 @endgroup
 
 @group UpdatePlaybackRestrictionPolicy
 @endpoint POST /UpdatePlaybackRestrictionPolicy
+@desc Updates a specified playback restriction policy.
 @required {arn: str}
 @optional {allowedCountries: [str], allowedOrigins: [str], enableStrictOriginEnforcement: bool, name: str}
-@returns(200) {playbackRestrictionPolicy: PlaybackRestrictionPolicy?{arn: str, allowedCountries: [str], allowedOrigins: [str], enableStrictOriginEnforcement: bool?, name: str?, tags: map<str,str>?}}
+@returns(200) {playbackRestrictionPolicy: PlaybackRestrictionPolicy?{arn: str, allowedCountries: [str], allowedOrigins: [str], enableStrictOriginEnforcement: bool?, name: str?, tags: map<str, str>?: any}}
 
 @endgroup
 

@@ -132,91 +132,101 @@ https://management.azure.com
 | HEAD | /providers/Microsoft.DocumentDB/databaseAccountNames/{accountName} | Checks that the Azure Cosmos DB account name already exists. A valid account name may contain only lowercase letters, numbers, and the '-' character, and must be between 3 and 50 characters. |
 | GET | /providers/Microsoft.DocumentDB/operations | Lists all of the available Cosmos DB Resource Provider operations. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I get details about my Cosmos DB account?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}
-- "How do I create a new Cosmos DB account?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}
-- "How do I delete a Cosmos DB account?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}
-- "How do I list all Cosmos DB accounts in my subscription?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.DocumentDB/databaseAccounts
-- "How do I get connection strings for my Cosmos DB account?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/listConnectionStrings
-- "How do I retrieve the access keys for my account?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/listKeys
-- "How do I rotate or regenerate an account key?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/regenerateKey
-- "How do I check if a Cosmos DB account name is available?" -> HEAD /providers/Microsoft.DocumentDB/databaseAccountNames/{accountName}
-- "How do I create a SQL database inside my Cosmos DB account?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}
-- "How do I scale throughput on a SQL container?" -> PUT .../sqlDatabases/{databaseName}/containers/{containerName}/throughputSettings/default
-- "How do I get performance metrics for a specific collection?" -> GET .../databaseAccounts/{accountName}/databases/{databaseRid}/collections/{collectionRid}/metrics
-- "How do I trigger a failover priority change for disaster recovery?" -> POST .../databaseAccounts/{accountName}/failoverPriorityChange
-- "How do I take a region offline for maintenance?" -> POST .../databaseAccounts/{accountName}/offlineRegion
-- "How do I list stored procedures in a SQL container?" -> GET .../sqlDatabases/{databaseName}/containers/{containerName}/storedProcedures
-- "How do I create a Cassandra keyspace?" -> PUT .../databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}
-
-## Response Tips
-
-- **Account operations**: GET returns full resource properties; PUT/PATCH return the updated resource on 200; DELETE returns 202 (accepted, async) or 204 (already gone) with no body.
-- **Resource creation (PUT)**: Returns 200 if the resource already exists and was updated, or 202 if provisioning is async -- poll the `Azure-AsyncOperation` header URL for completion.
-- **List endpoints**: Responses wrap items in a `value` array at the top level; there is no next-page token since ARM resources are not paginated by default at this scope.
-- **Metrics and usages**: Require a `$filter` query parameter (OData syntax, e.g., time grain and time range); responses contain a `value` array of metric objects with `name`, `unit`, `metricValues`.
-- **Throughput settings**: GET returns a `resource.throughput` integer (RU/s); PUT accepts an `updateThroughputParameters` body with the new RU/s value.
-- **Key operations (listKeys, regenerateKey)**: POST returns `primaryMasterKey`, `secondaryMasterKey`, `primaryReadonlyMasterKey`, `secondaryReadonlyMasterKey` -- treat these as secrets.
-- **Name availability (HEAD)**: 200 means the name is taken; 404 means available -- the inverse of what you might expect.
-
-## Anomaly Flags
-
-- **202 Accepted on mutations**: Surface that the operation is async. Extract and present the `Azure-AsyncOperation` or `Location` header so the user can poll for completion status.
-- **204 on DELETE**: Flag that the resource was already deleted or did not exist -- this is idempotent but may indicate a stale reference in automation.
-- **HEAD name check returning 200**: Proactively warn that the desired account name is already taken before the user attempts a PUT.
-- **Throughput values near limits**: When reading throughput settings, flag if the value is at the minimum (400 RU/s) or at common tier boundaries (e.g., 10,000+ RU/s) that may affect billing.
-- **Region offline/online operations**: These are disruptive -- surface a confirmation prompt before executing offlineRegion or onlineRegion calls, and note the async 202 response.
-- **Key regeneration**: Warn that regenerating a key immediately invalidates the old key -- all clients using that key will lose access until updated.
-- **$filter missing on metrics endpoints**: These endpoints require a `$filter` parameter; surface a clear error if the user omits it rather than sending a request that will fail.
-- **api-version mismatch**: This spec targets `2019-08-01`. Flag if the user attempts features from a newer API version that won't be available.
-
-## Playbook
-
-### 1. Provision a New Cosmos DB SQL Account with a Database and Container
-
-1. Check name availability: `HEAD /providers/Microsoft.DocumentDB/databaseAccountNames/{accountName}` -- expect 404 (available).
-2. Create the account: `PUT .../databaseAccounts/{accountName}` with `createUpdateParameters` specifying location, consistency policy, and capabilities.
-3. Poll the `Azure-AsyncOperation` URL from the 202 response until status is `Succeeded`.
-4. Create a SQL database: `PUT .../sqlDatabases/{databaseName}` with `createUpdateSqlDatabaseParameters` containing the resource `id`.
-5. Create a SQL container: `PUT .../sqlDatabases/{databaseName}/containers/{containerName}` with partition key and indexing policy in the parameters.
-6. Optionally set throughput: `PUT .../containers/{containerName}/throughputSettings/default` with desired RU/s.
-
-### 2. Rotate Account Keys Without Downtime
-
-1. Retrieve current keys: `POST .../listKeys` to get all four keys.
-2. Update all application connection strings to use the secondary key.
-3. Regenerate the primary key: `POST .../regenerateKey` with `{"keyKind": "primary"}`.
-4. Retrieve the new keys: `POST .../listKeys` again to confirm the new primary key.
-5. Update application connection strings back to the new primary key.
-6. Optionally regenerate the secondary key using the same process in reverse.
-
-### 3. Monitor Performance and Diagnose Throttling
-
-1. Get metric definitions: `GET .../metricDefinitions` to discover available metric names and units.
-2. Query account-level metrics: `GET .../metrics?$filter=(name.value eq 'Total Requests') and ...` with a time range filter.
-3. Drill into a specific database: `GET .../databases/{databaseRid}/metrics` with the same filter.
-4. Drill into a collection: `GET .../databases/{databaseRid}/collections/{collectionRid}/metrics`.
-5. Check partition-level metrics: `GET .../collections/{collectionRid}/partitions/metrics` to identify hot partitions.
-6. Review usage data: `GET .../usages` at account, database, or collection level to check storage consumption.
-
-### 4. Set Up Multi-Region Failover
-
-1. Get current account configuration: `GET .../databaseAccounts/{accountName}` to review existing regions and failover policies.
-2. Update the account to add regions: `PATCH .../databaseAccounts/{accountName}` with updated `locations` array in `updateParameters`.
-3. Configure failover priorities: `POST .../failoverPriorityChange` with `failoverParameters` listing regions and their priority ordinals.
-4. Verify by re-reading the account: `GET .../databaseAccounts/{accountName}` and confirm the `failoverPolicies` array reflects the new order.
-5. Test by taking a region offline: `POST .../offlineRegion` (use with caution in production) and then bring it back with `POST .../onlineRegion`.
-
-### 5. Manage Server-Side Logic (Stored Procedures, Triggers, UDFs)
-
-1. List existing stored procedures: `GET .../containers/{containerName}/storedProcedures`.
-2. Create or update a stored procedure: `PUT .../storedProcedures/{storedProcedureName}` with the JavaScript function body in `createUpdateSqlStoredProcedureParameters`.
-3. Create a pre-trigger: `PUT .../triggers/{triggerName}` with `triggerType: "Pre"` and `triggerOperation: "All"` in the parameters.
-4. Create a UDF for query-time logic: `PUT .../userDefinedFunctions/{udfName}` with the function body.
-5. To remove obsolete logic, delete with the corresponding `DELETE .../storedProcedures/{name}`, `.../triggers/{name}`, or `.../userDefinedFunctions/{name}` endpoint -- expect 202 or 204.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get databaseAccount details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}
+- "Partially update a databaseAccount?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}
+- "Update a databaseAccount?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}
+- "Delete a databaseAccount?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}
+- "Create a failoverPriorityChange?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/failoverPriorityChange
+- "List all databaseAccounts?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.DocumentDB/databaseAccounts
+- "List all databaseAccounts?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts
+- "Create a listKey?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/listKeys
+- "Create a listConnectionString?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/listConnectionStrings
+- "Create a offlineRegion?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/offlineRegion
+- "Create a onlineRegion?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/onlineRegion
+- "List all readonlykeys?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/readonlykeys
+- "Create a readonlykey?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/readonlykeys
+- "Create a regenerateKey?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/regenerateKey
+- "List all operations?" -> GET /providers/Microsoft.DocumentDB/operations
+- "List all metrics?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/metrics
+- "List all metrics?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/databases/{databaseRid}/metrics
+- "List all metrics?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/databases/{databaseRid}/collections/{collectionRid}/metrics
+- "List all metrics?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/region/{region}/databases/{databaseRid}/collections/{collectionRid}/metrics
+- "List all metrics?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/region/{region}/metrics
+- "List all metrics?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sourceRegion/{sourceRegion}/targetRegion/{targetRegion}/percentile/metrics
+- "List all metrics?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/targetRegion/{targetRegion}/percentile/metrics
+- "List all metrics?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/percentile/metrics
+- "List all metrics?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/region/{region}/databases/{databaseRid}/collections/{collectionRid}/partitions/metrics
+- "List all metrics?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/databases/{databaseRid}/collections/{collectionRid}/partitions/metrics
+- "List all metrics?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/databases/{databaseRid}/collections/{collectionRid}/partitionKeyRangeId/{partitionKeyRangeId}/metrics
+- "List all metrics?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/region/{region}/databases/{databaseRid}/collections/{collectionRid}/partitionKeyRangeId/{partitionKeyRangeId}/metrics
+- "List all usages?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/usages
+- "List all usages?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/databases/{databaseRid}/usages
+- "List all usages?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/databases/{databaseRid}/collections/{collectionRid}/usages
+- "List all usages?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/databases/{databaseRid}/collections/{collectionRid}/partitions/usages
+- "List all metricDefinitions?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/databases/{databaseRid}/metricDefinitions
+- "List all metricDefinitions?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/databases/{databaseRid}/collections/{collectionRid}/metricDefinitions
+- "List all metricDefinitions?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/metricDefinitions
+- "List all sqlDatabases?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases
+- "Get sqlDatabase details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}
+- "Update a sqlDatabase?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}
+- "Delete a sqlDatabase?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}
+- "List all default?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/throughputSettings/default
+- "List all containers?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers
+- "Get container details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}
+- "Update a container?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}
+- "Delete a container?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}
+- "List all default?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/throughputSettings/default
+- "List all storedProcedures?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/storedProcedures
+- "Get storedProcedure details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/storedProcedures/{storedProcedureName}
+- "Update a storedProcedure?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/storedProcedures/{storedProcedureName}
+- "Delete a storedProcedure?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/storedProcedures/{storedProcedureName}
+- "List all userDefinedFunctions?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/userDefinedFunctions
+- "Get userDefinedFunction details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/userDefinedFunctions/{userDefinedFunctionName}
+- "Update a userDefinedFunction?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/userDefinedFunctions/{userDefinedFunctionName}
+- "Delete a userDefinedFunction?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/userDefinedFunctions/{userDefinedFunctionName}
+- "List all triggers?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/triggers
+- "Get trigger details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/triggers/{triggerName}
+- "Update a trigger?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/triggers/{triggerName}
+- "Delete a trigger?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/sqlDatabases/{databaseName}/containers/{containerName}/triggers/{triggerName}
+- "List all mongodbDatabases?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/mongodbDatabases
+- "Get mongodbDatabase details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/mongodbDatabases/{databaseName}
+- "Update a mongodbDatabase?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/mongodbDatabases/{databaseName}
+- "Delete a mongodbDatabase?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/mongodbDatabases/{databaseName}
+- "List all default?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/mongodbDatabases/{databaseName}/throughputSettings/default
+- "List all collections?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/mongodbDatabases/{databaseName}/collections
+- "Get collection details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/mongodbDatabases/{databaseName}/collections/{collectionName}
+- "Update a collection?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/mongodbDatabases/{databaseName}/collections/{collectionName}
+- "Delete a collection?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/mongodbDatabases/{databaseName}/collections/{collectionName}
+- "List all default?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/mongodbDatabases/{databaseName}/collections/{collectionName}/throughputSettings/default
+- "List all tables?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/tables
+- "Get table details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/tables/{tableName}
+- "Update a table?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/tables/{tableName}
+- "Delete a table?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/tables/{tableName}
+- "List all default?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/tables/{tableName}/throughputSettings/default
+- "List all cassandraKeyspaces?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces
+- "Get cassandraKeyspace details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}
+- "Update a cassandraKeyspace?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}
+- "Delete a cassandraKeyspace?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}
+- "List all default?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}/throughputSettings/default
+- "List all tables?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}/tables
+- "Get table details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}/tables/{tableName}
+- "Update a table?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}/tables/{tableName}
+- "Delete a table?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}/tables/{tableName}
+- "List all default?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/cassandraKeyspaces/{keyspaceName}/tables/{tableName}/throughputSettings/default
+- "List all gremlinDatabases?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases
+- "Get gremlinDatabase details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases/{databaseName}
+- "Update a gremlinDatabase?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases/{databaseName}
+- "Delete a gremlinDatabase?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases/{databaseName}
+- "List all default?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases/{databaseName}/throughputSettings/default
+- "List all graphs?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases/{databaseName}/graphs
+- "Get graph details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases/{databaseName}/graphs/{graphName}
+- "Update a graph?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases/{databaseName}/graphs/{graphName}
+- "Delete a graph?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases/{databaseName}/graphs/{graphName}
+- "List all default?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.DocumentDB/databaseAccounts/{accountName}/gremlinDatabases/{databaseName}/graphs/{graphName}/throughputSettings/default
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

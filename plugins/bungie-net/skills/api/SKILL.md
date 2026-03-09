@@ -218,88 +218,130 @@ https://www.bungie.net/Platform
 |--------|------|-------------|
 | GET | /GlobalAlerts/ | Gets any active global alert for display in the forum banners, help pages, etc. Usually used for DOC alerts. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I look up a Bungie user by their ID?" -> GET /User/GetBungieNetUserById/{id}/
-- "How do I search for a Destiny player by Bungie name?" -> POST /Destiny2/SearchDestinyPlayerByBungieName/{membershipType}/
-- "What is a player's full Destiny 2 profile?" -> GET /Destiny2/{membershipType}/Profile/{destinyMembershipId}/
-- "How do I check a character's inventory and loadout?" -> GET /Destiny2/{membershipType}/Profile/{destinyMembershipId}/Character/{characterId}/
-- "How do I transfer an item between characters?" -> POST /Destiny2/Actions/Items/TransferItem/
-- "How do I equip a specific item on a character?" -> POST /Destiny2/Actions/Items/EquipItem/
-- "What are the current Destiny 2 milestones and weekly activities?" -> GET /Destiny2/Milestones/
-- "How do I get the post-game stats for a match?" -> GET /Destiny2/Stats/PostGameCarnageReport/{activityId}/
-- "How do I find a clan by name?" -> GET /GroupV2/Name/{groupName}/{groupType}/
-- "How do I list members of a clan?" -> GET /GroupV2/{groupId}/Members/
-- "How do I check what vendors are selling right now?" -> GET /Destiny2/{membershipType}/Profile/{destinyMembershipId}/Character/{characterId}/Vendors/
-- "How do I get the Destiny 2 manifest for item definitions?" -> GET /Destiny2/Manifest/
-- "How do I look up a specific manifest entity like a weapon or armor piece?" -> GET /Destiny2/Manifest/{entityType}/{hashIdentifier}/
-- "How do I see my friends list?" -> GET /Social/Friends/
-- "How do I find available fireteams for an activity?" -> GET /Fireteam/Search/Available/{platform}/{activityType}/{dateRange}/{slotFilter}/{page}/
-
-## Response Tips
-
-- **User/Profile endpoints**: Responses nest membership data inside arrays keyed by `membershipType` (enum: 1=Xbox, 2=PSN, 3=Steam, 4=Blizzard, 5=Stadia, 6=Epic, 10=Demon, 254=BungieNext). Always check `crossSaveOverride` before assuming the primary platform.
-- **Destiny2 Profile/Character**: Use the `components` query param (comma-separated integers) to control which data blocks are returned. Omitting it returns minimal data. Common components: 100=Profiles, 200=Characters, 201=CharacterInventories, 205=CharacterEquipment.
-- **GroupV2 (Clans)**: Paginated via `currentpage` (1-indexed). Results include `hasMore` boolean -- keep incrementing `currentpage` until `hasMore` is false.
-- **Stats endpoints**: Activity history is paginated via `page` (0-indexed) and `count` (default 25, max 250). Filter by `mode` enum (e.g., 5=AllPvP, 7=AllPvE, 4=Raid).
-- **Forum endpoints**: Heavily parameterized with enums for `sort`, `quickDate`, `categoryFilter`. Pagination via `page`/`pageSize` with 0-indexed pages.
-- **Actions (transfer/equip/loadout)**: POST bodies require `itemReferenceHash`, `itemId`, `characterId`, and `membershipType`. Returns success/failure -- no item data in response; re-fetch profile to confirm state.
-- **Manifest**: Returns URLs to SQLite content databases, not inline definitions. Cache aggressively and re-fetch only when `version` field changes.
-- **All endpoints**: Wrapped in a standard envelope: `{ Response, ErrorCode, ThrottleSeconds, ErrorStatus, Message, MessageData }`. Always check `ErrorCode` (1 = Success) before reading `Response`.
-
-## Anomaly Flags
-
-- **ThrottleSeconds > 0**: The API is actively throttling your key. Surface immediately and pause requests for the indicated duration before retrying.
-- **ErrorCode 36 (DestinyAccountNotFound)** or **ErrorCode 217 (UserCannotResolveCentralAccount)**: The player may have changed platforms or cross-save settings. Suggest re-searching by Bungie Name.
-- **ErrorCode 1665 (DestinyDirectBabelClientTimeout)**: Bungie backend instability. Recommend exponential backoff rather than immediate retry.
-- **ErrorCode 5 (SystemDisabled)**: Bungie API or a subsystem is down for maintenance. Surface the `Message` field and advise the user to check Bungie's status page.
-- **Manifest version change**: If a cached manifest version no longer matches `/Destiny2/Manifest/`, flag that item definitions may be stale and suggest a re-download.
-- **Deprecated membership types**: If a response returns `membershipType` values for Stadia (5) or Blizzard (4), flag that these platforms are sunset and accounts may have migrated.
-- **Empty component data**: If a requested profile component returns `null` or `privacy: 2` (Private), surface that the player's privacy settings are blocking data access.
-- **API key quota**: Monitor `/App/ApiUsage/{applicationId}/` -- if daily calls approach the throttle threshold, alert proactively before requests start failing.
-
-## Playbook
-
-### 1. Look Up a Player and View Their Full Profile
-
-1. Search for the player: `POST /Destiny2/SearchDestinyPlayerByBungieName/{membershipType}/` with body `{ "displayName": "PlayerName", "displayNameCode": 1234 }`. Use membershipType `-1` (All) to search across platforms.
-2. From the response, extract `membershipType` and `membershipId`. If multiple results appear, check `crossSaveOverride` to pick the primary account.
-3. Fetch the full profile: `GET /Destiny2/{membershipType}/Profile/{destinyMembershipId}/?components=100,200,202,205,800` to get profile, characters, inventories, equipment, and collectibles.
-4. Iterate over the `characters` block to display each character's class, power level, and equipped items.
-
-### 2. Transfer and Equip an Item
-
-1. Fetch the source character's inventory: `GET /Destiny2/{membershipType}/Profile/{destinyMembershipId}/Character/{characterId}/?components=201,205`.
-2. Identify the item by its `itemInstanceId` and `itemHash`.
-3. Transfer to vault (if moving between characters): `POST /Destiny2/Actions/Items/TransferItem/` with `{ itemReferenceHash, stackSize, transferToVault: true, itemId, characterId, membershipType }`.
-4. Transfer from vault to target character: same endpoint with `transferToVault: false` and the target `characterId`.
-5. Equip the item: `POST /Destiny2/Actions/Items/EquipItem/` with `{ itemId, characterId, membershipType }`.
-6. Re-fetch the target character's equipment to confirm the item is now equipped.
-
-### 3. Browse and Join a Fireteam
-
-1. Find available fireteams: `GET /Fireteam/Search/Available/{platform}/{activityType}/{dateRange}/{slotFilter}/{page}/`. Set `platform` to your platform enum, `activityType` to the desired activity, and `slotFilter` to filter by open slots.
-2. Review results and pick a fireteam by its `fireteamId` and `groupId`.
-3. Get fireteam details: `GET /Fireteam/Clan/{groupId}/Summary/{fireteamId}/` to confirm availability and read the description.
-4. Joining is handled in-game or via companion app -- the API provides discovery but not direct join functionality. Surface the fireteam details so the user can act on them.
-
-### 4. Monitor Clan Activity and Leaderboards
-
-1. Fetch clan info: `GET /GroupV2/{groupId}/` to confirm the clan name and member count.
-2. Get clan members: `GET /GroupV2/{groupId}/Members/?currentpage=1`. Paginate through all pages using `hasMore`.
-3. Pull clan leaderboards: `GET /Destiny2/Stats/Leaderboards/Clans/{groupId}/?modes=5&statid=kills&maxtop=10` to see top PvP performers.
-4. Get aggregate clan stats: `GET /Destiny2/Stats/AggregateClanStats/{groupId}/?modes=4` for raid completion summaries.
-5. Check weekly reward state: `GET /Destiny2/Clan/{groupId}/WeeklyRewardState/` to see if the clan has hit its weekly engagement milestones.
-
-### 5. Resolve a Player's Identity Across Platforms
-
-1. If you have a Bungie membership ID: `GET /User/GetMembershipsById/{membershipId}/254/` (254 = BungieNext) to retrieve all linked platform memberships.
-2. If you have a hard-linked credential (e.g., a Steam ID): `GET /User/GetMembershipFromHardLinkedCredential/{crType}/{credential}/` to resolve to a Bungie account.
-3. Check `crossSaveOverride` in the response -- if non-zero, the overriding membership type is the player's active platform.
-4. Fetch linked Destiny profiles: `GET /Destiny2/{membershipType}/Profile/{membershipId}/LinkedProfiles/?getAllMemberships=true` to see all Destiny accounts tied to this identity.
-5. Use the primary (cross-save override) membership for all subsequent Destiny 2 API calls.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get ApiUsage details?" -> GET /App/ApiUsage/{applicationId}/
+- "List all FirstParty?" -> GET /App/FirstParty/
+- "Get GetBungieNetUserById details?" -> GET /User/GetBungieNetUserById/{id}/
+- "Get GetSanitizedPlatformDisplayName details?" -> GET /User/GetSanitizedPlatformDisplayNames/{membershipId}/
+- "Get GetCredentialTypesForTargetAccount details?" -> GET /User/GetCredentialTypesForTargetAccount/{membershipId}/
+- "List all GetAvailableThemes?" -> GET /User/GetAvailableThemes/
+- "Get GetMembershipsById details?" -> GET /User/GetMembershipsById/{membershipId}/{membershipType}/
+- "List all GetMembershipsForCurrentUser?" -> GET /User/GetMembershipsForCurrentUser/
+- "Get GetMembershipFromHardLinkedCredential details?" -> GET /User/GetMembershipFromHardLinkedCredential/{crType}/{credential}/
+- "Get Prefix details?" -> GET /User/Search/Prefix/{displayNamePrefix}/{page}/
+- "Get GetContentType details?" -> GET /Content/GetContentType/{type}/
+- "Get GetContentById details?" -> GET /Content/GetContentById/{id}/{locale}/
+- "Get GetContentByTagAndType details?" -> GET /Content/GetContentByTagAndType/{tag}/{type}/{locale}/
+- "Get Search details?" -> GET /Content/Search/{locale}/
+- "Get SearchContentByTagAndType details?" -> GET /Content/SearchContentByTagAndType/{tag}/{type}/{locale}/
+- "Get SearchHelpArticle details?" -> GET /Content/SearchHelpArticles/{searchtext}/{size}/
+- "Get NewsArticle details?" -> GET /Content/Rss/NewsArticles/{pageToken}/
+- "Get GetTopicsPaged details?" -> GET /Forum/GetTopicsPaged/{page}/{pageSize}/{group}/{sort}/{quickDate}/{categoryFilter}/
+- "Get GetCoreTopicsPaged details?" -> GET /Forum/GetCoreTopicsPaged/{page}/{sort}/{quickDate}/{categoryFilter}/
+- "Get GetPostsThreadedPaged details?" -> GET /Forum/GetPostsThreadedPaged/{parentPostId}/{page}/{pageSize}/{replySize}/{getParentPost}/{rootThreadMode}/{sortMode}/
+- "Get GetPostsThreadedPagedFromChild details?" -> GET /Forum/GetPostsThreadedPagedFromChild/{childPostId}/{page}/{pageSize}/{replySize}/{rootThreadMode}/{sortMode}/
+- "Get GetPostAndParent details?" -> GET /Forum/GetPostAndParent/{childPostId}/
+- "Get GetPostAndParentAwaitingApproval details?" -> GET /Forum/GetPostAndParentAwaitingApproval/{childPostId}/
+- "Get GetTopicForContent details?" -> GET /Forum/GetTopicForContent/{contentId}/
+- "List all GetForumTagSuggestions?" -> GET /Forum/GetForumTagSuggestions/
+- "Get Poll details?" -> GET /Forum/Poll/{topicId}/
+- "Create a Summary?" -> POST /Forum/Recruit/Summaries/
+- "List all GetAvailableAvatars?" -> GET /GroupV2/GetAvailableAvatars/
+- "List all GetAvailableThemes?" -> GET /GroupV2/GetAvailableThemes/
+- "Get GetUserClanInviteSetting details?" -> GET /GroupV2/GetUserClanInviteSetting/{mType}/
+- "Create a Search?" -> POST /GroupV2/Search/
+- "Get GroupV2 details?" -> GET /GroupV2/{groupId}/
+- "Get Name details?" -> GET /GroupV2/Name/{groupName}/{groupType}/
+- "Create a NameV2?" -> POST /GroupV2/NameV2/
+- "List all OptionalConversations?" -> GET /GroupV2/{groupId}/OptionalConversations/
+- "Create a Edit?" -> POST /GroupV2/{groupId}/Edit/
+- "Create a EditClanBanner?" -> POST /GroupV2/{groupId}/EditClanBanner/
+- "Create a EditFounderOption?" -> POST /GroupV2/{groupId}/EditFounderOptions/
+- "Create a Add?" -> POST /GroupV2/{groupId}/OptionalConversations/Add/
+- "List all Members?" -> GET /GroupV2/{groupId}/Members/
+- "List all AdminsAndFounder?" -> GET /GroupV2/{groupId}/AdminsAndFounder/
+- "Create a Kick?" -> POST /GroupV2/{groupId}/Members/{membershipType}/{membershipId}/Kick/
+- "Create a Ban?" -> POST /GroupV2/{groupId}/Members/{membershipType}/{membershipId}/Ban/
+- "Create a Unban?" -> POST /GroupV2/{groupId}/Members/{membershipType}/{membershipId}/Unban/
+- "List all Banned?" -> GET /GroupV2/{groupId}/Banned/
+- "List all EditHistory?" -> GET /GroupV2/{groupId}/EditHistory/
+- "List all Pending?" -> GET /GroupV2/{groupId}/Members/Pending/
+- "List all InvitedIndividuals?" -> GET /GroupV2/{groupId}/Members/InvitedIndividuals/
+- "Create a ApproveAll?" -> POST /GroupV2/{groupId}/Members/ApproveAll/
+- "Create a DenyAll?" -> POST /GroupV2/{groupId}/Members/DenyAll/
+- "Create a ApproveList?" -> POST /GroupV2/{groupId}/Members/ApproveList/
+- "Create a DenyList?" -> POST /GroupV2/{groupId}/Members/DenyList/
+- "Get User details?" -> GET /GroupV2/User/{membershipType}/{membershipId}/{filter}/{groupType}/
+- "Get Recover details?" -> GET /GroupV2/Recover/{membershipType}/{membershipId}/{groupType}/
+- "Get Potential details?" -> GET /GroupV2/User/Potential/{membershipType}/{membershipId}/{filter}/{groupType}/
+- "Create a ForceDropsRepair?" -> POST /Tokens/Partner/ForceDropsRepair/
+- "Create a ClaimOffer?" -> POST /Tokens/Partner/ClaimOffer/
+- "Get History details?" -> GET /Tokens/Partner/History/{partnerApplicationId}/{targetBnetMembershipId}/
+- "Get Application details?" -> GET /Tokens/Partner/History/{targetBnetMembershipId}/Application/{partnerApplicationId}/
+- "Get GetRewardsForUser details?" -> GET /Tokens/Rewards/GetRewardsForUser/{membershipId}/
+- "Get GetRewardsForPlatformUser details?" -> GET /Tokens/Rewards/GetRewardsForPlatformUser/{membershipId}/{membershipType}/
+- "List all BungieRewards?" -> GET /Tokens/Rewards/BungieRewards/
+- "List all Manifest?" -> GET /Destiny2/Manifest/
+- "Get Manifest details?" -> GET /Destiny2/Manifest/{entityType}/{hashIdentifier}/
+- "List all LinkedProfiles?" -> GET /Destiny2/{membershipType}/Profile/{membershipId}/LinkedProfiles/
+- "Get Profile details?" -> GET /Destiny2/{membershipType}/Profile/{destinyMembershipId}/
+- "Get Character details?" -> GET /Destiny2/{membershipType}/Profile/{destinyMembershipId}/Character/{characterId}/
+- "List all WeeklyRewardState?" -> GET /Destiny2/Clan/{groupId}/WeeklyRewardState/
+- "List all ClanBannerDictionary?" -> GET /Destiny2/Clan/ClanBannerDictionary/
+- "Get Item details?" -> GET /Destiny2/{membershipType}/Profile/{destinyMembershipId}/Item/{itemInstanceId}/
+- "List all Vendors?" -> GET /Destiny2/{membershipType}/Profile/{destinyMembershipId}/Character/{characterId}/Vendors/
+- "Get Vendor details?" -> GET /Destiny2/{membershipType}/Profile/{destinyMembershipId}/Character/{characterId}/Vendors/{vendorHash}/
+- "List all Vendors?" -> GET /Destiny2/Vendors/
+- "Get Collectible details?" -> GET /Destiny2/{membershipType}/Profile/{destinyMembershipId}/Character/{characterId}/Collectibles/{collectiblePresentationNodeHash}/
+- "Create a TransferItem?" -> POST /Destiny2/Actions/Items/TransferItem/
+- "Create a PullFromPostmaster?" -> POST /Destiny2/Actions/Items/PullFromPostmaster/
+- "Create a EquipItem?" -> POST /Destiny2/Actions/Items/EquipItem/
+- "Create a EquipItem?" -> POST /Destiny2/Actions/Items/EquipItems/
+- "Create a EquipLoadout?" -> POST /Destiny2/Actions/Loadouts/EquipLoadout/
+- "Create a SnapshotLoadout?" -> POST /Destiny2/Actions/Loadouts/SnapshotLoadout/
+- "Create a UpdateLoadoutIdentifier?" -> POST /Destiny2/Actions/Loadouts/UpdateLoadoutIdentifiers/
+- "Create a ClearLoadout?" -> POST /Destiny2/Actions/Loadouts/ClearLoadout/
+- "Create a SetLockState?" -> POST /Destiny2/Actions/Items/SetLockState/
+- "Create a SetTrackedState?" -> POST /Destiny2/Actions/Items/SetTrackedState/
+- "Create a InsertSocketPlug?" -> POST /Destiny2/Actions/Items/InsertSocketPlug/
+- "Create a InsertSocketPlugFree?" -> POST /Destiny2/Actions/Items/InsertSocketPlugFree/
+- "Get PostGameCarnageReport details?" -> GET /Destiny2/Stats/PostGameCarnageReport/{activityId}/
+- "Create a Report?" -> POST /Destiny2/Stats/PostGameCarnageReport/{activityId}/Report/
+- "List all Definition?" -> GET /Destiny2/Stats/Definition/
+- "Get Clan details?" -> GET /Destiny2/Stats/Leaderboards/Clans/{groupId}/
+- "Get AggregateClanStat details?" -> GET /Destiny2/Stats/AggregateClanStats/{groupId}/
+- "List all Leaderboards?" -> GET /Destiny2/{membershipType}/Account/{destinyMembershipId}/Stats/Leaderboards/
+- "Get Leaderboard details?" -> GET /Destiny2/Stats/Leaderboards/{membershipType}/{destinyMembershipId}/{characterId}/
+- "Get Search details?" -> GET /Destiny2/Armory/Search/{type}/{searchTerm}/
+- "List all Stats?" -> GET /Destiny2/{membershipType}/Account/{destinyMembershipId}/Character/{characterId}/Stats/
+- "List all Stats?" -> GET /Destiny2/{membershipType}/Account/{destinyMembershipId}/Stats/
+- "List all Activities?" -> GET /Destiny2/{membershipType}/Account/{destinyMembershipId}/Character/{characterId}/Stats/Activities/
+- "List all UniqueWeapons?" -> GET /Destiny2/{membershipType}/Account/{destinyMembershipId}/Character/{characterId}/Stats/UniqueWeapons/
+- "List all AggregateActivityStats?" -> GET /Destiny2/{membershipType}/Account/{destinyMembershipId}/Character/{characterId}/Stats/AggregateActivityStats/
+- "List all Content?" -> GET /Destiny2/Milestones/{milestoneHash}/Content/
+- "List all Milestones?" -> GET /Destiny2/Milestones/
+- "Create a Initialize?" -> POST /Destiny2/Awa/Initialize/
+- "Create a AwaProvideAuthorizationResult?" -> POST /Destiny2/Awa/AwaProvideAuthorizationResult/
+- "Get GetActionToken details?" -> GET /Destiny2/Awa/GetActionToken/{correlationId}/
+- "Get Get details?" -> GET /CommunityContent/Get/{sort}/{mediaFilter}/{page}/
+- "List all Categories?" -> GET /Trending/Categories/
+- "Get Category details?" -> GET /Trending/Categories/{categoryId}/{pageNumber}/
+- "Get Detail details?" -> GET /Trending/Details/{trendingEntryType}/{identifier}/
+- "List all ActiveCount?" -> GET /Fireteam/Clan/{groupId}/ActiveCount/
+- "Get Available details?" -> GET /Fireteam/Clan/{groupId}/Available/{platform}/{activityType}/{dateRange}/{slotFilter}/{publicOnly}/{page}/
+- "Get Available details?" -> GET /Fireteam/Search/Available/{platform}/{activityType}/{dateRange}/{slotFilter}/{page}/
+- "Get My details?" -> GET /Fireteam/Clan/{groupId}/My/{platform}/{includeClosed}/{page}/
+- "Get Summary details?" -> GET /Fireteam/Clan/{groupId}/Summary/{fireteamId}/
+- "List all Friends?" -> GET /Social/Friends/
+- "List all Requests?" -> GET /Social/Friends/Requests/
+- "Get PlatformFriend details?" -> GET /Social/PlatformFriends/{friendPlatform}/{page}/
+- "List all GetAvailableLocales?" -> GET /GetAvailableLocales/
+- "List all Settings?" -> GET /Settings/
+- "List all UserSystemOverrides?" -> GET /UserSystemOverrides/
+- "List all GlobalAlerts?" -> GET /GlobalAlerts/
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

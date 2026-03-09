@@ -383,101 +383,313 @@ http://127.0.0.1
 | POST | /mimic/access/add/{user}/{agents}/{mask} | Adds/Overwrites the user entry in the access control database. |
 | DELETE | /mimic/access/del/{user} | Clears a users entry from access control database. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How many agents can I run?" -> GET /mimic/get/max
-- "Which agents are currently running?" -> GET /mimic/get/active_list
-- "What is the current state of agent 5?" -> GET /mimic/agent/{agentNum}/get/state
-- "How do I add a new SNMP agent at a specific IP?" -> POST /mimic/agent/{agentNum}/add/{IP}
-- "How do I start all simulations at once?" -> PUT /mimic/start
-- "What protocols does MIMIC support?" -> GET /mimic/get/protocols
-- "How do I configure SNMPv3 users on an agent?" -> POST /mimic/agent/{agentNum}/protocol/msg/snmpv3/user/add/{userName}/{securityName}/{authProtocol}/{authKey}/{privProtocol}/{privKey}
-- "What OID values does agent 3 expose?" -> GET /mimic/agent/{agentNum}/value/list/{OID}
-- "How do I send a syslog message from an agent?" -> POST /mimic/agent/{agentNum}/protocol/msg/syslog/send/{pri}
-- "How do I set up MQTT on an agent?" -> GET /mimic/agent/{agentNum}/protocol/msg/mqtt/get/config
-- "What agents have unsaved configuration changes?" -> GET /mimic/get/changed_config_list
-- "How do I create an IP alias for an agent?" -> POST /mimic/agent/{agentNum}/ipalias/add/{IP}/{port}/{mask}/{interface}
-- "How do I configure trap destinations for an agent?" -> POST /mimic/agent/{agentNum}/trap/config/add/{IP}/{port}
-- "How do I set up a NetFlow collector?" -> PUT /mimic/agent/{agentNum}/protocol/msg/netflow/set/collector/{collectorIP}
-- "Who has access to manage agents?" -> GET /mimic/access/list
-
-## Response Tips
-
-- **System info endpoints** (`/mimic/get/*`): Return scalar values (strings, integers, or comma-separated lists). No pagination -- results are always complete.
-- **Agent property getters** (`/mimic/agent/{agentNum}/get/*`): Return a single value per call. A 400 means the agent number is invalid or the agent is not configured.
-- **List endpoints** (`*/list`): Return arrays of items (IP aliases, trap configs, users, timer scripts). No cursor-based pagination; all items return in one response.
-- **Protocol config getters** (`*/get/config`): Return structured objects with named fields (see `@returns` schema per protocol). Fields vary by protocol type.
-- **Statistics endpoints** (`*/get/statistics`): Return protocol-specific counters. Pair with `*/get/stats_hdr` to get column headers that label the statistics values.
-- **Value space endpoints** (`*/value/*`): OID-centric responses; `eval` returns computed values, `variables` returns assignable fields, `meval`/`mget` support batch retrieval via array parameters.
-- **Store endpoints** (`*/store/*`): Key-value responses. `exists` returns boolean, `persists` indicates persistence flag, `list` returns all variable names.
-
-## Anomaly Flags
-
-- **Agent state mismatch**: If `GET /mimic/agent/{agentNum}/get/state` returns an unexpected state after a start/stop/pause command, surface this immediately -- the agent may have hit a configuration error during transition.
-- **Unsaved changes accumulating**: Proactively check `GET /mimic/get/changed_config_list` and `GET /mimic/get/changed_state_list` -- if these grow without `PUT /mimic/save` being called, warn about potential data loss on restart.
-- **Config file drift**: If `GET /mimic/get/cfgfile_changed` returns true, flag that the running configuration differs from the saved file.
-- **Agent 400 errors on valid numbers**: A 400 on a previously working agent number may indicate the agent was removed or the simulation was cleared -- check `GET /mimic/get/configured_list` to confirm.
-- **SNMPv3 security gaps**: After adding users or groups via SNMPv3 endpoints, flag if USM/VACM databases have not been saved (`*/usm/save`, `*/vacm/save`) -- changes are lost on reload.
-- **Protocol statistics anomalies**: If `*/get/statistics` shows high error counts or zero activity on a protocol that should be active, surface this as a potential misconfiguration.
-- **MQTT disconnection loops**: If `*/mqtt/client/get/protstate` shows repeated disconnects after `connect`, flag the broker address, port, or credentials as likely misconfigured.
-- **Trap destination unreachable**: After adding trap configs, if agent statistics show zero traps sent, flag the destination IP/port as potentially unreachable.
-
-## Playbook
-
-### 1. Set Up a New SNMP Agent from Scratch
-
-1. Check available capacity: `GET /mimic/get/max` and `GET /mimic/get/configured_list`
-2. Add the agent: `POST /mimic/agent/{agentNum}/add/{IP}`
-3. Set the network interface: `PUT /mimic/agent/{agentNum}/set/interface/{interface}`
-4. Set the subnet mask: `PUT /mimic/agent/{agentNum}/set/mask/{mask}`
-5. Set the listening port: `PUT /mimic/agent/{agentNum}/set/port/{port}`
-6. Load MIB files: `PUT /mimic/agent/{agentNum}/set/mibs`
-7. Start the agent: `PUT /mimic/agent/{agentNum}/start`
-8. Verify the state: `GET /mimic/agent/{agentNum}/get/state`
-9. Save the configuration: `PUT /mimic/agent/{agentNum}/save`
-
-### 2. Configure SNMPv3 Security on an Agent
-
-1. Get current SNMPv3 config: `GET /mimic/agent/{agentNum}/protocol/msg/snmpv3/get/config`
-2. Add a USM user: `POST /mimic/agent/{agentNum}/protocol/msg/snmpv3/user/add/{userName}/{securityName}/{authProtocol}/{authKey}/{privProtocol}/{privKey}`
-3. Create a security group: `POST /mimic/agent/{agentNum}/protocol/msg/snmpv3/group/add/{groupName}/{securityModel}/{securityName}`
-4. Define a view: `POST /mimic/agent/{agentNum}/protocol/msg/snmpv3/view/add/{viewName}/{viewType}/{subtree}/{mask}`
-5. Set access rules: `POST /mimic/agent/{agentNum}/protocol/msg/snmpv3/access/add/{groupName}/{prefix}/{securityModel}/{securityLevel}/{contextMatch}/{readView}/{writeView}/{notifyView}`
-6. Save USM database: `PUT /mimic/agent/{agentNum}/protocol/msg/snmpv3/usm/save`
-7. Save VACM database: `PUT /mimic/agent/{agentNum}/protocol/msg/snmpv3/vacm/save`
-
-### 3. Set Up NetFlow Export to a Collector
-
-1. Get current NetFlow config: `GET /mimic/agent/{agentNum}/protocol/msg/netflow/get/config`
-2. Set the flow data file: `PUT /mimic/agent/{agentNum}/protocol/msg/netflow/set/filename/{fileName}`
-3. Set the collector address: `PUT /mimic/agent/{agentNum}/protocol/msg/netflow/set/collector/{collectorIP}`
-4. Set the collector port: `PUT /mimic/agent/{agentNum}/protocol/msg/netflow/set/config/collectorport/{value}`
-5. Reload the flow data: `PUT /mimic/agent/{agentNum}/protocol/msg/netflow/reload`
-6. Resume exporting: `PUT /mimic/agent/{agentNum}/protocol/msg/netflow/resume`
-7. Verify with statistics: `GET /mimic/agent/{agentNum}/protocol/msg/netflow/get/statistics`
-
-### 4. Bulk Agent Management (Load, Start, Save)
-
-1. Load agents from a config file: `PUT /mimic/load/{cfgFile}/{firstAgentNum}/{lastAgentNum}/{startAgentNum}`
-2. Verify loaded agents: `GET /mimic/get/configured_list`
-3. Start all agents at once: `PUT /mimic/start`
-4. Confirm active agents: `GET /mimic/get/active_list`
-5. When done, save all state: `PUT /mimic/save`
-6. To archive a subset: `PUT /mimic/saveas/{cfgFile}/{firstAgentNum}/{lastAgentNum}`
-
-### 5. Set Up an MQTT Client Simulation
-
-1. Check MQTT config: `GET /mimic/agent/{agentNum}/protocol/msg/mqtt/get/config`
-2. Set the broker: `PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/broker/{brokerAddr}`
-3. Set the port: `PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/port/{port}`
-4. Set client ID: `PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/clientid/{clientID}`
-5. Set credentials: `PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/username/{username}` then `PUT .../set/password/{password}`
-6. Set keepalive interval: `PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/keepalive/{aliveTime}`
-7. Connect to broker: `PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/runtime/connect`
-8. Verify connection state: `GET /mimic/agent/{agentNum}/protocol/msg/mqtt/client/get/protstate`
-9. Check subscription count: `GET /mimic/agent/{agentNum}/protocol/msg/mqtt/client/subscribe/card`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all max?" -> GET /mimic/get/max
+- "List all last?" -> GET /mimic/get/last
+- "List all version?" -> GET /mimic/get/version
+- "List all clients?" -> GET /mimic/get/clients
+- "List all cfgfile?" -> GET /mimic/get/cfgfile
+- "List all cfgfile_changed?" -> GET /mimic/get/cfgfile_changed
+- "List all return?" -> GET /mimic/get/return
+- "List all log?" -> GET /mimic/get/log
+- "List all protocols?" -> GET /mimic/get/protocols
+- "List all interfaces?" -> GET /mimic/get/interfaces
+- "List all product?" -> GET /mimic/get/product
+- "List all netaddr?" -> GET /mimic/get/netaddr
+- "List all netdev?" -> GET /mimic/get/netdev
+- "List all configured_list?" -> GET /mimic/get/configured_list
+- "List all active_list?" -> GET /mimic/get/active_list
+- "List all active_data_list?" -> GET /mimic/get/active_data_list
+- "List all changed_config_list?" -> GET /mimic/get/changed_config_list
+- "List all changed_state_list?" -> GET /mimic/get/changed_state_list
+- "Get mget details?" -> GET /mimic/mget/{infoArray}
+- "Update a load?" -> PUT /mimic/load/{cfgFile}/{firstAgentNum}/{lastAgentNum}/{startAgentNum}
+- "Update a clear?" -> PUT /mimic/clear/{firstAgentNum}/{lastAgentNum}
+- "Update a savea?" -> PUT /mimic/saveas/{cfgFile}/{firstAgentNum}/{lastAgentNum}
+- "List all interface?" -> GET /mimic/agent/{agentNum}/get/interface
+- "List all host?" -> GET /mimic/agent/{agentNum}/get/host
+- "List all mask?" -> GET /mimic/agent/{agentNum}/get/mask
+- "List all port?" -> GET /mimic/agent/{agentNum}/get/port
+- "List all protocol?" -> GET /mimic/agent/{agentNum}/get/protocol
+- "List all read?" -> GET /mimic/agent/{agentNum}/get/read
+- "List all write?" -> GET /mimic/agent/{agentNum}/get/write
+- "List all delay?" -> GET /mimic/agent/{agentNum}/get/delay
+- "List all start?" -> GET /mimic/agent/{agentNum}/get/start
+- "List all mibs?" -> GET /mimic/agent/{agentNum}/get/mibs
+- "List all sim?" -> GET /mimic/agent/{agentNum}/get/sim
+- "List all scen?" -> GET /mimic/agent/{agentNum}/get/scen
+- "List all state?" -> GET /mimic/agent/{agentNum}/get/state
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/get/statistics
+- "List all changed?" -> GET /mimic/agent/{agentNum}/get/changed
+- "List all config_changed?" -> GET /mimic/agent/{agentNum}/get/config_changed
+- "List all state_changed?" -> GET /mimic/agent/{agentNum}/get/state_changed
+- "List all trace?" -> GET /mimic/agent/{agentNum}/get/trace
+- "List all pdusize?" -> GET /mimic/agent/{agentNum}/get/pdusize
+- "List all drops?" -> GET /mimic/agent/{agentNum}/get/drops
+- "List all owner?" -> GET /mimic/agent/{agentNum}/get/owner
+- "List all privdir?" -> GET /mimic/agent/{agentNum}/get/privdir
+- "List all oiddir?" -> GET /mimic/agent/{agentNum}/get/oiddir
+- "List all validate?" -> GET /mimic/agent/{agentNum}/get/validate
+- "List all inform_timeout?" -> GET /mimic/agent/{agentNum}/get/inform_timeout
+- "List all num_starts?" -> GET /mimic/agent/{agentNum}/get/num_starts
+- "Update a interface?" -> PUT /mimic/agent/{agentNum}/set/interface/{interface}
+- "Update a host?" -> PUT /mimic/agent/{agentNum}/set/host/{host}
+- "Update a mask?" -> PUT /mimic/agent/{agentNum}/set/mask/{mask}
+- "Update a port?" -> PUT /mimic/agent/{agentNum}/set/port/{port}
+- "Update a read?" -> PUT /mimic/agent/{agentNum}/set/read/{read}
+- "Update a write?" -> PUT /mimic/agent/{agentNum}/set/write/{write}
+- "Update a delay?" -> PUT /mimic/agent/{agentNum}/set/delay/{delay}
+- "Update a start?" -> PUT /mimic/agent/{agentNum}/set/start/{start}
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/set/trace/{trace}
+- "Update a pdusize?" -> PUT /mimic/agent/{agentNum}/set/pdusize/{pdusize}
+- "Update a drop?" -> PUT /mimic/agent/{agentNum}/set/drops/{drops}
+- "Update a owner?" -> PUT /mimic/agent/{agentNum}/set/owner/{owner}
+- "Update a privdir?" -> PUT /mimic/agent/{agentNum}/set/privdir/{privdir}
+- "Update a oiddir?" -> PUT /mimic/agent/{agentNum}/set/oiddir/{oiddir}
+- "Update a validate?" -> PUT /mimic/agent/{agentNum}/set/validate/{validate}
+- "Update a inform_timeout?" -> PUT /mimic/agent/{agentNum}/set/inform_timeout/{inform_timeout}
+- "List all list?" -> GET /mimic/agent/{agentNum}/ipalias/list
+- "Delete a delete?" -> DELETE /mimic/agent/{agentNum}/ipalias/delete/{IP}/{port}
+- "Update a start?" -> PUT /mimic/agent/{agentNum}/ipalias/start/{IP}/{port}
+- "Update a stop?" -> PUT /mimic/agent/{agentNum}/ipalias/stop/{IP}/{port}
+- "Get status details?" -> GET /mimic/agent/{agentNum}/ipalias/status/{IP}/{port}
+- "List all list?" -> GET /mimic/agent/{agentNum}/trap/config/list
+- "Delete a delete?" -> DELETE /mimic/agent/{agentNum}/trap/config/delete/{IP}/{port}
+- "List all list?" -> GET /mimic/agent/{agentNum}/trap/list
+- "List all list?" -> GET /mimic/agent/{agentNum}/from/list
+- "Delete a delete?" -> DELETE /mimic/agent/{agentNum}/from/delete/{IP}/{port}
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/{prot}/get/config
+- "Get list details?" -> GET /mimic/agent/{agentNum}/value/list/{OID}
+- "Get oid details?" -> GET /mimic/agent/{agentNum}/value/oid/{object}
+- "Get name details?" -> GET /mimic/agent/{agentNum}/value/name/{OID}
+- "Get mib details?" -> GET /mimic/agent/{agentNum}/value/mib/{object}
+- "Get info details?" -> GET /mimic/agent/{agentNum}/value/info/{object}
+- "Get instance details?" -> GET /mimic/agent/{agentNum}/value/instances/{object}
+- "Get eval details?" -> GET /mimic/agent/{agentNum}/value/eval/{object}/{instance}
+- "Get variable details?" -> GET /mimic/agent/{agentNum}/value/variables/{object}/{instance}
+- "Get split details?" -> GET /mimic/agent/{agentNum}/value/split/{OID}
+- "Get get details?" -> GET /mimic/agent/{agentNum}/value/get/{object}/{instance}/{variable}
+- "Update a set?" -> PUT /mimic/agent/{agentNum}/value/set/{object}/{instance}/{variable}
+- "Get meval details?" -> GET /mimic/agent/{agentNum}/value/meval/{objInsArray}
+- "Get mget details?" -> GET /mimic/agent/{agentNum}/value/mget/{objInsVarArray}
+- "Update a unset?" -> PUT /mimic/agent/{agentNum}/value/unset/{object}/{instance}/{variable}
+- "Delete a remove?" -> DELETE /mimic/agent/{agentNum}/value/remove/{object}/{instance}
+- "Get get details?" -> GET /mimic/agent/{agentNum}/value/state/get/{object}
+- "Update a set?" -> PUT /mimic/agent/{agentNum}/value/state/set/{object}/{state}
+- "Update a set?" -> PUT /mimic/store/set/{var}/{persist}
+- "Update a set?" -> PUT /mimic/agent/{agentNum}/store/set/{var}/{persist}
+- "Update a lreplace?" -> PUT /mimic/store/lreplace/{var}/{index}
+- "Update a lreplace?" -> PUT /mimic/agent/{agentNum}/store/lreplace/{var}/{index}
+- "Update a unset?" -> PUT /mimic/store/unset/{var}
+- "Update a unset?" -> PUT /mimic/agent/{agentNum}/store/unset/{var}
+- "Get get details?" -> GET /mimic/store/get/{var}
+- "Get get details?" -> GET /mimic/agent/{agentNum}/store/get/{var}
+- "Get exist details?" -> GET /mimic/store/exists/{var}
+- "Get exist details?" -> GET /mimic/agent/{agentNum}/store/exists/{var}
+- "Get persist details?" -> GET /mimic/store/persists/{var}
+- "Get persist details?" -> GET /mimic/agent/{agentNum}/store/persists/{var}
+- "List all list?" -> GET /mimic/store/list
+- "List all list?" -> GET /mimic/agent/{agentNum}/store/list
+- "Update a copy?" -> PUT /mimic/agent/{agentNum}/store/copy/{otherAgent}
+- "List all list?" -> GET /mimic/agent/{agentNum}/timer/script/list
+- "List all list?" -> GET /mimic/timer/script/list
+- "Delete a delete?" -> DELETE /mimic/agent/{agentNum}/timer/script/delete/{script}/{interval}/{arg}
+- "Delete a delete?" -> DELETE /mimic/timer/script/delete/{script}/{interval}/{arg}
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmpv3/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/snmpv3/set/config/{parameter}/{value}
+- "List all engineid?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmpv3/get/engineid
+- "List all engineboots?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmpv3/get/engineboots
+- "List all enginetime?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmpv3/get/enginetime
+- "List all context_engineid?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmpv3/get/context_engineid
+- "List all list?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmpv3/user/list
+- "Delete a del?" -> DELETE /mimic/agent/{agentNum}/protocol/msg/snmpv3/user/del/{userName}
+- "List all list?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmpv3/group/list
+- "Delete a del?" -> DELETE /mimic/agent/{agentNum}/protocol/msg/snmpv3/group/del/{groupName}
+- "List all list?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmpv3/access/list
+- "Delete a del?" -> DELETE /mimic/agent/{agentNum}/protocol/msg/snmpv3/access/del/{accessName}
+- "List all list?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmpv3/view/list
+- "Delete a del?" -> DELETE /mimic/agent/{agentNum}/protocol/msg/snmpv3/view/del/{viewName}
+- "Update a savea?" -> PUT /mimic/agent/{agentNum}/protocol/msg/snmpv3/usm/saveas/{filename}
+- "Update a savea?" -> PUT /mimic/agent/{agentNum}/protocol/msg/snmpv3/vacm/saveas/{filename}
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/dhcp/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/dhcp/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/dhcp/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/dhcp/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/dhcp/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/dhcp/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/dhcp/get/statistics
+- "List all params?" -> GET /mimic/agent/{agentNum}/protocol/msg/dhcp/params
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/tftp/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/tftp/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/tftp/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/tftp/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/tftp/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/tftp/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/tftp/get/statistics
+- "Get get details?" -> GET /mimic/agent/{agentNum}/protocol/msg/tftp/{sessionID}/get/{parameter}
+- "Update a set?" -> PUT /mimic/agent/{agentNum}/protocol/msg/tftp/{sessionID}/set/{parameter}/{value}
+- "List all status?" -> GET /mimic/agent/{agentNum}/protocol/msg/tftp/{sessionID}/status
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/tod/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/tod/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/tod/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/tod/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/tod/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/tod/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/tod/get/statistics
+- "Get retry details?" -> GET /mimic/agent/{agentNum}/protocol/msg/tod/gettime/server/{serverAddr}/port/{portNum}/script/{scriptName}/timeout/{timeSec}/retries/{numRetries}
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/telnet/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/telnet/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/telnet/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/telnet/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/telnet/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/telnet/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/telnet/get/statistics
+- "List all state?" -> GET /mimic/agent/{agentNum}/protocol/msg/telnet/server/get/state
+- "List all rulesdb?" -> GET /mimic/agent/{agentNum}/protocol/msg/telnet/server/get/rulesdb
+- "List all userdb?" -> GET /mimic/agent/{agentNum}/protocol/msg/telnet/server/get/userdb
+- "List all keymap?" -> GET /mimic/agent/{agentNum}/protocol/msg/telnet/server/get/keymap
+- "List all users?" -> GET /mimic/agent/{agentNum}/protocol/msg/telnet/server/get/users
+- "List all connections?" -> GET /mimic/agent/{agentNum}/protocol/msg/telnet/server/get/connections
+- "Update a logon?" -> PUT /mimic/agent/{agentNum}/protocol/msg/telnet/connection/logon/{connectionID}/{user}/{password}
+- "Update a request?" -> PUT /mimic/agent/{agentNum}/protocol/msg/telnet/connection/request/{connectionID}/{command}
+- "Update a signal?" -> PUT /mimic/agent/{agentNum}/protocol/msg/telnet/connection/signal/{connectionID}/{signalName}
+- "Update a enable?" -> PUT /mimic/agent/{agentNum}/protocol/msg/telnet/ipalias/enable/{ipaddress}/{port}
+- "Update a disable?" -> PUT /mimic/agent/{agentNum}/protocol/msg/telnet/ipalias/disable/{ipaddress}/{port}
+- "Get isenabled details?" -> GET /mimic/agent/{agentNum}/protocol/msg/telnet/ipalias/isenabled/{ipaddress}/{port}
+- "List all list?" -> GET /mimic/agent/{agentNum}/protocol/msg/telnet/ipalias/list
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/ssh/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/ssh/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/ssh/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/ssh/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/ssh/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/ssh/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/ssh/get/statistics
+- "Update a enable?" -> PUT /mimic/agent/{agentNum}/protocol/msg/ssh/ipalias/enable/{ipaddress}/{port}
+- "Update a disable?" -> PUT /mimic/agent/{agentNum}/protocol/msg/ssh/ipalias/disable/{ipaddress}/{port}
+- "Get isenabled details?" -> GET /mimic/agent/{agentNum}/protocol/msg/ssh/ipalias/isenabled/{ipaddress}/{port}
+- "List all list?" -> GET /mimic/agent/{agentNum}/protocol/msg/ssh/ipalias/list
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmptcp/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmptcp/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/snmptcp/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmptcp/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/snmptcp/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/snmptcp/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmptcp/get/statistics
+- "Update a enable?" -> PUT /mimic/agent/{agentNum}/protocol/msg/snmptcp/ipalias/enable/{ipaddress}/{port}
+- "Update a disable?" -> PUT /mimic/agent/{agentNum}/protocol/msg/snmptcp/ipalias/disable/{ipaddress}/{port}
+- "Get isenabled details?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmptcp/ipalias/isenabled/{ipaddress}/{port}
+- "List all list?" -> GET /mimic/agent/{agentNum}/protocol/msg/snmptcp/ipalias/list
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/syslog/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/syslog/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/syslog/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/syslog/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/syslog/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/syslog/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/syslog/get/statistics
+- "Get get details?" -> GET /mimic/agent/{agentNum}/protocol/msg/syslog/get/{attr}
+- "Update a set?" -> PUT /mimic/agent/{agentNum}/protocol/msg/syslog/set/{attr}/{value}
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/ipmi/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/ipmi/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/ipmi/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/ipmi/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/ipmi/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/ipmi/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/ipmi/get/statistics
+- "Get get details?" -> GET /mimic/agent/{agentNum}/protocol/msg/ipmi/get/{attr}
+- "Update a set?" -> PUT /mimic/agent/{agentNum}/protocol/msg/ipmi/set/{attr}/{value}
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/proxy/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/proxy/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/proxy/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/proxy/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/proxy/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/proxy/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/proxy/get/statistics
+- "Delete a remove?" -> DELETE /mimic/agent/{agentNum}/protocol/msg/proxy/port/remove/{port}
+- "List all list?" -> GET /mimic/agent/{agentNum}/protocol/msg/proxy/port/list
+- "Update a start?" -> PUT /mimic/agent/{agentNum}/protocol/msg/proxy/port/start/{port}
+- "Update a stop?" -> PUT /mimic/agent/{agentNum}/protocol/msg/proxy/port/stop/{port}
+- "Get isStarted details?" -> GET /mimic/agent/{agentNum}/protocol/msg/proxy/port/isStarted/{port}
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/netflow/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/netflow/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/netflow/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/netflow/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/netflow/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/netflow/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/netflow/get/statistics
+- "Update a filename?" -> PUT /mimic/agent/{agentNum}/protocol/msg/netflow/set/filename/{fileName}
+- "Update a collector?" -> PUT /mimic/agent/{agentNum}/protocol/msg/netflow/set/collector/{collectorIP}
+- "List all list?" -> GET /mimic/agent/{agentNum}/protocol/msg/netflow/flow/list
+- "Update a tfs_interval?" -> PUT /mimic/agent/{agentNum}/protocol/msg/netflow/flow/change/tfs_interval/{interval}
+- "Update a dfs_interval?" -> PUT /mimic/agent/{agentNum}/protocol/msg/netflow/flow/change/dfs_interval/{interval}
+- "Update a change?" -> PUT /mimic/agent/{agentNum}/protocol/msg/netflow/flow/change/{flowset-uid}/{field-num}/{attr}/{value}
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/sflow/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/sflow/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/sflow/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/sflow/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/sflow/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/sflow/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/sflow/get/statistics
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/web/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/web/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/web/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/web/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/web/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/web/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/web/get/statistics
+- "Get exist details?" -> GET /mimic/agent/{agentNum}/protocol/msg/web/port/exists/{port}
+- "Update a set?" -> PUT /mimic/agent/{agentNum}/protocol/msg/web/port/set/{port}/{protocol}/{version}
+- "Update a start?" -> PUT /mimic/agent/{agentNum}/protocol/msg/web/port/start/{port}
+- "Update a stop?" -> PUT /mimic/agent/{agentNum}/protocol/msg/web/port/stop/{port}
+- "Delete a remove?" -> DELETE /mimic/agent/{agentNum}/protocol/msg/web/port/remove/{port}
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/mqtt/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/mqtt/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/mqtt/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/mqtt/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/mqtt/get/statistics
+- "List all state?" -> GET /mimic/agent/{agentNum}/protocol/msg/mqtt/client/get/state
+- "List all protstate?" -> GET /mimic/agent/{agentNum}/protocol/msg/mqtt/client/get/protstate
+- "Update a broker?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/broker/{brokerAddr}
+- "Update a port?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/port/{port}
+- "Update a clientid?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/clientid/{clientID}
+- "Update a username?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/username/{username}
+- "Update a password?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/password/{password}
+- "Update a willtopic?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/willtopic/{topic}
+- "Update a willmsg?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/willmsg/{msg}
+- "Update a willretain?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/willretain/{retain}
+- "Update a willqo?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/willqos/{qos}
+- "Update a cleansession?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/cleansession/{cleanOrNot}
+- "Update a keepalive?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/keepalive/{aliveTime}
+- "Update a on_disconnect?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/set/on_disconnect/{action}
+- "List all card?" -> GET /mimic/agent/{agentNum}/protocol/msg/mqtt/client/message/card
+- "Get get details?" -> GET /mimic/agent/{agentNum}/protocol/msg/mqtt/client/message/get/{msgNum}/{attr}
+- "Update a set?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/message/set/{msgNum}/{attr}/{value}
+- "List all card?" -> GET /mimic/agent/{agentNum}/protocol/msg/mqtt/client/subscribe/card
+- "Get get details?" -> GET /mimic/agent/{agentNum}/protocol/msg/mqtt/client/subscribe/get/{subNum}/{attr}
+- "Update a unsubscribe?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/unsubscribe/{subNum}
+- "Update a resubscribe?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/resubscribe/{subNum}
+- "Update a set?" -> PUT /mimic/agent/{agentNum}/protocol/msg/mqtt/client/subscribe/set/{subNum}/{attr}/{value}
+- "List all args?" -> GET /mimic/agent/{agentNum}/protocol/msg/coap/get/args
+- "List all config?" -> GET /mimic/agent/{agentNum}/protocol/msg/coap/get/config
+- "Update a config?" -> PUT /mimic/agent/{agentNum}/protocol/msg/coap/set/config/{argument}/{value}
+- "List all trace?" -> GET /mimic/agent/{agentNum}/protocol/msg/coap/get/trace
+- "Update a trace?" -> PUT /mimic/agent/{agentNum}/protocol/msg/coap/set/trace/{enableOrNot}
+- "List all stats_hdr?" -> GET /mimic/protocol/msg/coap/get/stats_hdr
+- "List all statistics?" -> GET /mimic/agent/{agentNum}/protocol/msg/coap/get/statistics
+- "List all adminuser?" -> GET /mimic/access/get/adminuser
+- "List all admindir?" -> GET /mimic/access/get/admindir
+- "List all acldb?" -> GET /mimic/access/get/acldb
+- "Update a acldb?" -> PUT /mimic/access/set/acldb/{databaseName}
+- "List all enabled?" -> GET /mimic/access/get/enabled
+- "Update a enabled?" -> PUT /mimic/access/set/enabled/{enabledOrNot}
+- "Update a load?" -> PUT /mimic/access/load/{filename}
+- "Update a save?" -> PUT /mimic/access/save/{filename}
+- "List all list?" -> GET /mimic/access/list
+- "Delete a del?" -> DELETE /mimic/access/del/{user}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -43,86 +43,26 @@ https://management.azure.com
 | POST | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/immutabilityPolicies/default/extend | Extends the immutabilityPeriodSinceCreationInDays of a locked immutabilityPolicy. The only action allowed on a Locked policy will be this action. ETag in If-Match is required for this operation. |
 | POST | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/lease | The Lease Container operation establishes and manages a lock on a container for delete operations. The lock duration can be 15 to 60 seconds, or can be infinite. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What blob services are available for my storage account?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices
-- "How do I configure blob service properties like soft delete or versioning?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/{BlobServicesName}
-- "What are the current blob service settings for my account?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/{BlobServicesName}
-- "List all blob containers in my storage account" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers
-- "How do I create a new blob container?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}
-- "How do I update metadata or access level on an existing container?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}
-- "Get details about a specific blob container" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}
-- "How do I delete a blob container?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}
-- "How do I place a legal hold on a container?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/setLegalHold
-- "How do I remove a legal hold from a container?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/clearLegalHold
-- "How do I set an immutability policy on a container?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/immutabilityPolicies/{immutabilityPolicyName}
-- "How do I lock an immutability policy so it can't be deleted?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/immutabilityPolicies/default/lock
-- "How do I extend the retention period of a locked immutability policy?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/immutabilityPolicies/default/extend
-- "How do I acquire or break a lease on a container?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/lease
-- "How do I filter containers by name prefix when listing?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers (use `$filter` parameter)
-
-## Response Tips
-
-- **Blob Services (list/get/set):** Responses return a `properties` object with nested CORS rules, delete retention policy, and versioning settings; always check `properties.deleteRetentionPolicy.enabled` and `properties.isVersioningEnabled` for current state.
-- **Container list:** Paginated via `nextLink` in the response body; pass the `$skipToken` from the URL to fetch subsequent pages, and use `$maxpagesize` to control batch size.
-- **Container CRUD:** PUT returns 201 on create, 200 on update of an existing container; DELETE returns 200 on success and 204 if the container was already gone -- treat both as successful.
-- **Legal hold:** Response includes a `tags` array showing all active hold tags; an empty array means no holds remain.
-- **Immutability policies:** Response includes an `ETag` in the `If-Match` header -- you must capture and reuse this ETag for lock, extend, and delete operations.
-- **Lease operations:** Response varies by action (acquire/renew/break/release); check the `leaseId` in the response for acquire/renew, and `leaseTimeSeconds` for break.
-- **Errors:** Azure ARM errors follow `{ "error": { "code": "...", "message": "..." } }` structure; common codes are `ContainerBeingDeleted`, `ImmutabilityPolicyLocked`, and `LeaseAlreadyPresent`.
-
-## Anomaly Flags
-
-- **ETag mismatch on immutability operations:** If a lock, extend, or delete call fails with 412 Precondition Failed, the `If-Match` ETag is stale -- surface this and suggest re-fetching the policy before retrying.
-- **Legal hold accumulation:** If a `setLegalHold` response shows more than 5 active tags, flag that the container has many holds which will block deletion even after immutability policy expiry.
-- **Immutability policy already locked:** Attempting to delete or shorten retention on a locked policy returns an error -- surface that locked policies can only be extended, never reduced or removed.
-- **Container lease conflicts:** If container delete or update fails with `LeaseAlreadyPresent` (409), flag that a lease must be broken or released first before the operation can proceed.
-- **Pagination not followed:** If a container list response contains `nextLink` but the caller stops after the first page, flag that results are incomplete.
-- **Soft delete disabled:** When reading blob service properties, if `deleteRetentionPolicy.enabled` is false, surface a warning that accidental deletions are not recoverable.
-- **API version drift:** This spec targets `2019-04-01`; if newer features are needed (e.g., object replication, blob inventory), flag that a newer API version may be required.
-
-## Playbook
-
-### 1. Create a Container with Immutability Protection
-
-1. PUT the container at `.../containers/{containerName}` with desired access level in the `blobContainer` body.
-2. Confirm 201 response (container created).
-3. PUT an immutability policy at `.../containers/{containerName}/immutabilityPolicies/{policyName}` with the desired retention period in `parameters`.
-4. Capture the `ETag` from the response headers.
-5. POST to `.../immutabilityPolicies/default/lock` with the captured `ETag` in the `If-Match` header to make the policy permanent.
-6. Verify the lock by GET on the immutability policy and confirming `state` is `Locked`.
-
-### 2. Apply and Manage Legal Holds
-
-1. POST to `.../containers/{containerName}/setLegalHold` with a `LegalHold` body containing the `tags` array (e.g., `["investigation-2024"]`).
-2. Confirm the response shows your tag in the active tags list.
-3. When the hold is no longer needed, POST to `.../containers/{containerName}/clearLegalHold` with the same tag(s) in the `LegalHold` body.
-4. Verify the response shows an empty `tags` array (or the specific tag removed).
-
-### 3. Safely Delete a Container
-
-1. GET the container at `.../containers/{containerName}` to check `leaseState` and `hasLegalHold`.
-2. If `leaseState` is `Leased`, POST to `.../containers/{containerName}/lease` with a break action to release the lease.
-3. If `hasLegalHold` is true, POST to `.../clearLegalHold` to remove all active hold tags.
-4. If an immutability policy exists and is unlocked, DELETE it at `.../immutabilityPolicies/{policyName}` with the current `ETag`.
-5. DELETE the container at `.../containers/{containerName}`.
-6. Accept either 200 (deleted) or 204 (already gone) as success.
-
-### 4. Enable Soft Delete and Versioning on Blob Services
-
-1. GET the current blob service properties at `.../blobServices/{BlobServicesName}` (typically `default`).
-2. In the response body, note the current `properties` values to avoid overwriting settings.
-3. PUT to the same endpoint with updated `parameters` body setting `deleteRetentionPolicy.enabled: true`, `deleteRetentionPolicy.days: 30`, and `isVersioningEnabled: true`.
-4. Confirm 200 response and verify the returned properties match your intended configuration.
-
-### 5. Extend Retention on a Locked Immutability Policy
-
-1. GET the immutability policy at `.../immutabilityPolicies/{policyName}` to read the current retention days and capture the `ETag`.
-2. POST to `.../immutabilityPolicies/default/extend` with the `If-Match` header set to the captured `ETag` and a `parameters` body containing the new (longer) retention period.
-3. Confirm 200 response and verify `immutabilityPeriodSinceCreationInDays` reflects the extended value.
-4. Note: you can only increase retention, never decrease it on a locked policy.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all blobServices?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices
+- "Update a blobService?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/{BlobServicesName}
+- "Get blobService details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/{BlobServicesName}
+- "List all containers?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers
+- "Update a container?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}
+- "Partially update a container?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}
+- "Get container details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}
+- "Delete a container?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}
+- "Create a setLegalHold?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/setLegalHold
+- "Create a clearLegalHold?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/clearLegalHold
+- "Update a immutabilityPolicy?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/immutabilityPolicies/{immutabilityPolicyName}
+- "Get immutabilityPolicy details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/immutabilityPolicies/{immutabilityPolicyName}
+- "Delete a immutabilityPolicy?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/immutabilityPolicies/{immutabilityPolicyName}
+- "Create a lock?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/immutabilityPolicies/default/lock
+- "Create a extend?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/immutabilityPolicies/default/extend
+- "Create a lease?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Storage/storageAccounts/{accountName}/blobServices/default/containers/{containerName}/lease
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

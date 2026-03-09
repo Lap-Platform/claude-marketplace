@@ -45,83 +45,27 @@ Not specified.
 | POST | /tyk/oauth/authorize-client/ | The final request from an authorising party for a redirect URI during the Tyk OAuth flow |
 | DELETE | /tyk/oauth/refresh/{keyId} | Invalidate a refresh token |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all API keys?" -> GET /tyk/keys/
-- "How do I create a new API key?" -> POST /tyk/keys/create
-- "How do I update an existing key's session data?" -> PUT /tyk/keys/{keyId}
-- "How do I delete an API key?" -> DELETE /tyk/keys/{keyId}
-- "What APIs are configured on the gateway?" -> GET /tyk/apis/
-- "How do I register a new API definition?" -> POST /tyk/apis/
-- "How do I get details for a specific API?" -> GET /tyk/apis/{apiID}
-- "How do I remove an API from the gateway?" -> DELETE /tyk/apis/{apiID}
-- "How do I update an existing API definition?" -> PUT /tyk/apis/{apiID}
-- "How do I check the health of an API?" -> GET /tyk/health/
-- "How do I reload the gateway configuration?" -> GET /tyk/reload/
-- "How do I reload all gateways in a cluster?" -> GET /tyk/reload/group
-- "How do I create an OAuth client for an API?" -> POST /tyk/oauth/clients/create
-- "How do I list OAuth clients for an API?" -> GET /tyk/oauth/clients/{apiId}
-- "How do I revoke an OAuth client's refresh token?" -> DELETE /tyk/oauth/refresh/{keyId}
-
-## Response Tips
-
-- **Keys endpoints**: All return 200; create/update responses include the key identifier and session object. List requires `api_id` to scope results.
-- **APIs endpoints**: Responses contain full `api_definition` maps. List returns an array; single-fetch returns one definition object.
-- **Health endpoint**: Returns upstream latency and request-count metrics scoped to the given `api_id`.
-- **Reload endpoints**: Return a status message confirming reload. `/reload/group` fans out to all nodes; expect slightly longer response times.
-- **OAuth endpoints**: Client create returns client credentials (id + secret). Authorize-client returns a redirect payload with the authorization code or token.
-
-## Anomaly Flags
-
-- **Missing `x-tyk-authorization` header**: Nearly every endpoint requires it. Surface immediately if the caller omits it or receives 401/403.
-- **Reload not called after changes**: API or key mutations do not take effect until `/tyk/reload/` is called. Flag when create/update/delete is performed without a follow-up reload.
-- **`suppress_reset` usage**: When set on key create/update, quota counters are not reset. Flag if a user sets this unintentionally, as it can cause stale rate-limit state.
-- **OAuth client deletion without token revocation**: Deleting an OAuth client does not automatically revoke issued tokens. Surface when `/oauth/clients/{apiId}/{clientId}` DELETE is called without prior refresh-token cleanup.
-- **Health endpoint scoped to single API**: `/tyk/health/` requires `api_id`. If the user wants cluster-wide health, they need to iterate over all APIs -- flag this gap.
-
-## Playbook
-
-### 1. Register a New API and Make It Live
-
-1. POST /tyk/apis/ with the `api_definition` map (name, target URL, auth config, version settings)
-2. Note the `apiID` from the response
-3. GET /tyk/reload/ to apply the new configuration
-4. GET /tyk/apis/{apiID} to verify the API is registered and active
-5. GET /tyk/health/ with the new `api_id` to confirm upstream connectivity
-
-### 2. Create and Manage API Keys
-
-1. POST /tyk/keys/create with a `session_object` defining access rights, rate limits, and quota
-2. Store the returned key securely
-3. GET /tyk/keys/ with `api_id` to list all keys and confirm creation
-4. PUT /tyk/keys/{keyId} to update session data (e.g., change rate limits)
-5. GET /tyk/reload/ to ensure changes propagate
-
-### 3. Set Up OAuth for an API
-
-1. GET /tyk/apis/{apiID} to confirm the API exists and has OAuth enabled in its definition
-2. POST /tyk/oauth/clients/create with the `oauth_client` map (redirect URIs, policy ID)
-3. Store the returned `client_id` and `client_secret`
-4. POST /tyk/oauth/authorize-client/ with `response_type`, `client_id`, `redirect_uri`, and `key_rules` to generate an authorization code or token
-5. To revoke access later: DELETE /tyk/oauth/refresh/{keyId} then DELETE /tyk/oauth/clients/{apiId}/{clientId}
-
-### 4. Safely Remove an API
-
-1. GET /tyk/keys/ with `api_id` to list all keys tied to the API
-2. DELETE /tyk/keys/{keyId} for each key (with `api_id` parameter)
-3. GET /tyk/oauth/clients/{apiId} to list OAuth clients
-4. DELETE /tyk/oauth/clients/{apiId}/{clientId} for each client
-5. DELETE /tyk/apis/{apiID} to remove the API definition
-6. GET /tyk/reload/ to apply the removal across the gateway
-
-### 5. Rolling Cluster Reload After Bulk Changes
-
-1. Make all required changes (create/update/delete APIs and keys)
-2. GET /tyk/reload/group to trigger a reload across all gateway nodes simultaneously
-3. GET /tyk/apis/ to verify all API definitions reflect the expected state
-4. GET /tyk/health/ for critical APIs to confirm upstream health post-reload
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all keys?" -> GET /tyk/keys/
+- "Create a create?" -> POST /tyk/keys/create
+- "Update a key?" -> PUT /tyk/keys/{keyId}
+- "Delete a key?" -> DELETE /tyk/keys/{keyId}
+- "List all apis?" -> GET /tyk/apis/
+- "Create a apis?" -> POST /tyk/apis/
+- "Get apis details?" -> GET /tyk/apis/{apiID}
+- "Delete a apis?" -> DELETE /tyk/apis/{apiID}
+- "Update a apis?" -> PUT /tyk/apis/{apiID}
+- "List all health?" -> GET /tyk/health/
+- "List all reload?" -> GET /tyk/reload/
+- "List all group?" -> GET /tyk/reload/group
+- "Create a create?" -> POST /tyk/oauth/clients/create
+- "Delete a client?" -> DELETE /tyk/oauth/clients/{apiId}/{clientId}
+- "Get client details?" -> GET /tyk/oauth/clients/{apiId}
+- "Create a authorize-client?" -> POST /tyk/oauth/authorize-client/
+- "Delete a refresh?" -> DELETE /tyk/oauth/refresh/{keyId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

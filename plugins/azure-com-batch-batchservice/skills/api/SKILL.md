@@ -143,89 +143,82 @@ Not specified.
 | GET | /jobschedules | Lists all of the Job Schedules in the specified Account. |
 | GET | /jobschedules/{jobScheduleId}/jobs | Lists the Jobs that have been created under the specified Job Schedule. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What applications are available in my Batch account?" -> GET /applications
-- "Get details about a specific application" -> GET /applications/{applicationId}
-- "How do I create a new Batch job?" -> POST /jobs
-- "List all jobs in my Batch account" -> GET /jobs
-- "How do I submit a task to a job?" -> POST /jobs/{jobId}/tasks
-- "Add multiple tasks to a job at once" -> POST /jobs/{jobId}/addtaskcollection
-- "What's the task count breakdown for my job?" -> GET /jobs/{jobId}/taskcounts
-- "How do I create a compute pool?" -> POST /pools
-- "Resize an existing pool" -> POST /pools/{poolId}/resize
-- "How do I set up autoscaling on a pool?" -> POST /pools/{poolId}/enableautoscale
-- "Download a file from a task's output" -> GET /jobs/{jobId}/tasks/{taskId}/files/{filePath}
-- "List files produced by a task" -> GET /jobs/{jobId}/tasks/{taskId}/files
-- "How do I create a recurring job schedule?" -> POST /jobschedules
-- "Reboot a compute node that's stuck" -> POST /pools/{poolId}/nodes/{nodeId}/reboot
-- "Get RDP connection info for a node" -> GET /pools/{poolId}/nodes/{nodeId}/rdp
-
-## Response Tips
-
-- **List endpoints** (jobs, pools, tasks, certificates, schedules): Paginated via `maxresults`; follow `odata.nextLink` in response body for subsequent pages.
-- **Async operations** (delete, resize, terminate returning 202): The resource is not immediately gone; poll the resource GET endpoint or use `If-Match` with the ETag to confirm completion.
-- **File content endpoints** (GET .../files/{filePath}): Returns raw file bytes, not JSON; use `ocp-range` header for partial downloads; HEAD returns metadata (size, modified date) without body.
-- **Task collection** (POST /addtaskcollection): Returns per-task status in an array; check each entry's status individually since partial failures are possible.
-- **Autoscale evaluate** (POST /evaluateautoscale): Returns the formula evaluation result without applying it; use this to dry-run formulas before enabling autoscale.
-
-## Anomaly Flags
-
-- **202 Accepted on deletes/terminates**: The operation is queued, not complete. Agent should note this and suggest polling for final state if the user expects immediate removal.
-- **ETag / conditional header conflicts**: If a PATCH or PUT returns 412 Precondition Failed, surface that the resource was modified by another client since last read. Recommend re-fetching before retrying.
-- **404 on HEAD checks** (pools, job schedules): HEAD endpoints explicitly declare 404 errors. Flag when a resource existence check returns 404 so the user knows the resource is gone or never existed.
-- **Autoscale formula errors**: When `evaluateautoscale` returns error results in the evaluation, proactively warn before the user enables a broken formula.
-- **Large task collections**: When `addtaskcollection` response contains mixed success/failure statuses, surface the failure count and specific error codes rather than reporting generic success.
-- **Rate limiting via `client-request-id`**: If responses start returning 429 or throttling headers, flag the pattern and suggest backing off or batching requests.
-
-## Playbook
-
-### 1. Submit a Job with Tasks and Monitor Completion
-
-1. POST /jobs with job configuration (pool reference, constraints, priority)
-2. POST /jobs/{jobId}/addtaskcollection with your task array for bulk submission
-3. GET /jobs/{jobId}/taskcounts to check active/completed/failed breakdown
-4. GET /jobs/{jobId}/tasks with `$filter=state eq 'completed'` to list finished tasks
-5. GET /jobs/{jobId}/tasks/{taskId}/files/{filePath} to download stdout.txt or other outputs
-6. POST /jobs/{jobId}/terminate when all work is done (or DELETE /jobs/{jobId} to remove entirely)
-
-### 2. Create and Autoscale a Pool
-
-1. POST /pools with initial VM size, target node count, and OS configuration
-2. HEAD /pools/{poolId} to confirm the pool exists (200 = ready, 404 = still provisioning or failed)
-3. POST /pools/{poolId}/evaluateautoscale with your formula to dry-run it
-4. POST /pools/{poolId}/enableautoscale with the validated formula and evaluation interval
-5. GET /pools/{poolId} periodically to monitor allocation state and current node count
-6. POST /pools/{poolId}/disableautoscale if you need to return to manual scaling
-
-### 3. Manage a Recurring Job Schedule
-
-1. POST /jobschedules with schedule configuration (recurrence interval, job specification)
-2. GET /jobschedules/{jobScheduleId} to verify it was created correctly
-3. GET /jobschedules/{jobScheduleId}/jobs to see jobs spawned by the schedule
-4. POST /jobschedules/{jobScheduleId}/disable to temporarily pause the schedule
-5. POST /jobschedules/{jobScheduleId}/enable to resume it
-6. POST /jobschedules/{jobScheduleId}/terminate or DELETE /jobschedules/{jobScheduleId} to stop permanently
-
-### 4. Troubleshoot a Failed Compute Node
-
-1. GET /pools/{poolId}/nodes with `$filter` to find nodes in error or unusable state
-2. GET /pools/{poolId}/nodes/{nodeId} to inspect the node's scheduling state and recent errors
-3. GET /pools/{poolId}/nodes/{nodeId}/files with `recursive=true` to browse log files
-4. POST /pools/{poolId}/nodes/{nodeId}/uploadbatchservicelogs to collect diagnostics
-5. POST /pools/{poolId}/nodes/{nodeId}/reboot to attempt recovery, or POST /pools/{poolId}/removenodes to evict it
-6. POST /pools/{poolId}/nodes/{nodeId}/reimage as an alternative to reboot for a clean slate
-
-### 5. Manage Certificates for Secure Workloads
-
-1. POST /certificates with the certificate data (PFX or CER format, password if PFX)
-2. GET /certificates to list all certificates and confirm the new one appears
-3. GET /certificates(thumbprintAlgorithm={alg},thumbprint={tp}) to retrieve a specific certificate's details
-4. Reference the certificate thumbprint in pool configuration when creating or updating pools
-5. DELETE /certificates(thumbprintAlgorithm={alg},thumbprint={tp}) to remove when no longer needed
-6. POST /certificates(...)/canceldelete if the deletion was premature and the certificate is still in use by active nodes
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all applications?" -> GET /applications
+- "Get application details?" -> GET /applications/{applicationId}
+- "List all poolusagemetrics?" -> GET /poolusagemetrics
+- "List all supportedimages?" -> GET /supportedimages
+- "List all nodecounts?" -> GET /nodecounts
+- "List all lifetimepoolstats?" -> GET /lifetimepoolstats
+- "List all lifetimejobstats?" -> GET /lifetimejobstats
+- "Create a certificate?" -> POST /certificates
+- "List all certificates?" -> GET /certificates
+- "Create a canceldelete?" -> POST /certificates(thumbprintAlgorithm={thumbprintAlgorithm},thumbprint={thumbprint})/canceldelete
+- "Delete a certificates(thumbprintAlgorithm={thumbprintAlgorithm},thumbprint={thumbprint})?" -> DELETE /certificates(thumbprintAlgorithm={thumbprintAlgorithm},thumbprint={thumbprint})
+- "Get certificates(thumbprintAlgorithm={thumbprintAlgorithm},thumbprint={thumbprint}) details?" -> GET /certificates(thumbprintAlgorithm={thumbprintAlgorithm},thumbprint={thumbprint})
+- "Delete a file?" -> DELETE /jobs/{jobId}/tasks/{taskId}/files/{filePath}
+- "Get file details?" -> GET /jobs/{jobId}/tasks/{taskId}/files/{filePath}
+- "Delete a file?" -> DELETE /pools/{poolId}/nodes/{nodeId}/files/{filePath}
+- "Get file details?" -> GET /pools/{poolId}/nodes/{nodeId}/files/{filePath}
+- "List all files?" -> GET /jobs/{jobId}/tasks/{taskId}/files
+- "List all files?" -> GET /pools/{poolId}/nodes/{nodeId}/files
+- "Delete a jobschedule?" -> DELETE /jobschedules/{jobScheduleId}
+- "Get jobschedule details?" -> GET /jobschedules/{jobScheduleId}
+- "Partially update a jobschedule?" -> PATCH /jobschedules/{jobScheduleId}
+- "Update a jobschedule?" -> PUT /jobschedules/{jobScheduleId}
+- "Create a disable?" -> POST /jobschedules/{jobScheduleId}/disable
+- "Create a enable?" -> POST /jobschedules/{jobScheduleId}/enable
+- "Create a terminate?" -> POST /jobschedules/{jobScheduleId}/terminate
+- "Create a jobschedule?" -> POST /jobschedules
+- "List all jobschedules?" -> GET /jobschedules
+- "Delete a job?" -> DELETE /jobs/{jobId}
+- "Get job details?" -> GET /jobs/{jobId}
+- "Partially update a job?" -> PATCH /jobs/{jobId}
+- "Update a job?" -> PUT /jobs/{jobId}
+- "Create a disable?" -> POST /jobs/{jobId}/disable
+- "Create a enable?" -> POST /jobs/{jobId}/enable
+- "Create a terminate?" -> POST /jobs/{jobId}/terminate
+- "Create a job?" -> POST /jobs
+- "List all jobs?" -> GET /jobs
+- "List all jobs?" -> GET /jobschedules/{jobScheduleId}/jobs
+- "List all jobpreparationandreleasetaskstatus?" -> GET /jobs/{jobId}/jobpreparationandreleasetaskstatus
+- "List all taskcounts?" -> GET /jobs/{jobId}/taskcounts
+- "Create a pool?" -> POST /pools
+- "List all pools?" -> GET /pools
+- "Delete a pool?" -> DELETE /pools/{poolId}
+- "Get pool details?" -> GET /pools/{poolId}
+- "Partially update a pool?" -> PATCH /pools/{poolId}
+- "Create a disableautoscale?" -> POST /pools/{poolId}/disableautoscale
+- "Create a enableautoscale?" -> POST /pools/{poolId}/enableautoscale
+- "Create a evaluateautoscale?" -> POST /pools/{poolId}/evaluateautoscale
+- "Create a resize?" -> POST /pools/{poolId}/resize
+- "Create a stopresize?" -> POST /pools/{poolId}/stopresize
+- "Create a updateproperty?" -> POST /pools/{poolId}/updateproperties
+- "Create a removenode?" -> POST /pools/{poolId}/removenodes
+- "Create a task?" -> POST /jobs/{jobId}/tasks
+- "List all tasks?" -> GET /jobs/{jobId}/tasks
+- "Create a addtaskcollection?" -> POST /jobs/{jobId}/addtaskcollection
+- "Delete a task?" -> DELETE /jobs/{jobId}/tasks/{taskId}
+- "Get task details?" -> GET /jobs/{jobId}/tasks/{taskId}
+- "Update a task?" -> PUT /jobs/{jobId}/tasks/{taskId}
+- "List all subtasksinfo?" -> GET /jobs/{jobId}/tasks/{taskId}/subtasksinfo
+- "Create a terminate?" -> POST /jobs/{jobId}/tasks/{taskId}/terminate
+- "Create a reactivate?" -> POST /jobs/{jobId}/tasks/{taskId}/reactivate
+- "Create a user?" -> POST /pools/{poolId}/nodes/{nodeId}/users
+- "Delete a user?" -> DELETE /pools/{poolId}/nodes/{nodeId}/users/{userName}
+- "Update a user?" -> PUT /pools/{poolId}/nodes/{nodeId}/users/{userName}
+- "Get node details?" -> GET /pools/{poolId}/nodes/{nodeId}
+- "Create a reboot?" -> POST /pools/{poolId}/nodes/{nodeId}/reboot
+- "Create a reimage?" -> POST /pools/{poolId}/nodes/{nodeId}/reimage
+- "Create a disablescheduling?" -> POST /pools/{poolId}/nodes/{nodeId}/disablescheduling
+- "Create a enablescheduling?" -> POST /pools/{poolId}/nodes/{nodeId}/enablescheduling
+- "List all remoteloginsettings?" -> GET /pools/{poolId}/nodes/{nodeId}/remoteloginsettings
+- "List all rdp?" -> GET /pools/{poolId}/nodes/{nodeId}/rdp
+- "Create a uploadbatchservicelog?" -> POST /pools/{poolId}/nodes/{nodeId}/uploadbatchservicelogs
+- "List all nodes?" -> GET /pools/{poolId}/nodes
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

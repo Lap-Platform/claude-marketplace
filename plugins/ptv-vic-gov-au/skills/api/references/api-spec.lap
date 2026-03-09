@@ -4,186 +4,212 @@
 @base https://timetableapi.ptv.vic.gov.au
 @version v3
 @auth ApiKey token in query
-@common_fields {token: any, devid: any, signature: any}
+@common_fields {token: any # Please ignore, devid: any # Your developer id, signature: any # Authentication signature for request}
 @endpoints 26
 @hint download_for_search
 @toc departures(2), directions(3), disruptions(6), fare_estimate(1), outlets(2), pattern(1), routes(2), route_types(1), runs(4), search(1), stops(3)
 
 @group departures
 @endpoint GET /v3/departures/route_type/{route_type}/stop/{stop_id}
-@required {route_type: any, stop_id: any}
-@optional {platform_numbers: any, direction_id: any, gtfs: any, date_utc: any, max_results: any, include_cancelled: any, look_backwards: any, expand: any, include_geopath: any}
-@returns(200)
-@errors {400, 403}
+@desc View departures for all routes from a stop
+@required {route_type: any # Number identifying transport mode; values returned via RouteTypes API, stop_id: any # Identifier of stop; values returned by Stops API}
+@optional {platform_numbers: any # Filter by platform number at stop, direction_id: any # Filter by identifier of direction of travel; values returned by Directions API - /v3/directions/route/{route_id}, gtfs: any # Indicates that stop_id parameter will accept "GTFS stop_id" data, date_utc: any # Filter by the date and time of the request (ISO 8601 UTC format) (default = current date and time), max_results: any # Maximum number of results returned, include_cancelled: any # Indicates if cancelled services (if they exist) are returned (default = false) - metropolitan train only, look_backwards: any # Indicates if filtering runs (and their departures) to those that arrive at destination before date_utc (default = false). Requires max_results &gt; 0., expand: any # List of objects to be returned in full (i.e. expanded) - options include: All, Stop, Route, Run, Direction, Disruption, VehiclePosition, VehicleDescriptor or None. Run must be expanded to receive VehiclePosition and VehicleDescriptor information., include_geopath: any # Indicates if the route geopath should be returned}
+@returns(200) Service departures from the specified stop for all routes of the specified route type; departures are timetabled and real-time (if applicable).
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/departures/route_type/{route_type}/stop/{stop_id}/route/{route_id}
-@required {route_type: any, stop_id: any, route_id: any}
-@optional {direction_id: any, gtfs: any, date_utc: any, max_results: any, include_cancelled: any, look_backwards: any, expand: any, include_geopath: any}
-@returns(200)
-@errors {400, 403}
+@desc View departures for a specific route from a stop
+@required {route_type: any # Number identifying transport mode; values returned via RouteTypes API, stop_id: any # Identifier of stop; values returned by Stops API, route_id: any # Identifier of route; values returned by Routes API - v3/routes}
+@optional {direction_id: any # Filter by identifier of direction of travel; values returned by Directions API - /v3/directions/route/{route_id}, gtfs: any # Indicates that stop_id parameter will accept "GTFS stop_id" data, date_utc: any # Filter by the date and time of the request (ISO 8601 UTC format) (default = current date and time), max_results: any # Maximum number of results returned, include_cancelled: any # Indicates if cancelled services (if they exist) are returned (default = false) - metropolitan train only, look_backwards: any # Indicates if filtering runs (and their departures) to those that arrive at destination before date_utc (default = false). Requires max_results &gt; 0., expand: any # List of objects to be returned in full (i.e. expanded) - options include: All, Stop, Route, Run, Direction, Disruption, VehiclePosition, VehicleDescriptor or None. Run must be expanded to receive VehiclePosition and VehicleDescriptor information., include_geopath: any # Indicates if the route geopath should be returned}
+@returns(200) Service departures from the specified stop for the specified route (and route type); departures are timetabled and real-time (if applicable).
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endgroup
 
 @group directions
 @endpoint GET /v3/directions/route/{route_id}
-@required {route_id: any}
-@returns(200)
-@errors {400, 403}
+@desc View directions that a route travels in
+@required {route_id: any # Identifier of route; values returned by Routes API - v3/routes}
+@returns(200) The directions that a specified route travels in.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/directions/{direction_id}
-@required {direction_id: any}
-@returns(200)
-@errors {400, 403}
+@desc View all routes for a direction of travel
+@required {direction_id: any # Identifier of direction of travel; values returned by Directions API - /v3/directions/route/{route_id}}
+@returns(200) All routes that travel in the specified direction.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/directions/{direction_id}/route_type/{route_type}
-@required {direction_id: any, route_type: any}
-@returns(200)
-@errors {400, 403}
+@desc View all routes of a particular type for a direction of travel
+@required {direction_id: any # Identifier of direction of travel; values returned by Directions API - /v3/directions/route/{route_id}, route_type: any # Number identifying transport mode; values returned via RouteTypes API}
+@returns(200) All routes of the specified route type that travel in the specified direction.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endgroup
 
 @group disruptions
 @endpoint GET /v3/disruptions
-@optional {route_types: any, disruption_modes: any, disruption_status: any}
-@returns(200)
-@errors {400, 403}
+@desc View all disruptions for all route types
+@optional {route_types: any # Filter by route_type; values returned via RouteTypes API, disruption_modes: any # Filter by disruption_mode; values returned via v3/disruptions/modes API, disruption_status: any # Filter by status of disruption}
+@returns(200) All disruption information for all route types.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/disruptions/route/{route_id}
-@required {route_id: any}
-@optional {disruption_status: any}
-@returns(200)
-@errors {400, 403}
+@desc View all disruptions for a particular route
+@required {route_id: any # Identifier of route; values returned by Routes API - v3/routes}
+@optional {disruption_status: any # Filter by status of disruption}
+@returns(200) All disruption information (if any exists) for the specified route.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/disruptions/route/{route_id}/stop/{stop_id}
-@required {route_id: any, stop_id: any}
-@optional {disruption_status: any}
-@returns(200)
-@errors {400, 403}
+@desc View all disruptions for a particular route and stop
+@required {route_id: any # Identifier of route; values returned by Routes API - v3/routes, stop_id: any # Identifier of stop; values returned by Stops API - v3/stops}
+@optional {disruption_status: any # Filter by status of disruption}
+@returns(200) All disruption information (if any exists) for the specified route and stop.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/disruptions/stop/{stop_id}
-@required {stop_id: any}
-@optional {disruption_status: any}
-@returns(200)
-@errors {400, 403}
+@desc View all disruptions for a particular stop
+@required {stop_id: any # Identifier of stop; values returned by Stops API - v3/stops}
+@optional {disruption_status: any # Filter by status of disruption}
+@returns(200) All disruption information (if any exists) for the specified stop.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/disruptions/{disruption_id}
-@required {disruption_id: any}
-@returns(200)
-@errors {400, 403}
+@desc View a specific disruption
+@required {disruption_id: any # Identifier of disruption; values returned by Disruptions API - /v3/disruptions OR /v3/disruptions/route/{route_id}}
+@returns(200) Disruption information for the specified disruption ID.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/disruptions/modes
-@returns(200)
-@errors {400, 403}
+@desc Get all disruption modes
+@returns(200) Disruption specific modes
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endgroup
 
 @group fare_estimate
 @endpoint GET /v3/fare_estimate/min_zone/{minZone}/max_zone/{maxZone}
-@required {minZone: any, maxZone: any}
-@optional {journey_touch_on_utc: any, journey_touch_off_utc: any, is_journey_in_free_tram_zone: any, is_journey_in_overlap_zone: any, travelled_route_types: any}
-@returns(200)
-@errors {400, 403}
+@desc Estimate a fare by zone
+@required {minZone: any # Minimum Zone travelled through ie. 1, maxZone: any # Maximum Zone travelled through id. 6}
+@optional {journey_touch_on_utc: any # JourneyTouchOnUtc in format yyyy-M-d h:m (e.g 2016-5-31 16:53)., journey_touch_off_utc: any # JourneyTouchOffUtc in format yyyy-M-d h:m (e.g 2016-5-31 16:53)., is_journey_in_free_tram_zone: any, is_journey_in_overlap_zone: any, travelled_route_types: any}
+@returns(200) Resultant set fare estimates
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endgroup
 
 @group outlets
 @endpoint GET /v3/outlets
-@optional {max_results: any}
-@returns(200)
-@errors {400, 403}
+@desc List all ticket outlets
+@optional {max_results: any # Maximum number of results returned (default = 30)}
+@returns(200) Ticket outlets.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/outlets/location/{latitude},{longitude}
-@required {latitude: any, longitude: any}
-@optional {max_distance: any, max_results: any}
-@returns(200)
-@errors {400, 403}
+@desc List ticket outlets near a specific location
+@required {latitude: any # Geographic coordinate of latitude, longitude: any # Geographic coordinate of longitude}
+@optional {max_distance: any # Filter by maximum distance (in metres) from location specified via latitude and longitude parameters (default = 300), max_results: any # Maximum number of results returned (default = 30)}
+@returns(200) Ticket outlets near the specified location.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endgroup
 
 @group pattern
 @endpoint GET /v3/pattern/run/{run_ref}/route_type/{route_type}
-@required {run_ref: any, route_type: any}
-@optional {expand: any, stop_id: any, date_utc: any, include_skipped_stops: any, include_geopath: any, include_advertised_interchange: any}
-@returns(200)
-@errors {400, 403}
+@desc View the stopping pattern for a specific trip/service run
+@required {run_ref: any # The run_ref is the identifier of a run as returned by the departures/* and runs/* endpoints. WARNING, run_id is deprecated. Use run_ref instead., route_type: any # Number identifying transport mode; values returned via RouteTypes API}
+@optional {expand: any # List of objects to be returned in full (i.e. expanded) - options include: All, Stop, Route, Run, Direction, Disruption, VehiclePosition, VehicleDescriptor and None. Default is Disruption. Run must be expanded to receive VehiclePosition and VehicleDescriptor information., stop_id: any # Filter by stop_id; values returned by Stops API, date_utc: any # Filter by the date and time of the request (ISO 8601 UTC format) (default = current date and time), include_skipped_stops: any # Include any skipped stops in a stopping pattern. Defaults to false., include_geopath: any # Indicates if geopath data will be returned (default = false), include_advertised_interchange: any # Indicates whether data related to interchanges should be included in the response (default = false) When set to true, this parameter enables API clients to retrieve additional exchange information (stops, routes, runs, directions and disruptions) in a single call instead of making multiple requests}
+@returns(200) The stopping pattern of the specified run_ref and route type. (NOTE: the departure sequence field should be used to sort departures in chronological order, however it is not always N+1 or N-1 of the previous or following departure. e.g 100, 200, 250, 300 instead of 1, 2, 3, 4)
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endgroup
 
 @group routes
 @endpoint GET /v3/routes
-@optional {route_types: any, route_name: any}
-@returns(200)
-@errors {400, 403}
+@desc View route names and numbers for all routes
+@optional {route_types: any # Filter by route_type; values returned via RouteTypes API, route_name: any # Filter by name  of route (accepts partial route name matches)}
+@returns(200) Route names and numbers for all routes of all route types.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/routes/{route_id}
-@required {route_id: any}
-@optional {include_geopath: any, geopath_utc: any}
-@returns(200)
-@errors {400, 403}
+@desc View route name and number for specific route ID
+@required {route_id: any # Identifier of route; values returned by Departures, Directions and Disruptions APIs}
+@optional {include_geopath: any # Indicates kif geopath data will be returned (default = false), geopath_utc: any # Filter geopaths by date (ISO 8601 UTC format) (default = current date)}
+@returns(200) The route name and number for the specified route ID.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endgroup
 
 @group route_types
 @endpoint GET /v3/route_types
-@returns(200)
-@errors {400, 403}
+@desc View all route types and their names
+@returns(200) All route types (i.e. identifiers of transport modes) and their names.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endgroup
 
 @group runs
 @endpoint GET /v3/runs/route/{route_id}
-@required {route_id: any}
-@optional {expand: any, date_utc: any, include_advertised_interchange: any}
-@returns(200)
-@errors {400, 403}
+@desc View all trip/service runs for a specific route ID
+@required {route_id: any # Identifier of route; values returned by Routes API - v3/routes.}
+@optional {expand: any # List of objects to be returned in full (i.e. expanded) - options include: All, VehiclePosition, VehicleDescriptor, or None. Default is None., date_utc: any # Filter by the date and time of the request (ISO 8601 UTC format) (default = current date and time), include_advertised_interchange: any # Indicates whether data related to interchanges should be included in the response (default = false). When set to true, this parameter enables API clients to retrieve additional exchange information (stops, routes, runs, directions and disruptions) in a single call instead of making multiple requests}
+@returns(200) All trip/service run details for the specified route ID.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/runs/route/{route_id}/route_type/{route_type}
-@required {route_id: any, route_type: any}
-@optional {expand: any, date_utc: any, include_advertised_interchange: any}
-@returns(200)
-@errors {400, 403}
+@desc View all trip/service runs for a specific route ID and route type
+@required {route_id: any # Identifier of route; values returned by Routes API - v3/routes., route_type: any # Number identifying transport mode; values returned via RouteTypes API}
+@optional {expand: any # List of objects to be returned in full (i.e. expanded) - options include: All, VehiclePosition, VehicleDescriptor, or None. Default is None., date_utc: any # Filter by the date and time of the request (ISO 8601 UTC format) (default = current date and time), include_advertised_interchange: any # Indicates whether data related to interchanges should be included in the response (default = false). When set to true, this parameter enables API clients to retrieve additional exchange information (stops, routes, runs, directions and disruptions) in a single call instead of making multiple requests}
+@returns(200) All trip/service run details for the specified route ID and route type.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/runs/{run_ref}
-@required {run_ref: any}
-@optional {include_geopath: any, expand: any, date_utc: any, include_advertised_interchange: any}
-@returns(200)
-@errors {400, 403}
+@desc View all trip/service runs for a specific run_ref
+@required {run_ref: any # The run_ref is the identifier of a run as returned by the departures/* and runs/* endpoints. WARNING, run_id is deprecated. Use run_ref instead.}
+@optional {include_geopath: any # Indicates if geopath data will be returned (default = false), expand: any # List of objects to be returned in full (i.e. expanded) - options include: All, VehiclePosition, VehicleDescriptor, or None. Default is None., date_utc: any # Filter by the date and time of the request (ISO 8601 UTC format) (default = current date and time), include_advertised_interchange: any # Indicates whether data related to interchanges should be included in the response (default = false). When set to true, this parameter enables API clients to retrieve additional exchange information (stops, routes, runs, directions and disruptions) in a single call instead of making multiple requests}
+@returns(200) All trip/service run details for the specified run_ref.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/runs/{run_ref}/route_type/{route_type}
-@required {run_ref: any, route_type: any}
-@optional {expand: any, date_utc: any, include_geopath: any}
-@returns(200)
-@errors {400, 403}
+@desc View the trip/service run for a specific run_ref and route type
+@required {run_ref: any # The run_ref is the identifier of a run as returned by the departures/* and runs/* endpoints. WARNING, run_id is deprecated. Use run_ref instead., route_type: any # Number identifying transport mode; values returned via RouteTypes API}
+@optional {expand: any # List of objects to be returned in full (i.e. expanded) - options include: All, VehiclePosition, VehicleDescriptor, or None. Default is None., date_utc: any # Filter by the date and time of the request (ISO 8601 UTC format) (default = current date and time), include_geopath: any # Indicates if geopath data will be returned (default = false)}
+@returns(200) The trip/service run details for the run_ref and route type specified.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endgroup
 
 @group search
 @endpoint GET /v3/search/{search_term}
-@required {search_term: any}
-@optional {route_types: any, latitude: any, longitude: any, max_distance: any, include_addresses: any, include_outlets: any, match_stop_by_suburb: any, match_route_by_suburb: any, match_stop_by_gtfs_stop_id: any}
-@returns(200)
-@errors {400, 403}
+@desc View stops, routes and myki ticket outlets that match the search term
+@required {search_term: any # Search text (note: if search text is numeric and/or less than 3 characters, the API will only return routes)}
+@optional {route_types: any # Filter by route_type; values returned via RouteTypes API (note: stops and routes are ordered by route_types specified), latitude: any # Filter by geographic coordinate of latitude, longitude: any # Filter by geographic coordinate of longitude, max_distance: any # Filter by maximum distance (in metres) from location specified via latitude and longitude parameters, include_addresses: any # Placeholder for future development; currently unavailable, include_outlets: any # Indicates if outlets will be returned in response (default = true), match_stop_by_suburb: any # Indicates whether to find stops by suburbs in the search term (default = true), match_route_by_suburb: any # Indicates whether to find routes by suburbs in the search term (default = true), match_stop_by_gtfs_stop_id: any # Indicates whether to search for stops according to a metlink stop ID (default = false)}
+@returns(200) Stops, routes and myki ticket outlets that contain the search term (note: stops and routes are ordered by route_type by default).
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endgroup
 
 @group stops
 @endpoint GET /v3/stops/{stop_id}/route_type/{route_type}
-@required {stop_id: any, route_type: any}
-@optional {stop_location: any, stop_amenities: any, stop_accessibility: any, stop_contact: any, stop_ticket: any, gtfs: any, stop_staffing: any, stop_disruptions: any}
-@returns(200)
-@errors {400, 403}
+@desc View facilities at a specific stop (Metro and V/Line stations only)
+@required {stop_id: any # Identifier of stop; values returned by Stops API, route_type: any # Number identifying transport mode; values returned via RouteTypes API}
+@optional {stop_location: any # Indicates if stop location information will be returned (default = false), stop_amenities: any # Indicates if stop amenity information will be returned (default = false), stop_accessibility: any # Indicates if stop accessibility information will be returned (default = false), stop_contact: any # Indicates if stop contact information will be returned (default = false), stop_ticket: any # Indicates if stop ticket information will be returned (default = false), gtfs: any # Incdicates whether the stop_id is a GTFS ID or not, stop_staffing: any # Indicates if stop staffing information will be returned (default = false), stop_disruptions: any # Indicates if stop disruption information will be returned (default = false)}
+@returns(200) Stop location, amenity and accessibility facility information for the specified stop (metropolitan and V/Line stations only).
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/stops/route/{route_id}/route_type/{route_type}
-@required {route_id: any, route_type: any}
-@optional {direction_id: any, stop_disruptions: any, include_geopath: any, geopath_utc: any, include_advertised_interchange: any}
-@returns(200)
-@errors {400, 403}
+@desc View all stops on a specific route
+@required {route_id: any # Identifier of route; values returned by Routes API - v3/routes, route_type: any # Number identifying transport mode; values returned via RouteTypes API}
+@optional {direction_id: any # Direction for which the stops need to be returned, stop_disruptions: any # Flag to specify whether disruptions should be included in the response, include_geopath: any # Flag to specify whether geo_path should be included in the response, geopath_utc: any # Filter geopaths by date (ISO 8601 UTC format) (default = current date), include_advertised_interchange: any # Flag to specify whether additional stops for interchanges should be included in the response. Note-: To make use of this flag please pass in direction_id.}
+@returns(200) All stops on the specified route.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endpoint GET /v3/stops/location/{latitude},{longitude}
-@required {latitude: any, longitude: any}
-@optional {route_types: any, max_results: any, max_distance: any, stop_disruptions: any}
-@returns(200)
-@errors {400, 403}
+@desc View all stops near a specific location
+@required {latitude: any # Geographic coordinate of latitude, longitude: any # Geographic coordinate of longitude}
+@optional {route_types: any # Filter by route_type; values returned via RouteTypes API, max_results: any # Maximum number of results returned (default = 30), max_distance: any # Filter by maximum distance (in metres) from location specified via latitude and longitude parameters (default = 300), stop_disruptions: any # Indicates if stop disruption information will be returned (default = false)}
+@returns(200) All stops near the specified location.
+@errors {400: Invalid Request, 403: Access Denied}
 
 @endgroup
 

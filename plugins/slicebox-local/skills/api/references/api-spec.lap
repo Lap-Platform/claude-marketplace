@@ -9,561 +9,679 @@
 
 @group sources
 @endpoint GET /sources
-@returns(200)
+@desc Returns a list of currently available data sources. Possible source types are user - data imported by an API call by a user, box - data received from a remote box, directory - data imported via a watched directory, import - data imported into slicebox using import sessions, or scp - data received from a PACS.
+@returns(200) currently available sources
 
 @endgroup
 
 @group destinations
 @endpoint GET /destinations
-@returns(200)
+@desc Returns a list of currently available destinations. Possible destinations are box - sending data to a remote box, and scu - sending data a receiving SCP.
+@returns(200) currently available destinations
 
 @endgroup
 
 @group system
 @endpoint POST /system/stop
-@returns(200)
+@desc stop and shut down slicebox
+@returns(200) shutdown message
 
 @endpoint GET /system/health
-@returns(200)
+@desc No-op route for checking whether the service is alive or not
+@returns(200) The service is up and running
 
 @endgroup
 
 @group import
 @endpoint GET /import/sessions
-@optional {startindex: any, count: any}
-@returns(200)
+@desc Returns a list of available import sessions.
+@optional {startindex: any # start index of returned slice of import sessions, count: any # size of returned slice of import sessions}
+@returns(200) available import sessions
 
 @endpoint POST /import/sessions
-@required {import session: map}
-@returns(201)
+@desc create a new import sessions
+@required {import session: map: any # The import session to create containing the user defined name of the session}
+@returns(201) the created import session
 
 @endpoint GET /import/sessions/{id}
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc Returns the import sessions with the supplied ID
+@required {id: any # ID of session}
+@returns(200) the import session with the supplied ID
+@errors {404: import session not found (invalid ID)}
 
 @endpoint DELETE /import/sessions/{id}
-@required {id: any}
-@returns(204)
+@desc deletes the import session with the supplied ID
+@required {id: any # ID of import session to delete}
+@returns(204) import session deleted
 
 @endpoint POST /import/sessions/{id}/images
-@required {id: any, dataset: any}
-@returns(200)
-@returns(201)
-@errors {404}
+@desc add a DICOM dataset to the import session with the supplied ID
+@required {id: any # ID of session, dataset: any # The dataset file}
+@returns(200) meta data for the imported dataset on the image level of the DICOM hierarchy. Status code 200 signifies that this image was already present in the slicebox database.
+@returns(201) meta data for the imported dataset on the image level of the DICOM hierarchy
+@errors {404: import session not found (invalid ID)}
 
 @endpoint GET /import/sessions/{id}/images
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc get the imported images corresponding to the import session with the supplied ID
+@required {id: any # ID of import session}
+@returns(200) images corresponding to the specified import session
+@errors {404: import session not found (invalid ID)}
 
 @endgroup
 
 @group metadata
 @endpoint GET /metadata/patients
-@optional {startindex: any, count: any, orderby: any, orderascending: any, filter: any, sources: any, seriestypes: any, seriestags: any}
-@returns(200)
+@desc Returns a list of metadata on the patient level of the DICOM hierarchy
+@optional {startindex: any # start index of returned slice of patients, count: any # size of returned slice of patients, orderby: any # patient property to order results by, orderascending: any # order result ascendingly if true, descendingly otherwise, filter: any # filter the results by matching substrings of patient properties against this value, sources: any # filter the results by matching on one or more underlying series sources. Examples of sources are user, box, directory or scp. The list of sources to filter results by must have the form TYPE1:ID1,TYPE2:ID2,...,TYPEN:IDN. For instance, the argument sources=box:1,user:5 shows results either sent from (slice)box with id 1 or uploaded by user with id 5., seriestypes: any # filter the results by matching on one or more underlying series types. The supplied list of series types must be a comma separated list of series type ids. For instance, the argument seriestypes=3,7,22 shows results including series assigned to either of the series types with ids 3, 7 and 22., seriestags: any # filter the results by matching on one or more underlying series tags. The supplied list of series tags must be a comma separated list of series tag ids. For instance, the argument seriestags=6,2,11 shows results including series with either of the series tags with ids 6, 2 and 11.}
+@returns(200) patients
 
 @endpoint POST /metadata/patients/query
-@required {query: map}
-@returns(200)
+@desc submit a query for patients
+@required {query: map # parameters of patient query}
+@returns(200) patients
 
 @endpoint GET /metadata/patients/{id}
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc Return the patient with the supplied ID
+@required {id: any # ID of patient}
+@returns(200) patient response
+@errors {404: patient not found (invalid ID)}
 
 @endpoint GET /metadata/patients/{id}/images
-@required {id: any}
-@optional {sources: any, seriestypes: any, seriestags: any}
-@returns(200)
+@desc Returns all images for the patient with the supplied patient ID
+@required {id: any # ID of patient}
+@optional {sources: any # filter the results by matching on one or more series sources. Examples of sources are user, box, directory or scp. The list of sources to filter results by must have the form TYPE1:ID1,TYPE2:ID2,...,TYPEN:IDN. For instance, the argument sources=box:1,user:5 shows results either sent from (slice)box with id 1 or uploaded by user with id 5., seriestypes: any # filter the results by matching on one or more series types. The supplied list of series types must be a comma separated list of series type ids. For instance, the argument seriestypes=3,7,22 shows series assigned to either of the series types with ids 3, 7 and 22., seriestags: any # filter the results by matching on one or more series tags. The supplied list of series tags must be a comma separated list of series tag ids. For instance, the argument seriestags=6,2,11 shows series with either of the series tags with ids 6, 2 and 11.}
+@returns(200) list of images
 
 @endpoint GET /metadata/studies
-@required {patientid: any}
-@optional {startindex: any, count: any, sources: any, seriestypes: any, seriestags: any}
-@returns(200)
+@desc Returns a list of metadata on the study level of the DICOM hierarchy
+@required {patientid: any # reference to patient to list studies for}
+@optional {startindex: any # start index of returned slice of studies, count: any # size of returned slice of studies, sources: any # filter the results by matching on one or more underlying series sources. Examples of sources are user, box, directory or scp. The list of sources to filter results by must have the form TYPE1:ID1,TYPE2:ID2,...,TYPEN:IDN. For instance, the argument sources=box:1,user:5 shows results either sent from (slice)box with id 1 or uploaded by user with id 5., seriestypes: any # filter the results by matching on one or more underlying series types. The supplied list of series types must be a comma separated list of series type ids. For instance, the argument seriestypes=3,7,22 shows results including series assigned to either of the series types with ids 3, 7 and 22., seriestags: any # filter the results by matching on one or more underlying series tags. The supplied list of series tags must be a comma separated list of series tag ids. For instance, the argument seriestags=6,2,11 shows results including series with either of the series tags with ids 6, 2 and 11.}
+@returns(200) studies
 
 @endpoint POST /metadata/studies/query
-@required {query: map}
-@returns(200)
+@desc submit a query for studies
+@required {query: map # parameters of study query}
+@returns(200) studies
 
 @endpoint GET /metadata/studies/{id}
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc Return the study with the supplied ID
+@required {id: any # ID of study}
+@returns(200) study response
+@errors {404: study not found (invalid ID)}
 
 @endpoint GET /metadata/studies/{id}/images
-@required {id: any}
-@optional {sources: any, seriestypes: any, seriestags: any}
-@returns(200)
-@errors {404}
+@desc Returns all images for the study with the supplied study ID
+@required {id: any # ID of study}
+@optional {sources: any # filter the results by matching on one or more series sources. Examples of sources are user, box, directory or scp. The list of sources to filter results by must have the form TYPE1:ID1,TYPE2:ID2,...,TYPEN:IDN. For instance, the argument sources=box:1,user:5 shows results either sent from (slice)box with id 1 or uploaded by user with id 5., seriestypes: any # filter the results by matching on one or more series types. The supplied list of series types must be a comma separated list of series type ids. For instance, the argument seriestypes=3,7,22 shows series assigned to either of the series types with ids 3, 7 and 22., seriestags: any # filter the results by matching on one or more series tags. The supplied list of series tags must be a comma separated list of series tag ids. For instance, the argument seriestags=6,2,11 shows series with either of the series tags with ids 6, 2 and 11.}
+@returns(200) list of images
+@errors {404: study not found (invalid ID)}
 
 @endpoint GET /metadata/series
-@required {studyid: any}
-@optional {startindex: any, count: any, sources: any, seriestypes: any, seriestags: any}
-@returns(200)
+@desc Returns a list of metadata on the series level of the DICOM hierarchy
+@required {studyid: any # reference to study to list series for}
+@optional {startindex: any # start index of returned slice of series, count: any # size of returned slice of series, sources: any # filter the results by matching on one or more series sources. Examples of sources are user, box, directory or scp. The list of sources to filter results by must have the form TYPE1:ID1,TYPE2:ID2,...,TYPEN:IDN. For instance, the argument sources=box:1,user:5 shows results either sent from (slice)box with id 1 or uploaded by user with id 5., seriestypes: any # filter the results by matching on one or more series types. The supplied list of series types must be a comma separated list of series type ids. For instance, the argument seriestypes=3,7,22 shows series assigned to either of the series types with ids 3, 7 and 22., seriestags: any # filter the results by matching on one or more series tags. The supplied list of series tags must be a comma separated list of series tag ids. For instance, the argument seriestags=6,2,11 shows series with either of the series tags with ids 6, 2 and 11.}
+@returns(200) series
 
 @endpoint POST /metadata/series/query
-@required {query: map}
-@returns(200)
+@desc submit a query for series
+@required {query: map # parameters of series query}
+@returns(200) series
 
 @endpoint GET /metadata/series/{id}
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc Return the series with the supplied ID
+@required {id: any # ID of series}
+@returns(200) series response
+@errors {404: series not found (invalid ID)}
 
 @endpoint GET /metadata/series/{id}/source
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc Return the source of the series with the supplied ID
+@required {id: any # ID of series}
+@returns(200) source for series
+@errors {404: series not found (invalid ID)}
 
 @endpoint GET /metadata/series/{id}/seriestypes
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc get the list of series types for the series with the supplied ID.
+@required {id: any # ID of series}
+@returns(200) the list of series types
+@errors {404: series not found (invalid ID)}
 
 @endpoint DELETE /metadata/series/{id}/seriestypes
-@required {id: any}
-@returns(204)
+@desc Delete all series types for the series with the supplied ID
+@required {id: any # ID of series}
+@returns(204) series types deleted
 
 @endpoint PUT /metadata/series/{seriesId}/seriestypes/{seriesTypeId}
-@required {seriesId: any, seriesTypeId: any}
-@returns(204)
-@errors {404}
+@desc Add the series type with the supplied series type ID to the series with the supplied series ID
+@required {seriesId: any # ID of series, seriesTypeId: any # ID of series type to add}
+@returns(204) series type added
+@errors {404: no series or series type found for the supplied ID(s)}
 
 @endpoint DELETE /metadata/series/{seriesId}/seriestypes/{seriesTypeId}
-@required {seriesId: any, seriesTypeId: any}
-@returns(204)
+@desc Delete the series type with the supplied series type ID from the series with the supplied series ID
+@required {seriesId: any # ID of series, seriesTypeId: any # ID of series type to remove}
+@returns(204) series type removed
 
 @endpoint GET /metadata/series/{id}/seriestags
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc get the list of series tags for the series with the supplied ID.
+@required {id: any # ID of series}
+@returns(200) the list of series tags
+@errors {404: series not found (invalid ID)}
 
 @endpoint POST /metadata/series/{id}/seriestags
-@required {id: any, query: map}
-@returns(201)
-@errors {404}
+@desc add a series tag to the series with the supplied ID
+@required {id: any # ID of series, query: map # series tag to add}
+@returns(201) added series tag
+@errors {404: if no series with the supplied ID exists}
 
 @endpoint DELETE /metadata/series/{seriesId}/seriestags/{seriesTagId}
-@required {seriesId: any, seriesTagId: any}
-@returns(204)
+@desc Delete the series tag with the supplied series tag ID from the series with the supplied series ID
+@required {seriesId: any # ID of series, seriesTagId: any # ID of series tag to remove}
+@returns(204) series tag removed
 
 @endpoint GET /metadata/seriestags
-@returns(200)
+@desc Returns a list of series tags currently currently in use.
+@returns(200) a list of unique series tags currently used to tag series
 
 @endpoint GET /metadata/images
-@required {seriesid: any}
-@optional {startindex: any, count: any}
-@returns(200)
+@desc Returns a list of metadata on the image level of the DICOM hierarchy
+@required {seriesid: any # reference to series to list images for}
+@optional {startindex: any # start index of returned slice of images, count: any # size of returned slice of images}
+@returns(200) images
 
 @endpoint POST /metadata/images/query
-@required {query: map}
-@returns(200)
+@desc submit a query for images
+@required {query: map # parameters of images query}
+@returns(200) images
 
 @endpoint GET /metadata/images/{id}
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc Return the image with the supplied ID
+@required {id: any # ID of image}
+@returns(200) image response
+@errors {404: image not found (invalid ID)}
 
 @endpoint GET /metadata/flatseries
-@optional {startindex: any, count: any, orderby: any, orderascending: any, filter: any, sources: any, seriestypes: any, seriestags: any}
-@returns(200)
+@desc Returns a list of flattened metadata on the patient, study and series levels
+@optional {startindex: any # start index of returned slice of flat series, count: any # size of returned slice of flat series, orderby: any # flat series property to order results by, orderascending: any # order result ascendingly if true, descendingly otherwise, filter: any # filter the results by matching substrings of flat series properties against this value, sources: any # filter the results by matching on one or more series sources. Examples of sources are user, box, directory or scp. The list of sources to filter results by must have the form TYPE1:ID1,TYPE2:ID2,...,TYPEN:IDN. For instance, the argument sources=box:1,user:5 shows results either sent from (slice)box with id 1 or uploaded by user with id 5., seriestypes: any # filter the results by matching on one or more series types. The supplied list of series types must be a comma separated list of series type ids. For instance, the argument seriestypes=3,7,22 shows series assigned to either of the series types with ids 3, 7 and 22., seriestags: any # filter the results by matching on one or more series tags. The supplied list of series tags must be a comma separated list of series tag ids. For instance, the argument seriestags=6,2,11 shows series with either of the series tags with ids 6, 2 and 11.}
+@returns(200) flat series
 
 @endpoint GET /metadata/flatseries/{id}
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc Return the flat series with the supplied ID
+@required {id: any # ID of flat series}
+@returns(200) flat series response
+@errors {404: flat series not found (invalid ID)}
 
 @endpoint POST /metadata/flatseries/query
-@required {query: map}
-@returns(200)
+@desc submit a query for flat series
+@required {query: map # parameters of flat series query}
+@returns(200) flat series
 
 @endgroup
 
 @group images
 @endpoint POST /images
-@required {dataset: any}
-@returns(200)
-@returns(201)
+@desc add a DICOM dataset to slicebox
+@required {dataset: any # The dataset file}
+@returns(200) meta data for added dataset on the image level of the DICOM hierarchy. Status code 200 signifies that this image was already present in the slicebox database.
+@returns(201) meta data for added dataset on the image level of the DICOM hierarchy
 
 @endpoint POST /images/jpeg
-@required {studyid: any, jpeg bytes: any}
-@optional {description: any}
-@returns(201)
+@desc add a JPEG image to slicebox. The image data will be wrapped in a DICOM file and added as a new series belonging to the study with the supplied ID
+@required {studyid: any # ID of study to add new series to, jpeg bytes: any # The jpeg image data}
+@optional {description: any # DICOM series description of the resulting secondary capture series}
+@returns(201) meta data for added dataset on the image level of the DICOM hierarchy
 
 @endpoint GET /images/{id}
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc fetch dataset corresponding to the supplied image ID
+@required {id: any # ID of image}
+@returns(200) binary data of dataset
+@errors {404: if no image was found for the supplied image ID}
 
 @endpoint DELETE /images/{id}
-@required {id: any}
-@returns(204)
+@desc Delete the image with the supplied ID
+@required {id: any # ID of image}
+@returns(204) image deleted
 
 @endpoint POST /images/delete
-@required {image IDs: [int(int64)]}
-@returns(204)
+@desc bulk delete a sequence of images according to the supplied image IDs. This is the same as a sequence of DELETE requests to /images/{id}
+@required {image IDs: [int(int64)]: any # IDs of images to delete}
+@returns(204) Images deleted
 
 @endpoint GET /images/{id}/attributes
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc list all DICOM attributes of the dataset corresponding to the supplied image ID
+@required {id: any # ID of image}
+@returns(200) list of DICOM attributes
+@errors {404: if no image was found for the supplied image ID}
 
 @endpoint GET /images/{id}/imageinformation
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc get basic information about the pixel data of an image
+@required {id: any # ID of image}
+@returns(200) basic information about the pixeldata of an image
+@errors {404: if no image was found for the supplied image ID}
 
 @endpoint GET /images/{id}/png
-@required {id: any}
-@optional {framenumber: any, windowmin: any, windowmax: any, imageheight: any}
-@returns(200)
-@errors {404, 501}
+@desc get a PNG image representation of the image corresponding to the supplied ID
+@required {id: any # ID of image}
+@optional {framenumber: any # frame/slice to show, windowmin: any # intensity window minimum value. If not specified or set to zero, windowing will be selected from relevant DICOM attributes, windowmax: any # intensity window maximum value. If not specified or set to zero, windowing will be selected from relevant DICOM attributes, imageheight: any # height of PNG image. If not specified or set to zero, the image height will equal that of the data}
+@returns(200) image data
+@errors {404: if no image was found for the supplied image ID, 501: if the system is not capable of creating an image representation of the data}
 
 @endpoint PUT /images/{id}/modify
-@required {id: any, tag path value mappings: [map]}
-@returns(201)
+@desc modify and/or insert image attributes according to the input tagpath-value mappings
+@required {id: any # ID of image to modify, tag path value mappings: [map] # specification of tag paths and corresponding values to insert or modify}
+@returns(201) image attributes successfully modified
 
 @endpoint PUT /images/{id}/anonymize
-@required {id: any, tag values: map}
-@returns(200)
-@errors {404}
+@desc delete the selected image and replace it with an anonymized version
+@required {id: any # ID of image to anonymize, tag values: map # specification of values for anonymous DICOM attributes}
+@returns(200) the newly created anonymous image
+@errors {404: image or corresponding dataset not found}
 
 @endpoint POST /images/{id}/anonymized
-@required {id: any, tag values: map}
-@returns(200)
-@errors {404}
+@desc get an anonymized version of the image with the supplied ID
+@required {id: any # ID of image for which to get anonymized dataset, tag values: map # specification of values for anonymous DICOM attributes}
+@returns(200) binary data of anonymized dataset
+@errors {404: if no image was found for the supplied image ID}
 
 @endpoint POST /images/export
-@required {image ids: [int(int64)]}
-@returns(200)
-@returns(201)
+@desc create an export set, a group of image IDs of images to export. The export set will contain the selected images. The export set is available for download 12 hours before it is automatically deleted.
+@required {image ids: [int(int64)]: any # ids of images to export}
+@returns(200) ID of created export set. To be used with the associated GET method for downloading.
+@returns(201) if the supplied list of image ids is empty or no if images could be found
 
 @endpoint GET /images/export
-@required {id: any}
-@returns(200)
+@desc download the export set with the supplied export set ID as a zip archive
+@required {id: any # ID of export set to download}
+@returns(200) zip archive of images
 
 @endgroup
 
 @group anonymization
 @endpoint POST /anonymization/anonymize
-@required {query: [map]}
-@returns(200)
+@desc anonymize the images corresponding to the supplied list of image IDs (each paired with a list of DICOM tag translation). This route corresponds to repeated use of the route /images/{id}/anonymize.
+@required {query: [map] # parameters of anonymization key query}
+@returns(200) the list of newly created anonymous images
 
 @endpoint GET /anonymization/keys
-@optional {startindex: any, count: any, orderby: any, orderascending: any, filter: any}
-@returns(200)
+@desc get a list of anonymization keys, each specifying how vital DICOM attributes have been anonymized for a particular image
+@optional {startindex: any # start index of returned slice of anonymization keys, count: any # size of returned slice of anonymization keys, orderby: any # property to order results by, orderascending: any # order result ascendingly if true, descendingly otherwise, filter: any # filter the results by matching substrings of properties against this value}
+@returns(200) anonymization keys, one per DICOM image
 
 @endpoint GET /anonymization/keys/{id}
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc get the anonymization key with the supplied ID
+@required {id: any # ID of anonymization key}
+@returns(200) anonymization key for the supplied ID
+@errors {404: if no anonymization key could be found for the supplied ID}
 
 @endpoint DELETE /anonymization/keys/{id}
-@required {id: any}
-@returns(204)
+@desc delete an anonymization key that is no longer of interest
+@required {id: any # ID of anonymization key}
+@returns(204) anonymization key deleted
 
 @endpoint GET /anonymization/keys/{id}/keyvalues
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc get pointers to the images corresponding to the anonymization key with the supplied ID
+@required {id: any # ID of anonymization key}
+@returns(200) an array of anonymization key-value pairs corresponding to the anonymization key for the supplied ID
+@errors {404: if no anonymization key could be found for the supplied ID}
 
 @endpoint POST /anonymization/keys/query
-@required {query: map}
-@returns(200)
+@desc submit a query for anonymization keys
+@required {query: map # parameters of anonymization key query}
+@returns(200) anonymization keys
 
 @endpoint GET /anonymization/options
-@returns(200)
+@desc list all supported anonymization options defining an anonymization profile
+@returns(200) supported anonymization options
 
 @endpoint GET /anonymization/keys/export/csv
-@returns(200)
+@desc export all anonymization keys as a csv file
+@returns(200) all anonymization keys as a csv file
 
 @endgroup
 
 @group users
 @endpoint POST /users/login
-@required {UserPass: map}
-@returns(201)
-@errors {401}
+@desc Obtain a session cookie that can be used to authenticate future API calls from the present IP address and with the present user agent.
+@required {UserPass: map # username and password for user logging in}
+@returns(201) if the supplied credentials are valid. The response headers will contain Set-Cookie.
+@errors {401: if the supplied credentials are invalid.}
 
 @endpoint POST /users/logout
-@returns(201)
+@desc Logout the current user by responding with a delete cookie header removing the session cookie for this user.
+@returns(201) the user was logged out
 
 @endpoint GET /users/current
-@returns(200)
-@errors {404}
+@desc obtain information on the currently logged in user as specified by the supplied session cookie, IP address and user agent.
+@returns(200) user information
+@errors {404: no user found for the supplied session cookie, IP address and user agent, or if any of the required headers are missing.}
 
 @endpoint GET /users
-@optional {startindex: any, count: any}
-@returns(200)
+@desc Returns all users of slicebox
+@optional {startindex: any # start index of returned slice of users, count: any # size of returned slice of users}
+@returns(200) user response
 
 @endpoint POST /users
-@required {user: map}
-@returns(201)
+@desc Creates a new user. Dupicates are accepted but not added.
+@required {user: map # User to add}
+@returns(201) user response
 
 @endpoint DELETE /users/{id}
-@required {id: any}
-@returns(204)
+@desc deletes a single user based on the ID supplied
+@required {id: any # ID of user to delete}
+@returns(204) user deleted
 
 @endgroup
 
 @group log
 @endpoint GET /log
-@optional {startindex: any, count: any, subject: any, type: any}
-@returns(200)
+@desc get a list of slicebox log messages
+@optional {startindex: any # start index of returned slice of log messages, count: any # size of returned slice of log messages, subject: any # log subject to filter results by, type: any # log type (DEFAULT, INFO, WARN, ERROR) to filter results by}
+@returns(200) log messages
 
 @endpoint DELETE /log
-@returns(204)
+@desc delete all log messages
+@returns(204) log messages successfully
 
 @endpoint DELETE /log/{id}
-@required {id: any}
-@returns(204)
+@desc Delete the log entry with the supplied ID
+@required {id: any # ID of log entry}
+@returns(204) log entry deleted
 
 @endgroup
 
 @group boxes
 @endpoint GET /boxes
-@optional {startindex: any, count: any}
-@returns(200)
+@desc get a list of box connections
+@optional {startindex: any # start index of returned slice of boxes, count: any # size of returned slice of boxes}
+@returns(200) box connections
 
 @endpoint POST /boxes/createconnection
-@required {remoteBoxConnectionData: map}
-@returns(201)
+@desc create a new box connection where the supplied entity holds the remote box name. Used by publicly available boxes.
+@required {remoteBoxConnectionData: map # name of box to connect (and send URL) to}
+@returns(201) remote box of the connection
 
 @endpoint POST /boxes/connect
-@required {remoteBox: map}
-@returns(201)
+@desc connect to another box using a received URL. Used to connect to a public box.
+@required {remoteBox: map # remote box to connect with}
+@returns(201) connected box
 
 @endpoint DELETE /boxes/{id}
-@required {id: any}
-@returns(204)
+@desc Delete the remote box with the supplied ID
+@required {id: any # ID of box to remove}
+@returns(204) box deleted
 
 @endpoint POST /boxes/{id}/send
-@required {id: any, sequence of image tag values: map}
-@returns(201)
-@errors {404}
+@desc send images corresponding to the supplied image ids to the remote box with the supplied ID
+@required {id: any # ID of box to send images to, sequence of image tag values: map # specification of which images to send and list of DICOM attribute values to use in anonymized datasets}
+@returns(201) images sent
+@errors {404: box not found (invalid ID)}
 
 @endpoint GET /boxes/incoming
-@optional {startindex: any, count: any}
-@returns(200)
+@desc get incoming transactions (finished, currently receiving, waiting or failed)
+@optional {startindex: any # start index of returned slice of transactions, count: any # size of returned slice of transactions}
+@returns(200) incoming transactions, sorted from most to least recently updated
 
 @endpoint DELETE /boxes/incoming/{id}
-@required {id: any}
-@returns(204)
+@desc delete an incoming transaction. If a currently active transaction is deleted, a new transaction with the remainder of the images is created when receiving the next incoming image.
+@required {id: any # ID of incoming transaction}
+@returns(204) incoming transaction deleted
 
 @endpoint GET /boxes/incoming/{id}/images
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc get the received images corresponding to the incoming transaction with the supplied ID
+@required {id: any # ID of incoming transaction}
+@returns(200) images received corresponding to the specified incoming transaction
+@errors {404: incoming transaction not found (invalid ID)}
 
 @endpoint GET /boxes/outgoing
-@optional {startindex: any, count: any}
-@returns(200)
+@desc get outgoing transactions (finished, currently sending, waiting or failed)
+@optional {startindex: any # start index of returned slice of transactions, count: any # size of returned slice of transactions}
+@returns(200) outgoing transactions, finished, sending, waiting or failed
 
 @endpoint DELETE /boxes/outgoing/{id}
-@required {id: any}
-@returns(204)
+@desc delete an outgoing transaction. This will stop ongoing transactions.
+@required {id: any # ID of outgoing transaction}
+@returns(204) outgoing transaction deleted
 
 @endpoint GET /boxes/outgoing/{id}/images
-@required {id: any}
-@returns(200)
-@errors {404}
+@desc get the sent images corresponding to the outgoing transaction with the supplied ID
+@required {id: any # ID of outgoing transaction}
+@returns(200) images sent corresponding to the specified outgoing transaction
+@errors {404: outgoing transaction not found (invalid ID)}
 
 @endgroup
 
 @group transactions
 @endpoint POST /transactions/{token}/image
-@required {token: any, transactionid: any, sequencenumber: any, totalimagecount: any, dataset: any}
-@returns(204)
-@errors {401}
+@desc add an image (dataset) as part of a transaction. This method is used when sending images using the push method to a public slicebox.
+@required {token: any # authentication token identifying the current box-to-box connection, transactionid: any # the ID of the client's outgoing transaction, sequencenumber: any # the index of this image in the transaction, totalimagecount: any # the total number of images in this transaction, dataset: any # the dataset byte array}
+@returns(204) image data received
+@errors {401: unauthorized, invalid token}
 
 @endpoint GET /transactions/{token}/status
-@required {token: any, transactionid: any}
-@returns(200)
-@errors {401, 404}
+@desc get the status of the remote incoming transaction with the supplied transaction ID
+@required {token: any # authentication token identifying the current box-to-box connection, transactionid: any # the ID of the client's outgoing transaction}
+@returns(200) string representation of the transaction status (FINISHED, FAILED, WAITING or PROCESSING)
+@errors {401: unauthorized, invalid token, 404: no transaction found for the supplied transaction ID and box token}
 
 @endpoint PUT /transactions/{token}/status
-@required {token: any, transactionid: any, transaction status: str}
-@returns(204)
-@errors {404}
+@desc update the status of the transaction with the supplied ID
+@required {token: any # authentication token identifying the current box-to-box connection, transactionid: any # the ID of the client's outgoing transaction, transaction status: str # the updated status of the transaction}
+@returns(204) status update successfully applied to transaction
+@errors {404: no transaction found for the supplied transaction ID and box token}
 
 @endpoint GET /transactions/{token}/outgoing/poll
-@required {token: any}
-@returns(200)
-@errors {401, 404}
+@desc get next outgoing transaction and image (information on the next image that the connected box wishes to send to you), if any. This method is used when sending images using the poll method from a public slicebox.
+@required {token: any # authentication token identifying the current box-to-box connection}
+@returns(200) next outgoing transaction and image information block
+@errors {401: unauthorized, invalid token, 404: there are currently no outgoing transactions to fetch for the box connection with the supplied token}
 
 @endpoint GET /transactions/{token}/outgoing
-@required {token: any, transactionid: any, imageid: any}
-@returns(200)
-@errors {401, 404}
+@desc fetch an image from the connected box as part of a transaction. This method is used when sending images using the poll method from a public slicebox.
+@required {token: any # authentication token identifying the current box-to-box connection, transactionid: any # the ID of the outgoing transaction, imageid: any # the ID of the outgoing transaction image}
+@returns(200) binary data of dataset
+@errors {401: unauthorized, invalid token, 404: no outgoing trensaction and/or image found for the supplied transaction id and transaction image id}
 
 @endpoint POST /transactions/{token}/outgoing/done
-@required {token: any, outgoing entry and image information block: map}
-@returns(204)
-@errors {401}
+@desc signal that the supplied outgoing transaction and image was successfully received and can be marked as sent. This method is used when sending images using the poll method from a public slicebox.
+@required {token: any # authentication token identifying the current box-to-box connection, outgoing entry and image information block: map # outgoing transaction and image that has been successfully received}
+@returns(204) done message received
+@errors {401: unauthorized, invalid token}
 
 @endpoint POST /transactions/{token}/outgoing/failed
-@required {token: any, outgoing transaction and image, and error message: map}
-@returns(204)
-@errors {401}
+@desc signal that the image corresponding to the supplied outgoing transaction and image could not be read or stored properly on the receiving side, and that the transaction should be marked as failed.
+@required {token: any # authentication token identifying the current box-to-box connection, outgoing transaction and image, and error message: map # the outgoing transaction and image information block corresponding to the failed image transfer, along with the associated error message}
+@returns(204) failed message received
+@errors {401: unauthorized, invalid token}
 
 @endgroup
 
 @group directorywatches
 @endpoint GET /directorywatches
-@optional {startindex: any, count: any}
-@returns(200)
+@desc get a list of watch directories. Each watch directory and its sub-directories are watched for incoming DICOM files, which are read and imported into slicebox.
+@optional {startindex: any # start index of returned slice of watched directories, count: any # size of returned slice of watched directories}
+@returns(200) the list of watched directories
 
 @endpoint POST /directorywatches
-@optional {watchedDirectory: map}
-@returns(201)
+@desc add a new directory to watch for incoming DICOM files
+@optional {watchedDirectory: map # directory to setup a watch for. The ID property is irrelevant, the ID of the inserted record is present in the returned data.}
+@returns(201) the directory now being watched
 
 @endpoint DELETE /directorywatches/{id}
-@required {id: any}
-@returns(204)
+@desc stop watching and remove the directory corresponding to the supplied ID
+@required {id: any # id of directory to stop watching}
+@returns(204) directory watch removed
 
 @endgroup
 
 @group scps
 @endpoint GET /scps
-@optional {startindex: any, count: any}
-@returns(200)
+@desc get a list of DICOM SCPs. Each SCP is a server for receiving DICOM images from e.g. a PACS system.
+@optional {startindex: any # start index of returned slice of SCPs, count: any # size of returned slice of SCPs}
+@returns(200) the list of SCPs
 
 @endpoint POST /scps
-@optional {scp: map}
-@returns(201)
-@errors {400}
+@desc add a new SCP for receiving DICOM images
+@optional {scp: map # SCP information. The ID property is irrelevant, the ID of the inserted record is present in the returned data.}
+@returns(201) the created SCP
+@errors {400: Invalid port number or AE title}
 
 @endpoint DELETE /scps/{id}
-@required {id: any}
-@returns(204)
+@desc shut down and remove the SCP corresponding to the supplied ID
+@required {id: any # id of SCP to remove}
+@returns(204) SCP removed
 
 @endgroup
 
 @group scus
 @endpoint GET /scus
-@optional {startindex: any, count: any}
-@returns(200)
+@desc get a list of DICOM SCUs. Each SCU is a client for sending DICOM images to an SCP, e.g. a PACS system.
+@optional {startindex: any # start index of returned slice of SCUs, count: any # size of returned slice of SCUs}
+@returns(200) the list of SCUs
 
 @endpoint POST /scus
-@optional {scu: map}
-@returns(201)
-@errors {400}
+@desc add a new SCU for sending DICOM images
+@optional {scu: map # SCU information. The ID property is irrelevant, the ID of the inserted record is present in the returned data.}
+@returns(201) the created SCU
+@errors {400: Invalid port number or AE title}
 
 @endpoint DELETE /scus/{id}
-@required {id: any}
-@returns(204)
+@desc remove the SCU corresponding to the supplied ID
+@required {id: any # id of SCU to remove}
+@returns(204) SCU removed
 
 @endpoint POST /scus/{id}/send
-@required {id: any, imageids: [int(int64)]}
-@returns(204)
-@errors {404, 502}
+@desc send the images with the supplied image IDs to a DICOM SCP using the the SCU with the supplied scu ID
+@required {id: any # id of SCU to use for sending, imageids: [int(int64)] # array of ids of images to send}
+@returns(204) Series sent
+@errors {404: Series not found or SCU not found, 502: Receiving SCP host not available}
 
 @endgroup
 
 @group filtering
 @endpoint GET /filtering/filters
-@optional {startindex: any, count: any}
-@returns(200)
+@desc List defined filters
+@optional {startindex: any # start index of returned slice of filters, count: any # size of returned slice of filters}
+@returns(200) the list of filters
 
 @endpoint POST /filtering/filters
-@required {tagFilter: map}
-@returns(201)
+@desc Inserts or updates a filter. If a filter with same name as supplied filter exists this filter is updated, otherwise a new filter is inserted.
+@required {tagFilter: map # Filter}
+@returns(201) Filter upserted
 
 @endpoint DELETE /filtering/filters/{id}
-@required {id: any}
-@returns(204)
+@desc remove the filter corresponding to the supplied ID
+@required {id: any # id of filter to remove}
+@returns(204) Filter removed
 
 @endpoint GET /filtering/filters/{id}/tagpaths
-@required {id: any}
-@returns(200)
+@desc List tagpaths for the selected filter
+@required {id: any # id of filter}
+@returns(200) the list of tagpaths
 
 @endpoint POST /filtering/filters/{id}/tagpaths
-@required {id: any, tagpath: map}
-@returns(201)
+@desc add a tagpath to a filter
+@required {id: any # id of filter to remove, tagpath: map # id of filter to remove}
+@returns(201) TagPath added
 
 @endpoint DELETE /filtering/filters/{id}/tagpaths/{tagpathid}
-@required {id: any, tagpathid: any}
-@returns(204)
+@desc remove the tagpath corresponding to the supplied ID
+@required {id: any # id of filter, tagpathid: any # id of TagPath to remove}
+@returns(204) TagPath removed
 
 @endpoint GET /filtering/associations
-@optional {startindex: any, count: any}
-@returns(200)
+@desc Get a list of source to filter associations.
+@optional {startindex: any # start index of returned slice of source <-> filter associations, count: any # size of returned slice of source <-> filter associations}
+@returns(200) the list of source <-> filter associations
 
 @endpoint POST /filtering/associations
-@required {sourcetagfilter: map}
-@returns(201)
+@desc Inserts or updates a source <-> filter associations. If the specified Source already  has an association this is updated, otherwise a new is inserted.
+@required {sourcetagfilter: map # Source to Filter association}
+@returns(201) Upserted source <-> filter association
 
 @endpoint DELETE /filtering/associations/{id}
-@required {id: any}
-@returns(204)
+@desc remove the source <-> filter association corresponding to the supplied ID
+@required {id: any # id of source <-> filter association to remove}
+@returns(204) source <-> filter association removed
 
 @endgroup
 
 @group seriestypes
 @endpoint GET /seriestypes
-@optional {startindex: any, count: any}
-@returns(200)
+@desc get a list of all added series types. By filtering search results for certain series types, it is easier for applications to ensure that they read images of applicable types.
+@optional {startindex: any # start index of returned slice of series types, count: any # size of returned slice of series types}
+@returns(200) the list of series types
 
 @endpoint POST /seriestypes
-@optional {SeriesType: map}
-@returns(201)
+@desc add a new series type
+@optional {SeriesType: map # Series type information. The ID property is irrelevant, the ID of the inserted record is present in the returned data.}
+@returns(201) the created series type
 
 @endpoint PUT /seriestypes/{id}
-@required {id: any}
-@returns(204)
+@desc request an asynchronous update of all series, labelling appropriate series with the series type corresponding to the supplied ID.
+@required {id: any # id of series type to update series labels for}
+@returns(204) update successfully added to queue of series type updates
 
 @endpoint DELETE /seriestypes/{id}
-@required {id: any}
-@returns(204)
+@desc remove the series type corresponding to the supplied ID
+@required {id: any # id of series type to remove}
+@returns(204) series type removed
 
 @endpoint POST /seriestypes/series/query
-@required {query: map}
-@returns(200)
+@desc submit a query for seriestypes for a list of series
+@required {query: map # parameters of series query}
+@returns(200) series
 
 @endpoint GET /seriestypes/rules
-@required {seriestypeid: any}
-@returns(200)
+@desc get a list of rules for assigning series types to series. A rule connects to a series of attributes with values and a resulting series type. If a series has the required values of the listed attributes, it is assigned to the series type of the rule.
+@required {seriestypeid: any # ID of series type to list rules for}
+@returns(200) the list of series type rules for the series type with the supplied ID
 
 @endpoint POST /seriestypes/rules
-@optional {SeriesTypeRule: map}
-@returns(201)
+@desc add a new series type rule
+@optional {SeriesTypeRule: map # Series type rule information. The ID property is irrelevant, the ID of the inserted record is present in the returned data.}
+@returns(201) the created series type rule
 
 @endpoint GET /seriestypes/rules/updatestatus
-@returns(200)
+@desc get the status of the internal process of updating series types for series following a change of series types, rules or attributes.
+@returns(200) a status message, indicating if an update is running
 
 @endpoint DELETE /seriestypes/rules/{id}
-@required {id: any}
-@returns(204)
+@desc remove the series type rule corresponding to the supplied ID
+@required {id: any # id of series type rule to remove}
+@returns(204) series type rule removed
 
 @endpoint GET /seriestypes/rules/{id}/attributes
-@required {id: any}
-@returns(200)
+@desc get the list of attributes for the series type rule with the supplied ID.
+@required {id: any # index of series type rule to list rule attributes for}
+@returns(200) the list of series type rule attributes for the series type rule with the supplied ID
 
 @endpoint POST /seriestypes/rules/{id}/attributes
-@required {id: any}
-@optional {SeriesTypeRuleAttribute: map}
-@returns(201)
+@desc add a new series type rule attribute
+@required {id: any # ID of rule}
+@optional {SeriesTypeRuleAttribute: map # Series type rule attribute information. The ID property is irrelevant, the ID of the inserted record is present in the returned data.}
+@returns(201) the created series type rule attribute
 
 @endpoint DELETE /seriestypes/rules/{ruleId}/attributes/{attributeId}
-@required {ruleId: any, attributeId: any}
-@returns(204)
+@desc remove the series type rule attribute corresponding to the supplied series type and attribute IDs
+@required {ruleId: any # id of series type rule for which to remove an attribute, attributeId: any # id of attribute to remove}
+@returns(204) series type rule attribute removed
 
 @endgroup
 
 @group forwarding
 @endpoint GET /forwarding/rules
-@optional {startindex: any, count: any}
-@returns(200)
+@desc get a list of all forwarding rules. A forwarding rule specifies the automatic forwarding of images from a source (SCP, BOX, etc.) to a destimation (BOX, SCU, etc.)
+@optional {startindex: any # start index of returned slice of rules, count: any # size of returned slice of rules}
+@returns(200) the list of forwarding rules
 
 @endpoint POST /forwarding/rules
-@optional {FowardingRule: map}
-@returns(201)
+@desc add a new forwarding rule
+@optional {FowardingRule: map # The forwarding rule to add. The ID property is irrelevant, the ID of the inserted record is present in the returned data.}
+@returns(201) the created forwarding rule
 
 @endpoint DELETE /forwarding/rule/{id}
-@required {id: any}
-@returns(204)
+@desc remove the forwarding rule corresponding to the supplied ID
+@required {id: any # id of forwarding rule to remove}
+@returns(204) forwarding rule removed
 
 @endgroup
 

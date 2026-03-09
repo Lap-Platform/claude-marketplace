@@ -373,88 +373,191 @@ https://api.jumpseller.com/v1
 | GET | /products_locations | Stock by Product and Location |
 | PUT | /products_locations | Update Stock by Product and Location |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What are my store details?" -> GET /store/info.json
-- "How many products do I have?" -> GET /products/count.json
-- "Find products by SKU or barcode" -> GET /products/search.json
-- "Show me all orders from the last 7 days" -> GET /orders.json (with dateFilter=last7days)
-- "Which orders are still unfulfilled?" -> GET /orders.json (with fulfillment_filters=unfulfilled)
-- "Look up a customer by email address" -> GET /customers/email/{email}.json
-- "What orders has customer #42 placed?" -> GET /customers/{id}/orders.json
-- "List all abandoned carts" -> GET /orders/status/abandoned.json
-- "How do I update tracking info on an order?" -> PUT /orders/{id}.json (tracking_number, tracking_company, tracking_url fields)
-- "Create a new product with variants" -> POST /products.json (include variants array in body)
-- "What shipping methods are currently enabled?" -> GET /shipping_methods.json (with enabled=true)
-- "Get shipping rates for a fulfillment" -> POST /fulfillments/rates.json
-- "What promotions are active right now?" -> GET /promotions.json
-- "How do I manage inventory across multiple locations?" -> PUT /products_locations (set stock per location)
-- "What is my current transaction balance?" -> GET /transaction_ledger/balance.json
-
-## Response Tips
-
-- **Paginated lists** (products, orders, customers, hooks, pages, documents): Default 50 per page. Increment `page` param until results come back empty. No total-pages header -- use the companion `/count.json` endpoint to calculate pages upfront.
-- **Single-resource responses**: Wrapped in a root key matching the resource type (e.g., `{product: {...}}`, `{order: {...}}`). Always unwrap before accessing fields.
-- **Orders**: Deeply nested -- `source`, `shipping_address`, `billing_address`, `pickup_address`, and `billing_information` are all sub-objects. The `products` array inside an order is separate from top-level products.
-- **404 errors**: Returned for any invalid ID across all resource types. Treat as "not found," not a server error.
-- **Products search**: The `fields` param controls which fields are searched (sku, barcode, brand, name, etc.), not which fields are returned.
-- **Fulfillments**: The `order` field is triple-nested (`order.order.order`) -- likely a serialization quirk; dig into the innermost object for actual order data.
-
-## Anomaly Flags
-
-- **Promotion nearing max usage**: If `times_used` is approaching `max_times_used` on a promotion, surface a warning before it silently stops applying.
-- **Stock below threshold**: When `stock` drops at or below `stock_threshold` and `stock_unlimited` is false, flag the product/variant as low inventory.
-- **Expired or expiring promotions**: If `expires_at` is in the past or within 24 hours, alert that the promotion will stop working.
-- **Subscription status changes**: If `GET /store/info.json` returns a `subscription_status` other than active, surface immediately -- API access may degrade.
-- **Order status mismatch**: If `fulfillment_status` says "fulfilled" but `shipment_status` is still pending, flag the inconsistency.
-- **Missing tracking on fulfilled orders**: Orders marked as paid/completed but with empty `tracking_number` and `tracking_url` should be flagged for follow-up.
-- **Duplicate webhook URLs**: When creating hooks, warn if an identical `event` + `url` combination already exists to prevent double-firing.
-- **Digital product expiration**: `expiration_seconds` on digital products set to very low values may cause customer access issues -- flag if under 3600.
-
-## Playbook
-
-### 1. Create a Product with Options and Variants
-
-1. `POST /products.json` with name, price, and status to create the base product. Note the returned `product.id`.
-2. `POST /products/{id}/options.json` for each option axis (e.g., "Size", "Color"). Note each `option.id`.
-3. `POST /products/{id}/options/{option_id}/values.json` to add values to each option (e.g., "S", "M", "L").
-4. `POST /products/{id}/variants.json` for each combination, specifying price, sku, stock, and `options` array linking option names to values.
-5. `POST /products/{id}/images.json` to attach product images. Optionally set `image_id` on variants to assign variant-specific images.
-
-### 2. Process and Fulfill an Order
-
-1. `GET /orders/{id}.json` to retrieve full order details including products, shipping address, and current status.
-2. `PUT /orders/{id}.json` with `{order: {status: "paid"}}` if confirming payment manually.
-3. `POST /fulfillments.json` with `order_id`, `type`, `location_id`, `shipping_address`, and package dimensions to create the fulfillment.
-4. `PUT /fulfillments/{id}.json` to update `tracking_number`, `tracking_company`, and `tracking_url` once the carrier provides them.
-5. `PUT /orders/{id}.json` with `{order: {shipment_status: "shipped"}}` to sync the order-level status.
-6. `POST /orders/{id}/history.json` to log a message like "Shipped via FedEx, tracking #12345" for audit trail.
-
-### 3. Bulk Inventory Check Across Locations
-
-1. `GET /locations.json` to list all warehouse/store locations. Note each `location.id`.
-2. `GET /products.json` paginating through all pages (use `GET /products/count.json` first to calculate total pages).
-3. `GET /products_locations` with arrays of `location_ids` and `product_ids` to fetch stock levels per location.
-4. For any product where `stock <= stock_threshold` and `stock_unlimited` is false, flag for restocking.
-5. `PUT /products_locations` to update stock at a specific location when new inventory arrives.
-
-### 4. Set Up a Promotion with Coupon Codes
-
-1. `GET /categories.json` to find category IDs for targeting (or `GET /products.json` for specific product IDs).
-2. `POST /promotions.json` with promotion details: set `discount_target`, `discount_amount_percent` or `discount_amount_fix`, `begins_at`, `expires_at`, and `max_times_used`.
-3. Include a `coupons` array with objects like `{code: "SAVE20", usage_limit: 100}` to attach codes.
-4. Optionally scope to specific `categories`, `products`, `customer_categories`, or `countries` arrays.
-5. `GET /promotions/{id}.json` to verify the promotion was created correctly and `status` is active.
-
-### 5. Customer Lookup and Order History
-
-1. `GET /customers/search.json?query=john` to find a customer by name, email, or other details.
-2. `GET /customers/{id}.json` to retrieve full customer profile including addresses and custom fields.
-3. `GET /customers/{id}/orders.json` to list all their orders (paginated, default 50).
-4. `GET /customers/{id}/orders/status/Paid.json` to filter to only completed orders.
-5. `GET /customers/{id}/fields` to check any additional custom fields stored on the customer record.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all info.json?" -> GET /store/info.json
+- "List all languages.json?" -> GET /store/languages.json
+- "List all hooks.json?" -> GET /hooks.json
+- "Create a hooks.json?" -> POST /hooks.json
+- "Get hook details?" -> GET /hooks/{id}.json
+- "Update a hook?" -> PUT /hooks/{id}.json
+- "Delete a hook?" -> DELETE /hooks/{id}.json
+- "List all jsapps.json?" -> GET /jsapps.json
+- "Create a jsapps.json?" -> POST /jsapps.json
+- "Get jsapp details?" -> GET /jsapps/{code}.json
+- "Delete a jsapp?" -> DELETE /jsapps/{code}.json
+- "List all install_status.json?" -> GET /apps/{code}/install_status.json
+- "List all install_status_by_store_id.json?" -> GET /apps/{code}/install_status_by_store_id.json
+- "List all billing_cycle_dates.json?" -> GET /apps/{code}/billing_cycle_dates.json
+- "List all billing_cycle_orders.json?" -> GET /apps/{code}/billing_cycle_orders.json
+- "List all check_billing_cycle_order.json?" -> GET /apps/{code}/check_billing_cycle_order.json
+- "List all products.json?" -> GET /products.json
+- "Create a products.json?" -> POST /products.json
+- "List all count.json?" -> GET /products/count.json
+- "Get after details?" -> GET /products/after/{id}.json
+- "Get status details?" -> GET /products/status/{status}.json
+- "Get category details?" -> GET /products/category/{category_id}.json
+- "List all count.json?" -> GET /products/status/{status}/count.json
+- "List all count.json?" -> GET /products/category/{category_id}/count.json
+- "List all reviews.json?" -> GET /products/{id}/reviews.json
+- "Get review details?" -> GET /products/reviews/{review_id}.json
+- "List all reviews.json?" -> GET /products/reviews.json
+- "Get product details?" -> GET /products/{id}.json
+- "Update a product?" -> PUT /products/{id}.json
+- "Delete a product?" -> DELETE /products/{id}.json
+- "Search search.json?" -> GET /products/search.json
+- "List all options.json?" -> GET /products/{id}/options.json
+- "Create a options.json?" -> POST /products/{id}/options.json
+- "List all count.json?" -> GET /products/{id}/options/count.json
+- "Get option details?" -> GET /products/{id}/options/{option_id}.json
+- "Update a option?" -> PUT /products/{id}/options/{option_id}.json
+- "Delete a option?" -> DELETE /products/{id}/options/{option_id}.json
+- "List all values.json?" -> GET /products/{id}/options/{option_id}/values.json
+- "Create a values.json?" -> POST /products/{id}/options/{option_id}/values.json
+- "List all count.json?" -> GET /products/{id}/options/{option_id}/values/count.json
+- "Get value details?" -> GET /products/{id}/options/{option_id}/values/{value_id}.json
+- "Update a value?" -> PUT /products/{id}/options/{option_id}/values/{value_id}.json
+- "Delete a value?" -> DELETE /products/{id}/options/{option_id}/values/{value_id}.json
+- "Get variant details?" -> GET /products/{id}/variants/{variant_id}.json
+- "Update a variant?" -> PUT /products/{id}/variants/{variant_id}.json
+- "List all variants.json?" -> GET /products/{id}/variants.json
+- "Create a variants.json?" -> POST /products/{id}/variants.json
+- "List all count.json?" -> GET /products/{id}/variants/count.json
+- "List all images.json?" -> GET /products/{id}/images.json
+- "Create a images.json?" -> POST /products/{id}/images.json
+- "Update a image?" -> PUT /products/{product_id}/images/{image_id}.json
+- "List all count.json?" -> GET /products/{id}/images/count.json
+- "Get image details?" -> GET /products/{id}/images/{image_id}.json
+- "Delete a image?" -> DELETE /products/{id}/images/{image_id}.json
+- "List all attachments.json?" -> GET /products/{id}/attachments.json
+- "Create a attachments.json?" -> POST /products/{id}/attachments.json
+- "List all count.json?" -> GET /products/{id}/attachments/count.json
+- "Get attachment details?" -> GET /products/{id}/attachments/{attachment_id}.json
+- "Delete a attachment?" -> DELETE /products/{id}/attachments/{attachment_id}.json
+- "List all digital_products.json?" -> GET /products/{id}/digital_products.json
+- "Create a digital_products.json?" -> POST /products/{id}/digital_products.json
+- "List all count.json?" -> GET /products/{id}/digital_products/count.json
+- "Get digital_product details?" -> GET /products/{id}/digital_products/{digital_product_id}.json
+- "Delete a digital_product?" -> DELETE /products/{id}/digital_products/{digital_product_id}.json
+- "List all fields.json?" -> GET /products/{id}/fields.json
+- "Create a fields.json?" -> POST /products/{id}/fields.json
+- "List all count.json?" -> GET /products/{id}/fields/count.json
+- "Update a field?" -> PUT /products/{product_id}/fields/{field_id}.json
+- "Delete a field?" -> DELETE /products/{product_id}/fields/{field_id}.json
+- "List all categories.json?" -> GET /categories.json
+- "Create a categories.json?" -> POST /categories.json
+- "List all count.json?" -> GET /categories/count.json
+- "Get category details?" -> GET /categories/{id}.json
+- "Update a category?" -> PUT /categories/{id}.json
+- "Delete a category?" -> DELETE /categories/{id}.json
+- "List all orders.json?" -> GET /orders.json
+- "Create a orders.json?" -> POST /orders.json
+- "List all count.json?" -> GET /orders/count.json
+- "Get status details?" -> GET /orders/status/{status}.json
+- "Get order details?" -> GET /orders/{id}.json
+- "Update a order?" -> PUT /orders/{id}.json
+- "Search search.json?" -> GET /orders/search.json
+- "Get after details?" -> GET /orders/after/{id}.json
+- "List all history.json?" -> GET /orders/{id}/history.json
+- "Create a history.json?" -> POST /orders/{id}/history.json
+- "List all documents.json?" -> GET /orders/{id}/documents.json
+- "Create a documents.json?" -> POST /orders/{id}/documents.json
+- "Update a document?" -> PUT /orders/{id}/documents/{public_id}.json
+- "Delete a document?" -> DELETE /orders/{id}/documents/{public_id}.json
+- "List all count.json?" -> GET /fulfillments/count.json
+- "Create a rates.json?" -> POST /fulfillments/rates.json
+- "List all fulfillments.json?" -> GET /fulfillments.json
+- "Create a fulfillments.json?" -> POST /fulfillments.json
+- "List all label.json?" -> GET /fulfillments/{id}/label.json
+- "Get fulfillment details?" -> GET /fulfillments/{id}.json
+- "Update a fulfillment?" -> PUT /fulfillments/{id}.json
+- "List all fulfillments.json?" -> GET /order/{id}/fulfillments.json
+- "List all pages.json?" -> GET /pages.json
+- "Create a pages.json?" -> POST /pages.json
+- "List all count.json?" -> GET /pages/count.json
+- "Get page details?" -> GET /pages/{id}.json
+- "Update a page?" -> PUT /pages/{id}.json
+- "Delete a page?" -> DELETE /pages/{id}.json
+- "List all images.json?" -> GET /pages/{id}/images.json
+- "Create a images.json?" -> POST /pages/{id}/images.json
+- "List all count.json?" -> GET /pages/{id}/images/count.json
+- "Get image details?" -> GET /pages/{id}/images/{image_id}.json
+- "Update a image?" -> PUT /pages/{id}/images/{image_id}.json
+- "Delete a image?" -> DELETE /pages/{id}/images/{image_id}.json
+- "List all customers.json?" -> GET /customers.json
+- "Create a customers.json?" -> POST /customers.json
+- "List all count.json?" -> GET /customers/count.json
+- "Get email details?" -> GET /customers/email/{email}.json
+- "List all orders.json?" -> GET /customers/{id}/orders.json
+- "Get status details?" -> GET /customers/{id}/orders/status/{status}.json
+- "Get customer details?" -> GET /customers/{id}.json
+- "Update a customer?" -> PUT /customers/{id}.json
+- "Delete a customer?" -> DELETE /customers/{id}.json
+- "Search search.json?" -> GET /customers/search.json
+- "List all customer_categories.json?" -> GET /customer_categories.json
+- "Create a customer_categories.json?" -> POST /customer_categories.json
+- "Get customer_category details?" -> GET /customer_categories/{id}.json
+- "Update a customer_category?" -> PUT /customer_categories/{id}.json
+- "Delete a customer_category?" -> DELETE /customer_categories/{id}.json
+- "List all customers.json?" -> GET /customer_categories/{id}/customers.json
+- "Create a customers.json?" -> POST /customer_categories/{id}/customers.json
+- "Delete a customer?" -> DELETE /customer_categories/{id}/customers/{customer_id}.json
+- "List all fields?" -> GET /customers/{id}/fields
+- "Create a field?" -> POST /customers/{id}/fields
+- "Get field details?" -> GET /customers/{id}/fields/{field_id}
+- "Update a field?" -> PUT /customers/{id}/fields/{field_id}
+- "Delete a field?" -> DELETE /customers/{id}/fields/{field_id}
+- "List all promotions.json?" -> GET /promotions.json
+- "Create a promotions.json?" -> POST /promotions.json
+- "Get promotion details?" -> GET /promotions/{id}.json
+- "Update a promotion?" -> PUT /promotions/{id}.json
+- "Delete a promotion?" -> DELETE /promotions/{id}.json
+- "List all payment_methods.json?" -> GET /payment_methods.json
+- "Create a payment_methods.json?" -> POST /payment_methods.json
+- "Get payment_method details?" -> GET /payment_methods/{id}.json
+- "List all shipping_methods.json?" -> GET /shipping_methods.json
+- "Create a shipping_methods.json?" -> POST /shipping_methods.json
+- "Get shipping_method details?" -> GET /shipping_methods/{id}.json
+- "Update a shipping_method?" -> PUT /shipping_methods/{id}.json
+- "Delete a shipping_method?" -> DELETE /shipping_methods/{id}.json
+- "List all locations.json?" -> GET /locations.json
+- "Create a locations.json?" -> POST /locations.json
+- "Get location details?" -> GET /locations/{id}.json
+- "Update a location?" -> PUT /locations/{id}.json
+- "Delete a location?" -> DELETE /locations/{id}.json
+- "List all custom_fields.json?" -> GET /custom_fields.json
+- "Create a custom_fields.json?" -> POST /custom_fields.json
+- "Get custom_field details?" -> GET /custom_fields/{id}.json
+- "Update a custom_field?" -> PUT /custom_fields/{id}.json
+- "Delete a custom_field?" -> DELETE /custom_fields/{id}.json
+- "List all select_options.json?" -> GET /custom_fields/{id}/select_options.json
+- "Create a select_options.json?" -> POST /custom_fields/{id}/select_options.json
+- "Get select_option details?" -> GET /custom_fields/{id}/select_options/{custom_field_select_option_id}.json
+- "Update a select_option?" -> PUT /custom_fields/{id}/select_options/{custom_field_select_option_id}.json
+- "Delete a select_option?" -> DELETE /custom_fields/{id}/select_options/{custom_field_select_option_id}.json
+- "List all checkout_custom_fields.json?" -> GET /checkout_custom_fields.json
+- "Create a checkout_custom_fields.json?" -> POST /checkout_custom_fields.json
+- "Get checkout_custom_field details?" -> GET /checkout_custom_fields/{id}.json
+- "Update a checkout_custom_field?" -> PUT /checkout_custom_fields/{id}.json
+- "Delete a checkout_custom_field?" -> DELETE /checkout_custom_fields/{id}.json
+- "List all countries.json?" -> GET /countries.json
+- "Get country details?" -> GET /countries/{country_code}.json
+- "List all regions.json?" -> GET /countries/{country_code}/regions.json
+- "List all municipalities.json?" -> GET /countries/{country_code}/regions/{region_code}/municipalities.json
+- "Get region details?" -> GET /countries/{country_code}/regions/{region_code}.json
+- "List all taxes.json?" -> GET /taxes.json
+- "Create a taxes.json?" -> POST /taxes.json
+- "Get taxe details?" -> GET /taxes/{id}.json
+- "Create a create.json?" -> POST /store/create.json
+- "List all check_status.json?" -> GET /store/check_status.json
+- "List all stores.json?" -> GET /partners/stores.json
+- "List all subscriptions.json?" -> GET /partners/subscriptions.json
+- "Get cart details?" -> GET /carts/{id}.json
+- "List all documents.json?" -> GET /documents.json
+- "List all balance.json?" -> GET /transaction_ledger/balance.json
+- "List all products_locations?" -> GET /products_locations
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

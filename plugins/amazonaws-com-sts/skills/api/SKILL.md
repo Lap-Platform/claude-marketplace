@@ -34,83 +34,10 @@ Not specified.
 | POST | / | Returns a set of temporary security credentials (consisting of an access key ID, a secret access key, and a security token) for a user. A typical use is in a proxy application that gets temporary security credentials on behalf of distributed applications inside a corporate network. You must call the GetFederationToken operation using the long-term security credentials of an IAM user. As a result, this call is appropriate in contexts where those credentials can be safeguarded, usually in a server-based application. For a comparison of GetFederationToken with the other API operations that produce temporary credentials, see Requesting Temporary Security Credentials and Comparing the Amazon Web Services STS API operations in the IAM User Guide. Although it is possible to call GetFederationToken using the security credentials of an Amazon Web Services account root user rather than an IAM user that you create for the purpose of a proxy application, we do not recommend it. For more information, see Safeguard your root user credentials and don't use them for everyday tasks in the IAM User Guide.   You can create a mobile-based or browser-based app that can authenticate users using a web identity provider like Login with Amazon, Facebook, Google, or an OpenID Connect-compatible identity provider. In this case, we recommend that you use Amazon Cognito or AssumeRoleWithWebIdentity. For more information, see Federation Through a Web-based Identity Provider in the IAM User Guide.   Session duration  The temporary credentials are valid for the specified duration, from 900 seconds (15 minutes) up to a maximum of 129,600 seconds (36 hours). The default session duration is 43,200 seconds (12 hours). Temporary credentials obtained by using the root user credentials have a maximum duration of 3,600 seconds (1 hour).  Permissions  You can use the temporary credentials created by GetFederationToken in any Amazon Web Services service with the following exceptions:   You cannot call any IAM operations using the CLI or the Amazon Web Services API. This limitation does not apply to console sessions.   You cannot call any STS operations except GetCallerIdentity.   You can use temporary credentials for single sign-on (SSO) to the console. You must pass an inline or managed session policy to this operation. You can pass a single JSON policy document to use as an inline session policy. You can also specify up to 10 managed policy Amazon Resource Names (ARNs) to use as managed session policies. The plaintext that you use for both inline and managed session policies can't exceed 2,048 characters. Though the session policy parameters are optional, if you do not pass a policy, then the resulting federated user session has no permissions. When you pass session policies, the session permissions are the intersection of the IAM user policies and the session policies that you pass. This gives you a way to further restrict the permissions for a federated user. You cannot use session policies to grant more permissions than those that are defined in the permissions policy of the IAM user. For more information, see Session Policies in the IAM User Guide. For information about using GetFederationToken to create temporary security credentials, see GetFederationToken—Federation Through a Custom Identity Broker.  You can use the credentials to access a resource that has a resource-based policy. If that policy specifically references the federated user session in the Principal element of the policy, the session has the permissions allowed by the policy. These permissions are granted in addition to the permissions granted by the session policies.  Tags  (Optional) You can pass tag key-value pairs to your session. These are called session tags. For more information about session tags, see Passing Session Tags in STS in the IAM User Guide.  You can create a mobile-based or browser-based app that can authenticate users using a web identity provider like Login with Amazon, Facebook, Google, or an OpenID Connect-compatible identity provider. In this case, we recommend that you use Amazon Cognito or AssumeRoleWithWebIdentity. For more information, see Federation Through a Web-based Identity Provider in the IAM User Guide.  An administrator must grant you the permissions necessary to pass session tags. The administrator can also create granular permissions to allow you to pass only specific session tags. For more information, see Tutorial: Using Tags for Attribute-Based Access Control in the IAM User Guide. Tag key–value pairs are not case sensitive, but case is preserved. This means that you cannot have separate Department and department tag keys. Assume that the user that you are federating has the Department=Marketing tag and you pass the department=engineering session tag. Department and department are not saved as separate tags, and the session tag passed in the request takes precedence over the user tag. |
 | POST | / | Returns a set of temporary credentials for an Amazon Web Services account or IAM user. The credentials consist of an access key ID, a secret access key, and a security token. Typically, you use GetSessionToken if you want to use MFA to protect programmatic calls to specific Amazon Web Services API operations like Amazon EC2 StopInstances. MFA-enabled IAM users must call GetSessionToken and submit an MFA code that is associated with their MFA device. Using the temporary security credentials that the call returns, IAM users can then make programmatic calls to API operations that require MFA authentication. An incorrect MFA code causes the API to return an access denied error. For a comparison of GetSessionToken with the other API operations that produce temporary credentials, see Requesting Temporary Security Credentials and Comparing the Amazon Web Services STS API operations in the IAM User Guide.  No permissions are required for users to perform this operation. The purpose of the sts:GetSessionToken operation is to authenticate the user using MFA. You cannot use policies to control authentication operations. For more information, see Permissions for GetSessionToken in the IAM User Guide.   Session Duration  The GetSessionToken operation must be called by using the long-term Amazon Web Services security credentials of an IAM user. Credentials that are created by IAM users are valid for the duration that you specify. This duration can range from 900 seconds (15 minutes) up to a maximum of 129,600 seconds (36 hours), with a default of 43,200 seconds (12 hours). Credentials based on account credentials can range from 900 seconds (15 minutes) up to 3,600 seconds (1 hour), with a default of 1 hour.   Permissions  The temporary security credentials created by GetSessionToken can be used to make API calls to any Amazon Web Services service with the following exceptions:   You cannot call any IAM API operations unless MFA authentication information is included in the request.   You cannot call any STS API except AssumeRole or GetCallerIdentity.   The credentials that GetSessionToken returns are based on permissions associated with the IAM user whose credentials were used to call the operation. The temporary credentials have the same permissions as the IAM user.  Although it is possible to call GetSessionToken using the security credentials of an Amazon Web Services account root user rather than an IAM user, we do not recommend it. If GetSessionToken is called using root user credentials, the temporary credentials have root user permissions. For more information, see Safeguard your root user credentials and don't use them for everyday tasks in the IAM User Guide   For more information about using GetSessionToken to create temporary credentials, see Temporary Credentials for Users in Untrusted Environments in the IAM User Guide. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I assume an IAM role for cross-account access?" -> POST / (AssumeRole with RoleArn + RoleSessionName)
-- "How do I get temporary credentials for a federated user?" -> POST / (GetFederationToken with Name)
-- "How do I authenticate using a SAML assertion?" -> POST / (AssumeRoleWithSAML with RoleArn + PrincipalArn + SAMLAssertion)
-- "How do I get credentials from an OIDC or web identity provider?" -> POST / (AssumeRoleWithWebIdentity with RoleArn + WebIdentityToken)
-- "Who am I? What account and role am I using?" -> POST / (GetCallerIdentity, no required params)
-- "How do I get temporary session credentials with MFA?" -> POST / (GetSessionToken with SerialNumber + TokenCode)
-- "How do I decode an encoded authorization failure message?" -> POST / (DecodeAuthorizationMessage with EncodedMessage)
-- "Which AWS account owns this access key?" -> POST / (GetAccessKeyInfo with AccessKeyId)
-- "How do I restrict permissions when assuming a role?" -> POST / (AssumeRole with optional Policy or PolicyArns for session policy)
-- "How do I tag a session when assuming a role?" -> POST / (AssumeRole with Tags and optional TransitiveTagKeys)
-- "How do I set a source identity for audit tracking?" -> POST / (AssumeRole with SourceIdentity)
-- "How long can I make temporary credentials last?" -> POST / (AssumeRole/GetFederationToken/GetSessionToken with DurationSeconds)
-- "How do I require an external ID for third-party role assumption?" -> POST / (AssumeRole with ExternalId)
-
-## Response Tips
-
-- **Credential responses** (AssumeRole, GetFederationToken, GetSessionToken, SAML, WebIdentity): Always check `Credentials.Expiration` (ISO 8601 timestamp) to know when to refresh. All four fields inside `Credentials` are required for signing requests.
-- **Identity responses** (GetCallerIdentity, GetAccessKeyInfo): Fields are nullable -- a missing `Arn` or `Account` indicates insufficient permissions or an invalid key, not an error.
-- **Policy sizing** (AssumeRole, GetFederationToken): `PackedPolicySize` is an integer percentage (0-100); values near 100 mean you are close to the session policy size limit.
-- **SAML/WebIdentity metadata**: `Subject`, `Issuer`, `Audience`, and `Provider` fields are nullable and reflect IdP claims -- absent values mean the IdP did not provide them.
-- **Decoded messages** (DecodeAuthorizationMessage): `DecodedMessage` is a JSON string that must be parsed separately; it is nullable if decoding fails.
-
-## Anomaly Flags
-
-- **PackedPolicySize > 75%**: Session policy is approaching the size limit. Surface a warning recommending policy simplification or splitting into managed policies.
-- **Credential expiration under 15 minutes**: If `DurationSeconds` was not set or is unusually short, flag that credentials may expire before the task completes.
-- **Throttling errors (HTTP 429 or `Throttling` error code)**: STS has per-account rate limits. Surface retry-after guidance and recommend using regional STS endpoints instead of the global endpoint.
-- **ExpiredTokenException or AccessDenied on AssumeRole**: Likely indicates the trust policy is misconfigured or the caller's own credentials have expired. Flag for investigation.
-- **Missing SourceIdentity in response when Tags were set**: May indicate the IAM role's trust policy does not permit `sts:SetSourceIdentity`, which can cause silent audit gaps.
-- **ExternalId not provided for cross-account roles**: When assuming roles owned by third parties, the absence of `ExternalId` is a confused deputy risk. Flag proactively.
-- **GetCallerIdentity returning unexpected account or ARN**: Surface immediately -- this typically means the wrong credentials profile is active.
-
-## Playbook
-
-### 1. Cross-Account Role Assumption
-
-1. Call **GetCallerIdentity** to confirm your current identity and source account.
-2. Call **AssumeRole** with `RoleArn` of the target account role and a descriptive `RoleSessionName`.
-3. Optionally include `ExternalId` if the target role's trust policy requires it.
-4. Extract `Credentials.AccessKeyId`, `Credentials.SecretAccessKey`, and `Credentials.SessionToken` from the response.
-5. Use these temporary credentials to make API calls in the target account.
-6. Monitor `Credentials.Expiration` and re-assume before it lapses.
-
-### 2. MFA-Protected Session Escalation
-
-1. Call **GetCallerIdentity** to verify your base IAM user identity.
-2. Call **GetSessionToken** with `SerialNumber` (your MFA device ARN) and `TokenCode` (current TOTP code).
-3. Receive temporary credentials that satisfy MFA conditions on IAM policies.
-4. Use these credentials for operations gated by `aws:MultiFactorAuthPresent`.
-
-### 3. Federated User Access for Custom Identity Broker
-
-1. Authenticate the user through your custom identity system.
-2. Call **GetFederationToken** with `Name` set to the user's identifier.
-3. Attach a scoped-down `Policy` or `PolicyArns` to limit the session to only what this user needs.
-4. Check `PackedPolicySize` in the response -- if above 75%, simplify the policy.
-5. Return the temporary credentials and a console sign-in URL to the user.
-
-### 4. Web Identity Federation (OIDC)
-
-1. Obtain a web identity token (JWT) from the OIDC provider (Google, Facebook, Amazon Cognito, etc.).
-2. Call **AssumeRoleWithWebIdentity** with `RoleArn`, `RoleSessionName`, and `WebIdentityToken`.
-3. Optionally set `ProviderId` for additional validation.
-4. Verify `Audience` and `Provider` in the response match expected values.
-5. Use the returned `Credentials` for AWS API calls scoped to the assumed role.
-
-### 5. Debugging Authorization Failures
-
-1. Capture the encoded message from the `EncodedMessage` field of an `UnauthorizedOperation` or `AccessDenied` error.
-2. Call **DecodeAuthorizationMessage** with the encoded string.
-3. Parse the returned `DecodedMessage` as JSON to see the full evaluation context: which policies were evaluated, what was denied, and why.
-4. Cross-reference with **GetCallerIdentity** to confirm the principal that made the failing request.
-5. If the access key is unfamiliar, call **GetAccessKeyInfo** to identify the owning account.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

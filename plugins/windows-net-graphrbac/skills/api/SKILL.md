@@ -83,85 +83,62 @@ https://graph.windows.net
 | POST | /{tenantID}/oauth2PermissionGrants | Grants OAuth2 permissions for the relevant resource Ids of an app. |
 | DELETE | /{tenantID}/oauth2PermissionGrants/{objectId} | Delete a OAuth2 permission grant for the relevant resource Ids of an app. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Who am I signed in as?" -> GET /{tenantID}/me
-- "What objects do I own in this tenant?" -> GET /{tenantID}/me/ownedObjects
-- "How do I register a new application?" -> POST /{tenantID}/applications
-- "List all applications in the tenant" -> GET /{tenantID}/applications
-- "How do I restore a deleted application?" -> POST /{tenantID}/deletedApplications/{objectId}/restore
-- "What groups does a user belong to?" -> POST /{tenantID}/users/{objectId}/getMemberGroups
-- "Is a user or group a member of a specific group?" -> POST /{tenantID}/isMemberOf
-- "How do I rotate credentials on a service principal?" -> PATCH /{tenantID}/servicePrincipals/{objectId}/passwordCredentials
-- "Find a service principal by its application ID" -> GET /{tenantID}/servicePrincipalsByAppId/{applicationID}/objectId
-- "Who owns this application?" -> GET /{tenantID}/applications/{applicationObjectId}/owners
-- "How do I grant delegated permissions (OAuth2)?" -> POST /{tenantID}/oauth2PermissionGrants
-- "What app role assignments does a service principal have?" -> GET /{tenantID}/servicePrincipals/{objectId}/appRoleAssignments
-- "How do I add a member to a group?" -> POST /{tenantID}/groups/{groupObjectId}/$links/members
-- "List all verified domains for this tenant" -> GET /{tenantID}/domains
-- "How do I permanently delete a soft-deleted application?" -> DELETE /{tenantID}/deletedApplications/{applicationObjectId}
-
-## Response Tips
-
-- **Listing endpoints** (applications, groups, users, servicePrincipals): Responses use `odata.nextLink` for pagination -- follow the URL until absent. Filter with `$filter` (OData syntax). Users endpoint also supports `$top` and `$expand`.
-- **Mutation endpoints** (POST create, PATCH update, DELETE): 201 means created (body contains the new object), 204 means success with no body -- do not attempt to parse a response on 204.
-- **Credential endpoints** (keyCredentials, passwordCredentials): PATCH replaces the entire credential collection -- always GET first, merge, then PATCH to avoid wiping existing credentials.
-- **Link endpoints** ($links/owners, $links/members): These manage navigation property references, not the objects themselves. POST expects a body with an `odata.id` URL pointing to the target directory object.
-- **isMemberOf / getMemberGroups**: These are POST actions that return membership results in the body (not 204). `getMemberGroups` accepts a `securityEnabledOnly` boolean in the parameters map.
-
-## Anomaly Flags
-
-- **Credential overwrites**: Alert when PATCH is called on keyCredentials or passwordCredentials without a preceding GET -- this silently replaces all existing credentials.
-- **Orphaned service principals**: Flag service principals with no owners (GET owners returns empty) as they cannot be self-managed.
-- **Soft-delete window**: Surface when deletedApplications are listed -- these have a 30-day recovery window before permanent removal. Hard DELETE is irreversible.
-- **OAuth2 permission grants without constraints**: Flag POST to oauth2PermissionGrants where scope is overly broad (e.g., blanket consent grants).
-- **Missing api-version**: All calls require the `api-version` query parameter (common field). Flag requests that omit it -- the API will return 400 or use an unpredictable default.
-- **Rate limiting (429 responses)**: Azure AD Graph throttles aggressively. Surface retry-after headers and recommend exponential backoff.
-- **Deprecation notice**: Azure AD Graph API (graph.windows.net) is deprecated in favor of Microsoft Graph (graph.microsoft.com). Flag this to users and recommend migration planning.
-
-## Playbook
-
-### 1. Register an Application and Configure Credentials
-
-1. POST /{tenantID}/applications with `displayName`, `homepage`, and `identifierUris` in the parameters map
-2. Note the `objectId` from the 201 response
-3. PATCH /{tenantID}/applications/{objectId}/keyCredentials to add a certificate credential (provide the full credential array)
-4. PATCH /{tenantID}/applications/{objectId}/passwordCredentials to add a client secret
-5. POST /{tenantID}/applications/{objectId}/$links/owners to assign an owner for ongoing management
-
-### 2. Create a Group and Populate Members
-
-1. POST /{tenantID}/groups with `displayName`, `mailEnabled`, `mailNickname`, and `securityEnabled`
-2. Capture the group `objectId` from the 201 response
-3. For each member, POST /{tenantID}/groups/{groupObjectId}/$links/members with the member's directory object URL as `odata.id`
-4. POST /{tenantID}/groups/{groupObjectId}/$links/owners to assign a group owner
-5. Verify with GET /{tenantID}/groups/{objectId}/members
-
-### 3. Audit and Rotate Service Principal Credentials
-
-1. GET /{tenantID}/servicePrincipals with `$filter=displayName eq 'MyApp'` to find the target
-2. GET /{tenantID}/servicePrincipals/{objectId}/keyCredentials to list current certificates
-3. GET /{tenantID}/servicePrincipals/{objectId}/passwordCredentials to list current secrets
-4. Build a new credential array: add the new credential, set expiry on old ones
-5. PATCH the respective credentials endpoint with the full updated array
-6. Verify by GET-ing the credentials again and confirming the old credential is absent or expired
-
-### 4. Check User Group Membership and Permissions
-
-1. GET /{tenantID}/users/{upnOrObjectId} to confirm the user exists and get their objectId
-2. POST /{tenantID}/users/{objectId}/getMemberGroups with `{ "securityEnabledOnly": false }` to get all group memberships
-3. For a specific group check, POST /{tenantID}/isMemberOf with `{ "groupId": "...", "memberId": "..." }`
-4. GET /{tenantID}/groups/{objectId} on any returned group IDs to retrieve group details
-
-### 5. Restore a Deleted Application
-
-1. GET /{tenantID}/deletedApplications to list recoverable applications (optionally filter with `$filter`)
-2. Identify the target application's `objectId`
-3. POST /{tenantID}/deletedApplications/{objectId}/restore to recover it
-4. GET /{tenantID}/applications/{objectId} to confirm the restoration succeeded
-5. Review owners and credentials -- restoration may not preserve all linked objects
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all me?" -> GET /{tenantID}/me
+- "List all ownedObjects?" -> GET /{tenantID}/me/ownedObjects
+- "Create a application?" -> POST /{tenantID}/applications
+- "List all applications?" -> GET /{tenantID}/applications
+- "Create a restore?" -> POST /{tenantID}/deletedApplications/{objectId}/restore
+- "List all deletedApplications?" -> GET /{tenantID}/deletedApplications
+- "Delete a deletedApplication?" -> DELETE /{tenantID}/deletedApplications/{applicationObjectId}
+- "Delete a application?" -> DELETE /{tenantID}/applications/{applicationObjectId}
+- "Get application details?" -> GET /{tenantID}/applications/{applicationObjectId}
+- "Partially update a application?" -> PATCH /{tenantID}/applications/{applicationObjectId}
+- "List all owners?" -> GET /{tenantID}/applications/{applicationObjectId}/owners
+- "Create a owner?" -> POST /{tenantID}/applications/{applicationObjectId}/$links/owners
+- "Delete a owner?" -> DELETE /{tenantID}/applications/{applicationObjectId}/$links/owners/{ownerObjectId}
+- "List all keyCredentials?" -> GET /{tenantID}/applications/{applicationObjectId}/keyCredentials
+- "List all passwordCredentials?" -> GET /{tenantID}/applications/{applicationObjectId}/passwordCredentials
+- "Create a isMemberOf?" -> POST /{tenantID}/isMemberOf
+- "Delete a member?" -> DELETE /{tenantID}/groups/{groupObjectId}/$links/members/{memberObjectId}
+- "Create a member?" -> POST /{tenantID}/groups/{groupObjectId}/$links/members
+- "Create a group?" -> POST /{tenantID}/groups
+- "List all groups?" -> GET /{tenantID}/groups
+- "List all members?" -> GET /{tenantID}/groups/{objectId}/members
+- "Get group details?" -> GET /{tenantID}/groups/{objectId}
+- "Delete a group?" -> DELETE /{tenantID}/groups/{objectId}
+- "Create a getMemberGroup?" -> POST /{tenantID}/groups/{objectId}/getMemberGroups
+- "List all owners?" -> GET /{tenantID}/groups/{objectId}/owners
+- "Create a owner?" -> POST /{tenantID}/groups/{objectId}/$links/owners
+- "Delete a owner?" -> DELETE /{tenantID}/groups/{objectId}/$links/owners/{ownerObjectId}
+- "Create a servicePrincipal?" -> POST /{tenantID}/servicePrincipals
+- "List all servicePrincipals?" -> GET /{tenantID}/servicePrincipals
+- "List all objectId?" -> GET /{tenantID}/servicePrincipalsByAppId/{applicationID}/objectId
+- "Partially update a servicePrincipal?" -> PATCH /{tenantID}/servicePrincipals/{objectId}
+- "Delete a servicePrincipal?" -> DELETE /{tenantID}/servicePrincipals/{objectId}
+- "Get servicePrincipal details?" -> GET /{tenantID}/servicePrincipals/{objectId}
+- "List all appRoleAssignedTo?" -> GET /{tenantID}/servicePrincipals/{objectId}/appRoleAssignedTo
+- "List all appRoleAssignments?" -> GET /{tenantID}/servicePrincipals/{objectId}/appRoleAssignments
+- "List all owners?" -> GET /{tenantID}/servicePrincipals/{objectId}/owners
+- "Create a owner?" -> POST /{tenantID}/servicePrincipals/{objectId}/$links/owners
+- "Delete a owner?" -> DELETE /{tenantID}/servicePrincipals/{objectId}/$links/owners/{ownerObjectId}
+- "List all keyCredentials?" -> GET /{tenantID}/servicePrincipals/{objectId}/keyCredentials
+- "List all passwordCredentials?" -> GET /{tenantID}/servicePrincipals/{objectId}/passwordCredentials
+- "Create a user?" -> POST /{tenantID}/users
+- "List all users?" -> GET /{tenantID}/users
+- "Get user details?" -> GET /{tenantID}/users/{upnOrObjectId}
+- "Partially update a user?" -> PATCH /{tenantID}/users/{upnOrObjectId}
+- "Delete a user?" -> DELETE /{tenantID}/users/{upnOrObjectId}
+- "Create a getMemberGroup?" -> POST /{tenantID}/users/{objectId}/getMemberGroups
+- "Create a getObjectsByObjectId?" -> POST /{tenantID}/getObjectsByObjectIds
+- "List all domains?" -> GET /{tenantID}/domains
+- "Get domain details?" -> GET /{tenantID}/domains/{domainName}
+- "List all oauth2PermissionGrants?" -> GET /{tenantID}/oauth2PermissionGrants
+- "Create a oauth2PermissionGrant?" -> POST /{tenantID}/oauth2PermissionGrants
+- "Delete a oauth2PermissionGrant?" -> DELETE /{tenantID}/oauth2PermissionGrants/{objectId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

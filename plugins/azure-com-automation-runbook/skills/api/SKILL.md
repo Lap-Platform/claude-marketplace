@@ -45,89 +45,26 @@ https://management.azure.com
 | POST | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/testJob/stop | Stop the test job. |
 | POST | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/testJob/suspend | Suspend the test job. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all runbooks in my automation account?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks
-- "What is the content of a published runbook?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/content
-- "How do I read the draft version of a runbook?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/content
-- "How do I update a runbook's draft content?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/content
-- "How do I create a new runbook?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}
-- "How do I publish a draft runbook to production?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/publish
-- "How do I discard draft changes and revert?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/undoEdit
-- "How do I run a test job against a draft runbook?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/testJob
-- "How do I check the status of a test job?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/testJob
-- "How do I view output streams from a test job?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/testJob/streams
-- "How do I stop a running test job?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/testJob/stop
-- "How do I delete a runbook I no longer need?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}
-- "How do I update runbook properties without replacing it?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}
-- "How do I get metadata for a specific runbook?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}
-- "How do I resume a suspended test job?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/testJob/resume
-
-## Response Tips
-
-- **Runbook listing** (GET .../runbooks): Returns a paged array with `value` and `nextLink`; follow `nextLink` until null to retrieve all results.
-- **Runbook CRUD** (GET/PUT/PATCH/DELETE .../runbooks/{name}): Returns the full runbook resource object with `properties`, `id`, `name`, `type`, and `location`; 201 on create, 200 on update, 204 on delete-already-gone.
-- **Draft content** (GET/PUT .../draft/content): Returns raw runbook script text (not JSON); PUT returns 202 when accepted for async processing.
-- **Publish** (POST .../publish): Returns 202 Accepted with a `Location` header for polling the long-running operation; no response body.
-- **Test jobs** (PUT/GET .../draft/testJob): PUT returns 201 with job metadata including `status`, `creationTime`, and `parameters`; poll GET until `status` reaches a terminal state (Completed, Failed, Stopped).
-- **Test job streams** (GET .../testJob/streams): Returns an array of stream records; use `$filter` to narrow by stream type (e.g., `Output`, `Error`); individual stream content requires the `{jobStreamId}` sub-resource.
-- **Errors**: All endpoints return `ErrorResponse` with `code` and `message` on 4xx/5xx; watch for `ResourceNotFound` (404), `OperationNotAllowed` (409 on publish conflicts), and `AuthorizationFailed` (403).
-
-## Anomaly Flags
-
-- **202 without polling**: If `publish` or `draft/content PUT` returns 202, surface the `Location` header and remind the user to poll for completion -- the operation is not yet done.
-- **204 on delete**: A 204 means the runbook was already absent; flag this as a no-op so the user does not assume a deletion occurred.
-- **Test job stuck in non-terminal state**: If a test job GET returns `Running` or `Suspended` for an extended period, proactively suggest using the stop or resume endpoints.
-- **Missing draft**: If GET .../draft returns 404 while the published runbook exists, flag that the runbook has no pending draft -- edits must go through draft/content PUT first.
-- **$filter ignored**: If test job streams return unfiltered results despite a `$filter` parameter, warn that the filter syntax may be malformed (OData format required).
-- **OAuth2 token expiry**: Surface token refresh reminders when requests start returning 401, since Azure tokens expire after ~60 minutes.
-- **API version mismatch**: This spec targets `2018-06-30`; flag if a newer api-version is available or if responses contain `deprecated` annotations.
-
-## Playbook
-
-### 1. Edit and Publish a Runbook Draft
-
-1. Retrieve the current draft content: GET `.../runbooks/{runbookName}/draft/content`
-2. Modify the script locally as needed.
-3. Upload the updated draft: PUT `.../runbooks/{runbookName}/draft/content` with the new script body.
-4. If PUT returns 202, poll the `Location` URL until the operation completes.
-5. Publish the draft to production: POST `.../runbooks/{runbookName}/publish`.
-6. Poll the `Location` header from the 202 response until the publish operation finishes.
-7. Verify the published content: GET `.../runbooks/{runbookName}/content`.
-
-### 2. Test a Draft Runbook Before Publishing
-
-1. Upload or confirm draft content: PUT `.../runbooks/{runbookName}/draft/content`.
-2. Create a test job: PUT `.../runbooks/{runbookName}/draft/testJob` with required parameters.
-3. Poll test job status: GET `.../runbooks/{runbookName}/draft/testJob` until `status` is terminal (Completed, Failed, Stopped).
-4. Retrieve output streams: GET `.../runbooks/{runbookName}/draft/testJob/streams` (optionally filter with `$filter=properties/streamType eq 'Output'`).
-5. Inspect individual stream details: GET `.../runbooks/{runbookName}/draft/testJob/streams/{jobStreamId}`.
-6. If the test passes, publish: POST `.../runbooks/{runbookName}/publish`.
-7. If the test fails, fix the draft (step 1) and re-run.
-
-### 3. Create a New Runbook from Scratch
-
-1. Create the runbook resource: PUT `.../runbooks/{runbookName}` with `parameters` including `runbookType` (e.g., PowerShell, Python2, Graph), `location`, and `properties`.
-2. Confirm creation via the 201 response and inspect the returned resource object.
-3. Upload draft content: PUT `.../runbooks/{runbookName}/draft/content` with the script body.
-4. Test the draft (see Playbook 2).
-5. Publish when ready: POST `.../runbooks/{runbookName}/publish`.
-
-### 4. Roll Back a Draft Edit
-
-1. Check the current draft: GET `.../runbooks/{runbookName}/draft` to review pending changes.
-2. If the draft should be discarded, undo the edit: POST `.../runbooks/{runbookName}/draft/undoEdit`.
-3. Verify the draft is reverted: GET `.../runbooks/{runbookName}/draft/content` to confirm it matches the last published version.
-
-### 5. Manage a Stuck or Long-Running Test Job
-
-1. Check current test job status: GET `.../runbooks/{runbookName}/draft/testJob`.
-2. If status is `Suspended`, resume it: POST `.../runbooks/{runbookName}/draft/testJob/resume`.
-3. If status is `Running` and appears stuck, stop it: POST `.../runbooks/{runbookName}/draft/testJob/stop`.
-4. Review streams for error output: GET `.../runbooks/{runbookName}/draft/testJob/streams` with `$filter=properties/streamType eq 'Error'`.
-5. Fix the draft content and create a new test job if needed.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all content?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/content
+- "List all draft?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft
+- "Create a publish?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/publish
+- "Create a undoEdit?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/undoEdit
+- "List all content?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/content
+- "Get runbook details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}
+- "Update a runbook?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}
+- "Partially update a runbook?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}
+- "Delete a runbook?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}
+- "List all runbooks?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks
+- "Get stream details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/testJob/streams/{jobStreamId}
+- "List all streams?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/testJob/streams
+- "List all testJob?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/testJob
+- "Create a resume?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/testJob/resume
+- "Create a stop?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/testJob/stop
+- "Create a suspend?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Automation/automationAccounts/{automationAccountName}/runbooks/{runbookName}/draft/testJob/suspend
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

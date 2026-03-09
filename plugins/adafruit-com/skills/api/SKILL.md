@@ -106,89 +106,80 @@ https://io.adafruit.com/api/v2
 | POST | /webhooks/feed/:token | Send data to a feed via webhook URL. |
 | POST | /webhooks/feed/:token/raw | Send arbitrary data to a feed via webhook URL. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What feeds do I have?" -> GET /{username}/feeds
-- "Send a sensor reading to my temperature feed" -> POST /{username}/feeds/{feed_key}/data
-- "What was the last value sent to my feed?" -> GET /{username}/feeds/{feed_key}/data/last
-- "How close am I to my rate limit?" -> GET /{username}/throttle
-- "Show me my feed data as a chart" -> GET /{username}/feeds/{feed_key}/data/chart
-- "Upload multiple data points at once" -> POST /{username}/feeds/{feed_key}/data/batch
-- "Create a new feed inside a group" -> POST /{username}/groups/{group_key}/feeds
-- "Send data to all feeds in a group at once" -> POST /{username}/groups/{group_key}/data
-- "List all my dashboards" -> GET /{username}/dashboards
-- "Add a block to my dashboard" -> POST /{username}/dashboards/{dashboard_id}/blocks
-- "Who has access to my feed?" -> GET /{username}/{type}/{type_id}/acl
-- "Get my account info and plan details" -> GET /user
-- "Delete all my activity logs" -> DELETE /{username}/activities
-- "Set up a trigger on a feed value" -> POST /{username}/triggers
-- "Push data into Adafruit IO from an external webhook" -> POST /webhooks/feed/:token
-
-## Response Tips
-
-- **Feeds & Data**: Feed objects include `last_value`, `created_at`, and `updated_at`; data points have `value`, `feed_id`, `created_at`, and optional `lat`/`lon`/`ele` for location. The `include` param controls which related fields are expanded.
-- **Throttle**: Returns current rate limit usage vs. allowed maximum; compare `active_data_rate` to `data_rate_limit` to gauge headroom.
-- **Activities**: Returns a flat list filtered by `start_time`/`end_time`; use `limit` to paginate since there is no cursor -- fetch sequential time windows instead.
-- **Chart data**: Returns pre-aggregated points bucketed by `resolution` (e.g., 1, 5, 10 minutes); the `hours` param controls the lookback window.
-- **Groups**: Group responses nest an array of member feeds; use `/groups/{key}/feeds` for the full feed list when the summary is insufficient.
-- **Dashboards & Blocks**: Dashboard objects contain a `blocks` array summary; fetch `/blocks` sub-resource for full block configs including `visual_type` and `properties`.
-- **ACL/Permissions**: Responses describe per-user access grants on a typed resource; the `type` path param is one of `feeds`, `groups`, `dashboards`.
-- **Errors**: All endpoints share the same error shape (401 unauthorized, 403 forbidden, 404 not found, 500 server error); 401 almost always means a missing or invalid `X-AIO-Key`.
-- **Webhooks**: Return minimal acknowledgment; errors on the webhook token path typically mean the token is expired or revoked.
-
-## Anomaly Flags
-
-- **Rate limit approaching**: After any write, check `GET /{username}/throttle` -- surface a warning when `active_data_rate` exceeds 80% of `data_rate_limit`.
-- **401 on first call**: Likely means the `X-AIO-Key` header is missing or malformed. Prompt the user to verify their API key before retrying.
-- **404 on feed/group operations**: The `feed_key` or `group_key` is case-sensitive and uses the slug form (e.g., `temperature-sensor`, not `Temperature Sensor`). Flag key mismatch as the probable cause.
-- **Batch upload partial failures**: `POST .../data/batch` may silently drop malformed entries. If the returned count is less than submitted, surface the discrepancy.
-- **Stale last_value**: If `GET .../data/last` returns a timestamp older than expected, alert that the device may be offline or the feed is inactive.
-- **500 errors**: Adafruit IO occasionally returns 500 during maintenance windows. If a 500 is encountered, suggest a retry after 30 seconds before escalating.
-- **Deprecated token patterns**: If `GET /{username}/tokens` returns tokens with no recent `last_used_at`, flag them as candidates for rotation or deletion.
-
-## Playbook
-
-### 1. Set up a new IoT feed and send your first data point
-
-1. `GET /user` to confirm authentication and retrieve your username.
-2. `GET /{username}/throttle` to check you have rate limit headroom.
-3. `POST /{username}/feeds` with `{"feed": {"name": "Temperature", "description": "Living room sensor"}}` to create the feed.
-4. Note the returned `key` (e.g., `temperature`).
-5. `POST /{username}/feeds/temperature/data` with `{"datum": {"value": "22.5"}}` to send a reading.
-6. `GET /{username}/feeds/temperature/data/last` to verify the value was stored.
-
-### 2. Organize feeds into a group and send multi-feed data
-
-1. `POST /{username}/groups` with `{"group": {"name": "Weather Station"}}` to create a group.
-2. `POST /{username}/groups/weather-station/add` with `{"feed_key": "temperature"}` to add an existing feed.
-3. `POST /{username}/groups/weather-station/feeds` with `{"feed": {"name": "Humidity"}}` to create a new feed directly inside the group.
-4. `POST /{username}/groups/weather-station/data` with `{"group_feed_data": {"feeds": {"temperature": "22.5", "humidity": "60"}}}` to push values to all feeds in one call.
-5. `GET /{username}/groups/weather-station/feeds` to confirm both feeds and their latest values.
-
-### 3. Build a dashboard with visualization blocks
-
-1. `POST /{username}/dashboards` with `{"dashboard": {"name": "Home Monitor"}}` to create a dashboard.
-2. Note the returned `id`.
-3. `POST /{username}/dashboards/{id}/blocks` with a block definition specifying `visual_type` (e.g., line chart) and linking it to your feed key.
-4. Repeat step 3 for additional blocks (gauge, toggle, map, etc.).
-5. `GET /{username}/dashboards/{id}/blocks` to verify the full layout.
-
-### 4. Set up a reactive trigger on feed data
-
-1. `GET /{username}/feeds` to identify the feed key you want to monitor.
-2. `POST /{username}/triggers` with `{"trigger": {"name": "High Temp Alert", "feed_key": "temperature", "operator": "gt", "value": "30"}}` to fire when temperature exceeds 30.
-3. `GET /{username}/triggers` to confirm the trigger is active and correctly configured.
-4. Send a test data point: `POST /{username}/feeds/temperature/data` with `{"datum": {"value": "31"}}`.
-5. Check activity: `GET /{username}/activities?limit=5` to verify the trigger fired.
-
-### 5. Ingest external data via webhook
-
-1. `GET /{username}/feeds/{feed_key}/details` to find the webhook token (or create a token via `POST /{username}/tokens`).
-2. Configure your external service to POST to `https://io.adafruit.com/api/v2/webhooks/feed/{token}` with `{"payload": {"value": "42"}}`.
-3. For raw body ingestion (plain text sensors), POST to `/webhooks/feed/{token}/raw` with the value as the request body.
-4. `GET /{username}/feeds/{feed_key}/data/last` to confirm the webhook delivered the data.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all user?" -> GET /user
+- "List all throttle?" -> GET /{username}/throttle
+- "List all activities?" -> GET /{username}/activities
+- "Get activity details?" -> GET /{username}/activities/{type}
+- "List all feeds?" -> GET /{username}/feeds
+- "Create a feed?" -> POST /{username}/feeds
+- "Get feed details?" -> GET /{username}/feeds/{feed_key}
+- "Update a feed?" -> PUT /{username}/feeds/{feed_key}
+- "Partially update a feed?" -> PATCH /{username}/feeds/{feed_key}
+- "Delete a feed?" -> DELETE /{username}/feeds/{feed_key}
+- "List all details?" -> GET /{username}/feeds/{feed_key}/details
+- "List all data?" -> GET /{username}/feeds/{feed_key}/data
+- "Create a data?" -> POST /{username}/feeds/{feed_key}/data
+- "List all chart?" -> GET /{username}/feeds/{feed_key}/data/chart
+- "Create a batch?" -> POST /{username}/feeds/{feed_key}/data/batch
+- "List all previous?" -> GET /{username}/feeds/{feed_key}/data/previous
+- "List all next?" -> GET /{username}/feeds/{feed_key}/data/next
+- "List all last?" -> GET /{username}/feeds/{feed_key}/data/last
+- "List all first?" -> GET /{username}/feeds/{feed_key}/data/first
+- "List all retain?" -> GET /{username}/feeds/{feed_key}/data/retain
+- "Get data details?" -> GET /{username}/feeds/{feed_key}/data/{id}
+- "Update a data?" -> PUT /{username}/feeds/{feed_key}/data/{id}
+- "Partially update a data?" -> PATCH /{username}/feeds/{feed_key}/data/{id}
+- "Delete a data?" -> DELETE /{username}/feeds/{feed_key}/data/{id}
+- "List all groups?" -> GET /{username}/groups
+- "Create a group?" -> POST /{username}/groups
+- "Get group details?" -> GET /{username}/groups/{group_key}
+- "Update a group?" -> PUT /{username}/groups/{group_key}
+- "Partially update a group?" -> PATCH /{username}/groups/{group_key}
+- "Delete a group?" -> DELETE /{username}/groups/{group_key}
+- "Create a add?" -> POST /{username}/groups/{group_key}/add
+- "Create a remove?" -> POST /{username}/groups/{group_key}/remove
+- "List all feeds?" -> GET /{username}/groups/{group_key}/feeds
+- "Create a feed?" -> POST /{username}/groups/{group_key}/feeds
+- "Create a data?" -> POST /{username}/groups/{group_key}/data
+- "List all data?" -> GET /{username}/groups/{group_key}/feeds/{feed_key}/data
+- "Create a data?" -> POST /{username}/groups/{group_key}/feeds/{feed_key}/data
+- "Create a batch?" -> POST /{username}/groups/{group_key}/feeds/{feed_key}/data/batch
+- "List all dashboards?" -> GET /{username}/dashboards
+- "Create a dashboard?" -> POST /{username}/dashboards
+- "Get dashboard details?" -> GET /{username}/dashboards/{id}
+- "Update a dashboard?" -> PUT /{username}/dashboards/{id}
+- "Partially update a dashboard?" -> PATCH /{username}/dashboards/{id}
+- "Delete a dashboard?" -> DELETE /{username}/dashboards/{id}
+- "List all blocks?" -> GET /{username}/dashboards/{dashboard_id}/blocks
+- "Create a block?" -> POST /{username}/dashboards/{dashboard_id}/blocks
+- "Get block details?" -> GET /{username}/dashboards/{dashboard_id}/blocks/{id}
+- "Update a block?" -> PUT /{username}/dashboards/{dashboard_id}/blocks/{id}
+- "Partially update a block?" -> PATCH /{username}/dashboards/{dashboard_id}/blocks/{id}
+- "Delete a block?" -> DELETE /{username}/dashboards/{dashboard_id}/blocks/{id}
+- "List all tokens?" -> GET /{username}/tokens
+- "Create a token?" -> POST /{username}/tokens
+- "Get token details?" -> GET /{username}/tokens/{id}
+- "Update a token?" -> PUT /{username}/tokens/{id}
+- "Partially update a token?" -> PATCH /{username}/tokens/{id}
+- "Delete a token?" -> DELETE /{username}/tokens/{id}
+- "List all triggers?" -> GET /{username}/triggers
+- "Create a trigger?" -> POST /{username}/triggers
+- "Get trigger details?" -> GET /{username}/triggers/{id}
+- "Update a trigger?" -> PUT /{username}/triggers/{id}
+- "Partially update a trigger?" -> PATCH /{username}/triggers/{id}
+- "Delete a trigger?" -> DELETE /{username}/triggers/{id}
+- "List all acl?" -> GET /{username}/{type}/{type_id}/acl
+- "Create a acl?" -> POST /{username}/{type}/{type_id}/acl
+- "Get acl details?" -> GET /{username}/{type}/{type_id}/acl/{id}
+- "Update a acl?" -> PUT /{username}/{type}/{type_id}/acl/{id}
+- "Partially update a acl?" -> PATCH /{username}/{type}/{type_id}/acl/{id}
+- "Delete a acl?" -> DELETE /{username}/{type}/{type_id}/acl/{id}
+- "Create a :token?" -> POST /webhooks/feed/:token
+- "Create a raw?" -> POST /webhooks/feed/:token/raw
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

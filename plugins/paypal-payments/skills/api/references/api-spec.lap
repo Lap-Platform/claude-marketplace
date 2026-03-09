@@ -8,48 +8,58 @@
 @toc payments(7)
 
 @endpoint GET /v2/payments/authorizations/{authorization_id}
-@required {authorization_id: str}
-@optional {PayPal-Auth-Assertion: str}
-@returns(200)
-@errors {401, 404, 500}
+@desc Show details for authorized payment
+@required {authorization_id: str # The PayPal-generated ID for the authorized payment to void.}
+@optional {PayPal-Auth-Assertion: str # An API-caller-provided JSON Web Token (JWT) assertion that identifies the merchant. For details, see [PayPal-Auth-Assertion](/docs/api/reference/api-requests/#paypal-auth-assertion).<blockquote><strong>Note:</strong>For three party transactions in which a partner is managing the API calls on behalf of a merchant, the partner must identify the merchant using either a PayPal-Auth-Assertion header or an access token with target_subject.</blockquote>}
+@returns(200) A successful request returns the HTTP <code>200 OK</code> status code and a JSON response body that shows authorization details.
+@errors {401: Authentication failed due to missing authorization header, or invalid authentication credentials., 404: The request failed because the resource does not exist., 500: The request failed because an internal server error occurred.}
 
 @endpoint POST /v2/payments/authorizations/{authorization_id}/capture
-@required {authorization_id: str}
-@optional {PayPal-Request-Id: str, Prefer: str=return=minimal, PayPal-Auth-Assertion: str}
-@returns(200)
-@returns(201)
-@errors {400, 401, 403, 404, 409, 422, 500}
+@desc Capture authorized payment
+@required {authorization_id: str # The PayPal-generated ID for the authorized payment to void.}
+@optional {PayPal-Request-Id: str # The server stores keys for 45 days., Prefer: str=return=minimal # The preferred server response upon successful completion of the request. Value is:<ul><li><code>return=minimal</code>. The server returns a minimal response to optimize communication between the API caller and the server. A minimal response includes the <code>id</code>, <code>status</code> and HATEOAS links.</li><li><code>return=representation</code>. The server returns a complete resource representation, including the current state of the resource.</li></ul>, PayPal-Auth-Assertion: str # An API-caller-provided JSON Web Token (JWT) assertion that identifies the merchant. For details, see [PayPal-Auth-Assertion](/docs/api/reference/api-requests/#paypal-auth-assertion).<blockquote><strong>Note:</strong>For three party transactions in which a partner is managing the API calls on behalf of a merchant, the partner must identify the merchant using either a PayPal-Auth-Assertion header or an access token with target_subject.</blockquote>}
+@returns(200) A successful request returns the HTTP <code>200 OK</code> status code and a JSON response body that shows captured payment details.
+@returns(201) A successful request returns the HTTP <code>201 Created</code> status code and a JSON response body that shows captured payment details.
+@errors {400: The request failed because it is not well-formed or is syntactically incorrect or violates schema., 401: Authentication failed due to missing authorization header, or invalid authentication credentials., 403: The request failed because the caller has insufficient permissions., 404: The request failed because the resource does not exist., 409: The server has detected a conflict while processing this request., 422: The request failed because it is semantically incorrect or failed business validation., 500: The request failed because an internal server error occurred.}
+@example_request {"amount":{"value":"10.99","currency_code":"USD"},"invoice_id":"INVOICE-123","final_capture":true,"note_to_payer":"If the ordered color is not available, we will substitute with a different color free of charge.","soft_descriptor":"Bob's Custom Sweaters"}
 
 @endpoint POST /v2/payments/authorizations/{authorization_id}/reauthorize
-@required {authorization_id: str}
-@optional {PayPal-Request-Id: str, Prefer: str=return=minimal, PayPal-Auth-Assertion: str, amount: map{currency_code!: str, value!: str}}
-@returns(200)
-@returns(201)
-@errors {400, 401, 404, 422, 500}
+@desc Reauthorize authorized payment
+@required {authorization_id: str # The PayPal-generated ID for the authorized payment to void.}
+@optional {PayPal-Request-Id: str # The server stores keys for 45 days., Prefer: str=return=minimal # The preferred server response upon successful completion of the request. Value is:<ul><li><code>return=minimal</code>. The server returns a minimal response to optimize communication between the API caller and the server. A minimal response includes the <code>id</code>, <code>status</code> and HATEOAS links.</li><li><code>return=representation</code>. The server returns a complete resource representation, including the current state of the resource.</li></ul>, PayPal-Auth-Assertion: str # An API-caller-provided JSON Web Token (JWT) assertion that identifies the merchant. For details, see [PayPal-Auth-Assertion](/docs/api/reference/api-requests/#paypal-auth-assertion).<blockquote><strong>Note:</strong>For three party transactions in which a partner is managing the API calls on behalf of a merchant, the partner must identify the merchant using either a PayPal-Auth-Assertion header or an access token with target_subject.</blockquote>, amount: map{currency_code!: str, value!: str} # The currency and amount for a financial transaction, such as a balance or payment due.}
+@returns(200) A successful request returns the HTTP <code>200 OK</code> status code and a JSON response body that shows the reauthorized payment details.
+@returns(201) A successful request returns the HTTP <code>201 Created</code> status code and a JSON response body that shows the reauthorized payment details.
+@errors {400: The request failed because it is not well-formed or is syntactically incorrect or violates schema., 401: Authentication failed due to missing authorization header, or invalid authentication credentials., 404: The request failed because the resource does not exist., 422: The request failed because it either is semantically incorrect or failed business validation., 500: The request failed because an internal server error occurred.}
+@example_request {"amount":{"value":"10.99","currency_code":"USD"}}
 
 @endpoint POST /v2/payments/authorizations/{authorization_id}/void
-@required {authorization_id: str}
-@optional {PayPal-Auth-Assertion: str, PayPal-Request-Id: str, Prefer: str=return=minimal}
-@returns(200)
-@returns(204)
-@errors {401, 403, 404, 409, 422, 500}
+@desc Void authorized payment
+@required {authorization_id: str # The PayPal-generated ID for the authorized payment to void.}
+@optional {PayPal-Auth-Assertion: str # An API-caller-provided JSON Web Token (JWT) assertion that identifies the merchant. For details, see [PayPal-Auth-Assertion](/docs/api/reference/api-requests/#paypal-auth-assertion).<blockquote><strong>Note:</strong>For three party transactions in which a partner is managing the API calls on behalf of a merchant, the partner must identify the merchant using either a PayPal-Auth-Assertion header or an access token with target_subject.</blockquote>, PayPal-Request-Id: str # The server stores keys for 45 days., Prefer: str=return=minimal # The preferred server response upon successful completion of the request. Value is:<ul><li><code>return=minimal</code>. The server returns a minimal response to optimize communication between the API caller and the server. A minimal response includes the <code>id</code>, <code>status</code> and HATEOAS links.</li><li><code>return=representation</code>. The server returns a complete resource representation, including the current state of the resource.</li></ul>}
+@returns(200) A successful request returns the HTTP <code>200 OK</code> status code and a JSON response body that shows authorization details. This response is returned when the Prefer header is set to return=representation.
+@returns(204) A successful request returns the HTTP <code>204 No Content</code> status code with no JSON response body. This response is returned when the Prefer header is set to return=minimal.
+@errors {401: Authentication failed due to missing authorization header, or invalid authentication credentials., 403: The request failed because the caller has insufficient permissions., 404: The request failed because the resource does not exist., 409: The request failed because a previous call for the given resource is in progress., 422: The request failed because it either is semantically incorrect or failed business validation., 500: The request failed because an internal server error occurred.}
 
 @endpoint GET /v2/payments/captures/{capture_id}
-@required {capture_id: str}
-@returns(200)
-@errors {401, 403, 404, 500}
+@desc Show captured payment details
+@required {capture_id: str # The PayPal-generated ID for the captured payment to refund.}
+@returns(200) A successful request returns the HTTP <code>200 OK</code> status code and a JSON response body that shows captured payment details.
+@errors {401: Authentication failed due to missing authorization header, or invalid authentication credentials., 403: The request failed because the caller has insufficient permissions., 404: The request failed because the resource does not exist., 500: The request failed because an internal server error occurred.}
 
 @endpoint POST /v2/payments/captures/{capture_id}/refund
-@required {capture_id: str}
-@optional {PayPal-Request-Id: str, Prefer: str=return=minimal, PayPal-Auth-Assertion: str, amount: map{currency_code!: str, value!: str}, custom_id: str, invoice_id: str, note_to_payer: str, payment_instruction: map{platform_fees: [map{amount!: map}]}}
-@returns(200)
-@returns(201)
-@errors {400, 401, 403, 404, 409, 422, 500}
+@desc Refund captured payment
+@required {capture_id: str # The PayPal-generated ID for the captured payment to refund.}
+@optional {PayPal-Request-Id: str # The server stores keys for 45 days., Prefer: str=return=minimal # The preferred server response upon successful completion of the request. Value is:<ul><li><code>return=minimal</code>. The server returns a minimal response to optimize communication between the API caller and the server. A minimal response includes the <code>id</code>, <code>status</code> and HATEOAS links.</li><li><code>return=representation</code>. The server returns a complete resource representation, including the current state of the resource.</li></ul>, PayPal-Auth-Assertion: str # An API-caller-provided JSON Web Token (JWT) assertion that identifies the merchant. For details, see [PayPal-Auth-Assertion](/docs/api/reference/api-requests/#paypal-auth-assertion).<blockquote><strong>Note:</strong>For three party transactions in which a partner is managing the API calls on behalf of a merchant, the partner must identify the merchant using either a PayPal-Auth-Assertion header or an access token with target_subject.</blockquote>, amount: map{currency_code!: str, value!: str} # The currency and amount for a financial transaction, such as a balance or payment due., custom_id: str # The API caller-provided external ID. Used to reconcile API caller-initiated transactions with PayPal transactions. Appears in transaction and settlement reports. The pattern is defined by an external party and supports Unicode., invoice_id: str # The API caller-provided external invoice ID for this order. The pattern is defined by an external party and supports Unicode., note_to_payer: str # The reason for the refund. Appears in both the payer's transaction history and the emails that the payer receives. The pattern is defined by an external party and supports Unicode., payment_instruction: map{platform_fees: [map{amount!: map}]} # Any additional payments instructions during refund payment processing. This object is only applicable to merchants that have been enabled for PayPal Commerce Platform for Marketplaces and Platforms capability. Please speak to your account manager if you want to use this capability.}
+@returns(200) A successful request returns the HTTP <code>200 OK</code> status code and a JSON response body that shows refund details.
+@returns(201) A successful request returns the HTTP <code>201 Created</code> status code and a JSON response body that shows refund details.
+@errors {400: The request failed because it is not well-formed or is syntactically incorrect or violates schema., 401: Authentication failed due to missing authorization header, or invalid authentication credentials., 403: The request failed because the caller has insufficient permissions., 404: The request failed because the resource does not exist., 409: The request failed because a previous call for the given resource is in progress., 422: The request failed because it either is semantically incorrect or failed business validation., 500: The request failed because an internal server error occurred.}
+@example_request {"amount":{"value":"10.00","currency_code":"USD"},"invoice_id":"INVOICE-123","note_to_payer":"DefectiveProduct","payment_instruction":{"platform_fees":[{"amount":{"currency_code":"USD","value":"1.00"}}]}}
 
 @endpoint GET /v2/payments/refunds/{refund_id}
-@required {refund_id: str}
-@optional {PayPal-Auth-Assertion: str}
-@returns(200)
-@errors {401, 403, 404, 500}
+@desc Show refund details
+@required {refund_id: str # The PayPal-generated ID for the refund for which to show details.}
+@optional {PayPal-Auth-Assertion: str # An API-caller-provided JSON Web Token (JWT) assertion that identifies the merchant. For details, see [PayPal-Auth-Assertion](/docs/api/reference/api-requests/#paypal-auth-assertion).<blockquote><strong>Note:</strong>For three party transactions in which a partner is managing the API calls on behalf of a merchant, the partner must identify the merchant using either a PayPal-Auth-Assertion header or an access token with target_subject.</blockquote>}
+@returns(200) A successful request returns the HTTP <code>200 OK</code> status code and a JSON response body that shows refund details.
+@errors {401: Authentication failed due to missing authorization header, or invalid authentication credentials., 403: The request failed because the caller has insufficient permissions., 404: The request failed because the resource does not exist., 500: The request failed because an internal server error occurred.}
 
 @end

@@ -9,153 +9,182 @@
 
 @group asset
 @endpoint GET /asset/v1/content/assets/{id}
-@required {id: any}
-@returns(200)
-@errors {400, 403}
+@desc getAssetById
+@required {id: any # The ID of the asset}
+@returns(200) A single asset
+@errors {400: Bad request, 403: Permission error}
 
 @endpoint PATCH /asset/v1/content/assets/{id}
-@required {id: any, body: map}
-@returns(200)
-@errors {400, 403}
+@desc partiallyUpdateAssetById
+@required {id: any # The ID of the asset to update, body: map # JSON Parameters}
+@returns(200) A single asset
+@errors {400: Bad request, 403: Permission error}
 
 @endpoint DELETE /asset/v1/content/assets/{id}
-@required {id: any}
-@errors {400, 403}
+@desc deleteAssetById
+@required {id: any # The ID of the asset to delete}
+@errors {400: Bad request, 403: Permission error}
 
 @endpoint POST /asset/v1/content/assets
-@required {body: map}
-@returns(200)
-@errors {400, 403}
+@desc createAsset
+@required {body: map # JSON Parameters}
+@returns(200) A single asset
+@errors {400: Bad request, 403: Permission error}
 
 @endgroup
 
 @group hub
 @endpoint POST /hub/v1/campaigns
-@required {body: map}
-@returns(200)
+@desc createCampaign
+@required {body: map # JSON Parameters}
+@returns(200) A single campaign
 
 @endpoint GET /hub/v1/campaigns/{id}
-@required {id: any}
-@returns(200)
+@desc getCampaignById
+@required {id: any # Campaign ID}
+@returns(200) A single campaign
 
 @endpoint DELETE /hub/v1/campaigns/{id}
-@required {id: any}
-@errors {400, 403}
+@desc deleteCampaignById
+@required {id: any # The ID of the campaign to delete}
+@errors {400: Bad request, 403: Permission error}
 
 @endgroup
 
 @group messaging
 @endpoint POST /messaging/v1/email/definitions/
-@required {body: map}
-@returns(201)
-@errors {400, 403, 409, 500}
+@desc createEmailDefinition
+@required {body: map # JSON Parameters}
+@returns(201) A single definition for an email
+@errors {400: Bad request, 403: Permission error, 409: Conflict, 500: Server Error}
 
 @endpoint GET /messaging/v1/email/definitions/
-@optional {$filter: any, $pageSize: any, $page: any, $orderBy: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc getEmailDefinitions
+@optional {$filter: any # Filter by status type. Accepted values are active, inactive, or deleted. Valid operations are eq and neq., $pageSize: any # Number of definitions, which are array elements, to return per paged response., $page: any # Page number to return., $orderBy: any # Sort by a dimension. You can sort by only one dimension. Accepted values are definitionKey, name, createdDate, modifiedDate, and status.}
+@returns(200) Email definitions successfully retrieved
+@errors {400: Bad request, 403: Permission error, 500: Server Error}
 
 @endpoint DELETE /messaging/v1/email/definitions/{definitionKey}
-@required {definitionKey: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc deleteEmailDefinition
+@required {definitionKey: any # Unique identifier of the definition to delete}
+@returns(200) Definition of email successfully deleted
+@errors {400: Bad request, 403: Permission error, 404: Not found, 500: Server Error}
 
 @endpoint PATCH /messaging/v1/email/definitions/{definitionKey}
-@required {definitionKey: any, body: map}
-@returns(200)
-@errors {400, 403, 500}
+@desc partiallyUpdateEmailDefinition
+@required {definitionKey: any # Unique identifier of the definition., body: map # JSON Parameters}
+@returns(200) A single definition for an email
+@errors {400: Bad request, 403: Permission error, 500: Server Error}
 
 @endpoint GET /messaging/v1/email/definitions/{definitionKey}
-@required {definitionKey: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc getEmailDefinition
+@required {definitionKey: any # Unique identifier of the definition to get}
+@returns(200) Definition of email successfully retrieved
+@errors {400: Bad request, 403: Permission error, 404: Not found, 500: Server Error}
 
 @endpoint GET /messaging/v1/email/definitions/{definitionKey}/queue
-@required {definitionKey: any}
-@returns(200)
-@errors {400, 403}
+@desc getQueueMetricsForEmailDefinition
+@required {definitionKey: any # Unique identifier of the email definition}
+@returns(200) Metrics for the messages of an email definition
+@errors {400: Bad request, 403: Permission error}
 
 @endpoint DELETE /messaging/v1/email/definitions/{definitionKey}/queue
-@required {definitionKey: any}
-@returns(200)
-@errors {400, 403}
+@desc deleteQueuedMessagesForEmailDefinition
+@required {definitionKey: any # Unique identifier of the email definition}
+@returns(200) Queue for email defintion successfully deleted
+@errors {400: Bad request, 403: Permission error}
 
 @endpoint POST /messaging/v1/email/messages/
-@required {body: map}
-@returns(202)
-@errors {400, 403, 500}
+@desc sendEmailToMultipleRecipients
+@required {body: map # JSON Parameters}
+@returns(202) Accepted
+@errors {400: Bad request, 403: Permission error, 500: Server Error}
 
 @endpoint GET /messaging/v1/email/messages/
-@required {type: any}
-@optional {$pageSize: any, lastEventId: any}
+@desc getEmailsNotSentToRecipients
+@required {type: any # Only notSent is supported.}
+@optional {$pageSize: any # Number of messageKeys (array elements) to return per response page., lastEventId: any # Event ID from which you want the response to start. To obtain the initial event ID, submit a request without a lastEventId. The events in the response are listed top to bottom from oldest to newest.}
 @returns(200)
-@errors {400, 401, 500}
+@errors {400: Bad request, 401: Unauthorized, 500: Server Error}
 
 @endpoint GET /messaging/v1/email/messages/{messageKey}
-@required {messageKey: any}
-@returns(200)
-@errors {400, 401, 500}
+@desc getEmailSendStatusForRecipient
+@required {messageKey: any # Unique identifier to track message send status. You must provide it in singleton requests using the recipient attribute. To provide it in batch requests, use the recipients array attribute. If you don’t provide the message key for recipients, it’s generated in the response.}
+@returns(200) Email send status for recipient succesfully retrieved.
+@errors {400: Bad request, 401: Unauthorized, 500: Server Error}
 
 @endpoint POST /messaging/v1/email/messages/{messageKey}
-@required {messageKey: any, body: map}
+@desc sendEmailToSingleRecipient
+@required {messageKey: any # Unique identifier used to track message status. Can be automatically created when you create a message or provided as part of the request. Each recipient in a request must have a unique messageKey. If you use a duplicate messageKey in the same send request, the message is rejected., body: map # JSON Parameters}
 @returns(202)
-@errors {400, 401, 403, 500}
+@errors {400: Bad request, 401: Unauthorized, 403: Permission error, 500: Server Error}
 
 @endpoint GET /messaging/v1/sms/definitions/{definitionKey}
-@required {definitionKey: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc getSmsDefinition
+@required {definitionKey: any # Unique identifier of the definition to get}
+@returns(200) Definition of SMS successfully retrieved
+@errors {400: Bad request, 403: Permission error, 404: Not found, 500: Server Error}
 
 @endpoint PATCH /messaging/v1/sms/definitions/{definitionKey}
-@required {definitionKey: any, body: map}
-@returns(200)
-@errors {400, 403, 500}
+@desc partiallyUpdateSmsDefinition
+@required {definitionKey: any # Unique identifier of the definition., body: map # JSON Parameters}
+@returns(200) A single definition for an SMS
+@errors {400: Bad request, 403: Permission error, 500: Server Error}
 
 @endpoint DELETE /messaging/v1/sms/definitions/{definitionKey}
-@required {definitionKey: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc deleteSmsDefinition
+@required {definitionKey: any # Unique identifier of the definition to delete}
+@returns(200) Definition of SMS successfully deleted
+@errors {400: Bad request, 403: Permission error, 404: Not found, 500: Server Error}
 
 @endpoint POST /messaging/v1/sms/definitions
-@required {body: map}
-@returns(201)
-@errors {400, 403, 409, 500}
+@desc createSmsDefinition
+@required {body: map # JSON Parameters}
+@returns(201) A single definition for an sms
+@errors {400: Bad request, 403: Permission error, 409: Conflict, 500: Server Error}
 
 @endpoint GET /messaging/v1/sms/definitions
-@optional {$filter: any, $pageSize: any, $page: any, $orderBy: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc getSmsDefinitions
+@optional {$filter: any # Filter by status type. Accepted values are active, inactive, or deleted. Valid operations are eq and neq., $pageSize: any # Number of definitions, which are array elements, to return per paged response., $page: any # Page number to return., $orderBy: any # Sort by a dimension. You can sort by only one dimension. Accepted values are definitionKey, name, createdDate, modifiedDate, and status.}
+@returns(200) SMS definitions successfully retrieved
+@errors {400: Bad request, 403: Permission error, 500: Server Error}
 
 @endpoint GET /messaging/v1/sms/definitions/{definitionKey}/queue
-@required {definitionKey: any}
-@returns(200)
-@errors {400, 403}
+@desc getQueueMetricsForSmsDefinition
+@required {definitionKey: any # Unique identifier of the SMS definition}
+@returns(200) Metrics for the messages of an SMS definition
+@errors {400: Bad request, 403: Permission error}
 
 @endpoint DELETE /messaging/v1/sms/definitions/{definitionKey}/queue
-@required {definitionKey: any}
-@returns(200)
-@errors {400, 403}
+@desc deleteQueuedMessagesForSmsDefinition
+@required {definitionKey: any # Unique identifier of the SMS definition}
+@returns(200) Queue for SMS defintion successfully deleted
+@errors {400: Bad request, 403: Permission error}
 
 @endpoint POST /messaging/v1/sms/messages/
-@required {body: map}
-@returns(202)
-@errors {400, 403, 500}
+@desc sendSmsToMultipleRecipients
+@required {body: map # JSON Parameters}
+@returns(202) Accepted
+@errors {400: Bad request, 403: Permission error, 500: Server Error}
 
 @endpoint GET /messaging/v1/sms/messages/
-@required {type: any}
-@optional {$pageSize: any, lastEventId: any}
+@desc getSMSsNotSentToRecipients
+@required {type: any # Only notSent is supported.}
+@optional {$pageSize: any # Number of messageKeys (array elements) to return per response page., lastEventId: any # Event ID from which you want the response to start. To obtain the initial event ID, submit a request without a lastEventId. The events in the response are listed top to bottom from oldest to newest.}
 @returns(200)
-@errors {400, 401, 500}
+@errors {400: Bad request, 401: Unauthorized, 500: Server Error}
 
 @endpoint POST /messaging/v1/sms/messages/{messageKey}
-@required {messageKey: any, body: map}
+@desc sendSmsToSingleRecipient
+@required {messageKey: any # Unique identifier of the definition used to track message status. The messageKey can be created automatically when you create a message, or you can provide it as part of the request. Each recipient in a request must have a unique messageKey. If you use a duplicate messageKey in the same send request, the message is rejected., body: map # JSON Parameters}
 @returns(202)
-@errors {400, 401, 403, 500}
+@errors {400: Bad request, 401: Unauthorized, 403: Permission error, 500: Server Error}
 
 @endpoint GET /messaging/v1/sms/messages/{messageKey}
-@required {messageKey: any}
-@returns(200)
-@errors {400, 401, 500}
+@desc getSmsSendStatusForRecipient
+@required {messageKey: any # Unique identifier to track message send status. You must provide it in singleton requests using the recipient attribute. To provide message key in batch requests, use the recipients array attribute. If you don’t provide the message key for recipients, it’s generated in the response.}
+@returns(200) SMS send status for recipient succesfully retrieved.
+@errors {400: Bad request, 401: Unauthorized, 500: Server Error}
 
 @endgroup
 

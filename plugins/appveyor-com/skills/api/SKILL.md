@@ -116,84 +116,51 @@ https://ci.appveyor.com/api
 | POST | /deployments | Start deployment |
 | PUT | /deployments/stop | Cancel deployment |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What projects do I have on AppVeyor?" -> GET /projects
-- "Show me the latest build for my project" -> GET /projects/{accountName}/{projectSlug}
-- "What's the build history for a specific branch?" -> GET /projects/{accountName}/{projectSlug}/history
-- "How do I trigger a new build?" -> POST /builds
-- "Cancel a running build" -> PUT /builds
-- "What artifacts did a build job produce?" -> GET /buildjobs/{jobId}/artifacts
-- "Download a specific artifact from a build job" -> GET /buildjobs/{jobId}/artifacts/{artifactFileName}
-- "Show me the build log for a job" -> GET /buildjobs/{jobId}/log
-- "What deployment environments are configured?" -> GET /environments
-- "Start a new deployment" -> POST /deployments
-- "Stop a running deployment" -> PUT /deployments/stop
-- "What environment variables are set on my project?" -> GET /projects/{accountName}/{projectSlug}/settings/environment-variables
-- "Get the status badge for my project" -> GET /projects/status/{statusBadgeId}
-- "Who are the collaborators on my account?" -> GET /collaborators
-- "How do I encrypt a secret value for appveyor.yml?" -> POST /account/encrypt
-
-## Response Tips
-
-- **Projects/Builds**: Responses nest build details inside the project object; the latest build is typically at `project.builds[0]`. History uses `recordsNumber` for page size and `startBuildId` for cursor-based pagination.
-- **Build Jobs**: Artifacts return a flat array of `{fileName, size, type}`; log endpoint returns raw text, not JSON.
-- **Environments/Deployments**: Environment settings include nested `deploymentEnvironment` with security-sensitive fields masked. Deployments list is nested under the environment object.
-- **Users/Collaborators/Roles**: All return 204 (no body) on mutating operations (PUT/DELETE). Only GET and POST /roles return response bodies.
-- **Status Badges**: Returns an image (SVG or PNG) by default, not JSON. Use `svg=true` for vector format.
-
-## Anomaly Flags
-
-- **204 with no body**: Many write operations return 204. If an agent expects a response body, surface that this is normal -- the operation succeeded silently.
-- **Rate limiting**: AppVeyor enforces undocumented rate limits. Surface HTTP 429 responses immediately with retry-after guidance.
-- **Binary responses**: Artifact downloads and badge endpoints return binary/image content, not JSON. Flag if an agent attempts to parse these as structured data.
-- **Missing builds**: If `GET /projects/{accountName}/{projectSlug}` returns a project with no `builds` array or an empty one, flag that no builds have run yet.
-- **Stale build cache**: After clearing build cache (DELETE .../buildcache), surface that the next build will be slower due to cold cache.
-- **Encrypted values**: POST /account/encrypt returns a one-way encrypted string. Flag if an agent attempts to decrypt or reuse the plaintext.
-- **Invitation expiry**: Pending user invitations may expire. Surface if listing invitations shows stale entries.
-
-## Playbook
-
-### 1. Trigger a Build and Monitor It
-
-1. `GET /projects` to find the target project's `accountName` and `projectSlug`
-2. `POST /builds` with body specifying `accountName`, `projectSlug`, and optionally `branch`
-3. `GET /projects/{accountName}/{projectSlug}` to poll for updated build status
-4. Once build completes, `GET /buildjobs/{jobId}/log` to review the log
-5. `GET /buildjobs/{jobId}/artifacts` to list and download any produced artifacts
-
-### 2. Set Up a Deployment Environment and Deploy
-
-1. `POST /environments` with environment name, provider, and settings
-2. `GET /environments` to confirm the environment was created and note the `deploymentEnvironmentId`
-3. `POST /deployments` with body specifying `environmentName`, `accountName`, `projectSlug`, and `buildVersion`
-4. `GET /deployments/{deploymentId}` to monitor deployment progress
-5. If needed, `PUT /deployments/stop` with the deployment ID to cancel
-
-### 3. Manage Project Environment Variables
-
-1. `GET /projects/{accountName}/{projectSlug}/settings/environment-variables` to list current variables
-2. For secrets, `POST /account/encrypt` with the plaintext value to get an encrypted string
-3. `PUT /projects/{accountName}/{projectSlug}/settings/environment-variables` with the full array of variables (including encrypted values)
-4. Verify by re-fetching with the GET endpoint
-
-### 4. Add a Collaborator with a Custom Role
-
-1. `POST /roles` with the role name and permissions to create a custom role
-2. `GET /roles` to confirm and note the `roleId`
-3. `POST /users/invitations` with the collaborator's email and the assigned `roleId`
-4. `GET /users/invitations` to verify the invitation is pending
-5. Once accepted, `GET /collaborators` to confirm the user appears
-
-### 5. Review Build History and Diagnose Failures
-
-1. `GET /projects/{accountName}/{projectSlug}/history` with `recordsNumber=10` to fetch recent builds
-2. Identify failed builds from the response and note their `buildId` and `jobs` array
-3. `GET /buildjobs/{jobId}/log` for each failed job to read error output
-4. `GET /buildjobs/{jobId}/artifacts` to check if partial artifacts were produced
-5. Optionally `DELETE /builds/{accountName}/{projectSlug}/{buildVersion}` to clean up broken build records
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all users?" -> GET /users
+- "Get user details?" -> GET /users/{userId}
+- "Delete a user?" -> DELETE /users/{userId}
+- "List all invitations?" -> GET /users/invitations
+- "Create a invitation?" -> POST /users/invitations
+- "Delete a invitation?" -> DELETE /users/invitations/{userInvitationId}
+- "List all collaborators?" -> GET /collaborators
+- "Get collaborator details?" -> GET /collaborators/{userId}
+- "Delete a collaborator?" -> DELETE /collaborators/{userId}
+- "List all roles?" -> GET /roles
+- "Create a role?" -> POST /roles
+- "Get role details?" -> GET /roles/{roleId}
+- "Delete a role?" -> DELETE /roles/{roleId}
+- "Create a encrypt?" -> POST /account/encrypt
+- "List all projects?" -> GET /projects
+- "Create a project?" -> POST /projects
+- "Get project details?" -> GET /projects/{accountName}/{projectSlug}
+- "Delete a project?" -> DELETE /projects/{accountName}/{projectSlug}
+- "Get branch details?" -> GET /projects/{accountName}/{projectSlug}/branch/{buildBranch}
+- "Get build details?" -> GET /projects/{accountName}/{projectSlug}/build/{buildVersion}
+- "List all history?" -> GET /projects/{accountName}/{projectSlug}/history
+- "Get artifact details?" -> GET /projects/{accountName}/{projectSlug}/artifacts/{artifactFileName}
+- "List all deployments?" -> GET /projects/{accountName}/{projectSlug}/deployments
+- "List all settings?" -> GET /projects/{accountName}/{projectSlug}/settings
+- "List all yaml?" -> GET /projects/{accountName}/{projectSlug}/settings/yaml
+- "List all environment-variables?" -> GET /projects/{accountName}/{projectSlug}/settings/environment-variables
+- "Get status details?" -> GET /projects/status/{statusBadgeId}
+- "Get branch details?" -> GET /projects/status/{statusBadgeId}/branch/{buildBranch}
+- "Get status details?" -> GET /projects/status/{badgeRepoProvider}/{repoAccountName}/{repoSlug}
+- "Create a build?" -> POST /builds
+- "Delete a build?" -> DELETE /builds/{accountName}/{projectSlug}/{buildVersion}
+- "List all artifacts?" -> GET /buildjobs/{jobId}/artifacts
+- "Get artifact details?" -> GET /buildjobs/{jobId}/artifacts/{artifactFileName}
+- "List all log?" -> GET /buildjobs/{jobId}/log
+- "List all environments?" -> GET /environments
+- "Create a environment?" -> POST /environments
+- "List all settings?" -> GET /environments/{deploymentEnvironmentId}/settings
+- "List all deployments?" -> GET /environments/{deploymentEnvironmentId}/deployments
+- "Delete a environment?" -> DELETE /environments/{deploymentEnvironmentId}
+- "Get deployment details?" -> GET /deployments/{deploymentId}
+- "Create a deployment?" -> POST /deployments
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

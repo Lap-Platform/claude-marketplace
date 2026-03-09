@@ -53,83 +53,10 @@ Not specified.
 | POST | / | Updates a public DNS namespace. |
 | POST | / | Submits a request to perform the following operations:   Update the TTL setting for existing DnsRecords configurations   Add, update, or delete HealthCheckConfig for a specified service  You can't add, update, or delete a HealthCheckCustomConfig configuration.    For public and private DNS namespaces, note the following:   If you omit any existing DnsRecords or HealthCheckConfig configurations from an UpdateService request, the configurations are deleted from the service.   If you omit an existing HealthCheckCustomConfig configuration from an UpdateService request, the configuration isn't deleted from the service.   When you update settings for a service, Cloud Map also updates the corresponding settings in all the records and health checks that were created by using the specified service. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new namespace for my microservices?" -> POST / (CreateHttpNamespace, CreatePrivateDnsNamespace, or CreatePublicDnsNamespace depending on type)
-- "How do I register a service instance with its IP address?" -> POST / (RegisterInstance with ServiceId, InstanceId, and Attributes)
-- "Which instances are healthy for a given service?" -> POST / (DiscoverInstances with NamespaceName, ServiceName, and HealthStatus filter)
-- "What is the current status of my namespace creation?" -> POST / (GetOperation with the OperationId returned from create)
-- "How do I list all namespaces in my account?" -> POST / (ListNamespaces, with optional Filters)
-- "How do I remove an instance from service discovery?" -> POST / (DeregisterInstance with ServiceId and InstanceId)
-- "How do I look up details about a specific service?" -> POST / (GetService with Id)
-- "How do I delete a namespace I no longer need?" -> POST / (DeleteNamespace with Id)
-- "How do I tag my Cloud Map resources for cost tracking?" -> POST / (TagResource with ResourceARN and Tags)
-- "How do I check if a long-running operation completed?" -> POST / (GetOperation with OperationId, check Status field)
-- "How do I create a service with custom health checks?" -> POST / (CreateService with HealthCheckConfig or HealthCheckCustomConfig)
-- "How do I update health status for an instance manually?" -> POST / (UpdateInstanceCustomHealthStatus with ServiceId, InstanceId, Status)
-- "How do I find all instances registered to a service?" -> POST / (ListInstances with ServiceId)
-- "Has the set of instances changed since I last checked?" -> POST / (DiscoverInstancesRevision with NamespaceName, ServiceName -- compare InstancesRevision value)
-
-## Response Tips
-
-- **Async operations** (Create/Delete/Update namespace, Register/Deregister instance): Return an `OperationId` -- poll with GetOperation until `Status` is `SUCCESS` or `FAIL`. Do not assume completion on 200.
-- **List endpoints** (ListNamespaces, ListServices, ListInstances, ListOperations): Paginate via `NextToken`; absence of `NextToken` in response means last page. Respect `MaxResults` (default varies).
-- **DiscoverInstances**: Returns `HttpInstanceSummary` objects with attributes map -- keys like `AWS_INSTANCE_IPV4`, `AWS_INSTANCE_PORT` are conventional but user-defined.
-- **GetOperation**: The `Targets` map uses string keys like `NAMESPACE`, `SERVICE`, `INSTANCE` pointing to resource IDs -- use these to correlate.
-- **Error responses**: AWS standard error shape with `__type` and `message` fields. Watch for `NamespaceAlreadyExists`, `ServiceAlreadyExists`, `ResourceLimitExceeded`.
-
-## Anomaly Flags
-
-- **Operation stuck**: If GetOperation returns `Status: SUBMITTED` for more than 5 minutes, surface a warning -- namespace or instance operations rarely take that long.
-- **Operation failed**: If `Status` is `FAIL`, immediately surface `ErrorCode` and `ErrorMessage` -- common codes are `ACCESS_DENIED` and `RESOURCE_LIMIT_EXCEEDED`.
-- **ResourceLimitExceeded**: Flag when any create/register call fails with this error -- user may be hitting account-level quotas on namespaces (default 3), services (default 100 per namespace), or instances.
-- **HealthStatus UNHEALTHY**: When DiscoverInstances returns instances but all have unhealthy status, proactively warn that no healthy endpoints are available for the service.
-- **Empty DiscoverInstances**: If the response returns zero instances, flag that either the service has no registered instances or all are filtered out by HealthStatus -- suggest checking ListInstances to compare.
-- **Deprecated DnsConfig.NamespaceId**: This field in DnsConfig is deprecated (read-only) -- flag if a user attempts to set it during CreateService.
-- **CreatorRequestId reuse**: If a create call returns an existing resource instead of creating a new one, the idempotency token matched -- surface this so the user knows no new resource was created.
-
-## Playbook
-
-### 1. Set Up Service Discovery for a Microservice
-
-1. Create a namespace: POST / (CreateHttpNamespace with `Name` for HTTP-only, or CreatePrivateDnsNamespace with `Name` and `Vpc` for DNS-based discovery)
-2. Note the returned `OperationId` and poll with POST / (GetOperation) until `Status` is `SUCCESS`
-3. Extract the namespace ID from `Operation.Targets["NAMESPACE"]`
-4. Create a service: POST / (CreateService with `Name` and `NamespaceId` set to the namespace ID)
-5. Register instances: POST / (RegisterInstance with `ServiceId`, a unique `InstanceId`, and `Attributes` like `{"AWS_INSTANCE_IPV4": "10.0.0.1", "AWS_INSTANCE_PORT": "8080"}`)
-6. Poll the returned `OperationId` until the instance registration completes
-
-### 2. Discover and Connect to a Service
-
-1. Call POST / (DiscoverInstances with `NamespaceName` and `ServiceName`, optionally set `HealthStatus: "HEALTHY"` to filter)
-2. Parse the `Instances` array -- each entry contains an `Attributes` map with connection details
-3. Optionally pass `QueryParameters` to filter by custom attributes (e.g., `{"stage": "prod"}`)
-4. Cache the `InstancesRevision` value, then periodically call POST / (DiscoverInstancesRevision) to check if instances have changed before re-fetching the full list
-
-### 3. Implement Custom Health Checking
-
-1. Create a service with `HealthCheckCustomConfig` and set `FailureThreshold` (e.g., 3): POST / (CreateService)
-2. Register instances as normal: POST / (RegisterInstance)
-3. From your application's health monitor, call POST / (UpdateInstanceCustomHealthStatus) with `Status: "HEALTHY"` or `Status: "UNHEALTHY"` for each instance
-4. Cloud Map will mark instances unhealthy after the configured failure threshold of consecutive unhealthy reports
-
-### 4. Clean Up and Tear Down Resources
-
-1. List all instances for the service: POST / (ListInstances with `ServiceId`)
-2. Deregister each instance: POST / (DeregisterInstance with `ServiceId` and `InstanceId`) -- poll each `OperationId` to confirm
-3. Delete the service: POST / (DeleteService with `Id`) -- this fails if instances still exist
-4. Delete the namespace: POST / (DeleteNamespace with `Id`) -- this fails if services still exist
-5. Poll the returned `OperationId` until namespace deletion completes
-
-### 5. Audit and Tag Cloud Map Resources
-
-1. List all namespaces: POST / (ListNamespaces) -- paginate through all results
-2. For each namespace, list services: POST / (ListServices with a `NamespaceFilter`)
-3. Check existing tags: POST / (ListTagsForResource with the resource ARN)
-4. Apply or update tags: POST / (TagResource with `ResourceARN` and `Tags` array)
-5. Remove stale tags: POST / (UntagResource with `ResourceARN` and `TagKeys` to remove)
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

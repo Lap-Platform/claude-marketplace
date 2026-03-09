@@ -153,84 +153,36 @@ https://webservice.wikipathways.org/
 |--------|------|-------------|
 | GET | /getUserByOrcid | getUserByOrcid |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What organisms are available in WikiPathways?" -> GET /listOrganisms
-- "Show me all pathways for Homo sapiens" -> GET /listPathways
-- "Download the GPML for pathway WP554" -> GET /getPathway
-- "What is the description and revision of pathway WP100?" -> GET /getPathwayInfo
-- "What changes were made to pathway WP554 since January 2024?" -> GET /getPathwayHistory
-- "What pathways were updated in the last week?" -> GET /getRecentChanges
-- "Find pathways related to apoptosis" -> GET /findPathwaysByText
-- "Which pathways reference gene BRCA1 by cross-reference ID?" -> GET /findPathwaysByXref
-- "Find pathways cited in a specific PubMed paper" -> GET /findPathwaysByLiterature
-- "What interactions involve TP53?" -> GET /findInteractions
-- "Get all cross-references for pathway WP554 using Ensembl codes" -> GET /getXrefList
-- "What curation tags are on pathway WP100?" -> GET /getCurationTags
-- "Which pathways have the 'Curation:AnalysisCollection' tag?" -> GET /getCurationTagsByName
-- "What ontology terms are associated with pathway WP554?" -> GET /getOntologyTermsByPathway
-- "Find pathways annotated with a specific ontology term" -> GET /getPathwaysByOntologyTerm
-- "Look up a WikiPathways user by their ORCID" -> GET /getUserByOrcid
-
-## Response Tips
-
-- **Listing endpoints** (listOrganisms, listPathways): Returns flat arrays; no pagination -- full result set in one call. Filter client-side or use the `organism`/`species` param where available.
-- **Pathway detail** (getPathway, getPathwayInfo): Returns nested objects with GPML (XML) content embedded as a string field. Parse GPML separately if you need graph structure.
-- **Search endpoints** (findPathwaysByText, findPathwaysByXref, findPathwaysByLiterature, findInteractions): Results are arrays of pathway summaries with score/relevance info. Empty queries return empty arrays, not errors.
-- **History/changes** (getPathwayHistory, getRecentChanges, getCurationTagHistory): Requires a `timestamp` parameter (typically UNIX epoch or ISO string). Returns chronological change records.
-- **Write operations** (updatePathway, createPathway, saveCurationTag, saveOntologyTag): Require `auth` token from login plus `username`. Successful writes return the new revision number.
-- **Colored pathway** (getColoredPathway): Returns binary image data (SVG/PNG per `fileType` param), not JSON. Handle as a file download.
-- **All endpoints**: Append `format=json` to get JSON responses; default format may be XML.
-
-## Anomaly Flags
-
-- **Auth token expiry**: The `login` endpoint returns a short-lived token. Surface a warning if write operations return auth errors -- the agent should re-authenticate automatically.
-- **Missing format parameter**: Responses default to XML. If the agent receives XML unexpectedly, flag that `format=json` was not included and retry.
-- **Empty search results**: If `findPathwaysByText` or `findPathwaysByXref` returns zero results, suggest broadening the query or checking organism/species filters.
-- **Stale revision on update**: If `updatePathway` fails, it likely means the `revision` parameter is outdated. Flag a revision conflict and suggest fetching the latest revision first.
-- **Deprecated pathways**: If `getPathwayInfo` returns a pathway marked as deleted or redirected, surface this to the user before proceeding with further operations.
-- **Rate limiting**: WikiPathways is a community resource. If responses slow down or return 429/503 status codes, flag rate limiting and back off automatically.
-- **GPML size**: Large pathways can return multi-MB GPML payloads from `getPathway`. Flag when response size is unusually large.
-
-## Playbook
-
-### 1. Search and Download a Pathway
-
-1. Call `GET /listOrganisms` to confirm the target organism name
-2. Call `GET /findPathwaysByText?query=apoptosis&species=Homo sapiens&format=json` to find matching pathways
-3. Pick the best match from results and note the `pwId`
-4. Call `GET /getPathwayInfo?pwId=WP554&format=json` to review metadata
-5. Call `GET /getPathway?pwId=WP554&format=json` to download the full GPML content
-
-### 2. Cross-Reference Lookup for a Gene
-
-1. Call `GET /findPathwaysByXref?ids=ENSG00000141510&codes=En&format=json` to find pathways containing the gene
-2. For each returned pathway, call `GET /getXrefList?pwId={pwId}&code=L&format=json` to get Entrez Gene cross-references
-3. Optionally call `GET /getOntologyTermsByPathway?pwId={pwId}&format=json` to see associated biological terms
-
-### 3. Annotate a Pathway with Curation and Ontology Tags
-
-1. Call `GET /login?name={user}&pass={pass}&format=json` to obtain an auth token
-2. Call `GET /getPathwayInfo?pwId={pwId}&format=json` to get the current revision number
-3. Call `GET /saveCurationTag?pwId={pwId}&tagName=Curation:AnalysisCollection&text=Reviewed&revision={rev}&auth={token}&username={user}&format=json`
-4. Call `GET /saveOntologyTag?pwId={pwId}&term=apoptotic+process&termId=GO:0006915&auth={token}&user={user}&format=json`
-5. Verify by calling `GET /getCurationTags?pwId={pwId}&format=json` and `GET /getOntologyTermsByPathway?pwId={pwId}&format=json`
-
-### 4. Monitor Recent Pathway Changes
-
-1. Compute a UNIX timestamp for the desired lookback window (e.g., 7 days ago)
-2. Call `GET /getRecentChanges?timestamp={ts}&format=json` to get all recent edits
-3. For each changed pathway of interest, call `GET /getPathwayHistory?pwId={pwId}&timestamp={ts}&format=json` for detailed revision history
-4. Optionally call `GET /getCurationTagHistory?pwId={pwId}&timestamp={ts}&format=json` to check if curation status changed
-
-### 5. Generate a Highlighted Pathway Image
-
-1. Call `GET /getPathway?pwId={pwId}&format=json` to retrieve the GPML and identify graph element IDs
-2. Select the `graphId` values for nodes to highlight and choose hex colors (e.g., `#FF0000`)
-3. Call `GET /getColoredPathway?pwId={pwId}&revision={rev}&graphId={id}&color={hex}&fileType=svg` to get the colored image
-4. Save the binary response as an SVG or PNG file for review
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all listOrganisms?" -> GET /listOrganisms
+- "List all listPathways?" -> GET /listPathways
+- "List all getPathway?" -> GET /getPathway
+- "List all getPathwayInfo?" -> GET /getPathwayInfo
+- "List all getPathwayHistory?" -> GET /getPathwayHistory
+- "List all getRecentChanges?" -> GET /getRecentChanges
+- "List all login?" -> GET /login
+- "List all updatePathway?" -> GET /updatePathway
+- "Create a createPathway?" -> POST /createPathway
+- "Search findPathwaysByText?" -> GET /findPathwaysByText
+- "List all findPathwaysByXref?" -> GET /findPathwaysByXref
+- "List all removeCurationTag?" -> GET /removeCurationTag
+- "List all saveCurationTag?" -> GET /saveCurationTag
+- "List all getCurationTags?" -> GET /getCurationTags
+- "List all getCurationTagsByName?" -> GET /getCurationTagsByName
+- "List all getCurationTagHistory?" -> GET /getCurationTagHistory
+- "List all getColoredPathway?" -> GET /getColoredPathway
+- "Search findInteractions?" -> GET /findInteractions
+- "List all getXrefList?" -> GET /getXrefList
+- "Search findPathwaysByLiterature?" -> GET /findPathwaysByLiterature
+- "List all saveOntologyTag?" -> GET /saveOntologyTag
+- "List all removeOntologyTag?" -> GET /removeOntologyTag
+- "List all getOntologyTermsByPathway?" -> GET /getOntologyTermsByPathway
+- "List all getPathwaysByOntologyTerm?" -> GET /getPathwaysByOntologyTerm
+- "List all getPathwaysByParentOntologyTerm?" -> GET /getPathwaysByParentOntologyTerm
+- "List all getUserByOrcid?" -> GET /getUserByOrcid
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

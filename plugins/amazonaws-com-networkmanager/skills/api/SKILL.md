@@ -160,91 +160,91 @@ Not specified.
 | POST | /tags/{resourceArn} | Tags a specified resource. |
 | DELETE | /tags/{resourceArn} | Removes tags from a specified resource. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all my global networks?" -> GET /global-networks
-- "What devices are registered in my global network?" -> GET /global-networks/{globalNetworkId}/devices
-- "How do I attach a VPC to my core network?" -> POST /vpc-attachments
-- "How do I accept a pending attachment?" -> POST /attachments/{attachmentId}/accept
-- "What's the current policy on my core network?" -> GET /core-networks/{coreNetworkId}/core-network-policy
-- "How do I trace a route between two transit gateways?" -> POST /global-networks/{globalNetworkId}/route-analyses
-- "How do I connect an on-prem site via VPN?" -> POST /site-to-site-vpn-attachments
-- "What are all the attachments on my core network?" -> GET /attachments
-- "How do I remove a device from my global network?" -> DELETE /global-networks/{globalNetworkId}/devices/{deviceId}
-- "How do I check the status of a route analysis?" -> GET /global-networks/{globalNetworkId}/route-analyses/{routeAnalysisId}
-- "How do I update the subnets on a VPC attachment?" -> PATCH /vpc-attachments/{attachmentId}
-- "How do I roll back a core network policy?" -> POST /core-networks/{coreNetworkId}/core-network-policy-versions/{policyVersionId}/restore
-- "What resources exist in my global network by region?" -> GET /global-networks/{globalNetworkId}/network-resources
-- "How do I enable AWS Organizations integration?" -> POST /organizations/service-access
-- "How do I tag a network resource?" -> POST /tags/{resourceArn}
-
-## Response Tips
-
-- **List endpoints** (devices, sites, links, attachments, peerings): Always paginated via `NextToken` -- loop until `NextToken` is absent or null. Use `maxResults` to control page size.
-- **Create/Update endpoints**: Return the full resource object on success (200). Check the nested `State` field to confirm the resource reached the expected lifecycle state (e.g., `AVAILABLE`, `PENDING_ATTACHMENT_ACCEPTANCE`).
-- **Attachment responses**: Deeply nested -- the actual attachment metadata is inside `{TypeAttachment}.Attachment`. Watch for `LastModificationErrors` array for async failure details.
-- **Route analysis**: The `ForwardPath` and `ReturnPath` each contain a `CompletionStatus` with `ResultCode` and `ReasonCode` -- always inspect both before trusting the path.
-- **Policy endpoints**: `PolicyDocument` is a JSON string inside the response, not a parsed object -- deserialize it separately. Check `PolicyErrors` array and `ChangeSetState` before assuming success.
-- **Delete endpoints**: Return the deleted resource's final state (200). A successful HTTP response does not mean instant deletion -- poll `State` until it shows `DELETING` or the resource disappears from list calls.
-
-## Anomaly Flags
-
-- **Attachment stuck in non-terminal state**: Surface when any attachment `State` remains `PENDING_ATTACHMENT_ACCEPTANCE`, `CREATING`, or `UPDATING` for an extended period -- the caller likely needs to accept/reject or investigate errors.
-- **LastModificationErrors populated**: Proactively warn whenever `LastModificationErrors` (attachments) or `LastModificationErrors` (connect peers) is non-empty, even on 200 responses -- these indicate async failures that succeeded at the API level but failed during provisioning.
-- **PolicyErrors on core network policy**: After PUT/restore of a policy, always check `PolicyErrors` array. A 200 with policy errors means the policy was accepted but contains validation problems that will block execution.
-- **ChangeSetState is FAILED_GENERATION or EXECUTION_FAILED**: Flag immediately -- the core network policy change did not apply. The user must fix the policy document or restore a previous version.
-- **Route analysis CompletionStatus with non-CONNECTED ResultCode**: When `ResultCode` is `NOT_CONNECTED` or `ROUTE_NOT_FOUND`, surface the `ReasonCode` and `ReasonContext` map -- these contain the specific hop or segment that broke the path.
-- **TransitGatewayRegistration state degraded**: If `State.Code` is `FAILED` or `DELETED`, flag it -- the transit gateway is no longer usable in the global network and associations will fail silently.
-- **Organizations SLRDeploymentStatus not SUCCEEDED**: If `SLRDeploymentStatus` is `NOT_STARTED` or `IN_PROGRESS` after enabling service access, warn that cross-account features won't work until the service-linked role finishes deploying.
-- **Proposed segment/function group changes present**: When `ProposedSegmentChange` or `ProposedNetworkFunctionGroupChange` is non-null on an attachment, the attachment is pending a policy-driven reassignment -- surface this so the user doesn't assume current segment placement is final.
-
-## Playbook
-
-### 1. Build a Hub-and-Spoke Network from Scratch
-
-1. Create a global network: `POST /global-networks` with a description.
-2. Create a core network: `POST /core-networks` with the `GlobalNetworkId` and a `PolicyDocument` defining segments and edge locations.
-3. Wait for core network `State` to be `AVAILABLE`.
-4. Attach VPCs as spokes: `POST /vpc-attachments` for each VPC, providing `CoreNetworkId`, `VpcArn`, and `SubnetArns`.
-5. Accept each attachment: `POST /attachments/{attachmentId}/accept`.
-6. Verify attachments reach `AVAILABLE` state via `GET /attachments?coreNetworkId=...`.
-
-### 2. Connect an On-Premises Site via Site-to-Site VPN
-
-1. Create a site in your global network: `POST /global-networks/{id}/sites` with location details.
-2. Create a device representing the on-prem equipment: `POST /global-networks/{id}/devices` with `SiteId`.
-3. Register your transit gateway: `POST /global-networks/{id}/transit-gateway-registrations`.
-4. Create the VPN attachment: `POST /site-to-site-vpn-attachments` with `CoreNetworkId` and `VpnConnectionArn`.
-5. Accept the attachment: `POST /attachments/{attachmentId}/accept`.
-6. Associate the customer gateway with the device: `POST /global-networks/{id}/customer-gateway-associations`.
-
-### 3. Update a Core Network Policy with Rollback Safety
-
-1. List existing policy versions: `GET /core-networks/{id}/core-network-policy-versions` -- note the current `LIVE` version ID.
-2. Submit the new policy: `POST /core-networks/{id}/core-network-policy` with updated `PolicyDocument` and `LatestVersionId` for optimistic locking.
-3. Check the response `PolicyErrors` array -- if non-empty, fix and resubmit.
-4. Review the change set: `GET /core-networks/{id}/core-network-change-sets/{versionId}`.
-5. Execute the change set: `POST /core-networks/{id}/core-network-change-sets/{versionId}/execute`.
-6. If something goes wrong, restore the previous version: `POST /core-networks/{id}/core-network-policy-versions/{previousVersionId}/restore`, then execute that change set.
-
-### 4. Diagnose Connectivity Issues with Route Analysis
-
-1. Start a route analysis: `POST /global-networks/{id}/route-analyses` with `Source` and `Destination` transit gateway details. Set `IncludeReturnPath: true` for full round-trip analysis.
-2. Poll the result: `GET /global-networks/{id}/route-analyses/{analysisId}` until `Status` is `COMPLETED`.
-3. Inspect `ForwardPath.CompletionStatus.ResultCode` -- if not `CONNECTED`, read `ReasonCode` and `ReasonContext` for the failing hop.
-4. Check `ReturnPath` separately -- asymmetric routing issues only show up here.
-5. Cross-reference broken segments with `GET /global-networks/{id}/network-routes` using the relevant route table identifier to verify route table entries.
-
-### 5. Set Up Transit Gateway Peering Across Regions
-
-1. Ensure both regions have edge locations defined in your core network policy.
-2. Create the transit gateway peering: `POST /transit-gateway-peerings` with `CoreNetworkId` and `TransitGatewayArn`.
-3. Wait for the peering `State` to become `AVAILABLE` via `GET /transit-gateway-peerings/{peeringId}`.
-4. Attach the transit gateway route table: `POST /transit-gateway-route-table-attachments` with the `PeeringId` and `TransitGatewayRouteTableArn`.
-5. Accept the route table attachment: `POST /attachments/{attachmentId}/accept`.
-6. Verify cross-region routing with a route analysis between the two transit gateways.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a accept?" -> POST /attachments/{attachmentId}/accept
+- "Create a connect-peer-association?" -> POST /global-networks/{globalNetworkId}/connect-peer-associations
+- "Create a customer-gateway-association?" -> POST /global-networks/{globalNetworkId}/customer-gateway-associations
+- "Create a link-association?" -> POST /global-networks/{globalNetworkId}/link-associations
+- "Create a transit-gateway-connect-peer-association?" -> POST /global-networks/{globalNetworkId}/transit-gateway-connect-peer-associations
+- "Create a connect-attachment?" -> POST /connect-attachments
+- "Create a connect-peer?" -> POST /connect-peers
+- "Create a connection?" -> POST /global-networks/{globalNetworkId}/connections
+- "Create a core-network?" -> POST /core-networks
+- "Create a device?" -> POST /global-networks/{globalNetworkId}/devices
+- "Create a global-network?" -> POST /global-networks
+- "Create a link?" -> POST /global-networks/{globalNetworkId}/links
+- "Create a site?" -> POST /global-networks/{globalNetworkId}/sites
+- "Create a site-to-site-vpn-attachment?" -> POST /site-to-site-vpn-attachments
+- "Create a transit-gateway-peering?" -> POST /transit-gateway-peerings
+- "Create a transit-gateway-route-table-attachment?" -> POST /transit-gateway-route-table-attachments
+- "Create a vpc-attachment?" -> POST /vpc-attachments
+- "Delete a attachment?" -> DELETE /attachments/{attachmentId}
+- "Delete a connect-peer?" -> DELETE /connect-peers/{connectPeerId}
+- "Delete a connection?" -> DELETE /global-networks/{globalNetworkId}/connections/{connectionId}
+- "Delete a core-network?" -> DELETE /core-networks/{coreNetworkId}
+- "Delete a core-network-policy-version?" -> DELETE /core-networks/{coreNetworkId}/core-network-policy-versions/{policyVersionId}
+- "Delete a device?" -> DELETE /global-networks/{globalNetworkId}/devices/{deviceId}
+- "Delete a global-network?" -> DELETE /global-networks/{globalNetworkId}
+- "Delete a link?" -> DELETE /global-networks/{globalNetworkId}/links/{linkId}
+- "Delete a peering?" -> DELETE /peerings/{peeringId}
+- "Delete a resource-policy?" -> DELETE /resource-policy/{resourceArn}
+- "Delete a site?" -> DELETE /global-networks/{globalNetworkId}/sites/{siteId}
+- "Delete a transit-gateway-registration?" -> DELETE /global-networks/{globalNetworkId}/transit-gateway-registrations/{transitGatewayArn}
+- "List all global-networks?" -> GET /global-networks
+- "Delete a connect-peer-association?" -> DELETE /global-networks/{globalNetworkId}/connect-peer-associations/{connectPeerId}
+- "Delete a customer-gateway-association?" -> DELETE /global-networks/{globalNetworkId}/customer-gateway-associations/{customerGatewayArn}
+- "Delete a transit-gateway-connect-peer-association?" -> DELETE /global-networks/{globalNetworkId}/transit-gateway-connect-peer-associations/{transitGatewayConnectPeerArn}
+- "Create a execute?" -> POST /core-networks/{coreNetworkId}/core-network-change-sets/{policyVersionId}/execute
+- "Get connect-attachment details?" -> GET /connect-attachments/{attachmentId}
+- "Get connect-peer details?" -> GET /connect-peers/{connectPeerId}
+- "List all connect-peer-associations?" -> GET /global-networks/{globalNetworkId}/connect-peer-associations
+- "List all connections?" -> GET /global-networks/{globalNetworkId}/connections
+- "Get core-network details?" -> GET /core-networks/{coreNetworkId}
+- "Get core-network-change-event details?" -> GET /core-networks/{coreNetworkId}/core-network-change-events/{policyVersionId}
+- "Get core-network-change-set details?" -> GET /core-networks/{coreNetworkId}/core-network-change-sets/{policyVersionId}
+- "List all core-network-policy?" -> GET /core-networks/{coreNetworkId}/core-network-policy
+- "List all customer-gateway-associations?" -> GET /global-networks/{globalNetworkId}/customer-gateway-associations
+- "List all devices?" -> GET /global-networks/{globalNetworkId}/devices
+- "List all link-associations?" -> GET /global-networks/{globalNetworkId}/link-associations
+- "List all links?" -> GET /global-networks/{globalNetworkId}/links
+- "List all network-resource-count?" -> GET /global-networks/{globalNetworkId}/network-resource-count
+- "List all network-resource-relationships?" -> GET /global-networks/{globalNetworkId}/network-resource-relationships
+- "List all network-resources?" -> GET /global-networks/{globalNetworkId}/network-resources
+- "Create a network-route?" -> POST /global-networks/{globalNetworkId}/network-routes
+- "List all network-telemetry?" -> GET /global-networks/{globalNetworkId}/network-telemetry
+- "Get resource-policy details?" -> GET /resource-policy/{resourceArn}
+- "Get route-analys details?" -> GET /global-networks/{globalNetworkId}/route-analyses/{routeAnalysisId}
+- "Get site-to-site-vpn-attachment details?" -> GET /site-to-site-vpn-attachments/{attachmentId}
+- "List all sites?" -> GET /global-networks/{globalNetworkId}/sites
+- "List all transit-gateway-connect-peer-associations?" -> GET /global-networks/{globalNetworkId}/transit-gateway-connect-peer-associations
+- "Get transit-gateway-peering details?" -> GET /transit-gateway-peerings/{peeringId}
+- "List all transit-gateway-registrations?" -> GET /global-networks/{globalNetworkId}/transit-gateway-registrations
+- "Get transit-gateway-route-table-attachment details?" -> GET /transit-gateway-route-table-attachments/{attachmentId}
+- "Get vpc-attachment details?" -> GET /vpc-attachments/{attachmentId}
+- "List all attachments?" -> GET /attachments
+- "List all connect-peers?" -> GET /connect-peers
+- "List all core-network-policy-versions?" -> GET /core-networks/{coreNetworkId}/core-network-policy-versions
+- "List all core-networks?" -> GET /core-networks
+- "List all service-access?" -> GET /organizations/service-access
+- "List all peerings?" -> GET /peerings
+- "Get tag details?" -> GET /tags/{resourceArn}
+- "Create a core-network-policy?" -> POST /core-networks/{coreNetworkId}/core-network-policy
+- "Create a transit-gateway-registration?" -> POST /global-networks/{globalNetworkId}/transit-gateway-registrations
+- "Create a reject?" -> POST /attachments/{attachmentId}/reject
+- "Create a restore?" -> POST /core-networks/{coreNetworkId}/core-network-policy-versions/{policyVersionId}/restore
+- "Create a service-access?" -> POST /organizations/service-access
+- "Create a route-analys?" -> POST /global-networks/{globalNetworkId}/route-analyses
+- "Delete a tag?" -> DELETE /tags/{resourceArn}
+- "Partially update a connection?" -> PATCH /global-networks/{globalNetworkId}/connections/{connectionId}
+- "Partially update a core-network?" -> PATCH /core-networks/{coreNetworkId}
+- "Partially update a device?" -> PATCH /global-networks/{globalNetworkId}/devices/{deviceId}
+- "Partially update a global-network?" -> PATCH /global-networks/{globalNetworkId}
+- "Partially update a link?" -> PATCH /global-networks/{globalNetworkId}/links/{linkId}
+- "Partially update a site?" -> PATCH /global-networks/{globalNetworkId}/sites/{siteId}
+- "Partially update a vpc-attachment?" -> PATCH /vpc-attachments/{attachmentId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

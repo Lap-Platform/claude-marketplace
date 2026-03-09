@@ -125,88 +125,40 @@ http://example.com/setup
 |--------|------|-------------|
 | GET | /icon.png | Chromecast Icon |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What timezones does my Google Home support?" -> GET /supported_timezones
-- "What languages/locales are available on my device?" -> GET /supported_locales
-- "How do I get detailed info about my Chromecast/Google Home device?" -> GET /eureka_info
-- "What's the current Bluetooth status and connected devices?" -> GET /bluetooth/status
-- "Which Wi-Fi networks has my device saved?" -> GET /configured_networks
-- "What Wi-Fi networks are available nearby?" -> GET /scan_results
-- "How do I reboot my Google Home?" -> POST /reboot
-- "How do I connect my device to a new Wi-Fi network?" -> POST /connect_wifi
-- "How do I pair a Bluetooth device?" -> POST /bluetooth/bond
-- "How do I set up night mode with a schedule?" -> POST /assistant/set_night_mode_params
-- "What alarms and timers are currently set?" -> GET /assistant/alarms
-- "How do I delete an alarm or timer?" -> POST /assistant/alarms/delete
-- "How do I adjust the equalizer (bass/treble)?" -> POST /user_eq/set_equalizer
-- "How do I rename my device or change its settings?" -> POST /set_eureka_info
-- "How do I test my device's internet speed?" -> POST /test_internet_download_speed
-
-## Response Tips
-
-- **Device info** (`/eureka_info`): Response is deeply nested with maps inside maps -- access capabilities via `device_info.capabilities`, network via `net`, and audio via `audio`. The `sign` block contains certificate data for device verification.
-- **Bluetooth** (`/bluetooth/*`): `scan_results` and `get_bonded` return bare lists. `status` nests connected devices as `[map]` -- iterate to find specific devices by `mac_address`.
-- **Wi-Fi** (`/connect_wifi`, `/scan_wifi`, `/scan_results`): Connect requires encrypted password (`enc_passwd`) plus WPA auth/cipher integers -- obtain these from scan results first. Forget requires the `wpa_id` from `/configured_networks`.
-- **Alarms** (`/assistant/alarms`): Returns separate `alarm` and `timer` arrays of maps. Deletion requires collecting `ids` from these arrays.
-- **Night mode** (`/assistant/set_night_mode_params`): The `windows` array uses `days` as integer arrays (0=Sunday through 6=Saturday), `start_hour` as 24h int, and `length_hours` for duration.
-- **General**: Most POST endpoints return 200 with empty or minimal bodies on success. A non-200 status or missing expected fields indicates failure. `/get_app_device_id` is the only endpoint explicitly declaring 404 errors.
-
-## Anomaly Flags
-
-- **Auth token missing or rejected**: All requests require `cast-local-authorization-token` in the header. Surface immediately if any call returns 401/403 -- the token may have rotated after a device reboot.
-- **Device offline**: If `/eureka_info` returns `net.online: false` or `net.ethernet_connected: false` with no `ip_address`, flag that the device has lost network connectivity.
-- **Wi-Fi signal degradation**: If `wifi.signal_level` in eureka_info drops significantly or `wifi.noise_level` is high, surface a warning about potential connectivity issues.
-- **Bluetooth connection failures**: If `/bluetooth/status` shows devices in `connecting_devices` but none in `connected_devices` after a bond/connect attempt, flag the pairing as potentially stuck.
-- **Night mode misconfiguration**: If `set_night_mode_params` is called with `enabled: true` but an empty `windows` array, warn that night mode will have no active schedule.
-- **Speed test anomalies**: If `test_internet_download_speed` returns a very low `bytes_received` relative to `time_for_data_fetch`, surface a potential bandwidth issue.
-- **Setup state incomplete**: If `eureka_info` returns `setup.setup_state` other than the expected complete value or `setup.tos_accepted: false`, flag that device setup may be incomplete.
-
-## Playbook
-
-### 1. Connect Device to a New Wi-Fi Network
-
-1. Call `POST /scan_wifi` to trigger a fresh Wi-Fi scan.
-2. Call `GET /scan_results` to retrieve available networks.
-3. Identify the target network and note its `bssid`, `signal_level`, `ssid`, `wpa_auth`, and `wpa_cipher`.
-4. Call `POST /connect_wifi` with the network details and the encrypted password.
-5. Verify by calling `GET /eureka_info` and checking `net.online` and `wifi.ssid`.
-
-### 2. Pair and Connect a Bluetooth Speaker
-
-1. Call `POST /bluetooth/scan` with `{"enable": true, "clear_results": true, "timeout": 30}` to scan for nearby devices.
-2. Call `GET /bluetooth/scan_results` to list discovered devices and find the target `mac_address`.
-3. Call `POST /bluetooth/bond` with `{"mac_address": "<addr>", "bond": true}` to pair.
-4. Call `POST /bluetooth/connect` with `{"mac_address": "<addr>", "connect": true, "profile": 2}` to establish the audio connection.
-5. Confirm via `GET /bluetooth/status` -- the device should appear in `connected_devices`.
-
-### 3. Configure Night Mode Schedule
-
-1. Call `GET /eureka_info` to check current `night_mode_params` and device capabilities.
-2. Call `POST /assistant/set_night_mode_params` with the desired schedule:
-   - Set `enabled: true`, `do_not_disturb: true`
-   - Define `windows` with days (e.g., `[0,1,2,3,4,5,6]` for every day), `start_hour` (e.g., `22` for 10 PM), and `length_hours` (e.g., `8`).
-   - Set `led_brightness` and `volume` to reduced levels (e.g., `0.2` and `0.3`).
-3. Verify the response mirrors your settings.
-
-### 4. Manage Alarms and Timers
-
-1. Call `GET /assistant/alarms` to retrieve all current alarms and timers.
-2. Identify the alarm/timer IDs you want to manage from the `alarm` and `timer` arrays.
-3. To delete, call `POST /assistant/alarms/delete` with `{"ids": ["<id1>", "<id2>"]}`.
-4. To adjust alarm volume, call `POST /assistant/alarms/volume` with `{"volume": 5}` (integer scale).
-5. Confirm deletion by calling `GET /assistant/alarms` again.
-
-### 5. Full Device Diagnostics
-
-1. Call `GET /eureka_info` with appropriate params to get complete device state.
-2. Check `net.online` and `wifi.signal_level` for connectivity health.
-3. Call `POST /test_internet_download_speed` with a known test URL to benchmark bandwidth.
-4. Call `GET /bluetooth/status` to verify Bluetooth subsystem state.
-5. Review `device_info.capabilities` to confirm which features are available.
-6. If issues are found, call `POST /reboot` with `{"params": "now"}` as a last resort.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all supported_timezones?" -> GET /supported_timezones
+- "Create a get_app_device_id?" -> POST /get_app_device_id
+- "List all supported_locales?" -> GET /supported_locales
+- "Create a check_ready_status?" -> POST /assistant/check_ready_status
+- "List all offer?" -> GET /offer
+- "List all eureka_info?" -> GET /eureka_info
+- "Create a test_internet_download_speed?" -> POST /test_internet_download_speed
+- "Create a reboot?" -> POST /reboot
+- "Create a set_night_mode_param?" -> POST /assistant/set_night_mode_params
+- "Create a set_eureka_info?" -> POST /set_eureka_info
+- "List all alarms?" -> GET /assistant/alarms
+- "Create a delete?" -> POST /assistant/alarms/delete
+- "Create a notification?" -> POST /assistant/notifications
+- "Create a volume?" -> POST /assistant/alarms/volume
+- "Create a set_equalizer?" -> POST /user_eq/set_equalizer
+- "Create a a11y_mode?" -> POST /assistant/a11y_mode
+- "List all scan_results?" -> GET /bluetooth/scan_results
+- "Create a bond?" -> POST /bluetooth/bond
+- "Create a discovery?" -> POST /bluetooth/discovery
+- "Create a connect?" -> POST /bluetooth/connect
+- "List all status?" -> GET /bluetooth/status
+- "Create a scan?" -> POST /bluetooth/scan
+- "List all get_bonded?" -> GET /bluetooth/get_bonded
+- "Create a connect_wifi?" -> POST /connect_wifi
+- "Create a scan_wifi?" -> POST /scan_wifi
+- "List all configured_networks?" -> GET /configured_networks
+- "Create a forget_wifi?" -> POST /forget_wifi
+- "List all scan_results?" -> GET /scan_results
+- "List all NOTICE.html.gz?" -> GET /NOTICE.html.gz
+- "List all icon.png?" -> GET /icon.png
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

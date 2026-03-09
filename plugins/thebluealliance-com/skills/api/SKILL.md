@@ -146,89 +146,90 @@ https://www.thebluealliance.com/api/v3
 | GET | /teams/{year}/{page_num}/keys | Gets a list Team Keys that competed in the given year, paginated in groups of 500. |
 | GET | /teams/{year}/{page_num}/simple | Gets a list of short form `Team_Simple` objects that competed in the given year, paginated in groups of 500. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What team is number 254?" -> GET /team/{team_key}
-- "What events are happening in 2024?" -> GET /events/{year}
-- "Show me the rankings for this event" -> GET /event/{event_key}/rankings
-- "Who won this match?" -> GET /match/{match_key}
-- "What teams are at this event?" -> GET /event/{event_key}/teams
-- "What districts exist this year?" -> GET /districts/{year}
-- "What awards has this team won?" -> GET /team/{team_key}/awards
-- "How did this team do at a specific event?" -> GET /team/{team_key}/event/{event_key}/status
-- "What matches did this team play in 2024?" -> GET /team/{team_key}/matches/{year}
-- "What are the OPRs for this event?" -> GET /event/{event_key}/oprs
-- "Is the TBA datafeed working?" -> GET /status
-- "What are the district rankings?" -> GET /district/{district_key}/rankings
-- "Show me the alliances for this event" -> GET /event/{event_key}/alliances
-- "What robot did this team build each year?" -> GET /team/{team_key}/robots
-- "Find a team or event by name" -> GET /search_index
-
-## Response Tips
-
-- **Team/Event detail endpoints**: Full objects include nullable location fields (`city`, `state_prov`, `country`, `lat`, `lng`) -- always null-check before displaying addresses or mapping.
-- **`/simple` variants**: Return stripped-down objects (no location details, no webcasts). Use these for listing/search to reduce payload; fall back to full endpoints only when detail is needed.
-- **`/keys` variants**: Return flat string arrays (e.g., `["2024casj"]`), not objects. Ideal for existence checks or feeding into batch lookups.
-- **Match objects**: `alliances` is always nested two levels deep (`alliances.red.team_keys`, `alliances.blue.score`). `score_breakdown` is year-specific and its schema changes every season.
-- **Rankings**: Wrapped in a `rankings` array inside an object that also carries `sort_order_info` and `extra_stats_info` -- iterate `.rankings`, not the top-level response.
-- **Teams pagination**: `/teams/{page_num}` is 0-indexed, 500 teams per page. Use `GET /status` -> `max_team_page` to know when to stop.
-- **304 Not Modified**: All endpoints support `If-None-Match` (ETag caching). A 304 means data has not changed -- reuse your cached copy. Always send `If-None-Match` on repeated calls.
-- **Error responses**: 401 means missing or invalid `X-TBA-Auth-Key`. 404 means the resource key does not exist (check key format: `frc254`, `2024casj`, `2024casj_qm1`).
-
-## Anomaly Flags
-
-- **`is_datafeed_down: true`** from `GET /status` -- surface immediately; all data may be stale or incomplete during outages.
-- **`down_events` non-empty** from `GET /status` -- warn that specific event data may be unreliable.
-- **401 on any call** -- the API key is missing, expired, or malformed. Prompt user to verify `X-TBA-Auth-Key` before retrying.
-- **304 on every call in a batch** -- data has not updated since last fetch. Note this to the user rather than silently returning stale results.
-- **`score_breakdown: null` on a match** -- the match has not been played yet or score data is unavailable. Flag if the user expects results.
-- **`winning_alliance: ""`** on a match -- indicates a tie or unplayed match; do not assume red/blue won.
-- **`playoff_type` changes across events** -- different events may use different playoff formats (bracket vs round-robin). Surface when comparing cross-event playoff data.
-- **Zebra MotionWorks returning 404** -- robot tracking data is only available for select events. Flag that this is expected, not an error.
-- **Teams page returning empty array** -- you have passed `max_team_page`. Stop paginating.
-
-## Playbook
-
-### 1. Get a Full Team Profile
-
-1. Call `GET /team/frc{number}` (e.g., `frc254`) to get team details, location, and rookie year.
-2. Call `GET /team/frc{number}/years_participated` to see active seasons.
-3. Call `GET /team/frc{number}/social_media` for website and social links.
-4. Call `GET /team/frc{number}/robots` for robot names and photos by year.
-5. Call `GET /team/frc{number}/awards` for a lifetime awards list.
-
-### 2. Analyze a Team's Performance at an Event
-
-1. Call `GET /team/{team_key}/event/{event_key}/status` to get qualification ranking, alliance pick, and playoff result.
-2. Call `GET /team/{team_key}/event/{event_key}/matches` to get all match details.
-3. Call `GET /event/{event_key}/oprs` and look up the team key in the `oprs`, `dprs`, and `ccwms` maps for offensive/defensive power ratings.
-4. Call `GET /team/{team_key}/event/{event_key}/awards` to see any awards earned at that event.
-
-### 3. Scout All Teams at an Upcoming Event
-
-1. Call `GET /event/{event_key}/teams/simple` to get the team list with basic info.
-2. For each team, call `GET /team/{team_key}/events/{year}` to see what other events they have attended this season.
-3. Call `GET /event/{event_key}/rankings` once matches begin to track live qualification rankings.
-4. Call `GET /event/{event_key}/oprs` as matches accumulate for calculated stats.
-
-### 4. Track a Live Event
-
-1. Call `GET /status` to confirm the datafeed is up and the event is not in `down_events`.
-2. Call `GET /event/{event_key}/matches/simple` to get the match schedule with predicted times.
-3. Poll `GET /event/{event_key}/matches` with `If-None-Match` to detect new results (304 = no update).
-4. Call `GET /event/{event_key}/rankings` after each qual round to get updated standings.
-5. Call `GET /event/{event_key}/alliances` once alliance selection begins.
-6. Call `GET /event/{event_key}/predictions` for model-generated win probabilities.
-
-### 5. Explore District Season Standings
-
-1. Call `GET /districts/{year}` to list all active districts and their keys.
-2. Call `GET /district/{district_key}/rankings` to see cumulative point standings.
-3. Call `GET /district/{district_key}/events` to see all events in that district.
-4. Call `GET /district/{district_key}/advancement` to check which teams qualify for district championship or worlds.
-5. Call `GET /district/{district_abbreviation}/insights` for aggregate district statistics.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all dcmp_history?" -> GET /district/{district_abbreviation}/dcmp_history
+- "List all history?" -> GET /district/{district_abbreviation}/history
+- "List all insights?" -> GET /district/{district_abbreviation}/insights
+- "List all advancement?" -> GET /district/{district_key}/advancement
+- "List all awards?" -> GET /district/{district_key}/awards
+- "List all events?" -> GET /district/{district_key}/events
+- "List all keys?" -> GET /district/{district_key}/events/keys
+- "List all simple?" -> GET /district/{district_key}/events/simple
+- "List all rankings?" -> GET /district/{district_key}/rankings
+- "List all teams?" -> GET /district/{district_key}/teams
+- "List all keys?" -> GET /district/{district_key}/teams/keys
+- "List all simple?" -> GET /district/{district_key}/teams/simple
+- "Get district details?" -> GET /districts/{year}
+- "Get event details?" -> GET /event/{event_key}
+- "List all advancement_points?" -> GET /event/{event_key}/advancement_points
+- "List all alliances?" -> GET /event/{event_key}/alliances
+- "List all awards?" -> GET /event/{event_key}/awards
+- "List all coprs?" -> GET /event/{event_key}/coprs
+- "List all district_points?" -> GET /event/{event_key}/district_points
+- "List all insights?" -> GET /event/{event_key}/insights
+- "List all matches?" -> GET /event/{event_key}/matches
+- "List all keys?" -> GET /event/{event_key}/matches/keys
+- "List all simple?" -> GET /event/{event_key}/matches/simple
+- "List all timeseries?" -> GET /event/{event_key}/matches/timeseries
+- "List all oprs?" -> GET /event/{event_key}/oprs
+- "List all predictions?" -> GET /event/{event_key}/predictions
+- "List all rankings?" -> GET /event/{event_key}/rankings
+- "List all regional_champs_pool_points?" -> GET /event/{event_key}/regional_champs_pool_points
+- "List all simple?" -> GET /event/{event_key}/simple
+- "List all team_media?" -> GET /event/{event_key}/team_media
+- "List all teams?" -> GET /event/{event_key}/teams
+- "List all keys?" -> GET /event/{event_key}/teams/keys
+- "List all simple?" -> GET /event/{event_key}/teams/simple
+- "List all statuses?" -> GET /event/{event_key}/teams/statuses
+- "Get event details?" -> GET /events/{year}
+- "List all keys?" -> GET /events/{year}/keys
+- "List all simple?" -> GET /events/{year}/simple
+- "Get leaderboard details?" -> GET /insights/leaderboards/{year}
+- "Get notable details?" -> GET /insights/notables/{year}
+- "Get match details?" -> GET /match/{match_key}
+- "List all simple?" -> GET /match/{match_key}/simple
+- "List all timeseries?" -> GET /match/{match_key}/timeseries
+- "List all zebra_motionworks?" -> GET /match/{match_key}/zebra_motionworks
+- "Get regional_advancement details?" -> GET /regional_advancement/{year}
+- "List all rankings?" -> GET /regional_advancement/{year}/rankings
+- "List all search_index?" -> GET /search_index
+- "List all status?" -> GET /status
+- "Get team details?" -> GET /team/{team_key}
+- "List all awards?" -> GET /team/{team_key}/awards
+- "Get award details?" -> GET /team/{team_key}/awards/{year}
+- "List all districts?" -> GET /team/{team_key}/districts
+- "List all awards?" -> GET /team/{team_key}/event/{event_key}/awards
+- "List all matches?" -> GET /team/{team_key}/event/{event_key}/matches
+- "List all keys?" -> GET /team/{team_key}/event/{event_key}/matches/keys
+- "List all simple?" -> GET /team/{team_key}/event/{event_key}/matches/simple
+- "List all status?" -> GET /team/{team_key}/event/{event_key}/status
+- "List all events?" -> GET /team/{team_key}/events
+- "List all keys?" -> GET /team/{team_key}/events/keys
+- "List all simple?" -> GET /team/{team_key}/events/simple
+- "Get event details?" -> GET /team/{team_key}/events/{year}
+- "List all keys?" -> GET /team/{team_key}/events/{year}/keys
+- "List all simple?" -> GET /team/{team_key}/events/{year}/simple
+- "List all statuses?" -> GET /team/{team_key}/events/{year}/statuses
+- "List all history?" -> GET /team/{team_key}/history
+- "Get matche details?" -> GET /team/{team_key}/matches/{year}
+- "List all keys?" -> GET /team/{team_key}/matches/{year}/keys
+- "List all simple?" -> GET /team/{team_key}/matches/{year}/simple
+- "Get tag details?" -> GET /team/{team_key}/media/tag/{media_tag}
+- "Get tag details?" -> GET /team/{team_key}/media/tag/{media_tag}/{year}
+- "Get media details?" -> GET /team/{team_key}/media/{year}
+- "List all robots?" -> GET /team/{team_key}/robots
+- "List all simple?" -> GET /team/{team_key}/simple
+- "List all social_media?" -> GET /team/{team_key}/social_media
+- "List all years_participated?" -> GET /team/{team_key}/years_participated
+- "Get team details?" -> GET /teams/{page_num}
+- "List all keys?" -> GET /teams/{page_num}/keys
+- "List all simple?" -> GET /teams/{page_num}/simple
+- "Get team details?" -> GET /teams/{year}/{page_num}
+- "List all keys?" -> GET /teams/{year}/{page_num}/keys
+- "List all simple?" -> GET /teams/{year}/{page_num}/simple
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -166,87 +166,10 @@ Not specified.
 | POST | / | Update a resource data sync. After you create a resource data sync for a Region, you can't change the account options for that sync. For example, if you create a sync in the us-east-2 (Ohio) Region and you choose the Include only the current account option, you can't edit that sync later and choose the Include all accounts from my Organizations configuration option. Instead, you must delete the first resource data sync, and create a new one.  This API operation only supports a resource data sync that was created with a SyncFromSource SyncType. |
 | POST | / | ServiceSetting is an account-level setting for an Amazon Web Services service. This setting defines how a user interacts with or uses a service or a feature of a service. For example, if an Amazon Web Services service charges money to the account based on feature or service usage, then the Amazon Web Services service team might create a default setting of "false". This means the user can't use this feature unless they change the setting to "true" and intentionally opt in for a paid feature. Services map a SettingId object to a setting value. Amazon Web Services services teams define the default value for a SettingId. You can't create a new SettingId, but you can overwrite the default value if you have the ssm:UpdateServiceSetting permission for the setting. Use the GetServiceSetting API operation to view the current value. Or, use the ResetServiceSetting to change the value back to the original value defined by the Amazon Web Services service team. Update the service setting for the account. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I run a command on multiple EC2 instances?" -> POST / (SendCommand with DocumentName + InstanceIds/Targets)
-- "What is the current value of a Parameter Store parameter?" -> POST / (GetParameter with Name + WithDecryption)
-- "Which instances are missing patches in a patch group?" -> POST / (DescribePatchGroupState with PatchGroup)
-- "How do I create an SSM document from a JSON or YAML definition?" -> POST / (CreateDocument with Content + Name)
-- "What is the status of my automation execution?" -> POST / (GetAutomationExecution with AutomationExecutionId)
-- "How do I schedule a maintenance window for patching?" -> POST / (CreateMaintenanceWindow with Name, Schedule, Duration, Cutoff, AllowUnassociatedTargets)
-- "How do I store a secret string in Parameter Store?" -> POST / (PutParameter with Name, Value, Type:"SecureString")
-- "What commands have been sent to a specific instance?" -> POST / (ListCommandInvocations with InstanceId)
-- "How do I start a Session Manager session to an instance?" -> POST / (StartSession with Target)
-- "Which patch baseline is assigned to a patch group?" -> POST / (GetPatchBaselineForPatchGroup with PatchGroup)
-- "How do I track an OpsItem for an incident?" -> POST / (CreateOpsItem with Description, Source, Title)
-- "What associations are failing on my instances?" -> POST / (DescribeInstanceAssociationsStatus with InstanceId)
-- "How do I get all parameters under a hierarchy path?" -> POST / (GetParametersByPath with Path + Recursive)
-- "How do I register an on-premises server with SSM?" -> POST / (CreateActivation with IamRole)
-
-## Response Tips
-
-- **Pagination**: Most List/Describe endpoints return `NextToken`; keep calling with the returned token until it is null. `MaxResults` caps per-page size (typically 10-50 default, 50-100 max).
-- **Parameters**: `GetParameters` returns both `Parameters` (found) and `InvalidParameters` (not found) -- always check both arrays to catch typos.
-- **Commands**: `SendCommand` returns a `Command` object; poll status via `ListCommandInvocations` or `GetCommandInvocation` since execution is async.
-- **Maintenance Windows**: Execution results are three layers deep: Window Execution -> Task Execution -> Task Invocation. Drill down with the corresponding Get/Describe calls.
-- **Associations**: `AssociationDescription` nests `Status`, `Overview`, `AlarmConfiguration`, and `OutputLocation` -- the `Overview.DetailedStatus` field gives the most actionable state.
-- **OpsItems**: `OperationalData` is a string-keyed map of `OpsItemDataValue` -- treat it as arbitrary metadata, not structured fields.
-- **Patch Compliance**: `DescribeInstancePatches` returns `PatchComplianceData` per patch; aggregate counts come from `DescribePatchGroupState` instead.
-
-## Anomaly Flags
-
-- **Command timeout or failure**: Surface when `GetCommandInvocation` returns `Status: "Failed"`, `"TimedOut"`, or `"Cancelled"` -- include `StandardErrorContent` in the alert.
-- **Triggered alarms**: Any response containing a non-empty `TriggeredAlarms` array means a CloudWatch alarm fired during execution -- surface immediately with alarm name and state.
-- **Association drift**: When `AssociationOverview.Status` is `"Failed"` or `DetailedStatus` shows repeated failures, flag the association and affected instance count.
-- **Step execution truncation**: `GetAutomationExecution` may return `StepExecutionsTruncated: true` -- warn the user that they need `DescribeAutomationStepExecutions` for the full list.
-- **Invalid parameters**: When `GetParameters` or `DeleteParameters` returns a non-empty `InvalidParameters` array, proactively list the bad names so the user can correct them.
-- **Patch non-compliance spikes**: In `DescribePatchGroupState`, flag when `InstancesWithCriticalNonCompliantPatches` or `InstancesWithSecurityNonCompliantPatches` is greater than zero.
-- **Deprecated document versions**: When `DescribeDocument` shows `ReviewStatus: "REJECTED"` or `Status: "Failed"`, warn the user before they reference that version.
-- **Activation expiration**: `DescribeActivations` includes `ExpirationDate` -- flag activations expiring within 7 days.
-
-## Playbook
-
-### 1. Run a Command and Retrieve Output
-
-1. Call **SendCommand** with `DocumentName` (e.g., `"AWS-RunShellScript"`), `InstanceIds` or `Targets`, and `Parameters` (e.g., `{"commands": ["uptime"]}`).
-2. Extract `Command.CommandId` from the response.
-3. Poll **ListCommandInvocations** with `CommandId` and `Details: true` until all invocations show a terminal `Status` (`"Success"`, `"Failed"`, `"TimedOut"`).
-4. For each instance, call **GetCommandInvocation** with `CommandId` + `InstanceId` to retrieve `StandardOutputContent` and `StandardErrorContent`.
-5. If status is `"Failed"`, check `StatusDetails` for the failure reason and `StandardErrorContent` for logs.
-
-### 2. Set Up a Patch Baseline and Scan Instances
-
-1. Call **CreatePatchBaseline** with `Name`, `OperatingSystem`, `ApprovalRules`, and optionally `ApprovedPatches`/`RejectedPatches`.
-2. Call **RegisterPatchBaselineForPatchGroup** with the returned `BaselineId` and the target `PatchGroup`.
-3. Run **SendCommand** with `DocumentName: "AWS-RunPatchBaseline"` and `Parameters: {"Operation": ["Scan"]}` targeting the patch group.
-4. After the scan completes, call **DescribePatchGroupState** with `PatchGroup` to get aggregate compliance counts.
-5. For per-instance detail, call **DescribeInstancePatches** with `InstanceId` and filter on `State: "Missing"` or `"Failed"`.
-
-### 3. Create and Monitor an Automation Execution
-
-1. Call **StartAutomationExecution** with `DocumentName` (e.g., `"AWS-RestartEC2Instance"`), `Parameters`, and optionally `Targets` for multi-account/region.
-2. Capture the returned `AutomationExecutionId`.
-3. Poll **GetAutomationExecution** with `AutomationExecutionId` -- check `AutomationExecutionStatus` for `"InProgress"`, `"Success"`, `"Failed"`, etc.
-4. If `StepExecutionsTruncated` is true, call **DescribeAutomationStepExecutions** to get the full step list.
-5. Review `ProgressCounters` (`SuccessSteps`, `FailedSteps`, `TimedOutSteps`) for a quick health check. If `TriggeredAlarms` is non-empty, investigate the associated CloudWatch alarms.
-
-### 4. Manage Secrets in Parameter Store
-
-1. Call **PutParameter** with `Name` (use hierarchy like `/app/prod/db-password`), `Value`, `Type: "SecureString"`, and optionally `KeyId` for a custom KMS key.
-2. To retrieve, call **GetParameter** with `Name` and `WithDecryption: true`.
-3. To fetch all parameters under a path, use **GetParametersByPath** with `Path: "/app/prod/"`, `Recursive: true`, and `WithDecryption: true`.
-4. To version-track, call **LabelParameterVersion** with `Name`, `ParameterVersion`, and `Labels` (e.g., `["production", "v2"]`).
-5. To audit history, call **GetParameterHistory** with `Name` to see all versions, who changed them, and when.
-
-### 5. Schedule Recurring Tasks with Maintenance Windows
-
-1. Call **CreateMaintenanceWindow** with `Name`, `Schedule` (cron or rate expression), `Duration`, `Cutoff`, and `AllowUnassociatedTargets`.
-2. Call **RegisterTargetWithMaintenanceWindow** with `WindowId`, `ResourceType: "INSTANCE"`, and `Targets` (tag-based or instance ID list).
-3. Call **RegisterTaskWithMaintenanceWindow** with `WindowId`, `TaskArn` (e.g., an SSM document or Lambda ARN), `TaskType`, `Targets`, and `TaskInvocationParameters`.
-4. Monitor executions via **DescribeMaintenanceWindowExecutions** with `WindowId` -- check `Status` for each run.
-5. Drill into failures: **GetMaintenanceWindowExecutionTask** for task-level status, then **GetMaintenanceWindowExecutionTaskInvocation** for per-target results.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

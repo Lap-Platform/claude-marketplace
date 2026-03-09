@@ -12,7 +12,7 @@ API version: 5.0.0
 ApiKey X-Auth in header | ApiKey X-Auth in header
 
 ## Base URL
-https://restapi.kumpeapps.com/{version}
+https://restapi.kumpeapps.com/v5
 
 ## Setup
 1. Set your API key in the appropriate header

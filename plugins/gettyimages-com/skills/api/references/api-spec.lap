@@ -9,472 +9,545 @@
 
 @group affiliates
 @endpoint GET /v3/affiliates/search/images
-@optional {Accept-Language: str, GI-Country-Code: str, phrase: str, style: str}
-@returns(200) {images: [map]?, auto_corrections: map{phrase: str?}}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., GI-Country-Code: str # Receive regionally relevant search results based on the value specified. Accepts only ISO Alpha-3 country codes. The Countries operation can be used to retrieve the codes., phrase: str # Search images using a search phrase., style: str # Filter based on graphical style of the image.}
+@returns(200) {images: [map]?, auto_corrections: map{phrase: str?}} # OK
 
 @endpoint GET /v3/affiliates/search/videos
-@optional {Accept-Language: str, GI-Country-Code: str, phrase: str}
-@returns(200) {videos: [map]?, auto_corrections: map{phrase: str?}}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., GI-Country-Code: str # Receive regionally relevant search results based on the value specified. Accepts only ISO Alpha-3 country codes. The Countries operation can be used to retrieve the codes., phrase: str}
+@returns(200) {videos: [map]?, auto_corrections: map{phrase: str?}} # OK
 
 @endgroup
 
 @group ai
 @endpoint POST /v3/ai/image-generations
-@optional {prompt: str, aspect_ratio: str, media_type: str(photography/illustration), mood: str(black_and_white/warm/cool/natural/vivid/dramatic/bold), product_id: int(int32), project_code: str, notes: str}
-@returns(202) {generation_request_id: str?}
-@errors {400, 403, 409, 429}
+@desc Generates images from a prompt
+@optional {prompt: str # The only required parameter, this is the primary text used for the generation of the images., aspect_ratio: str # Aspect ratio of the result images.  Must be one of 1:1, 3:4, 4:3, 9:16, or 16:9, media_type: str(photography/illustration), mood: str(black_and_white/warm/cool/natural/vivid/dramatic/bold), product_id: int(int32) # If you have multiple Getty products, indicate which one you would like to use for this generation request, project_code: str # The project code to use for the generation request.  Some products require this value., notes: str # The notes to use for the generation request.  Some products require this value.}
+@returns(202) {generation_request_id: str?} # Returns the request ID
+@errors {400: The request was invalid, 403: Product quota exceeded, 409: ConcurrencyConflict, 429: TooManyConcurrentGenerations}
 
 @endpoint GET /v3/ai/image-generations/{generationRequestId}
-@required {generationRequestId: str}
-@returns(202) {generation_request_id: str?}
-@returns(200) {generation_request_id: str?, seed: int(int32)?, results: [map]?, original_asset: map{id: str?}}
-@errors {404, 409, 400, 403, 429, 410}
+@desc Get generated images from a previous generation request
+@required {generationRequestId: str # The ID from a previous request to generate images}
+@returns(202) {generation_request_id: str?} # Returns the request ID for a pending request
+@returns(200) {generation_request_id: str?, seed: int(int32)?, results: [map]?, original_asset: map{id: str?}} # Returns the result of a request to generate images
+@errors {404: The request ID was not found, 409: ConcurrencyConflict, 400: InvalidProduct, 403: NoProducts, 429: TooManyConcurrentGenerations, 410: GenerationRequestGone}
 
 @endpoint POST /v3/ai/image-generations/{generationRequestId}/images/{index}/variations
-@required {generationRequestId: str, index: int(int32)}
-@optional {product_id: int(int32), project_code: str, notes: str}
-@returns(202) {generation_request_id: str?}
-@errors {403, 404, 409, 400, 429}
+@desc Get variations on a generated image
+@required {generationRequestId: str # The ID from a previous request to generate images, index: int(int32) # The index of the image from the specific images generation}
+@optional {product_id: int(int32) # If you have multiple Getty products, indicate which one you would like to use for this generation request, project_code: str # The project code to use for the generation request.  Some products require this value., notes: str # The notes to use for the generation request.  Some products require this value.}
+@returns(202) {generation_request_id: str?} # Returns the request ID for a pending request to generate a variation of images
+@errors {403: Product quota exceeded, 404: Either the generation id does not exist, the index is incorrect, or the generation is still pending, 409: ConcurrencyConflict, 400: InvalidProduct, 429: TooManyConcurrentGenerations}
 
 @endpoint POST /v3/ai/file-registrations
-@optional {url: str, rights_claimed: bool, category: str(ImageReference/CustomerProduct)}
-@returns(200) {id: str?}
-@errors {400, 403}
+@desc Register a client provided file for use with AIGenerator endpoints
+@optional {url: str # The location of the file., rights_claimed: bool # Acknowledgment of ownership or licensing of file., category: str(ImageReference/CustomerProduct)}
+@returns(200) {id: str?} # Returns the response
+@errors {400: The request was invalid, 403: Not authorized}
 
 @endpoint GET /v3/ai/file-registrations
-@optional {page: int(int32), page_size: int(int32)}
-@returns(200) {result_count: int(int32), file_registrations: [map]?}
-@errors {403}
+@optional {page: int(int32) # The page number of results.  Default is 1., page_size: int(int32) # The page size of results.  Default is 30.}
+@returns(200) {result_count: int(int32), file_registrations: [map]?} # OK
+@errors {403: NotAuthorized}
 
 @endpoint GET /v3/ai/file-registrations/{fileRegistrationId}
-@required {fileRegistrationId: str}
-@returns(200) {id: str?, preview_urls: [map]?}
-@errors {400, 403, 404}
+@desc Get details on a registered file
+@required {fileRegistrationId: str # The id from a previous request to register a file}
+@returns(200) {id: str?, preview_urls: [map]?} # Returns the response
+@errors {400: The request was invalid, 403: Not authorized, 404: FileRegistrationIdNotFound}
 
 @endpoint DELETE /v3/ai/file-registrations/{fileRegistrationId}
+@desc Archives a registered file
 @required {fileRegistrationId: str}
-@returns(200)
-@returns(204)
-@errors {404, 403}
+@returns(200) OK
+@returns(204) The file was successfully archived
+@errors {404: The file registration id does not exist, 403: Not authorized}
 
 @endpoint POST /v3/ai/image-generations/refine
+@desc Refine an image
 @required {prompt: str, mask_url: str}
 @optional {reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, product_id: int(int32), project_code: str, notes: str}
-@returns(202) {generation_request_id: str?}
-@errors {403, 404, 409, 400, 410, 429}
+@returns(202) {generation_request_id: str?} # Returns the request ID for a pending request to refine an image
+@errors {403: Product quota exceeded, 404: Image not found, 409: ConcurrencyConflict, 400: InvalidProduct, 410: GenerationRequestGone, 429: TooManyConcurrentGenerations}
 
 @endpoint POST /v3/ai/image-generations/extend
+@desc Extend an image
 @optional {reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, prompt: str, product_id: int(int32), project_code: str, notes: str, left_percentage: num(float), right_percentage: num(float), top_percentage: num(float), bottom_percentage: num(float)}
-@returns(202) {generation_request_id: str?}
-@errors {403, 404, 409, 400, 410, 429}
+@returns(202) {generation_request_id: str?} # Returns the request ID for a pending request to extend an image
+@errors {403: Product quota exceeded, 404: Image not found, 409: ConcurrencyConflict, 400: InvalidProduct, 410: GenerationRequestGone, 429: TooManyConcurrentGenerations}
 
 @endpoint POST /v3/ai/image-generations/background-removal
-@optional {reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, product_id: int(int32), project_code: str, notes: str}
-@returns(202) {generation_request_id: str?}
-@errors {400, 403, 404, 409, 410, 429}
+@desc Remove a background
+@optional {reference_asset_id: str # Asset Id to modify., reference_generation: map{generation_request_id: str, index: int(int32)}, product_id: int(int32) # If you have multiple Getty products, indicate which one you would like to use for this refine request, project_code: str # The project code to use for the request.  Some products require this value., notes: str # The notes to use for the request.  Some products require this value.}
+@returns(202) {generation_request_id: str?} # Returns the request ID for a pending request to extend an image
+@errors {400: The request was invalid, 403: Product quota exceeded, 404: Image not found, 409: ConcurrencyConflict, 410: GenerationRequestGone, 429: TooManyConcurrentGenerations}
 
 @endpoint POST /v3/ai/image-generations/object-removal
-@optional {reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, product_id: int(int32), project_code: str, notes: str, mask_url: str}
-@returns(202) {generation_request_id: str?}
-@errors {403, 404, 409, 400, 410, 429}
+@desc Remove object(s)
+@optional {reference_asset_id: str # Asset Id to modify., reference_generation: map{generation_request_id: str, index: int(int32)}, product_id: int(int32) # If you have multiple Getty products, indicate which one you would like to use for this refine request, project_code: str # The project code to use for the request.  Some products require this value., notes: str # The notes to use for the request.  Some products require this value., mask_url: str # The location of the mask.}
+@returns(202) {generation_request_id: str?} # Returns the request ID for a pending request to refine images
+@errors {403: Product quota exceeded, 404: Either the generation id does not exist, the index is incorrect, or the generation is still pending, 409: ConcurrencyConflict, 400: InvalidProduct, 410: GenerationRequestGone, 429: TooManyConcurrentGenerations}
 
 @endpoint POST /v3/ai/image-generations/background-replacement
+@desc Replace the background of an existing image
 @optional {prompt: str, reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, product_id: int(int32), media_type: str(photography/illustration), negative_prompt: str, background_color: str, project_code: str, notes: str}
-@returns(202) {generation_request_id: str?}
-@errors {409, 403, 400, 404, 410, 429}
+@returns(202) {generation_request_id: str?} # Returns the request ID for a pending request to replace a background
+@errors {409: ConcurrencyConflict, 403: NotAuthorized, 400: InvalidProduct, 404: GenerationRequestIdNotFound, 410: GenerationRequestGone, 429: TooManyConcurrentGenerations}
 
 @endpoint POST /v3/ai/image-generations/influence-color-by-image
-@optional {reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, reference_file_registration_id: str, prompt: str, noise_level: num(float), media_type: str(photography/illustration), product_id: int(int32), project_code: str, notes: str}
-@returns(202) {generation_request_id: str?}
-@errors {400, 403, 404, 409, 410, 429}
+@desc Influence the color of generated images using a reference image
+@optional {reference_asset_id: str # Asset Id to modify., reference_generation: map{generation_request_id: str, index: int(int32)}, reference_file_registration_id: str # File Id to modify., prompt: str # This is the primary text used for refining the images., noise_level: num(float) # Accepted values are 0-1. Higher values will increase differences between the reference and generated images., media_type: str(photography/illustration), product_id: int(int32) # If you have multiple Getty products, indicate which one you would like to use for this refine request, project_code: str # The project code to use for the request.  Some products require this value., notes: str # The notes to use for the request.  Some products require this value.}
+@returns(202) {generation_request_id: str?} # Returns the request ID for a pending request to extend an image
+@errors {400: The request was invalid, 403: Product quota exceeded, 404: Image not found, 409: ConcurrencyConflict, 410: GenerationRequestGone, 429: TooManyConcurrentGenerations}
 
 @endpoint POST /v3/ai/image-generations/influence-composition-by-image
-@optional {reference_asset_id: str, reference_generation: map{generation_request_id: str, index: int(int32)}, reference_file_registration_id: str, prompt: str, influence_level: num(float), media_type: str(photography/illustration), mood: str(black_and_white/warm/cool/natural/vivid/dramatic/bold), product_id: int(int32), project_code: str, notes: str}
-@returns(202) {generation_request_id: str?}
-@errors {403, 404, 409, 400, 410, 429}
+@desc Influence the composition of generated images using a reference image
+@optional {reference_asset_id: str # Asset Id to modify., reference_generation: map{generation_request_id: str, index: int(int32)}, reference_file_registration_id: str # File Id to modify., prompt: str # This is the primary text used for refining the images., influence_level: num(float) # Accepted values are 0-1. Higher values will increase the similarities between the reference and generated images., media_type: str(photography/illustration), mood: str(black_and_white/warm/cool/natural/vivid/dramatic/bold), product_id: int(int32) # If you have multiple Getty products, indicate which one you would like to use for this refine request, project_code: str # The project code to use for the request.  Some products require this value., notes: str # The notes to use for the request.  Some products require this value.}
+@returns(202) {generation_request_id: str?} # Returns the request ID for a pending request to extend an image
+@errors {403: Product quota exceeded, 404: Image not found, 409: ConcurrencyConflict, 400: InvalidProduct, 410: GenerationRequestGone, 429: TooManyConcurrentGenerations}
 
 @endpoint POST /v3/ai/image-generations/background-generations
+@desc Add a background to a reference image
 @optional {reference_file_registration_id: str, prompt: str, product_id: int(int32), project_code: str, notes: str, left_percentage: num(float), right_percentage: num(float), top_percentage: num(float), bottom_percentage: num(float), background_file_registration_id: str, background_asset_id: str, background_reference_generation: map{generation_request_id: str, index: int(int32)}, background_reference_adherence: str(flexible/strong)}
-@returns(202) {generation_request_id: str?}
-@errors {403, 404, 409, 400, 429}
+@returns(202) {generation_request_id: str?} # Returns the request ID for a pending request
+@errors {403: Product quota exceeded, 404: Image not found, 409: ConcurrencyConflict, 400: InvalidProduct, 429: TooManyConcurrentGenerations}
 
 @endpoint GET /v3/ai/generation-history
-@optional {date_start: str(date-time), date_end: str(date-time), media_type: str, page_size: int(int32), page: int(int32), product_ids: [int(int32)], company_generations: bool=False}
-@returns(200) {generations: [map]?, result_count: int(int32)}
-@errors {403, 409}
+@desc Retrieve history of AI generations
+@optional {date_start: str(date-time) # If included, limits the results to those generation requests made on or after date_start. Both dates and datetimes are supported.  Dates should be submitted in ISO 8601 format YYYY-MM-DD. The time will default to 00:00:00 UTC.  Datetimes should be submitted in ISO 8601 format YYYY-MM-DDTHH:mm:ssZ., date_end: str(date-time) # If included, limits the results to those generation requests made on or before date_end. Both dates and datetimes are supported.  Dates should be submitted in ISO 8601 format YYYY-MM-DD. The time will default to 00:00:00 UTC.  Datetimes should be submitted in ISO 8601 format YYYY-MM-DDTHH:mm:ssZ., media_type: str # If included, limits the results to those generation requests made for the given media type., page_size: int(int32) # The page size of results.  Default is 30., page: int(int32) # The page number of results.  Default is 1., product_ids: [int(int32)] # If included, limits the results to only those requests made against the indicated products., company_generations: bool=False # If `true`, returns the list of previously downloaded images for all users in             your company. Your account must be enabled for this functionality. Contact your Getty Images account rep for             more information. Default is `false`.}
+@returns(200) {generations: [map]?, result_count: int(int32)} # Returns the history of AI generations
+@errors {403: Company generations were requested but your account is not configured for access., 409: ConcurrencyConflict}
 
 @endpoint GET /v3/ai/generation-history/{generationRequestId}
-@required {generationRequestId: str}
-@returns(200) {generation_request_id: str?, seed: int(int32)?, generation_date: str(date-time), product_revoked_date: str(date-time)?, prompt: str?, negative_prompt: str?, product_id: int(int32), notes: str?, project_code: str?, generation_type: str, generation_options: map{media_type: str, aspect_ratio: str?, mood: str}, source_generation_request: map{source_generation_request_id: str?, source_generation_result_index: int(int32)}, original_asset: map{id: str?}, results: [map]?, user: map{username: str?, first_name: str?, middle_name: str?, last_name: str?}}
-@errors {404, 409, 403}
+@desc Retrieve history item for an individual generation request
+@required {generationRequestId: str # The ID from a previous request to generate images}
+@returns(200) {generation_request_id: str?, seed: int(int32)?, generation_date: str(date-time), product_revoked_date: str(date-time)?, prompt: str?, negative_prompt: str?, product_id: int(int32), notes: str?, project_code: str?, generation_type: str, generation_options: map{media_type: str, aspect_ratio: str?, mood: str}, source_generation_request: map{source_generation_request_id: str?, source_generation_result_index: int(int32)}, original_asset: map{id: str?}, results: [map]?, user: map{username: str?, first_name: str?, middle_name: str?, last_name: str?}} # Returns the history item for the request
+@errors {404: The request ID was not found, 409: ConcurrencyConflict, 403: NotAuthorized}
 
 @endpoint GET /v3/ai/image-generations/{generationRequestId}/images/{index}/download-sizes
-@required {generationRequestId: str, index: int(int32)}
-@returns(200) {download_sizes: [map]?}
-@errors {404, 409, 403, 400, 410, 429}
+@desc Get download sizes for a generated image
+@required {generationRequestId: str # The ID from a previous request to generate images, index: int(int32) # The index of the image from the specific images generation}
+@returns(200) {download_sizes: [map]?} # Returns the result of a request
+@errors {404: Either the generation id does not exist, the index is incorrect, or the generation is still pending, 409: ConcurrencyConflict, 403: NotAuthorized, 400: InvalidProduct, 410: GenerationRequestGone, 429: DailyRequestLimitExceeded}
 
 @endpoint PUT /v3/ai/image-generations/{generationRequestId}/images/{index}/download
-@required {generationRequestId: str, index: int(int32)}
-@optional {notes: str, project_code: str, size_name: str, product_id: int(int32)}
-@returns(202)
-@errors {409, 403, 400, 410, 404, 429}
+@desc Begin the download process
+@required {generationRequestId: str # The ID from a previous request to generate images, index: int(int32) # The index of the image from the specific images generation}
+@optional {notes: str # The notes to use for the download request.  Some products require this value., project_code: str # The project code to use for the download request.  Some products require this value., size_name: str # The size name.  Valid values are 1k or 4k., product_id: int(int32) # The product id to download against. Only required when the customer has more than one agreement.}
+@returns(202) Download request was successful but is pending
+@errors {409: A download is already in progress for the given `generationRequestId` and `index`., 403: NotAuthorized, 400: InvalidProduct, 410: GenerationRequestGone, 404: GenerationRequestIdNotFound, 429: DailyRequestLimitExceeded}
 
 @endpoint GET /v3/ai/image-generations/{generationRequestId}/images/{index}/download
-@required {generationRequestId: str, index: int(int32)}
-@returns(202)
-@returns(200) {url: str?, generated_asset_id: str?}
-@errors {409, 403, 400, 410, 404, 429}
+@desc Once the download process has started, this endpoint can be used to check the status of the download and get the
+@required {generationRequestId: str # The ID from a previous request to generate images, index: int(int32) # The index of the image from the specific images generation}
+@returns(202) Download request was successful put is pending
+@returns(200) {url: str?, generated_asset_id: str?} # Download request was successful and is complete
+@errors {409: ConcurrencyConflict, 403: NotAuthorized, 400: InvalidProduct, 410: GenerationRequestGone, 404: GenerationRequestIdNotFound, 429: DailyRequestLimitExceeded}
 
 @endpoint POST /v3/ai/redownloads
-@optional {generated_asset_id: str, product_id: int(int32), size_name: str, project_code: str, notes: str}
-@returns(200) {url: str?, generated_asset_id: str?}
-@errors {400, 404, 403, 409, 410, 429}
+@desc Re-download a previously downloaded item
+@optional {generated_asset_id: str # The identifier of the previously-downloaded generated asset., product_id: int(int32) # The product ID to use for the download., size_name: str # The size name.  Valid values are 1k or 4k., project_code: str # The project code to use for the download request.  Some products require this value., notes: str # The notes to use for the download request.  Some products require this value.}
+@returns(200) {url: str?, generated_asset_id: str?} # Returns the re-download response
+@errors {400: The request was invalid, 404: Could not find source generated_asset_id, 403: Product is not active or quota exceeded, 409: ConcurrencyConflict, 410: GenerationRequestGone, 429: DailyRequestLimitExceeded}
 
 @endpoint POST /v3/ai/enhance-prompt
+@desc Expands and enriches a short prompt to produce a more detailed and descriptive prompt which can then be used to generate images.
 @required {prompt: str}
-@returns(200) {enhanced_prompt: str?}
-@errors {400}
+@returns(200) {enhanced_prompt: str?} # OK
+@errors {400: PromptEnhancementFailed}
 
 @endgroup
 
 @group artists
 @endpoint GET /v3/artists/images
-@optional {Accept-Language: str, artist_name: str, fields: [str], page: int(int32)=1, page_size: int(int32)=10}
-@returns(200) {images: [map]?, result_count: int(int32)}
-@errors {400, 401}
+@desc Search for images by a photographer
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., artist_name: str # Name of artist for desired images, fields: [str] # Comma separated list of fields. Allows restricting which fields are returned. If no fields are selected, the summary_set of fields are returned., page: int(int32)=1 # Identifies page to return. Default page is 1., page_size: int(int32)=10 # Specifies page size. Default page_size is 10, maximum page_size is 100.}
+@returns(200) {images: [map]?, result_count: int(int32)} # OK
+@errors {400: InvalidParameterValue, 401: Unauthorized}
 
 @endpoint GET /v3/artists/videos
-@optional {Accept-Language: str, artist_name: str, fields: [str], page: int(int32)=1, page_size: int(int32)=10}
-@returns(200) {videos: [map]?, result_count: int(int32)}
-@errors {400, 401}
+@desc Search for videos by a photographer
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., artist_name: str # Name of artist for desired images, fields: [str] # Comma separated list of fields. Allows restricting which fields are returned. If no fields are selected, the summary_set of fields are returned., page: int(int32)=1 # Identifies page to return. Default page is 1., page_size: int(int32)=10 # Specifies page size. Default page_size is 10, maximum page_size is 100.}
+@returns(200) {videos: [map]?, result_count: int(int32)} # OK
+@errors {400: InvalidParameterValue, 401: Unauthorized}
 
 @endgroup
 
 @group asset-changes
 @endpoint PUT /v3/asset-changes/change-sets
-@optional {channel_id: int(int32), batch_size: int(int32)}
-@returns(201) {change_set_id: str?, changed_assets: [map]?}
-@returns(200) {change_set_id: str?, changed_assets: [map]?}
-@errors {403, 404, 400}
+@desc Get asset change notifications.
+@optional {channel_id: int(int32) # Specifies the id of the channel for the asset data. Valid channel ids can be found in the results of the Get Partner Channel query., batch_size: int(int32) # Specifies the number of assets to return. The default is 2200; maximum is 2200.}
+@returns(201) {change_set_id: str?, changed_assets: [map]?} # Created
+@returns(200) {change_set_id: str?, changed_assets: [map]?} # Success - Channel contains unconfirmed asset change notifications
+@errors {403: Your access token does not authorize access to this resource, 404: The channel you specified does not exist, 400: InvalidChannelIdException}
 
 @endpoint DELETE /v3/asset-changes/change-sets/{change-set-id}
-@required {change-set-id: int(int64)}
-@returns(200)
-@errors {403, 404, 400}
+@desc Confirm asset change notifications.
+@required {change-set-id: int(int64) # Specify the change-set-id associated with a transaction resource whose receipt you want to confirm.}
+@returns(200) Success
+@errors {403: Your access token does not authorize access to this resource, 404: Transaction was not found, 400: InvalidChangeSetId}
 
 @endpoint GET /v3/asset-changes/channels
-@returns(200)
-@errors {404, 403}
+@desc Get a list of asset change notification channels.
+@returns(200) OK
+@errors {404: ChannelsNotFound, 403: UnauthorizedToAccessResource}
 
 @endgroup
 
 @group asset-licensing
 @endpoint POST /v3/asset-licensing/{assetId}
-@required {assetId: str, extended_licenses: [str]}
-@optional {Accept-Language: str, use_team_credits: bool}
-@returns(200) {credits_used: int(int32), acquired_licenses: [str]?}
-@errors {401, 400, 402, 404}
+@desc Endpoint for acquiring extended licenses with iStock credits for an asset.
+@required {assetId: str # Getty Images assetId - examples 520621493, 112301284, extended_licenses: [str]}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., use_team_credits: bool # Defaults to false.}
+@returns(200) {credits_used: int(int32), acquired_licenses: [str]?} # OK
+@errors {401: AuthorizationTokenRequired, 400: InvalidRequestParameters, 402: NotEnoughCreditsForPurchase, 404: StandardLicenseNotFound}
 
 @endgroup
 
 @group boards
 @endpoint GET /v3/boards
-@optional {Accept-Language: str, page: int(int32)=1, board_relationship: str, sort_order: str, pageSize: int(int32)=30}
-@returns(200) {boards: [map]?, board_count: int(int32)}
-@errors {400, 401}
+@desc Get all boards that the user participates in
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., page: int(int32)=1 # Request results starting at a page number (default is 1)., board_relationship: str # Search for boards the user owns or has been invited to as an editor., sort_order: str # Sort the list of boards by last update date or name. Defaults to date_last_updated_descending., pageSize: int(int32)=30 # Request number of boards to return in each page. (default is 30).}
+@returns(200) {boards: [map]?, board_count: int(int32)} # OK
+@errors {400: InvalidParameterValue, 401: Unauthorized}
 
 @endpoint POST /v3/boards
+@desc Create a new board
 @required {name: str}
-@optional {Accept-Language: str, description: str}
-@returns(201) {id: str?}
-@errors {400, 401}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., description: str}
+@returns(201) {id: str?} # Created
+@errors {400: InvalidParameterValue, 401: Unauthorized}
 
 @endpoint GET /v3/boards/{board_id}
-@required {board_id: str}
-@optional {Accept-Language: str}
-@returns(200) {id: str?, asset_count: int(int32), assets: [map]?, date_created: str(date-time), date_last_updated: str(date-time), description: str?, name: str?, comment_count: int(int32), permissions: map{can_delete_board: bool, can_invite_to_board: bool, can_update_name: bool, can_update_description: bool, can_add_assets: bool, can_remove_assets: bool}, links: map{invitation: str?, share: str?}}
-@errors {400, 401, 404}
+@desc Get assets and metadata for a specific board
+@required {board_id: str # Retrieve details for a specific board.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only).}
+@returns(200) {id: str?, asset_count: int(int32), assets: [map]?, date_created: str(date-time), date_last_updated: str(date-time), description: str?, name: str?, comment_count: int(int32), permissions: map{can_delete_board: bool, can_invite_to_board: bool, can_update_name: bool, can_update_description: bool, can_add_assets: bool, can_remove_assets: bool}, links: map{invitation: str?, share: str?}} # OK
+@errors {400: InvalidParameterValue, 401: Unauthorized, 404: BoardNotFound}
 
 @endpoint DELETE /v3/boards/{board_id}
-@required {board_id: str}
-@optional {Accept-Language: str}
-@returns(200)
+@desc Delete a board
+@required {board_id: str # Specifies the board to delete.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only).}
+@returns(200) OK
 @returns(204)
-@errors {400, 401, 404, 403}
+@errors {400: InvalidParameterValue, 401: Unauthorized, 404: BoardNotFound, 403: InsufficientAccess}
 
 @endpoint PUT /v3/boards/{board_id}
-@required {board_id: str, name: str}
-@optional {Accept-Language: str, description: str}
-@returns(200)
-@returns(204)
-@errors {400, 401, 403, 404}
+@desc Update a board
+@required {board_id: str # Specifies the board to update., name: str}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., description: str}
+@returns(200) OK
+@returns(204) Updated
+@errors {400: InvalidParameterValue, 401: Unauthorized, 403: InsufficientAccess, 404: BoardNotFound}
 
 @endpoint PUT /v3/boards/{board_id}/assets
-@required {board_id: str}
-@optional {Accept-Language: str}
-@returns(201) {assets_added: [map]?, assets_not_added: [str]?}
-@errors {400, 401, 403, 404}
+@desc Add assets to a board
+@required {board_id: str # Specifies the board to add assets to.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only).}
+@returns(201) {assets_added: [map]?, assets_not_added: [str]?} # Created
+@errors {400: InvalidParameterValue, 401: Unauthorized, 403: InsufficientAccess, 404: BoardNotFound}
 
 @endpoint DELETE /v3/boards/{board_id}/assets
-@required {board_id: str}
-@optional {Accept-Language: str, asset_ids: [str]}
-@returns(200)
-@errors {400, 401, 403, 404}
+@desc Remove assets from a board
+@required {board_id: str # Specifies the board to remove assets from.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., asset_ids: [str] # List the assets to be removed from the board.}
+@returns(200) OK
+@errors {400: InvalidParameterValue, 401: Unauthorized, 403: InsufficientAccess, 404: BoardNotFound}
 
 @endpoint PUT /v3/boards/{board_id}/assets/{asset_id}
-@required {board_id: str, asset_id: str}
-@optional {Accept-Language: str}
-@returns(201)
-@errors {403, 400, 401, 404}
+@desc Add an asset to a board
+@required {board_id: str # Specifies the board to add an asset to., asset_id: str # Specifies the asset to add to the board. If it is already in the board's asset collection, no action is taken.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only).}
+@returns(201) Created
+@errors {403: AssetNotFound, 400: InvalidParameterValue, 401: Unauthorized, 404: BoardNotFound}
 
 @endpoint DELETE /v3/boards/{board_id}/assets/{asset_id}
-@required {board_id: str, asset_id: str}
-@optional {Accept-Language: str}
-@returns(200)
-@errors {400, 401, 403, 404}
+@desc Remove an asset from a board
+@required {board_id: str # Specifies the board to remove an asset from., asset_id: str # Specifies the asset to remove from the board.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only).}
+@returns(200) OK
+@errors {400: InvalidParameterValue, 401: Unauthorized, 403: InsufficientAccess, 404: BoardNotFound}
 
 @endpoint POST /v3/boards/{board_id}/assets/{asset_id}/comments
-@required {board_id: str, asset_id: str}
-@optional {Accept-Language: str, Text: str}
-@returns(200) {Id: str?}
-@errors {400, 401, 404, 403}
+@desc Add a comment to an asset on the specified board.
+@required {board_id: str # Specifies the board containing the asset., asset_id: str # Specifies the asset to add the comment to.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., Text: str}
+@returns(200) {Id: str?} # OK
+@errors {400: InvalidParameterValue, 401: Unauthorized, 404: BoardNotFound, 403: InsufficientAccess}
 
 @endpoint DELETE /v3/boards/{board_id}/assets/{asset_id}/comments/{comment_id}
-@required {board_id: str, asset_id: str, comment_id: str}
-@optional {Accept-Language: str}
-@returns(200)
-@errors {400, 401, 404, 403}
+@desc Delete a comment from an asset on the specified board.
+@required {board_id: str # Specifies the board containing the asset., asset_id: str # Specifies the asset containing the comment., comment_id: str # Specifies the comment to delete.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only).}
+@returns(200) OK
+@errors {400: InvalidParameterValue, 401: Unauthorized, 404: BoardNotFound, 403: InsufficientAccess}
 
 @endpoint GET /v3/boards/{board_id}/comments
-@required {board_id: str}
-@optional {Accept-Language: str}
-@returns(200) {comments: [map]?, permissions: map{can_add_comment: bool}}
-@errors {400, 401, 404}
+@desc Get comments from a board
+@required {board_id: str # Specifies the board to retrieve comments from.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only).}
+@returns(200) {comments: [map]?, permissions: map{can_add_comment: bool}} # OK
+@errors {400: InvalidParameterValue, 401: Unauthorized, 404: BoardNotFound}
 
 @endpoint POST /v3/boards/{board_id}/comments
-@required {board_id: str}
-@optional {Accept-Language: str, text: str}
-@returns(201) {id: str?}
-@errors {400, 401, 403, 404}
+@desc Add a comment to a board
+@required {board_id: str # Specifies the board to add a comment to.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., text: str}
+@returns(201) {id: str?} # Created
+@errors {400: InvalidParameterValue, 401: Unauthorized, 403: InsufficientAccess, 404: BoardNotFound}
 
 @endpoint DELETE /v3/boards/{board_id}/comments/{comment_id}
-@required {board_id: str, comment_id: str}
-@optional {Accept-Language: str}
-@returns(200)
-@returns(204)
-@errors {400, 401, 404, 403}
+@desc Delete a comment from a board
+@required {board_id: str # Specifies the board containing the comment to delete., comment_id: str # Specifies the comment to delete.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only).}
+@returns(200) OK
+@returns(204) CommentDeleted
+@errors {400: InvalidParameterValue, 401: Unauthorized, 404: BoardNotFound, 403: InsufficientAccess}
 
 @endgroup
 
 @group collections
 @endpoint GET /v3/collections
-@optional {Accept-Language: str}
-@returns(200) {collections: [map]?}
-@errors {401}
+@desc Gets collections applicable for the customer.
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only).}
+@returns(200) {collections: [map]?} # OK
+@errors {401: Unauthorized}
 
 @endgroup
 
 @group countries
 @endpoint GET /v3/countries
-@optional {Accept-Language: str}
-@returns(200) {countries: [map]?}
-@errors {401}
+@desc Gets countries codes and names.
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only).}
+@returns(200) {countries: [map]?} # OK
+@errors {401: Unauthorized}
 
 @endgroup
 
 @group customers
 @endpoint GET /v3/customers/current
-@optional {Accept-Language: str}
-@returns(200) {first_name: str?, middle_name: str?, last_name: str?}
-@errors {401, 400, 503}
+@desc Returns information about the current user.
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only).}
+@returns(200) {first_name: str?, middle_name: str?, last_name: str?} # OK
+@errors {401: Unauthorized, 400: InvalidRequestParameters, 503: ServiceUnavailable}
 
 @endgroup
 
 @group downloads
 @endpoint GET /v3/downloads
-@optional {Accept-Language: str, date_from: str(date-time), date_to: str(date-time), use_time: bool=False, page: int(int32)=1, page_size: int(int32)=30, product_type: str, company_downloads: bool=False}
-@returns(200) {result_count: int(int32), downloads: [map]?}
-@errors {400, 403, 401}
+@desc Returns information about a customer's downloaded assets.
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., date_from: str(date-time) # If specified, selects assets downloaded on or after this date. Dates should be submitted in ISO 8601 format (i.e., YYYY-MM-DD).  Any hour, minute, second values in the request are not used, unless useTimePart parameter is included. Date/times in the response are UTC. Default is 30 days prior to date_to, date_to: str(date-time) # If specified, selects assets downloaded on or before this date. Dates should be submitted in ISO 8601 format (i.e., YYYY-MM-DD) Any hour, minute, second values in the request are not used, unless useTimePart parameter is included. Date/times in the response are UTC. Default is current date or 30 days after specified start date, whichever one is earlier., use_time: bool=False # If specified, time values provided with date_to or date_from will be used. Time values should be appended to the date value in ISO 8601 format i.e.: 2019-09-19T19:30:37 or 2019-09-19 19:30:37.  Time zone can be specified as optional. Default value is false, page: int(int32)=1 # Identifies page to return. Default is 1., page_size: int(int32)=30 # Specifies page size. Default is 30, maximum page_size is 100., product_type: str # Specifies product type to be included in the previous download results. Product types easyaccess, editorialsubscription, imagepack, and premiumaccess are for GettyImages API keys. Product types royaltyfreesubscription and creditpack are for iStock API keys. To get previous iStockPhoto credit downloads, creditpack must be selected., company_downloads: bool=False # If specified, returns the list of previously downloaded images for all users in your company. Your account must be enabled for this functionality. Contact your Getty Images account rep for more information. Default is false.}
+@returns(200) {result_count: int(int32), downloads: [map]?} # OK
+@errors {400: Bad request, 403: Forbidden, 401: AuthorizationTokenRequired}
 
 @endpoint POST /v3/downloads/images/{id}
-@required {id: str}
-@optional {Accept-Language: str, auto_download: bool=True, file_type: str, height: str, product_id: int(int32), product_type: str, use_team_credits: bool=False, download_notes: str, project_code: str}
-@returns(200)
-@errors {303, 401, 400, 403, 404}
+@desc Download an image
+@required {id: str # <remarks>                     Id of image to download.                 </remarks>}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., auto_download: bool=True # <remarks>                     Specifies whether to auto-download the image. If true is specified, a 303 SeeOther status is returned with a                     Location header set to the location of the image.                     If false is specified, the download URI will be returned in the response message. Default is true.                 </remarks>, file_type: str # <remarks>                     File Type expressed with three character file extension.                 </remarks>, height: str # <remarks>                     Specifies the pixel height of the particular image to download.                     Available heights can be found in the images/{ids} response for the specific image.                     If left blank, it will return the largest available size.                 </remarks>, product_id: int(int32) # <remarks>                     Identifier of the instance for the selected product offering type.                 </remarks>, product_type: str # <remarks>                     Product types easyaccess, editorialsubscription, imagepack, and premiumaccess are for GettyImages API keys. Product types royaltyfreesubscription and creditpack are for iStock API keys. Default product type for iStock API keys is creditpack.                 </remarks>, use_team_credits: bool=False # Specifies whether to download the image with iStock Team Credits. Only applicable to iStock API keys authenticated with a user that has Team Credits. Blank is the same as False., download_notes: str, project_code: str}
+@returns(200) OK
+@errors {303: See Other, 401: AuthorizationTokenRequired, 400: MissingRequiredQueryParameters, 403: OverageLimitReached, 404: ImageNotFound}
 
 @endpoint POST /v3/downloads/videos/{id}
-@required {id: str}
-@optional {Accept-Language: str, auto_download: bool=False, size: str, product_id: int(int32), product_type: str, use_team_credits: bool, download_notes: str, project_code: str}
-@returns(200)
-@errors {303, 401, 400, 403, 404}
+@desc Download a video
+@required {id: str # <remarks>                     Id of video to download.                 </remarks>}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., auto_download: bool=False # <remarks>                     Specifies whether to auto-download the video. If true is specified, a 303 SeeOther status is returned with a                     Location header set to the location of the video.                     If false is specified, the download URI will be returned in the response message. Default is false.                 </remarks>, size: str # Specifies the size to be downloaded., product_id: int(int32) # <remarks>                     Identifier of the instance for the selected product offering type.                 </remarks>, product_type: str # <remarks>                     Product types easyaccess, editorialsubscription, imagepack, and premiumaccess are for GettyImages API keys. Product types royaltyfreesubscription and creditpack are for iStock API keys. Default product type for iStock API keys is creditpack.                 </remarks>, use_team_credits: bool # Specifies whether to download the image with iStock Team Credits. Only applicable to iStock API keys authenticated with a user that has Team Credits. Blank is the same as False., download_notes: str, project_code: str}
+@returns(200) OK
+@errors {303: See Other, 401: AuthorizationTokenRequired, 400: MissingRequiredQueryParameters, 403: OverageLimitReached, 404: VideoNotFound}
 
 @endgroup
 
 @group events
 @endpoint GET /v3/events
-@optional {Accept-Language: str, ids: [int(int32)], fields: [str]}
-@returns(200) {events: [map]?, events_not_found: [int(int32)]?}
-@errors {400, 404, 401}
+@desc Get metadata for multiple events
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., ids: [int(int32)] # A comma separated list of event ids., fields: [str] # A comma separated list of fields to return in the response.}
+@returns(200) {events: [map]?, events_not_found: [int(int32)]?} # OK
+@errors {400: InvalidRequestParameters, 404: EventNotFound, 401: Unauthorized}
 
 @endpoint GET /v3/events/{id}
-@required {id: int(int32)}
-@optional {Accept-Language: str, fields: [str]}
-@returns(200) {child_event_count: int(int32)?, child_events: [map]?, editorial_segments: [str]?, hero_image: map{id: str?, display_sizes: [map]?}, id: int(int32), image_count: int(int32)?, keywords: [map]?, location: map{city: str?, country: str?, state_province: str?, venue: str?}, name: str?, start_date: str(date-time)?, type: str?}
-@errors {400, 404, 401}
+@desc Get metadata for a single event
+@required {id: int(int32) # An event id.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., fields: [str] # A comma separated list of fields to return in the response.}
+@returns(200) {child_event_count: int(int32)?, child_events: [map]?, editorial_segments: [str]?, hero_image: map{id: str?, display_sizes: [map]?}, id: int(int32), image_count: int(int32)?, keywords: [map]?, location: map{city: str?, country: str?, state_province: str?, venue: str?}, name: str?, start_date: str(date-time)?, type: str?} # OK
+@errors {400: InvalidRequestParameters, 404: EventNotFound, 401: Unauthorized}
 
 @endgroup
 
 @group image-match
 @endpoint GET /v3/image-match/search
-@required {url: str}
-@returns(200) {id: str?}
-@errors {404, 400}
+@desc Searches for image matches using the provided URL.
+@required {url: str # The URL of the image to search for.}
+@returns(200) {id: str?} # OK
+@errors {404: Not Found, 400: InvalidImageUrl}
 
 @endgroup
 
 @group images
 @endpoint GET /v3/images
-@optional {Accept-Language: str, ids: [str], fields: [str]}
-@returns(200) {images: [map]?, images_not_found: [str]?}
-@errors {403, 400, 401, 404, 500}
+@desc Get metadata for multiple images by supplying multiple image ids
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., ids: [str] # Specifies one or more image ids to return. Use comma delimiter when requesting multiple ids.  Maximum of 100 ids., fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes, height, and width returned by 'download_sizes' field are estimates.}
+@returns(200) {images: [map]?, images_not_found: [str]?} # OK
+@errors {403: UnauthorizedDisplaySize, 400: InvalidParameterValue, 401: AuthorizationTokenRequired, 404: ImageNotFound, 500: InvalidIStockCollection}
 
 @endpoint GET /v3/images/{id}
-@required {id: str}
-@optional {Accept-Language: str, fields: [str]}
-@returns(200) {images: [map]?, images_not_found: [str]?}
-@errors {403, 400, 401, 404, 500}
+@desc Get metadata for a single image by supplying one image id
+@required {id: str # An image id. For more than one image please use the /v3/images endpoint.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes, height, and width returned by 'download_sizes' field are estimates.}
+@returns(200) {images: [map]?, images_not_found: [str]?} # OK
+@errors {403: UnauthorizedDisplaySize, 400: InvalidParameterValue, 401: AuthorizationTokenRequired, 404: ImageNotFound, 500: InvalidIStockCollection}
 
 @endpoint GET /v3/images/{id}/downloadhistory
-@required {id: str}
-@optional {Accept-Language: str, company_downloads: bool}
-@returns(200) {id: str?, downloads: [map]?}
-@errors {400, 403, 401, 404, 500}
+@desc Returns information about a customer's download history for a specific asset
+@required {id: str # An image id.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., company_downloads: bool # If specified, returns the list of previously downloaded images for all users in your company. Your account must be enabled for this functionality. Contact your Getty Images account rep for more information. Default is false.}
+@returns(200) {id: str?, downloads: [map]?} # OK
+@errors {400: Bad request, 403: UnauthorizedDisplaySize, 401: AuthorizationTokenRequired, 404: ImageNotFound, 500: InvalidIStockCollection}
 
 @endpoint GET /v3/images/{id}/same-series
-@required {id: str}
-@optional {Accept-Language: str, fields: [str], page: int(int32)=1, page_size: int(int32)=30}
-@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?}
-@errors {403, 400, 401, 404, 500}
+@desc Retrieve creative images from the same series
+@required {id: str # Identifies an existing image}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes, height, and width returned by 'download_sizes' field are estimates., page: int(int32)=1 # Identifies page to return. Default is 1., page_size: int(int32)=30 # Specifies page size. Default is 30, maximum page_size is 100.}
+@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?} # OK
+@errors {403: UnauthorizedDisplaySize, 400: InvalidParameterValue, 401: AuthorizationTokenRequired, 404: ImageNotFound, 500: InvalidIStockCollection}
 
 @endpoint GET /v3/images/{id}/similar
-@required {id: str}
-@optional {Accept-Language: str, fields: [str], page: int(int32)=1, page_size: int(int32)=30}
-@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?}
-@errors {403, 400, 401, 404, 500}
+@desc Retrieve similar images
+@required {id: str # Identifies an existing image}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes, height, and width returned by 'download_sizes' field are estimates., page: int(int32)=1 # Identifies page to return. Default is 1., page_size: int(int32)=30 # Specifies page size. Default is 30, maximum page_size is 100.}
+@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?} # OK
+@errors {403: UnauthorizedDisplaySize, 400: InvalidParameterValue, 401: AuthorizationTokenRequired, 404: ImageNotFound, 500: InvalidIStockCollection}
 
 @endgroup
 
 @group orders
 @endpoint GET /v3/orders/{id}
-@required {id: str}
-@optional {Accept-Language: str}
-@returns(200) {id: str?, invoice_number: str?, order_date: str(date-time), end_client: str?, notes: map{licensee_name: str?, purchase_order_number: str?, project_title: str?, ordered_by: str?}, assets: [map]?}
-@errors {404, 401, 403}
+@desc Get order metadata
+@required {id: str # An order id.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only).}
+@returns(200) {id: str?, invoice_number: str?, order_date: str(date-time), end_client: str?, notes: map{licensee_name: str?, purchase_order_number: str?, project_title: str?, ordered_by: str?}, assets: [map]?} # OK
+@errors {404: OrderNotFound, 401: Unauthorized, 403: NoAccessToOrderMetadata}
 
 @endgroup
 
 @group products
 @endpoint GET /v3/products
-@optional {Accept-Language: str, fields: [str]}
-@returns(200) {products: [map]?}
-@errors {401, 400, 500}
+@desc Get Products
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., fields: [str] # Comma separated list of fields. Allows product download requirements to be returned.}
+@returns(200) {products: [map]?} # OK
+@errors {401: Unauthorized, 400: InvalidRequestParameters, 500: CreditPack}
 
 @endgroup
 
 @group purchased-assets
 @endpoint GET /v3/purchased-assets
-@optional {Accept-Language: str, date_to: str(date-time), page: int(int32)=1, page_size: int(int32)=75, date_from: str(date-time), company_purchases: bool=False}
-@returns(200) {result_count: int(int32), previous_purchases: [map]?}
-@errors {401, 400, 403}
+@desc Get Previously Purchased Images and Video
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., date_to: str(date-time) # If specified, retrieves previous purchases on or before this date. Dates should be submitted in ISO 8601 format (i.e., YYYY-MM-DD)., page: int(int32)=1 # Identifies page to return. Default is 1., page_size: int(int32)=75 # Specifies page size. Default is 75, maximum page_size is 100., date_from: str(date-time) # If specified, retrieves previous purchases on or after this date. Dates should be submitted in ISO 8601 format (i.e., YYYY-MM-DD)., company_purchases: bool=False # If specified, returns the list of previously purchased assets for all users in your company. Your account must be enabled for this functionality. Contact your Getty Images account rep for more information. Default is false.}
+@returns(200) {result_count: int(int32), previous_purchases: [map]?} # OK
+@errors {401: Unauthorized, 400: PageNumberLessThanOne, 403: InsufficientPermissions}
 
 @endgroup
 
 @group search
 @endpoint GET /v3/search/events
-@optional {Accept-Language: str, GI-Country-Code: str, editorial_segment: str, date_from: str(date-time), date_to: str(date-time), fields: [str], page: int(int32)=1, page_size: int(int32)=30, phrase: str=, sort_order: str}
-@returns(200) {events: [map]?, result_count: int(int32)}
-@errors {400, 403, 401}
+@desc Search for events
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., GI-Country-Code: str # Receive regionally relevant search results based on the value specified. Accepts only ISO Alpha-3 country codes. The Countries operation can be used to retrieve the codes., editorial_segment: str # Filters to events with a matching editorial segment., date_from: str(date-time) # Filters to events that start on or after this date. Use ISO 8601 format (e.g., 1999-12-31). Defaults to UTC unless otherwise specified., date_to: str(date-time) # Filters to events that start on or before this date. Use ISO 8601 format (e.g., 1999-12-31). Defaults to UTC unless otherwise specified., fields: [str] # Specifies fields to return. Default set is 'id','name','start_date'., page: int(int32)=1 # Request results starting at a page number (default is 1, maximum is 50)., page_size: int(int32)=30 # Request number of events to return in each page. Default is 30, maximum page_size is 100., phrase: str= # Filters to events related to this phrase, sort_order: str # Specifies the order in which to sort the results. Default is `newest`.}
+@returns(200) {events: [map]?, result_count: int(int32)} # OK
+@errors {400: InvalidParameterValue, 403: UnauthorizedDisplaySize, 401: AuthorizationTokenRequired}
 
 @endpoint GET /v3/search/images/creative
-@optional {Accept-Language: str, GI-Country-Code: str, age_of_people: [str], artists: str, collection_codes: [str], collections_filter_type: str, color: str, compositions: [str], download_product: str, embed_content_only: bool=False, enhanced_search: bool=True, ethnicity: [str], exclude_editorial_use_only: bool, exclude_keyword_ids: [int(int32)], exclude_nudity: bool=False, facet_fields: [str], facet_max_count: int(int32)=300, fields: [str], file_types: [str], graphical_styles: [str], graphical_styles_filter_type: str, include_facets: bool, include_related_searches: bool=False, keyword_ids: [int(int32)], minimum_size: str, moods: [str], number_of_people: [str], orientations: [str], page: int(int32)=1, page_size: int(int32)=30, phrase: str=, safe_search: bool=False, sort_order: str}
-@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?}
-@errors {400, 403, 401, 500}
+@desc Search for creative images only
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., GI-Country-Code: str # Receive regionally relevant search results based on the value specified. Accepts only ISO Alpha-3 country codes. The Countries operation can be used to retrieve the codes., age_of_people: [str] # Filter based on the age of individuals in an image., artists: str # Search for images by specific artists (free-text, comma-separated list of artists)., collection_codes: [str] # Filter by collection codes (comma-separated list). Include or exclude based on collections_filter_type., collections_filter_type: str # Use to include or exclude collections from search. The default is include, color: str # Filter based on predominant color in an image. Use 6 character hexadecimal format (e.g., #002244)., compositions: [str] # Filter based on image composition., download_product: str # Filters based on which product the asset will download against.                     Allowed values are easyaccess, editorialsubscription, imagepack, premiumaccess and royaltyfreesubscription.                     If you have more than one instance of a product, you may also include the ID of the product instance you wish to filter on.                      For example, some users may have more than one premiumaccess product, so the download_product value would be premiumaccess:1234.                      Product ID can be obtained from the GET /products response., embed_content_only: bool=False # Restrict search results to embeddable images. The default is false., enhanced_search: bool=True # If set to `false`, your search will not use enhanced search. Defaults to `true`., ethnicity: [str] # Filter search results based on the ethnicity of individuals in an image., exclude_editorial_use_only: bool # Exclude images that are only available for editorial (non-commercial) use. Default value is false., exclude_keyword_ids: [int(int32)] # Return only images not tagged with specific keyword(s). Specify using a comma-separated list of keyword Ids. If keyword Ids and phrase are both specified, only those images matching the query phrase which also do not contain the requested keyword(s) are returned., exclude_nudity: bool=False # Excludes images containing nudity. The default is false., facet_fields: [str] # Specifies the facets to return in the response. Facets provide additional search parameters to refine your results.                    The include_facets parameter must be set to "true" for facets to be returned., facet_max_count: int(int32)=300 # Specifies the maximum number of facets to return per type. Default is 300., fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes, height, and width returned by 'download_sizes' field are estimates., file_types: [str] # Return only images having a specific file type., graphical_styles: [str] # Filter based on graphical style of the image., graphical_styles_filter_type: str # Provides searching based on specified graphical style(s). The default is include., include_facets: bool # Specifies whether or not to include facets in the result set. Default is "false"., include_related_searches: bool=False # Specifies whether or not to include related searches in the response. The default is false., keyword_ids: [int(int32)] # Return only images tagged with specific keyword(s). Specify using a comma-separated list of keyword Ids. If keyword Ids and phrase are both specified, only those images matching the query phrase which also contain the requested keyword(s) are returned., minimum_size: str # Filter based on minimum size requested. The default is x-small., moods: [str] # Filter based on predominant mood in an image., number_of_people: [str] # Filter based on the number of people in the image., orientations: [str] # Return only images with selected aspect ratios., page: int(int32)=1 # Request results starting at a page number (default is 1)., page_size: int(int32)=30 # Request number of images to return in each page. Default is 30, maximum page_size is 100., phrase: str= # Search images using a search phrase., safe_search: bool=False # Setting safe_search to "true" excludes images containing nudity, death, profanity, drugs and alcohol, suggestive content, and graphic content from the result set. The default is false. Because this is a keyword-based filter, it's possible that a small number of unsafe images may not be caught by the filter. Please direct feedback to your Getty Images Account or API support representative., sort_order: str # Select sort order of results.  The default is best_match}
+@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?} # OK
+@errors {400: InvalidParameterValue, 403: UnauthorizedDisplaySize, 401: AuthorizationTokenRequired, 500: InvalidIStockCollection}
 
 @endpoint GET /v3/search/images/creative/by-image
-@optional {Accept-Language: str, GI-Country-Code: str, asset_id: str, exclude_editorial_use_only: bool, facet_fields: [str], facet_max_count: int(int32)=300, fields: [str], image_url: str, include_facets: bool, page: int(int32)=1, page_size: int(int32)=30, phrase: str=, product_types: [str]}
-@returns(200) {image_fingerprint: str?, related_searches: [map]?, result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}}
-@errors {400, 403, 401, 500, 404}
+@desc Search for creative images based on url
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., GI-Country-Code: str # Receive regionally relevant search results based on the value specified. Accepts only ISO Alpha-3 country codes. The Countries operation can be used to retrieve the codes., asset_id: str # Specifies the Getty image id to use in the search., exclude_editorial_use_only: bool # Exclude images that are only available for editorial (non-commercial) use. Default value is false., facet_fields: [str] # Specifies the facets to return in the response. Facets provide additional search parameters to refine your results.                     The include_facets parameter must be set to "true" for facets to be returned., facet_max_count: int(int32)=300 # Specifies the maximum number of facets to return per type. Default is 300., fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes, height, and width returned by 'download_sizes' field are estimates., image_url: str # Specifies the location of the image to use in the search., include_facets: bool # Specifies whether or not to include facets in the result set. Default is "false"., page: int(int32)=1 # Request results starting at a page number (default is 1)., page_size: int(int32)=30 # Request number of images to return in each page. Default is 30, maximum page_size is 100., phrase: str= # Free-text search query., product_types: [str] # Filter images to those from one of your product types.                      Allowed values are easyaccess, imagepack, premiumaccess and royaltyfreesubscription.                      If you have more than one instance of a product, you may also include the ID of the product instance you wish to filter on.                      For example, some users may have more than one premiumaccess product, so the product_types value would be premiumaccess:1234.                      Product ID can be obtained from the GET /products response.}
+@returns(200) {image_fingerprint: str?, related_searches: [map]?, result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}} # OK
+@errors {400: InvalidParameterValue, 403: UnauthorizedDisplaySize, 401: AuthorizationTokenRequired, 500: InvalidIStockCollection, 404: AssetNotFound}
 
 @endpoint GET /v3/search/images/editorial
-@optional {Accept-Language: str, GI-Country-Code: str, age_of_people: [str], artists: str, collection_codes: [str], collections_filter_type: str, compositions: [str], date_from: str(date-time), date_to: str(date-time), download_product: str, editorial_segments: [str], embed_content_only: bool=False, ethnicity: [str], event_ids: [int(int32)], exclude_keyword_ids: [int(int32)], fields: [str], file_types: [str], graphical_styles: [str], graphical_styles_filter_type: str, include_related_searches: bool=False, keyword_ids: [int(int32)], minimum_size: str, number_of_people: [str], orientations: [str], page: int(int32)=1, page_size: int(int32)=30, phrase: str, sort_order: str, specific_people: [str], minimum_quality_rank: int(int32), facet_fields: [str], include_facets: bool, facet_max_count: int(int32)=300}
-@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?}
-@errors {400, 403, 401}
+@desc Search for editorial images only
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., GI-Country-Code: str # Receive regionally relevant search results based on the value specified. Accepts only ISO Alpha-3 country codes. The Countries operation can be used to retrieve the codes., age_of_people: [str] # Filter based on the age of individuals in an image., artists: str # Search for images by specific artists (free-text, comma-separated list of artists)., collection_codes: [str] # Filter by collections (comma-separated list of collection codes). Include or exclude based on collections_filter_type., collections_filter_type: str # Use to include or exclude collections from search. The default is include, compositions: [str] # Filter based on image composition., date_from: str(date-time) # Return only images that are created on or after this date. Use ISO 8601 format (e.g., 1999-12-31)., date_to: str(date-time) # Return only images that are created on or before this date. Use ISO 8601 format (e.g., 1999-12-31)., download_product: str # Filters based on which product the asset will download against.                     Allowed values are easyaccess, editorialsubscription, imagepack, premiumaccess and royaltyfreesubscription.                     If you have more than one instance of a product, you may also include the ID of the product instance you wish to filter on.                      For example, some users may have more than one premiumaccess product, so the download_product value would be premiumaccess:1234.                      Product ID can be obtained from the GET /products response., editorial_segments: [str] # Return only events with a matching editorial segment., embed_content_only: bool=False # Restrict search results to embeddable images. The default is false., ethnicity: [str] # Filter search results based on the ethnicity of individuals in an image., event_ids: [int(int32)] # Filter based on specific events, exclude_keyword_ids: [int(int32)] # Return only images not tagged with specific keyword(s). Specify using a comma-separated list of keyword Ids. If keyword Ids and phrase are both specified, only those images matching the query phrase which also do not contain the requested keyword(s) are returned., fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes, height, and width returned by 'download_sizes' field are estimates., file_types: [str] # Return only images having a specific file type., graphical_styles: [str] # Filter based on graphical style of the image., graphical_styles_filter_type: str # Provides searching based on specified graphical style(s). The default is include., include_related_searches: bool=False # Specifies whether or not to include related searches in the response. The default is false., keyword_ids: [int(int32)] # Return only images tagged with specific keyword(s). Specify using a comma-separated list of keyword Ids. If keyword Ids and phrase are both specified, only those images matching the query phrase which also contain the requested keyword(s) are returned., minimum_size: str # Filter based on minimum size requested. The default is x-small., number_of_people: [str] # Filter based on the number of people in the image., orientations: [str] # Return only images with selected aspect ratios., page: int(int32)=1 # Request results starting at a page number (default is 1)., page_size: int(int32)=30 # Request number of images to return in each page. Default is 30, maximum page_size is 100., phrase: str # Search images using a search phrase., sort_order: str # Select sort order of results.  The default is best_match, specific_people: [str] # Return only images associated with specific people (using a comma-delimited list)., minimum_quality_rank: int(int32) # Filter search results based on minimum quality ranking. Possible values 1, 2, 3 with 1 being best., facet_fields: [str] # Specifies the facets to return in the response. Facets provide additional search parameters to refine your results.                    The include_facets parameter must be set to "true" for facets to be returned., include_facets: bool # Specifies whether or not to include facets in the result set. Default is "false"., facet_max_count: int(int32)=300 # Specifies the maximum number of facets to return per type. Default is 300.}
+@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?} # OK
+@errors {400: InvalidParameterValue, 403: UnauthorizedDisplaySize, 401: AuthorizationTokenRequired}
 
 @endpoint GET /v3/search/videos/creative
-@optional {Accept-Language: str, GI-Country-Code: str, age_of_people: [str], artists: str, aspect_ratios: [str], collection_codes: [str], collections_filter_type: str, compositions: [str], download_product: str, enhanced_search: bool=True, ethnicity: [str], exclude_editorial_use_only: bool, exclude_keyword_ids: [int(int32)], exclude_nudity: bool=False, facet_fields: [str], facet_max_count: int(int32)=300, fields: [str], format_available: str, frame_rates: [str], image_techniques: [str], include_facets: bool, include_related_searches: bool=False, keyword_ids: [int(int32)], license_models: [str], min_clip_length: int(int32)=0, max_clip_length: int(int32)=0, number_of_people: [str], orientations: [str], page: int(int32)=1, page_size: int(int32)=30, phrase: str=, safe_search: bool=False, sort_order: str, release_status: str, viewpoints: [str]}
-@returns(200) {videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, related_searches: [map]?, result_count: int(int32), auto_corrections: map{phrase: str?}}
-@errors {400, 403, 401, 500}
+@desc Search for creative videos
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., GI-Country-Code: str # Receive regionally relevant search results based on the value specified. Accepts only ISO Alpha-3 country codes. The Countries operation can be used to retrieve the codes., age_of_people: [str] # Provides filtering according to the age of individuals in a video., artists: str # Search for videos by specific artists (free-text, comma-separated list of artists)., aspect_ratios: [str] # Search for videos by specific aspect ratios., collection_codes: [str] # Provides filtering by collection code., collections_filter_type: str # Use to include or exclude collections from search. The default is include, compositions: [str] # Filter based on video composition., download_product: str # Filters based on which product the asset will download against.                     Allowed values are easyaccess, editorialsubscription, imagepack, premiumaccess and royaltyfreesubscription.                     If you have more than one instance of a product, you may also include the ID of the product instance you wish to filter on.                      For example, some users may have more than one premiumaccess product, so the download_product value would be premiumaccess:1234.                      Product ID can be obtained from the GET /products response., enhanced_search: bool=True # If set to `false`, your search will not use enhanced search. Defaults to `true`., ethnicity: [str] # Filter search results based on the ethnicity of individuals., exclude_editorial_use_only: bool # Exclude videos that are only available for editorial (non-commercial) use. Default value is false., exclude_keyword_ids: [int(int32)] # Return only videos not tagged with specific keyword(s). Specify using a comma-separated list of keyword Ids. If keyword Ids and phrase are both specified, only those videos matching the query phrase which also do not contain the requested keyword(s) are returned., exclude_nudity: bool=False # Excludes videos containing nudity. The default is false., facet_fields: [str] # Specifies the facets to return in the response. Facets provide additional search parameters to refine your results.                    The include_facets parameter must be set to "true" for facets to be returned., facet_max_count: int(int32)=300 # Specifies the maximum number of facets to return per type. Default is 300., fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes returned by 'download_sizes' field is an estimate., format_available: str # Filters according to the digital video format available on a film asset., frame_rates: [str] # Provides filtering by video frame rate (frames/second)., image_techniques: [str] # Filter based on image technique., include_facets: bool # Specifies whether or not to include facets in the result set. Default is "false"., include_related_searches: bool=False # Specifies whether or not to include related searches in the response. The default is false., keyword_ids: [int(int32)] # Return only videos tagged with specific keyword(s). Specify using a comma-separated list of keyword Ids. If keyword Ids and phrase are both specified, only those videos matching the query phrase which also contain the requested keyword(s) are returned., license_models: [str] # Specifies the video licensing model(s)., min_clip_length: int(int32)=0 # Provides filtering by minimum length of video clip, in seconds, max_clip_length: int(int32)=0 # Provides filtering by maximum length of video, in seconds, number_of_people: [str] # Filter based on the number of people., orientations: [str] # Return only videos with selected orientations., page: int(int32)=1 # Identifies page to return. Default is 1., page_size: int(int32)=30 # Specifies page size. Default is 30, maximum page_size is 100., phrase: str= # Free-text search query., safe_search: bool=False # Setting safe_search to "true" excludes images containing nudity, death, profanity, drugs and alcohol, suggestive content, and graphic content from the result set. The default is false. Because this is a keyword-based filter, it's possible that a small number of unsafe images may not be caught by the filter. Please direct feedback to your Getty Images Account or API support representative., sort_order: str # Select sort order of results.  The default is best_match, release_status: str # Allows filtering by type of model release., viewpoints: [str] # Filter based on viewpoint.}
+@returns(200) {videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, related_searches: [map]?, result_count: int(int32), auto_corrections: map{phrase: str?}} # OK
+@errors {400: InvalidParameterValue, 403: UnauthorizedDisplaySize, 401: AuthorizationTokenRequired, 500: InvalidIStockCollection}
 
 @endpoint GET /v3/search/videos/creative/by-image
-@optional {Accept-Language: str, GI-Country-Code: str, asset_id: str, exclude_editorial_use_only: bool, facet_fields: [str], facet_max_count: int(int32)=300, fields: [str], image_url: str, include_facets: bool, page: int(int32)=1, page_size: int(int32)=30, phrase: str=, product_types: [str]}
-@returns(200) {related_searches: [map]?, videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, result_count: int(int32), auto_corrections: map{phrase: str?}}
-@errors {400, 403, 401, 500, 404}
+@desc Search for creative videos based on url
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., GI-Country-Code: str # Receive regionally relevant search results based on the value specified. Accepts only ISO Alpha-3 country codes. The Countries operation can be used to retrieve the codes., asset_id: str # Specifies the Getty video id to use in the search., exclude_editorial_use_only: bool # Exclude videos that are only available for editorial (non-commercial) use. Default value is false., facet_fields: [str] # Specifies the facets to return in the response. Facets provide additional search parameters to refine your results.                     The include_facets parameter must be set to "true" for facets to be returned., facet_max_count: int(int32)=300 # Specifies the maximum number of facets to return per type. Default is 300., fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes returned by 'download_sizes' field is an estimate., image_url: str # Specifies the location of the image to use in the search., include_facets: bool # Specifies whether or not to include facets in the result set. Default is "false"., page: int(int32)=1 # Request results starting at a page number (default is 1)., page_size: int(int32)=30 # Request number of images to return in each page. Default is 30, maximum page_size is 100., phrase: str= # Free-text search query., product_types: [str] # Filter images to those from one of your product types.                      Allowed values are easyaccess, imagepack, premiumaccess and royaltyfreesubscription.                      If you have more than one instance of a product, you may also include the ID of the product instance you wish to filter on.                      For example, some users may have more than one premiumaccess product, so the product_types value would be premiumaccess:1234.                      Product ID can be obtained from the GET /products response.}
+@returns(200) {related_searches: [map]?, videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, result_count: int(int32), auto_corrections: map{phrase: str?}} # OK
+@errors {400: InvalidParameterValue, 403: UnauthorizedDisplaySize, 401: AuthorizationTokenRequired, 500: InvalidIStockCollection, 404: AssetNotFound}
 
 @endpoint GET /v3/search/videos/editorial
-@optional {Accept-Language: str, GI-Country-Code: str, age_of_people: [str], artists: str, aspect_ratios: [str], collection_codes: [str], collections_filter_type: str, compositions: [str], date_from: str(date-time), date_to: str(date-time), download_product: str, editorial_video_types: [str], event_ids: [int(int32)], fields: [str], format_available: str, frame_rates: [str], image_techniques: [str], include_related_searches: bool=False, keyword_ids: [int(int32)], min_clip_length: int(int32)=0, max_clip_length: int(int32)=0, orientations: [str], page: int(int32)=1, page_size: int(int32)=30, phrase: str=, sort_order: str, specific_people: [str], release_status: str, facet_fields: [str], include_facets: bool, facet_max_count: int(int32)=300, viewpoints: [str]}
-@returns(200) {videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, related_searches: [map]?, result_count: int(int32), auto_corrections: map{phrase: str?}}
-@errors {400, 403, 401}
+@desc Search for editorial videos
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., GI-Country-Code: str # Receive regionally relevant search results based on the value specified. Accepts only ISO Alpha-3 country codes. The Countries operation can be used to retrieve the codes., age_of_people: [str] # Provides filtering according to the age of individuals in a video., artists: str # Search for videos by specific artists (free-text, comma-separated list of artists)., aspect_ratios: [str] # Search for videos by specific aspect ratios., collection_codes: [str] # Provides filtering by collection code., collections_filter_type: str # Use to include or exclude collections from search. The default is include, compositions: [str] # Filter based on video composition., date_from: str(date-time) # Return only images that are created on or after this date. Use ISO 8601 format (e.g., 1999-12-31)., date_to: str(date-time) # Return only images that are created on or before this date. Use ISO 8601 format (e.g., 1999-12-31)., download_product: str # Filters based on which product the asset will download against.                     Allowed values are easyaccess, editorialsubscription, imagepack, premiumaccess and royaltyfreesubscription.                     If you have more than one instance of a product, you may also include the ID of the product instance you wish to filter on.                      For example, some users may have more than one premiumaccess product, so the download_product value would be premiumaccess:1234.                      Product ID can be obtained from the GET /products response., editorial_video_types: [str] # Allows filtering by types of video., event_ids: [int(int32)] # Filter based on specific events, fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes returned by 'download_sizes' field is an estimate., format_available: str # Filters according to the digital video format available on a film asset., frame_rates: [str] # Provides filtering by video frame rate (frames/second)., image_techniques: [str] # Filter based on image technique., include_related_searches: bool=False # Specifies whether or not to include related searches in the response. The default is false., keyword_ids: [int(int32)] # Return only videos tagged with specific keyword(s). Specify using a comma-separated list of keyword Ids. If keyword Ids and phrase are both specified, only those videos matching the query phrase which also contain the requested keyword(s) are returned., min_clip_length: int(int32)=0 # Provides filtering by minimum length of video clip, in seconds, max_clip_length: int(int32)=0 # Provides filtering by maximum length of video clip, in seconds, orientations: [str] # Return only videos with selected orientations., page: int(int32)=1 # Identifies page to return. Default is 1., page_size: int(int32)=30 # Specifies page size. Default is 30, maximum page_size is 100., phrase: str= # Free-text search query., sort_order: str # Select sort order of results.  The default is best_match, specific_people: [str] # Allows filtering by specific peoples' names., release_status: str # Allows filtering by type of model release., facet_fields: [str] # Specifies the facets to return in the response. Facets provide additional search parameters to refine your results.                    The include_facets parameter must be set to "true" for facets to be returned., include_facets: bool # Specifies whether or not to include facets in the result set. Default is "false"., facet_max_count: int(int32)=300 # Specifies the maximum number of facets to return per type. Default is 300., viewpoints: [str] # Filter based on viewpoint.}
+@returns(200) {videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, related_searches: [map]?, result_count: int(int32), auto_corrections: map{phrase: str?}} # OK
+@errors {400: InvalidParameterValue, 403: UnauthorizedDisplaySize, 401: AuthorizationTokenRequired}
 
 @endpoint PUT /v3/search/by-image/uploads/{file-name}
+@desc Upload image for use by the search creative images/videos operations
 @required {file-name: str}
-@returns(200)
-@errors {400, 403, 401}
+@returns(200) OK
+@errors {400: InvalidParameterValue, 403: UnauthorizedDisplaySize, 401: AuthorizationTokenRequired}
 
 @endpoint GET /v3/search/images
-@optional {Accept-Language: str, GI-Country-Code: str, age_of_people: [str], artists: str, collection_codes: [str], collections_filter_type: str, color: str, compositions: [str], download_product: str, embed_content_only: bool=False, event_ids: [int(int32)], ethnicity: [str], fields: [str], file_types: [str], graphical_styles: [str], graphical_styles_filter_type: str, include_related_searches: bool=False, keyword_ids: [int(int32)], minimum_size: str, number_of_people: [str], orientations: [str], page: int(int32)=1, page_size: int(int32)=30, phrase: str, sort_order: str, specific_people: [str]}
-@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?}
-@errors {400, 403, 401}
+@desc Search for both creative and editorial images - *** DEPRECATED ***
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., GI-Country-Code: str # Receive regionally relevant search results based on the value specified. Accepts only ISO Alpha-3 country codes. The Countries operation can be used to retrieve the codes., age_of_people: [str] # Filter based on the age of individuals in an image., artists: str # Search for images by specific artists (free-text, comma-separated list of artists)., collection_codes: [str] # Filter by collection codes (comma-separated list). Include or exclude based on collections_filter_type., collections_filter_type: str # Provides searching based on specified collection(s). The default is Include, color: str # Filter based on predominant color in an image. Use 6 character hexidecimal format (e.g., #002244). Note: when specified, results will not contain editorial images., compositions: [str] # Filter based on image composition., download_product: str # Filters based on which product the asset will download against.                     Allowed values are easyaccess, editorialsubscription, imagepack, premiumaccess and royaltyfreesubscription.                     If you have more than one instance of a product, you may also include the ID of the product instance you wish to filter on.                      For example, some users may have more than one premiumaccess product, so the download_product value would be premiumaccess:1234.                      Product ID can be obtained from the GET /products response., embed_content_only: bool=False # Restrict search results to embeddable images. The default is false., event_ids: [int(int32)] # Filter based on specific events, ethnicity: [str] # Filter search results based on the ethnicity of individuals in an image., fields: [str] # Specifies fields to return. Defaults to 'summary_set'., file_types: [str] # Return only images having a specific file type., graphical_styles: [str] # Filter based on graphical style of the image., graphical_styles_filter_type: str # Provides searching based on specified graphical style(s). The default is Include, include_related_searches: bool=False # Specifies whether or not to include related searches in the response. The default is false., keyword_ids: [int(int32)] # Return only images tagged with specific keyword(s). Specify using a comma-separated list of keyword Ids. If keyword Ids and phrase are both specified, only those images matching the query phrase which also contain the requested keyword(s) are returned., minimum_size: str # Filter based on minimum size requested. The default is x-small, number_of_people: [str] # Filter based on the number of people in the image., orientations: [str] # Return only images with selected aspect ratios., page: int(int32)=1 # Request results starting at a page number (default is 1)., page_size: int(int32)=30 # Request number of images to return in each page. Default is 30, maximum page_size is 100., phrase: str # Search images using a search phrase., sort_order: str # Select sort order of results.  The default is best_match, specific_people: [str] # Return only images associated with specific people (using a comma-delimited list).}
+@returns(200) {result_count: int(int32), images: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, auto_corrections: map{phrase: str?}, related_searches: [map]?} # OK
+@errors {400: InvalidParameterValue, 403: UnauthorizedDisplaySize, 401: AuthorizationTokenRequired}
 
 @endgroup
 
 @group usage-batches
 @endpoint PUT /v3/usage-batches/{id}
-@required {id: str}
-@optional {asset_usages: [map{asset_id: str, quantity: int(int32), usage_date: str(date-time)}]}
-@returns(201) {invalid_assets: [str]?, total_asset_usages_processed: int(int32)?}
-@errors {401, 400, 409, 403}
+@desc Report usage of assets via a batch format.
+@required {id: str # Specifies a unique batch transaction id to identify the report.}
+@optional {asset_usages: [map{asset_id: str, quantity: int(int32), usage_date: str(date-time)}] # Identifies the list of asset id, usage count and date of usage combinations to record.}
+@returns(201) {invalid_assets: [str]?, total_asset_usages_processed: int(int32)?} # Success - All usages reported were successfully recorded.
+@errors {401: AuthorizationTokenRequired - Authorization token was missing or not valid., 400: InvalidRequest - The content of the request was invalid. Most commonly this is due to either too many assets specified, no assets or invalid JSON., 409: TransactionIdDuplicated, 403: UnauthorizedToReportUsage}
 
 @endgroup
 
 @group videos
 @endpoint GET /v3/videos
-@optional {Accept-Language: str, ids: [str], fields: [str]}
-@returns(200) {videos: [map]?, videos_not_found: [str]?}
-@errors {403, 400, 401, 404, 500}
+@desc Get metadata for multiple videos by supplying multiple video ids
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., ids: [str] # Specifies one or more video ids to return. Use comma delimiter when requesting multiple ids.  Maximum of 100 ids., fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes returned by 'download_sizes' field is an estimate.}
+@returns(200) {videos: [map]?, videos_not_found: [str]?} # OK
+@errors {403: UnauthorizedDisplaySize, 400: InvalidParameterValue, 401: AuthorizationTokenRequired, 404: VideosNotFound, 500: InvalidIStockCollection}
 
 @endpoint GET /v3/videos/{id}
-@required {id: str}
-@optional {Accept-Language: str, fields: [str]}
-@returns(200) {id: str?, allowed_use: map{how_can_i_use_it: str?, release_info: str?, usage_restrictions: [str]?, editorial_use_only: bool}, artist: str?, asset_family: str?, caption: str?, city: str?, clip_length: str?, collection_id: int(int32)?, collection_code: str?, collection_name: str?, color_type: str?, copyright: str?, country: str?, date_created: str(date-time)?, date_submitted: str(date-time)?, download_product: str?, display_sizes: [map]?, download_sizes: [map]?, editorial_segments: [str]?, era: str?, event_ids: [int(int32)]?, is_ai_editable: bool?, key_frames: [map]?, keywords: [map]?, license_model: str?, mastered_to: str?, originally_shot_on: str?, product_types: [str]?, quality_rank: int(int32)?, referral_destinations: [map]?, shot_speed: str?, source: str?, state_province: str?, title: str?, istock_licenses: [map]?, alternative_ids: map?, call_for_image: bool?, istock_sub_collection: str?, istock_collection: str?, max_dimensions: map{height: int(int32), width: int(int32)}, object_name: str?, orientation: str?, people: [str]?}
-@errors {403, 400, 401, 404, 500}
+@desc Get metadata for a single video by supplying one video id
+@required {id: str # A video id. For more than one video please use the /v3/video endpoint.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes returned by 'download_sizes' field is an estimate.}
+@returns(200) {id: str?, allowed_use: map{how_can_i_use_it: str?, release_info: str?, usage_restrictions: [str]?, editorial_use_only: bool}, artist: str?, asset_family: str?, caption: str?, city: str?, clip_length: str?, collection_id: int(int32)?, collection_code: str?, collection_name: str?, color_type: str?, copyright: str?, country: str?, date_created: str(date-time)?, date_submitted: str(date-time)?, download_product: str?, display_sizes: [map]?, download_sizes: [map]?, editorial_segments: [str]?, era: str?, event_ids: [int(int32)]?, is_ai_editable: bool?, key_frames: [map]?, keywords: [map]?, license_model: str?, mastered_to: str?, originally_shot_on: str?, product_types: [str]?, quality_rank: int(int32)?, referral_destinations: [map]?, shot_speed: str?, source: str?, state_province: str?, title: str?, istock_licenses: [map]?, alternative_ids: map?, call_for_image: bool?, istock_sub_collection: str?, istock_collection: str?, max_dimensions: map{height: int(int32), width: int(int32)}, object_name: str?, orientation: str?, people: [str]?} # OK
+@errors {403: UnauthorizedDisplaySize, 400: InvalidParameterValue, 401: AuthorizationTokenRequired, 404: VideosNotFound, 500: InvalidIStockCollection}
 
 @endpoint GET /v3/videos/{id}/downloadhistory
-@required {id: str}
-@optional {Accept-Language: str, company_downloads: bool}
-@returns(200) {id: str?, downloads: [map]?}
-@errors {400, 403, 401, 404, 500}
+@desc Returns information about a customer's download history for a specific asset
+@required {id: str # A video id.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., company_downloads: bool # If specified, returns the list of previously downloaded videos for all users in your company.             Your account must be enabled for this functionality. Contact your Getty Images account rep for more information. Default is false.}
+@returns(200) {id: str?, downloads: [map]?} # OK
+@errors {400: Bad request, 403: UnauthorizedDisplaySize, 401: AuthorizationTokenRequired, 404: VideosNotFound, 500: InvalidIStockCollection}
 
 @endpoint GET /v3/videos/{id}/same-series
-@required {id: str}
-@optional {Accept-Language: str, fields: [str], page: int(int32)=1, page_size: int(int32)=30}
-@returns(200) {videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, related_searches: [map]?, result_count: int(int32), auto_corrections: map{phrase: str?}}
-@errors {403, 400, 401, 404, 500}
+@desc Retrieve creative videos from the same series
+@required {id: str # Identifies an existing video}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes returned by 'download_sizes' field is an estimate., page: int(int32)=1 # Identifies page to return. Default is 1., page_size: int(int32)=30 # Specifies page size. Default is 30, maximum page_size is 100.}
+@returns(200) {videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, related_searches: [map]?, result_count: int(int32), auto_corrections: map{phrase: str?}} # OK
+@errors {403: UnauthorizedDisplaySize, 400: InvalidParameterValue, 401: AuthorizationTokenRequired, 404: VideosNotFound, 500: InvalidIStockCollection}
 
 @endpoint GET /v3/videos/{id}/similar
-@required {id: str}
-@optional {Accept-Language: str, fields: [str], page: int(int32)=1, page_size: int(int32)=30}
-@returns(200) {videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, related_searches: [map]?, result_count: int(int32), auto_corrections: map{phrase: str?}}
-@errors {403, 400, 401, 404, 500}
+@desc Retrieve similar videos
+@required {id: str # A video id.}
+@optional {Accept-Language: str # Provide a header to specify the language of result values. Supported values: cs (iStock only), de, en-GB, en-US, es, fi (iStock only), fr, hu (iStock only), id (iStock only), it, ja, ko (creative assets only), nl, pl (creative assets only), pt-BR, pt-PT, ro (iStock only), ru (creative assets only), sv, th (iStock only), tr, uk (iStock only), vi (iStock only), zh-HK (creative assets only)., fields: [str] # Specifies fields to return. Defaults to 'summary_set'. NOTE: Bytes returned by 'download_sizes' field is an estimate., page: int(int32)=1 # Identifies page to return. Default is 1., page_size: int(int32)=30 # Specifies page size. Default is 30, maximum page_size is 100.}
+@returns(200) {videos: [map]?, facets: map{specific_people: [map]?, events: [map]?, locations: [map]?, artists: [map]?, entertainment: [map]?}, related_searches: [map]?, result_count: int(int32), auto_corrections: map{phrase: str?}} # OK
+@errors {403: UnauthorizedDisplaySize, 400: InvalidParameterValue, 401: AuthorizationTokenRequired, 404: VideosNotFound, 500: InvalidIStockCollection}
 
 @endgroup
 

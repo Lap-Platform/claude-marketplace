@@ -67,83 +67,18 @@ https://run.googleapis.com/
 |--------|------|-------------|
 | POST | /v2/{resource}:testIamPermissions | Returns permissions that a caller has on the specified Project. There are no permissions required for making this API call. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What services are running in my project?" -> GET /v2/{parent}/services
-- "Show me details for a specific service" -> GET /v2/{name}
-- "Deploy a new Cloud Run service" -> POST /v2/{parent}/services
-- "Update my service's container image or scaling" -> PATCH /v2/{name}
-- "Delete a Cloud Run service" -> DELETE /v2/{name}
-- "List all jobs in my project" -> GET /v2/{parent}/jobs
-- "Create a new Cloud Run job" -> POST /v2/{parent}/jobs
-- "Trigger a job execution" -> POST /v2/{name}:run
-- "What executions has this job had?" -> GET /v2/{parent}/executions
-- "List tasks within a job execution" -> GET /v2/{parent}/tasks
-- "Check the status of a long-running operation" -> POST /v2/{name}:wait
-- "List all operations for a resource" -> GET /v2/{name}/operations
-- "Who has access to this service?" -> GET /v2/{resource}:getIamPolicy
-- "Grant a user permission to invoke a service" -> POST /v2/{resource}:setIamPolicy
-- "Check if a principal has specific permissions" -> POST /v2/{resource}:testIamPermissions
-
-## Response Tips
-
-- **Services/Jobs/Revisions (list endpoints):** Paginated via `nextPageToken` -- keep calling with `pageToken` until token is absent. Use `showDeleted: true` to include soft-deleted resources.
-- **Mutating operations (create/update/delete):** Return a long-running operation object (`{done, error, metadata, name, response}`). Poll with `GET /v2/{name}/operations` or block with `POST /v2/{name}:wait` until `done: true`. Check `error` before reading `response`.
-- **Service/Job detail (GET by name):** `conditions` array holds readiness state -- look for `type: "Ready"` with `state: "CONDITION_SUCCEEDED"`. `reconciling: true` means changes are still propagating.
-- **IAM responses:** `bindings` array maps roles to members. Always include the returned `etag` in subsequent `setIamPolicy` calls to avoid concurrent modification conflicts.
-
-## Anomaly Flags
-
-- **`reconciling: true`** on a service or job: Changes are still being applied -- warn the user before making additional updates.
-- **`launchStage: "DEPRECATED"`** on any resource: Surface immediately; the resource uses a deprecated feature that may stop working.
-- **`error` present in operation response**: Extract `error.code` and `error.message` and surface prominently -- the operation failed silently.
-- **`done: false` persisting** on operations after a wait call: The operation is taking unusually long; suggest increasing the `timeout` duration or investigating.
-- **`conditions` with `severity: "ERROR"`**: A resource has entered a broken state -- surface the `message` and `reason` fields.
-- **`deleteTime` / `expireTime` populated**: Resource is scheduled for deletion -- alert user if they're trying to modify it.
-- **Missing `latestReadyRevision`** when `latestCreatedRevision` exists: The newest revision failed to become ready -- check conditions for details.
-- **`etag` mismatch on delete/update**: Concurrent modification detected; re-fetch the resource before retrying.
-
-## Playbook
-
-### Deploy a New Service
-
-1. Call `POST /v2/{parent}/services` with `parent` as `projects/{project}/locations/{region}`, providing at minimum `template.containers[0].image`.
-2. Capture the operation `name` from the response.
-3. Call `POST /v2/{name}:wait` with the operation name and a reasonable `timeout` (e.g., `"300s"`).
-4. When `done: true`, read `response` for the created service details. If `error` is present, inspect `error.message`.
-5. Verify by calling `GET /v2/{name}` on the service and confirming `conditions` show `Ready` with `CONDITION_SUCCEEDED`.
-
-### Run a Job and Monitor Execution
-
-1. Call `POST /v2/{name}:run` with the job's full resource name to trigger an execution.
-2. Capture the operation `name` from the response.
-3. Call `POST /v2/{name}:wait` on the operation to block until completion.
-4. Once done, call `GET /v2/{parent}/executions` with the job name as parent to list executions.
-5. For granular progress, call `GET /v2/{parent}/tasks` with the execution name as parent to see individual task statuses.
-
-### Update Service Traffic Splitting
-
-1. Call `GET /v2/{name}` on the service to retrieve the current config and `etag`.
-2. Call `GET /v2/{parent}/revisions` to identify available revision names.
-3. Call `PATCH /v2/{name}` with `traffic` array specifying `revision` and `percent` for each split (must total 100). Include the `etag` from step 1.
-4. Wait on the returned operation until `done: true`.
-5. Verify by reading the service again and checking `trafficStatuses` for the applied split and per-tag URIs.
-
-### Grant Invoke Access to a Service
-
-1. Call `GET /v2/{resource}:getIamPolicy` with the service resource name to retrieve current bindings and `etag`.
-2. Add a new entry to `bindings` with `role: "roles/run.invoker"` and `members: ["user:email@example.com"]`.
-3. Call `POST /v2/{resource}:setIamPolicy` with the full `policy` object including the original `etag`.
-4. Optionally call `POST /v2/{resource}:testIamPermissions` with `permissions: ["run.routes.invoke"]` to confirm the grant took effect.
-
-### Scale Down a Service for Cost Savings
-
-1. Call `GET /v2/{name}` on the service to retrieve the current template and `etag`.
-2. Call `PATCH /v2/{name}` setting `template.scaling.minInstanceCount` to `0` and `template.scaling.maxInstanceCount` to a lower bound (e.g., `1`). Include the `etag`.
-3. Wait on the returned operation until `done: true`.
-4. Confirm by calling `GET /v2/{name}` and checking `scaling` values on the latest ready revision.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all operations?" -> GET /v2/{name}/operations
+- "List all executions?" -> GET /v2/{parent}/executions
+- "List all jobs?" -> GET /v2/{parent}/jobs
+- "Create a job?" -> POST /v2/{parent}/jobs
+- "List all revisions?" -> GET /v2/{parent}/revisions
+- "List all services?" -> GET /v2/{parent}/services
+- "Create a service?" -> POST /v2/{parent}/services
+- "List all tasks?" -> GET /v2/{parent}/tasks
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

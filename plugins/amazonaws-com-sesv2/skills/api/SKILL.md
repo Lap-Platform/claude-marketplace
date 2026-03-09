@@ -119,91 +119,79 @@ Not specified.
 | PUT | /v2/email/identities/{EmailIdentity}/policies/{PolicyName} | Updates the specified sending authorization policy for the given identity (an email address or a domain). This API returns successfully even if a policy with the specified name does not exist.  This API is for the identity owner only. If you have not verified the identity, this API will return an error.  Sending authorization is a feature that enables an identity owner to authorize other senders to use its identities. For information about using sending authorization, see the Amazon SES Developer Guide. You can execute this operation no more than once per second. |
 | PUT | /v2/email/templates/{TemplateName} | Updates an email template. Email templates enable you to send personalized email to one or more destinations in a single API operation. For more information, see the Amazon SES Developer Guide. You can execute this operation no more than once per second. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I send an email?" -> POST /v2/email/outbound-emails
-- "How do I send bulk emails to a list?" -> POST /v2/email/outbound-bulk-emails
-- "What are my current sending limits and quota?" -> GET /v2/email/account
-- "Is my domain verified for sending?" -> GET /v2/email/identities/{EmailIdentity}
-- "How do I verify a new domain or email address?" -> POST /v2/email/identities
-- "How do I create an email template?" -> POST /v2/email/templates
-- "How do I preview a template with data before sending?" -> POST /v2/email/templates/{TemplateName}/render
-- "Why are my emails going to spam?" -> GET /v2/email/deliverability-dashboard/statistics-report/{Domain}
-- "Is an email address on my suppression list?" -> GET /v2/email/suppression/addresses/{EmailAddress}
-- "How do I remove someone from the suppression list?" -> DELETE /v2/email/suppression/addresses/{EmailAddress}
-- "How do I check the status of a bulk import job?" -> GET /v2/email/import-jobs/{JobId}
-- "What configuration sets do I have?" -> GET /v2/email/configuration-sets
-- "How do I manage contact subscription preferences?" -> PUT /v2/email/contact-lists/{ContactListName}/contacts/{EmailAddress}
-- "How do I run a deliverability test for a message?" -> POST /v2/email/deliverability-dashboard/test
-- "How do I track what happened to a specific message?" -> GET /v2/email/insights/{MessageId}/
-
-## Response Tips
-
-- **Account/settings endpoints** (`GET /account`, PUT account options): Return flat objects; check `SendQuota.SentLast24Hours` vs `Max24HourSend` to gauge headroom, and `ProductionAccessEnabled` to confirm sandbox exit.
-- **List endpoints** (configuration-sets, identities, templates, contacts, suppression, pools): All paginated via `NextToken`/`PageSize` -- loop until `NextToken` is absent or null.
-- **Send endpoints** (`POST outbound-emails`, `outbound-bulk-emails`): Success returns `MessageId`; for bulk, inspect each `BulkEmailEntryResults[].Status` individually since partial failures are common.
-- **Job endpoints** (export/import jobs): Poll `JobStatus` -- valid states include `CREATED`, `PROCESSING`, `COMPLETED`, `FAILED`; check `FailureInfo` on failure for S3 error logs.
-- **Deliverability endpoints** (dashboard, test reports, campaigns, statistics): Responses nest placement percentages and volume stats deeply; always drill into `OverallPlacement` and `IspPlacements` arrays for provider-level breakdown.
-- **Identity endpoints**: `DkimAttributes.Status` and `VerificationStatus` are separate concerns -- DKIM can be pending while the identity itself is verified; check both.
-
-## Anomaly Flags
-
-- **Sending quota near limit**: Surface a warning when `SendQuota.SentLast24Hours` exceeds 80% of `Max24HourSend`.
-- **Sandbox mode active**: Alert if `GET /account` returns `ProductionAccessEnabled: false` -- all sends are restricted to verified addresses only.
-- **DKIM not verified**: Flag when `DkimAttributes.Status` is anything other than `SUCCESS` on a sending identity.
-- **Identity verification failure**: Surface `VerificationInfo.ErrorType` and `SOARecord` details when `VerificationStatus` is `FAILED` or `TEMPORARY_FAILURE`.
-- **Suppression list growth**: Note when `GET /suppression/addresses` returns a large or growing list, which signals bounce or complaint issues.
-- **Bulk send partial failures**: After `POST /outbound-bulk-emails`, flag any entries in `BulkEmailEntryResults` where `Status` is not `SUCCESS`.
-- **Export/import job failures**: Alert when `JobStatus` is `FAILED` and provide the `FailureInfo.ErrorMessage` and `FailedRecordsS3Url` for diagnosis.
-- **Deliverability dashboard disabled**: Warn if `DashboardEnabled: false` -- deliverability insights are unavailable until enabled (paid feature).
-- **Low inbox placement**: Flag when `InboxPercentage` drops below 90% in deliverability test results or domain statistics.
-- **Dedicated IP still warming**: Surface when `DedicatedIp.WarmupStatus` is not `DONE` and `WarmupPercentage` is below 100.
-
-## Playbook
-
-### 1. Set Up a New Sending Domain from Scratch
-
-1. Create the identity: `POST /v2/email/identities` with `EmailIdentity` set to your domain.
-2. Note the `DkimAttributes.Tokens` in the response -- add these as CNAME records in your DNS.
-3. Optionally set a custom MAIL FROM: `PUT /v2/email/identities/{domain}/mail-from` with your subdomain.
-4. Poll `GET /v2/email/identities/{domain}` until `VerificationStatus` is `SUCCESS` and `DkimAttributes.Status` is `SUCCESS`.
-5. Create a configuration set: `POST /v2/email/configuration-sets` with tracking and reputation options.
-6. Attach the config set to the identity: `PUT /v2/email/identities/{domain}/configuration-set`.
-
-### 2. Send a Templated Email Campaign
-
-1. Create a template: `POST /v2/email/templates` with subject, HTML, and text content using `{{variable}}` placeholders.
-2. Preview it: `POST /v2/email/templates/{TemplateName}/render` with sample `TemplateData` JSON to verify output.
-3. For individual sends: `POST /v2/email/outbound-emails` with `Content.Template.TemplateName` and `TemplateData`.
-4. For bulk sends: `POST /v2/email/outbound-bulk-emails` with `DefaultContent` referencing the template and a `BulkEmailEntries` array.
-5. Check each entry in `BulkEmailEntryResults` for `Status` -- handle any `FAILED` entries individually.
-
-### 3. Diagnose Deliverability Problems for a Domain
-
-1. Ensure dashboard is enabled: `PUT /v2/email/deliverability-dashboard` with `DashboardEnabled: true`.
-2. Pull domain statistics: `GET /v2/email/deliverability-dashboard/statistics-report/{Domain}` with your date range.
-3. Review `OverallVolume.ReadRatePercent` and `DomainIspPlacements` to find problem ISPs.
-4. Check for blacklisting: `GET /v2/email/deliverability-dashboard/blacklist-report` with relevant blacklist names.
-5. Run a placement test: `POST /v2/email/deliverability-dashboard/test` with a representative message, then fetch results via `GET /v2/email/deliverability-dashboard/test-reports/{ReportId}`.
-
-### 4. Manage Contacts and Suppression Lists
-
-1. Create a contact list: `POST /v2/email/contact-lists` with topics for subscription management.
-2. Add contacts: `POST /v2/email/contact-lists/{ContactListName}/contacts` with email and topic preferences.
-3. Bulk import contacts: `POST /v2/email/import-jobs` with an S3 source and `ContactListDestination`.
-4. Monitor the import: `GET /v2/email/import-jobs/{JobId}` -- check `ProcessedRecordsCount` and `FailedRecordsCount`.
-5. Review suppressed addresses: `GET /v2/email/suppression/addresses` filtered by reason and date range.
-6. Remove a false positive: `DELETE /v2/email/suppression/addresses/{EmailAddress}`.
-
-### 5. Export Metrics and Message Insights
-
-1. Create a metrics export: `POST /v2/email/export-jobs` with `MetricsDataSource` specifying dimensions, namespace, metrics, and date range.
-2. Or create a message insights export: use `MessageInsightsDataSource` with include/exclude filters for sender, destination, subject, ISP, or delivery event.
-3. Poll `GET /v2/email/export-jobs/{JobId}` until `JobStatus` is `COMPLETED`.
-4. Download results from `ExportDestination.S3Url`.
-5. If the job fails, check `FailureInfo.ErrorMessage` and retrieve partial results from `FailedRecordsS3Url`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a batch?" -> POST /v2/email/metrics/batch
+- "Create a configuration-set?" -> POST /v2/email/configuration-sets
+- "Create a event-destination?" -> POST /v2/email/configuration-sets/{ConfigurationSetName}/event-destinations
+- "Create a contact?" -> POST /v2/email/contact-lists/{ContactListName}/contacts
+- "Create a contact-list?" -> POST /v2/email/contact-lists
+- "Create a custom-verification-email-template?" -> POST /v2/email/custom-verification-email-templates
+- "Create a dedicated-ip-pool?" -> POST /v2/email/dedicated-ip-pools
+- "Create a test?" -> POST /v2/email/deliverability-dashboard/test
+- "Create a identity?" -> POST /v2/email/identities
+- "Create a template?" -> POST /v2/email/templates
+- "Create a export-job?" -> POST /v2/email/export-jobs
+- "Create a import-job?" -> POST /v2/email/import-jobs
+- "Delete a configuration-set?" -> DELETE /v2/email/configuration-sets/{ConfigurationSetName}
+- "Delete a event-destination?" -> DELETE /v2/email/configuration-sets/{ConfigurationSetName}/event-destinations/{EventDestinationName}
+- "Delete a contact?" -> DELETE /v2/email/contact-lists/{ContactListName}/contacts/{EmailAddress}
+- "Delete a contact-list?" -> DELETE /v2/email/contact-lists/{ContactListName}
+- "Delete a custom-verification-email-template?" -> DELETE /v2/email/custom-verification-email-templates/{TemplateName}
+- "Delete a dedicated-ip-pool?" -> DELETE /v2/email/dedicated-ip-pools/{PoolName}
+- "Delete a identity?" -> DELETE /v2/email/identities/{EmailIdentity}
+- "Delete a policy?" -> DELETE /v2/email/identities/{EmailIdentity}/policies/{PolicyName}
+- "Delete a template?" -> DELETE /v2/email/templates/{TemplateName}
+- "Delete a address?" -> DELETE /v2/email/suppression/addresses/{EmailAddress}
+- "List all account?" -> GET /v2/email/account
+- "List all blacklist-report?" -> GET /v2/email/deliverability-dashboard/blacklist-report
+- "Get configuration-set details?" -> GET /v2/email/configuration-sets/{ConfigurationSetName}
+- "List all event-destinations?" -> GET /v2/email/configuration-sets/{ConfigurationSetName}/event-destinations
+- "Get contact details?" -> GET /v2/email/contact-lists/{ContactListName}/contacts/{EmailAddress}
+- "Get contact-list details?" -> GET /v2/email/contact-lists/{ContactListName}
+- "Get custom-verification-email-template details?" -> GET /v2/email/custom-verification-email-templates/{TemplateName}
+- "Get dedicated-ip details?" -> GET /v2/email/dedicated-ips/{IP}
+- "Get dedicated-ip-pool details?" -> GET /v2/email/dedicated-ip-pools/{PoolName}
+- "List all dedicated-ips?" -> GET /v2/email/dedicated-ips
+- "List all deliverability-dashboard?" -> GET /v2/email/deliverability-dashboard
+- "Get test-report details?" -> GET /v2/email/deliverability-dashboard/test-reports/{ReportId}
+- "Get campaign details?" -> GET /v2/email/deliverability-dashboard/campaigns/{CampaignId}
+- "Get statistics-report details?" -> GET /v2/email/deliverability-dashboard/statistics-report/{Domain}
+- "Get identity details?" -> GET /v2/email/identities/{EmailIdentity}
+- "List all policies?" -> GET /v2/email/identities/{EmailIdentity}/policies
+- "Get template details?" -> GET /v2/email/templates/{TemplateName}
+- "Get export-job details?" -> GET /v2/email/export-jobs/{JobId}
+- "Get import-job details?" -> GET /v2/email/import-jobs/{JobId}
+- "Get insight details?" -> GET /v2/email/insights/{MessageId}/
+- "Get address details?" -> GET /v2/email/suppression/addresses/{EmailAddress}
+- "List all configuration-sets?" -> GET /v2/email/configuration-sets
+- "List all contact-lists?" -> GET /v2/email/contact-lists
+- "Create a list?" -> POST /v2/email/contact-lists/{ContactListName}/contacts/list
+- "List all custom-verification-email-templates?" -> GET /v2/email/custom-verification-email-templates
+- "List all dedicated-ip-pools?" -> GET /v2/email/dedicated-ip-pools
+- "List all test-reports?" -> GET /v2/email/deliverability-dashboard/test-reports
+- "List all campaigns?" -> GET /v2/email/deliverability-dashboard/domains/{SubscribedDomain}/campaigns
+- "List all identities?" -> GET /v2/email/identities
+- "List all templates?" -> GET /v2/email/templates
+- "Create a list-export-job?" -> POST /v2/email/list-export-jobs
+- "Create a list?" -> POST /v2/email/import-jobs/list
+- "Create a recommendation?" -> POST /v2/email/vdm/recommendations
+- "List all addresses?" -> GET /v2/email/suppression/addresses
+- "List all tags?" -> GET /v2/email/tags
+- "Create a detail?" -> POST /v2/email/account/details
+- "Create a outbound-bulk-email?" -> POST /v2/email/outbound-bulk-emails
+- "Create a outbound-custom-verification-email?" -> POST /v2/email/outbound-custom-verification-emails
+- "Create a outbound-email?" -> POST /v2/email/outbound-emails
+- "Create a tag?" -> POST /v2/email/tags
+- "Create a render?" -> POST /v2/email/templates/{TemplateName}/render
+- "Update a event-destination?" -> PUT /v2/email/configuration-sets/{ConfigurationSetName}/event-destinations/{EventDestinationName}
+- "Update a contact?" -> PUT /v2/email/contact-lists/{ContactListName}/contacts/{EmailAddress}
+- "Update a contact-list?" -> PUT /v2/email/contact-lists/{ContactListName}
+- "Update a custom-verification-email-template?" -> PUT /v2/email/custom-verification-email-templates/{TemplateName}
+- "Update a policy?" -> PUT /v2/email/identities/{EmailIdentity}/policies/{PolicyName}
+- "Update a template?" -> PUT /v2/email/templates/{TemplateName}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

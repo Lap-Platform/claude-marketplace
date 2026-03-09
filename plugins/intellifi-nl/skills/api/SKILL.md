@@ -12,7 +12,7 @@ API version: 2.27.2+0.gd5006bf.dirty
 ApiKey key in query | ApiKey X-Api-Key in header | ApiKey brain.sid in cookie
 
 ## Base URL
-{protocol}://{customer}.intellifi.{tld}/api
+https://brain.intellifi.cloud/api
 
 ## Setup
 1. Set your API key in the appropriate header
@@ -160,84 +160,87 @@ ApiKey key in query | ApiKey X-Api-Key in header | ApiKey brain.sid in cookie
 | PUT | /users/{id} | Update existing user |
 | DELETE | /users/{id} | Delete user |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I authenticate with the Brain API?" -> GET /authinfo
-- "What items are currently present in the system?" -> GET /items with `is_present=true`
-- "Where is a specific item located right now?" -> GET /items/{id} (check `location` field)
-- "Which spots are online?" -> GET /spots with `is_online=true`
-- "How do I upload a file to the system?" -> POST /blobs then POST /blobs/{id}/upload
-- "What events happened in the last hour?" -> GET /events with `from` set to one hour ago
-- "How do I set up a webhook to receive notifications?" -> POST /subscriptions with `target_url` and `topic_filter`
-- "Why is my subscription not delivering events?" -> GET /subscriptions/{id} (check `target_delivery_status` and `target_delivery_last_failure`)
-- "How do I create a rule that prevents items from moving to a location?" -> POST /locationrules with `type=disallow`
-- "Can I get just the IDs without full objects?" -> GET /items (or any list endpoint) with `id_only=true`
-- "How do I add an item to an item list?" -> POST /sets/itemlists/{id}/ids
-- "What API keys exist and which are read-only?" -> GET /keys with `is_read_only=true`
-- "How do I track which items a specific spot has seen?" -> GET /presences with `location={spotLocationId}`
-- "How do I store custom key-value data?" -> POST /kvpairs then PUT /kvpairs/{id} with `kv_value`
-- "How do I long-poll for new items?" -> GET /items with `timeout_s` and `after_id` set to the last seen ID
-
-## Response Tips
-
-- **List endpoints** (GET /items, /blobs, /events, etc.): Default limit is 100. Use `after_id`/`before_id` for cursor-based pagination; combine with `sort=-id` (default, newest first) or `sort=id` for chronological order. Set `results_only=true` to skip envelope metadata.
-- **Create endpoints** (POST): Return 201 with `{resource: {id, url}, status}` -- always capture `resource.id` for subsequent operations.
-- **Update/Delete endpoints** (PUT/DELETE): Return 200 with the same `{resource: {id, url}, status}` envelope -- check `status` field, not just HTTP code.
-- **Events and subscriptions**: Event payloads use nested `topic` object with `resource_type`, `action`, and `resource_id` -- filter server-side via `topic.resource_type` and `topic.action` query params rather than client-side.
-- **Presences**: Responses nest full `location` and `item` objects when populated -- use `select` param to reduce payload size if you only need IDs.
-
-## Anomaly Flags
-
-- **Subscription delivery failures**: Surface `target_delivery_last_failure` and `target_delivery_status` whenever a subscription is read -- failed webhooks silently drop events if `database_hold_time_h` expires.
-- **Spot offline status**: Flag when `is_online=false` on any spot, as this means the reader hardware is disconnected and no new presences will be recorded.
-- **Item move without location rule**: Alert when an item's `location` changes and active location rules of type `disallow` exist for that path -- may indicate a rule misconfiguration.
-- **Stale presence data**: Warn if `time_last_present` on an item is significantly older than expected -- the item may have left range without a departure event.
-- **Unverified TLS on subscriptions**: Flag subscriptions where `verify_target_certificate=false` -- events are being delivered without certificate validation.
-- **Read-only key used for mutation**: If `GET /authinfo` returns `permissions.mutate=false`, proactively warn before attempting any POST/PUT/DELETE call.
-- **Large list sets**: Surface when an itemlist or spotlist `total` is high (e.g., >1000) as bulk operations on these may be slow or hit timeouts.
-
-## Playbook
-
-### 1. Track an Item Through Locations in Real Time
-
-1. `GET /items?code_hex={tagCode}` to find the item by its RFID/NFC code
-2. Note the `id` from the result
-3. `POST /subscriptions` with `topic_filter=items.{id}.moved` and your `target_url`
-4. Receive webhook events whenever the item moves between locations
-5. `GET /presences?item={id}` at any time to see current location and proximity
-
-### 2. Set Up a Geofence (Disallow Rule)
-
-1. `GET /locations` to find the source and restricted location IDs
-2. `POST /locationrules` with `type=disallow`, `conditions.from_location={sourceId}`, `conditions.to_location={restrictedId}`, and `enabled=true`
-3. `POST /subscriptions` with `topic_filter=locationrules.*.triggered` to get alerts
-4. Verify with `GET /locationrules/{id}` to confirm the rule is active
-
-### 3. Upload and Attach a Blob to an Item
-
-1. `POST /blobs` with `filename` and `content_type` to create a blob record
-2. Capture `resource.id` from the response
-3. `POST /blobs/{id}/upload` with the file binary in the request body
-4. `PUT /items/{itemId}` with `metadata: {blob_id: "{blobId}"}` to link the blob
-5. Later retrieve via `GET /blobs/{id}/download/{filename}`
-
-### 4. Build an Event-Driven Dashboard
-
-1. `GET /spots` to list all reader hardware and their online status
-2. `GET /locations` to map location IDs to labels
-3. `POST /subscriptions` with `topic_filter=*` and `populate_events=true` for a firehose subscription
-4. `GET /subscriptions/{id}/events?sort=-id&limit=50` to poll recent events (or use the webhook `target_url` for push)
-5. `GET /items?is_present=true&populate=location` to snapshot current item distribution
-
-### 5. Manage API Keys for Team Access
-
-1. `GET /authinfo` to verify your current permissions (must have `mutate=true`)
-2. `POST /keys` with `label="team-member-name"` and `is_read_only=true` for read-only access
-3. Share the `secret` from `GET /keys/{id}` -- this is the only time the full key is readable
-4. To revoke access: `DELETE /keys/{id}`
-5. Audit existing keys: `GET /keys?select=id,label,is_read_only` for a summary view
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all authinfo?" -> GET /authinfo
+- "List all blobs?" -> GET /blobs
+- "Create a blob?" -> POST /blobs
+- "Get blob details?" -> GET /blobs/{id}
+- "Delete a blob?" -> DELETE /blobs/{id}
+- "Get download details?" -> GET /blobs/{id}/download/{filename}
+- "Create a upload?" -> POST /blobs/{id}/upload
+- "List all events?" -> GET /events
+- "Get event details?" -> GET /events/{id}
+- "List all items?" -> GET /items
+- "Create a item?" -> POST /items
+- "Get item details?" -> GET /items/{id}
+- "Update a item?" -> PUT /items/{id}
+- "Delete a item?" -> DELETE /items/{id}
+- "List all keys?" -> GET /keys
+- "Create a key?" -> POST /keys
+- "Get key details?" -> GET /keys/{id}
+- "Update a key?" -> PUT /keys/{id}
+- "Delete a key?" -> DELETE /keys/{id}
+- "List all kvpairs?" -> GET /kvpairs
+- "Create a kvpair?" -> POST /kvpairs
+- "Get kvpair details?" -> GET /kvpairs/{id}
+- "Update a kvpair?" -> PUT /kvpairs/{id}
+- "Delete a kvpair?" -> DELETE /kvpairs/{id}
+- "List all locations?" -> GET /locations
+- "Create a location?" -> POST /locations
+- "Get location details?" -> GET /locations/{id}
+- "Update a location?" -> PUT /locations/{id}
+- "Delete a location?" -> DELETE /locations/{id}
+- "List all locationrules?" -> GET /locationrules
+- "Create a locationrule?" -> POST /locationrules
+- "Get locationrule details?" -> GET /locationrules/{id}
+- "Update a locationrule?" -> PUT /locationrules/{id}
+- "Delete a locationrule?" -> DELETE /locationrules/{id}
+- "List all presences?" -> GET /presences
+- "Get presence details?" -> GET /presences/{id}
+- "List all services?" -> GET /services
+- "Get service details?" -> GET /services/{id}
+- "Update a service?" -> PUT /services/{id}
+- "List all itemlists?" -> GET /sets/itemlists
+- "Create a itemlist?" -> POST /sets/itemlists
+- "Get itemlist details?" -> GET /sets/itemlists/{id}
+- "Update a itemlist?" -> PUT /sets/itemlists/{id}
+- "Delete a itemlist?" -> DELETE /sets/itemlists/{id}
+- "List all ids?" -> GET /sets/itemlists/{id}/ids
+- "Create a id?" -> POST /sets/itemlists/{id}/ids
+- "Delete a id?" -> DELETE /sets/itemlists/{id}/ids/{itemId}
+- "List all spotlists?" -> GET /sets/spotlists
+- "Create a spotlist?" -> POST /sets/spotlists
+- "Get spotlist details?" -> GET /sets/spotlists/{id}
+- "Update a spotlist?" -> PUT /sets/spotlists/{id}
+- "Delete a spotlist?" -> DELETE /sets/spotlists/{id}
+- "List all ids?" -> GET /sets/spotlists/{id}/ids
+- "Create a id?" -> POST /sets/spotlists/{id}/ids
+- "Delete a id?" -> DELETE /sets/spotlists/{id}/ids/{itemId}
+- "List all spots?" -> GET /spots
+- "Get spot details?" -> GET /spots/{id}
+- "Update a spot?" -> PUT /spots/{id}
+- "List all sets?" -> GET /spots/{id}/sets
+- "Create a set?" -> POST /spots/{id}/sets
+- "Update a set?" -> PUT /spots/{id}/sets/{setId}
+- "Get set details?" -> GET /spots/{id}/sets/{setId}
+- "List all spotsets?" -> GET /spotsets
+- "Create a spotset?" -> POST /spotsets
+- "Update a spotset?" -> PUT /spotsets/{id}
+- "Get spotset details?" -> GET /spotsets/{id}
+- "List all subscriptions?" -> GET /subscriptions
+- "Create a subscription?" -> POST /subscriptions
+- "Get subscription details?" -> GET /subscriptions/{id}
+- "Update a subscription?" -> PUT /subscriptions/{id}
+- "Delete a subscription?" -> DELETE /subscriptions/{id}
+- "List all events?" -> GET /subscriptions/{id}/events
+- "List all users?" -> GET /users
+- "Create a user?" -> POST /users
+- "Get user details?" -> GET /users/{id}
+- "Update a user?" -> PUT /users/{id}
+- "Delete a user?" -> DELETE /users/{id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

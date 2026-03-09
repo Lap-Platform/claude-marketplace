@@ -47,83 +47,10 @@ Not specified.
 | POST | / | Adds tags to the specified AWS Elemental MediaStore container. Tags are key:value pairs that you can associate with AWS resources. For example, the tag key might be "customer" and the tag value might be "companyA." You can specify one or more tags to add to each container. You can add up to 50 tags to each container. For more information about tagging, including naming and usage conventions, see Tagging Resources in MediaStore. |
 | POST | / | Removes tags from the specified container. You can specify one or more tags to remove. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new MediaStore container?" -> POST / (CreateContainer: ContainerName + optional Tags)
-- "How do I delete a MediaStore container?" -> POST / (DeleteContainer: ContainerName)
-- "What containers do I have?" -> POST / (ListContainers: optional NextToken, MaxResults)
-- "What's the status of my container?" -> POST / (DescribeContainer: optional ContainerName)
-- "How do I set a container access policy?" -> POST / (PutContainerPolicy: ContainerName + Policy)
-- "What policy is attached to my container?" -> POST / (GetContainerPolicy: ContainerName)
-- "How do I enable CORS on my container?" -> POST / (PutCorsPolicy: ContainerName + CorsPolicy)
-- "What CORS rules are on my container?" -> POST / (GetCorsPolicy: ContainerName)
-- "How do I set a lifecycle policy for auto-expiring objects?" -> POST / (PutLifecyclePolicy: ContainerName + LifecyclePolicy)
-- "How do I enable CloudWatch metrics for my container?" -> POST / (PutMetricPolicy: ContainerName + MetricPolicy)
-- "How do I turn on access logging?" -> POST / (StartAccessLogging: ContainerName)
-- "How do I stop access logging?" -> POST / (StopAccessLogging: ContainerName)
-- "How do I tag a MediaStore resource?" -> POST / (TagResource: Resource ARN + Tags)
-- "What tags are on my resource?" -> POST / (ListTagsForResource: Resource ARN)
-- "How do I remove tags from a resource?" -> POST / (UntagResource: Resource ARN + TagKeys)
-
-## Response Tips
-
-- **Container operations**: Container objects include `Status` (CREATING, ACTIVE, DELETING) -- always check status before performing actions; `Endpoint` is null until status is ACTIVE.
-- **List operations**: `ListContainers` paginates via `NextToken`; keep calling with the returned `NextToken` until it is absent from the response.
-- **Policy operations**: `GetContainerPolicy` and `GetLifecyclePolicy` return policy as a JSON string -- parse it before presenting to the user.
-- **CORS operations**: `GetCorsPolicy` returns an array of `CorsRule` objects; each rule may have different allowed origins, headers, and methods.
-- **Metric operations**: `GetMetricPolicy` returns `ContainerLevelMetrics` (ENABLED/DISABLED) and an optional array of path-level `MetricPolicyRules`.
-- **Tag operations**: Tags are key-value pairs on resource ARNs; `ListTagsForResource` may return null if no tags exist.
-- **Errors**: All endpoints use standard AWS error shapes -- watch for `ContainerNotFoundException`, `PolicyNotFoundException`, `LimitExceededException`, and `ContainerInUseException`.
-
-## Anomaly Flags
-
-- **Container stuck in CREATING/DELETING**: If `DescribeContainer` returns a non-ACTIVE status for more than a few minutes, surface this -- the container may be stalled.
-- **Missing endpoint URL**: A container with a null `Endpoint` field is not yet ready for data plane operations; warn the user before they attempt object uploads.
-- **No policy attached**: If `GetContainerPolicy` throws `PolicyNotFoundException`, flag that the container has no access policy and is inaccessible to external callers.
-- **Access logging disabled**: If `AccessLoggingEnabled` is false on a production container, proactively suggest enabling it for audit compliance.
-- **Pagination truncation**: If `ListContainers` returns a `NextToken`, alert the user that results are incomplete and offer to fetch all pages.
-- **Lifecycle policy risks**: When a user sets a lifecycle policy, warn that it will permanently delete objects matching the rules -- this is irreversible.
-- **Tag limit approaching**: AWS limits tags per resource (typically 50); if `ListTagsForResource` returns a high count, flag it before `TagResource` calls fail.
-
-## Playbook
-
-### 1. Create and Configure a New Container
-
-1. Call **CreateContainer** with the desired `ContainerName` and optional `Tags`.
-2. Call **DescribeContainer** repeatedly until `Status` is `ACTIVE` and `Endpoint` is populated.
-3. Call **PutContainerPolicy** to attach an access policy allowing your desired principals.
-4. Call **PutCorsPolicy** if the container will serve browser-based clients.
-5. Call **StartAccessLogging** if audit logging is required.
-
-### 2. Set Up Monitoring and Lifecycle Management
-
-1. Call **PutMetricPolicy** with `ContainerLevelMetrics: "ENABLED"` and optional path-level rules.
-2. Call **PutLifecyclePolicy** with a JSON policy string defining object expiration rules.
-3. Verify with **GetMetricPolicy** and **GetLifecyclePolicy** that both are applied correctly.
-
-### 3. Audit and Review Container Configuration
-
-1. Call **ListContainers** (paginate with `NextToken`) to enumerate all containers.
-2. For each container, call **DescribeContainer** to check `Status` and `AccessLoggingEnabled`.
-3. Call **GetContainerPolicy**, **GetCorsPolicy**, and **GetMetricPolicy** to review current settings.
-4. Call **ListTagsForResource** with the container ARN to verify tagging compliance.
-
-### 4. Tear Down a Container
-
-1. Call **DeleteContainerPolicy** to remove the access policy.
-2. Call **DeleteCorsPolicy** and **DeleteLifecyclePolicy** to remove attached policies.
-3. Call **StopAccessLogging** if access logging is enabled.
-4. Ensure all objects in the container are deleted via the data plane (not covered by this API).
-5. Call **DeleteContainer** -- this will fail if objects still exist in the container.
-
-### 5. Manage Resource Tags
-
-1. Call **ListTagsForResource** with the resource ARN to see current tags.
-2. Call **TagResource** with the ARN and an array of `{Key, Value}` pairs to add or update tags.
-3. Call **UntagResource** with the ARN and an array of tag key strings to remove specific tags.
-4. Call **ListTagsForResource** again to confirm the final tag state.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

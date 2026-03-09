@@ -8,96 +8,105 @@
 
 @group auth
 @endpoint GET /auth
-@returns(200)
+@desc Request a JWT access token using your obono username and password.
+@returns(200) The JWT `accessToken` to use for accessing secured resourced as well as the `registrierkassenUuid` of the corresponding "Registrierkasse".
 
 @endgroup
 
 @group registrierkassen
 @endpoint GET /registrierkassen/{registrierkasseUuid}
-@required {registrierkasseUuid: any}
-@returns(200)
-@errors {404}
+@desc Returns information about a particular `Registrierkasse`.
+@required {registrierkasseUuid: any # The `_uuid` of a particular `Registrierkasse` to fetch.}
+@returns(200) Information about a particular `Registrierkasse`.
+@errors {404: This particular `Registrierkasse` does not exist.}
 
 @endpoint GET /registrierkassen/{registrierkasseUuid}/dep
-@required {registrierkasseUuid: any}
-@returns(200)
+@desc Generates a DEP file.
+@required {registrierkasseUuid: any # The `_uuid` of the `Registrierkasse` to retrieve the DEP file.}
+@returns(200) The DEP file.
 
 @endpoint POST /registrierkassen/{registrierkasseUuid}/abschluss
-@required {registrierkasseUuid: any, abschlussbelegdaten: map}
-@returns(201)
+@desc Generates an `Abschlussbeleg`.
+@required {registrierkasseUuid: any # The `_uuid` of the `Registrierkasse` to retrieve the `Beleg` collection., abschlussbelegdaten: map # An object that contains all data for a particular `Abschlussbeleg`.}
+@returns(201) The `Abschlussbeleg` has been created, signed and added to the "Datenerfassungsprotokoll".
 
 @endpoint GET /registrierkassen/{registrierkasseUuid}/belege
-@required {registrierkasseUuid: any, format: any}
-@optional {order: any, limit: any, offset: any, before: any, after: any, gte: any, lte: any}
-@returns(200)
+@desc Retrieves the `Beleg` collection from the "Datenerfassungsprotokoll".
+@required {registrierkasseUuid: any # The `_uuid` of the `Registrierkasse` to retrieve the `Beleg` collection., format: any # Determines the format of the `Beleg` collection.}
+@optional {order: any # Determines the sorting order., limit: any # Limits the number of returned results., offset: any # Skips the specified number of results from the result set., before: any # Only return results that where saved before the specified date-time string (i.e., anything that `Date.parse()` can parse)., after: any # Only return results that where saved after the specified date-time string (i.e., anything that `Date.parse()` can parse)., gte: any # Only return results that have at least a particular `Belegnummer`., lte: any # Only return results that have at most a particular `Belegnummer`.}
+@returns(200) The `Beleg` collection from the "Datenerfassungsprotokoll".
 
 @endpoint PUT /registrierkassen/{registrierkasseUuid}/belege/{belegUuid}
-@required {registrierkasseUuid: any, belegUuid: any, belegdaten: map}
-@returns(201)
-@errors {400, 403, 415, 429, 409, 500}
+@desc Signs a receipt and stores it in the "Datenerfassungsprotokoll".
+@required {registrierkasseUuid: any # The `_uuid` of the `Registrierkasse` to use for signing data., belegUuid: any # The `_uuid` of the `Beleg` to store., belegdaten: map # An object that contains all data for a particular `Beleg` and is formatted according to RKSV "Signaturformat".}
+@returns(201) The `Beleg` has been signed and added to the "Datenerfassungsprotokoll".
+@errors {400: The provided request payload is invalid i.e. not conform the the JSON schema., 403: Access token is either missing or invalid. Be sure to include the Authorization HTTP header., 415: The provided request payload is not JSON encoded., 429: Request limit exceeded., 409: A `Beleg` with this particular `belegUuid` already exists., 500: The receipt could not be signed either because the HSM delivered invalid data or the request signing request timed out (currently after 10 seconds).}
 
 @endpoint GET /registrierkassen/{registrierkasseUuid}/belege/{belegUuid}
-@required {registrierkasseUuid: any, belegUuid: any}
-@returns(200)
-@errors {404}
+@desc Retrieves a particular `Beleg` from the "Datenerfassungsprotokoll".
+@required {registrierkasseUuid: any # The `_uuid` of the `Registrierkasse` that contains the requested `Beleg`., belegUuid: any # The `_uuid` of the `Beleg` to fetch.}
+@returns(200) The requested `Beleg` resource.
+@errors {404: The requested `Beleg` resource does not exist.}
 
 @endpoint GET /registrierkassen/{registrierkasseUuid}/monatsbelege
-@required {registrierkasseUuid: any}
+@desc Returns a list of `Monatsbelege`.
+@required {registrierkasseUuid: any # The `_uuid` of the `Registrierkasse`.}
 @optional {year: any, month: any}
-@returns(200)
+@returns(200) Information about `Monatsbelege`.
 
 @endgroup
 
 @group belege
 @endpoint GET /belege/{belegUuid}
-@required {belegUuid: any}
-@returns(200)
-@errors {404}
+@desc Retrieves a particular `Beleg` from the "Datenerfassungsprotokoll".
+@required {belegUuid: any # The `_uuid` of the `Beleg` to fetch.}
+@returns(200) The requested `Beleg` resource.
+@errors {404: The requested `Beleg` resource does not exist.}
 
 @endgroup
 
 @group export
 @endpoint GET /export/pdf/belege/{belegUuid}
-@required {belegUuid: any}
-@returns(200)
+@required {belegUuid: any # The `_uuid` of a particular `Beleg` to export.}
+@returns(200) A particular `Beleg` in its PDF representation.
 
 @endpoint GET /export/qr/belege/{belegUuid}
-@required {belegUuid: any}
-@returns(200)
+@required {belegUuid: any # The `_uuid` of a particular `Beleg` to export.}
+@returns(200) The RKSV QR-Code as PNG file.
 
 @endpoint GET /export/html/belege/{belegUuid}
-@required {belegUuid: any}
-@returns(200)
+@required {belegUuid: any # The `_uuid` of a particular `Beleg` to export.}
+@returns(200) A particular `Beleg` in its HTML representation.
 
 @endpoint GET /export/thermal-print/belege/{belegUuid}
-@required {belegUuid: any}
-@optional {qr: any, width: any, dialect: any, encoding: any}
-@returns(200)
+@required {belegUuid: any # The `_uuid` of a particular `Beleg` to export.}
+@optional {qr: any # Should the RKSV QR code should be rendered?, width: any # Number of characters per line., dialect: any # The thermal printer dialect., encoding: any # The encoding of the binary data.}
+@returns(200) A particular `Beleg` in its ESC/POS or STAR representation.
 
 @endpoint GET /export/gobd/registrierkassen/{registrierkasseUuid}
-@required {registrierkasseUuid: any}
-@optional {before: any, after: any}
-@returns(200)
+@required {registrierkasseUuid: any # The `_uuid` of the `Registrierkasse` to export.}
+@optional {before: any # Only return results that were saved before the specified date-time string (i.e., anything that `Date.parse()` can parse)., after: any # Only return results that were saved after the specified date-time string (i.e., anything that `Date.parse()` can parse).}
+@returns(200) The exported data of a particular `Registrierkasse` in its GoBD representation.
 
 @endpoint GET /export/xls/registrierkassen/{registrierkasseUuid}/belege
-@required {registrierkasseUuid: any}
-@optional {before: any, after: any}
-@returns(200)
+@required {registrierkasseUuid: any # The `_uuid` of the `Registrierkasse` to export.}
+@optional {before: any # Only return results that were saved before the specified date-time string (i.e., anything that `Date.parse()` can parse)., after: any # Only return results that were saved after the specified date-time string (i.e., anything that `Date.parse()` can parse).}
+@returns(200) The exported data of a particular `Registrierkasse` in its Microsoft Excel representation.
 
 @endpoint GET /export/csv/registrierkassen/{registrierkasseUuid}/belege
-@required {registrierkasseUuid: any}
-@optional {before: any, after: any, posten: any}
-@returns(200)
+@required {registrierkasseUuid: any # The `_uuid` of the `Registrierkasse` to export.}
+@optional {before: any # Only return results that were saved before the specified date-time string (i.e., anything that `Date.parse()` can parse)., after: any # Only return results that were saved after the specified date-time string (i.e., anything that `Date.parse()` can parse)., posten: any # Export `Posten` instead of `Belegdaten`.}
+@returns(200) The exported data of a particular `Registrierkasse` in its CSV representation.
 
 @endpoint GET /export/dep7/registrierkassen/{registrierkasseUuid}/belege
-@required {registrierkasseUuid: any}
-@optional {before: any, after: any}
-@returns(200)
+@required {registrierkasseUuid: any # The `_uuid` of the `Registrierkasse` to export.}
+@optional {before: any # Only return results that were saved before the specified date-time string (i.e., anything that `Date.parse()` can parse)., after: any # Only return results that were saved after the specified date-time string (i.e., anything that `Date.parse()` can parse).}
+@returns(200) The exported data of a particular `Registrierkasse` in its DEP7 representation.
 
 @endpoint GET /export/dep131/registrierkassen/{registrierkasseUuid}/belege
-@required {registrierkasseUuid: any}
-@optional {before: any, after: any}
-@returns(200)
+@required {registrierkasseUuid: any # The `_uuid` of the `Registrierkasse` to export.}
+@optional {before: any # Only return results that were saved before the specified date-time string (i.e., anything that `Date.parse()` can parse)., after: any # Only return results that were saved after the specified date-time string (i.e., anything that `Date.parse()` can parse).}
+@returns(200) The exported data of a particular `Registrierkasse` in its DEP131 / CSV representation.
 
 @endgroup
 

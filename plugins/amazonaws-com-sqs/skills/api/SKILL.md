@@ -49,86 +49,10 @@ Not specified.
 | POST | / | Add cost allocation tags to the specified Amazon SQS queue. For an overview, see Tagging Your Amazon SQS Queues in the Amazon SQS Developer Guide. When you use queue tags, keep the following guidelines in mind:   Adding more than 50 tags to a queue isn't recommended.   Tags don't have any semantic meaning. Amazon SQS interprets tags as character strings.   Tags are case-sensitive.   A new tag with a key identical to that of an existing tag overwrites the existing tag.   For a full list of tag restrictions, see Quotas related to queues in the Amazon SQS Developer Guide.  Cross-account permissions don't apply to this action. For more information, see Grant cross-account permissions to a role and a username in the Amazon SQS Developer Guide. |
 | POST | / | Remove cost allocation tags from the specified Amazon SQS queue. For an overview, see Tagging Your Amazon SQS Queues in the Amazon SQS Developer Guide.  Cross-account permissions don't apply to this action. For more information, see Grant cross-account permissions to a role and a username in the Amazon SQS Developer Guide. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new SQS queue?" -> POST / (CreateQueue: QueueName + optional Attributes/tags)
-- "How do I send a message to a queue?" -> POST / (SendMessage: QueueUrl + MessageBody)
-- "How do I send multiple messages at once?" -> POST / (SendMessageBatch: QueueUrl + Entries)
-- "How do I read messages from a queue?" -> POST / (ReceiveMessage: QueueUrl + optional MaxNumberOfMessages/WaitTimeSeconds)
-- "How do I delete a message after processing it?" -> POST / (DeleteMessage: QueueUrl + ReceiptHandle)
-- "How do I delete messages in bulk?" -> POST / (DeleteMessageBatch: QueueUrl + Entries)
-- "How do I find the URL for a queue by name?" -> POST / (GetQueueUrl: QueueName)
-- "How do I list all my queues?" -> POST / (ListQueues: optional QueueNamePrefix/NextToken/MaxResults)
-- "How do I check queue attributes like message count?" -> POST / (GetQueueAttributes: QueueUrl + AttributeNames)
-- "How do I delete an entire queue?" -> POST / (DeleteQueue: QueueUrl)
-- "How do I purge all messages from a queue without deleting it?" -> POST / (PurgeQueue: QueueUrl)
-- "How do I extend the visibility timeout on a message I'm processing?" -> POST / (ChangeMessageVisibility: QueueUrl + ReceiptHandle + VisibilityTimeout)
-- "How do I move messages from a dead-letter queue back to the source?" -> POST / (StartMessageMoveTask: SourceArn + optional DestinationArn)
-- "How do I tag a queue for cost tracking?" -> POST / (TagQueue: QueueUrl + Tags)
-- "How do I grant another AWS account access to my queue?" -> POST / (AddPermission: QueueUrl + Label + AWSAccountIds + Actions)
-
-## Response Tips
-
-- **Queue creation/lookup**: Returns `QueueUrl` (nullable) -- always check for null; queue creation is idempotent if attributes match.
-- **Send operations**: Verify message integrity by comparing returned `MD5OfMessageBody` against your local hash; `MessageId` confirms acceptance.
-- **Receive operations**: `Messages` array may be empty or null even on 200 -- this means no messages are visible, not an error.
-- **Batch operations**: Always inspect both `Successful` and `Failed` arrays; partial failures return 200 with mixed results in `BatchResultErrorEntry`.
-- **List operations**: Paginate using `NextToken` from response; null/absent token means final page. Respect `MaxResults` ceiling.
-- **Message move tasks**: `TaskHandle` is your reference for cancel/status; `ApproximateNumberOfMessagesMoved` is eventual-consistency approximate.
-- **Attribute/tag reads**: Returned maps may be null rather than empty -- guard against both cases.
-
-## Anomaly Flags
-
-- **Partial batch failures**: Any non-empty `Failed` array in batch send/delete/visibility responses should be surfaced immediately with per-entry error codes.
-- **Empty receives on long poll**: If `ReceiveMessage` with `WaitTimeSeconds > 0` consistently returns null/empty `Messages`, flag potential misconfiguration (wrong queue, permission issue, or all messages in-flight).
-- **MD5 mismatch**: If `MD5OfMessageBody` or `MD5OfMessageAttributes` in SendMessage response does not match the locally computed hash, flag possible data corruption in transit.
-- **Queue purge cooldown**: PurgeQueue can only be called once every 60 seconds -- repeated 403/error responses should surface the cooldown window.
-- **Dead-letter queue accumulation**: When `ListDeadLetterSourceQueues` returns URLs, proactively note that messages are landing in DLQ and may need redrive via `StartMessageMoveTask`.
-- **Deprecated attribute names**: If `GetQueueAttributes` is called with legacy attribute names (e.g., `ApproximateNumberOfMessagesNotVisible` misspellings), flag the unrecognized key.
-- **High in-flight count**: If `ApproximateNumberOfMessagesNotVisible` from `GetQueueAttributes` is disproportionately high relative to visible messages, flag a consumer bottleneck or visibility timeout misconfiguration.
-
-## Playbook
-
-### 1. Create a Queue and Send Your First Message
-
-1. Call **CreateQueue** with `QueueName` and optional `Attributes` (e.g., `{"VisibilityTimeout": "30", "MessageRetentionPeriod": "86400"}`).
-2. Capture the returned `QueueUrl`.
-3. Call **SendMessage** with the `QueueUrl` and your `MessageBody`.
-4. Verify the response `MD5OfMessageBody` matches your input hash and note the `MessageId`.
-
-### 2. Poll, Process, and Delete Messages
-
-1. Call **ReceiveMessage** with `QueueUrl`, set `MaxNumberOfMessages` (up to 10), and `WaitTimeSeconds` (1-20 for long polling).
-2. For each message in the `Messages` array, extract `Body` and `ReceiptHandle`.
-3. Process the message in your application logic.
-4. Call **DeleteMessage** with `QueueUrl` and `ReceiptHandle` for each successfully processed message.
-5. If processing fails, let the visibility timeout expire so the message returns to the queue, or call **ChangeMessageVisibility** to extend the timeout if you need more time.
-
-### 3. Set Up and Redrive a Dead-Letter Queue
-
-1. Create the DLQ: call **CreateQueue** with a name like `my-queue-dlq`.
-2. Call **GetQueueAttributes** on the DLQ to get its ARN from the `QueueArn` attribute.
-3. Call **SetQueueAttributes** on the source queue, setting `RedrivePolicy` to `{"deadLetterTargetArn": "<DLQ-ARN>", "maxReceiveCount": "5"}`.
-4. When ready to redrive, call **StartMessageMoveTask** with `SourceArn` set to the DLQ ARN and optionally `DestinationArn` (defaults to original source).
-5. Monitor progress via **ListMessageMoveTasks** using the DLQ's `SourceArn`; check `ApproximateNumberOfMessagesMoved`.
-
-### 4. Bulk Send with Error Handling
-
-1. Prepare up to 10 messages as `SendMessageBatchRequestEntry` items, each with a unique `Id` and `MessageBody`.
-2. Call **SendMessageBatch** with `QueueUrl` and `Entries`.
-3. Iterate the `Successful` array to confirm delivered messages by `Id`.
-4. Iterate the `Failed` array -- for each `BatchResultErrorEntry`, log the `Code` and `Message`, then retry failed entries in a subsequent batch call.
-5. For FIFO queues, include `MessageGroupId` and `MessageDeduplicationId` in each entry.
-
-### 5. Queue Inventory and Cleanup
-
-1. Call **ListQueues** with optional `QueueNamePrefix` to filter; paginate with `NextToken` until exhausted.
-2. For each queue URL, call **GetQueueAttributes** requesting `ApproximateNumberOfMessages`, `LastModifiedTimestamp`, and `CreatedTimestamp`.
-3. Call **ListQueueTags** to check tagging compliance.
-4. For unused queues (zero messages, old timestamps, no tags), call **PurgeQueue** first to clear residual messages, then **DeleteQueue** to remove.
-5. For queues to keep, call **TagQueue** to apply any missing cost-allocation or environment tags.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

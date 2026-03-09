@@ -181,95 +181,106 @@ https://[region].api.insight.rapid7.com/ias/v1
 | GET | /vulnerabilities/{vuln-id}/history | Get Vulnerability History |
 | GET | /vulnerabilities/{vuln-id}/variances/{variance-id}/documentation | Get Vulnerability Variance Documentation |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What apps are registered in InsightAppSec?" -> GET /apps
-- "How do I create a new application to scan?" -> POST /apps
-- "What vulnerabilities have been found?" -> GET /vulnerabilities
-- "Show me details for a specific vulnerability" -> GET /vulnerabilities/{vuln-id}
-- "How do I kick off a scan?" -> POST /scans
-- "What is the current status of my scan?" -> GET /scans/{scan-id}
-- "How do I pause or stop a running scan?" -> PUT /scans/{scan-id}/action
-- "How many links have been crawled so far in this scan?" -> GET /scans/{scan-id}/execution-details
-- "How do I generate a PCI compliance report?" -> POST /reports
-- "What scan configs are available?" -> GET /scan-configs
-- "How do I search for all critical vulnerabilities?" -> POST /search (type=VULNERABILITY)
-- "What engines are online and available?" -> GET /engines
-- "How do I set up a recurring scan schedule?" -> POST /schedules
-- "How do I create a maintenance blackout window?" -> POST /blackouts
-- "How do I mark a vulnerability as a false positive?" -> PUT /vulnerabilities/{vuln-id}
-
-## Response Tips
-
-- **List endpoints** (apps, scans, vulns, etc.): Responses use `{data, metadata, links}` structure. Use `metadata` for total counts and `links` for HATEOAS navigation. Paginate with `index`, `size`, and `page-token` query params.
-- **Single resource GETs**: Return the object directly with a `links` array for related actions; always check `links` for discoverable sub-resource URLs.
-- **Create (POST)**: Returns 201 with the resource Location header; the response body may be empty -- use the returned ID or Location to fetch the full object.
-- **Update (PUT/PATCH)**: Returns 200 on success; scan-config options support both PUT (full replace) and PATCH (partial update).
-- **Delete**: Returns 204 No Content with an empty body; a 409 means the resource is in use or has dependencies.
-- **Search (POST /search)**: Returns `{data: [map], metadata, links}`; the `type` field determines the shape of objects in `data` -- each type returns different fields.
-- **Vulnerabilities**: Severity uses `SAFE|INFORMATIONAL|LOW|MEDIUM|HIGH|CRITICAL`; status uses `UNREVIEWED|FALSE_POSITIVE|VERIFIED|IGNORED|REMEDIATED|DUPLICATE` -- both are string enums.
-- **Scans**: The `status` field has 16 possible values tracking the full lifecycle from PENDING through COMPLETE or FAILED; `failure_reason` explains why a scan failed.
-
-## Anomaly Flags
-
-- **Engine status degradation**: Surface when any engine reports status `FAILED`, `OFFLINE`, or `PARKED` -- especially `failure_reason` values like `INITIALIZATION_FAILED` or `UPGRADE_FAILED`.
-- **Scan failures**: Proactively alert on scans with status `FAILED` and flag the `failure_reason` (e.g., `LICENSE_INVALID`, `ENGINE_UNAVAILABLE`, `BAD_AUTH`, `INSUFFICIENT_MEMORY`).
-- **415 Unsupported Media Type**: Every endpoint can return 415 -- if seen, the request is missing `Content-Type: application/json`.
-- **409 Conflict**: Indicates a naming collision or resource-in-use condition; surface when creates or deletes return 409 so the user can resolve the conflict.
-- **422 Unprocessable Entity**: Validation failure on write operations; surface the response body which contains field-level error details.
-- **Blackout overlap**: When a scan returns status `BLACKED_OUT`, flag that an active blackout window is blocking execution and link to GET /blackouts.
-- **Stale vulnerabilities**: Flag vulnerabilities where `newly_discovered` is false and `status` is still `UNREVIEWED` -- these are known but untriaged findings.
-- **Engine upgrade available**: When `upgradeable` is true and `latest_version` is false on an engine, proactively suggest running POST /engines/{id}/upgrade.
-- **Scan authentication issues**: Surface scans stuck in `AWAITING_AUTHENTICATION` or `AUTHENTICATING` status, or those that failed with `BAD_AUTH` or `BOOTSTRAP_AUTHENTICATION_FAILURE`.
-
-## Playbook
-
-### 1. Set Up and Run a Full Application Scan
-
-1. Create the app: POST /apps with `{name, description}`
-2. Create or select an attack template: GET /attack-templates to list existing, or POST /attack-templates to create one
-3. Create a scan config: POST /scan-configs with `{name, app: {id}, attack_template: {id}}`
-4. Optionally tune scan options: PUT /scan-configs/{id}/options (auth config, proxy, performance settings)
-5. Launch the scan: POST /scans with `{scan_config: {id}}`
-6. Monitor progress: poll GET /scans/{id}/execution-details for `links_crawled`, `attacked`, `vulnerable` counts
-7. When status is `COMPLETE`, review results: GET /vulnerabilities (or POST /search with type=VULNERABILITY)
-
-### 2. Triage and Remediate Vulnerabilities
-
-1. Search for critical/high vulnerabilities: POST /search with `{type: "VULNERABILITY", query: "vulnerability.severity = 'CRITICAL'"}`
-2. Get full details for each finding: GET /vulnerabilities/{vuln-id}
-3. Review variance documentation: GET /vulnerabilities/{vuln-id}/variances/{variance-id}/documentation for remediation guidance
-4. Check discovery history: GET /vulnerabilities/{vuln-id}/discoveries to see which scans found it
-5. Add analyst notes: POST /vulnerabilities/{vuln-id}/comments with `{content: "..."}`
-6. Update status: PUT /vulnerabilities/{vuln-id} with `{status: "VERIFIED"}` or `{status: "FALSE_POSITIVE"}`
-7. Run a verification scan: POST /scans with `scan_type: "VERIFICATION"` to confirm the fix
-
-### 3. Schedule Recurring Scans with Blackout Windows
-
-1. Identify the scan config to schedule: GET /scan-configs and pick the target config ID
-2. Create a schedule: POST /schedules with `{name, enabled: true, scan_config: {id}, first_start: "<ISO datetime>", rrule: "FREQ=WEEKLY;BYDAY=SA"}`
-3. Define a blackout window for maintenance: POST /blackouts with `{name, enabled: true, first_start, first_end, scope: "GLOBAL"}`
-4. Verify the schedule is active: GET /schedules/{id} and confirm `enabled: true`
-5. Monitor scheduled scan runs: GET /scans with sort by submit_time to see triggered scans
-
-### 4. Generate a Compliance Report
-
-1. Run a scan and wait for completion: GET /scans/{id} until status is `COMPLETE`
-2. Generate the report: POST /reports with `{name: "PCI Q1 2026", type: "PCI_COMPLIANCE", format: "PDF", scan: {id}}`
-3. Poll report status: GET /reports/{id} until `status` indicates generation is complete
-4. Download or share the report using the links in the response
-5. Clean up old reports if needed: DELETE /reports/{id}
-
-### 5. Manage Scan Engines and Engine Groups
-
-1. List all engines: GET /engines to check status and versions
-2. Flag any engines with `status: "OFFLINE"` or `status: "FAILED"` for investigation
-3. Upgrade outdated engines: for each engine where `upgradeable: true`, call POST /engines/{id}/upgrade
-4. Organize engines into groups: POST /engine-groups with `{name, description}`, then PUT /engines/{id} to assign `engine_group`
-5. Verify group membership: GET /engine-groups/{id}/engines to confirm engines are correctly assigned
-6. Rotate engine credentials if needed: PUT /engines/{id}/credential to regenerate, or DELETE /engines/{id}/credential to revoke
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all apps?" -> GET /apps
+- "Create a app?" -> POST /apps
+- "Get app details?" -> GET /apps/{app-id}
+- "Update a app?" -> PUT /apps/{app-id}
+- "Delete a app?" -> DELETE /apps/{app-id}
+- "List all files?" -> GET /apps/{app-id}/files
+- "Create a file?" -> POST /apps/{app-id}/files
+- "Get file details?" -> GET /apps/{app-id}/files/{file-id}
+- "Update a file?" -> PUT /apps/{app-id}/files/{file-id}
+- "Delete a file?" -> DELETE /apps/{app-id}/files/{file-id}
+- "List all tags?" -> GET /apps/{app-id}/tags
+- "Create a tag?" -> POST /apps/{app-id}/tags
+- "Delete a tag?" -> DELETE /apps/{app-id}/tags/{tag-id}
+- "List all users?" -> GET /apps/{app-id}/users
+- "Create a user?" -> POST /apps/{app-id}/users
+- "Delete a user?" -> DELETE /apps/{app-id}/users/{user-id}
+- "List all attack-templates?" -> GET /attack-templates
+- "Create a attack-template?" -> POST /attack-templates
+- "List all module-configs?" -> GET /attack-templates/module-configs
+- "Get attack-template details?" -> GET /attack-templates/{attack-template-id}
+- "Update a attack-template?" -> PUT /attack-templates/{attack-template-id}
+- "Delete a attack-template?" -> DELETE /attack-templates/{attack-template-id}
+- "List all modules?" -> GET /attack-templates/{attack-template-id}/modules
+- "Create a module?" -> POST /attack-templates/{attack-template-id}/modules
+- "Update a module?" -> PUT /attack-templates/{attack-template-id}/modules/{attack-module-id}
+- "Delete a module?" -> DELETE /attack-templates/{attack-template-id}/modules/{attack-module-id}
+- "List all blackouts?" -> GET /blackouts
+- "Create a blackout?" -> POST /blackouts
+- "Get blackout details?" -> GET /blackouts/{blackout-id}
+- "Update a blackout?" -> PUT /blackouts/{blackout-id}
+- "Delete a blackout?" -> DELETE /blackouts/{blackout-id}
+- "List all engine-groups?" -> GET /engine-groups
+- "Create a engine-group?" -> POST /engine-groups
+- "Get engine-group details?" -> GET /engine-groups/{engine-group-id}
+- "Update a engine-group?" -> PUT /engine-groups/{engine-group-id}
+- "Delete a engine-group?" -> DELETE /engine-groups/{engine-group-id}
+- "List all engines?" -> GET /engine-groups/{engine-group-id}/engines
+- "List all engines?" -> GET /engines
+- "Create a engine?" -> POST /engines
+- "Get engine details?" -> GET /engines/{engine-id}
+- "Update a engine?" -> PUT /engines/{engine-id}
+- "Delete a engine?" -> DELETE /engines/{engine-id}
+- "List all credential?" -> GET /engines/{engine-id}/credential
+- "Create a upgrade?" -> POST /engines/{engine-id}/upgrade
+- "List all modules?" -> GET /modules
+- "Get module details?" -> GET /modules/{module-id}
+- "Get attack details?" -> GET /modules/{module-id}/attacks/{attack-id}
+- "List all documentation?" -> GET /modules/{module-id}/attacks/{attack-id}/documentation
+- "List all reports?" -> GET /reports
+- "Create a report?" -> POST /reports
+- "Get report details?" -> GET /reports/{report-id}
+- "Delete a report?" -> DELETE /reports/{report-id}
+- "List all scan-configs?" -> GET /scan-configs
+- "Create a scan-config?" -> POST /scan-configs
+- "List all default?" -> GET /scan-configs/options/default
+- "Get scan-config details?" -> GET /scan-configs/{scan-config-id}
+- "Update a scan-config?" -> PUT /scan-configs/{scan-config-id}
+- "Delete a scan-config?" -> DELETE /scan-configs/{scan-config-id}
+- "List all options?" -> GET /scan-configs/{scan-config-id}/options
+- "List all scans?" -> GET /scans
+- "Create a scan?" -> POST /scans
+- "Get scan details?" -> GET /scans/{scan-id}
+- "Delete a scan?" -> DELETE /scans/{scan-id}
+- "List all action?" -> GET /scans/{scan-id}/action
+- "List all engine-events?" -> GET /scans/{scan-id}/engine-events
+- "List all execution-details?" -> GET /scans/{scan-id}/execution-details
+- "List all platform-events?" -> GET /scans/{scan-id}/platform-events
+- "List all schedules?" -> GET /schedules
+- "Create a schedule?" -> POST /schedules
+- "Get schedule details?" -> GET /schedules/{schedule-id}
+- "Update a schedule?" -> PUT /schedules/{schedule-id}
+- "Delete a schedule?" -> DELETE /schedules/{schedule-id}
+- "Create a search?" -> POST /search
+- "List all tags?" -> GET /tags
+- "Create a tag?" -> POST /tags
+- "Get tag details?" -> GET /tags/{tag-id}
+- "Update a tag?" -> PUT /tags/{tag-id}
+- "Delete a tag?" -> DELETE /tags/{tag-id}
+- "List all targets?" -> GET /targets
+- "Create a target?" -> POST /targets
+- "Get target details?" -> GET /targets/{target-id}
+- "Update a target?" -> PUT /targets/{target-id}
+- "Delete a target?" -> DELETE /targets/{target-id}
+- "List all vulnerabilities?" -> GET /vulnerabilities
+- "Create a documentation?" -> POST /vulnerabilities/variances/documentation
+- "Get vulnerability details?" -> GET /vulnerabilities/{vuln-id}
+- "Update a vulnerability?" -> PUT /vulnerabilities/{vuln-id}
+- "List all comments?" -> GET /vulnerabilities/{vuln-id}/comments
+- "Create a comment?" -> POST /vulnerabilities/{vuln-id}/comments
+- "Get comment details?" -> GET /vulnerabilities/{vuln-id}/comments/{comment-id}
+- "Update a comment?" -> PUT /vulnerabilities/{vuln-id}/comments/{comment-id}
+- "Delete a comment?" -> DELETE /vulnerabilities/{vuln-id}/comments/{comment-id}
+- "List all discoveries?" -> GET /vulnerabilities/{vuln-id}/discoveries
+- "Get discovery details?" -> GET /vulnerabilities/{vuln-id}/discoveries/{vuln-discovery-id}
+- "List all history?" -> GET /vulnerabilities/{vuln-id}/history
+- "List all documentation?" -> GET /vulnerabilities/{vuln-id}/variances/{variance-id}/documentation
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -83,85 +83,37 @@ https://voice.twilio.com
 | POST | /v1/SourceIpMappings/{Sid} |  |
 | DELETE | /v1/SourceIpMappings/{Sid} |  |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I delete an archived call recording?" -> DELETE /v1/Archives/{Date}/Calls/{Sid}
-- "How do I create a new BYOC trunk?" -> POST /v1/ByocTrunks
-- "List all my BYOC trunks" -> GET /v1/ByocTrunks
-- "How do I update the voice URL on a BYOC trunk?" -> POST /v1/ByocTrunks/{Sid}
-- "How do I set up a connection policy with failover targets?" -> POST /v1/ConnectionPolicies then POST /v1/ConnectionPolicies/{ConnectionPolicySid}/Targets (multiple targets with priority/weight)
-- "What countries can I dial and which risk levels are enabled?" -> GET /v1/DialingPermissions/Countries
-- "How do I enable high-risk number dialing for a specific country?" -> POST /v1/DialingPermissions/BulkCountryUpdates
-- "What are the high-risk special prefixes for a country?" -> GET /v1/DialingPermissions/Countries/{IsoCode}/HighRiskSpecialPrefixes
-- "How do I check if dialing permissions inheritance is on?" -> GET /v1/Settings
-- "How do I register an IP address for SIP trunking?" -> POST /v1/IpRecords
-- "How do I map a source IP to a SIP domain?" -> POST /v1/SourceIpMappings
-- "How do I remove a connection policy target?" -> DELETE /v1/ConnectionPolicies/{ConnectionPolicySid}/Targets/{Sid}
-- "How do I list all IP records with pagination?" -> GET /v1/IpRecords with PageSize/Page/PageToken params
-- "How do I delete a BYOC trunk I no longer need?" -> DELETE /v1/ByocTrunks/{Sid}
-- "How do I change the priority and weight of a connection policy target?" -> POST /v1/ConnectionPolicies/{ConnectionPolicySid}/Targets/{Sid}
-
-## Response Tips
-
-- **List endpoints** (GET collections): Response wraps items in a named array (`byoc_trunks`, `connection_policies`, `targets`, `ip_records`, `source_ip_mappings`, `content`) with a `meta` object for pagination -- use `meta.next_page_url` to fetch additional pages, stop when it is null.
-- **Create endpoints** (POST to collection): Return 201 with the full created resource including system-assigned `sid`, `account_sid`, timestamps, and canonical `url`.
-- **Update endpoints** (POST to resource): Return 200 with the full updated resource; compare `date_updated` to confirm mutation took effect.
-- **Delete endpoints**: Return 204 with no body -- any non-204 response indicates failure.
-- **Settings**: POST returns 202 (accepted), not 200 -- the change may not take effect immediately.
-- **Dialing Permissions**: Country lists use `content` as the array key (not a resource-specific name), and include nested fields like `country_codes` (array of strings) and boolean risk flags.
-- **Bulk updates**: `BulkCountryUpdates` returns `update_count` (int) and `update_request` (string) -- verify `update_count` matches your expected number of changes.
-
-## Anomaly Flags
-
-- **202 on Settings update**: Surface that the settings change is asynchronous -- agent should poll GET /v1/Settings to confirm the update propagated.
-- **CNAM lookup enabled on BYOC trunk**: Flag when `cnam_lookup_enabled` is true, as this adds latency and cost to every inbound call.
-- **High-risk numbers enabled**: Proactively warn when `high_risk_special_numbers_enabled` or `high_risk_tollfraud_numbers_enabled` is true for any country -- these carry elevated fraud risk.
-- **Connection policy target weight/priority imbalance**: Surface when all targets have equal priority and weight (no failover differentiation) or when a target has weight 0 (will never receive traffic).
-- **Disabled targets**: Flag when a connection policy target has `enabled: false` -- it exists but is not routing traffic.
-- **CIDR prefix length extremes**: Warn if an IP record has an unusually broad CIDR (e.g., prefix < 24) which could expose a wide address range.
-- **Pagination truncation**: Alert when `meta.next_page_url` is present -- the user is seeing a partial result set.
-- **Missing fallback URL**: Flag BYOC trunks where `voice_url` is set but `voice_fallback_url` is null -- calls will fail with no recovery path if the primary URL is unreachable.
-
-## Playbook
-
-### 1. Set up a BYOC trunk with a connection policy
-
-1. Create a connection policy: POST /v1/ConnectionPolicies with a `friendly_name`.
-2. Add a primary target: POST /v1/ConnectionPolicies/{ConnectionPolicySid}/Targets with `target` URI, `priority: 1`, `weight: 10`.
-3. Add a failover target: POST /v1/ConnectionPolicies/{ConnectionPolicySid}/Targets with a different `target` URI, `priority: 2`, `weight: 10`.
-4. Create the BYOC trunk: POST /v1/ByocTrunks with `voice_url`, `voice_fallback_url`, `status_callback_url`, and `connection_policy_sid` set to the policy SID from step 1.
-5. Verify: GET /v1/ByocTrunks/{Sid} and confirm `connection_policy_sid` is populated.
-
-### 2. Register IP addresses and map them to a SIP domain
-
-1. Create an IP record: POST /v1/IpRecords with `ip_address` and `cidr_prefix_length` and an optional `friendly_name`.
-2. Repeat for each IP that needs to send SIP traffic.
-3. Map each IP to your SIP domain: POST /v1/SourceIpMappings with `ip_record_sid` and `sip_domain_sid`.
-4. Verify mappings: GET /v1/SourceIpMappings and confirm each entry shows the correct `ip_record_sid` and `sip_domain_sid`.
-
-### 3. Configure international dialing permissions
-
-1. Review current permissions: GET /v1/DialingPermissions/Countries to see all countries and their risk flags.
-2. Check a specific country: GET /v1/DialingPermissions/Countries/{IsoCode} for detailed info including `country_codes` and risk settings.
-3. Review high-risk prefixes: GET /v1/DialingPermissions/Countries/{IsoCode}/HighRiskSpecialPrefixes before enabling high-risk dialing.
-4. Apply changes: POST /v1/DialingPermissions/BulkCountryUpdates with the desired country configurations.
-5. Confirm: Verify `update_count` in the response matches the number of countries you intended to update.
-
-### 4. Clean up archived calls
-
-1. Identify the archive date and call SID you want to remove.
-2. Delete the archived call: DELETE /v1/Archives/{Date}/Calls/{Sid} (date format: YYYY-MM-DD).
-3. Confirm deletion: Response should be 204 with no body.
-
-### 5. Audit and update connection policy targets
-
-1. List all connection policies: GET /v1/ConnectionPolicies.
-2. For each policy, list its targets: GET /v1/ConnectionPolicies/{ConnectionPolicySid}/Targets.
-3. Check each target for issues: disabled targets, zero-weight entries, or missing priority differentiation.
-4. Update as needed: POST /v1/ConnectionPolicies/{ConnectionPolicySid}/Targets/{Sid} to adjust `priority`, `weight`, `enabled`, or `target` URI.
-5. Remove stale targets: DELETE /v1/ConnectionPolicies/{ConnectionPolicySid}/Targets/{Sid} for any targets no longer in use.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Delete a Call?" -> DELETE /v1/Archives/{Date}/Calls/{Sid}
+- "Create a ByocTrunk?" -> POST /v1/ByocTrunks
+- "List all ByocTrunks?" -> GET /v1/ByocTrunks
+- "Get ByocTrunk details?" -> GET /v1/ByocTrunks/{Sid}
+- "Delete a ByocTrunk?" -> DELETE /v1/ByocTrunks/{Sid}
+- "Create a ConnectionPolicy?" -> POST /v1/ConnectionPolicies
+- "List all ConnectionPolicies?" -> GET /v1/ConnectionPolicies
+- "Get ConnectionPolicy details?" -> GET /v1/ConnectionPolicies/{Sid}
+- "Delete a ConnectionPolicy?" -> DELETE /v1/ConnectionPolicies/{Sid}
+- "Create a Target?" -> POST /v1/ConnectionPolicies/{ConnectionPolicySid}/Targets
+- "List all Targets?" -> GET /v1/ConnectionPolicies/{ConnectionPolicySid}/Targets
+- "Get Target details?" -> GET /v1/ConnectionPolicies/{ConnectionPolicySid}/Targets/{Sid}
+- "Delete a Target?" -> DELETE /v1/ConnectionPolicies/{ConnectionPolicySid}/Targets/{Sid}
+- "Get Country details?" -> GET /v1/DialingPermissions/Countries/{IsoCode}
+- "List all Countries?" -> GET /v1/DialingPermissions/Countries
+- "Create a BulkCountryUpdate?" -> POST /v1/DialingPermissions/BulkCountryUpdates
+- "List all HighRiskSpecialPrefixes?" -> GET /v1/DialingPermissions/Countries/{IsoCode}/HighRiskSpecialPrefixes
+- "List all Settings?" -> GET /v1/Settings
+- "Create a Setting?" -> POST /v1/Settings
+- "Create a IpRecord?" -> POST /v1/IpRecords
+- "List all IpRecords?" -> GET /v1/IpRecords
+- "Get IpRecord details?" -> GET /v1/IpRecords/{Sid}
+- "Delete a IpRecord?" -> DELETE /v1/IpRecords/{Sid}
+- "Create a SourceIpMapping?" -> POST /v1/SourceIpMappings
+- "List all SourceIpMappings?" -> GET /v1/SourceIpMappings
+- "Get SourceIpMapping details?" -> GET /v1/SourceIpMappings/{Sid}
+- "Delete a SourceIpMapping?" -> DELETE /v1/SourceIpMappings/{Sid}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

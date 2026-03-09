@@ -263,86 +263,117 @@ https://app.bigredcloud.com/api
 |--------|------|-------------|
 | GET | /v1/vatTypes | Returns a list of global Vat Types. Supports OData querying protocol. |
 
-## Enhanced Skill Content
+## Common Questions
 
-
-## Question Mapping
-
-- "How do I list all customers?" -> GET /v1/customers
-- "How do I create a new sales invoice?" -> POST /v1/salesInvoices
-- "What are my bank accounts?" -> GET /v1/bankAccounts
-- "How do I look up a specific supplier's balance?" -> GET /v1/suppliers/{id} (with needBalance param)
-- "How do I record a cash payment?" -> POST /v1/cashPayments
-- "What is the company's financial year?" -> GET /v1/companySetupConfig/getFinancialYear
-- "How do I email an invoice to a customer?" -> POST /v1/email/sendSalesInvoice
-- "How do I convert a quote into a sales invoice?" -> POST /v1/quotes/generateSaleInvoice
-- "What transactions does a customer have?" -> GET /v1/customers/{itemId}/accountTrans
-- "How do I update multiple products at once?" -> PUT /v1/products/batch
-- "How do I issue a credit note with an auto-generated reference?" -> POST /v1/salesCreditNotes/createCreditNoteWithGeneratingReference
-- "What are the current VAT rates?" -> GET /v1/vatRates
-- "How do I get the nominal ledger for a date range?" -> GET /v1/nominalAccounts/ledger (with startDate, endDate)
-- "How do I close a quote?" -> PUT /v1/quotes/close/{id}
-- "How do I get active customers excluding dormant ones?" -> GET /v1/customers/GetWithoutDormant
-
-## Response Tips
-
-- **List endpoints** (GET /v1/customers, /v1/products, etc.): Responses return arrays of objects. Check for pagination parameters in query string (page, pageSize) -- the spec does not define them explicitly, so test with large datasets.
-- **Single-resource endpoints** (GET /v1/.../\{id\}): Return a single object. A missing or invalid ID typically returns a 404 or empty body, not an error array.
-- **Create/Update endpoints** (POST, PUT): Return the created or updated object. The `timestamp` field on the returned object is required for subsequent DELETE calls (optimistic concurrency).
-- **Batch endpoints** (PUT .../batch): Accept an array of maps and return results for each item. Check individual item statuses within the response array.
-- **Email endpoints** (POST /v1/email/...): Return success/failure status. No email content is returned -- only delivery confirmation.
-- **Ledger endpoints** (GET /v1/nominalAccounts/ledger): Require date range parameters. Responses may be large; filter by specific account IDs using the /ledger/\{ids\} variant.
-- **Delete endpoints**: Require both `id` and `timestamp` (concurrency token from the last GET/PUT). Omitting timestamp will fail.
-
-## Anomaly Flags
-
-- **Stale timestamp on DELETE**: If a delete fails, the entity was modified since last fetch. Re-fetch to get the current timestamp before retrying.
-- **Missing auth**: All endpoints require ApiKey authentication. A 401 or 403 response means the API key is missing, expired, or lacks permissions.
-- **Empty results on GetWithoutDormant**: If active customer/product counts are unexpectedly low, dormant flags may have been set in bulk -- verify against the full list endpoint.
-- **Financial year boundaries**: When querying ledger endpoints, results outside the active financial year (from /getFinancialYear) may be incomplete or absent.
-- **Batch partial failures**: Batch PUT responses may succeed for some items and fail for others. Always inspect each item in the response array individually.
-- **Quote lifecycle state**: Attempting to generate a sales invoice from a closed quote will fail. Check quote status or reopen it first via PUT /v1/quotes/reopen/\{id\}.
-- **Large ledger responses**: Unbounded date ranges on /nominalAccounts/ledger can return very large payloads. Narrow the date range or filter by account IDs.
-
-## Playbook
-
-### 1. Create and Send a Sales Invoice
-
-1. GET /v1/customers to find the target customer ID
-2. GET /v1/products to get product IDs and pricing
-3. GET /v1/vatRates to determine applicable VAT rate
-4. POST /v1/salesInvoices with customer, line items, and VAT details (or use POST /v1/salesInvoices/createSaleInvoiceWithGeneratingReference for auto-numbering)
-5. POST /v1/email/sendSalesInvoice with the returned invoice ID to email it to the customer
-
-### 2. Quote-to-Invoice Workflow
-
-1. POST /v1/quotes (or POST /v1/quotes/createQuoteWithGeneratingReference for auto-numbering)
-2. POST /v1/email/sendQuote to send the quote to the customer
-3. Once accepted, POST /v1/quotes/generateSaleInvoice with the quote ID to convert it into a sales invoice
-4. POST /v1/email/sendSalesInvoice to send the generated invoice
-
-### 3. Record a Supplier Purchase and Payment
-
-1. GET /v1/suppliers to find the supplier ID
-2. POST /v1/purchases (or POST /v1/purchases/createPurchaseWithGeneratingReference for auto-numbering)
-3. POST /v1/payments to record the payment against the purchase
-4. GET /v1/suppliers/{itemId}/accountTrans to verify the transaction appears on the supplier ledger
-
-### 4. Reconcile Customer Account
-
-1. GET /v1/customers/{id} with needBalance=true to check the outstanding balance
-2. GET /v1/customers/{itemId}/accountTrans to review all transactions
-3. GET /v1/customers/{itemId}/openingBalanceList to verify opening balance entries
-4. POST /v1/cashReceipts to record any incoming payments
-5. If overcredited, POST /v1/salesCreditNotes to issue a credit note
-
-### 5. Bulk Update Products and Pricing
-
-1. GET /v1/products to retrieve current product catalog
-2. Modify pricing, descriptions, or VAT categories in the returned objects
-3. PUT /v1/products/batch with the array of updated product maps
-4. Verify updates by calling GET /v1/products and spot-checking individual items via GET /v1/products/{id}
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all accounts?" -> GET /v1/accounts
+- "List all analysisCategories?" -> GET /v1/analysisCategories
+- "List all bankAccounts?" -> GET /v1/bankAccounts
+- "Create a bankAccount?" -> POST /v1/bankAccounts
+- "Get bankAccount details?" -> GET /v1/bankAccounts/{id}
+- "Update a bankAccount?" -> PUT /v1/bankAccounts/{id}
+- "Delete a bankAccount?" -> DELETE /v1/bankAccounts/{id}
+- "List all bookTranTypes?" -> GET /v1/bookTranTypes
+- "List all cashPayments?" -> GET /v1/cashPayments
+- "Create a cashPayment?" -> POST /v1/cashPayments
+- "Get cashPayment details?" -> GET /v1/cashPayments/{id}
+- "Update a cashPayment?" -> PUT /v1/cashPayments/{id}
+- "Delete a cashPayment?" -> DELETE /v1/cashPayments/{id}
+- "List all cashReceipts?" -> GET /v1/cashReceipts
+- "Create a cashReceipt?" -> POST /v1/cashReceipts
+- "Get cashReceipt details?" -> GET /v1/cashReceipts/{id}
+- "Update a cashReceipt?" -> PUT /v1/cashReceipts/{id}
+- "Delete a cashReceipt?" -> DELETE /v1/cashReceipts/{id}
+- "List all categoryTypes?" -> GET /v1/categoryTypes
+- "List all companySettings?" -> GET /v1/companySettings
+- "List all companySetupConfig?" -> GET /v1/companySetupConfig
+- "List all getFinancialYear?" -> GET /v1/companySetupConfig/getFinancialYear
+- "List all getCompanyOptions?" -> GET /v1/companySetupConfig/getCompanyOptions
+- "List all getCompanyLogo?" -> GET /v1/companySetupConfig/getCompanyLogo
+- "List all customers?" -> GET /v1/customers
+- "Create a customer?" -> POST /v1/customers
+- "Get customer details?" -> GET /v1/customers/{id}
+- "Update a customer?" -> PUT /v1/customers/{id}
+- "Delete a customer?" -> DELETE /v1/customers/{id}
+- "List all GetWithoutDormant?" -> GET /v1/customers/GetWithoutDormant
+- "List all openingBalance?" -> GET /v1/customers/{itemId}/openingBalance
+- "List all openingBalanceList?" -> GET /v1/customers/{itemId}/openingBalanceList
+- "List all accountTrans?" -> GET /v1/customers/{itemId}/accountTrans
+- "List all quotes?" -> GET /v1/customers/{itemId}/quotes
+- "Create a sendSalesInvoice?" -> POST /v1/email/sendSalesInvoice
+- "Create a sendEmailStatement?" -> POST /v1/email/sendEmailStatement
+- "Create a sendQuote?" -> POST /v1/email/sendQuote
+- "List all nominalAccounts?" -> GET /v1/nominalAccounts
+- "Get nominalAccount details?" -> GET /v1/nominalAccounts/{id}
+- "List all ledger?" -> GET /v1/nominalAccounts/ledger
+- "Get ledger details?" -> GET /v1/nominalAccounts/ledger/{ids}
+- "List all ownerTypeGroups?" -> GET /v1/ownerTypeGroups
+- "List all ownerTypes?" -> GET /v1/ownerTypes
+- "List all payments?" -> GET /v1/payments
+- "Create a payment?" -> POST /v1/payments
+- "Get payment details?" -> GET /v1/payments/{id}
+- "Update a payment?" -> PUT /v1/payments/{id}
+- "Delete a payment?" -> DELETE /v1/payments/{id}
+- "List all products?" -> GET /v1/products
+- "Create a product?" -> POST /v1/products
+- "Get product details?" -> GET /v1/products/{id}
+- "Update a product?" -> PUT /v1/products/{id}
+- "Delete a product?" -> DELETE /v1/products/{id}
+- "List all GetWithoutDormant?" -> GET /v1/products/GetWithoutDormant
+- "List all productTypes?" -> GET /v1/productTypes
+- "List all purchases?" -> GET /v1/purchases
+- "Create a purchase?" -> POST /v1/purchases
+- "Get purchase details?" -> GET /v1/purchases/{id}
+- "Update a purchase?" -> PUT /v1/purchases/{id}
+- "Delete a purchase?" -> DELETE /v1/purchases/{id}
+- "Create a createPurchaseWithGeneratingReference?" -> POST /v1/purchases/createPurchaseWithGeneratingReference
+- "List all quotes?" -> GET /v1/quotes
+- "Create a quote?" -> POST /v1/quotes
+- "Get quote details?" -> GET /v1/quotes/{id}
+- "Update a quote?" -> PUT /v1/quotes/{id}
+- "Delete a quote?" -> DELETE /v1/quotes/{id}
+- "Update a close?" -> PUT /v1/quotes/close/{id}
+- "Update a reopen?" -> PUT /v1/quotes/reopen/{id}
+- "Create a generateSaleInvoice?" -> POST /v1/quotes/generateSaleInvoice
+- "Create a createQuoteWithGeneratingReference?" -> POST /v1/quotes/createQuoteWithGeneratingReference
+- "List all sales?" -> GET /v1/sales
+- "List all salesCreditNotes?" -> GET /v1/salesCreditNotes
+- "Create a salesCreditNote?" -> POST /v1/salesCreditNotes
+- "Get salesCreditNote details?" -> GET /v1/salesCreditNotes/{id}
+- "Update a salesCreditNote?" -> PUT /v1/salesCreditNotes/{id}
+- "Delete a salesCreditNote?" -> DELETE /v1/salesCreditNotes/{id}
+- "Create a createCreditNoteWithGeneratingReference?" -> POST /v1/salesCreditNotes/createCreditNoteWithGeneratingReference
+- "List all salesEntries?" -> GET /v1/salesEntries
+- "Create a salesEntry?" -> POST /v1/salesEntries
+- "Get salesEntry details?" -> GET /v1/salesEntries/{id}
+- "Update a salesEntry?" -> PUT /v1/salesEntries/{id}
+- "Delete a salesEntry?" -> DELETE /v1/salesEntries/{id}
+- "List all salesInvoices?" -> GET /v1/salesInvoices
+- "Create a salesInvoice?" -> POST /v1/salesInvoices
+- "Get salesInvoice details?" -> GET /v1/salesInvoices/{id}
+- "Update a salesInvoice?" -> PUT /v1/salesInvoices/{id}
+- "Delete a salesInvoice?" -> DELETE /v1/salesInvoices/{id}
+- "Create a createSaleInvoiceWithGeneratingReference?" -> POST /v1/salesInvoices/createSaleInvoiceWithGeneratingReference
+- "List all salesReps?" -> GET /v1/salesReps
+- "Create a salesRep?" -> POST /v1/salesReps
+- "Get salesRep details?" -> GET /v1/salesReps/{id}
+- "Update a salesRep?" -> PUT /v1/salesReps/{id}
+- "Delete a salesRep?" -> DELETE /v1/salesReps/{id}
+- "List all suppliers?" -> GET /v1/suppliers
+- "Create a supplier?" -> POST /v1/suppliers
+- "Get supplier details?" -> GET /v1/suppliers/{id}
+- "Update a supplier?" -> PUT /v1/suppliers/{id}
+- "Delete a supplier?" -> DELETE /v1/suppliers/{id}
+- "List all openingBalance?" -> GET /v1/suppliers/{itemId}/openingBalance
+- "List all openingBalanceList?" -> GET /v1/suppliers/{itemId}/openingBalanceList
+- "List all accountTrans?" -> GET /v1/suppliers/{itemId}/accountTrans
+- "List all userDefinedFields?" -> GET /v1/userDefinedFields
+- "List all vatAnalysisTypes?" -> GET /v1/vatAnalysisTypes
+- "List all vatCategories?" -> GET /v1/vatCategories
+- "Create a vatRate?" -> POST /v1/vatCategories/vatRates
+- "List all vatRates?" -> GET /v1/vatRates
+- "List all vatTypes?" -> GET /v1/vatTypes
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

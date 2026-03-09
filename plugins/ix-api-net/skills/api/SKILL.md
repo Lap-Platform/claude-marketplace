@@ -246,88 +246,124 @@ Bearer bearer | OAuth2
 | DELETE | /routing-functions/{id} | Request Decommission |
 | GET | /routing-functions/{id}/cancellation-policy | Read Cancellation Policy |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I authenticate with IX-API?" -> POST /auth/token
-- "My token expired, how do I get a new one?" -> POST /auth/refresh
-- "What facilities are available in a specific metro area?" -> GET /facilities (with `metro_area` filter)
-- "Show me all my active connections" -> GET /connections (with `state` filter and `managing_account`)
-- "What ports are assigned to a connection?" -> GET /ports (with `connection` filter)
-- "How do I order a new connection at a specific PoP?" -> POST /connections (requires `product_offering`, `mode`, `pop` via offering)
-- "What product offerings support cloud connectivity?" -> GET /product-offerings (with `type=cloud_vc`)
-- "How much bandwidth is my port using?" -> GET /ports/{id}/statistics
-- "What is my cancellation window for a network service?" -> GET /network-services/{id}/cancellation-policy
-- "List all accounts I manage" -> GET /accounts (with `managing_account` filter)
-- "How do I set up a peering session on an exchange LAN?" -> POST /network-service-configs (with `type=exchange_lan`)
-- "What IP addresses are allocated to my service config?" -> GET /ips (with `network_service_config` filter)
-- "Is the IX-API healthy right now?" -> GET /health
-- "What network service types does this implementation support?" -> GET /implementation
-- "How do I decommission a connection with a future date?" -> DELETE /connections/{id} (with `decommission_at`)
-
-## Response Tips
-
-- **List endpoints** (facilities, connections, ports, etc.): Return 200 for complete results or 206 for partial -- always check for `page_token` in the response to fetch the next page. Use `page_limit` and `page_offset` for cursor control.
-- **Create/Update endpoints**: POST returns 201, PUT/PATCH return 202 (accepted, may provision asynchronously) -- poll the resource by ID to track `state` and `status` progression.
-- **Statistics endpoints**: The `aggregates` map keys vary by resource type; timeseries `samples` are arrays of arrays where column order matches the `fields` array.
-- **Polymorphic resources** (network-services, network-service-configs, network-feature-configs, member-joining-rules): The `type` field in requests and responses determines the full schema -- always include `type` to interpret the payload correctly.
-- **Error responses**: 400 = invalid input, 401 = expired or missing token, 403 = insufficient permissions, 404 = resource not found, 409 = conflict (contact deletion with active assignments).
-
-## Anomaly Flags
-
-- **State = "decommissioning" or unexpected state**: Surface when any managed resource (connection, port, network service) enters a decommission or error state without explicit user action.
-- **206 Partial Content without pagination follow-up**: Warn when a list response returns 206, indicating more results exist that the caller has not fetched.
-- **`charged_until` date approaching**: Proactively flag when a cancellation policy shows billing continuing past the intended decommission date.
-- **`status` array contains error or warning entries**: The `status: [map]` field on connections, ports, and accounts can contain provisioning warnings -- surface any non-normal status entries.
-- **Token expiry**: If a 401 is returned on a previously authenticated call, prompt for token refresh via POST /auth/refresh before retrying.
-- **`capacity_allocation_limit` near `capacity_allocated`**: On connections, flag when allocated capacity is approaching the limit to prevent failed service config provisioning.
-- **409 Conflict on contact deletion**: Indicates the contact still has active role assignments -- surface this and suggest removing assignments first.
-
-## Playbook
-
-### 1. Provision a New Exchange LAN Peering Connection
-
-1. Authenticate: POST /auth/token with `api_key` and `api_secret`
-2. Find a metro area: GET /metro-areas, pick the target metro
-3. List product offerings: GET /product-offerings with `type=exchange_lan` and `handover_metro_area={metro_id}`
-4. Create the connection: POST /connections with the chosen `product_offering`, `mode`, account IDs, and `port_quantity`
-5. Wait for port reservations to appear: GET /connections/{id} and check `port_reservations` array
-6. Download LOA: GET /connections/{id}/loa to hand to the facility for cross-connect
-7. Create a network service config: POST /network-service-configs with `type=exchange_lan`, referencing the connection and network service
-8. Assign IPs: POST /ips with the service config reference and your peering IP
-
-### 2. Monitor Port and Connection Bandwidth
-
-1. List active ports: GET /ports with `state=production`
-2. For each port, fetch aggregate stats: GET /ports/{id}/statistics with desired `start` and `end` range
-3. Drill into timeseries: GET /ports/{id}/statistics/{aggregate}/timeseries with `fields` to select specific metrics
-4. Repeat for connections: GET /connections/{id}/statistics and the corresponding timeseries endpoint
-5. Compare `capacity_allocated` from GET /connections/{id} against observed throughput to identify saturation
-
-### 3. Set Up Account Hierarchy with Contacts and Roles
-
-1. Create a sub-account: POST /accounts with `managing_account` set to your parent account ID
-2. Create a contact: POST /contacts with `managing_account` and `consuming_account` referencing the new account
-3. List available roles: GET /roles to find the role ID (e.g., technical, billing, admin)
-4. Assign the contact to a role: POST /role-assignments with the `role` and `contact` IDs
-5. Reference the role assignment ID when creating connections or services (the `role_assignments` array)
-
-### 4. Decommission a Network Service Gracefully
-
-1. Check the cancellation policy: GET /network-services/{id}/cancellation-policy with desired `decommission_at` date
-2. Review `charged_until` in the response to understand billing impact
-3. If acceptable, delete with future date: DELETE /network-services/{id} with `decommission_at` in the body
-4. Monitor state: GET /network-services/{id} periodically -- state will transition through decommissioning
-5. Clean up related configs: DELETE /network-service-configs/{id} for any configs attached to this service
-
-### 5. Upgrade a Network Service via Change Request
-
-1. List available product offerings: GET /product-offerings with `type` matching your service and `upgrade_allowed=true`
-2. Check current service: GET /network-services/{id} to note the current `product_offering`
-3. Submit the change request: POST /network-services/{id}/change-request with the new `product_offering` and optional `capacity`
-4. Review pending change: GET /network-services/{id}/change-request to confirm details
-5. To abort: DELETE /network-services/{id}/change-request before it is applied
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a token?" -> POST /auth/token
+- "Create a refresh?" -> POST /auth/refresh
+- "List all facilities?" -> GET /facilities
+- "Get facility details?" -> GET /facilities/{id}
+- "List all devices?" -> GET /devices
+- "Get device details?" -> GET /devices/{id}
+- "List all pops?" -> GET /pops
+- "Get pop details?" -> GET /pops/{id}
+- "List all metro-area-networks?" -> GET /metro-area-networks
+- "Get metro-area-network details?" -> GET /metro-area-networks/{id}
+- "List all metro-areas?" -> GET /metro-areas
+- "Get metro-area details?" -> GET /metro-areas/{id}
+- "List all product-offerings?" -> GET /product-offerings
+- "Get product-offering details?" -> GET /product-offerings/{id}
+- "List all availability-zones?" -> GET /availability-zones
+- "Get availability-zone details?" -> GET /availability-zones/{id}
+- "List all ports?" -> GET /ports
+- "Get port details?" -> GET /ports/{id}
+- "List all statistics?" -> GET /ports/{id}/statistics
+- "List all timeseries?" -> GET /ports/{id}/statistics/{aggregate}/timeseries
+- "List all port-reservations?" -> GET /port-reservations
+- "Create a port-reservation?" -> POST /port-reservations
+- "Get port-reservation details?" -> GET /port-reservations/{id}
+- "Update a port-reservation?" -> PUT /port-reservations/{id}
+- "Partially update a port-reservation?" -> PATCH /port-reservations/{id}
+- "Delete a port-reservation?" -> DELETE /port-reservations/{id}
+- "List all cancellation-policy?" -> GET /port-reservations/{id}/cancellation-policy
+- "List all loa?" -> GET /port-reservations/{id}/loa
+- "Create a loa?" -> POST /port-reservations/{id}/loa
+- "List all connections?" -> GET /connections
+- "Create a connection?" -> POST /connections
+- "Get connection details?" -> GET /connections/{id}
+- "Update a connection?" -> PUT /connections/{id}
+- "Partially update a connection?" -> PATCH /connections/{id}
+- "Delete a connection?" -> DELETE /connections/{id}
+- "List all statistics?" -> GET /connections/{id}/statistics
+- "List all timeseries?" -> GET /connections/{id}/statistics/{aggregate}/timeseries
+- "List all loa?" -> GET /connections/{id}/loa
+- "Create a loa?" -> POST /connections/{id}/loa
+- "List all cancellation-policy?" -> GET /connections/{id}/cancellation-policy
+- "List all network-service-configs?" -> GET /network-service-configs
+- "Create a network-service-config?" -> POST /network-service-configs
+- "Get network-service-config details?" -> GET /network-service-configs/{id}
+- "Update a network-service-config?" -> PUT /network-service-configs/{id}
+- "Partially update a network-service-config?" -> PATCH /network-service-configs/{id}
+- "Delete a network-service-config?" -> DELETE /network-service-configs/{id}
+- "List all statistics?" -> GET /network-service-configs/{id}/statistics
+- "List all timeseries?" -> GET /network-service-configs/{id}/statistics/{aggregate}/timeseries
+- "List all peer-statistics?" -> GET /network-service-configs/{id}/peer-statistics
+- "List all timeseries?" -> GET /network-service-configs/{id}/peer-statistics/{aggregate}/timeseries
+- "List all cancellation-policy?" -> GET /network-service-configs/{id}/cancellation-policy
+- "List all network-feature-configs?" -> GET /network-feature-configs
+- "Create a network-feature-config?" -> POST /network-feature-configs
+- "Get network-feature-config details?" -> GET /network-feature-configs/{id}
+- "Update a network-feature-config?" -> PUT /network-feature-configs/{id}
+- "Partially update a network-feature-config?" -> PATCH /network-feature-configs/{id}
+- "Delete a network-feature-config?" -> DELETE /network-feature-configs/{id}
+- "List all account?" -> GET /account
+- "List all accounts?" -> GET /accounts
+- "Create a account?" -> POST /accounts
+- "Get account details?" -> GET /accounts/{id}
+- "Update a account?" -> PUT /accounts/{id}
+- "Partially update a account?" -> PATCH /accounts/{id}
+- "Delete a account?" -> DELETE /accounts/{id}
+- "List all roles?" -> GET /roles
+- "Get role details?" -> GET /roles/{id}
+- "List all contacts?" -> GET /contacts
+- "Create a contact?" -> POST /contacts
+- "Get contact details?" -> GET /contacts/{id}
+- "Update a contact?" -> PUT /contacts/{id}
+- "Partially update a contact?" -> PATCH /contacts/{id}
+- "Delete a contact?" -> DELETE /contacts/{id}
+- "List all role-assignments?" -> GET /role-assignments
+- "Create a role-assignment?" -> POST /role-assignments
+- "Get role-assignment details?" -> GET /role-assignments/{id}
+- "Delete a role-assignment?" -> DELETE /role-assignments/{id}
+- "List all health?" -> GET /health
+- "List all implementation?" -> GET /implementation
+- "List all extensions?" -> GET /extensions
+- "List all ips?" -> GET /ips
+- "Create a ip?" -> POST /ips
+- "Get ip details?" -> GET /ips/{id}
+- "Update a ip?" -> PUT /ips/{id}
+- "Partially update a ip?" -> PATCH /ips/{id}
+- "List all macs?" -> GET /macs
+- "Create a mac?" -> POST /macs
+- "Get mac details?" -> GET /macs/{id}
+- "Delete a mac?" -> DELETE /macs/{id}
+- "List all network-services?" -> GET /network-services
+- "Create a network-service?" -> POST /network-services
+- "Get network-service details?" -> GET /network-services/{id}
+- "Update a network-service?" -> PUT /network-services/{id}
+- "Partially update a network-service?" -> PATCH /network-services/{id}
+- "Delete a network-service?" -> DELETE /network-services/{id}
+- "List all statistics?" -> GET /network-services/{id}/statistics
+- "List all timeseries?" -> GET /network-services/{id}/statistics/{aggregate}/timeseries
+- "List all rtt-statistics?" -> GET /network-services/{id}/rtt-statistics
+- "List all change-request?" -> GET /network-services/{id}/change-request
+- "Create a change-request?" -> POST /network-services/{id}/change-request
+- "List all cancellation-policy?" -> GET /network-services/{id}/cancellation-policy
+- "List all network-features?" -> GET /network-features
+- "Get network-feature details?" -> GET /network-features/{id}
+- "List all member-joining-rules?" -> GET /member-joining-rules
+- "Create a member-joining-rule?" -> POST /member-joining-rules
+- "Get member-joining-rule details?" -> GET /member-joining-rules/{id}
+- "Update a member-joining-rule?" -> PUT /member-joining-rules/{id}
+- "Partially update a member-joining-rule?" -> PATCH /member-joining-rules/{id}
+- "Delete a member-joining-rule?" -> DELETE /member-joining-rules/{id}
+- "List all routing-functions?" -> GET /routing-functions
+- "Create a routing-function?" -> POST /routing-functions
+- "Get routing-function details?" -> GET /routing-functions/{id}
+- "Partially update a routing-function?" -> PATCH /routing-functions/{id}
+- "Delete a routing-function?" -> DELETE /routing-functions/{id}
+- "List all cancellation-policy?" -> GET /routing-functions/{id}/cancellation-policy
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -151,90 +151,100 @@ https://api.snyk.io/v1
 | POST | /reporting/counts/projects | Get project counts |
 | POST | /reporting/counts/tests | Get test counts |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Who am I authenticated as?" -> GET /user/me
-- "Get details about a specific user?" -> GET /user/{userId}
-- "What organizations do I belong to?" -> GET /orgs
-- "List all members in my organization?" -> GET /org/{orgId}/members
-- "What integrations are configured for my org?" -> GET /org/{orgId}/integrations
-- "Show me the vulnerability issues for a project?" -> POST /org/{orgId}/project/{projectId}/aggregated-issues
-- "What does the dependency graph look like for a project?" -> GET /org/{orgId}/project/{projectId}/dep-graph
-- "Test an npm package for vulnerabilities?" -> POST /test/npm
-- "How many issues do we have right now?" -> POST /reporting/counts/issues/latest
-- "Ignore a specific vulnerability in a project?" -> POST /org/{orgId}/project/{projectId}/ignore/{issueId}
-- "Invite someone to my organization?" -> POST /org/{orgId}/invite
-- "Move a project to a different organization?" -> PUT /org/{orgId}/project/{projectId}/move
-- "What are the notification settings for my org?" -> GET /user/me/notification-settings/org/{orgId}
-- "List all projects' issues over a date range?" -> POST /reporting/issues
-- "Create a Jira ticket for a vulnerability?" -> POST /org/{orgId}/project/{projectId}/issue/{issueId}/jira-issue
-
-## Response Tips
-
-- **User endpoints**: Flat object responses; `/user/me` returns the authenticated user profile directly.
-- **Group endpoints**: `members`, `tags`, and `orgs` listings support `perPage`/`page` query params for manual pagination -- always check if more pages exist.
-- **Org endpoints**: Nested maps are common (`issueCountsBySeverity`, `owner`, `importingUser`); project responses include image metadata fields that may be null for non-container projects.
-- **Test endpoints**: Responses contain `ok` boolean, `issues.vulnerabilities` array, and `dependencyCount`; a `200` with `ok: false` means vulnerabilities were found (not an error).
-- **Reporting endpoints**: Return `results` array with `total` count; support `page`/`perPage` for pagination and `sortBy`/`order`/`groupBy` for shaping output. 400 errors indicate malformed filter or date params.
-- **Integration endpoints**: Settings responses have many boolean flags for PR behavior; unchanged fields are still returned in full on PUT.
-- **Ignore endpoints**: Returns a nested `ignorePath` map with `reason`, `reasonType`, `ignoredBy` (user object), and `expires` -- check `disregardIfFixable` to understand auto-unignore behavior.
-
-## Anomaly Flags
-
-- **401 on any endpoint**: API key is invalid, expired, or missing -- surface immediately and halt further calls.
-- **403 on org operations**: The authenticated user lacks permissions for that org; flag the role mismatch (common on `/provision`, `/settings` PUT, integration auth endpoints).
-- **Test result with `ok: true` but non-empty vulnerabilities array**: Inconsistent state -- flag for manual review.
-- **`disregardIfFixable: true` on ignores**: Alert the user that this ignore will auto-expire when a fix becomes available.
-- **`expires` field on ignores approaching current date**: Proactively warn that an ignore is about to lapse.
-- **`isMonitored: false` on a project**: Flag that this project is not being actively scanned -- may be a gap in coverage.
-- **`readOnly: true` on a project**: Surface before any write attempts to avoid confusing 403s.
-- **Large `totalDependencies` count (>500)**: May indicate a bloated dependency tree worth investigating.
-- **Import job `status` not `complete`**: Poll `/import/{jobId}` and alert if stuck in pending state.
-- **422 on org creation**: Signals validation failure (duplicate name, invalid plan) -- surface the response body for details.
-
-## Playbook
-
-### Audit an Organization's Vulnerability Posture
-
-1. Call `GET /orgs` to list all accessible organizations
-2. For each org, call `POST /reporting/counts/issues/latest` to get current issue counts
-3. Drill into high-count orgs with `POST /reporting/issues/latest` using `sortBy: "severity"` and `order: "desc"`
-4. For critical issues, call `GET /org/{orgId}/project/{projectId}/issue/{issueId}/paths` to understand the dependency path
-5. Summarize findings by org, severity, and exploitability
-
-### Onboard a New Team Member
-
-1. Call `GET /user/me` to confirm your admin identity
-2. Call `POST /org/{orgId}/invite` with the new member's email
-3. Optionally call `POST /org/{orgId}/provision` with `email` and `role` to pre-assign permissions
-4. Call `GET /org/{orgId}/members` to verify the member appears in the list
-5. Call `PUT /user/me/notification-settings/org/{orgId}` to configure their notification preferences
-
-### Set Up a New Integration and Import Projects
-
-1. Call `GET /org/{orgId}/integrations` to see existing integrations
-2. Call `POST /org/{orgId}/integrations` with credentials to create a new integration
-3. Call `PUT /org/{orgId}/integrations/{integrationId}/settings` to configure PR test behavior (`pullRequestTestEnabled`, `autoRemediationPrs`, etc.)
-4. Call `POST /org/{orgId}/integrations/{integrationId}/import` to kick off project import
-5. Poll `GET /org/{orgId}/integrations/{integrationId}/import/{jobId}` until `status` is `complete`, checking `logs` for errors
-
-### Triage and Ignore a Known False Positive
-
-1. Call `POST /org/{orgId}/project/{projectId}/aggregated-issues` to list current issues
-2. Identify the false positive issue and note its `issueId`
-3. Call `POST /org/{orgId}/project/{projectId}/ignore/{issueId}` with `reasonType: "not-vulnerable"`, `reason: "confirmed false positive"`, and `disregardIfFixable: false`
-4. Call `GET /org/{orgId}/project/{projectId}/ignore/{issueId}` to verify the ignore was applied
-5. Optionally call `POST /org/{orgId}/project/{projectId}/issue/{issueId}/jira-issue` to create a tracking ticket
-
-### Generate a Time-Bound Security Report
-
-1. Call `POST /reporting/issues` with `from` and `to` date range, `perPage: 100`, `page: 1`
-2. Paginate through all results by incrementing `page` until results count < `perPage`
-3. Call `POST /reporting/counts/issues` with the same date range and `groupBy: "severity"` for summary stats
-4. Call `POST /reporting/counts/projects` with the same range to get project-level counts
-5. Call `POST /reporting/counts/tests` with `groupBy: "isPrivate"` to show test activity breakdown
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get user details?" -> GET /user/{userId}
+- "List all me?" -> GET /user/me
+- "Get org details?" -> GET /user/me/notification-settings/org/{orgId}
+- "Update a org?" -> PUT /user/me/notification-settings/org/{orgId}
+- "Get project details?" -> GET /user/me/notification-settings/org/{orgId}/project/{projectId}
+- "Update a project?" -> PUT /user/me/notification-settings/org/{orgId}/project/{projectId}
+- "List all settings?" -> GET /group/{groupId}/settings
+- "List all members?" -> GET /group/{groupId}/members
+- "Create a member?" -> POST /group/{groupId}/org/{orgId}/members
+- "List all tags?" -> GET /group/{groupId}/tags
+- "Create a delete?" -> POST /group/{groupId}/tags/delete
+- "List all orgs?" -> GET /group/{groupId}/orgs
+- "List all roles?" -> GET /group/{groupId}/roles
+- "List all orgs?" -> GET /orgs
+- "Create a org?" -> POST /org
+- "List all notification-settings?" -> GET /org/{orgId}/notification-settings
+- "Create a invite?" -> POST /org/{orgId}/invite
+- "List all members?" -> GET /org/{orgId}/members
+- "List all settings?" -> GET /org/{orgId}/settings
+- "Update a member?" -> PUT /org/{orgId}/members/{userId}
+- "Delete a member?" -> DELETE /org/{orgId}/members/{userId}
+- "Update a update?" -> PUT /org/{orgId}/members/update/{userId}
+- "Delete a org?" -> DELETE /org/{orgId}
+- "Create a provision?" -> POST /org/{orgId}/provision
+- "List all provision?" -> GET /org/{orgId}/provision
+- "List all integrations?" -> GET /org/{orgId}/integrations
+- "Create a integration?" -> POST /org/{orgId}/integrations
+- "Update a integration?" -> PUT /org/{orgId}/integrations/{integrationId}
+- "Create a provision-token?" -> POST /org/{orgId}/integrations/{integrationId}/authentication/provision-token
+- "Create a switch-token?" -> POST /org/{orgId}/integrations/{integrationId}/authentication/switch-token
+- "Create a clone?" -> POST /org/{orgId}/integrations/{integrationId}/clone
+- "Get integration details?" -> GET /org/{orgId}/integrations/{type}
+- "List all settings?" -> GET /org/{orgId}/integrations/{integrationId}/settings
+- "Create a import?" -> POST /org/{orgId}/integrations/{integrationId}/import
+- "Get import details?" -> GET /org/{orgId}/integrations/{integrationId}/import/{jobId}
+- "Get project details?" -> GET /org/{orgId}/project/{projectId}
+- "Update a project?" -> PUT /org/{orgId}/project/{projectId}
+- "Delete a project?" -> DELETE /org/{orgId}/project/{projectId}
+- "Create a deactivate?" -> POST /org/{orgId}/project/{projectId}/deactivate
+- "Create a activate?" -> POST /org/{orgId}/project/{projectId}/activate
+- "Create a aggregated-issue?" -> POST /org/{orgId}/project/{projectId}/aggregated-issues
+- "List all paths?" -> GET /org/{orgId}/project/{projectId}/issue/{issueId}/paths
+- "Create a history?" -> POST /org/{orgId}/project/{projectId}/history
+- "Create a aggregated-issue?" -> POST /org/{orgId}/project/{projectId}/history/{snapshotId}/aggregated-issues
+- "List all paths?" -> GET /org/{orgId}/project/{projectId}/history/{snapshotId}/issue/{issueId}/paths
+- "List all dep-graph?" -> GET /org/{orgId}/project/{projectId}/dep-graph
+- "List all ignores?" -> GET /org/{orgId}/project/{projectId}/ignores
+- "Get ignore details?" -> GET /org/{orgId}/project/{projectId}/ignore/{issueId}
+- "Update a ignore?" -> PUT /org/{orgId}/project/{projectId}/ignore/{issueId}
+- "Delete a ignore?" -> DELETE /org/{orgId}/project/{projectId}/ignore/{issueId}
+- "List all jira-issues?" -> GET /org/{orgId}/project/{projectId}/jira-issues
+- "Create a jira-issue?" -> POST /org/{orgId}/project/{projectId}/issue/{issueId}/jira-issue
+- "List all settings?" -> GET /org/{orgId}/project/{projectId}/settings
+- "Create a tag?" -> POST /org/{orgId}/project/{projectId}/tags
+- "Create a remove?" -> POST /org/{orgId}/project/{projectId}/tags/remove
+- "Create a attribute?" -> POST /org/{orgId}/project/{projectId}/attributes
+- "Create a dependency?" -> POST /org/{orgId}/dependencies
+- "Create a license?" -> POST /org/{orgId}/licenses
+- "List all entitlements?" -> GET /org/{orgId}/entitlements
+- "Get entitlement details?" -> GET /org/{orgId}/entitlement/{entitlementKey}
+- "Get maven details?" -> GET /test/maven/{groupId}/{artifactId}/{version}
+- "Create a maven?" -> POST /test/maven
+- "Get npm details?" -> GET /test/npm/{packageName}/{version}
+- "Create a npm?" -> POST /test/npm
+- "Create a golangdep?" -> POST /test/golangdep
+- "Create a govendor?" -> POST /test/govendor
+- "Create a yarn?" -> POST /test/yarn
+- "Get rubygem details?" -> GET /test/rubygems/{gemName}/{version}
+- "Create a rubygem?" -> POST /test/rubygems
+- "Get gradle details?" -> GET /test/gradle/{group}/{name}/{version}
+- "Create a gradle?" -> POST /test/gradle
+- "Get sbt details?" -> GET /test/sbt/{groupId}/{artifactId}/{version}
+- "Create a sbt?" -> POST /test/sbt
+- "Get pip details?" -> GET /test/pip/{packageName}/{version}
+- "Create a pip?" -> POST /test/pip
+- "Create a composer?" -> POST /test/composer
+- "Create a dep-graph?" -> POST /test/dep-graph
+- "Create a dep-graph?" -> POST /monitor/dep-graph
+- "Create a latest?" -> POST /reporting/issues/latest
+- "Create a issue?" -> POST /reporting/issues
+- "Create a latest?" -> POST /reporting/counts/issues/latest
+- "Create a issue?" -> POST /reporting/counts/issues
+- "Create a latest?" -> POST /reporting/counts/projects/latest
+- "Create a project?" -> POST /reporting/counts/projects
+- "Create a test?" -> POST /reporting/counts/tests
+- "Create a webhook?" -> POST /org/{orgId}/webhooks
+- "List all webhooks?" -> GET /org/{orgId}/webhooks
+- "Get webhook details?" -> GET /org/{orgId}/webhooks/{webhookId}
+- "Delete a webhook?" -> DELETE /org/{orgId}/webhooks/{webhookId}
+- "Create a ping?" -> POST /org/{orgId}/webhooks/{webhookId}/ping
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

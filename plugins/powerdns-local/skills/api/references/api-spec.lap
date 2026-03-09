@@ -9,219 +9,262 @@
 
 @group error
 @endpoint GET /error
-@errors {400, 404, 422, 500}
+@desc Will always generate an error
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endgroup
 
 @group servers
 @endpoint GET /servers
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc List all servers
+@returns(200) An array of servers
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}
-@required {server_id: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc List a server
+@required {server_id: any # The id of the server to retrieve}
+@returns(200) An server
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint PUT /servers/{server_id}/cache/flush
-@required {server_id: any, domain: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Flush a cache-entry by name
+@required {server_id: any # The id of the server to retrieve, domain: any # The domain name to flush from the cache}
+@returns(200) Flush successful
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/zones
-@required {server_id: any}
-@optional {zone: any, dnssec: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc List all Zones in a server
+@required {server_id: any # The id of the server to retrieve}
+@optional {zone: any # When set to the name of a zone, only this zone is returned. If no zone with that name exists, the response is an empty array. This can e.g. be used to check if a zone exists in the database without having to guess/encode the zone's id or to check if a zone exists., dnssec: any # “true” (default) or “false”, whether to include the “dnssec” and “edited_serial” fields in the Zone objects. Setting this to ”false” will make the query a lot faster.}
+@returns(200) An array of Zones
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint POST /servers/{server_id}/zones
-@required {server_id: any, zone_struct: any}
-@optional {rrsets: any}
-@returns(201)
-@errors {400, 404, 422, 500}
+@desc Creates a new domain, returns the Zone on creation.
+@required {server_id: any # The id of the server to retrieve, zone_struct: any # The zone struct to patch with}
+@optional {rrsets: any # “true” (default) or “false”, whether to include the “rrsets” in the response Zone object.}
+@returns(201) A zone
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/zones/{zone_id}
-@required {server_id: any, zone_id: any}
-@optional {rrsets: any, rrset_name: any, rrset_type: any, include_disabled: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc zone managed by a server
+@required {server_id: any # The id of the server to retrieve, zone_id: any # The id of the zone to retrieve}
+@optional {rrsets: any # “true” (default) or “false”, whether to include the “rrsets” in the response Zone object., rrset_name: any # Limit output to RRsets for this name., rrset_type: any # Limit output to the RRset of this type. Can only be used together with rrset_name., include_disabled: any # “true” (default) or “false”, whether to include disabled RRsets in the response.}
+@returns(200) A Zone
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint DELETE /servers/{server_id}/zones/{zone_id}
-@required {server_id: any, zone_id: any}
-@returns(204)
-@errors {400, 404, 422, 500}
+@desc Deletes this zone, all attached metadata and rrsets.
+@required {server_id: any # The id of the server to retrieve, zone_id: any # The id of the zone to retrieve}
+@returns(204) Returns 204 No Content on success.
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint PATCH /servers/{server_id}/zones/{zone_id}
-@required {server_id: any, zone_id: any, zone_struct: any}
-@returns(204)
-@errors {400, 404, 422, 500}
+@desc Creates/modifies/deletes RRsets present in the payload and their comments. Returns 204 No Content on success.
+@required {server_id: any # The id of the server to retrieve, zone_id: any, zone_struct: any # The zone struct to patch with}
+@returns(204) Returns 204 No Content on success.
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint PUT /servers/{server_id}/zones/{zone_id}
-@required {server_id: any, zone_id: any, zone_struct: any}
-@returns(204)
-@errors {400, 404, 422, 500}
+@desc Modifies basic zone data.
+@required {server_id: any # The id of the server to retrieve, zone_id: any, zone_struct: any # The zone struct to patch with}
+@returns(204) Returns 204 No Content on success.
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint PUT /servers/{server_id}/zones/{zone_id}/notify
-@required {server_id: any, zone_id: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Send a DNS NOTIFY to all secondaries.
+@required {server_id: any # The id of the server to retrieve, zone_id: any # The id of the zone to retrieve}
+@returns(200) OK
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint PUT /servers/{server_id}/zones/{zone_id}/axfr-retrieve
-@required {server_id: any, zone_id: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Retrieve secondary zone from its primary.
+@required {server_id: any # The id of the server to retrieve, zone_id: any # The id of the zone to retrieve}
+@returns(200) OK
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/zones/{zone_id}/export
-@required {server_id: any, zone_id: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Returns the zone in AXFR format.
+@required {server_id: any # The id of the server to retrieve, zone_id: any # The id of the zone to retrieve}
+@returns(200) OK
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint PUT /servers/{server_id}/zones/{zone_id}/rectify
-@required {server_id: any, zone_id: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Rectify the zone data.
+@required {server_id: any # The id of the server to retrieve, zone_id: any # The id of the zone to retrieve}
+@returns(200) OK
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/config
-@required {server_id: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Returns all ConfigSettings for a single server
+@required {server_id: any # The id of the server to retrieve}
+@returns(200) List of config values
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/config/{config_setting_name}
-@required {server_id: any, config_setting_name: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Returns a specific ConfigSetting for a single server
+@required {server_id: any # The id of the server to retrieve, config_setting_name: any # The name of the setting to retrieve}
+@returns(200) List of config values
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/statistics
-@required {server_id: any}
-@optional {statistic: any, includerings: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Query statistics.
+@required {server_id: any # The id of the server to retrieve}
+@optional {statistic: any # When set to the name of a specific statistic, only this value is returned. If no statistic with that name exists, the response has a 422 status and an error message., includerings: any # “true” (default) or “false”, whether to include the Ring items, which can contain thousands of log messages or queried domains. Setting this to ”false” may make the response a lot smaller.}
+@returns(200) List of Statistic Items
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: Returned when a non-existing statistic name has been requested. Contains an error message, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/search-data
-@required {server_id: any, q: any, max: any}
-@optional {object_type: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Search the data inside PowerDNS
+@required {server_id: any # The id of the server to retrieve, q: any # The string to search for, max: any # Maximum number of entries to return}
+@optional {object_type: any # Type of data to search for, one of “all”, “zone”, “record”, “comment”}
+@returns(200) Returns a JSON array with results
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/zones/{zone_id}/metadata
-@required {server_id: any, zone_id: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Get all the Metadata associated with the zone.
+@required {server_id: any # The id of the server to retrieve, zone_id: any # The id of the zone to retrieve}
+@returns(200) List of Metadata objects
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint POST /servers/{server_id}/zones/{zone_id}/metadata
-@required {server_id: any, zone_id: any, metadata: any}
-@returns(204)
-@errors {400, 404, 422, 500}
+@desc Creates a set of metadata entries
+@required {server_id: any # The id of the server to retrieve, zone_id: any, metadata: any # Metadata object with list of values to create}
+@returns(204) OK
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/zones/{zone_id}/metadata/{metadata_kind}
-@required {server_id: any, zone_id: any, metadata_kind: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Get the content of a single kind of domain metadata as a Metadata object.
+@required {server_id: any # The id of the server to retrieve, zone_id: any # The id of the zone to retrieve, metadata_kind: any # The kind of metadata}
+@returns(200) Metadata object with list of values
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint PUT /servers/{server_id}/zones/{zone_id}/metadata/{metadata_kind}
-@required {server_id: any, zone_id: any, metadata_kind: any, metadata: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Replace the content of a single kind of domain metadata.
+@required {server_id: any # The id of the server to retrieve, zone_id: any, metadata_kind: any # The kind of metadata, metadata: any # metadata to add/create}
+@returns(200) Metadata object with list of values
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint DELETE /servers/{server_id}/zones/{zone_id}/metadata/{metadata_kind}
-@required {server_id: any, zone_id: any, metadata_kind: any}
-@returns(204)
-@errors {400, 404, 422, 500}
+@desc Delete all items of a single kind of domain metadata.
+@required {server_id: any # The id of the server to retrieve, zone_id: any # The id of the zone to retrieve, metadata_kind: any # The kind of metadata}
+@returns(204) OK
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/zones/{zone_id}/cryptokeys
-@required {server_id: any, zone_id: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Get all CryptoKeys for a zone, except the privatekey
+@required {server_id: any # The id of the server to retrieve, zone_id: any # The id of the zone to retrieve}
+@returns(200) List of Cryptokey objects
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint POST /servers/{server_id}/zones/{zone_id}/cryptokeys
-@required {server_id: any, zone_id: any, cryptokey: any}
-@returns(201)
-@errors {400, 404, 422, 500}
+@desc Creates a Cryptokey
+@required {server_id: any # The id of the server to retrieve, zone_id: any, cryptokey: any # Add a Cryptokey}
+@returns(201) Created
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/zones/{zone_id}/cryptokeys/{cryptokey_id}
-@required {server_id: any, zone_id: any, cryptokey_id: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Returns all data about the CryptoKey, including the privatekey.
+@required {server_id: any # The id of the server to retrieve, zone_id: any # The id of the zone to retrieve, cryptokey_id: any # The id value of the CryptoKey}
+@returns(200) Cryptokey
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint PUT /servers/{server_id}/zones/{zone_id}/cryptokeys/{cryptokey_id}
-@required {server_id: any, zone_id: any, cryptokey_id: any, cryptokey: any}
-@returns(204)
-@errors {400, 404, 422, 500}
+@desc This method (de)activates a key from zone_name specified by cryptokey_id
+@required {server_id: any # The id of the server to retrieve, zone_id: any, cryptokey_id: any # Cryptokey to manipulate, cryptokey: any # the Cryptokey}
+@returns(204) OK
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint DELETE /servers/{server_id}/zones/{zone_id}/cryptokeys/{cryptokey_id}
-@required {server_id: any, zone_id: any, cryptokey_id: any}
-@returns(204)
-@errors {400, 404, 422, 500}
+@desc This method deletes a key specified by cryptokey_id.
+@required {server_id: any # The id of the server to retrieve, zone_id: any # The id of the zone to retrieve, cryptokey_id: any # The id value of the Cryptokey}
+@returns(204) OK
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/tsigkeys
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Get all TSIGKeys on the server, except the actual key
+@returns(200) List of TSIGKey objects
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint POST /servers/{server_id}/tsigkeys
-@required {tsigkey: any}
-@returns(201)
-@errors {400, 404, 422, 500, 409}
+@desc Add a TSIG key
+@required {tsigkey: any # The TSIGKey to add}
+@returns(201) Created
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error, 409: An item with this name already exists}
 
 @endpoint GET /servers/{server_id}/tsigkeys/{tsigkey_id}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Get a specific TSIGKeys on the server, including the actual key
+@returns(200) OK.
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint PUT /servers/{server_id}/tsigkeys/{tsigkey_id}
-@required {tsigkey: any}
-@returns(200)
-@errors {400, 404, 422, 500, 409}
+@desc The TSIGKey at tsigkey_id can be changed in multiple ways:
+@required {tsigkey: any # A (possibly stripped down) TSIGKey object with the new values}
+@returns(200) OK. TSIGKey is changed.
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error, 409: An item with this name already exists}
 
 @endpoint DELETE /servers/{server_id}/tsigkeys/{tsigkey_id}
-@returns(204)
-@errors {400, 404, 422, 500}
+@desc Delete the TSIGKey with tsigkey_id
+@returns(204) OK, key was deleted
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/autoprimaries
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Get a list of autoprimaries
+@returns(200) OK.
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint POST /servers/{server_id}/autoprimaries
-@required {autoprimary: any}
-@returns(201)
-@errors {400, 404, 422, 500}
+@desc Add an autoprimary
+@required {autoprimary: any # autoprimary entry to add}
+@returns(201) Created
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint DELETE /servers/{server_id}/autoprimaries/{ip}/{nameserver}
-@returns(204)
-@errors {400, 404, 422, 500}
+@desc Delete the autoprimary entry
+@returns(204) OK, key was deleted
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/views
-@required {server_id: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc List all views in a server
+@required {server_id: any # The id of the server to retrieve}
+@returns(200) An array of view names
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/views/{view}
-@required {server_id: any, view: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc List the contents of a given view
+@required {server_id: any # The id of the server to retrieve, view: any # The name of the view to retrieve}
+@returns(200) An array of zone names
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint POST /servers/{server_id}/views/{view}
-@required {server_id: any, view: any, name: str}
-@returns(204)
-@errors {400, 404, 422, 500}
+@desc Adds a zone to a given view, creating it if needed
+@required {server_id: any # The id of the server to retrieve, view: any # The name of the view to update, name: str # The zone to add to the view}
+@returns(204) Returns 204 No Content on success.
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint DELETE /servers/{server_id}/views/{view}/{id}
-@required {server_id: any, view: any, id: any}
-@returns(204)
-@errors {400, 404, 422, 500}
+@desc Removes the given zone from the given view
+@required {server_id: any # The id of the server to retrieve, view: any # The name of the view to update, id: any # The zone to remove from the view}
+@returns(204) Returns 204 No Content on success.
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/networks
-@required {server_id: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc List all registered networks and views in a server
+@required {server_id: any # The id of the server to retrieve}
+@returns(200) An array of networks
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint GET /servers/{server_id}/networks/{ip}/{prefixlen}
-@required {server_id: any, ip: any, prefixlen: any}
-@returns(200)
-@errors {400, 404, 422, 500}
+@desc Return the view associated to the given network
+@required {server_id: any # The id of the server to retrieve, ip: any # The base address of the network, prefixlen: any # The length of the network prefix}
+@returns(200) A network
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endpoint PUT /servers/{server_id}/networks/{ip}/{prefixlen}
-@required {server_id: any, ip: any, prefixlen: any, view: str}
-@returns(204)
-@errors {400, 404, 422, 500}
+@desc Sets the view associated to the given network
+@required {server_id: any # The id of the server to retrieve, ip: any # The base address of the network, prefixlen: any # The length of the network prefix, view: str # The name of the view to use for this network}
+@returns(204) Returns 204 No Content on success.
+@errors {400: The supplied request was not valid, 404: Requested item was not found, 422: The input to the operation was not valid, 500: Internal server error}
 
 @endgroup
 

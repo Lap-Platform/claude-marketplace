@@ -4,318 +4,365 @@
 @base https://api.anthropic.com
 @version 253
 @auth ApiKey x-api-key in header
-@common_fields {anthropic-version: str}
+@common_fields {anthropic-version: str # The version of the Claude API you want to use.  Read more about versioning and our version history [here](https://docs.claude.com/en/api/versioning).}
 @endpoints 47
 @hint download_for_search
 @toc messages(15), complete(1), models(3), files(8), skills(14), messages?beta=true(1), models?beta=true(1), files?beta=true(2), skills?beta=true(2)
 
 @group messages
 @endpoint POST /v1/messages
-@required {model: any, messages: [map{content!: any, role!: str}], max_tokens: int}
-@optional {inference_geo: any, metadata: map{user_id: any}, output_config: map{effort: any, format: any}, service_tier: str(auto/standard_only), stop_sequences: [str], stream: bool, system: any, temperature: num, thinking: any, tool_choice: any, tools: [any], top_k: int, top_p: num}
-@returns(200) {id: str, type: str, role: str, content: [any], model: any, stop_reason: any, stop_sequence: any, usage: map{cache_creation: any, cache_creation_input_tokens: any, cache_read_input_tokens: any, inference_geo: any, input_tokens: int, output_tokens: int, server_tool_use: any, service_tier: any}}
-@errors {4XX}
+@desc Create a Message
+@required {model: any # The model that will complete your prompt.\n\nSee [models](https://docs.anthropic.com/en/docs/models-overview) for additional details and options., messages: [map{content!: any, role!: str}] # Input messages.  Our models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.  Each input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.  If the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response.  Example with a single `user` message:  ```json [{"role": "user", "content": "Hello, Claude"}] ```  Example with multiple conversational turns:  ```json [   {"role": "user", "content": "Hello there."},   {"role": "assistant", "content": "Hi, I'm Claude. How can I help you?"},   {"role": "user", "content": "Can you explain LLMs in plain English?"}, ] ```  Example with a partially-filled response from Claude:  ```json [   {"role": "user", "content": "What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun"},   {"role": "assistant", "content": "The best answer is ("}, ] ```  Each input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `"text"`. The following input messages are equivalent:  ```json {"role": "user", "content": "Hello, Claude"} ```  ```json {"role": "user", "content": [{"type": "text", "text": "Hello, Claude"}]} ```  See [input examples](https://docs.claude.com/en/api/messages-examples).  Note that if you want to include a [system prompt](https://docs.claude.com/en/docs/system-prompts), you can use the top-level `system` parameter — there is no `"system"` role for input messages in the Messages API.  There is a limit of 100,000 messages in a single request., max_tokens: int # The maximum number of tokens to generate before stopping.  Note that our models may stop _before_ reaching this maximum. This parameter only specifies the absolute maximum number of tokens to generate.  Different models have different maximum values for this parameter.  See [models](https://docs.claude.com/en/docs/models-overview) for details.}
+@optional {inference_geo: any # Specifies the geographic region for inference processing. If not specified, the workspace's `default_inference_geo` is used., metadata: map{user_id: any}, output_config: map{effort: any, format: any}, service_tier: str(auto/standard_only) # Determines whether to use priority capacity (if available) or standard capacity for this request.  Anthropic offers different levels of service for your API requests. See [service-tiers](https://docs.claude.com/en/api/service-tiers) for details., stop_sequences: [str] # Custom text sequences that will cause the model to stop generating.  Our models will normally stop when they have naturally completed their turn, which will result in a response `stop_reason` of `"end_turn"`.  If you want the model to stop generating when it encounters custom strings of text, you can use the `stop_sequences` parameter. If the model encounters one of the custom sequences, the response `stop_reason` value will be `"stop_sequence"` and the response `stop_sequence` value will contain the matched stop sequence., stream: bool # Whether to incrementally stream the response using server-sent events.  See [streaming](https://docs.claude.com/en/api/messages-streaming) for details., system: any # System prompt.  A system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://docs.claude.com/en/docs/system-prompts)., temperature: num # Amount of randomness injected into the response.  Defaults to `1.0`. Ranges from `0.0` to `1.0`. Use `temperature` closer to `0.0` for analytical / multiple choice, and closer to `1.0` for creative and generative tasks.  Note that even with `temperature` of `0.0`, the results will not be fully deterministic., thinking: any # Configuration for enabling Claude's extended thinking.  When enabled, responses include `thinking` content blocks showing Claude's thinking process before the final answer. Requires a minimum budget of 1,024 tokens and counts towards your `max_tokens` limit.  See [extended thinking](https://docs.claude.com/en/docs/build-with-claude/extended-thinking) for details., tool_choice: any # How the model should use the provided tools. The model can use a specific tool, any available tool, decide by itself, or not use tools at all., tools: [any] # Definitions of tools that the model may use.  If you include `tools` in your API request, the model may return `tool_use` content blocks that represent the model's use of those tools. You can then run those tools using the tool input generated by the model and then optionally return results back to the model using `tool_result` content blocks.  There are two types of tools: **client tools** and **server tools**. The behavior described below applies to client tools. For [server tools](https://docs.claude.com/en/docs/agents-and-tools/tool-use/overview\#server-tools), see their individual documentation as each has its own behavior (e.g., the [web search tool](https://docs.claude.com/en/docs/agents-and-tools/tool-use/web-search-tool)).  Each tool definition includes:  * `name`: Name of the tool. * `description`: Optional, but strongly-recommended description of the tool. * `input_schema`: [JSON schema](https://json-schema.org/draft/2020-12) for the tool `input` shape that the model will produce in `tool_use` output content blocks.  For example, if you defined `tools` as:  ```json [   {     "name": "get_stock_price",     "description": "Get the current stock price for a given ticker symbol.",     "input_schema": {       "type": "object",       "properties": {         "ticker": {           "type": "string",           "description": "The stock ticker symbol, e.g. AAPL for Apple Inc."         }       },       "required": ["ticker"]     }   } ] ```  And then asked the model "What's the S&P 500 at today?", the model might produce `tool_use` content blocks in the response like this:  ```json [   {     "type": "tool_use",     "id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",     "name": "get_stock_price",     "input": { "ticker": "^GSPC" }   } ] ```  You might then run your `get_stock_price` tool with `{"ticker": "^GSPC"}` as an input, and return the following back to the model in a subsequent `user` message:  ```json [   {     "type": "tool_result",     "tool_use_id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",     "content": "259.75 USD"   } ] ```  Tools can be used for workflows that include running client-side tools and functions, or more generally whenever you want the model to produce a particular JSON structure of output.  See our [guide](https://docs.claude.com/en/docs/tool-use) for more details., top_k: int # Only sample from the top K options for each subsequent token.  Used to remove "long tail" low probability responses. [Learn more technical details here](https://towardsdatascience.com/how-to-sample-from-language-models-682bceb97277).  Recommended for advanced use cases only. You usually only need to use `temperature`., top_p: num # Use nucleus sampling.  In nucleus sampling, we compute the cumulative distribution over all the options for each subsequent token in decreasing probability order and cut it off once it reaches a particular probability specified by `top_p`. You should either alter `temperature` or `top_p`, but not both.  Recommended for advanced use cases only. You usually only need to use `temperature`.}
+@returns(200) {id: str, type: str, role: str, content: [any], model: any, stop_reason: any, stop_sequence: any, usage: map{cache_creation: any, cache_creation_input_tokens: any, cache_read_input_tokens: any, inference_geo: any, input_tokens: int, output_tokens: int, server_tool_use: any, service_tier: any}} # Message object.
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 
 @group complete
 @endpoint POST /v1/complete
-@required {model: any, prompt: str, max_tokens_to_sample: int}
-@optional {anthropic-beta: str, stop_sequences: [str], temperature: num, top_p: num, top_k: int, metadata: map{user_id: any}, stream: bool}
-@returns(200) {completion: str, id: str, model: any, stop_reason: any, type: str}
-@errors {4XX}
+@desc Create a Text Completion
+@required {model: any # The model that will complete your prompt.\n\nSee [models](https://docs.anthropic.com/en/docs/models-overview) for additional details and options., prompt: str # The prompt that you want Claude to complete.  For proper response generation you will need to format your prompt using alternating `\n\nHuman:` and `\n\nAssistant:` conversational turns. For example:  ``` "\n\nHuman: {userQuestion}\n\nAssistant:" ```  See [prompt validation](https://docs.claude.com/en/api/prompt-validation) and our guide to [prompt design](https://docs.claude.com/en/docs/intro-to-prompting) for more details., max_tokens_to_sample: int # The maximum number of tokens to generate before stopping.  Note that our models may stop _before_ reaching this maximum. This parameter only specifies the absolute maximum number of tokens to generate.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., stop_sequences: [str] # Sequences that will cause the model to stop generating.  Our models stop on `"\n\nHuman:"`, and may include additional built-in stop sequences in the future. By providing the stop_sequences parameter, you may include additional strings that will cause the model to stop generating., temperature: num # Amount of randomness injected into the response.  Defaults to `1.0`. Ranges from `0.0` to `1.0`. Use `temperature` closer to `0.0` for analytical / multiple choice, and closer to `1.0` for creative and generative tasks.  Note that even with `temperature` of `0.0`, the results will not be fully deterministic., top_p: num # Use nucleus sampling.  In nucleus sampling, we compute the cumulative distribution over all the options for each subsequent token in decreasing probability order and cut it off once it reaches a particular probability specified by `top_p`. You should either alter `temperature` or `top_p`, but not both.  Recommended for advanced use cases only. You usually only need to use `temperature`., top_k: int # Only sample from the top K options for each subsequent token.  Used to remove "long tail" low probability responses. [Learn more technical details here](https://towardsdatascience.com/how-to-sample-from-language-models-682bceb97277).  Recommended for advanced use cases only. You usually only need to use `temperature`., metadata: map{user_id: any}, stream: bool # Whether to incrementally stream the response using server-sent events.  See [streaming](https://docs.claude.com/en/api/streaming) for details.}
+@returns(200) {completion: str, id: str, model: any, stop_reason: any, type: str} # Text Completion object.
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 
 @group models
 @endpoint GET /v1/models
-@optional {before_id: str, after_id: str, limit: int=20, x-api-key: str, anthropic-beta: str}
-@returns(200) {data: [map], first_id: any, has_more: bool, last_id: any}
-@errors {4XX}
+@desc List Models
+@optional {before_id: str # ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately before this object., after_id: str # ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately after this object., limit: int=20 # Number of items to return per page.  Defaults to `20`. Ranges from `1` to `1000`., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace., anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta.}
+@returns(200) {data: [map], first_id: any, has_more: bool, last_id: any} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/models/{model_id}
-@required {model_id: str}
-@optional {x-api-key: str, anthropic-beta: str}
-@returns(200) {created_at: str(date-time), display_name: str, id: str, type: str}
-@errors {4XX}
+@desc Get a Model
+@required {model_id: str # Model identifier or alias.}
+@optional {x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace., anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta.}
+@returns(200) {created_at: str(date-time), display_name: str, id: str, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 
 @group messages
 @endpoint POST /v1/messages/batches
-@required {requests: [map{custom_id!: str, params!: map{model!: any, messages!: [map], inference_geo: any, max_tokens!: int, metadata: map, output_config: map, service_tier: str, stop_sequences: [str], stream: bool, system: any, temperature: num, thinking: any, tool_choice: any, tools: [any], top_k: int, top_p: num}}]}
-@returns(200) {archived_at: any, cancel_initiated_at: any, created_at: str(date-time), ended_at: any, expires_at: str(date-time), id: str, processing_status: str, request_counts: map{canceled: int, errored: int, expired: int, processing: int, succeeded: int}, results_url: any, type: str}
-@errors {4XX}
+@desc Create a Message Batch
+@required {requests: [map{custom_id!: str, params!: map{model!: any, messages!: [map], inference_geo: any, max_tokens!: int, metadata: map, output_config: map, service_tier: str, stop_sequences: [str], stream: bool, system: any, temperature: num, thinking: any, tool_choice: any, tools: [any], top_k: int, top_p: num}}] # List of requests for prompt completion. Each is an individual request to create a Message.}
+@returns(200) {archived_at: any, cancel_initiated_at: any, created_at: str(date-time), ended_at: any, expires_at: str(date-time), id: str, processing_status: str, request_counts: map{canceled: int, errored: int, expired: int, processing: int, succeeded: int}, results_url: any, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/messages/batches
-@optional {before_id: str, after_id: str, limit: int=20, x-api-key: str}
-@returns(200) {data: [map], first_id: any, has_more: bool, last_id: any}
-@errors {4XX}
+@desc List Message Batches
+@optional {before_id: str # ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately before this object., after_id: str # ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately after this object., limit: int=20 # Number of items to return per page.  Defaults to `20`. Ranges from `1` to `1000`., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {data: [map], first_id: any, has_more: bool, last_id: any} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/messages/batches/{message_batch_id}
-@required {message_batch_id: str}
-@optional {x-api-key: str}
-@returns(200) {archived_at: any, cancel_initiated_at: any, created_at: str(date-time), ended_at: any, expires_at: str(date-time), id: str, processing_status: str, request_counts: map{canceled: int, errored: int, expired: int, processing: int, succeeded: int}, results_url: any, type: str}
-@errors {4XX}
+@desc Retrieve a Message Batch
+@required {message_batch_id: str # ID of the Message Batch.}
+@optional {x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {archived_at: any, cancel_initiated_at: any, created_at: str(date-time), ended_at: any, expires_at: str(date-time), id: str, processing_status: str, request_counts: map{canceled: int, errored: int, expired: int, processing: int, succeeded: int}, results_url: any, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint DELETE /v1/messages/batches/{message_batch_id}
-@required {message_batch_id: str}
-@optional {x-api-key: str}
-@returns(200) {id: str, type: str}
-@errors {4XX}
+@desc Delete a Message Batch
+@required {message_batch_id: str # ID of the Message Batch.}
+@optional {x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {id: str, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint POST /v1/messages/batches/{message_batch_id}/cancel
-@required {message_batch_id: str}
-@returns(200) {archived_at: any, cancel_initiated_at: any, created_at: str(date-time), ended_at: any, expires_at: str(date-time), id: str, processing_status: str, request_counts: map{canceled: int, errored: int, expired: int, processing: int, succeeded: int}, results_url: any, type: str}
-@errors {4XX}
+@desc Cancel a Message Batch
+@required {message_batch_id: str # ID of the Message Batch.}
+@returns(200) {archived_at: any, cancel_initiated_at: any, created_at: str(date-time), ended_at: any, expires_at: str(date-time), id: str, processing_status: str, request_counts: map{canceled: int, errored: int, expired: int, processing: int, succeeded: int}, results_url: any, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/messages/batches/{message_batch_id}/results
-@required {message_batch_id: str}
-@optional {x-api-key: str}
-@returns(200)
-@errors {4XX}
+@desc Retrieve Message Batch results
+@required {message_batch_id: str # ID of the Message Batch.}
+@optional {x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint POST /v1/messages/count_tokens
-@required {messages: [map{content!: any, role!: str}], model: any}
-@optional {output_config: map{effort: any, format: any}, system: any, thinking: any, tool_choice: any, tools: [any]}
-@returns(200) {input_tokens: int}
-@errors {4XX}
+@desc Count tokens in a Message
+@required {messages: [map{content!: any, role!: str}] # Input messages.  Our models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.  Each input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.  If the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response.  Example with a single `user` message:  ```json [{"role": "user", "content": "Hello, Claude"}] ```  Example with multiple conversational turns:  ```json [   {"role": "user", "content": "Hello there."},   {"role": "assistant", "content": "Hi, I'm Claude. How can I help you?"},   {"role": "user", "content": "Can you explain LLMs in plain English?"}, ] ```  Example with a partially-filled response from Claude:  ```json [   {"role": "user", "content": "What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun"},   {"role": "assistant", "content": "The best answer is ("}, ] ```  Each input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `"text"`. The following input messages are equivalent:  ```json {"role": "user", "content": "Hello, Claude"} ```  ```json {"role": "user", "content": [{"type": "text", "text": "Hello, Claude"}]} ```  See [input examples](https://docs.claude.com/en/api/messages-examples).  Note that if you want to include a [system prompt](https://docs.claude.com/en/docs/system-prompts), you can use the top-level `system` parameter — there is no `"system"` role for input messages in the Messages API.  There is a limit of 100,000 messages in a single request., model: any # The model that will complete your prompt.\n\nSee [models](https://docs.anthropic.com/en/docs/models-overview) for additional details and options.}
+@optional {output_config: map{effort: any, format: any}, system: any # System prompt.  A system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://docs.claude.com/en/docs/system-prompts)., thinking: any # Configuration for enabling Claude's extended thinking.  When enabled, responses include `thinking` content blocks showing Claude's thinking process before the final answer. Requires a minimum budget of 1,024 tokens and counts towards your `max_tokens` limit.  See [extended thinking](https://docs.claude.com/en/docs/build-with-claude/extended-thinking) for details., tool_choice: any # How the model should use the provided tools. The model can use a specific tool, any available tool, decide by itself, or not use tools at all., tools: [any] # Definitions of tools that the model may use.  If you include `tools` in your API request, the model may return `tool_use` content blocks that represent the model's use of those tools. You can then run those tools using the tool input generated by the model and then optionally return results back to the model using `tool_result` content blocks.  There are two types of tools: **client tools** and **server tools**. The behavior described below applies to client tools. For [server tools](https://docs.claude.com/en/docs/agents-and-tools/tool-use/overview\#server-tools), see their individual documentation as each has its own behavior (e.g., the [web search tool](https://docs.claude.com/en/docs/agents-and-tools/tool-use/web-search-tool)).  Each tool definition includes:  * `name`: Name of the tool. * `description`: Optional, but strongly-recommended description of the tool. * `input_schema`: [JSON schema](https://json-schema.org/draft/2020-12) for the tool `input` shape that the model will produce in `tool_use` output content blocks.  For example, if you defined `tools` as:  ```json [   {     "name": "get_stock_price",     "description": "Get the current stock price for a given ticker symbol.",     "input_schema": {       "type": "object",       "properties": {         "ticker": {           "type": "string",           "description": "The stock ticker symbol, e.g. AAPL for Apple Inc."         }       },       "required": ["ticker"]     }   } ] ```  And then asked the model "What's the S&P 500 at today?", the model might produce `tool_use` content blocks in the response like this:  ```json [   {     "type": "tool_use",     "id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",     "name": "get_stock_price",     "input": { "ticker": "^GSPC" }   } ] ```  You might then run your `get_stock_price` tool with `{"ticker": "^GSPC"}` as an input, and return the following back to the model in a subsequent `user` message:  ```json [   {     "type": "tool_result",     "tool_use_id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",     "content": "259.75 USD"   } ] ```  Tools can be used for workflows that include running client-side tools and functions, or more generally whenever you want the model to produce a particular JSON structure of output.  See our [guide](https://docs.claude.com/en/docs/tool-use) for more details.}
+@returns(200) {input_tokens: int} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 
 @group files
 @endpoint POST /v1/files
-@optional {anthropic-beta: str}
-@returns(200) {created_at: str(date-time), downloadable: bool, filename: str, id: str, mime_type: str, size_bytes: int, type: str}
-@errors {4XX}
+@desc Upload File
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta.}
+@returns(200) {created_at: str(date-time), downloadable: bool, filename: str, id: str, mime_type: str, size_bytes: int, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/files
-@optional {before_id: str, after_id: str, limit: int=20, anthropic-beta: str, x-api-key: str}
-@returns(200) {data: [map], first_id: any, has_more: bool, last_id: any}
-@errors {4XX}
+@desc List Files
+@optional {before_id: str # ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately before this object., after_id: str # ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately after this object., limit: int=20 # Number of items to return per page.  Defaults to `20`. Ranges from `1` to `1000`., anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {data: [map], first_id: any, has_more: bool, last_id: any} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/files/{file_id}
-@required {file_id: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {created_at: str(date-time), downloadable: bool, filename: str, id: str, mime_type: str, size_bytes: int, type: str}
-@errors {4XX}
+@desc Get File Metadata
+@required {file_id: str # ID of the File.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {created_at: str(date-time), downloadable: bool, filename: str, id: str, mime_type: str, size_bytes: int, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint DELETE /v1/files/{file_id}
-@required {file_id: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {id: str, type: str}
-@errors {4XX}
+@desc Delete File
+@required {file_id: str # ID of the File.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {id: str, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/files/{file_id}/content
-@required {file_id: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200)
-@errors {4XX}
+@desc Download File
+@required {file_id: str # ID of the File.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 
 @group skills
 @endpoint POST /v1/skills
-@optional {anthropic-beta: str}
-@returns(200) {created_at: str, display_title: any, id: str, latest_version: any, source: str, type: str, updated_at: str}
-@errors {4XX}
+@desc Create Skill
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta.}
+@returns(200) {created_at: str, display_title: any, id: str, latest_version: any, source: str, type: str, updated_at: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/skills
-@optional {page: any, limit: int=20, source: any, anthropic-beta: str, x-api-key: str}
-@returns(200) {data: [map], has_more: bool, next_page: any}
-@errors {4XX}
+@desc List Skills
+@optional {page: any # Pagination token for fetching a specific page of results.  Pass the value from a previous response's `next_page` field to get the next page of results., limit: int=20 # Number of results to return per page.  Maximum value is 100. Defaults to 20., source: any # Filter skills by source.  If provided, only skills from the specified source will be returned: * `"custom"`: only return user-created skills * `"anthropic"`: only return Anthropic-created skills, anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {data: [map], has_more: bool, next_page: any} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/skills/{skill_id}
-@required {skill_id: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {created_at: str, display_title: any, id: str, latest_version: any, source: str, type: str, updated_at: str}
-@errors {4XX}
+@desc Get Skill
+@required {skill_id: str # Unique identifier for the skill.  The format and length of IDs may change over time.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {created_at: str, display_title: any, id: str, latest_version: any, source: str, type: str, updated_at: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint DELETE /v1/skills/{skill_id}
-@required {skill_id: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {id: str, type: str}
-@errors {4XX}
+@desc Delete Skill
+@required {skill_id: str # Unique identifier for the skill.  The format and length of IDs may change over time.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {id: str, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint POST /v1/skills/{skill_id}/versions
-@required {skill_id: str}
-@optional {anthropic-beta: str}
-@returns(200) {created_at: str, description: str, directory: str, id: str, name: str, skill_id: str, type: str, version: str}
-@errors {4XX}
+@desc Create Skill Version
+@required {skill_id: str # Unique identifier for the skill.  The format and length of IDs may change over time.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta.}
+@returns(200) {created_at: str, description: str, directory: str, id: str, name: str, skill_id: str, type: str, version: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/skills/{skill_id}/versions
-@required {skill_id: str}
-@optional {page: any, limit: any, anthropic-beta: str, x-api-key: str}
-@returns(200) {data: [map], has_more: bool, next_page: any}
-@errors {4XX}
+@desc List Skill Versions
+@required {skill_id: str # Unique identifier for the skill.  The format and length of IDs may change over time.}
+@optional {page: any # Optionally set to the `next_page` token from the previous response., limit: any # Number of items to return per page.  Defaults to `20`. Ranges from `1` to `1000`., anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {data: [map], has_more: bool, next_page: any} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/skills/{skill_id}/versions/{version}
-@required {skill_id: str, version: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {created_at: str, description: str, directory: str, id: str, name: str, skill_id: str, type: str, version: str}
-@errors {4XX}
+@desc Get Skill Version
+@required {skill_id: str # Unique identifier for the skill.  The format and length of IDs may change over time., version: str # Version identifier for the skill.  Each version is identified by a Unix epoch timestamp (e.g., "1759178010641129").}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {created_at: str, description: str, directory: str, id: str, name: str, skill_id: str, type: str, version: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint DELETE /v1/skills/{skill_id}/versions/{version}
-@required {skill_id: str, version: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {id: str, type: str}
-@errors {4XX}
+@desc Delete Skill Version
+@required {skill_id: str # Unique identifier for the skill.  The format and length of IDs may change over time., version: str # Version identifier for the skill.  Each version is identified by a Unix epoch timestamp (e.g., "1759178010641129").}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {id: str, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 
 @group messages?beta=true
 @endpoint POST /v1/messages?beta=true
-@required {model: any, messages: [map{content!: any, role!: str}], max_tokens: int}
-@optional {anthropic-beta: str, container: any, context_management: any, inference_geo: any, mcp_servers: [map{authorization_token: any, name!: str, tool_configuration: any, type!: str, url!: str}], metadata: map{user_id: any}, output_config: map{effort: any, format: any}, output_format: any, service_tier: str(auto/standard_only), speed: any, stop_sequences: [str], stream: bool, system: any, temperature: num, thinking: any, tool_choice: any, tools: [any], top_k: int, top_p: num}
-@returns(200) {id: str, type: str, role: str, content: [any], model: any, stop_reason: any, stop_sequence: any, usage: map{cache_creation: any, cache_creation_input_tokens: any, cache_read_input_tokens: any, inference_geo: any, input_tokens: int, iterations: any, output_tokens: int, server_tool_use: any, service_tier: any, speed: any}, context_management: any, container: any}
-@errors {4XX}
+@desc Create a Message
+@required {model: any # The model that will complete your prompt.\n\nSee [models](https://docs.anthropic.com/en/docs/models-overview) for additional details and options., messages: [map{content!: any, role!: str}] # Input messages.  Our models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.  Each input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.  If the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response.  Example with a single `user` message:  ```json [{"role": "user", "content": "Hello, Claude"}] ```  Example with multiple conversational turns:  ```json [   {"role": "user", "content": "Hello there."},   {"role": "assistant", "content": "Hi, I'm Claude. How can I help you?"},   {"role": "user", "content": "Can you explain LLMs in plain English?"}, ] ```  Example with a partially-filled response from Claude:  ```json [   {"role": "user", "content": "What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun"},   {"role": "assistant", "content": "The best answer is ("}, ] ```  Each input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `"text"`. The following input messages are equivalent:  ```json {"role": "user", "content": "Hello, Claude"} ```  ```json {"role": "user", "content": [{"type": "text", "text": "Hello, Claude"}]} ```  See [input examples](https://docs.claude.com/en/api/messages-examples).  Note that if you want to include a [system prompt](https://docs.claude.com/en/docs/system-prompts), you can use the top-level `system` parameter — there is no `"system"` role for input messages in the Messages API.  There is a limit of 100,000 messages in a single request., max_tokens: int # The maximum number of tokens to generate before stopping.  Note that our models may stop _before_ reaching this maximum. This parameter only specifies the absolute maximum number of tokens to generate.  Different models have different maximum values for this parameter.  See [models](https://docs.claude.com/en/docs/models-overview) for details.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., container: any # Container identifier for reuse across requests., context_management: any # Context management configuration.  This allows you to control how Claude manages context across multiple requests, such as whether to clear function results or not., inference_geo: any # Specifies the geographic region for inference processing. If not specified, the workspace's `default_inference_geo` is used., mcp_servers: [map{authorization_token: any, name!: str, tool_configuration: any, type!: str, url!: str}] # MCP servers to be utilized in this request, metadata: map{user_id: any}, output_config: map{effort: any, format: any}, output_format: any # Deprecated: Use `output_config.format` instead. See [structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)  A schema to specify Claude's output format in responses. This parameter will be removed in a future release., service_tier: str(auto/standard_only) # Determines whether to use priority capacity (if available) or standard capacity for this request.  Anthropic offers different levels of service for your API requests. See [service-tiers](https://docs.claude.com/en/api/service-tiers) for details., speed: any # The inference speed mode for this request. `"fast"` enables high output-tokens-per-second inference., stop_sequences: [str] # Custom text sequences that will cause the model to stop generating.  Our models will normally stop when they have naturally completed their turn, which will result in a response `stop_reason` of `"end_turn"`.  If you want the model to stop generating when it encounters custom strings of text, you can use the `stop_sequences` parameter. If the model encounters one of the custom sequences, the response `stop_reason` value will be `"stop_sequence"` and the response `stop_sequence` value will contain the matched stop sequence., stream: bool # Whether to incrementally stream the response using server-sent events.  See [streaming](https://docs.claude.com/en/api/messages-streaming) for details., system: any # System prompt.  A system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://docs.claude.com/en/docs/system-prompts)., temperature: num # Amount of randomness injected into the response.  Defaults to `1.0`. Ranges from `0.0` to `1.0`. Use `temperature` closer to `0.0` for analytical / multiple choice, and closer to `1.0` for creative and generative tasks.  Note that even with `temperature` of `0.0`, the results will not be fully deterministic., thinking: any # Configuration for enabling Claude's extended thinking.  When enabled, responses include `thinking` content blocks showing Claude's thinking process before the final answer. Requires a minimum budget of 1,024 tokens and counts towards your `max_tokens` limit.  See [extended thinking](https://docs.claude.com/en/docs/build-with-claude/extended-thinking) for details., tool_choice: any # How the model should use the provided tools. The model can use a specific tool, any available tool, decide by itself, or not use tools at all., tools: [any] # Definitions of tools that the model may use.  If you include `tools` in your API request, the model may return `tool_use` content blocks that represent the model's use of those tools. You can then run those tools using the tool input generated by the model and then optionally return results back to the model using `tool_result` content blocks.  There are two types of tools: **client tools** and **server tools**. The behavior described below applies to client tools. For [server tools](https://docs.claude.com/en/docs/agents-and-tools/tool-use/overview\#server-tools), see their individual documentation as each has its own behavior (e.g., the [web search tool](https://docs.claude.com/en/docs/agents-and-tools/tool-use/web-search-tool)).  Each tool definition includes:  * `name`: Name of the tool. * `description`: Optional, but strongly-recommended description of the tool. * `input_schema`: [JSON schema](https://json-schema.org/draft/2020-12) for the tool `input` shape that the model will produce in `tool_use` output content blocks.  For example, if you defined `tools` as:  ```json [   {     "name": "get_stock_price",     "description": "Get the current stock price for a given ticker symbol.",     "input_schema": {       "type": "object",       "properties": {         "ticker": {           "type": "string",           "description": "The stock ticker symbol, e.g. AAPL for Apple Inc."         }       },       "required": ["ticker"]     }   } ] ```  And then asked the model "What's the S&P 500 at today?", the model might produce `tool_use` content blocks in the response like this:  ```json [   {     "type": "tool_use",     "id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",     "name": "get_stock_price",     "input": { "ticker": "^GSPC" }   } ] ```  You might then run your `get_stock_price` tool with `{"ticker": "^GSPC"}` as an input, and return the following back to the model in a subsequent `user` message:  ```json [   {     "type": "tool_result",     "tool_use_id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",     "content": "259.75 USD"   } ] ```  Tools can be used for workflows that include running client-side tools and functions, or more generally whenever you want the model to produce a particular JSON structure of output.  See our [guide](https://docs.claude.com/en/docs/tool-use) for more details., top_k: int # Only sample from the top K options for each subsequent token.  Used to remove "long tail" low probability responses. [Learn more technical details here](https://towardsdatascience.com/how-to-sample-from-language-models-682bceb97277).  Recommended for advanced use cases only. You usually only need to use `temperature`., top_p: num # Use nucleus sampling.  In nucleus sampling, we compute the cumulative distribution over all the options for each subsequent token in decreasing probability order and cut it off once it reaches a particular probability specified by `top_p`. You should either alter `temperature` or `top_p`, but not both.  Recommended for advanced use cases only. You usually only need to use `temperature`.}
+@returns(200) {id: str, type: str, role: str, content: [any], model: any, stop_reason: any, stop_sequence: any, usage: map{cache_creation: any, cache_creation_input_tokens: any, cache_read_input_tokens: any, inference_geo: any, input_tokens: int, iterations: any, output_tokens: int, server_tool_use: any, service_tier: any, speed: any}, context_management: any, container: any} # Message object.
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 
 @group models?beta=true
 @endpoint GET /v1/models?beta=true
-@optional {before_id: str, after_id: str, limit: int=20, x-api-key: str, anthropic-beta: str}
-@returns(200) {data: [map], first_id: any, has_more: bool, last_id: any}
-@errors {4XX}
+@desc List Models
+@optional {before_id: str # ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately before this object., after_id: str # ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately after this object., limit: int=20 # Number of items to return per page.  Defaults to `20`. Ranges from `1` to `1000`., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace., anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta.}
+@returns(200) {data: [map], first_id: any, has_more: bool, last_id: any} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 
 @group models
 @endpoint GET /v1/models/{model_id}?beta=true
-@required {model_id: str}
-@optional {x-api-key: str, anthropic-beta: str}
-@returns(200) {created_at: str(date-time), display_name: str, id: str, type: str}
-@errors {4XX}
+@desc Get a Model
+@required {model_id: str # Model identifier or alias.}
+@optional {x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace., anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta.}
+@returns(200) {created_at: str(date-time), display_name: str, id: str, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 
 @group messages
 @endpoint POST /v1/messages/batches?beta=true
-@required {requests: [map{custom_id!: str, params!: map{model!: any, messages!: [map], container: any, context_management: any, inference_geo: any, max_tokens!: int, mcp_servers: [map], metadata: map, output_config: map, output_format: any, service_tier: str, speed: any, stop_sequences: [str], stream: bool, system: any, temperature: num, thinking: any, tool_choice: any, tools: [any], top_k: int, top_p: num}}]}
-@optional {anthropic-beta: str}
-@returns(200) {archived_at: any, cancel_initiated_at: any, created_at: str(date-time), ended_at: any, expires_at: str(date-time), id: str, processing_status: str, request_counts: map{canceled: int, errored: int, expired: int, processing: int, succeeded: int}, results_url: any, type: str}
-@errors {4XX}
+@desc Create a Message Batch
+@required {requests: [map{custom_id!: str, params!: map{model!: any, messages!: [map], container: any, context_management: any, inference_geo: any, max_tokens!: int, mcp_servers: [map], metadata: map, output_config: map, output_format: any, service_tier: str, speed: any, stop_sequences: [str], stream: bool, system: any, temperature: num, thinking: any, tool_choice: any, tools: [any], top_k: int, top_p: num}}] # List of requests for prompt completion. Each is an individual request to create a Message.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta.}
+@returns(200) {archived_at: any, cancel_initiated_at: any, created_at: str(date-time), ended_at: any, expires_at: str(date-time), id: str, processing_status: str, request_counts: map{canceled: int, errored: int, expired: int, processing: int, succeeded: int}, results_url: any, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/messages/batches?beta=true
-@optional {before_id: str, after_id: str, limit: int=20, anthropic-beta: str, x-api-key: str}
-@returns(200) {data: [map], first_id: any, has_more: bool, last_id: any}
-@errors {4XX}
+@desc List Message Batches
+@optional {before_id: str # ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately before this object., after_id: str # ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately after this object., limit: int=20 # Number of items to return per page.  Defaults to `20`. Ranges from `1` to `1000`., anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {data: [map], first_id: any, has_more: bool, last_id: any} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/messages/batches/{message_batch_id}?beta=true
-@required {message_batch_id: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {archived_at: any, cancel_initiated_at: any, created_at: str(date-time), ended_at: any, expires_at: str(date-time), id: str, processing_status: str, request_counts: map{canceled: int, errored: int, expired: int, processing: int, succeeded: int}, results_url: any, type: str}
-@errors {4XX}
+@desc Retrieve a Message Batch
+@required {message_batch_id: str # ID of the Message Batch.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {archived_at: any, cancel_initiated_at: any, created_at: str(date-time), ended_at: any, expires_at: str(date-time), id: str, processing_status: str, request_counts: map{canceled: int, errored: int, expired: int, processing: int, succeeded: int}, results_url: any, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint DELETE /v1/messages/batches/{message_batch_id}?beta=true
-@required {message_batch_id: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {id: str, type: str}
-@errors {4XX}
+@desc Delete a Message Batch
+@required {message_batch_id: str # ID of the Message Batch.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {id: str, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint POST /v1/messages/batches/{message_batch_id}/cancel?beta=true
-@required {message_batch_id: str}
-@optional {anthropic-beta: str}
-@returns(200) {archived_at: any, cancel_initiated_at: any, created_at: str(date-time), ended_at: any, expires_at: str(date-time), id: str, processing_status: str, request_counts: map{canceled: int, errored: int, expired: int, processing: int, succeeded: int}, results_url: any, type: str}
-@errors {4XX}
+@desc Cancel a Message Batch
+@required {message_batch_id: str # ID of the Message Batch.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta.}
+@returns(200) {archived_at: any, cancel_initiated_at: any, created_at: str(date-time), ended_at: any, expires_at: str(date-time), id: str, processing_status: str, request_counts: map{canceled: int, errored: int, expired: int, processing: int, succeeded: int}, results_url: any, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/messages/batches/{message_batch_id}/results?beta=true
-@required {message_batch_id: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200)
-@errors {4XX}
+@desc Retrieve Message Batch results
+@required {message_batch_id: str # ID of the Message Batch.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint POST /v1/messages/count_tokens?beta=true
-@required {messages: [map{content!: any, role!: str}], model: any}
-@optional {anthropic-beta: str, context_management: any, mcp_servers: [map{authorization_token: any, name!: str, tool_configuration: any, type!: str, url!: str}], output_config: map{effort: any, format: any}, output_format: any, speed: any, system: any, thinking: any, tool_choice: any, tools: [any]}
-@returns(200) {context_management: any, input_tokens: int}
-@errors {4XX}
+@desc Count tokens in a Message
+@required {messages: [map{content!: any, role!: str}] # Input messages.  Our models are trained to operate on alternating `user` and `assistant` conversational turns. When creating a new `Message`, you specify the prior conversational turns with the `messages` parameter, and the model then generates the next `Message` in the conversation. Consecutive `user` or `assistant` turns in your request will be combined into a single turn.  Each input message must be an object with a `role` and `content`. You can specify a single `user`-role message, or you can include multiple `user` and `assistant` messages.  If the final message uses the `assistant` role, the response content will continue immediately from the content in that message. This can be used to constrain part of the model's response.  Example with a single `user` message:  ```json [{"role": "user", "content": "Hello, Claude"}] ```  Example with multiple conversational turns:  ```json [   {"role": "user", "content": "Hello there."},   {"role": "assistant", "content": "Hi, I'm Claude. How can I help you?"},   {"role": "user", "content": "Can you explain LLMs in plain English?"}, ] ```  Example with a partially-filled response from Claude:  ```json [   {"role": "user", "content": "What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun"},   {"role": "assistant", "content": "The best answer is ("}, ] ```  Each input message `content` may be either a single `string` or an array of content blocks, where each block has a specific `type`. Using a `string` for `content` is shorthand for an array of one content block of type `"text"`. The following input messages are equivalent:  ```json {"role": "user", "content": "Hello, Claude"} ```  ```json {"role": "user", "content": [{"type": "text", "text": "Hello, Claude"}]} ```  See [input examples](https://docs.claude.com/en/api/messages-examples).  Note that if you want to include a [system prompt](https://docs.claude.com/en/docs/system-prompts), you can use the top-level `system` parameter — there is no `"system"` role for input messages in the Messages API.  There is a limit of 100,000 messages in a single request., model: any # The model that will complete your prompt.\n\nSee [models](https://docs.anthropic.com/en/docs/models-overview) for additional details and options.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., context_management: any # Context management configuration.  This allows you to control how Claude manages context across multiple requests, such as whether to clear function results or not., mcp_servers: [map{authorization_token: any, name!: str, tool_configuration: any, type!: str, url!: str}] # MCP servers to be utilized in this request, output_config: map{effort: any, format: any}, output_format: any # Deprecated: Use `output_config.format` instead. See [structured outputs](https://platform.claude.com/docs/en/build-with-claude/structured-outputs)  A schema to specify Claude's output format in responses. This parameter will be removed in a future release., speed: any # The inference speed mode for this request. `"fast"` enables high output-tokens-per-second inference., system: any # System prompt.  A system prompt is a way of providing context and instructions to Claude, such as specifying a particular goal or role. See our [guide to system prompts](https://docs.claude.com/en/docs/system-prompts)., thinking: any # Configuration for enabling Claude's extended thinking.  When enabled, responses include `thinking` content blocks showing Claude's thinking process before the final answer. Requires a minimum budget of 1,024 tokens and counts towards your `max_tokens` limit.  See [extended thinking](https://docs.claude.com/en/docs/build-with-claude/extended-thinking) for details., tool_choice: any # How the model should use the provided tools. The model can use a specific tool, any available tool, decide by itself, or not use tools at all., tools: [any] # Definitions of tools that the model may use.  If you include `tools` in your API request, the model may return `tool_use` content blocks that represent the model's use of those tools. You can then run those tools using the tool input generated by the model and then optionally return results back to the model using `tool_result` content blocks.  There are two types of tools: **client tools** and **server tools**. The behavior described below applies to client tools. For [server tools](https://docs.claude.com/en/docs/agents-and-tools/tool-use/overview\#server-tools), see their individual documentation as each has its own behavior (e.g., the [web search tool](https://docs.claude.com/en/docs/agents-and-tools/tool-use/web-search-tool)).  Each tool definition includes:  * `name`: Name of the tool. * `description`: Optional, but strongly-recommended description of the tool. * `input_schema`: [JSON schema](https://json-schema.org/draft/2020-12) for the tool `input` shape that the model will produce in `tool_use` output content blocks.  For example, if you defined `tools` as:  ```json [   {     "name": "get_stock_price",     "description": "Get the current stock price for a given ticker symbol.",     "input_schema": {       "type": "object",       "properties": {         "ticker": {           "type": "string",           "description": "The stock ticker symbol, e.g. AAPL for Apple Inc."         }       },       "required": ["ticker"]     }   } ] ```  And then asked the model "What's the S&P 500 at today?", the model might produce `tool_use` content blocks in the response like this:  ```json [   {     "type": "tool_use",     "id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",     "name": "get_stock_price",     "input": { "ticker": "^GSPC" }   } ] ```  You might then run your `get_stock_price` tool with `{"ticker": "^GSPC"}` as an input, and return the following back to the model in a subsequent `user` message:  ```json [   {     "type": "tool_result",     "tool_use_id": "toolu_01D7FLrfh4GYq7yT1ULFeyMV",     "content": "259.75 USD"   } ] ```  Tools can be used for workflows that include running client-side tools and functions, or more generally whenever you want the model to produce a particular JSON structure of output.  See our [guide](https://docs.claude.com/en/docs/tool-use) for more details.}
+@returns(200) {context_management: any, input_tokens: int} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 
 @group files?beta=true
 @endpoint POST /v1/files?beta=true
-@optional {anthropic-beta: str}
-@returns(200) {created_at: str(date-time), downloadable: bool, filename: str, id: str, mime_type: str, size_bytes: int, type: str}
-@errors {4XX}
+@desc Upload File
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta.}
+@returns(200) {created_at: str(date-time), downloadable: bool, filename: str, id: str, mime_type: str, size_bytes: int, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/files?beta=true
-@optional {before_id: str, after_id: str, limit: int=20, anthropic-beta: str, x-api-key: str}
-@returns(200) {data: [map], first_id: any, has_more: bool, last_id: any}
-@errors {4XX}
+@desc List Files
+@optional {before_id: str # ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately before this object., after_id: str # ID of the object to use as a cursor for pagination. When provided, returns the page of results immediately after this object., limit: int=20 # Number of items to return per page.  Defaults to `20`. Ranges from `1` to `1000`., anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {data: [map], first_id: any, has_more: bool, last_id: any} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 
 @group files
 @endpoint GET /v1/files/{file_id}?beta=true
-@required {file_id: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {created_at: str(date-time), downloadable: bool, filename: str, id: str, mime_type: str, size_bytes: int, type: str}
-@errors {4XX}
+@desc Get File Metadata
+@required {file_id: str # ID of the File.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {created_at: str(date-time), downloadable: bool, filename: str, id: str, mime_type: str, size_bytes: int, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint DELETE /v1/files/{file_id}?beta=true
-@required {file_id: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {id: str, type: str}
-@errors {4XX}
+@desc Delete File
+@required {file_id: str # ID of the File.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {id: str, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/files/{file_id}/content?beta=true
-@required {file_id: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200)
-@errors {4XX}
+@desc Download File
+@required {file_id: str # ID of the File.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 
 @group skills?beta=true
 @endpoint POST /v1/skills?beta=true
-@optional {anthropic-beta: str}
-@returns(200) {created_at: str, display_title: any, id: str, latest_version: any, source: str, type: str, updated_at: str}
-@errors {4XX}
+@desc Create Skill
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta.}
+@returns(200) {created_at: str, display_title: any, id: str, latest_version: any, source: str, type: str, updated_at: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/skills?beta=true
-@optional {page: any, limit: int=20, source: any, anthropic-beta: str, x-api-key: str}
-@returns(200) {data: [map], has_more: bool, next_page: any}
-@errors {4XX}
+@desc List Skills
+@optional {page: any # Pagination token for fetching a specific page of results.  Pass the value from a previous response's `next_page` field to get the next page of results., limit: int=20 # Number of results to return per page.  Maximum value is 100. Defaults to 20., source: any # Filter skills by source.  If provided, only skills from the specified source will be returned: * `"custom"`: only return user-created skills * `"anthropic"`: only return Anthropic-created skills, anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {data: [map], has_more: bool, next_page: any} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 
 @group skills
 @endpoint GET /v1/skills/{skill_id}?beta=true
-@required {skill_id: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {created_at: str, display_title: any, id: str, latest_version: any, source: str, type: str, updated_at: str}
-@errors {4XX}
+@desc Get Skill
+@required {skill_id: str # Unique identifier for the skill.  The format and length of IDs may change over time.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {created_at: str, display_title: any, id: str, latest_version: any, source: str, type: str, updated_at: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint DELETE /v1/skills/{skill_id}?beta=true
-@required {skill_id: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {id: str, type: str}
-@errors {4XX}
+@desc Delete Skill
+@required {skill_id: str # Unique identifier for the skill.  The format and length of IDs may change over time.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {id: str, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint POST /v1/skills/{skill_id}/versions?beta=true
-@required {skill_id: str}
-@optional {anthropic-beta: str}
-@returns(200) {created_at: str, description: str, directory: str, id: str, name: str, skill_id: str, type: str, version: str}
-@errors {4XX}
+@desc Create Skill Version
+@required {skill_id: str # Unique identifier for the skill.  The format and length of IDs may change over time.}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta.}
+@returns(200) {created_at: str, description: str, directory: str, id: str, name: str, skill_id: str, type: str, version: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/skills/{skill_id}/versions?beta=true
-@required {skill_id: str}
-@optional {page: any, limit: any, anthropic-beta: str, x-api-key: str}
-@returns(200) {data: [map], has_more: bool, next_page: any}
-@errors {4XX}
+@desc List Skill Versions
+@required {skill_id: str # Unique identifier for the skill.  The format and length of IDs may change over time.}
+@optional {page: any # Optionally set to the `next_page` token from the previous response., limit: any # Number of items to return per page.  Defaults to `20`. Ranges from `1` to `1000`., anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {data: [map], has_more: bool, next_page: any} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint GET /v1/skills/{skill_id}/versions/{version}?beta=true
-@required {skill_id: str, version: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {created_at: str, description: str, directory: str, id: str, name: str, skill_id: str, type: str, version: str}
-@errors {4XX}
+@desc Get Skill Version
+@required {skill_id: str # Unique identifier for the skill.  The format and length of IDs may change over time., version: str # Version identifier for the skill.  Each version is identified by a Unix epoch timestamp (e.g., "1759178010641129").}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {created_at: str, description: str, directory: str, id: str, name: str, skill_id: str, type: str, version: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endpoint DELETE /v1/skills/{skill_id}/versions/{version}?beta=true
-@required {skill_id: str, version: str}
-@optional {anthropic-beta: str, x-api-key: str}
-@returns(200) {id: str, type: str}
-@errors {4XX}
+@desc Delete Skill Version
+@required {skill_id: str # Unique identifier for the skill.  The format and length of IDs may change over time., version: str # Version identifier for the skill.  Each version is identified by a Unix epoch timestamp (e.g., "1759178010641129").}
+@optional {anthropic-beta: str # Optional header to specify the beta version(s) you want to use.  To use multiple betas, use a comma separated list like `beta1,beta2` or specify the header multiple times for each beta., x-api-key: str # Your unique API key for authentication.  This key is required in the header of all API requests, to authenticate your account and access Anthropic's services. Get your API key through the [Console](https://console.anthropic.com/settings/keys). Each key is scoped to a Workspace.}
+@returns(200) {id: str, type: str} # Successful Response
+@errors {4XX: Error response.  See our [errors documentation](https://docs.claude.com/en/api/errors) for more details.}
 
 @endgroup
 

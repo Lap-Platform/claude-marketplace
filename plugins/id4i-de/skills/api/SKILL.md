@@ -150,88 +150,95 @@ https://backend.id4i.de/
 |--------|------|-------------|
 | GET | /whois/{id4n} | Resolve owner of id4n |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I authenticate with the ID4i API?" -> POST /login
-- "How do I register a new user account?" -> POST /account/registration
-- "How do I reset my password?" -> POST /account/password
-- "How do I create a new GUID?" -> POST /api/v1/guids
-- "How do I look up what an ID4N belongs to?" -> GET /whois/{id4n}
-- "How do I find GUIDs that aren't in any collection?" -> GET /api/v1/guids/withoutCollection
-- "How do I search for a GUID by alias?" -> GET /api/v1/search/guids
-- "How do I create a collection and add items to it?" -> POST /api/v1/collections then POST /api/v1/collections/{id4n}/elements
-- "How do I upload a document to an ID4N?" -> POST /api/v1/documents/{id4n}/{organizationId}
-- "How do I view the history of an item?" -> GET /api/v1/history/{id4n}
-- "How do I transfer an item to another organization?" -> PUT /api/v1/transfers/{id4n}/sendInfo
-- "How do I manage API key permissions?" -> POST /api/v1/apikeys/{key}/privileges
-- "How do I invite users to my organization?" -> POST /api/v1/organizations/{organizationId}/users/invite
-- "How do I set up routing for an ID4N?" -> PUT /api/v1/routingfiles/{id4n}
-- "How do I check my organization's billing?" -> GET /api/v1/billing/{organizationId}
-
-## Response Tips
-
-- **Account endpoints**: 200/201/202 all indicate success at different stages; 202 means the action is accepted but pending (e.g., email verification required).
-- **Paginated lists** (API keys, collections, users, history, documents): Use `offset` and `limit` params; responses include a result array -- always check total count to determine if more pages exist.
-- **GUID/ID4N lookups**: Responses nest organization ownership and type information; check the `type` field to distinguish GUIDs from collections or labelled collections.
-- **Document endpoints**: GET returns binary content directly; use the `/metadata` sub-path to get file info without downloading the file body.
-- **Error responses**: The API uses a wide error code range (400-500); 409 specifically signals conflicts (duplicate GUID, name collision); 415 means wrong Content-Type header.
-- **Public endpoints** (`/api/v1/public/*`): Return the same structure as authenticated counterparts but with restricted fields -- missing fields are permission-gated, not errors.
-
-## Anomaly Flags
-
-- **401 on any endpoint**: API key may be expired or revoked -- surface immediately and suggest re-authenticating via POST /login.
-- **409 Conflict on GUID/collection creation**: The identifier already exists -- agent should check existing state with GET before retrying.
-- **202 Accepted instead of 200**: The operation is asynchronous (registration verification, transfers) -- agent should notify the user that a follow-up step is required.
-- **415 Unsupported Media Type**: Common when uploading documents or microstorage without correct Content-Type -- flag the header requirement.
-- **Billing endpoint returning unexpected positions**: Surface billing changes proactively when `fromDate`/`toDate` range shows new line items.
-- **Empty collection elements list**: If a collection returns zero elements after a bulk add, the GUIDs may belong to a different organization -- flag the organizationId mismatch.
-- **History items with visibility changes**: When PATCH or PUT visibility is used, alert that downstream public history consumers will be affected.
-
-## Playbook
-
-### 1. Register and Set Up a New Organization
-
-1. Register a user account: POST /account/registration with user details
-2. Complete registration via the verification link: PUT /account/registration
-3. Verify the account token: POST /account/verification
-4. Log in to get a session: POST /login with credentials
-5. Create an organization: POST /api/v1/organizations
-6. Set the default address: PUT /api/v1/organizations/{organizationId}/addresses/default
-7. Upload a logo: POST /api/v1/organizations/{organizationId}/logo
-
-### 2. Create GUIDs, Organize into Collections, and Attach Documents
-
-1. Create one or more GUIDs: POST /api/v1/guids with the organization and count
-2. Create a collection: POST /api/v1/collections
-3. Add GUIDs to the collection: POST /api/v1/collections/{id4n}/elements with the GUID list
-4. Upload a document to a GUID: POST /api/v1/documents/{id4n}/{organizationId} with file content
-5. Verify the document: GET /api/v1/documents/{id4n}/{organizationId}/{fileName}/metadata
-
-### 3. Set Up API Key with Scoped Privileges
-
-1. Create a new API key: POST /api/v1/apikeys with a name and organizationId
-2. List available privileges: GET /api/v1/apikeys/privileges
-3. Grant specific privileges to the key: POST /api/v1/apikeys/{key}/privileges
-4. Scope a privilege to specific ID4Ns: POST /api/v1/apikeys/{key}/privileges/{privilege}/id4ns
-5. Verify the key's effective permissions: GET /api/v1/apikeys/{key}/privileges
-
-### 4. Transfer an Item Between Organizations
-
-1. Look up the item: GET /api/v1/id4ns/{id4n} to confirm ownership
-2. Set send info on the source side: PUT /api/v1/transfers/{id4n}/sendInfo with recipient details
-3. Recipient sets receive info: PUT /api/v1/transfers/{id4n}/receiveInfo to accept
-4. Verify the new ownership: GET /whois/{id4n}
-5. Add a history entry documenting the transfer: POST /api/v1/history/{id4n}
-
-### 5. Audit Item History and Public Access
-
-1. Retrieve full private history: GET /api/v1/history/{id4n} with `includePrivate=true`
-2. Check what the public sees: GET /api/v1/public/history/{id4n}
-3. Adjust visibility on sensitive entries: PUT /api/v1/history/{id4n}/{organizationId}/{sequenceId}/visibility
-4. Verify public documents are accessible: GET /api/v1/public/documents/{id4n}
-5. Test the public routing resolution: GET /api/v1/public/routes/{id4n} with the target type
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a password?" -> POST /account/password
+- "Create a registration?" -> POST /account/registration
+- "Create a verification?" -> POST /account/verification
+- "List all apikeys?" -> GET /api/v1/apikeys
+- "Create a apikey?" -> POST /api/v1/apikeys
+- "List all privileges?" -> GET /api/v1/apikeys/privileges
+- "Get apikey details?" -> GET /api/v1/apikeys/{key}
+- "Update a apikey?" -> PUT /api/v1/apikeys/{key}
+- "Delete a apikey?" -> DELETE /api/v1/apikeys/{key}
+- "List all privileges?" -> GET /api/v1/apikeys/{key}/privileges
+- "Create a privilege?" -> POST /api/v1/apikeys/{key}/privileges
+- "List all id4ns?" -> GET /api/v1/apikeys/{key}/privileges/{privilege}/id4ns
+- "Create a id4n?" -> POST /api/v1/apikeys/{key}/privileges/{privilege}/id4ns
+- "Get billing details?" -> GET /api/v1/billing/{organizationId}
+- "List all positions?" -> GET /api/v1/billing/{organizationId}/positions
+- "Get organization details?" -> GET /api/v1/changelog/organization/{organizationId}/
+- "Create a collection?" -> POST /api/v1/collections
+- "Get collection details?" -> GET /api/v1/collections/{id4n}
+- "Delete a collection?" -> DELETE /api/v1/collections/{id4n}
+- "Partially update a collection?" -> PATCH /api/v1/collections/{id4n}
+- "List all elements?" -> GET /api/v1/collections/{id4n}/elements
+- "Create a element?" -> POST /api/v1/collections/{id4n}/elements
+- "List all countries?" -> GET /api/v1/countries
+- "Get document details?" -> GET /api/v1/documents/{id4n}
+- "Get document details?" -> GET /api/v1/documents/{id4n}/{organizationId}
+- "Update a document?" -> PUT /api/v1/documents/{id4n}/{organizationId}
+- "Get document details?" -> GET /api/v1/documents/{id4n}/{organizationId}/{fileName}
+- "Delete a document?" -> DELETE /api/v1/documents/{id4n}/{organizationId}/{fileName}
+- "List all metadata?" -> GET /api/v1/documents/{id4n}/{organizationId}/{fileName}/metadata
+- "Create a guid?" -> POST /api/v1/guids
+- "List all withoutCollection?" -> GET /api/v1/guids/withoutCollection
+- "Get guid details?" -> GET /api/v1/guids/{id4n}
+- "Partially update a guid?" -> PATCH /api/v1/guids/{id4n}
+- "Get history details?" -> GET /api/v1/history/{id4n}
+- "Get history details?" -> GET /api/v1/history/{id4n}/{organizationId}
+- "Get history details?" -> GET /api/v1/history/{id4n}/{organizationId}/{sequenceId}
+- "Partially update a history?" -> PATCH /api/v1/history/{id4n}/{organizationId}/{sequenceId}
+- "Get id4n details?" -> GET /api/v1/id4ns/{id4n}
+- "List all alias?" -> GET /api/v1/id4ns/{id4n}/alias
+- "Delete a alia?" -> DELETE /api/v1/id4ns/{id4n}/alias/{aliasType}
+- "List all collections?" -> GET /api/v1/id4ns/{id4n}/collections
+- "List all properties?" -> GET /api/v1/id4ns/{id4n}/properties
+- "Create a gs1?" -> POST /api/v1/import/gs1
+- "List all info?" -> GET /api/v1/info
+- "Get microstorage details?" -> GET /api/v1/microstorage/{id4n}/{organization}
+- "Update a microstorage?" -> PUT /api/v1/microstorage/{id4n}/{organization}
+- "List all properties?" -> GET /api/v1/multiple/id4ns/properties
+- "Create a organization?" -> POST /api/v1/organizations
+- "Get organization details?" -> GET /api/v1/organizations/{organizationId}
+- "Update a organization?" -> PUT /api/v1/organizations/{organizationId}
+- "Delete a organization?" -> DELETE /api/v1/organizations/{organizationId}
+- "List all billing?" -> GET /api/v1/organizations/{organizationId}/addresses/billing
+- "List all default?" -> GET /api/v1/organizations/{organizationId}/addresses/default
+- "List all collections?" -> GET /api/v1/organizations/{organizationId}/collections
+- "Create a logo?" -> POST /api/v1/organizations/{organizationId}/logo
+- "List all messaging?" -> GET /api/v1/organizations/{organizationId}/messaging
+- "Create a enqueueCustomMessage?" -> POST /api/v1/organizations/{organizationId}/messaging/enqueueCustomMessage
+- "List all partner?" -> GET /api/v1/organizations/{organizationId}/partner
+- "List all privileges?" -> GET /api/v1/organizations/{organizationId}/privileges
+- "List all roles?" -> GET /api/v1/organizations/{organizationId}/roles
+- "List all users?" -> GET /api/v1/organizations/{organizationId}/users
+- "Create a invite?" -> POST /api/v1/organizations/{organizationId}/users/invite
+- "List all roles?" -> GET /api/v1/organizations/{organizationId}/users/{username}/roles
+- "Create a role?" -> POST /api/v1/organizations/{organizationId}/users/{username}/roles
+- "Get document details?" -> GET /api/v1/public/documents/{id4n}
+- "Get document details?" -> GET /api/v1/public/documents/{id4n}/{organizationId}/{fileName}
+- "List all metadata?" -> GET /api/v1/public/documents/{id4n}/{organizationId}/{fileName}/metadata
+- "Get history details?" -> GET /api/v1/public/history/{id4n}
+- "Get image details?" -> GET /api/v1/public/image/{imageID}
+- "Get organization details?" -> GET /api/v1/public/organizations/{organizationId}
+- "Get route details?" -> GET /api/v1/public/routes/{id4n}
+- "List all roles?" -> GET /api/v1/roles
+- "Get routingfile details?" -> GET /api/v1/routingfiles/{id4n}
+- "Update a routingfile?" -> PUT /api/v1/routingfiles/{id4n}
+- "Get route details?" -> GET /api/v1/routingfiles/{id4n}/route/{type}
+- "Get route details?" -> GET /api/v1/routingfiles/{id4n}/routes/{type}
+- "List all guids?" -> GET /api/v1/search/guids
+- "List all types?" -> GET /api/v1/search/guids/aliases/types
+- "List all sendInfo?" -> GET /api/v1/transfers/{id4n}/sendInfo
+- "List all organizations?" -> GET /api/v1/user/organizations
+- "List all users?" -> GET /api/v1/users
+- "Get user details?" -> GET /api/v1/users/{username}
+- "Get go details?" -> GET /go/{guid}
+- "Create a login?" -> POST /login
+- "Get whois details?" -> GET /whois/{id4n}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

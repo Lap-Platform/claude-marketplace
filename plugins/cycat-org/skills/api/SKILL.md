@@ -77,80 +77,23 @@ Not specified.
 |--------|------|-------------|
 | GET | /search/{searchquery} | Full-text search in CyCAT and return matching UUID. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What is CyCAT and what version is the API?" -> GET /info
-- "Generate a new UUID for a CyCAT entry" -> GET /generate/uuid
-- "Look up details for a specific UUID" -> GET /lookup/{uuid}
-- "What are the child entries of this UUID?" -> GET /child/{uuid}
-- "What is the parent of this UUID?" -> GET /parent/{uuid}
-- "Show me all relationships for a UUID" -> GET /relationships/{uuid}
-- "Show me expanded relationships with full details for a UUID" -> GET /relationships/expanded/{uuid}
-- "List all available namespaces" -> GET /namespace/getall
-- "What is the ID for a specific namespace?" -> GET /namespace/getid/{namespace}
-- "Find the UUID for an item in a given namespace" -> GET /namespace/finduuid/{namespace}/{namespaceid}
-- "List projects in a paginated range" -> GET /list/project/{start}/{end}
-- "List publishers in a paginated range" -> GET /list/publisher/{start}/{end}
-- "Search for cybersecurity entries by keyword" -> GET /search/{searchquery}
-- "Propose a new entry to the CyCAT catalog" -> POST /propose
-
-## Response Tips
-
-- **Info/Generate**: Flat JSON objects; `/info` returns version and instance metadata, `/generate/uuid` returns a single UUID string.
-- **Lookup/Child/Parent**: Keyed by UUID; check for empty or null responses when a UUID has no children or no parent.
-- **Relationships**: `/relationships/{uuid}` returns direct links; `/relationships/expanded/{uuid}` nests full objects for each related entry -- expect deeper payloads.
-- **List (project/publisher)**: `{start}` and `{end}` are offset indices, not page numbers; an empty array signals you have passed the last entry.
-- **Namespace**: `/getall` returns a flat list; `/getid` and `/finduuid` return single-value lookups that may return empty when the namespace or ID is unregistered.
-- **Search**: Results are returned as an array; no result count header -- an empty array means zero matches.
-- **Propose**: POST body format is not documented in the spec; expect a confirmation object or error message on 200.
-
-## Anomaly Flags
-
-- **Empty relationship graph**: If `/child/{uuid}` and `/parent/{uuid}` both return empty while `/lookup/{uuid}` succeeds, the entry may be orphaned -- surface this to the user.
-- **UUID not found**: Any lookup/child/parent/relationships call returning empty or null likely means the UUID is unregistered; suggest using `/search` or `/namespace/finduuid` instead.
-- **List range overshoot**: If `/list/project/{start}/{end}` returns fewer items than `(end - start)`, the user has reached the end of the catalog -- note this proactively.
-- **Namespace mismatch**: If `/namespace/getid/{namespace}` returns empty, the namespace may be misspelled or not yet registered; list available namespaces with `/namespace/getall`.
-- **Proposal without UUID**: If a user tries `/propose` without first generating a UUID via `/generate/uuid`, flag that they may need to generate one first.
-- **Expanded relationships payload size**: `/relationships/expanded/{uuid}` can return significantly larger payloads than the compact variant; warn when traversing many UUIDs in sequence.
-
-## Playbook
-
-### Register and Propose a New Entry
-
-1. Call `GET /generate/uuid` to obtain a fresh UUID.
-2. Call `GET /namespace/getall` to review available namespaces and pick the right one.
-3. Call `POST /propose` with the generated UUID, chosen namespace, and entry metadata.
-4. Call `GET /lookup/{uuid}` to confirm the entry is now registered.
-
-### Explore an Entry's Full Context
-
-1. Call `GET /lookup/{uuid}` to retrieve the entry's core metadata.
-2. Call `GET /parent/{uuid}` to find the parent entry (if any).
-3. Call `GET /child/{uuid}` to list all child entries.
-4. Call `GET /relationships/expanded/{uuid}` to get the full relationship graph with nested details.
-
-### Search and Resolve a Cybersecurity Item
-
-1. Call `GET /search/{searchquery}` with a keyword (e.g., CVE ID, tool name).
-2. Pick the best-matching UUID from the results.
-3. Call `GET /lookup/{uuid}` to get full details.
-4. Optionally call `GET /relationships/{uuid}` to see linked advisories, tools, or actors.
-
-### Enumerate All Projects or Publishers
-
-1. Call `GET /list/project/0/50` to fetch the first 50 projects.
-2. If 50 results are returned, call `GET /list/project/50/100` for the next batch.
-3. Repeat, incrementing by 50, until fewer than 50 results are returned.
-4. Apply the same pattern with `/list/publisher/{start}/{end}` for publishers.
-
-### Cross-Reference a Namespace ID to Full Entry
-
-1. Call `GET /namespace/getall` to confirm the namespace exists.
-2. Call `GET /namespace/finduuid/{namespace}/{namespaceid}` to resolve the namespace-specific ID to a CyCAT UUID.
-3. Call `GET /lookup/{uuid}` with the resolved UUID to get the full entry.
-4. Call `GET /relationships/{uuid}` to discover linked entries across namespaces.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get child details?" -> GET /child/{uuid}
+- "List all uuid?" -> GET /generate/uuid
+- "List all info?" -> GET /info
+- "Get project details?" -> GET /list/project/{start}/{end}
+- "Get publisher details?" -> GET /list/publisher/{start}/{end}
+- "Get lookup details?" -> GET /lookup/{uuid}
+- "Get finduuid details?" -> GET /namespace/finduuid/{namespace}/{namespaceid}
+- "List all getall?" -> GET /namespace/getall
+- "Get getid details?" -> GET /namespace/getid/{namespace}
+- "Get parent details?" -> GET /parent/{uuid}
+- "Create a propose?" -> POST /propose
+- "Get expanded details?" -> GET /relationships/expanded/{uuid}
+- "Get relationship details?" -> GET /relationships/{uuid}
+- "Get search details?" -> GET /search/{searchquery}
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

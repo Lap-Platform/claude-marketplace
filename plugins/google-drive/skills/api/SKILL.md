@@ -95,83 +95,57 @@ https://www.googleapis.com/drive/v3
 | GET | /teamdrives/{teamDriveId} | Deprecated use drives.get instead. |
 | PATCH | /teamdrives/{teamDriveId} | Deprecated use drives.update instead |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How much storage am I using?" -> GET /about
-- "List all files in my Drive" -> GET /files
-- "Find files named 'budget' in my Drive?" -> GET /files (use `q` parameter with `name contains 'budget'`)
-- "What changed since my last sync?" -> GET /changes (requires `pageToken` from GET /changes/startPageToken)
-- "Who has access to this file?" -> GET /files/{fileId}/permissions
-- "Share a file with someone by email?" -> POST /files/{fileId}/permissions
-- "How do I move a file to a different folder?" -> PATCH /files/{fileId} (use `addParents` and `removeParents`)
-- "Download a Google Doc as PDF?" -> GET /files/{fileId}/export (set `mimeType=application/pdf`)
-- "Delete a file permanently?" -> DELETE /files/{fileId}
-- "Copy a file to a new location?" -> POST /files/{fileId}/copy
-- "List all shared drives I have access to?" -> GET /drives
-- "Get all comments on a document?" -> GET /files/{fileId}/comments
-- "Watch a file for changes?" -> POST /files/{fileId}/watch
-- "Stop receiving notifications for a channel?" -> POST /channels/stop
-- "What are the revision history entries for a file?" -> GET /files/{fileId}/revisions
-
-## Response Tips
-
-- **Files & Drives lists**: Paginated via `nextPageToken` -- keep calling with `pageToken` until `nextPageToken` is absent or empty. Default `pageSize` is small (100 for files, 10 for drives); increase it to reduce round-trips.
-- **Changes feed**: Returns `newStartPageToken` when you have consumed all changes (no more pages); store it for next poll. If `nextPageToken` is present instead, there are more pages to fetch.
-- **File metadata**: The `capabilities` map is your permission truth -- check `canEdit`, `canShare`, `canDelete` before attempting write operations rather than guessing from `role`.
-- **Comments & replies**: Nested structure -- comments contain `replies` arrays. Deleted items remain in responses with `deleted: true`; filter client-side unless `includeDeleted` is explicitly false.
-- **Permissions**: The `type` field distinguishes `user`, `group`, `domain`, and `anyone` scopes. `permissionDetails` is an array showing inherited vs. direct grants.
-- **Revisions**: `size` and numeric IDs are returned as strings (int64 format) -- parse them explicitly. `keepForever` defaults to false; old revisions get auto-purged.
-- **Error responses**: Not in the 200 schema. Expect `{error: {code, message, errors[]}}` on 4xx/5xx. Common: 403 (insufficient permissions), 404 (file not found or no access), 429 (rate limited).
-
-## Anomaly Flags
-
-- **Rate limit proximity**: Surface HTTP 429 responses or `userRateLimitExceeded` / `rateLimitExceeded` error reasons immediately -- back off exponentially before retrying.
-- **Storage quota near limit**: After GET /about, flag when `storageQuota.usage` approaches `storageQuota.limit` (e.g., >90% used).
-- **Deprecated Team Drives usage**: Any use of `/teamdrives` endpoints or `supportsTeamDrives`/`teamDriveId` parameters -- these are legacy; recommend migrating to `/drives` and `supportsAllDrives`/`driveId`.
-- **Trashed file operations**: Flag when `trashed: true` or `explicitlyTrashed: true` appears on a file the user is trying to work with -- they may not realize the file is in trash.
-- **Incomplete search results**: When `incompleteSearch: true` appears in GET /files response, the result set is partial and the user should narrow their query.
-- **Expiring permissions**: When `expirationTime` is present on a permission and is approaching, alert the user that access will be revoked soon.
-- **Missing capabilities**: Before destructive or sharing operations, check the file's `capabilities` map and warn if the required capability (e.g., `canShare`, `canDelete`) is false.
-
-## Playbook
-
-### 1. Poll for Recent Changes (Incremental Sync)
-
-1. Call GET /changes/startPageToken to get an initial `startPageToken` (first run only; store it persistently).
-2. Call GET /changes with `pageToken` set to the stored token and `includeItemsFromAllDrives: true`, `supportsAllDrives: true`.
-3. Process each entry in the `changes` array (file metadata, removal flags).
-4. If `nextPageToken` is present, repeat step 2 with that token.
-5. When `newStartPageToken` appears instead, store it for the next poll cycle.
-
-### 2. Share a File and Notify the Recipient
-
-1. Call GET /files/{fileId} to confirm the file exists and check `capabilities.canShare`.
-2. Call POST /files/{fileId}/permissions with body `{type: "user", role: "writer", emailAddress: "user@example.com"}` and query `sendNotificationEmail=true`, optionally with `emailMessage`.
-3. Verify the returned permission object has the expected `role` and `emailAddress`.
-4. Optionally call GET /files/{fileId}/permissions to confirm the full permission list.
-
-### 3. Export a Google Workspace Document
-
-1. Call GET /files/{fileId} to retrieve the file's `mimeType` and confirm it is a Google Workspace type (e.g., `application/vnd.google-apps.document`).
-2. Call GET /about and inspect `exportFormats` to find supported export MIME types for that source type.
-3. Call GET /files/{fileId}/export with `mimeType` set to the desired format (e.g., `application/pdf`).
-4. The response body is the binary file content -- stream it directly to disk or the client.
-
-### 4. Organize Files into a Shared Drive Folder
-
-1. Call GET /drives to list available shared drives; identify the target `driveId`.
-2. Call GET /files with `q: "'<folderId>' in parents"`, `driveId`, `supportsAllDrives: true`, `includeItemsFromAllDrives: true` to see current contents.
-3. To move a file in, call PATCH /files/{fileId} with `addParents=<targetFolderId>`, `removeParents=<currentParentId>`, and `supportsAllDrives: true`.
-4. To upload a new file, call POST /files with the file metadata including `parents: ["<targetFolderId>"]` and `supportsAllDrives: true`.
-
-### 5. Set Up Push Notifications for a File
-
-1. Call POST /files/{fileId}/watch with body `{id: "<unique-channel-id>", type: "web_hook", address: "https://your-server.com/webhook"}`.
-2. Store the returned `resourceId` and `id` -- you will need both to stop the channel later.
-3. Note the `expiration` timestamp; channels expire automatically (max ~24 hours). Set a timer to renew before expiry by repeating step 1.
-4. To stop notifications early, call POST /channels/stop with `{id: "<channel-id>", resourceId: "<resource-id>"}`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all about?" -> GET /about
+- "List all changes?" -> GET /changes
+- "List all startPageToken?" -> GET /changes/startPageToken
+- "Create a watch?" -> POST /changes/watch
+- "Create a stop?" -> POST /channels/stop
+- "Search drives?" -> GET /drives
+- "Create a drive?" -> POST /drives
+- "Delete a drive?" -> DELETE /drives/{driveId}
+- "Get drive details?" -> GET /drives/{driveId}
+- "Partially update a drive?" -> PATCH /drives/{driveId}
+- "Create a hide?" -> POST /drives/{driveId}/hide
+- "Create a unhide?" -> POST /drives/{driveId}/unhide
+- "Search files?" -> GET /files
+- "Create a file?" -> POST /files
+- "List all generateIds?" -> GET /files/generateIds
+- "Delete a file?" -> DELETE /files/{fileId}
+- "Get file details?" -> GET /files/{fileId}
+- "Partially update a file?" -> PATCH /files/{fileId}
+- "List all comments?" -> GET /files/{fileId}/comments
+- "Create a comment?" -> POST /files/{fileId}/comments
+- "Delete a comment?" -> DELETE /files/{fileId}/comments/{commentId}
+- "Get comment details?" -> GET /files/{fileId}/comments/{commentId}
+- "Partially update a comment?" -> PATCH /files/{fileId}/comments/{commentId}
+- "List all replies?" -> GET /files/{fileId}/comments/{commentId}/replies
+- "Create a reply?" -> POST /files/{fileId}/comments/{commentId}/replies
+- "Delete a reply?" -> DELETE /files/{fileId}/comments/{commentId}/replies/{replyId}
+- "Get reply details?" -> GET /files/{fileId}/comments/{commentId}/replies/{replyId}
+- "Partially update a reply?" -> PATCH /files/{fileId}/comments/{commentId}/replies/{replyId}
+- "Create a copy?" -> POST /files/{fileId}/copy
+- "List all export?" -> GET /files/{fileId}/export
+- "List all listLabels?" -> GET /files/{fileId}/listLabels
+- "Create a modifyLabel?" -> POST /files/{fileId}/modifyLabels
+- "List all permissions?" -> GET /files/{fileId}/permissions
+- "Create a permission?" -> POST /files/{fileId}/permissions
+- "Delete a permission?" -> DELETE /files/{fileId}/permissions/{permissionId}
+- "Get permission details?" -> GET /files/{fileId}/permissions/{permissionId}
+- "Partially update a permission?" -> PATCH /files/{fileId}/permissions/{permissionId}
+- "List all revisions?" -> GET /files/{fileId}/revisions
+- "Delete a revision?" -> DELETE /files/{fileId}/revisions/{revisionId}
+- "Get revision details?" -> GET /files/{fileId}/revisions/{revisionId}
+- "Partially update a revision?" -> PATCH /files/{fileId}/revisions/{revisionId}
+- "Create a watch?" -> POST /files/{fileId}/watch
+- "Search teamdrives?" -> GET /teamdrives
+- "Create a teamdrive?" -> POST /teamdrives
+- "Delete a teamdrive?" -> DELETE /teamdrives/{teamDriveId}
+- "Get teamdrive details?" -> GET /teamdrives/{teamDriveId}
+- "Partially update a teamdrive?" -> PATCH /teamdrives/{teamDriveId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

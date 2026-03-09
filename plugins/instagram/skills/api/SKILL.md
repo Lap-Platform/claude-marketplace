@@ -70,83 +70,36 @@ https://api.instagram.com/v1
 | GET | /users/{user-id}/relationship | Get information about a relationship to another user. |
 | POST | /users/{user-id}/relationship | Modify the relationship between the current user and the target user. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I search for users by name?" -> GET /users/search
-- "What media is popular right now?" -> GET /media/popular
-- "How do I get a user's recent posts?" -> GET /users/{user-id}/media/recent
-- "How do I find media near a specific location?" -> GET /media/search
-- "How do I look up a post by its shortcode from a URL?" -> GET /media/shortcode/{shortcode}
-- "Who follows a given user?" -> GET /users/{user-id}/followed-by
-- "Who does a user follow?" -> GET /users/{user-id}/follows
-- "How do I like a post?" -> POST /media/{media-id}/likes
-- "How do I comment on a post?" -> POST /media/{media-id}/comments
-- "How do I delete a comment I left?" -> DELETE /media/{media-id}/comments/{comment-id}
-- "How do I search for locations near coordinates?" -> GET /locations/search
-- "What posts are tagged with a specific hashtag?" -> GET /tags/{tag-name}/media/recent
-- "How do I follow or unfollow someone?" -> POST /users/{user-id}/relationship
-- "What does my feed look like?" -> GET /users/self/feed
-- "Who has requested to follow me?" -> GET /users/self/requested-by
-
-## Response Tips
-
-- **Media endpoints**: Responses nest image/video data under `images` and `videos` objects with resolution variants (`low_resolution`, `standard_resolution`, `thumbnail`). Pagination uses `min_id`/`max_id` cursor fields in a top-level `pagination` object -- pass these as query params to page forward/backward.
-- **User endpoints**: User profiles return `counts` with `media`, `follows`, `followed_by`. A 404 means the user ID is invalid or the account is deactivated. Relationship status is a separate call.
-- **Location/Geography endpoints**: Location search supports multiple ID systems (Facebook Places, Foursquare v1/v2) -- only one is needed. Distance is in meters.
-- **Tag endpoints**: Tag objects include `media_count`. Recent media under a tag paginates via `min_tag_id`/`max_tag_id`, not the standard `min_id`/`max_id`.
-- **Comments/Likes**: Comment creation returns the new comment object. Like/unlike return a simple `meta` status. Likes list returns an array of user summary objects, not full profiles.
-
-## Anomaly Flags
-
-- **Rate limit headers**: Surface `X-Ratelimit-Remaining` when it drops below 20% of `X-Ratelimit-Limit`. Instagram's default is 500 requests/hour per token -- alert well before exhaustion.
-- **Deprecated API version**: This spec targets v1, which Instagram has sunset in favor of the Instagram Graph API. Flag any 400/403 responses that indicate endpoint deprecation or migration requirements.
-- **Empty pagination**: If `pagination` is present but contains no `next_url` or cursor IDs, the result set is complete -- do not retry or assume an error.
-- **OAuth scope errors**: A 400 with `OAuthPermissionsException` means the token lacks required scopes (e.g., `public_content`, `comments`, `relationships`). Surface the missing scope name.
-- **Sandbox mode restrictions**: If responses consistently return only a small fixed set of users/media, the app is likely in sandbox mode. Flag this so the user can submit for review.
-- **Unusual 429/503 responses**: Instagram may throttle beyond standard rate limits during high traffic. Surface retry-after timing if present.
-
-## Playbook
-
-### 1. Explore a hashtag and save top posts
-
-1. `GET /tags/{tag-name}` to confirm the tag exists and check `media_count`
-2. `GET /tags/{tag-name}/media/recent` to fetch the first page of results
-3. For each media item, extract `id`, `images.standard_resolution.url`, `likes.count`, and `caption.text`
-4. Page through results using `max_tag_id` from the `pagination` object until you have enough posts or reach a `min_tag_id` boundary
-
-### 2. Analyze a user's profile and recent activity
-
-1. `GET /users/search?q={username}` to resolve a username to a `user-id`
-2. `GET /users/{user-id}` to retrieve full profile including follower/following counts
-3. `GET /users/{user-id}/media/recent?count=20` to pull their latest posts
-4. `GET /users/{user-id}/followed-by` and `GET /users/{user-id}/follows` to examine their social graph
-5. `GET /users/{user-id}/relationship` to check your relationship status with them
-
-### 3. Engage with a specific post
-
-1. `GET /media/shortcode/{shortcode}` to resolve a post URL (instagram.com/p/{shortcode}) to a `media-id` and view details
-2. `GET /media/{media-id}/comments` to read existing comments
-3. `POST /media/{media-id}/likes` to like the post
-4. `POST /media/{media-id}/comments` with `text` to leave a comment
-5. If needed, `DELETE /media/{media-id}/comments/{comment-id}` to remove your comment
-
-### 4. Find and browse media near a place
-
-1. `GET /locations/search?lat={lat}&lng={lng}&distance=1000` to find nearby location IDs
-2. Pick a location and `GET /locations/{location-id}` for its name and coordinates
-3. `GET /locations/{location-id}/media/recent` to browse recent posts from that spot
-4. Use `min_timestamp`/`max_timestamp` to narrow results to a specific time window
-5. Alternatively, `GET /media/search?lat={lat}&lng={lng}` for a coordinate-based media search without a specific location ID
-
-### 5. Manage follow relationships
-
-1. `GET /users/self/requested-by` to see pending follow requests
-2. `POST /users/{user-id}/relationship` with `action=approve` or `action=ignore` to handle each request
-3. To follow a new user: `POST /users/{user-id}/relationship` with `action=follow`
-4. To unfollow: `POST /users/{user-id}/relationship` with `action=unfollow`
-5. Verify the outcome with `GET /users/{user-id}/relationship` to confirm the updated status
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all recent?" -> GET /geographies/{geo-id}/media/recent
+- "List all search?" -> GET /locations/search
+- "Get location details?" -> GET /locations/{location-id}
+- "List all recent?" -> GET /locations/{location-id}/media/recent
+- "List all popular?" -> GET /media/popular
+- "List all search?" -> GET /media/search
+- "Get shortcode details?" -> GET /media/shortcode/{shortcode}
+- "Get media details?" -> GET /media/{media-id}
+- "List all comments?" -> GET /media/{media-id}/comments
+- "Create a comment?" -> POST /media/{media-id}/comments
+- "Delete a comment?" -> DELETE /media/{media-id}/comments/{comment-id}
+- "List all likes?" -> GET /media/{media-id}/likes
+- "Create a like?" -> POST /media/{media-id}/likes
+- "Search search?" -> GET /tags/search
+- "Get tag details?" -> GET /tags/{tag-name}
+- "List all recent?" -> GET /tags/{tag-name}/media/recent
+- "Search search?" -> GET /users/search
+- "List all feed?" -> GET /users/self/feed
+- "List all liked?" -> GET /users/self/media/liked
+- "List all requested-by?" -> GET /users/self/requested-by
+- "Get user details?" -> GET /users/{user-id}
+- "List all followed-by?" -> GET /users/{user-id}/followed-by
+- "List all follows?" -> GET /users/{user-id}/follows
+- "List all recent?" -> GET /users/{user-id}/media/recent
+- "List all relationship?" -> GET /users/{user-id}/relationship
+- "Create a relationship?" -> POST /users/{user-id}/relationship
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -167,87 +167,42 @@ https://container.googleapis.com/
 | POST | /v1/{parent}/nodePools | Creates a node pool for a cluster. |
 | GET | /v1/{parent}/operations | Lists all operations in a project in a specific zone or all zones. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What clusters are running in my project?" -> GET /v1/{parent}/clusters
-- "How do I create a new GKE cluster?" -> POST /v1/{parent}/clusters
-- "What are the details of a specific cluster?" -> GET /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}
-- "How do I delete a cluster?" -> DELETE /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}
-- "What node pools exist in my cluster?" -> GET /v1/{parent}/nodePools
-- "How do I add a node pool to a cluster?" -> POST /v1/{parent}/nodePools
-- "How do I scale a node pool up or down?" -> POST /v1/{name}:setSize
-- "How do I upgrade the master version of my cluster?" -> POST /v1/{name}:updateMaster
-- "What Kubernetes versions are available in my zone?" -> GET /v1/{parent}/serverConfig
-- "How do I enable or disable cluster autoscaling?" -> POST /v1/{name}:setAutoscaling
-- "What operations are currently running on my cluster?" -> GET /v1/{parent}/operations
-- "How do I cancel a long-running cluster operation?" -> POST /v1/{name}:cancel
-- "How do I rotate my cluster's IP addresses and credentials?" -> POST /v1/{name}:startIpRotation
-- "How do I set a maintenance window for my cluster?" -> POST /v1/{name}:setMaintenancePolicy
-- "How do I enable network policy on my cluster?" -> POST /v1/{name}:setNetworkPolicy
-
-## Response Tips
-
-- **Cluster lists**: Check `missingZones` array -- non-empty means some zones were unreachable and results are partial.
-- **Mutating operations** (create, delete, update, scale): All return an Operation object; poll `status` field (`RUNNING`, `DONE`, `ABORTING`) via GET /v1/{name} until completion.
-- **Operation errors**: Inspect `error.code` and `error.details[]` for structured failure reasons; `statusMessage` may contain a human-readable summary but can be empty.
-- **Server config**: `validMasterVersions` and `validNodeVersions` are ordered arrays; `channels[]` maps release channels (RAPID, REGULAR, STABLE) to their supported versions.
-- **Node pool details**: `management.upgradeOptions.autoUpgradeStartTime` is only populated when an auto-upgrade is actually scheduled.
-- **OIDC/JWKS**: `cacheHeader.age` and `cacheHeader.expires` indicate upstream caching; respect these to avoid unnecessary re-fetches.
-
-## Anomaly Flags
-
-- **Cluster status not RUNNING**: Surface immediately if `status` is `DEGRADED`, `ERROR`, `RECONCILING`, or `STOPPING` -- the cluster may be unhealthy or mid-transition.
-- **Operation stuck**: Flag any operation where `status` remains `RUNNING` for an extended period without `progress.stages` advancing.
-- **Legacy ABAC enabled**: If `legacyAbac.enabled` is true, warn the user -- this is a deprecated, less-secure authorization mode.
-- **Missing zones in list responses**: A non-empty `missingZones` array means the API could not reach some zones; results are incomplete.
-- **Master/node version skew**: If `currentMasterVersion` and `currentNodeVersion` differ by more than two minor versions, flag a potential compatibility risk.
-- **Expiring clusters**: If `expireTime` is set and approaching, the cluster will be auto-deleted.
-- **Shielded nodes disabled**: If `shieldedNodes.enabled` is false, recommend enabling for improved node integrity.
-- **Basic auth credentials present**: If `masterAuth.username` or `masterAuth.password` are non-empty, warn about deprecated basic authentication.
-- **Condition codes**: Surface any entries in `conditions[]` or `clusterConditions[]` with non-OK `canonicalCode` values.
-
-## Playbook
-
-### 1. Create a cluster and verify it is ready
-
-1. GET /v1/{parent}/serverConfig to find the latest valid master version and available image types.
-2. POST /v1/{parent}/clusters with your desired cluster config (name, node count, machine type, network settings).
-3. Capture the returned operation `name`.
-4. Poll GET /v1/{name} until `status` is `DONE`. Check `error` for failures.
-5. GET /v1/{parent}/clusters and confirm the new cluster appears with `status: RUNNING`.
-
-### 2. Scale a node pool
-
-1. GET /v1/{parent}/nodePools to list pools and identify the target `nodePoolId`.
-2. POST /v1/{name}:setSize with the desired `nodeCount`.
-3. Poll the returned operation via GET /v1/{name} until `status` is `DONE`.
-4. GET the node pool detail to confirm `initialNodeCount` reflects the new size and `status` is `RUNNING`.
-
-### 3. Upgrade master and nodes
-
-1. GET /v1/{parent}/serverConfig to find available versions in `validMasterVersions`.
-2. POST /v1/{name}:updateMaster with the target `masterVersion`.
-3. Poll the operation until `DONE`.
-4. For each node pool, POST /v1/{name} (PUT update) or use the node pool update endpoint with the target `nodeVersion`.
-5. Poll each node pool operation until `DONE`.
-6. GET the cluster detail and verify `currentMasterVersion` and `currentNodeVersion` match expectations.
-
-### 4. Rotate cluster IP addresses and credentials
-
-1. POST /v1/{name}:startIpRotation (set `rotateCredentials: true` to also rotate credentials).
-2. Poll the returned operation until `DONE`.
-3. Update all clients and kubeconfig to use the new endpoint/credentials.
-4. POST /v1/{name}:completeIpRotation to finalize and drop the old IP.
-5. Poll until `DONE`, then verify connectivity with the new endpoint.
-
-### 5. Set up a maintenance window
-
-1. GET the cluster to read the current `maintenancePolicy` and note the `resourceVersion`.
-2. POST /v1/{name}:setMaintenancePolicy with a `window` containing either a `dailyMaintenanceWindow` (start time + duration) or a `recurringWindow` (RRULE recurrence + time window). Include `maintenanceExclusions` for blackout periods.
-3. Poll the operation until `DONE`.
-4. GET the cluster again and confirm `maintenancePolicy.window` reflects your settings.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all clusters?" -> GET /v1/projects/{projectId}/zones/{zone}/clusters
+- "Create a cluster?" -> POST /v1/projects/{projectId}/zones/{zone}/clusters
+- "Delete a cluster?" -> DELETE /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}
+- "Get cluster details?" -> GET /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}
+- "Update a cluster?" -> PUT /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}
+- "Create a addon?" -> POST /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/addons
+- "Create a legacyAbac?" -> POST /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/legacyAbac
+- "Create a location?" -> POST /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/locations
+- "Create a logging?" -> POST /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/logging
+- "Create a master?" -> POST /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/master
+- "Create a monitoring?" -> POST /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/monitoring
+- "List all nodePools?" -> GET /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/nodePools
+- "Create a nodePool?" -> POST /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/nodePools
+- "Delete a nodePool?" -> DELETE /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/nodePools/{nodePoolId}
+- "Get nodePool details?" -> GET /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/nodePools/{nodePoolId}
+- "Create a autoscaling?" -> POST /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/nodePools/{nodePoolId}/autoscaling
+- "Create a setManagement?" -> POST /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/nodePools/{nodePoolId}/setManagement
+- "Create a setSize?" -> POST /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/nodePools/{nodePoolId}/setSize
+- "Create a update?" -> POST /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/nodePools/{nodePoolId}/update
+- "Create a resourceLabel?" -> POST /v1/projects/{projectId}/zones/{zone}/clusters/{clusterId}/resourceLabels
+- "List all operations?" -> GET /v1/projects/{projectId}/zones/{zone}/operations
+- "Get operation details?" -> GET /v1/projects/{projectId}/zones/{zone}/operations/{operationId}
+- "List all serverconfig?" -> GET /v1/projects/{projectId}/zones/{zone}/serverconfig
+- "List all serverConfig?" -> GET /v1/{name}/serverConfig
+- "List all openid-configuration?" -> GET /v1/{parent}/.well-known/openid-configuration
+- "List all usableSubnetworks?" -> GET /v1/{parent}/aggregated/usableSubnetworks
+- "List all clusters?" -> GET /v1/{parent}/clusters
+- "Create a cluster?" -> POST /v1/{parent}/clusters
+- "List all jwks?" -> GET /v1/{parent}/jwks
+- "List all nodePools?" -> GET /v1/{parent}/nodePools
+- "Create a nodePool?" -> POST /v1/{parent}/nodePools
+- "List all operations?" -> GET /v1/{parent}/operations
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

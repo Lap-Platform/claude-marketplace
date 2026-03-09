@@ -9,6 +9,7 @@
 
 @group messages
 @endpoint POST /messages/batch
+@desc Sends messages to a channel.
 @required {channelName: str, messages: [Message]}
 @returns(200) {batchPutMessageErrorEntries: [BatchPutMessageErrorEntry]?}
 
@@ -16,12 +17,14 @@
 
 @group pipelines
 @endpoint DELETE /pipelines/{pipelineName}/reprocessing/{reprocessingId}
+@desc Cancels the reprocessing of data through the pipeline.
 @required {pipelineName: str, reprocessingId: str}
 
 @endgroup
 
 @group channels
 @endpoint POST /channels
+@desc Used to create a channel. A channel collects data from an MQTT topic and archives the raw, unprocessed messages before publishing the data to a pipeline.
 @required {channelName: str}
 @optional {channelStorage: ChannelStorage, retentionPeriod: RetentionPeriod, tags: [Tag]}
 @returns(200) {channelName: str?, channelArn: str?, retentionPeriod: RetentionPeriod?{unlimited: bool?, numberOfDays: int?}}
@@ -30,11 +33,13 @@
 
 @group datasets
 @endpoint POST /datasets
+@desc Used to create a dataset. A dataset stores data retrieved from a data store by applying a queryAction (a SQL query) or a containerAction (executing a containerized application). This operation creates the skeleton of a dataset. The dataset can be populated manually by calling CreateDatasetContent or automatically according to a trigger you specify.
 @required {datasetName: str, actions: [DatasetAction]}
 @optional {triggers: [DatasetTrigger], contentDeliveryRules: [DatasetContentDeliveryRule], retentionPeriod: RetentionPeriod, versioningConfiguration: VersioningConfiguration, tags: [Tag], lateDataRules: [LateDataRule]}
 @returns(200) {datasetName: str?, datasetArn: str?, retentionPeriod: RetentionPeriod?{unlimited: bool?, numberOfDays: int?}}
 
 @endpoint POST /datasets/{datasetName}/content
+@desc Creates the content of a dataset by applying a queryAction (a SQL query) or a containerAction (executing a containerized application).
 @required {datasetName: str}
 @optional {versionId: str}
 @returns(200) {versionId: str?}
@@ -43,6 +48,7 @@
 
 @group datastores
 @endpoint POST /datastores
+@desc Creates a data store, which is a repository for messages.
 @required {datastoreName: str}
 @optional {datastoreStorage: DatastoreStorage, retentionPeriod: RetentionPeriod, tags: [Tag], fileFormatConfiguration: FileFormatConfiguration, datastorePartitions: DatastorePartitions}
 @returns(200) {datastoreName: str?, datastoreArn: str?, retentionPeriod: RetentionPeriod?{unlimited: bool?, numberOfDays: int?}}
@@ -51,6 +57,7 @@
 
 @group pipelines
 @endpoint POST /pipelines
+@desc Creates a pipeline. A pipeline consumes messages from a channel and allows you to process the messages before storing them in a data store. You must specify both a channel and a datastore activity and, optionally, as many as 23 additional activities in the pipelineActivities array.
 @required {pipelineName: str, pipelineActivities: [PipelineActivity]}
 @optional {tags: [Tag]}
 @returns(200) {pipelineName: str?, pipelineArn: str?}
@@ -59,15 +66,18 @@
 
 @group channels
 @endpoint DELETE /channels/{channelName}
+@desc Deletes the specified channel.
 @required {channelName: str}
 
 @endgroup
 
 @group datasets
 @endpoint DELETE /datasets/{datasetName}
+@desc Deletes the specified dataset. You do not have to delete the content of the dataset before you perform this operation.
 @required {datasetName: str}
 
 @endpoint DELETE /datasets/{datasetName}/content
+@desc Deletes the content of the specified dataset.
 @required {datasetName: str}
 @optional {versionId: str}
 
@@ -75,18 +85,21 @@
 
 @group datastores
 @endpoint DELETE /datastores/{datastoreName}
+@desc Deletes the specified data store.
 @required {datastoreName: str}
 
 @endgroup
 
 @group pipelines
 @endpoint DELETE /pipelines/{pipelineName}
+@desc Deletes the specified pipeline.
 @required {pipelineName: str}
 
 @endgroup
 
 @group channels
 @endpoint GET /channels/{channelName}
+@desc Retrieves information about a channel.
 @required {channelName: str}
 @optional {includeStatistics: bool}
 @returns(200) {channel: Channel?{name: str?, storage: ChannelStorage?{serviceManagedS3: ServiceManagedChannelS3Storage?, customerManagedS3: CustomerManagedChannelS3Storage?{bucket: str, keyPrefix: str?, roleArn: str}}, arn: str?, status: str?, retentionPeriod: RetentionPeriod?{unlimited: bool?, numberOfDays: int?}, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, lastMessageArrivalTime: str(timestamp)?}, statistics: ChannelStatistics?{size: EstimatedResourceSize?{estimatedSizeInBytes: num(f64)?, estimatedOn: str(timestamp)?}}}
@@ -95,6 +108,7 @@
 
 @group datasets
 @endpoint GET /datasets/{datasetName}
+@desc Retrieves information about a dataset.
 @required {datasetName: str}
 @returns(200) {dataset: Dataset?{name: str?, arn: str?, actions: [DatasetAction]?, triggers: [DatasetTrigger]?, contentDeliveryRules: [DatasetContentDeliveryRule]?, status: str?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, retentionPeriod: RetentionPeriod?{unlimited: bool?, numberOfDays: int?}, versioningConfiguration: VersioningConfiguration?{unlimited: bool?, maxVersions: int?}, lateDataRules: [LateDataRule]?}}
 
@@ -102,6 +116,7 @@
 
 @group datastores
 @endpoint GET /datastores/{datastoreName}
+@desc Retrieves information about a data store.
 @required {datastoreName: str}
 @optional {includeStatistics: bool}
 @returns(200) {datastore: Datastore?{name: str?, storage: DatastoreStorage?{serviceManagedS3: ServiceManagedDatastoreS3Storage?, customerManagedS3: CustomerManagedDatastoreS3Storage?{bucket: str, keyPrefix: str?, roleArn: str}, iotSiteWiseMultiLayerStorage: DatastoreIotSiteWiseMultiLayerStorage?{customerManagedS3Storage: IotSiteWiseCustomerManagedDatastoreS3Storage}}, arn: str?, status: str?, retentionPeriod: RetentionPeriod?{unlimited: bool?, numberOfDays: int?}, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?, lastMessageArrivalTime: str(timestamp)?, fileFormatConfiguration: FileFormatConfiguration?{jsonConfiguration: JsonConfiguration?, parquetConfiguration: ParquetConfiguration?{schemaDefinition: SchemaDefinition?}}, datastorePartitions: DatastorePartitions?{partitions: [DatastorePartition]?}}, statistics: DatastoreStatistics?{size: EstimatedResourceSize?{estimatedSizeInBytes: num(f64)?, estimatedOn: str(timestamp)?}}}
@@ -110,12 +125,14 @@
 
 @group logging
 @endpoint GET /logging
+@desc Retrieves the current settings of the IoT Analytics logging options.
 @returns(200) {loggingOptions: LoggingOptions?{roleArn: str, level: str, enabled: bool}}
 
 @endgroup
 
 @group pipelines
 @endpoint GET /pipelines/{pipelineName}
+@desc Retrieves information about a pipeline.
 @required {pipelineName: str}
 @returns(200) {pipeline: Pipeline?{name: str?, arn: str?, activities: [PipelineActivity]?, reprocessingSummaries: [ReprocessingSummary]?, creationTime: str(timestamp)?, lastUpdateTime: str(timestamp)?}}
 
@@ -123,6 +140,7 @@
 
 @group datasets
 @endpoint GET /datasets/{datasetName}/content
+@desc Retrieves the contents of a dataset as presigned URIs.
 @required {datasetName: str}
 @optional {versionId: str}
 @returns(200) {entries: [DatasetEntry]?, timestamp: str(timestamp)?, status: DatasetContentStatus?{state: str?, reason: str?}}
@@ -131,6 +149,7 @@
 
 @group channels
 @endpoint GET /channels
+@desc Retrieves a list of channels.
 @optional {nextToken: str, maxResults: int}
 @returns(200) {channelSummaries: [ChannelSummary]?, nextToken: str?}
 
@@ -138,11 +157,13 @@
 
 @group datasets
 @endpoint GET /datasets/{datasetName}/contents
+@desc Lists information about dataset contents that have been created.
 @required {datasetName: str}
 @optional {nextToken: str, maxResults: int, scheduledOnOrAfter: str(timestamp), scheduledBefore: str(timestamp)}
 @returns(200) {datasetContentSummaries: [DatasetContentSummary]?, nextToken: str?}
 
 @endpoint GET /datasets
+@desc Retrieves information about datasets.
 @optional {nextToken: str, maxResults: int}
 @returns(200) {datasetSummaries: [DatasetSummary]?, nextToken: str?}
 
@@ -150,6 +171,7 @@
 
 @group datastores
 @endpoint GET /datastores
+@desc Retrieves a list of data stores.
 @optional {nextToken: str, maxResults: int}
 @returns(200) {datastoreSummaries: [DatastoreSummary]?, nextToken: str?}
 
@@ -157,6 +179,7 @@
 
 @group pipelines
 @endpoint GET /pipelines
+@desc Retrieves a list of pipelines.
 @optional {nextToken: str, maxResults: int}
 @returns(200) {pipelineSummaries: [PipelineSummary]?, nextToken: str?}
 
@@ -164,6 +187,7 @@
 
 @group tags
 @endpoint GET /tags
+@desc Lists the tags (metadata) that you have assigned to the resource.
 @required {resourceArn: str}
 @returns(200) {tags: [Tag]?}
 
@@ -171,12 +195,14 @@
 
 @group logging
 @endpoint PUT /logging
+@desc Sets or updates the IoT Analytics logging options. If you update the value of any loggingOptions field, it takes up to one minute for the change to take effect. Also, if you change the policy attached to the role you specified in the roleArn field (for example, to correct an invalid policy), it takes up to five minutes for that change to take effect.
 @required {loggingOptions: LoggingOptions}
 
 @endgroup
 
 @group pipelineactivities
 @endpoint POST /pipelineactivities/run
+@desc Simulates the results of running a pipeline activity on a message payload.
 @required {pipelineActivity: PipelineActivity, payloads: [bytes]}
 @returns(200) {payloads: [bytes]?, logResult: str?}
 
@@ -184,6 +210,7 @@
 
 @group channels
 @endpoint GET /channels/{channelName}/sample
+@desc Retrieves a sample of messages from the specified channel ingested during the specified timeframe. Up to 10 messages can be retrieved.
 @required {channelName: str}
 @optional {maxMessages: int, startTime: str(timestamp), endTime: str(timestamp)}
 @returns(200) {payloads: [bytes]?}
@@ -192,6 +219,7 @@
 
 @group pipelines
 @endpoint POST /pipelines/{pipelineName}/reprocessing
+@desc Starts the reprocessing of raw message data through the pipeline.
 @required {pipelineName: str}
 @optional {startTime: str(timestamp), endTime: str(timestamp), channelMessages: ChannelMessages}
 @returns(200) {reprocessingId: str?}
@@ -200,15 +228,18 @@
 
 @group tags
 @endpoint POST /tags
+@desc Adds to or modifies the tags of the given resource. Tags are metadata that can be used to manage a resource.
 @required {resourceArn: str, tags: [Tag]}
 
 @endpoint DELETE /tags
+@desc Removes the given tags (metadata) from the resource.
 @required {resourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group channels
 @endpoint PUT /channels/{channelName}
+@desc Used to update the settings of a channel.
 @required {channelName: str}
 @optional {channelStorage: ChannelStorage, retentionPeriod: RetentionPeriod}
 
@@ -216,6 +247,7 @@
 
 @group datasets
 @endpoint PUT /datasets/{datasetName}
+@desc Updates the settings of a dataset.
 @required {datasetName: str, actions: [DatasetAction]}
 @optional {triggers: [DatasetTrigger], contentDeliveryRules: [DatasetContentDeliveryRule], retentionPeriod: RetentionPeriod, versioningConfiguration: VersioningConfiguration, lateDataRules: [LateDataRule]}
 
@@ -223,6 +255,7 @@
 
 @group datastores
 @endpoint PUT /datastores/{datastoreName}
+@desc Used to update the settings of a data store.
 @required {datastoreName: str}
 @optional {retentionPeriod: RetentionPeriod, datastoreStorage: DatastoreStorage, fileFormatConfiguration: FileFormatConfiguration}
 
@@ -230,6 +263,7 @@
 
 @group pipelines
 @endpoint PUT /pipelines/{pipelineName}
+@desc Updates the settings of a pipeline. You must specify both a channel and a datastore activity and, optionally, as many as 23 additional activities in the pipelineActivities array.
 @required {pipelineName: str, pipelineActivities: [PipelineActivity]}
 
 @endgroup

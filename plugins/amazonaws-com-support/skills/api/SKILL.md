@@ -42,84 +42,10 @@ Not specified.
 | POST | / | Refreshes the Trusted Advisor check that you specify using the check ID. You can get the check IDs by calling the DescribeTrustedAdvisorChecks operation. Some checks are refreshed automatically. If you call the RefreshTrustedAdvisorCheck operation to refresh them, you might see the InvalidParameterValue error. The response contains a TrustedAdvisorCheckRefreshStatus object.    You must have a Business, Enterprise On-Ramp, or Enterprise Support plan to use the Amazon Web Services Support API.    If you call the Amazon Web Services Support API from an account that doesn't have a Business, Enterprise On-Ramp, or Enterprise Support plan, the SubscriptionRequiredException error message appears. For information about changing your support plan, see Amazon Web Services Support.    To call the Trusted Advisor operations in the Amazon Web Services Support API, you must use the US East (N. Virginia) endpoint. Currently, the US West (Oregon) and Europe (Ireland) endpoints don't support the Trusted Advisor operations. For more information, see About the Amazon Web Services Support API in the Amazon Web Services Support User Guide. |
 | POST | / | Resolves a support case. This operation takes a caseId and returns the initial and final state of the case.    You must have a Business, Enterprise On-Ramp, or Enterprise Support plan to use the Amazon Web Services Support API.    If you call the Amazon Web Services Support API from an account that doesn't have a Business, Enterprise On-Ramp, or Enterprise Support plan, the SubscriptionRequiredException error message appears. For information about changing your support plan, see Amazon Web Services Support. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I open a new support case?" -> POST / (CreateCase: subject + communicationBody required)
-- "How do I add a reply to an existing case?" -> POST / (AddCommunicationToCase: communicationBody + caseId)
-- "How do I attach files to a support case?" -> POST / (AddAttachmentsToSet: attachments array, then reference attachmentSetId in CreateCase or AddCommunication)
-- "How do I download an attachment from a case?" -> POST / (DescribeAttachment: attachmentId)
-- "How do I list all my open support cases?" -> POST / (DescribeCases: omit includeResolvedCases or set false)
-- "How do I find a case by its display ID?" -> POST / (DescribeCases: pass displayId filter)
-- "How do I read the conversation history on a case?" -> POST / (DescribeCommunications: caseId required, paginate with nextToken)
-- "How do I close/resolve a support case?" -> POST / (ResolveCase: caseId)
-- "What AWS services can I open a case for?" -> POST / (DescribeServices: optional serviceCodeList filter)
-- "What severity levels are available for cases?" -> POST / (DescribeSeverityLevels)
-- "What Trusted Advisor checks are available?" -> POST / (DescribeTrustedAdvisorChecks: language required)
-- "How do I get the results of a Trusted Advisor check?" -> POST / (DescribeTrustedAdvisorCheckResult: checkId)
-- "How do I refresh a Trusted Advisor check?" -> POST / (RefreshTrustedAdvisorCheck: checkId, then poll status)
-- "How do I get a cost savings summary from Trusted Advisor?" -> POST / (DescribeTrustedAdvisorCheckResult: look at categorySpecificSummary.costOptimizing)
-- "What languages can I use when creating a case?" -> POST / (DescribeSupportedLanguages: issueType + serviceCode + categoryCode)
-
-## Response Tips
-
-- **Case operations** (CreateCase, ResolveCase): Return nullable fields -- a null `caseId` or missing `finalCaseStatus` means the operation may not have completed; always check the value.
-- **List endpoints** (DescribeCases, DescribeCommunications): Paginated via `nextToken` -- keep calling with the returned token until it is null or absent. Use `maxResults` to control page size.
-- **Trusted Advisor results**: `resourcesSummary` counts are i64; `flaggedResources` is a flat array of detail objects -- iterate it to find specific resources at risk. The `status` field values are `ok`, `warning`, `error`, `not_available`.
-- **Trusted Advisor summaries vs results**: Summaries give high-level status per check; results include the full `flaggedResources` list. Use summaries for dashboards, results for remediation.
-- **Attachments**: `data` is returned as bytes (base64-encoded in JSON transport). The `expiryTime` on an attachment set means you must reference it before that deadline or re-upload.
-- **All endpoints**: Every call is POST / differentiated by the `X-Amz-Target` header. HTTP 200 does not guarantee success -- inspect the response body for null/empty fields indicating partial failure.
-
-## Anomaly Flags
-
-- **Case severity escalation**: If a case is created with `urgent` or `critical` severity, surface this prominently -- these have SLA expectations.
-- **Trusted Advisor check status `error`**: Proactively alert when any check returns `status: "error"` -- this indicates a real finding that needs attention.
-- **High flagged resource counts**: If `resourcesFlagged` is significantly higher than `resourcesSuppressed`, flag the delta -- suppressed resources are acknowledged, flagged ones are not.
-- **Cost optimization savings**: When `estimatedMonthlySavings` exceeds a meaningful threshold (e.g., $100), proactively surface the finding with the estimated amount.
-- **Refresh throttling**: `millisUntilNextRefreshable` indicates cooldown -- surface when a refresh is requested but the check is still in cooldown to avoid wasted retries.
-- **Pagination truncation**: If `nextToken` is returned but the caller stops paginating, warn that results are incomplete.
-- **Resolved case modification**: Attempting to add communications to a resolved case may fail silently (result: false) -- flag this if `result` comes back false or null.
-- **Attachment set expiry**: If `expiryTime` is approaching and the set has not been referenced in a CreateCase or AddCommunication call, alert the user.
-
-## Playbook
-
-### 1. Open a Support Case with Attachments
-
-1. Call **AddAttachmentsToSet** with your file(s) in the `attachments` array. Save the returned `attachmentSetId`.
-2. Call **DescribeServices** to get valid `serviceCode` values. Pick the relevant service.
-3. Call **DescribeSeverityLevels** to confirm available severity codes for your support plan.
-4. Call **CreateCase** with `subject`, `communicationBody`, the `serviceCode`, `severityCode`, and the `attachmentSetId` from step 1.
-5. Save the returned `caseId` for follow-up.
-
-### 2. Monitor and Reply to an Existing Case
-
-1. Call **DescribeCases** with your `caseId` (or `displayId`) to get current case status and metadata.
-2. Call **DescribeCommunications** with the `caseId` to read the full conversation thread. Paginate with `nextToken` until exhausted.
-3. To reply, call **AddCommunicationToCase** with `caseId` and your `communicationBody`. Optionally attach files by first calling **AddAttachmentsToSet** and passing the `attachmentSetId`.
-4. Re-check case status with **DescribeCases** to confirm the communication was recorded.
-
-### 3. Run a Trusted Advisor Cost Audit
-
-1. Call **DescribeTrustedAdvisorChecks** (language: `"en"`) to list all available checks. Filter for cost-optimization category checks and collect their `checkId` values.
-2. Call **RefreshTrustedAdvisorCheck** for each check to ensure data is current. Note `millisUntilNextRefreshable` -- if non-zero, the check was recently refreshed and you can skip.
-3. Call **DescribeTrustedAdvisorCheckSummaries** with all cost-related `checkIds` for a quick overview.
-4. For any summary with `status: "warning"` or `status: "error"`, call **DescribeTrustedAdvisorCheckResult** to get the full `flaggedResources` list and `estimatedMonthlySavings`.
-5. Present findings sorted by savings potential, highlighting the top offenders.
-
-### 4. Bulk Review All Open Cases in a Time Window
-
-1. Call **DescribeCases** with `afterTime` and `beforeTime` to scope the window. Set `includeResolvedCases: false` and `includeCommunications: true` to get full threads.
-2. Paginate with `nextToken` until all cases are retrieved.
-3. For each case, review the latest communication timestamp and severity to triage.
-4. For stale cases (no recent communication), consider calling **ResolveCase** to close them or **AddCommunicationToCase** to follow up.
-
-### 5. Resolve a Case and Verify Closure
-
-1. Call **DescribeCases** with the `caseId` to confirm current status before closing.
-2. Call **ResolveCase** with the `caseId`. Check `initialCaseStatus` and `finalCaseStatus` in the response.
-3. If `finalCaseStatus` is not `"resolved"`, investigate -- the case may have a pending AWS action preventing closure.
-4. Call **DescribeCases** again to verify the case now shows as resolved in the listing.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -71,89 +71,46 @@ Not specified.
 | PATCH | /api/v1/folders/{FolderId} | Updates the specified attributes of the specified folder. The user must have access to both the folder and its parent folder, if applicable. |
 | PATCH | /api/v1/users/{UserId} | Updates the specified attributes of the specified user, and grants or revokes administrative privileges to the Amazon WorkDocs site. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I upload a new document to a folder?" -> POST /api/v1/documents
-- "What files and folders are inside a specific folder?" -> GET /api/v1/folders/{FolderId}/contents
-- "Who has access to this document?" -> GET /api/v1/resources/{ResourceId}/permissions
-- "How do I share a document with another user?" -> POST /api/v1/resources/{ResourceId}/permissions
-- "How do I search for a document by name or content?" -> POST /api/v1/search
-- "What is the current user's root folder?" -> GET /api/v1/me/root
-- "How do I move a document to a different folder?" -> PATCH /api/v1/documents/{DocumentId}
-- "How do I add a comment to a document?" -> POST /api/v1/documents/{DocumentId}/versions/{VersionId}/comment
-- "How do I see the version history of a document?" -> GET /api/v1/documents/{DocumentId}/versions
-- "How do I delete a folder and everything in it?" -> DELETE /api/v1/folders/{FolderId}/contents then DELETE /api/v1/folders/{FolderId}
-- "How do I create a new user account?" -> POST /api/v1/users
-- "How do I deactivate a user?" -> DELETE /api/v1/users/{UserId}/activation
-- "What activity has happened on a resource recently?" -> GET /api/v1/activities
-- "How do I restore a deleted document?" -> POST /api/v1/documentVersions/restore/{DocumentId}
-- "How do I tag a resource with labels?" -> PUT /api/v1/resources/{ResourceId}/labels
-
-## Response Tips
-
-- **Listings (folders, users, groups, subscriptions):** All return a `Marker` field for cursor-based pagination. Pass the returned `Marker` as the `marker` query param in the next request. Stop when `Marker` is null or absent.
-- **Document creation:** `POST /documents` returns both `Metadata` and `UploadMetadata` with a pre-signed `UploadUrl`. You must PUT file bytes to that URL using the `SignedHeaders` to complete the upload.
-- **User objects:** Nested `Storage.StorageRule` contains allocation and type; `Storage.StorageUtilizedInBytes` shows current usage. Both can be null.
-- **Comments:** The `Comment` response nests a full `Contributor` (User) object. Use `CommentId` for deletes, `ThreadId`/`ParentId` for threading.
-- **Permissions:** The `ShareResults` array from POST may contain per-principal success/failure statuses -- always iterate to confirm each share succeeded.
-- **Custom metadata:** Returned as a flat `map<str,str>` alongside `Metadata`. Only present when `includeCustomMetadata=true` on GET requests.
-- **Search results:** `Items` is an array of `ResponseItem` objects, not raw document metadata. Use `AdditionalResponseFields` to control which fields are included.
-- **Errors:** AWS-style errors return HTTP 4xx/5xx with an error type string (e.g., `EntityNotExistsException`, `UnauthorizedResourceAccessException`). Match on the error type, not the message.
-
-## Anomaly Flags
-
-- **Storage quota near limit:** When `StorageUtilizedInBytes` approaches `StorageAllocatedInBytes` on a user, warn before upload attempts will fail.
-- **Deactivated users:** If a user's `Status` is not `ACTIVE`, flag that operations on their behalf will likely fail with authorization errors.
-- **Empty upload URL:** If `POST /documents` returns `Metadata` but `UploadMetadata.UploadUrl` is null, the document was created but content cannot be uploaded -- surface immediately.
-- **ResourceState changes:** When `ResourceState` is `RECYCLING` or `RECYCLED` on a document or folder, flag that the resource is in the trash and may be permanently deleted.
-- **Pagination loops:** If the same `Marker` value is returned twice in succession, flag a potential infinite pagination loop and stop.
-- **Missing permissions on share:** If any entry in `ShareResults` indicates failure (e.g., status is not success), surface which principals could not be added and the reason.
-- **Deprecated version status:** When a `DocumentVersionMetadata.Status` is not `ACTIVE`, flag that the version may be a draft or otherwise unavailable for download.
-- **Large folder contents:** If `GET /folders/{id}/contents` returns a `Marker` on the first page, warn the user the folder has many items and full enumeration may require multiple requests.
-
-## Playbook
-
-### 1. Upload a Document to a Folder
-
-1. Identify the target folder ID (use `GET /api/v1/me/root` for the current user's root, or `GET /api/v1/folders/{FolderId}/contents` to browse).
-2. Call `POST /api/v1/documents` with `ParentFolderId`, `Name`, `ContentType`, and `DocumentSizeInBytes`.
-3. Extract `UploadMetadata.UploadUrl` and `UploadMetadata.SignedHeaders` from the response.
-4. PUT the raw file bytes to the `UploadUrl`, including all `SignedHeaders` in the request.
-5. Verify upload by calling `GET /api/v1/documents/{DocumentId}` and checking `LatestVersionMetadata.Status` is `ACTIVE`.
-
-### 2. Share a Document and Notify Collaborators
-
-1. Get the document's `ResourceId` (same as `DocumentId`).
-2. Build a `Principals` array with each `SharePrincipal` specifying user/group ID, role, and type.
-3. Call `POST /api/v1/resources/{ResourceId}/permissions` with the principals and `NotificationOptions` to send email.
-4. Inspect `ShareResults` in the response to confirm each principal was added successfully.
-5. Verify final permissions with `GET /api/v1/resources/{ResourceId}/permissions`.
-
-### 3. Review and Comment on a Document Version
-
-1. Call `GET /api/v1/documents/{DocumentId}/versions` to list all versions.
-2. Pick the target `VersionId` (usually the latest).
-3. Call `GET /api/v1/documents/{DocumentId}/versions/{VersionId}/comments` to see existing discussion.
-4. Add your comment with `POST /api/v1/documents/{DocumentId}/versions/{VersionId}/comment`, providing `Text` and optionally `ThreadId` to reply in-thread.
-5. Set `Visibility` to `PUBLIC` or `PRIVATE` depending on audience.
-
-### 4. Organize Documents with Folders and Labels
-
-1. Create a folder with `POST /api/v1/folders`, passing the `ParentFolderId` and `Name`.
-2. Move documents into it with `PATCH /api/v1/documents/{DocumentId}`, setting `ParentFolderId` to the new folder ID.
-3. Apply labels with `PUT /api/v1/resources/{ResourceId}/labels`, passing an array of label strings.
-4. Add custom metadata with `PUT /api/v1/resources/{ResourceId}/customMetadata` for key-value tagging.
-5. Browse the organized structure with `GET /api/v1/folders/{FolderId}/contents`, using `sort` and `order` params.
-
-### 5. Audit Recent Activity Across the Organization
-
-1. Call `GET /api/v1/activities` with `organizationId` and a `startTime`/`endTime` window.
-2. Optionally filter by `activityTypes` (e.g., document uploads, permission changes) or `userId`.
-3. Set `includeIndirectActivities=true` to capture actions triggered by shares or automation.
-4. Page through results using `Marker` until it is absent.
-5. For each activity referencing a resource, call `GET /api/v1/documents/{DocumentId}` or `GET /api/v1/folders/{FolderId}` to get current state and confirm no anomalies.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Delete a version?" -> DELETE /api/v1/documents/{DocumentId}/versions/{VersionId}
+- "Create a activation?" -> POST /api/v1/users/{UserId}/activation
+- "Create a permission?" -> POST /api/v1/resources/{ResourceId}/permissions
+- "Create a comment?" -> POST /api/v1/documents/{DocumentId}/versions/{VersionId}/comment
+- "Create a folder?" -> POST /api/v1/folders
+- "Create a subscription?" -> POST /api/v1/organizations/{OrganizationId}/subscriptions
+- "Create a user?" -> POST /api/v1/users
+- "Delete a comment?" -> DELETE /api/v1/documents/{DocumentId}/versions/{VersionId}/comment/{CommentId}
+- "Delete a document?" -> DELETE /api/v1/documents/{DocumentId}
+- "Delete a version?" -> DELETE /api/v1/documentVersions/{DocumentId}/versions/{VersionId}
+- "Delete a folder?" -> DELETE /api/v1/folders/{FolderId}
+- "Delete a subscription?" -> DELETE /api/v1/organizations/{OrganizationId}/subscriptions/{SubscriptionId}
+- "Delete a user?" -> DELETE /api/v1/users/{UserId}
+- "List all activities?" -> GET /api/v1/activities
+- "List all comments?" -> GET /api/v1/documents/{DocumentId}/versions/{VersionId}/comments
+- "List all versions?" -> GET /api/v1/documents/{DocumentId}/versions
+- "List all contents?" -> GET /api/v1/folders/{FolderId}/contents
+- "List all groups?" -> GET /api/v1/groups
+- "List all subscriptions?" -> GET /api/v1/organizations/{OrganizationId}/subscriptions
+- "List all permissions?" -> GET /api/v1/resources/{ResourceId}/permissions
+- "List all root?" -> GET /api/v1/me/root
+- "Search users?" -> GET /api/v1/users
+- "List all me?" -> GET /api/v1/me
+- "Get document details?" -> GET /api/v1/documents/{DocumentId}
+- "List all path?" -> GET /api/v1/documents/{DocumentId}/path
+- "Get version details?" -> GET /api/v1/documents/{DocumentId}/versions/{VersionId}
+- "Get folder details?" -> GET /api/v1/folders/{FolderId}
+- "List all path?" -> GET /api/v1/folders/{FolderId}/path
+- "List all resources?" -> GET /api/v1/resources
+- "Create a document?" -> POST /api/v1/documents
+- "Delete a permission?" -> DELETE /api/v1/resources/{ResourceId}/permissions/{PrincipalId}
+- "Create a search?" -> POST /api/v1/search
+- "Partially update a document?" -> PATCH /api/v1/documents/{DocumentId}
+- "Partially update a version?" -> PATCH /api/v1/documents/{DocumentId}/versions/{VersionId}
+- "Partially update a folder?" -> PATCH /api/v1/folders/{FolderId}
+- "Partially update a user?" -> PATCH /api/v1/users/{UserId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

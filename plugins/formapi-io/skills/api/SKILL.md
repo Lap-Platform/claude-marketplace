@@ -103,89 +103,49 @@ https://sync.api.docspring.com/api/v1
 |--------|------|-------------|
 | POST | /templates?endpoint_variant=create_template_from_cached_upload | Create a new PDF template from a cached S3 file upload |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I verify my API credentials are working?" -> GET /authentication
-- "Show me all my combined submissions" -> GET /combined_submissions
-- "How do I merge multiple PDFs into one?" -> POST /combined_submissions
-- "What's the status of my combined submission?" -> GET /combined_submissions/{combined_submission_id}
-- "How do I upload a file to use as a template?" -> GET /uploads/presign
-- "List all templates in a specific folder" -> GET /templates with parent_folder_id
-- "How do I generate a PDF from a template?" -> POST /templates/{template_id}/submissions
-- "Where is my submission? Is it done processing?" -> GET /submissions/{submission_id}
-- "How do I submit data for multiple templates at once?" -> POST /submissions/batches
-- "How do I create a template from raw HTML?" -> POST /templates?endpoint_variant=create_html_template
-- "How do I roll back a template to a previous version?" -> POST /templates/{template_id}/restore_version
-- "What fields does a template expect?" -> GET /templates/{template_id}/schema
-- "How do I organize templates into folders?" -> POST /folders/ then POST /templates/{template_id}/move
-- "How do I let an external user fill in a data request?" -> POST /data_requests/{data_request_id}/tokens
-- "How do I get a preview of a submission without finalizing?" -> POST /submissions/{submission_id}/generate_preview
-
-## Response Tips
-
-- **Authentication:** 200 means credentials are valid; 401 on any endpoint means your basic auth header is missing or wrong.
-- **Combined submissions:** Response includes processing status -- poll the GET endpoint until state indicates completion.
-- **Submissions:** Both list endpoints (global and per-template) use cursor-based pagination via `cursor` and `limit` params; check for a next cursor in the response to know if more pages exist.
-- **Combined submissions list:** Uses page-based pagination via `page` and `per_page` params instead of cursors.
-- **Templates:** List response is paginated with `page`/`per_page`; the `?full=true` variant on GET returns expanded field definitions and document details.
-- **Batch submissions:** Returns 201 when queued asynchronously, 200 when `wait=true` and processing completes synchronously -- check which you received.
-- **Folders:** Responses are hierarchical; use `parent_folder_id` to traverse the tree.
-- **Data requests:** Token creation (POST tokens) returns a short-lived URL or token for external users to submit data without API credentials.
-- **Errors:** 422 consistently indicates validation failure with field-level detail in the response body; 403 means you lack permission on that specific resource.
-
-## Anomaly Flags
-
-- **401 on any endpoint:** Surface immediately -- credentials are invalid or expired. Do not retry; prompt the user to check their API key.
-- **422 with field errors:** Parse and display the specific validation failures rather than the raw response -- these contain actionable fix instructions.
-- **Submission stuck in processing:** If polling GET /submissions/{id} returns the same non-terminal state across multiple checks, flag that the submission may be stalled.
-- **Combined submission partial failure:** When a combined submission completes but individual component submissions have errors, surface which ones failed.
-- **Template version conflicts:** If PUT /templates/{id} or publish_version returns 422, flag that someone else may have modified the template concurrently.
-- **Presign URL expiry:** The upload presign URL from GET /uploads/presign is time-limited. If a subsequent upload fails with 403, flag that the presign likely expired and a new one is needed.
-- **Batch submission mixed results:** When POST /submissions/batches returns 200 (sync mode), check each submission's individual status in the response -- some may have succeeded while others failed.
-- **Delete with version param:** Deleting a template with `version` param only removes that version, not the whole template. Flag this distinction when the user says "delete template."
-
-## Playbook
-
-### Generate a PDF from a Template
-
-1. List available templates: `GET /templates` (optionally filter with `query` param)
-2. Get the template schema to see required fields: `GET /templates/{template_id}/schema`
-3. Submit data to generate the PDF: `POST /templates/{template_id}/submissions` with the `submission` map containing field values
-4. If you need synchronous result, include `wait=true`; otherwise poll `GET /submissions/{submission_id}` until the state is terminal
-5. Download the PDF from the URL in the completed submission response
-
-### Create and Configure a Template from HTML
-
-1. Create the HTML template: `POST /templates?endpoint_variant=create_html_template` with your HTML content in the `data` map
-2. Add form fields to the template: `PUT /templates/{template_id}/add_fields` with field definitions
-3. Optionally organize it: `POST /templates/{template_id}/move` to place it in a folder
-4. Publish a version: `POST /templates/{template_id}/publish_version`
-5. Verify the schema: `GET /templates/{template_id}/schema`
-
-### Bulk Generate PDFs Across Templates
-
-1. Prepare your batch payload mapping template IDs to their submission data
-2. Submit the batch: `POST /submissions/batches` with the `data` map (add `wait=true` for synchronous processing)
-3. If async, poll the batch status: `GET /submissions/batches/{submission_batch_id}` with `include_submissions=true`
-4. Check each individual submission's status in the response for errors or completion
-5. Collect download URLs from completed submissions
-
-### Organize Templates into Folders
-
-1. List existing folders: `GET /folders/` (use `parent_folder_id` to browse sub-folders)
-2. Create a new folder if needed: `POST /folders/` with folder name in `data`
-3. Move templates into the folder: `POST /templates/{template_id}/move` for each template
-4. To reorganize later, rename with `POST /folders/{folder_id}/rename` or move with `POST /folders/{folder_id}/move`
-
-### Collect Data from External Users via Data Requests
-
-1. Create a submission with a data request (via template submission with appropriate options)
-2. Generate an access token for the external user: `POST /data_requests/{data_request_id}/tokens`
-3. Share the token/URL with the external user
-4. Monitor progress: `GET /data_requests/{data_request_id}` to check if data has been submitted
-5. Track events: `POST /data_requests/{data_request_id}/events` to log custom milestones or send reminders
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all authentication?" -> GET /authentication
+- "List all combined_submissions?" -> GET /combined_submissions
+- "Create a combined_submission?" -> POST /combined_submissions
+- "Get combined_submission details?" -> GET /combined_submissions/{combined_submission_id}
+- "Delete a combined_submission?" -> DELETE /combined_submissions/{combined_submission_id}
+- "Create a custom_file?" -> POST /custom_files
+- "List all presign?" -> GET /uploads/presign
+- "List all folders?" -> GET /folders/
+- "Create a folder?" -> POST /folders/
+- "Create a move?" -> POST /folders/{folder_id}/move
+- "Create a rename?" -> POST /folders/{folder_id}/rename
+- "Delete a folder?" -> DELETE /folders/{folder_id}
+- "Create a event?" -> POST /data_requests/{data_request_id}/events
+- "Create a token?" -> POST /data_requests/{data_request_id}/tokens
+- "Get data_request details?" -> GET /data_requests/{data_request_id}
+- "Update a data_request?" -> PUT /data_requests/{data_request_id}
+- "Create a batche?" -> POST /submissions/batches
+- "Get batche details?" -> GET /submissions/batches/{submission_batch_id}
+- "Create a submission?" -> POST /templates/{template_id}/submissions
+- "List all submissions?" -> GET /templates/{template_id}/submissions
+- "Get submission details?" -> GET /submissions/{submission_id}
+- "Delete a submission?" -> DELETE /submissions/{submission_id}
+- "Create a generate_preview?" -> POST /submissions/{submission_id}/generate_preview
+- "List all submissions?" -> GET /submissions
+- "Search templates?" -> GET /templates
+- "Create a template?" -> POST /templates
+- "Create a templates?endpoint_variant=create_html_template?" -> POST /templates?endpoint_variant=create_html_template
+- "Create a templates?endpoint_variant=create_template_from_cached_upload?" -> POST /templates?endpoint_variant=create_template_from_cached_upload
+- "Get template details?" -> GET /templates/{template_id}
+- "Update a template?" -> PUT /templates/{template_id}
+- "Delete a template?" -> DELETE /templates/{template_id}
+- "Create a publish_version?" -> POST /templates/{template_id}/publish_version
+- "Create a restore_version?" -> POST /templates/{template_id}/restore_version
+- "Get template details?" -> GET /templates/{template_id}?full=true
+- "Update a template?" -> PUT /templates/{template_id}?endpoint_variant=update_template_pdf_with_form_post
+- "Update a template?" -> PUT /templates/{template_id}?endpoint_variant=update_template_pdf_with_cached_upload
+- "Create a move?" -> POST /templates/{template_id}/move
+- "Create a copy?" -> POST /templates/{template_id}/copy
+- "List all schema?" -> GET /templates/{template_id}/schema
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

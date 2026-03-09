@@ -172,87 +172,40 @@ Not specified.
 |--------|------|-------------|
 | POST | /UpdateSamplingRule | Modifies a sampling rule's configuration. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I retrieve specific traces by their IDs?" -> POST /Traces
-- "How do I search for traces within a time range?" -> POST /TraceSummaries
-- "How do I visualize the service dependency map for my application?" -> POST /ServiceGraph
-- "How do I create a group to filter traces by expression?" -> POST /CreateGroup
-- "How do I check what sampling rules are currently active?" -> POST /GetSamplingRules
-- "How do I create a new sampling rule to control trace volume?" -> POST /CreateSamplingRule
-- "How do I investigate an insight or anomaly detected by X-Ray?" -> POST /Insight
-- "How do I get the timeline of events for a specific insight?" -> POST /InsightEvents
-- "How do I check what encryption is configured for my X-Ray data?" -> POST /EncryptionConfig
-- "How do I enable KMS encryption for X-Ray trace data?" -> POST /PutEncryptionConfig
-- "How do I send trace segments from a custom instrumentation?" -> POST /TraceSegments
-- "How do I tag an X-Ray group or sampling rule for cost tracking?" -> POST /TagResource
-- "How do I get time-bucketed latency and error statistics for services?" -> POST /TimeSeriesServiceStatistics
-- "How do I set up a resource policy for cross-account trace access?" -> POST /PutResourcePolicy
-- "How do I see which services are impacted by an active insight?" -> POST /InsightImpactGraph
-
-## Response Tips
-
-- **Trace retrieval** (`/Traces`, `/TraceSummaries`): Check `UnprocessedTraceIds` for IDs that failed lookup -- these may be expired or invalid. `TracesProcessedCount` indicates how many traces were scanned, not returned.
-- **Paginated lists** (`/Groups`, `/GetSamplingRules`, `/InsightSummaries`, `/InsightEvents`, `/ListResourcePolicies`, `/ListTagsForResource`, `/SamplingStatisticSummaries`, `/TimeSeriesServiceStatistics`): Continue calling with `NextToken` from the response until it is absent or null.
-- **Service graphs** (`/ServiceGraph`, `/TraceGraph`): `Services` is a list of nodes with edges embedded; `ContainsOldGroupVersions` being true means the graph includes data from a previous group definition.
-- **Sampling targets** (`/SamplingTargets`): Always check `UnprocessedStatistics` for documents the service rejected, and use `LastRuleModification` to detect rule changes since last poll.
-- **Segment submission** (`/TraceSegments`): Non-empty `UnprocessedTraceSegments` means partial failure -- inspect each entry's error code and message individually.
-- **Mutation responses** (`/CreateGroup`, `/CreateSamplingRule`, `/UpdateGroup`, `/UpdateSamplingRule`, `/PutEncryptionConfig`, `/PutResourcePolicy`): The full created/updated resource is returned; compare with your request to confirm all fields were applied.
-- **Delete operations** (`/DeleteGroup`, `/DeleteSamplingRule`, `/DeleteResourcePolicy`): Return empty 200 on success; any non-200 indicates the resource was not deleted.
-
-## Anomaly Flags
-
-- **Unprocessed trace IDs**: Surface when `/Traces` returns `UnprocessedTraceIds` -- indicates missing, expired, or inaccessible traces that may signal data retention issues.
-- **Unprocessed trace segments**: Alert when `/TraceSegments` returns non-empty `UnprocessedTraceSegments` -- custom instrumentation is silently dropping data.
-- **Unprocessed sampling statistics**: Flag when `/SamplingTargets` returns `UnprocessedStatistics` -- the sampling daemon is out of sync with centralized rules.
-- **Encryption status not ACTIVE**: After `/PutEncryptionConfig`, if `Status` is `UPDATING` for an extended period or missing, KMS key permissions may be misconfigured.
-- **Insight state changes**: When `/Insight` shows `State` transitioning to `ACTIVE`, proactively notify -- this means X-Ray detected an anomaly in fault rates or latency.
-- **Old group versions in graphs**: When `ContainsOldGroupVersions` is true in `/ServiceGraph` or `/TimeSeriesServiceStatistics`, warn that results mix data from before and after a group filter change.
-- **High TracesProcessedCount with low results**: In `/TraceSummaries`, a large `TracesProcessedCount` with few `TraceSummaries` returned suggests the filter expression is too restrictive or the time window has sparse traffic.
-- **Sampling rule priority conflicts**: When `/GetSamplingRules` returns multiple rules with the same `Priority` value, flag potential non-deterministic sampling behavior.
-
-## Playbook
-
-### 1. Investigate a Latency Spike
-
-1. Call `POST /TraceSummaries` with `StartTime`/`EndTime` covering the spike window and `FilterExpression` targeting the affected service (e.g., `service("my-api") AND responseTime > 5`).
-2. Collect `TraceIds` from the returned summaries.
-3. Call `POST /Traces` with those `TraceIds` to retrieve full trace documents.
-4. Call `POST /TraceGraph` with the same `TraceIds` to see the dependency graph for those specific traces.
-5. Examine segment and subsegment durations in the trace data to pinpoint the slow downstream call.
-
-### 2. Set Up Custom Sampling for a High-Volume Endpoint
-
-1. Call `POST /GetSamplingRules` to review existing rules and identify the highest priority number in use.
-2. Call `POST /CreateSamplingRule` with a `SamplingRule` specifying `URLPath` matching your endpoint, a `FixedRate` (e.g., 0.01 for 1%), `ReservoirSize` (e.g., 1 per second), and a `Priority` lower than the default rule.
-3. Call `POST /GetSamplingRules` again to confirm the new rule appears and has the expected priority order.
-4. Call `POST /SamplingTargets` from your daemon with `SamplingStatisticsDocuments` to start receiving target allocations for the new rule.
-5. Monitor with `POST /SamplingStatisticSummaries` to verify the new rule is being matched and the sample rate is as expected.
-
-### 3. Enable Encryption and Verify
-
-1. Call `POST /EncryptionConfig` to check the current encryption state.
-2. Call `POST /PutEncryptionConfig` with `Type` set to `KMS` and `KeyId` pointing to your CMK ARN.
-3. Call `POST /EncryptionConfig` again and verify `Status` is `UPDATING` or `ACTIVE` and `Type` is `KMS`.
-4. If `Status` stays `UPDATING`, check that the X-Ray service principal has `kms:GenerateDataKey` and `kms:Decrypt` permissions on the key.
-
-### 4. Monitor Application Health with Insights
-
-1. Call `POST /CreateGroup` (or `POST /UpdateGroup`) with `InsightsConfiguration` setting `InsightsEnabled: true` and optionally `NotificationsEnabled: true`.
-2. Periodically call `POST /InsightSummaries` with a rolling time window and `States: ["ACTIVE"]` to detect new anomalies.
-3. For each active insight, call `POST /Insight` with the `InsightId` to get root cause service and impact statistics.
-4. Call `POST /InsightImpactGraph` with the insight's time range to visualize which downstream services are affected.
-5. Call `POST /InsightEvents` to review the chronological event log showing how the anomaly developed.
-
-### 5. Configure Cross-Account Trace Sharing
-
-1. Call `POST /ListResourcePolicies` to see existing policies.
-2. Call `POST /PutResourcePolicy` with a `PolicyName` and `PolicyDocument` granting `xray:PutTraceSegments` and `xray:GetSamplingRules` to the source account principal.
-3. Verify by calling `POST /ListResourcePolicies` again and confirming the `PolicyRevisionId` is set.
-4. To update, call `POST /PutResourcePolicy` with the same `PolicyName` and the current `PolicyRevisionId` to avoid concurrent modification conflicts.
-5. To revoke, call `POST /DeleteResourcePolicy` with the `PolicyName` and optionally `PolicyRevisionId` for safe deletion.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a Trace?" -> POST /Traces
+- "Create a CreateGroup?" -> POST /CreateGroup
+- "Create a CreateSamplingRule?" -> POST /CreateSamplingRule
+- "Create a DeleteGroup?" -> POST /DeleteGroup
+- "Create a DeleteResourcePolicy?" -> POST /DeleteResourcePolicy
+- "Create a DeleteSamplingRule?" -> POST /DeleteSamplingRule
+- "Create a EncryptionConfig?" -> POST /EncryptionConfig
+- "Create a GetGroup?" -> POST /GetGroup
+- "Create a Group?" -> POST /Groups
+- "Create a Insight?" -> POST /Insight
+- "Create a InsightEvent?" -> POST /InsightEvents
+- "Create a InsightImpactGraph?" -> POST /InsightImpactGraph
+- "Create a InsightSummary?" -> POST /InsightSummaries
+- "Create a GetSamplingRule?" -> POST /GetSamplingRules
+- "Create a SamplingStatisticSummary?" -> POST /SamplingStatisticSummaries
+- "Create a SamplingTarget?" -> POST /SamplingTargets
+- "Create a ServiceGraph?" -> POST /ServiceGraph
+- "Create a TimeSeriesServiceStatistic?" -> POST /TimeSeriesServiceStatistics
+- "Create a TraceGraph?" -> POST /TraceGraph
+- "Create a TraceSummary?" -> POST /TraceSummaries
+- "Create a ListResourcePolicy?" -> POST /ListResourcePolicies
+- "Create a ListTagsForResource?" -> POST /ListTagsForResource
+- "Create a PutEncryptionConfig?" -> POST /PutEncryptionConfig
+- "Create a PutResourcePolicy?" -> POST /PutResourcePolicy
+- "Create a TelemetryRecord?" -> POST /TelemetryRecords
+- "Create a TraceSegment?" -> POST /TraceSegments
+- "Create a TagResource?" -> POST /TagResource
+- "Create a UntagResource?" -> POST /UntagResource
+- "Create a UpdateGroup?" -> POST /UpdateGroup
+- "Create a UpdateSamplingRule?" -> POST /UpdateSamplingRule
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

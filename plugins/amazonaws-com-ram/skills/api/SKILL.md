@@ -192,88 +192,41 @@ Not specified.
 |--------|------|-------------|
 | POST | /updateresourceshare | Modifies some of the properties of the specified resource share. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I share a resource with another AWS account?" -> POST /createresourceshare
-- "How do I accept a resource share invitation?" -> POST /acceptresourceshareinvitation
-- "How do I reject a resource share invitation?" -> POST /rejectresourceshareinvitation
-- "What resource shares do I own or have shared with me?" -> POST /getresourceshares
-- "What pending invitations do I have?" -> POST /getresourceshareinvitations
-- "What resources are in a pending invitation?" -> POST /listpendinginvitationresources
-- "Who has access to my shared resources?" -> POST /listprincipals
-- "How do I remove a principal from a resource share?" -> POST /disassociateresourceshare
-- "What permissions are attached to a resource share?" -> POST /listresourcesharepermissions
-- "How do I create a custom permission for sharing?" -> POST /createpermission
-- "How do I enable RAM sharing across my AWS Organization?" -> POST /enablesharingwithawsorganization
-- "What resource types can I share with RAM?" -> POST /listresourcetypes
-- "How do I replace a permission on all associated resource shares?" -> POST /replacepermissionassociations
-- "How do I tag a resource share?" -> POST /tagresource
-- "How do I delete a resource share?" -> DELETE /deleteresourceshare
-
-## Response Tips
-
-- **Resource shares & invitations**: Top-level object wraps a nullable detail object (e.g., `resourceShare`, `resourceShareInvitation`) -- always null-check before accessing nested fields like `status` or `tags`.
-- **List/Get endpoints with pagination**: Any response containing `nextToken` may have more results. Loop until `nextToken` is absent. Use `maxResults` (default varies) to control page size.
-- **Association endpoints**: Return arrays of `ResourceShareAssociation` -- each entry has its own `status` (e.g., ASSOCIATING, ASSOCIATED, FAILED). Check per-item status, not just HTTP 200.
-- **Mutation confirmations**: Endpoints like delete, disassociate, and set-default return `returnValue: bool?` -- a `false` or null here means the operation did not complete as expected.
-- **Permission detail vs summary**: `getpermission` returns `ResourceSharePermissionDetail` (includes `permission` policy JSON), while list endpoints return `ResourceSharePermissionSummary` (metadata only). Fetch detail when you need the actual policy.
-- **Timestamps**: All timestamp fields are ISO 8601 strings -- parse with standard date libraries, not integer epoch.
-
-## Anomaly Flags
-
-- **Invitation status not ACCEPTED/REJECTED**: Surface if `status` is `EXPIRED` -- the user missed the acceptance window and must request a new share.
-- **Association status FAILED**: After associate/disassociate calls, any `ResourceShareAssociation` with `status: "FAILED"` should be flagged with its `statusMessage`.
-- **External principals on sensitive shares**: Warn when `allowExternalPrincipals: true` on a resource share -- resources are accessible outside the Organization.
-- **Permission replacement work status**: When `replacepermissionassociations` returns a work item with `status: "FAILED"`, surface the `statusMessage` -- partial rollout may leave shares in inconsistent state.
-- **Non-default permission versions**: Flag when `defaultVersion: false` on an active permission -- resource shares may be using an outdated policy.
-- **Organization sharing not enabled**: If `enablesharingwithawsorganization` returns `returnValue: false`, warn that Organization-level sharing failed (likely missing Organizations trust).
-- **clientToken mismatch**: If a response `clientToken` differs from the request, flag potential idempotency collision.
-
-## Playbook
-
-### 1. Share a Resource with Another AWS Account
-
-1. Call `POST /createresourceshare` with a `name`, the `resourceArns` to share, and `principals` (target account IDs or Organization ARN).
-2. Set `allowExternalPrincipals: true` if sharing outside your Organization.
-3. Optionally attach `permissionArns` to control access level.
-4. The target account receives an invitation -- confirm by calling `POST /getresourceshareinvitations` from the receiver's context.
-5. Receiver calls `POST /acceptresourceshareinvitation` with the `resourceShareInvitationArn`.
-6. Verify association status via `POST /getresourceshareassociations` with `associationType: "PRINCIPAL"`.
-
-### 2. Create and Apply a Custom Permission
-
-1. Call `POST /listresourcetypes` to find the exact `resourceType` string for your resource.
-2. Call `POST /createpermission` with `name`, `resourceType`, and a `policyTemplate` (JSON policy document).
-3. Note the returned `permission.arn` and `permission.version`.
-4. Call `POST /associateresourcesharepermission` with the `resourceShareArn` and `permissionArn`. Set `replace: true` to swap out the existing default permission.
-5. Verify via `POST /listresourcesharepermissions` that the new permission is active on the share.
-
-### 3. Audit Who Has Access to Your Shared Resources
-
-1. Call `POST /getresourceshares` with `resourceOwner: "SELF"` to list all shares you own. Paginate with `nextToken`.
-2. For each share, call `POST /listprincipals` with `resourceOwner: "SELF"` and the `resourceShareArns`.
-3. For each share, call `POST /listresources` with `resourceOwner: "SELF"` to see which resources are included.
-4. Cross-reference principals against expected accounts. Flag any unknown `receiverAccountId` values.
-5. Check `allowExternalPrincipals` on each share -- escalate if external sharing is unintended.
-
-### 4. Replace a Permission Across All Resource Shares
-
-1. Call `POST /createpermission` or `POST /createpermissionversion` to prepare the new permission.
-2. Call `POST /setdefaultpermissionversion` to set the new version as default.
-3. Call `POST /replacepermissionassociations` with `fromPermissionArn` and `toPermissionArn`.
-4. Monitor the work item by calling `POST /listreplacepermissionassociationswork` with the returned `id`.
-5. Repeat polling until `status` is `COMPLETED`. If `FAILED`, read `statusMessage` and remediate.
-
-### 5. Clean Up a Resource Share
-
-1. Call `POST /disassociateresourceshare` with `resourceShareArn` and the `principals` and `resourceArns` to remove.
-2. Check each returned `ResourceShareAssociation` for `status: "DISASSOCIATED"`.
-3. Call `POST /disassociateresourcesharepermission` to detach any custom permissions.
-4. Call `POST /untagresource` to remove tags if needed.
-5. Call `DELETE /deleteresourceshare` with the `resourceShareArn`.
-6. Confirm deletion by calling `POST /getresourceshares` and verifying the share no longer appears (or has `status: "DELETED"`).
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a acceptresourceshareinvitation?" -> POST /acceptresourceshareinvitation
+- "Create a associateresourceshare?" -> POST /associateresourceshare
+- "Create a associateresourcesharepermission?" -> POST /associateresourcesharepermission
+- "Create a createpermission?" -> POST /createpermission
+- "Create a createpermissionversion?" -> POST /createpermissionversion
+- "Create a createresourceshare?" -> POST /createresourceshare
+- "Create a disassociateresourceshare?" -> POST /disassociateresourceshare
+- "Create a disassociateresourcesharepermission?" -> POST /disassociateresourcesharepermission
+- "Create a enablesharingwithawsorganization?" -> POST /enablesharingwithawsorganization
+- "Create a getpermission?" -> POST /getpermission
+- "Create a getresourcepolicy?" -> POST /getresourcepolicies
+- "Create a getresourceshareassociation?" -> POST /getresourceshareassociations
+- "Create a getresourceshareinvitation?" -> POST /getresourceshareinvitations
+- "Create a getresourceshare?" -> POST /getresourceshares
+- "Create a listpendinginvitationresource?" -> POST /listpendinginvitationresources
+- "Create a listpermissionassociation?" -> POST /listpermissionassociations
+- "Create a listpermissionversion?" -> POST /listpermissionversions
+- "Create a listpermission?" -> POST /listpermissions
+- "Create a listprincipal?" -> POST /listprincipals
+- "Create a listreplacepermissionassociationswork?" -> POST /listreplacepermissionassociationswork
+- "Create a listresourcesharepermission?" -> POST /listresourcesharepermissions
+- "Create a listresourcetype?" -> POST /listresourcetypes
+- "Create a listresource?" -> POST /listresources
+- "Create a promotepermissioncreatedfrompolicy?" -> POST /promotepermissioncreatedfrompolicy
+- "Create a promoteresourcesharecreatedfrompolicy?" -> POST /promoteresourcesharecreatedfrompolicy
+- "Create a rejectresourceshareinvitation?" -> POST /rejectresourceshareinvitation
+- "Create a replacepermissionassociation?" -> POST /replacepermissionassociations
+- "Create a setdefaultpermissionversion?" -> POST /setdefaultpermissionversion
+- "Create a tagresource?" -> POST /tagresource
+- "Create a untagresource?" -> POST /untagresource
+- "Create a updateresourceshare?" -> POST /updateresourceshare
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

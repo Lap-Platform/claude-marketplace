@@ -486,89 +486,327 @@ https://connect.squareup.com
 | POST | /v2/webhooks/subscriptions/{subscription_id}/signature-key | UpdateWebhookSubscriptionSignatureKey |
 | POST | /v2/webhooks/subscriptions/{subscription_id}/test | TestWebhookSubscription |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I accept a payment?" -> POST /v2/payments
-- "How do I refund a customer?" -> POST /v2/refunds
-- "How do I look up a customer by email or phone?" -> POST /v2/customers/search
-- "What locations does my business have?" -> GET /v2/locations
-- "How do I create a catalog item?" -> POST /v2/catalog/object
-- "What is the inventory count for a product?" -> GET /v2/inventory/{catalog_object_id}
-- "How do I create an invoice and send it?" -> POST /v2/invoices then POST /v2/invoices/{invoice_id}/publish
-- "How do I schedule a booking for a customer?" -> POST /v2/bookings
-- "How do I check available appointment slots?" -> POST /v2/bookings/availability/search
-- "How do I set up a webhook to listen for payment events?" -> POST /v2/webhooks/subscriptions
-- "How do I create a payment link for online checkout?" -> POST /v2/online-checkout/payment-links
-- "How do I check a loyalty account balance?" -> GET /v2/loyalty/accounts/{account_id}
-- "How do I transfer inventory between locations?" -> POST /v2/transfer-orders
-- "How do I clock in an employee?" -> POST /v2/labor/shifts
-- "How do I cancel a subscription?" -> POST /v2/subscriptions/{subscription_id}/cancel
-
-## Response Tips
-
-- **Payments/Orders/Refunds**: Money fields use `{amount, currency}` where amount is in the smallest currency unit (cents). A `status` field tracks lifecycle state. Check `processing_fee` array for fee breakdowns.
-- **Catalog**: Objects are polymorphic -- the `type` field determines which `*_data` sub-object is populated (e.g., `item_data`, `item_variation_data`). Use `include_related_objects` to pull linked items in one call.
-- **Customers/Team Members**: Paginate with `cursor` (opaque string returned in response). The `version` field is required for safe concurrent updates (optimistic locking).
-- **Inventory**: Quantities are strings (not numbers) to support decimal units. State transitions (`from_state` -> `to_state`) track the full audit trail.
-- **Bookings/Labor**: Timestamps use ISO 8601 with timezone. Shifts and bookings carry a `version` field -- always pass the latest version on updates to avoid conflicts.
-- **Subscriptions/Invoices**: Both return `actions` arrays representing pending scheduled changes. Invoice `version` must be passed to publish, cancel, or update.
-- **All endpoints**: Every response includes an `errors` array. An HTTP 200 with a non-empty `errors` array is a partial failure -- always check it.
-
-## Anomaly Flags
-
-- **Non-empty `errors` array on 200 responses**: Square returns errors inline even on success status codes. Always surface these to the user -- they indicate partial failures or warnings.
-- **`version` mismatch on updates**: If a PUT or state-change call fails with a version conflict, alert that another process modified the resource. Re-fetch and retry.
-- **Deprecated v1 endpoints**: The `/v1/{location_id}/orders` endpoints are legacy. Flag when these are used and suggest the `/v2/orders` equivalents.
-- **`delay_action` on payments**: When a payment has `delayed_until` set, it will auto-complete or auto-cancel. Surface the deadline so the user can act before it fires.
-- **`expiring_point_deadlines` on loyalty accounts**: Proactively warn when loyalty points are about to expire so the merchant can notify customers.
-- **`issuer_alert` on cards**: When present, this signals the card issuer has flagged the card (e.g., fraud concern). Surface immediately.
-- **Subscription `actions` array**: Pending plan changes (swap, pause, cancel) scheduled for the future. Flag so the user is aware of upcoming billing changes.
-- **`risk_evaluation` on payments**: When `risk_level` is elevated, surface the risk assessment so the merchant can review before fulfilling.
-- **Invoice `status` stuck in DRAFT**: If an invoice was created but never published, flag it as potentially forgotten.
-
-## Playbook
-
-### 1. Process a Payment and Issue a Receipt
-
-1. Create the order: `POST /v2/orders` with `location_id` and `line_items`
-2. Take payment: `POST /v2/payments` with `source_id` (card nonce), `amount_money`, and `order_id` from step 1
-3. Verify `payment.status` is `COMPLETED` and `errors` is empty
-4. Retrieve receipt URL from `payment.receipt_url` to share with the customer
-5. If autocomplete is disabled, explicitly complete: `POST /v2/payments/{payment_id}/complete`
-
-### 2. Create and Send an Invoice
-
-1. Create the order: `POST /v2/orders` with line items and `location_id`
-2. Create the invoice: `POST /v2/invoices` with `order_id`, `primary_recipient` (customer info), and `payment_requests` (due date, amount)
-3. Optionally attach files: `POST /v2/invoices/{invoice_id}/attachments`
-4. Publish and send: `POST /v2/invoices/{invoice_id}/publish` with the invoice `version`
-5. Monitor status via `GET /v2/invoices/{invoice_id}` -- status progresses through DRAFT -> UNPAID -> PAID
-
-### 3. Set Up a Loyalty Program Reward Flow
-
-1. Retrieve the program: `GET /v2/loyalty/programs` to get `program_id` and reward tiers
-2. Find or create the loyalty account: `POST /v2/loyalty/accounts/search` by `customer_id`, or `POST /v2/loyalty/accounts` to enroll
-3. Accumulate points after a purchase: `POST /v2/loyalty/accounts/{account_id}/accumulate` with `order_id` and `location_id`
-4. When enough points, create a reward: `POST /v2/loyalty/rewards` with `reward_tier_id` and `loyalty_account_id`
-5. Redeem at checkout: `POST /v2/loyalty/rewards/{reward_id}/redeem` with `location_id`
-
-### 4. Manage Inventory Across Locations
-
-1. List locations: `GET /v2/locations` to get all `location_id` values
-2. Check current counts: `POST /v2/inventory/counts/batch-retrieve` with `catalog_object_ids` and `location_ids`
-3. Adjust stock (receiving shipment): `POST /v2/inventory/changes/batch-create` with adjustment entries (`from_state: NONE`, `to_state: IN_STOCK`)
-4. Transfer between locations: `POST /v2/transfer-orders` with source/destination location IDs and line items
-5. Start the transfer: `POST /v2/transfer-orders/{id}/start`, then confirm receipt: `POST /v2/transfer-orders/{id}/receive`
-
-### 5. Onboard a Customer with a Saved Card
-
-1. Create the customer: `POST /v2/customers` with name, email, and phone
-2. Save a card on file: `POST /v2/cards` with `source_id` (card nonce from Web Payments SDK), `customer_id`, and `idempotency_key`
-3. Verify the card was saved: check `card.enabled` is `true` in the response
-4. For future payments, use `POST /v2/payments` with `source_id` set to the saved `card.id` and `customer_id`
-5. To remove the card later: `POST /v2/cards/{card_id}/disable`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a authorization-code?" -> POST /mobile/authorization-code
+- "Create a revoke?" -> POST /oauth2/revoke
+- "Create a token?" -> POST /oauth2/token
+- "Create a status?" -> POST /oauth2/token/status
+- "List all orders?" -> GET /v1/{location_id}/orders
+- "Get order details?" -> GET /v1/{location_id}/orders/{order_id}
+- "Update a order?" -> PUT /v1/{location_id}/orders/{order_id}
+- "Create a domain?" -> POST /v2/apple-pay/domains
+- "List all bank-accounts?" -> GET /v2/bank-accounts
+- "Get by-v1-id details?" -> GET /v2/bank-accounts/by-v1-id/{v1_bank_account_id}
+- "Get bank-account details?" -> GET /v2/bank-accounts/{bank_account_id}
+- "List all bookings?" -> GET /v2/bookings
+- "Create a booking?" -> POST /v2/bookings
+- "Create a search?" -> POST /v2/bookings/availability/search
+- "Create a bulk-retrieve?" -> POST /v2/bookings/bulk-retrieve
+- "List all business-booking-profile?" -> GET /v2/bookings/business-booking-profile
+- "List all custom-attribute-definitions?" -> GET /v2/bookings/custom-attribute-definitions
+- "Create a custom-attribute-definition?" -> POST /v2/bookings/custom-attribute-definitions
+- "Delete a custom-attribute-definition?" -> DELETE /v2/bookings/custom-attribute-definitions/{key}
+- "Get custom-attribute-definition details?" -> GET /v2/bookings/custom-attribute-definitions/{key}
+- "Update a custom-attribute-definition?" -> PUT /v2/bookings/custom-attribute-definitions/{key}
+- "Create a bulk-delete?" -> POST /v2/bookings/custom-attributes/bulk-delete
+- "Create a bulk-upsert?" -> POST /v2/bookings/custom-attributes/bulk-upsert
+- "List all location-booking-profiles?" -> GET /v2/bookings/location-booking-profiles
+- "Get location-booking-profile details?" -> GET /v2/bookings/location-booking-profiles/{location_id}
+- "List all team-member-booking-profiles?" -> GET /v2/bookings/team-member-booking-profiles
+- "Create a bulk-retrieve?" -> POST /v2/bookings/team-member-booking-profiles/bulk-retrieve
+- "Get team-member-booking-profile details?" -> GET /v2/bookings/team-member-booking-profiles/{team_member_id}
+- "Get booking details?" -> GET /v2/bookings/{booking_id}
+- "Update a booking?" -> PUT /v2/bookings/{booking_id}
+- "Create a cancel?" -> POST /v2/bookings/{booking_id}/cancel
+- "List all custom-attributes?" -> GET /v2/bookings/{booking_id}/custom-attributes
+- "Delete a custom-attribute?" -> DELETE /v2/bookings/{booking_id}/custom-attributes/{key}
+- "Get custom-attribute details?" -> GET /v2/bookings/{booking_id}/custom-attributes/{key}
+- "Update a custom-attribute?" -> PUT /v2/bookings/{booking_id}/custom-attributes/{key}
+- "List all cards?" -> GET /v2/cards
+- "Create a card?" -> POST /v2/cards
+- "Get card details?" -> GET /v2/cards/{card_id}
+- "Create a disable?" -> POST /v2/cards/{card_id}/disable
+- "List all shifts?" -> GET /v2/cash-drawers/shifts
+- "Get shift details?" -> GET /v2/cash-drawers/shifts/{shift_id}
+- "List all events?" -> GET /v2/cash-drawers/shifts/{shift_id}/events
+- "Create a batch-delete?" -> POST /v2/catalog/batch-delete
+- "Create a batch-retrieve?" -> POST /v2/catalog/batch-retrieve
+- "Create a batch-upsert?" -> POST /v2/catalog/batch-upsert
+- "Create a image?" -> POST /v2/catalog/images
+- "Update a image?" -> PUT /v2/catalog/images/{image_id}
+- "List all info?" -> GET /v2/catalog/info
+- "List all list?" -> GET /v2/catalog/list
+- "Create a object?" -> POST /v2/catalog/object
+- "Delete a object?" -> DELETE /v2/catalog/object/{object_id}
+- "Get object details?" -> GET /v2/catalog/object/{object_id}
+- "Create a search?" -> POST /v2/catalog/search
+- "Create a search-catalog-item?" -> POST /v2/catalog/search-catalog-items
+- "Create a update-item-modifier-list?" -> POST /v2/catalog/update-item-modifier-lists
+- "Create a update-item-taxe?" -> POST /v2/catalog/update-item-taxes
+- "List all channels?" -> GET /v2/channels
+- "Create a bulk-retrieve?" -> POST /v2/channels/bulk-retrieve
+- "Get channel details?" -> GET /v2/channels/{channel_id}
+- "List all customers?" -> GET /v2/customers
+- "Create a customer?" -> POST /v2/customers
+- "Create a bulk-create?" -> POST /v2/customers/bulk-create
+- "Create a bulk-delete?" -> POST /v2/customers/bulk-delete
+- "Create a bulk-retrieve?" -> POST /v2/customers/bulk-retrieve
+- "Create a bulk-update?" -> POST /v2/customers/bulk-update
+- "List all custom-attribute-definitions?" -> GET /v2/customers/custom-attribute-definitions
+- "Create a custom-attribute-definition?" -> POST /v2/customers/custom-attribute-definitions
+- "Delete a custom-attribute-definition?" -> DELETE /v2/customers/custom-attribute-definitions/{key}
+- "Get custom-attribute-definition details?" -> GET /v2/customers/custom-attribute-definitions/{key}
+- "Update a custom-attribute-definition?" -> PUT /v2/customers/custom-attribute-definitions/{key}
+- "Create a bulk-upsert?" -> POST /v2/customers/custom-attributes/bulk-upsert
+- "List all groups?" -> GET /v2/customers/groups
+- "Create a group?" -> POST /v2/customers/groups
+- "Delete a group?" -> DELETE /v2/customers/groups/{group_id}
+- "Get group details?" -> GET /v2/customers/groups/{group_id}
+- "Update a group?" -> PUT /v2/customers/groups/{group_id}
+- "Create a search?" -> POST /v2/customers/search
+- "List all segments?" -> GET /v2/customers/segments
+- "Get segment details?" -> GET /v2/customers/segments/{segment_id}
+- "Delete a customer?" -> DELETE /v2/customers/{customer_id}
+- "Get customer details?" -> GET /v2/customers/{customer_id}
+- "Update a customer?" -> PUT /v2/customers/{customer_id}
+- "Create a card?" -> POST /v2/customers/{customer_id}/cards
+- "Delete a card?" -> DELETE /v2/customers/{customer_id}/cards/{card_id}
+- "List all custom-attributes?" -> GET /v2/customers/{customer_id}/custom-attributes
+- "Delete a custom-attribute?" -> DELETE /v2/customers/{customer_id}/custom-attributes/{key}
+- "Get custom-attribute details?" -> GET /v2/customers/{customer_id}/custom-attributes/{key}
+- "Delete a group?" -> DELETE /v2/customers/{customer_id}/groups/{group_id}
+- "Update a group?" -> PUT /v2/customers/{customer_id}/groups/{group_id}
+- "List all devices?" -> GET /v2/devices
+- "List all codes?" -> GET /v2/devices/codes
+- "Create a code?" -> POST /v2/devices/codes
+- "Get code details?" -> GET /v2/devices/codes/{id}
+- "Get device details?" -> GET /v2/devices/{device_id}
+- "List all disputes?" -> GET /v2/disputes
+- "Get dispute details?" -> GET /v2/disputes/{dispute_id}
+- "Create a accept?" -> POST /v2/disputes/{dispute_id}/accept
+- "List all evidence?" -> GET /v2/disputes/{dispute_id}/evidence
+- "Create a evidence-file?" -> POST /v2/disputes/{dispute_id}/evidence-files
+- "Create a evidence-text?" -> POST /v2/disputes/{dispute_id}/evidence-text
+- "Delete a evidence?" -> DELETE /v2/disputes/{dispute_id}/evidence/{evidence_id}
+- "Get evidence details?" -> GET /v2/disputes/{dispute_id}/evidence/{evidence_id}
+- "Create a submit-evidence?" -> POST /v2/disputes/{dispute_id}/submit-evidence
+- "List all employees?" -> GET /v2/employees
+- "Get employee details?" -> GET /v2/employees/{id}
+- "Create a event?" -> POST /v2/events
+- "List all types?" -> GET /v2/events/types
+- "List all gift-cards?" -> GET /v2/gift-cards
+- "Create a gift-card?" -> POST /v2/gift-cards
+- "List all activities?" -> GET /v2/gift-cards/activities
+- "Create a activity?" -> POST /v2/gift-cards/activities
+- "Create a from-gan?" -> POST /v2/gift-cards/from-gan
+- "Create a from-nonce?" -> POST /v2/gift-cards/from-nonce
+- "Create a link-customer?" -> POST /v2/gift-cards/{gift_card_id}/link-customer
+- "Create a unlink-customer?" -> POST /v2/gift-cards/{gift_card_id}/unlink-customer
+- "Get gift-card details?" -> GET /v2/gift-cards/{id}
+- "Get adjustment details?" -> GET /v2/inventory/adjustment/{adjustment_id}
+- "Get adjustment details?" -> GET /v2/inventory/adjustments/{adjustment_id}
+- "Create a batch-change?" -> POST /v2/inventory/batch-change
+- "Create a batch-retrieve-change?" -> POST /v2/inventory/batch-retrieve-changes
+- "Create a batch-retrieve-count?" -> POST /v2/inventory/batch-retrieve-counts
+- "Create a batch-create?" -> POST /v2/inventory/changes/batch-create
+- "Create a batch-retrieve?" -> POST /v2/inventory/changes/batch-retrieve
+- "Create a batch-retrieve?" -> POST /v2/inventory/counts/batch-retrieve
+- "Get physical-count details?" -> GET /v2/inventory/physical-count/{physical_count_id}
+- "Get physical-count details?" -> GET /v2/inventory/physical-counts/{physical_count_id}
+- "Get transfer details?" -> GET /v2/inventory/transfers/{transfer_id}
+- "Get inventory details?" -> GET /v2/inventory/{catalog_object_id}
+- "List all changes?" -> GET /v2/inventory/{catalog_object_id}/changes
+- "List all invoices?" -> GET /v2/invoices
+- "Create a invoice?" -> POST /v2/invoices
+- "Create a search?" -> POST /v2/invoices/search
+- "Delete a invoice?" -> DELETE /v2/invoices/{invoice_id}
+- "Get invoice details?" -> GET /v2/invoices/{invoice_id}
+- "Update a invoice?" -> PUT /v2/invoices/{invoice_id}
+- "Create a attachment?" -> POST /v2/invoices/{invoice_id}/attachments
+- "Delete a attachment?" -> DELETE /v2/invoices/{invoice_id}/attachments/{attachment_id}
+- "Create a cancel?" -> POST /v2/invoices/{invoice_id}/cancel
+- "Create a publish?" -> POST /v2/invoices/{invoice_id}/publish
+- "List all break-types?" -> GET /v2/labor/break-types
+- "Create a break-type?" -> POST /v2/labor/break-types
+- "Delete a break-type?" -> DELETE /v2/labor/break-types/{id}
+- "Get break-type details?" -> GET /v2/labor/break-types/{id}
+- "Update a break-type?" -> PUT /v2/labor/break-types/{id}
+- "List all employee-wages?" -> GET /v2/labor/employee-wages
+- "Get employee-wage details?" -> GET /v2/labor/employee-wages/{id}
+- "Create a scheduled-shift?" -> POST /v2/labor/scheduled-shifts
+- "Create a bulk-publish?" -> POST /v2/labor/scheduled-shifts/bulk-publish
+- "Create a search?" -> POST /v2/labor/scheduled-shifts/search
+- "Get scheduled-shift details?" -> GET /v2/labor/scheduled-shifts/{id}
+- "Update a scheduled-shift?" -> PUT /v2/labor/scheduled-shifts/{id}
+- "Create a publish?" -> POST /v2/labor/scheduled-shifts/{id}/publish
+- "Create a shift?" -> POST /v2/labor/shifts
+- "Create a search?" -> POST /v2/labor/shifts/search
+- "Delete a shift?" -> DELETE /v2/labor/shifts/{id}
+- "Get shift details?" -> GET /v2/labor/shifts/{id}
+- "Update a shift?" -> PUT /v2/labor/shifts/{id}
+- "List all team-member-wages?" -> GET /v2/labor/team-member-wages
+- "Get team-member-wage details?" -> GET /v2/labor/team-member-wages/{id}
+- "Create a timecard?" -> POST /v2/labor/timecards
+- "Create a search?" -> POST /v2/labor/timecards/search
+- "Delete a timecard?" -> DELETE /v2/labor/timecards/{id}
+- "Get timecard details?" -> GET /v2/labor/timecards/{id}
+- "Update a timecard?" -> PUT /v2/labor/timecards/{id}
+- "List all workweek-configs?" -> GET /v2/labor/workweek-configs
+- "Update a workweek-config?" -> PUT /v2/labor/workweek-configs/{id}
+- "List all locations?" -> GET /v2/locations
+- "Create a location?" -> POST /v2/locations
+- "List all custom-attribute-definitions?" -> GET /v2/locations/custom-attribute-definitions
+- "Create a custom-attribute-definition?" -> POST /v2/locations/custom-attribute-definitions
+- "Delete a custom-attribute-definition?" -> DELETE /v2/locations/custom-attribute-definitions/{key}
+- "Get custom-attribute-definition details?" -> GET /v2/locations/custom-attribute-definitions/{key}
+- "Update a custom-attribute-definition?" -> PUT /v2/locations/custom-attribute-definitions/{key}
+- "Create a bulk-delete?" -> POST /v2/locations/custom-attributes/bulk-delete
+- "Create a bulk-upsert?" -> POST /v2/locations/custom-attributes/bulk-upsert
+- "Get location details?" -> GET /v2/locations/{location_id}
+- "Update a location?" -> PUT /v2/locations/{location_id}
+- "Create a checkout?" -> POST /v2/locations/{location_id}/checkouts
+- "List all custom-attributes?" -> GET /v2/locations/{location_id}/custom-attributes
+- "Delete a custom-attribute?" -> DELETE /v2/locations/{location_id}/custom-attributes/{key}
+- "Get custom-attribute details?" -> GET /v2/locations/{location_id}/custom-attributes/{key}
+- "List all transactions?" -> GET /v2/locations/{location_id}/transactions
+- "Get transaction details?" -> GET /v2/locations/{location_id}/transactions/{transaction_id}
+- "Create a capture?" -> POST /v2/locations/{location_id}/transactions/{transaction_id}/capture
+- "Create a void?" -> POST /v2/locations/{location_id}/transactions/{transaction_id}/void
+- "Create a account?" -> POST /v2/loyalty/accounts
+- "Create a search?" -> POST /v2/loyalty/accounts/search
+- "Get account details?" -> GET /v2/loyalty/accounts/{account_id}
+- "Create a accumulate?" -> POST /v2/loyalty/accounts/{account_id}/accumulate
+- "Create a adjust?" -> POST /v2/loyalty/accounts/{account_id}/adjust
+- "Create a search?" -> POST /v2/loyalty/events/search
+- "List all programs?" -> GET /v2/loyalty/programs
+- "Get program details?" -> GET /v2/loyalty/programs/{program_id}
+- "Create a calculate?" -> POST /v2/loyalty/programs/{program_id}/calculate
+- "List all promotions?" -> GET /v2/loyalty/programs/{program_id}/promotions
+- "Create a promotion?" -> POST /v2/loyalty/programs/{program_id}/promotions
+- "Get promotion details?" -> GET /v2/loyalty/programs/{program_id}/promotions/{promotion_id}
+- "Create a cancel?" -> POST /v2/loyalty/programs/{program_id}/promotions/{promotion_id}/cancel
+- "Create a reward?" -> POST /v2/loyalty/rewards
+- "Create a search?" -> POST /v2/loyalty/rewards/search
+- "Delete a reward?" -> DELETE /v2/loyalty/rewards/{reward_id}
+- "Get reward details?" -> GET /v2/loyalty/rewards/{reward_id}
+- "Create a redeem?" -> POST /v2/loyalty/rewards/{reward_id}/redeem
+- "List all merchants?" -> GET /v2/merchants
+- "List all custom-attribute-definitions?" -> GET /v2/merchants/custom-attribute-definitions
+- "Create a custom-attribute-definition?" -> POST /v2/merchants/custom-attribute-definitions
+- "Delete a custom-attribute-definition?" -> DELETE /v2/merchants/custom-attribute-definitions/{key}
+- "Get custom-attribute-definition details?" -> GET /v2/merchants/custom-attribute-definitions/{key}
+- "Update a custom-attribute-definition?" -> PUT /v2/merchants/custom-attribute-definitions/{key}
+- "Create a bulk-delete?" -> POST /v2/merchants/custom-attributes/bulk-delete
+- "Create a bulk-upsert?" -> POST /v2/merchants/custom-attributes/bulk-upsert
+- "Get merchant details?" -> GET /v2/merchants/{merchant_id}
+- "List all custom-attributes?" -> GET /v2/merchants/{merchant_id}/custom-attributes
+- "Delete a custom-attribute?" -> DELETE /v2/merchants/{merchant_id}/custom-attributes/{key}
+- "Get custom-attribute details?" -> GET /v2/merchants/{merchant_id}/custom-attributes/{key}
+- "Get location-setting details?" -> GET /v2/online-checkout/location-settings/{location_id}
+- "Update a location-setting?" -> PUT /v2/online-checkout/location-settings/{location_id}
+- "List all merchant-settings?" -> GET /v2/online-checkout/merchant-settings
+- "List all payment-links?" -> GET /v2/online-checkout/payment-links
+- "Create a payment-link?" -> POST /v2/online-checkout/payment-links
+- "Delete a payment-link?" -> DELETE /v2/online-checkout/payment-links/{id}
+- "Get payment-link details?" -> GET /v2/online-checkout/payment-links/{id}
+- "Update a payment-link?" -> PUT /v2/online-checkout/payment-links/{id}
+- "Create a order?" -> POST /v2/orders
+- "Create a batch-retrieve?" -> POST /v2/orders/batch-retrieve
+- "Create a calculate?" -> POST /v2/orders/calculate
+- "Create a clone?" -> POST /v2/orders/clone
+- "List all custom-attribute-definitions?" -> GET /v2/orders/custom-attribute-definitions
+- "Create a custom-attribute-definition?" -> POST /v2/orders/custom-attribute-definitions
+- "Delete a custom-attribute-definition?" -> DELETE /v2/orders/custom-attribute-definitions/{key}
+- "Get custom-attribute-definition details?" -> GET /v2/orders/custom-attribute-definitions/{key}
+- "Update a custom-attribute-definition?" -> PUT /v2/orders/custom-attribute-definitions/{key}
+- "Create a bulk-delete?" -> POST /v2/orders/custom-attributes/bulk-delete
+- "Create a bulk-upsert?" -> POST /v2/orders/custom-attributes/bulk-upsert
+- "Create a search?" -> POST /v2/orders/search
+- "Get order details?" -> GET /v2/orders/{order_id}
+- "Update a order?" -> PUT /v2/orders/{order_id}
+- "List all custom-attributes?" -> GET /v2/orders/{order_id}/custom-attributes
+- "Delete a custom-attribute?" -> DELETE /v2/orders/{order_id}/custom-attributes/{custom_attribute_key}
+- "Get custom-attribute details?" -> GET /v2/orders/{order_id}/custom-attributes/{custom_attribute_key}
+- "Create a pay?" -> POST /v2/orders/{order_id}/pay
+- "List all payments?" -> GET /v2/payments
+- "Create a payment?" -> POST /v2/payments
+- "Create a cancel?" -> POST /v2/payments/cancel
+- "Get payment details?" -> GET /v2/payments/{payment_id}
+- "Update a payment?" -> PUT /v2/payments/{payment_id}
+- "Create a cancel?" -> POST /v2/payments/{payment_id}/cancel
+- "Create a complete?" -> POST /v2/payments/{payment_id}/complete
+- "List all payouts?" -> GET /v2/payouts
+- "Get payout details?" -> GET /v2/payouts/{payout_id}
+- "List all payout-entries?" -> GET /v2/payouts/{payout_id}/payout-entries
+- "List all refunds?" -> GET /v2/refunds
+- "Create a refund?" -> POST /v2/refunds
+- "Get refund details?" -> GET /v2/refunds/{refund_id}
+- "List all sites?" -> GET /v2/sites
+- "List all snippet?" -> GET /v2/sites/{site_id}/snippet
+- "Create a snippet?" -> POST /v2/sites/{site_id}/snippet
+- "Create a subscription?" -> POST /v2/subscriptions
+- "Create a bulk-swap-plan?" -> POST /v2/subscriptions/bulk-swap-plan
+- "Create a search?" -> POST /v2/subscriptions/search
+- "Get subscription details?" -> GET /v2/subscriptions/{subscription_id}
+- "Update a subscription?" -> PUT /v2/subscriptions/{subscription_id}
+- "Delete a action?" -> DELETE /v2/subscriptions/{subscription_id}/actions/{action_id}
+- "Create a billing-anchor?" -> POST /v2/subscriptions/{subscription_id}/billing-anchor
+- "Create a cancel?" -> POST /v2/subscriptions/{subscription_id}/cancel
+- "List all events?" -> GET /v2/subscriptions/{subscription_id}/events
+- "Create a pause?" -> POST /v2/subscriptions/{subscription_id}/pause
+- "Create a resume?" -> POST /v2/subscriptions/{subscription_id}/resume
+- "Create a swap-plan?" -> POST /v2/subscriptions/{subscription_id}/swap-plan
+- "Create a team-member?" -> POST /v2/team-members
+- "Create a bulk-create?" -> POST /v2/team-members/bulk-create
+- "Create a bulk-update?" -> POST /v2/team-members/bulk-update
+- "List all jobs?" -> GET /v2/team-members/jobs
+- "Create a job?" -> POST /v2/team-members/jobs
+- "Get job details?" -> GET /v2/team-members/jobs/{job_id}
+- "Update a job?" -> PUT /v2/team-members/jobs/{job_id}
+- "Create a search?" -> POST /v2/team-members/search
+- "Get team-member details?" -> GET /v2/team-members/{team_member_id}
+- "Update a team-member?" -> PUT /v2/team-members/{team_member_id}
+- "List all wage-setting?" -> GET /v2/team-members/{team_member_id}/wage-setting
+- "Create a action?" -> POST /v2/terminals/actions
+- "Create a search?" -> POST /v2/terminals/actions/search
+- "Get action details?" -> GET /v2/terminals/actions/{action_id}
+- "Create a cancel?" -> POST /v2/terminals/actions/{action_id}/cancel
+- "Create a dismiss?" -> POST /v2/terminals/actions/{action_id}/dismiss
+- "Create a checkout?" -> POST /v2/terminals/checkouts
+- "Create a search?" -> POST /v2/terminals/checkouts/search
+- "Get checkout details?" -> GET /v2/terminals/checkouts/{checkout_id}
+- "Create a cancel?" -> POST /v2/terminals/checkouts/{checkout_id}/cancel
+- "Create a dismiss?" -> POST /v2/terminals/checkouts/{checkout_id}/dismiss
+- "Create a refund?" -> POST /v2/terminals/refunds
+- "Create a search?" -> POST /v2/terminals/refunds/search
+- "Get refund details?" -> GET /v2/terminals/refunds/{terminal_refund_id}
+- "Create a cancel?" -> POST /v2/terminals/refunds/{terminal_refund_id}/cancel
+- "Create a dismiss?" -> POST /v2/terminals/refunds/{terminal_refund_id}/dismiss
+- "Create a transfer-order?" -> POST /v2/transfer-orders
+- "Create a search?" -> POST /v2/transfer-orders/search
+- "Delete a transfer-order?" -> DELETE /v2/transfer-orders/{transfer_order_id}
+- "Get transfer-order details?" -> GET /v2/transfer-orders/{transfer_order_id}
+- "Update a transfer-order?" -> PUT /v2/transfer-orders/{transfer_order_id}
+- "Create a cancel?" -> POST /v2/transfer-orders/{transfer_order_id}/cancel
+- "Create a receive?" -> POST /v2/transfer-orders/{transfer_order_id}/receive
+- "Create a start?" -> POST /v2/transfer-orders/{transfer_order_id}/start
+- "Create a bulk-create?" -> POST /v2/vendors/bulk-create
+- "Create a bulk-retrieve?" -> POST /v2/vendors/bulk-retrieve
+- "Create a create?" -> POST /v2/vendors/create
+- "Create a search?" -> POST /v2/vendors/search
+- "Get vendor details?" -> GET /v2/vendors/{vendor_id}
+- "Update a vendor?" -> PUT /v2/vendors/{vendor_id}
+- "List all event-types?" -> GET /v2/webhooks/event-types
+- "List all subscriptions?" -> GET /v2/webhooks/subscriptions
+- "Create a subscription?" -> POST /v2/webhooks/subscriptions
+- "Delete a subscription?" -> DELETE /v2/webhooks/subscriptions/{subscription_id}
+- "Get subscription details?" -> GET /v2/webhooks/subscriptions/{subscription_id}
+- "Update a subscription?" -> PUT /v2/webhooks/subscriptions/{subscription_id}
+- "Create a signature-key?" -> POST /v2/webhooks/subscriptions/{subscription_id}/signature-key
+- "Create a test?" -> POST /v2/webhooks/subscriptions/{subscription_id}/test
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

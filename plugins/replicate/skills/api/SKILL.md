@@ -99,88 +99,46 @@ https://api.replicate.com/v1
 |--------|------|-------------|
 | GET | /webhooks/default/secret | Get the signing secret for the default webhook |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What account am I logged in as?" -> GET /account
-- "Search for a model that does image generation" -> GET /search
-- "List all my predictions" -> GET /predictions
-- "What happened to prediction abc123?" -> GET /predictions/{prediction_id}
-- "Run a prediction using model stability-ai/sdxl" -> POST /models/{model_owner}/{model_name}/predictions
-- "Cancel a running prediction" -> POST /predictions/{prediction_id}/cancel
-- "What hardware options are available?" -> GET /hardware
-- "Create a new private model called my-model" -> POST /models
-- "List all versions of a model" -> GET /models/{model_owner}/{model_name}/versions
-- "Start a training job on a model version" -> POST /models/{model_owner}/{model_name}/versions/{version_id}/trainings
-- "Upload a file to use as prediction input" -> POST /files
-- "Create a new deployment with autoscaling" -> POST /deployments
-- "Scale down my deployment to zero instances" -> PATCH /deployments/{deployment_owner}/{deployment_name}
-- "Run a prediction on my deployment" -> POST /deployments/{deployment_owner}/{deployment_name}/predictions
-- "Get my webhook signing secret" -> GET /webhooks/default/secret
-
-## Response Tips
-
-- **List endpoints** (models, predictions, deployments, files, collections, trainings, versions, examples): All return `{next, previous, results}` cursor pagination. Follow `next` URL until null to fetch all pages.
-- **Predictions & trainings**: Poll `status` field (`starting` -> `processing` -> `succeeded`/`failed`/`canceled`). Use `urls.get` to re-fetch, `urls.cancel` to abort, `urls.stream` for SSE streaming. `output` is `any` type (varies per model -- could be a string URL, array of URLs, or structured object).
-- **Async predictions** (201 vs 202): 201 means the prediction completed synchronously; 202 means it is still processing and requires polling. Use `Prefer: wait` header to request synchronous completion up to a timeout.
-- **Deployments & models**: Nested `current_release.configuration` holds hardware/scaling config; `current_release.created_by` holds the user who triggered it.
-- **Files**: `urls.get` contains the download URL. `expires_at` indicates when the file will be auto-deleted. 413 means the file is too large.
-- **Search**: Returns three result arrays (`models`, `collections`, `pages`) -- check all three for comprehensive results.
-- **DELETE endpoints**: Return 204 with no body on success.
-
-## Anomaly Flags
-
-- **Prediction errors**: Surface `error` field (nullable) whenever `status` is `failed` -- include the full error string, it often contains actionable model-specific messages.
-- **Data removal**: Flag `data_removed: true` on predictions -- means input/output have been scrubbed and are no longer retrievable.
-- **Deadline approaching**: If `deadline` is set on a prediction and current time is close, warn the user the prediction may be auto-canceled.
-- **File expiration**: Surface `expires_at` on uploaded files -- alert if a file will expire within the next hour.
-- **Model visibility**: Flag when a newly created model is `private` in case the user intended public access, or vice versa.
-- **Empty pagination**: If `results` is empty on a list call, explicitly note "no results found" rather than silently returning nothing.
-- **413 on file upload**: Proactively suggest checking file size limits before retrying.
-- **Deprecated version deletion (202)**: Model version DELETE returns 202 (async) -- warn that deletion may not be immediate and dependent predictions could still be running.
-- **Missing latest_version**: If `GET /models/{owner}/{name}` returns `latest_version: null`, flag that the model has no pushed versions and cannot run predictions.
-
-## Playbook
-
-### 1. Run a Prediction on a Public Model
-
-1. `GET /search?query=stable diffusion` to find the model (note `owner` and `name` from results).
-2. `GET /models/{owner}/{name}` to inspect the model, check `latest_version` for the current version ID and `default_example` for sample inputs.
-3. `POST /predictions` with `version` (from latest_version.id) and `input` matching the model schema. Optionally set `stream: true` for SSE output.
-4. Poll `GET /predictions/{id}` using the returned `urls.get` until `status` is `succeeded` or `failed`.
-5. Read `output` from the final response (usually a URL or array of URLs for media models).
-
-### 2. Create and Use a Deployment
-
-1. `GET /hardware` to list available hardware SKUs (e.g., `gpu-a40-large`).
-2. `GET /models/{owner}/{name}/versions` to pick the version ID you want to deploy.
-3. `POST /deployments` with `name`, `model`, `version`, `hardware`, `min_instances`, and `max_instances`.
-4. `POST /deployments/{owner}/{name}/predictions` with `input` to run predictions on the deployment.
-5. `PATCH /deployments/{owner}/{name}` to scale instances or update the version later.
-
-### 3. Fine-tune a Model (Training)
-
-1. `GET /models/{owner}/{name}/versions` to find the trainable base model version.
-2. Upload training data via `POST /files`, note the returned `id` and `urls.get`.
-3. `POST /models/{owner}/{name}/versions/{version_id}/trainings` with `input` (including file reference), `destination` (e.g., `your-username/my-fine-tune`), and optionally a `webhook` URL.
-4. Poll `GET /trainings/{training_id}` until `status` is `succeeded`. Check `output.weights` for the resulting weights URL and `output.version` for the new version ID.
-5. Run predictions using the new version from `output.version`.
-
-### 4. Manage Files for Large Inputs
-
-1. `POST /files` to upload the file (image, audio, etc.). Note the `id`, `checksums.sha256`, and `expires_at`.
-2. Use the `urls.get` URL as input to a prediction (e.g., `"image": "https://..."`).
-3. `GET /files` to list all uploaded files and check expiration dates.
-4. `DELETE /files/{file_id}` to clean up files you no longer need.
-
-### 5. Monitor and Cancel Long-Running Work
-
-1. `GET /predictions?created_after=2025-01-01T00:00:00Z` to list recent predictions, optionally filtering by date range.
-2. For each prediction with `status` of `starting` or `processing`, decide whether to keep or cancel.
-3. `POST /predictions/{id}/cancel` to abort unwanted predictions.
-4. `GET /trainings` to review active training jobs similarly.
-5. `POST /trainings/{id}/cancel` to abort unwanted training runs.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all account?" -> GET /account
+- "List all collections?" -> GET /collections
+- "Get collection details?" -> GET /collections/{collection_slug}
+- "List all deployments?" -> GET /deployments
+- "Create a deployment?" -> POST /deployments
+- "Delete a deployment?" -> DELETE /deployments/{deployment_owner}/{deployment_name}
+- "Get deployment details?" -> GET /deployments/{deployment_owner}/{deployment_name}
+- "Partially update a deployment?" -> PATCH /deployments/{deployment_owner}/{deployment_name}
+- "Create a prediction?" -> POST /deployments/{deployment_owner}/{deployment_name}/predictions
+- "List all files?" -> GET /files
+- "Create a file?" -> POST /files
+- "Delete a file?" -> DELETE /files/{file_id}
+- "Get file details?" -> GET /files/{file_id}
+- "List all download?" -> GET /files/{file_id}/download
+- "List all hardware?" -> GET /hardware
+- "List all models?" -> GET /models
+- "Create a model?" -> POST /models
+- "Delete a model?" -> DELETE /models/{model_owner}/{model_name}
+- "Get model details?" -> GET /models/{model_owner}/{model_name}
+- "Partially update a model?" -> PATCH /models/{model_owner}/{model_name}
+- "List all examples?" -> GET /models/{model_owner}/{model_name}/examples
+- "Create a prediction?" -> POST /models/{model_owner}/{model_name}/predictions
+- "List all readme?" -> GET /models/{model_owner}/{model_name}/readme
+- "List all versions?" -> GET /models/{model_owner}/{model_name}/versions
+- "Delete a version?" -> DELETE /models/{model_owner}/{model_name}/versions/{version_id}
+- "Get version details?" -> GET /models/{model_owner}/{model_name}/versions/{version_id}
+- "Create a training?" -> POST /models/{model_owner}/{model_name}/versions/{version_id}/trainings
+- "List all predictions?" -> GET /predictions
+- "Create a prediction?" -> POST /predictions
+- "Get prediction details?" -> GET /predictions/{prediction_id}
+- "Create a cancel?" -> POST /predictions/{prediction_id}/cancel
+- "Search search?" -> GET /search
+- "List all trainings?" -> GET /trainings
+- "Get training details?" -> GET /trainings/{training_id}
+- "Create a cancel?" -> POST /trainings/{training_id}/cancel
+- "List all secret?" -> GET /webhooks/default/secret
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

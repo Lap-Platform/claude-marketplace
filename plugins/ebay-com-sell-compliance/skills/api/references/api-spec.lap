@@ -1,7 +1,7 @@
 @lap v0.3
 # Machine-readable API spec. Each @endpoint block is one API call.
 @api Compliance API
-@base https://api.ebay.com{basePath}
+@base https://api.ebay.com/sell/compliance/v1
 @version 1.4.4
 @auth OAuth2
 @endpoints 2
@@ -9,21 +9,19 @@
 
 @group listing_violation_summary
 @endpoint GET /listing_violation_summary
-@required {X-EBAY-C-MARKETPLACE-ID: str}
-@optional {compliance_type: str}
-@returns(200)
-@returns(204)
-@errors {400, 500}
+@desc This call returns listing violation counts for a seller. A user can pass in one or more compliance types through the <strong>compliance_type</strong> query parameter. See <a href="/api-docs/sell/compliance/types/com:ComplianceTypeEnum">ComplianceTypeEnum</a> for more information on the supported listing compliance types. Listing violations are returned for multiple marketplaces if the seller sells on multiple eBay marketplaces.<br /><br /> <span class="tablenote"><strong>Note:</strong> Only a canned response, with counts for all listing compliance types, is returned in the Sandbox environment. Due to this limitation, the <strong>compliance_type</strong> query parameter (if used) will not have an effect on the response. </span>
+@required {X-EBAY-C-MARKETPLACE-ID: str # This header identifies the seller's eBay marketplace. <br><br>Supported values for this header can be found in the <a href="/api-docs/sell/compliance/types/bas:MarketplaceIdEnum">MarketplaceIdEnum</a> type definition.}
+@optional {compliance_type: str # <span class="tablenote"><b>Note:</b> The <a href="https://developer.ebay.com/api-docs/sell/compliance/types/com:ComplianceTypeEnum" target="_blank" rel="noopener">ASPECTS_ADOPTION</a> compliance type has been deprecated and will be decommissioned on September 9th, 2025.</span><br>This query parameter specifies the compliance type(s) of the listing violation counts being retrieved. <br><br>See <a href="/api-docs/sell/compliance/types/com:ComplianceTypeEnum">ComplianceTypeEnum</a> for more information on the supported compliance types that can be passed in here. <br><br>If more than one compliance type value is used, delimit these values with a comma. If no compliance type values are passed in, the listing count for all compliance types will be returned. <br /><br /> <span class="tablenote"><strong>Note:</strong> Only a canned response, with counts for all listing compliance types, is returned in the Sandbox environment. Due to this limitation, the <strong>compliance_type</strong> query parameter (if used) will not have an effect on the response. </span>}
+@returns(200) Success
+@returns(204) No Content
+@errors {400: Bad Request, 500: Internal Server Error}
 
 @endgroup
 
 @group listing_violation
 @endpoint GET /listing_violation
-@required {X-EBAY-C-MARKETPLACE-ID: str, compliance_type: str}
-@optional {offset: str, listing_id: str, limit: str, filter: str}
-@returns(200)
-@returns(204)
-@errors {400, 500}
+@desc This call returns specific listing violations for the supported listing compliance types. Only one compliance type can be passed in per call, and the response will include all the listing violations for this compliance type, and listing violations are grouped together by eBay listing ID. See <a href="/api-docs/sell/compliance/types/com:ComplianceTypeEnum">ComplianceTypeEnum</a> for more information on the supported listing compliance types. This method also has pagination control. <br /><br /> <span class="tablenote"><strong>Note:</strong> A maximum of 2000 listing violations will be returned in a result set. If the seller has more than 2000 listing violations, some/all of those listing violations must be corrected before additional listing violations will be retrieved. The user should pay attention to the <strong>total</strong> value in the response. If this value is '2000', it is possible that the seller has more than 2000 listing violations, but this field maxes out at 2000. </span> <br /><span class="tablenote"><strong>Note:</strong> In a future release of this API, the seller will be able to pass in a specific eBay listing ID as a query parameter to see if this specific listing has any violations. </span><br /> <span class="tablenote"><strong>Note:</strong> Only mocked non-compliant listing data will be returned for this call in the Sandbox environment, and not specific to the seller. However, the user can still use this mock data to experiment with the compliance type filters and pagination control.</span>
+@required {X-EBAY-C-MARKETPLACE-ID: str # This header identifies the seller's eBay marketplace. <br><br>Supported values for this header can be found in the <a href="/api-docs/sell/compliance/types/bas:MarketplaceIdEnum">MarketplaceIdEnum</a> type definition., compliance_type: str # <span class="tablenote"><b>Note:</b> The <a href="https://developer.ebay.com/api-docs/sell/compliance/types/com:ComplianceTypeEnum" target="_blank" rel="noopener">ASPECTS_ADOPTION</a> compliance type has been deprecated and will be decommissioned on September 9th, 2025.</span><br>This query parameter specifies the compliance type of the listing violations being retrieved. Only one compliance type value can be specified. <br> <br>See <a href="/api-docs/sell/compliance/types/com:ComplianceTypeEnum">ComplianceTypeEnum</a> for more information on supported compliance types.}
 
 @endgroup
 

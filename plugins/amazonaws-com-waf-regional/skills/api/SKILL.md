@@ -107,88 +107,10 @@ Not specified.
 | POST | / | This is AWS WAF Classic documentation. For more information, see AWS WAF Classic in the developer guide.  For the latest version of AWS WAF, use the AWS WAFV2 API and see the AWS WAF Developer Guide. With the latest version, AWS WAF has a single set of endpoints for regional and global use.   Inserts or deletes ActivatedRule objects in a WebACL. Each Rule identifies web requests that you want to allow, block, or count. When you update a WebACL, you specify the following values:   A default action for the WebACL, either ALLOW or BLOCK. AWS WAF performs the default action if a request doesn't match the criteria in any of the Rules in a WebACL.   The Rules that you want to add or delete. If you want to replace one Rule with another, you delete the existing Rule and add the new one.   For each Rule, whether you want AWS WAF to allow requests, block requests, or count requests that match the conditions in the Rule.   The order in which you want AWS WAF to evaluate the Rules in a WebACL. If you add more than one Rule to a WebACL, AWS WAF evaluates each request against the Rules in order based on the value of Priority. (The Rule that has the lowest value for Priority is evaluated first.) When a web request matches all the predicates (such as ByteMatchSets and IPSets) in a Rule, AWS WAF immediately takes the corresponding action, allow or block, and doesn't evaluate the request against the remaining Rules in the WebACL, if any.    To create and configure a WebACL, perform the following steps:   Create and update the predicates that you want to include in Rules. For more information, see CreateByteMatchSet, UpdateByteMatchSet, CreateIPSet, UpdateIPSet, CreateSqlInjectionMatchSet, and UpdateSqlInjectionMatchSet.   Create and update the Rules that you want to include in the WebACL. For more information, see CreateRule and UpdateRule.   Create a WebACL. See CreateWebACL.   Use GetChangeToken to get the change token that you provide in the ChangeToken parameter of an UpdateWebACL request.   Submit an UpdateWebACL request to specify the Rules that you want to include in the WebACL, to specify the default action, and to associate the WebACL with a CloudFront distribution.  The ActivatedRule can be a rule group. If you specify a rule group as your ActivatedRule , you can exclude specific rules from that rule group. If you already have a rule group associated with a web ACL and want to submit an UpdateWebACL request to exclude certain rules from that rule group, you must first remove the rule group from the web ACL, the re-insert it again, specifying the excluded rules. For details, see ActivatedRule$ExcludedRules .    Be aware that if you try to add a RATE_BASED rule to a web ACL without setting the rule type when first creating the rule, the UpdateWebACL request will fail because the request tries to add a REGULAR rule (the default rule type) with the specified ID, which does not exist.  For more information about how to use the AWS WAF API to allow or block HTTP requests, see the AWS WAF Developer Guide. |
 | POST | / | This is AWS WAF Classic documentation. For more information, see AWS WAF Classic in the developer guide.  For the latest version of AWS WAF, use the AWS WAFV2 API and see the AWS WAF Developer Guide. With the latest version, AWS WAF has a single set of endpoints for regional and global use.   Inserts or deletes XssMatchTuple objects (filters) in an XssMatchSet. For each XssMatchTuple object, you specify the following values:    Action: Whether to insert the object into or delete the object from the array. To change an XssMatchTuple, you delete the existing object and add a new one.    FieldToMatch: The part of web requests that you want AWS WAF to inspect and, if you want AWS WAF to inspect a header or custom query parameter, the name of the header or parameter.    TextTransformation: Which text transformation, if any, to perform on the web request before inspecting the request for cross-site scripting attacks. You can only specify a single type of TextTransformation.   You use XssMatchSet objects to specify which CloudFront requests that you want to allow, block, or count. For example, if you're receiving requests that contain cross-site scripting attacks in the request body and you want to block the requests, you can create an XssMatchSet with the applicable settings, and then configure AWS WAF to block the requests.  To create and configure an XssMatchSet, perform the following steps:   Submit a CreateXssMatchSet request.   Use GetChangeToken to get the change token that you provide in the ChangeToken parameter of an UpdateIPSet request.   Submit an UpdateXssMatchSet request to specify the parts of web requests that you want AWS WAF to inspect for cross-site scripting attacks.   For more information about how to use the AWS WAF API to allow or block HTTP requests, see the AWS WAF Developer Guide. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I block a specific IP address from accessing my application?" -> POST / (CreateIPSet, then UpdateIPSet with the IP, then UpdateWebACL to add rule)
-- "What Web ACLs are currently configured?" -> POST / (ListWebACLs)
-- "Which resources are associated with a specific Web ACL?" -> POST / (ListResourcesForWebACL)
-- "How do I protect against SQL injection attacks?" -> POST / (CreateSqlInjectionMatchSet, UpdateSqlInjectionMatchSet, then attach via Rule and WebACL)
-- "How do I set up rate limiting for an endpoint?" -> POST / (CreateRateBasedRule with RateKey and RateLimit)
-- "What rules are in my Web ACL?" -> POST / (GetWebACL, inspect Rules array of ActivatedRule)
-- "How do I enable logging for my WAF?" -> POST / (PutLoggingConfiguration with LogDestinationConfigs)
-- "How do I block traffic from specific countries?" -> POST / (CreateGeoMatchSet, UpdateGeoMatchSet with GeoMatchConstraints)
-- "What IPs are currently being rate-limited by a rule?" -> POST / (GetRateBasedRuleManagedKeys)
-- "How do I see a sample of requests hitting my Web ACL?" -> POST / (GetSampledRequests with TimeWindow and MaxItems)
-- "How do I attach a Web ACL to my ALB or API Gateway?" -> POST / (AssociateWebACL with WebACLId and ResourceArn)
-- "How do I remove a rule set I no longer need?" -> POST / (first remove from WebACL via UpdateWebACL, then DeleteRule/DeleteRuleGroup)
-- "How do I check if my change token is still valid?" -> POST / (GetChangeTokenStatus)
-- "How do I export my Web ACL config for backup?" -> POST / (CreateWebACLMigrationStack, returns S3ObjectUrl)
-- "How do I tag my WAF resources for cost tracking?" -> POST / (TagResource with ResourceARN and Tags)
-
-## Response Tips
-
-- **List endpoints** (ListWebACLs, ListIPSets, etc.): All return `NextMarker` for pagination -- pass it back with `Limit` to page through results. An absent `NextMarker` means you have reached the last page.
-- **Get endpoints** (GetWebACL, GetIPSet, etc.): The main resource object is nested one level deep (e.g., `{WebACL: {Rules: [...]}}`) -- always unwrap the outer key first.
-- **Create endpoints**: Return both the created resource object and a `ChangeToken` -- the resource is immediately available but further modifications require a fresh change token.
-- **Update/Delete endpoints**: Return only `{ChangeToken: str}` on success -- a null or missing `ChangeToken` in the response indicates a problem even on 200.
-- **GetSampledRequests**: Returns `PopulationSize` alongside `SampledRequests` -- compare these to understand sampling ratio; the sample is not exhaustive.
-- **Error responses**: AWS WAF uses exception types like `WAFNonexistentItemException`, `WAFStaleDataException` (stale ChangeToken), and `WAFLimitsExceededException` -- parse the `__type` field from error JSON.
-
-## Anomaly Flags
-
-- **Stale ChangeToken**: If `GetChangeTokenStatus` returns `INSYNC` but an update fails with `WAFStaleDataException`, another process modified the resource concurrently -- surface this as a conflict warning.
-- **Rate limit threshold**: When `RateLimit` on a RateBasedRule is set unusually low (below 100), flag that this may trigger false positives on legitimate traffic spikes.
-- **Empty rule sets**: If a WebACL has `Rules: []` (no activated rules), proactively warn that it only applies the `DefaultAction` with no inspection -- effectively a pass-through or blanket block.
-- **Orphaned resources**: When listing IPSets, ByteMatchSets, or other condition sets that are not referenced by any Rule (discoverable by cross-referencing ListRules predicates), flag them as unused and candidates for cleanup.
-- **Deprecated API**: AWS WAF Regional is a legacy API superseded by AWS WAF v2 (WAFV2). Surface a notice recommending migration to WAFV2 for new deployments.
-- **Migration stack export**: `CreateWebACLMigrationStack` returns an S3 URL -- flag if the URL is not retrieved promptly, as the CloudFormation template is a point-in-time snapshot.
-- **Unlogged Web ACLs**: If `ListLoggingConfigurations` returns no entry for an active WebACL, flag the gap in visibility.
-
-## Playbook
-
-### 1. Block a List of Malicious IPs
-
-1. Call `GetChangeToken` to obtain a fresh change token.
-2. Call `CreateIPSet` with a descriptive `Name` and the change token. Save the returned `IPSetId`.
-3. Call `GetChangeToken` again for a new token.
-4. Call `UpdateIPSet` with the `IPSetId`, new change token, and `Updates` array containing `INSERT` actions with `IPSetDescriptor` entries (Type: `IPV4` or `IPV6`, Value: CIDR notation).
-5. Call `GetChangeToken` and `CreateRule` with a `Name`, `MetricName`, and change token. Save the `RuleId`.
-6. Call `GetChangeToken` and `UpdateRule` to add a `Predicate` referencing the `IPSetId` (Type: `IPMatch`, Negated: false).
-7. Call `GetChangeToken` and `UpdateWebACL` to add an `ActivatedRule` referencing the `RuleId` with Action type `BLOCK`.
-
-### 2. Set Up Rate-Based Blocking
-
-1. Call `GetChangeToken`.
-2. Call `CreateRateBasedRule` with `Name`, `MetricName`, `RateKey` (typically `IP`), `RateLimit` (minimum 100, requests per 5-minute window), and the change token.
-3. Optionally call `GetChangeToken` and `UpdateRateBasedRule` to add match predicates (e.g., only rate-limit specific URI paths).
-4. Call `GetChangeToken` and `UpdateWebACL` to attach the rate-based rule with Action type `BLOCK`.
-5. Monitor with `GetRateBasedRuleManagedKeys` to see which IPs are currently throttled.
-
-### 3. Enable WAF Logging and Review Traffic
-
-1. Call `PutLoggingConfiguration` with the WebACL's `ResourceArn` and `LogDestinationConfigs` pointing to a Kinesis Data Firehose delivery stream ARN.
-2. Optionally set `RedactedFields` to mask sensitive headers (e.g., Authorization, Cookie).
-3. Verify with `GetLoggingConfiguration` using the same `ResourceArn`.
-4. To inspect live traffic, call `GetSampledRequests` with the `WebAclId`, a `RuleId` (or use the default rule), a `TimeWindow` (start/end timestamps), and `MaxItems`.
-5. Examine the returned `SampledHTTPRequest` objects for source IPs, headers, and matched rule actions.
-
-### 4. Protect Against SQL Injection
-
-1. Call `GetChangeToken` and `CreateSqlInjectionMatchSet` with a `Name`. Save the `SqlInjectionMatchSetId`.
-2. Call `GetChangeToken` and `UpdateSqlInjectionMatchSet` with `Updates` containing `INSERT` actions specifying `FieldToMatch` (e.g., BODY, QUERY_STRING, URI) and `TextTransformation` (e.g., URL_DECODE, HTML_ENTITY_DECODE).
-3. Call `GetChangeToken` and `CreateRule`, then `UpdateRule` to add a predicate referencing the SqlInjectionMatchSet.
-4. Call `GetChangeToken` and `UpdateWebACL` to attach the rule with Action type `BLOCK`.
-5. Test with `GetSampledRequests` to verify SQL injection attempts are being caught.
-
-### 5. Migrate from WAF Regional to WAF v2
-
-1. Call `CreateWebACLMigrationStack` with the `WebACLId`, an `S3BucketName` for output, and `IgnoreUnsupportedType: true` to skip incompatible conditions.
-2. Download the CloudFormation template from the returned `S3ObjectUrl`.
-3. Review the template for any resources marked as unsupported or requiring manual adjustment.
-4. Deploy the CloudFormation stack in your account to create equivalent WAFV2 resources.
-5. Call `DisassociateWebACL` on the old regional WebACL's `ResourceArn`, then associate the new WAFV2 WebACL with your resources via the WAFV2 API.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

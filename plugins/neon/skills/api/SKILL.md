@@ -189,92 +189,133 @@ https://console.neon.tech/api/v2
 |--------|------|-------------|
 | GET | /auth | Get request authentication details |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all my projects?" -> GET /projects
-- "How do I create a new Neon project?" -> POST /projects
-- "What's the connection string for my database?" -> GET /projects/{project_id}/connection_uri
-- "How do I create a new branch for my project?" -> POST /projects/{project_id}/branches
-- "How do I check my resource consumption?" -> GET /consumption_history/account
-- "What regions are available?" -> GET /regions
-- "How do I get my account info and current plan?" -> GET /users/me
-- "How do I share a project with someone?" -> POST /projects/{project_id}/permissions
-- "How do I reveal a database role's password?" -> GET /projects/{project_id}/branches/{branch_id}/roles/{role_name}/reveal_password
-- "How do I scale my compute endpoint up or down?" -> PATCH /projects/{project_id}/endpoints/{endpoint_id}
-- "What organizations do I belong to?" -> GET /users/me/organizations
-- "How do I set up Neon Auth on a branch?" -> POST /projects/{project_id}/branches/{branch_id}/auth
-- "How do I compare schema changes between branches?" -> GET /projects/{project_id}/branches/{branch_id}/compare_schema
-- "How do I check the status of a long-running operation?" -> GET /projects/{project_id}/operations/{operation_id}
-- "How do I create an API key?" -> POST /api_keys
-
-## Response Tips
-
-- **Projects**: List endpoints use cursor-based pagination (`cursor` + `limit`); always check for a next cursor in the response. Project objects are deeply nested -- `settings.quota`, `settings.allowed_ips`, `default_endpoint_settings` each contain sub-maps.
-- **Operations**: Operations have a `status` field (check for `running`, `finished`, `failed`) and a `failures_count` with optional `retry_at` timestamp. Poll using GET /projects/{project_id}/operations/{operation_id} until status is terminal.
-- **Consumption**: Requires `from`, `to`, and `granularity` params. Returns `periods` array; each period contains metric values. 403/404/406/429 errors are common -- check date range validity and rate limits.
-- **Branches**: DELETE may return either 200 (with body) or 204 (no content). Branch schema endpoints return either `sql` (raw DDL) or `json.tables` depending on the `format` param.
-- **Endpoints (compute)**: The `current_state` and `pending_state` fields indicate transition status. After start/suspend/restart, poll the endpoint until `pending_state` is null.
-- **Auth**: Auth setup returns keys (`pub_client_key`, `secret_server_key`) only on creation -- store them immediately as they cannot be retrieved later.
-- **Organizations**: Member roles are limited to `admin` or `member`. Project transfer may fail with 406 (not acceptable) or 422 (validation error) -- surface the error body.
-
-## Anomaly Flags
-
-- **Operation failures**: Surface when `failures_count > 0` or `status` is `failed` on any operation. Include `error` message and `retry_at` if present.
-- **Quota approaching**: After fetching project details, compare `consumption_period_*` values against `settings.quota` limits. Warn when usage exceeds 80% of any quota (active_time_seconds, compute_time_seconds, written_data_bytes, data_transfer_bytes, logical_size_bytes).
-- **Suspended endpoints**: Flag when `current_state` is `idle` or `suspended_at` is recent, as queries will fail until the endpoint wakes.
-- **Maintenance scheduled**: Surface `maintenance_scheduled_for` and `maintenance_starts_at` from project details so users can plan around downtime.
-- **Branch protection**: Warn before modifying or deleting branches where `protected` is true.
-- **Password reveal errors**: A 412 on reveal_password means `store_passwords` is disabled on the project -- surface this with remediation advice (enable it via PATCH /projects/{project_id}).
-- **Transfer request expiration**: Transfer requests have `expires_at` -- warn if expiration is imminent.
-- **Rate limiting**: 429 responses on consumption_history endpoints indicate throttling. Surface the retry-after timing.
-- **HIPAA projects**: Flag when `hipaa` is enabled, as this restricts certain operations and region availability.
-
-## Playbook
-
-### 1. Create a Project with a Dev Branch
-
-1. GET /regions -- pick a `region_id` close to your users
-2. POST /projects -- provide `project.name`, `project.region_id`, and `project.pg_version`
-3. Note the `project.id` and default branch from the response
-4. POST /projects/{project_id}/branches -- create a dev branch (optionally set `name` and `parent_branch_id`)
-5. GET /projects/{project_id}/connection_uri with `database_name`, `role_name`, and `branch_id` to get a connection string for the new branch
-6. GET /projects/{project_id}/branches/{branch_id}/roles/{role_name}/reveal_password if you need the raw password
-
-### 2. Monitor and Manage Resource Usage
-
-1. GET /users/me -- check your `plan`, `compute_seconds_limit`, and `active_seconds_limit`
-2. GET /consumption_history/account with `from`, `to`, `granularity` set to `hourly` or `daily`
-3. Compare returned metrics against quota values from GET /projects/{project_id} (`settings.quota`)
-4. If approaching limits, PATCH /projects/{project_id} to adjust `settings.quota` or scale down endpoints
-5. PATCH /projects/{project_id}/endpoints/{endpoint_id} to lower `autoscaling_limit_max_cu` or set `suspend_timeout_seconds` to auto-suspend sooner
-
-### 3. Set Up Neon Auth with OAuth Provider
-
-1. POST /projects/{project_id}/branches/{branch_id}/auth with `auth_provider` (e.g., `stack_v2` or `better_auth`) -- save the returned `pub_client_key` and `secret_server_key`
-2. POST /projects/{project_id}/branches/{branch_id}/auth/oauth_providers with `id` set to `google` or `github`, plus your `client_id` and `client_secret`
-3. POST /projects/{project_id}/branches/{branch_id}/auth/domains with your production `domain` and `auth_provider`
-4. PATCH /projects/{project_id}/branches/{branch_id}/auth/email_and_password to configure email sign-in settings
-5. GET /projects/{project_id}/branches/{branch_id}/auth/plugins to verify the full auth configuration
-
-### 4. Branch, Test Schema Changes, and Restore
-
-1. GET /projects/{project_id}/branches/{branch_id}/schema with `db_name` to capture current schema
-2. POST /projects/{project_id}/branches -- create a test branch from the current branch
-3. Apply migrations on the test branch via your SQL client
-4. GET /projects/{project_id}/branches/{test_branch_id}/compare_schema with `base_branch_id` set to the original branch to review the diff
-5. If satisfied, POST /projects/{project_id}/branches/{branch_id}/restore with `source_branch_id` set to the test branch to promote changes
-6. POST /projects/{project_id}/branches/{branch_id}/finalize_restore to complete the operation
-7. DELETE /projects/{project_id}/branches/{test_branch_id} to clean up
-
-### 5. Transfer a Project Between Organizations
-
-1. GET /users/me/organizations -- identify source and destination org IDs
-2. GET /projects with `org_id` for the source org to find the project
-3. POST /organizations/{source_org_id}/projects/transfer with `destination_org_id` and `project_ids`
-4. If transfer fails with 406, check that the destination org's plan supports the project's features (HIPAA, VPC, etc.)
-5. GET /projects/{project_id} to verify the `org_id` has changed on the project
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all advisors?" -> GET /projects/{project_id}/advisors
+- "List all api_keys?" -> GET /api_keys
+- "Create a api_key?" -> POST /api_keys
+- "Delete a api_key?" -> DELETE /api_keys/{key_id}
+- "Get operation details?" -> GET /projects/{project_id}/operations/{operation_id}
+- "Search projects?" -> GET /projects
+- "Create a project?" -> POST /projects
+- "Search shared?" -> GET /projects/shared
+- "Get project details?" -> GET /projects/{project_id}
+- "Partially update a project?" -> PATCH /projects/{project_id}
+- "Delete a project?" -> DELETE /projects/{project_id}
+- "Create a restore?" -> POST /projects/{project_id}/restore
+- "Create a recover?" -> POST /projects/{project_id}/recover
+- "List all operations?" -> GET /projects/{project_id}/operations
+- "List all permissions?" -> GET /projects/{project_id}/permissions
+- "Create a permission?" -> POST /projects/{project_id}/permissions
+- "Delete a permission?" -> DELETE /projects/{project_id}/permissions/{permission_id}
+- "List all available_preload_libraries?" -> GET /projects/{project_id}/available_preload_libraries
+- "Create a transfer_request?" -> POST /projects/{project_id}/transfer_requests
+- "Update a transfer_request?" -> PUT /projects/{project_id}/transfer_requests/{request_id}
+- "List all jwks?" -> GET /projects/{project_id}/jwks
+- "Create a jwk?" -> POST /projects/{project_id}/jwks
+- "Delete a jwk?" -> DELETE /projects/{project_id}/jwks/{jwks_id}
+- "Partially update a data-api?" -> PATCH /projects/{project_id}/branches/{branch_id}/data-api/{database_name}
+- "Delete a data-api?" -> DELETE /projects/{project_id}/branches/{branch_id}/data-api/{database_name}
+- "Get data-api details?" -> GET /projects/{project_id}/branches/{branch_id}/data-api/{database_name}
+- "Create a create?" -> POST /projects/auth/create
+- "List all auth?" -> GET /projects/{project_id}/branches/{branch_id}/auth
+- "Create a auth?" -> POST /projects/{project_id}/branches/{branch_id}/auth
+- "List all domains?" -> GET /projects/{project_id}/auth/domains
+- "Create a domain?" -> POST /projects/{project_id}/auth/domains
+- "List all domains?" -> GET /projects/{project_id}/branches/{branch_id}/auth/domains
+- "Create a domain?" -> POST /projects/{project_id}/branches/{branch_id}/auth/domains
+- "Create a key?" -> POST /projects/auth/keys
+- "Create a user?" -> POST /projects/auth/user
+- "Create a user?" -> POST /projects/{project_id}/branches/{branch_id}/auth/users
+- "Delete a user?" -> DELETE /projects/{project_id}/branches/{branch_id}/auth/users/{auth_user_id}
+- "Delete a user?" -> DELETE /projects/{project_id}/auth/users/{auth_user_id}
+- "Create a transfer_ownership?" -> POST /projects/auth/transfer_ownership
+- "List all integrations?" -> GET /projects/{project_id}/auth/integrations
+- "List all oauth_providers?" -> GET /projects/{project_id}/auth/oauth_providers
+- "Create a oauth_provider?" -> POST /projects/{project_id}/auth/oauth_providers
+- "List all oauth_providers?" -> GET /projects/{project_id}/branches/{branch_id}/auth/oauth_providers
+- "Create a oauth_provider?" -> POST /projects/{project_id}/branches/{branch_id}/auth/oauth_providers
+- "Partially update a oauth_provider?" -> PATCH /projects/{project_id}/auth/oauth_providers/{oauth_provider_id}
+- "Delete a oauth_provider?" -> DELETE /projects/{project_id}/auth/oauth_providers/{oauth_provider_id}
+- "Partially update a oauth_provider?" -> PATCH /projects/{project_id}/branches/{branch_id}/auth/oauth_providers/{oauth_provider_id}
+- "Delete a oauth_provider?" -> DELETE /projects/{project_id}/branches/{branch_id}/auth/oauth_providers/{oauth_provider_id}
+- "List all email_server?" -> GET /projects/{project_id}/auth/email_server
+- "Create a send_test_email?" -> POST /projects/{project_id}/branches/{branch_id}/auth/send_test_email
+- "List all email_and_password?" -> GET /projects/{project_id}/branches/{branch_id}/auth/email_and_password
+- "List all email_provider?" -> GET /projects/{project_id}/branches/{branch_id}/auth/email_provider
+- "Delete a integration?" -> DELETE /projects/{project_id}/auth/integration/{auth_provider}
+- "List all connection_uri?" -> GET /projects/{project_id}/connection_uri
+- "List all allow_localhost?" -> GET /projects/{project_id}/branches/{branch_id}/auth/allow_localhost
+- "List all plugins?" -> GET /projects/{project_id}/branches/{branch_id}/auth/plugins
+- "List all webhooks?" -> GET /projects/{project_id}/branches/{branch_id}/auth/webhooks
+- "Create a branche?" -> POST /projects/{project_id}/branches
+- "Search branches?" -> GET /projects/{project_id}/branches
+- "Create a branch_anonymized?" -> POST /projects/{project_id}/branch_anonymized
+- "Search count?" -> GET /projects/{project_id}/branches/count
+- "Get branche details?" -> GET /projects/{project_id}/branches/{branch_id}
+- "Delete a branche?" -> DELETE /projects/{project_id}/branches/{branch_id}
+- "Partially update a branche?" -> PATCH /projects/{project_id}/branches/{branch_id}
+- "Create a restore?" -> POST /projects/{project_id}/branches/{branch_id}/restore
+- "List all schema?" -> GET /projects/{project_id}/branches/{branch_id}/schema
+- "List all compare_schema?" -> GET /projects/{project_id}/branches/{branch_id}/compare_schema
+- "List all masking_rules?" -> GET /projects/{project_id}/branches/{branch_id}/masking_rules
+- "List all anonymized_status?" -> GET /projects/{project_id}/branches/{branch_id}/anonymized_status
+- "Create a anonymize?" -> POST /projects/{project_id}/branches/{branch_id}/anonymize
+- "Create a set_as_default?" -> POST /projects/{project_id}/branches/{branch_id}/set_as_default
+- "Create a finalize_restore?" -> POST /projects/{project_id}/branches/{branch_id}/finalize_restore
+- "List all endpoints?" -> GET /projects/{project_id}/branches/{branch_id}/endpoints
+- "List all databases?" -> GET /projects/{project_id}/branches/{branch_id}/databases
+- "Create a database?" -> POST /projects/{project_id}/branches/{branch_id}/databases
+- "Get database details?" -> GET /projects/{project_id}/branches/{branch_id}/databases/{database_name}
+- "Partially update a database?" -> PATCH /projects/{project_id}/branches/{branch_id}/databases/{database_name}
+- "Delete a database?" -> DELETE /projects/{project_id}/branches/{branch_id}/databases/{database_name}
+- "List all roles?" -> GET /projects/{project_id}/branches/{branch_id}/roles
+- "Create a role?" -> POST /projects/{project_id}/branches/{branch_id}/roles
+- "Get role details?" -> GET /projects/{project_id}/branches/{branch_id}/roles/{role_name}
+- "Delete a role?" -> DELETE /projects/{project_id}/branches/{branch_id}/roles/{role_name}
+- "List all reveal_password?" -> GET /projects/{project_id}/branches/{branch_id}/roles/{role_name}/reveal_password
+- "Create a reset_password?" -> POST /projects/{project_id}/branches/{branch_id}/roles/{role_name}/reset_password
+- "List all vpc_endpoints?" -> GET /projects/{project_id}/vpc_endpoints
+- "Delete a vpc_endpoint?" -> DELETE /projects/{project_id}/vpc_endpoints/{vpc_endpoint_id}
+- "Create a endpoint?" -> POST /projects/{project_id}/endpoints
+- "List all endpoints?" -> GET /projects/{project_id}/endpoints
+- "Get endpoint details?" -> GET /projects/{project_id}/endpoints/{endpoint_id}
+- "Delete a endpoint?" -> DELETE /projects/{project_id}/endpoints/{endpoint_id}
+- "Partially update a endpoint?" -> PATCH /projects/{project_id}/endpoints/{endpoint_id}
+- "Create a start?" -> POST /projects/{project_id}/endpoints/{endpoint_id}/start
+- "Create a suspend?" -> POST /projects/{project_id}/endpoints/{endpoint_id}/suspend
+- "Create a restart?" -> POST /projects/{project_id}/endpoints/{endpoint_id}/restart
+- "List all account?" -> GET /consumption_history/account
+- "List all projects?" -> GET /consumption_history/projects
+- "List all projects?" -> GET /consumption_history/v2/projects
+- "Get organization details?" -> GET /organizations/{org_id}
+- "List all api_keys?" -> GET /organizations/{org_id}/api_keys
+- "Create a api_key?" -> POST /organizations/{org_id}/api_keys
+- "Delete a api_key?" -> DELETE /organizations/{org_id}/api_keys/{key_id}
+- "List all members?" -> GET /organizations/{org_id}/members
+- "Get member details?" -> GET /organizations/{org_id}/members/{member_id}
+- "Partially update a member?" -> PATCH /organizations/{org_id}/members/{member_id}
+- "Delete a member?" -> DELETE /organizations/{org_id}/members/{member_id}
+- "List all invitations?" -> GET /organizations/{org_id}/invitations
+- "Create a invitation?" -> POST /organizations/{org_id}/invitations
+- "Create a transfer?" -> POST /organizations/{source_org_id}/projects/transfer
+- "List all vpc_endpoints?" -> GET /organizations/{org_id}/vpc/vpc_endpoints
+- "List all vpc_endpoints?" -> GET /organizations/{org_id}/vpc/region/{region_id}/vpc_endpoints
+- "Get vpc_endpoint details?" -> GET /organizations/{org_id}/vpc/region/{region_id}/vpc_endpoints/{vpc_endpoint_id}
+- "Delete a vpc_endpoint?" -> DELETE /organizations/{org_id}/vpc/region/{region_id}/vpc_endpoints/{vpc_endpoint_id}
+- "List all regions?" -> GET /regions
+- "List all me?" -> GET /users/me
+- "List all organizations?" -> GET /users/me/organizations
+- "Create a transfer?" -> POST /users/me/projects/transfer
+- "List all auth?" -> GET /auth
+- "Create a snapshot?" -> POST /projects/{project_id}/branches/{branch_id}/snapshot
+- "List all snapshots?" -> GET /projects/{project_id}/snapshots
+- "Delete a snapshot?" -> DELETE /projects/{project_id}/snapshots/{snapshot_id}
+- "Partially update a snapshot?" -> PATCH /projects/{project_id}/snapshots/{snapshot_id}
+- "Create a restore?" -> POST /projects/{project_id}/snapshots/{snapshot_id}/restore
+- "List all backup_schedule?" -> GET /projects/{project_id}/branches/{branch_id}/backup_schedule
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

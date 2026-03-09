@@ -182,88 +182,96 @@ https://sandbox-api.paddle.com
 | POST | /transactions/{transaction_id}/revise | Revise customer information on a billed or completed transaction |
 | GET | /transactions/{transaction_id}/invoice | Get a PDF invoice for a transaction |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all my customers?" -> GET /customers
-- "How do I find a customer by email?" -> GET /customers (use `email` filter or `search` param)
-- "How do I create a refund for a transaction?" -> POST /adjustments (action: "refund", transaction_id required)
-- "What subscriptions does a customer have?" -> GET /subscriptions (filter by `customer_id`)
-- "How do I cancel a subscription?" -> POST /subscriptions/{subscription_id}/cancel
-- "How do I pause and later resume a subscription?" -> POST /subscriptions/{subscription_id}/pause, then POST /subscriptions/{subscription_id}/resume
-- "How do I preview pricing before checkout?" -> POST /pricing-preview
-- "How do I get an invoice PDF for a transaction?" -> GET /transactions/{transaction_id}/invoice
-- "What payment methods does a customer have saved?" -> GET /customers/{customer_id}/payment-methods
-- "How do I create a product with a recurring price?" -> POST /products, then POST /prices (with `billing_cycle`)
-- "How do I set up a webhook to receive events?" -> POST /notification-settings
-- "How do I check what IP addresses Paddle sends webhooks from?" -> GET /ips
-- "How do I preview what happens if I change subscription items?" -> PATCH /subscriptions/{subscription_id}/preview
-- "How do I download a credit note for an adjustment?" -> GET /adjustments/{adjustment_id}/credit-note
-- "How do I apply a discount to a subscription?" -> PATCH /subscriptions/{subscription_id} (set `discount` field)
-
-## Response Tips
-
-- **All list endpoints**: Paginated via `meta.pagination` -- use `after` cursor (from `meta.pagination.next`) and `per_page` to page through; check `has_more` to know when to stop. Never rely on `estimated_total` for exact counts.
-- **Single resource endpoints**: Entity is always in `data` (object), metadata in `meta.request_id` -- log `request_id` for Paddle support debugging.
-- **Mutation endpoints (POST/PATCH)**: Return the full updated entity in `data` on success (201 or 200); 204 means success with no body (DELETE operations).
-- **Subscriptions**: Deeply nested -- `items`, `scheduled_change`, `billing_details`, `management_urls`, and `current_billing_period` are all nested objects; always check `scheduled_change` for pending future changes.
-- **Transactions**: Use `include` param to sideload related entities (`customer`, `address`, `business`, `discount`, `adjustments`) to avoid extra calls.
-- **Preview endpoints**: Return the same shape as the real mutation but with additional `immediate_transaction`, `next_transaction`, `update_summary` fields showing financial impact.
-- **Errors**: Non-2xx responses include error details -- watch for 409 (conflict/state violation), 404 (invalid ID), and 422 (validation failure).
-
-## Anomaly Flags
-
-- **Subscription `scheduled_change` is non-null**: A cancellation, pause, or plan change is pending -- surface this before making further modifications, as it may conflict.
-- **Discount `usage_limit` approaching `times_used`**: The discount is nearly exhausted and may stop applying to new checkouts.
-- **Discount `expires_at` is in the past or imminent**: Surface when a discount is referenced but expired or expiring within 24 hours.
-- **Notification delivery failures**: When `GET /notifications` returns entries with `status` other than "delivered" or `times_attempted` is high, the webhook endpoint may be failing.
-- **Subscription status is "past_due"**: Payment collection failed -- surface immediately as revenue is at risk; check `next_billed_at` and payment methods.
-- **Transaction `status` is "ready" but not "completed"**: The checkout was created but never finished -- may indicate abandoned carts.
-- **Credit balance exists**: When `GET /customers/{id}/credit-balances` returns non-zero balances, mention this when creating transactions as credits apply automatically.
-- **Archived entities referenced**: If a product, price, or discount has `status: "archived"`, flag it when it appears in active subscriptions or new transaction creation attempts.
-- **`collection_mode` mismatch**: If a subscription uses `manual` collection mode, agent should flag that invoices must be collected outside Paddle's automatic billing.
-
-## Playbook
-
-### 1. Create a New Product with Pricing and a Checkout
-
-1. Create the product: `POST /products` with `name`, `tax_category` (e.g., "saas" or "digital-goods")
-2. Create a price for the product: `POST /prices` with `product_id` from step 1, `description`, `unit_price` (object with `amount` and `currency_code`), and optionally `billing_cycle` for recurring
-3. Preview the pricing: `POST /pricing-preview` with `items: [{price_id, quantity}]` and optional `address` to verify tax calculations
-4. Create a transaction to start checkout: `POST /transactions` with `items: [{price_id, quantity}]` and `customer_id` (or let Paddle create a new customer)
-5. Use the `checkout.url` from the transaction response to direct the customer to pay
-
-### 2. Process a Refund
-
-1. Look up the transaction: `GET /transactions/{transaction_id}` (include `adjustments` to check for prior refunds)
-2. Verify the transaction status is "completed" or "billed" -- refunds only work on completed payments
-3. Create the adjustment: `POST /adjustments` with `action: "refund"`, `transaction_id`, and `reason`; set `type: "partial"` and specify `items` for partial refunds, or `type: "full"` for a complete refund
-4. Confirm the adjustment status in the response -- it may be "pending" before funds are returned
-5. Optionally retrieve the credit note: `GET /adjustments/{adjustment_id}/credit-note` for the PDF URL
-
-### 3. Set Up Webhook Notifications
-
-1. Check available event types: `GET /event-types` to see all subscribable events
-2. Verify your endpoint IP allowlist if needed: `GET /ips` returns Paddle's outbound CIDRs
-3. Create the notification setting: `POST /notification-settings` with `description`, `type: "url"`, `destination` (your HTTPS endpoint), and `subscribed_events` (array of event type names)
-4. Note the `endpoint_secret_key` from the response -- use this to verify webhook signatures
-5. Test delivery: create a simulation with `POST /simulations`, add a run with `POST /simulations/{id}/runs`, then check `GET /notifications` to verify delivery
-
-### 4. Modify a Subscription (Upgrade/Downgrade)
-
-1. Get the current subscription: `GET /subscriptions/{subscription_id}` to review current `items` and `billing_cycle`
-2. Preview the change: `PATCH /subscriptions/{subscription_id}/preview` with updated `items` array and `proration_billing_mode` (e.g., "prorated_immediately") -- review `update_summary` and `immediate_transaction` for financial impact
-3. If the preview looks correct, apply the change: `PATCH /subscriptions/{subscription_id}` with the same body (minus `/preview`)
-4. Check the response for `scheduled_change` -- some changes take effect at next billing period rather than immediately
-5. If an immediate charge was created, verify the transaction status in the response `items` and `billing_details`
-
-### 5. Customer Self-Service Portal Setup
-
-1. Look up the customer: `GET /customers` filtered by `email` or `GET /customers/{customer_id}`
-2. Generate an auth token: `POST /customers/{customer_id}/auth-token` -- returns a short-lived `customer_auth_token`
-3. Create a portal session: `POST /customers/{customer_id}/portal-sessions` with optional `subscription_ids` to scope which subscriptions are visible
-4. Use the `urls` from the portal session response to redirect the customer -- these are pre-authenticated deep links to manage subscriptions, update payment methods, and view invoices
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Search addresses?" -> GET /customers/{customer_id}/addresses
+- "Create a address?" -> POST /customers/{customer_id}/addresses
+- "Get address details?" -> GET /customers/{customer_id}/addresses/{address_id}
+- "Partially update a address?" -> PATCH /customers/{customer_id}/addresses/{address_id}
+- "List all adjustments?" -> GET /adjustments
+- "Create a adjustment?" -> POST /adjustments
+- "List all credit-note?" -> GET /adjustments/{adjustment_id}/credit-note
+- "Search businesses?" -> GET /customers/{customer_id}/businesses
+- "Create a business?" -> POST /customers/{customer_id}/businesses
+- "Get business details?" -> GET /customers/{customer_id}/businesses/{business_id}
+- "Partially update a business?" -> PATCH /customers/{customer_id}/businesses/{business_id}
+- "List all client-tokens?" -> GET /client-tokens
+- "Create a client-token?" -> POST /client-tokens
+- "Get client-token details?" -> GET /client-tokens/{client_token_id}
+- "Partially update a client-token?" -> PATCH /client-tokens/{client_token_id}
+- "Search customers?" -> GET /customers
+- "Create a customer?" -> POST /customers
+- "Get customer details?" -> GET /customers/{customer_id}
+- "Partially update a customer?" -> PATCH /customers/{customer_id}
+- "List all credit-balances?" -> GET /customers/{customer_id}/credit-balances
+- "Create a auth-token?" -> POST /customers/{customer_id}/auth-token
+- "Create a portal-session?" -> POST /customers/{customer_id}/portal-sessions
+- "List all discount-groups?" -> GET /discount-groups
+- "Create a discount-group?" -> POST /discount-groups
+- "Get discount-group details?" -> GET /discount-groups/{discount_group_id}
+- "Partially update a discount-group?" -> PATCH /discount-groups/{discount_group_id}
+- "List all discounts?" -> GET /discounts
+- "Create a discount?" -> POST /discounts
+- "Get discount details?" -> GET /discounts/{discount_id}
+- "Partially update a discount?" -> PATCH /discounts/{discount_id}
+- "List all event-types?" -> GET /event-types
+- "List all events?" -> GET /events
+- "List all ips?" -> GET /ips
+- "List all notification-settings?" -> GET /notification-settings
+- "Create a notification-setting?" -> POST /notification-settings
+- "Get notification-setting details?" -> GET /notification-settings/{notification_setting_id}
+- "Partially update a notification-setting?" -> PATCH /notification-settings/{notification_setting_id}
+- "Delete a notification-setting?" -> DELETE /notification-settings/{notification_setting_id}
+- "Search notifications?" -> GET /notifications
+- "Get notification details?" -> GET /notifications/{notification_id}
+- "List all logs?" -> GET /notifications/{notification_id}/logs
+- "Create a replay?" -> POST /notifications/{notification_id}/replay
+- "List all payment-methods?" -> GET /customers/{customer_id}/payment-methods
+- "Get payment-method details?" -> GET /customers/{customer_id}/payment-methods/{payment_method_id}
+- "Delete a payment-method?" -> DELETE /customers/{customer_id}/payment-methods/{payment_method_id}
+- "List all prices?" -> GET /prices
+- "Create a price?" -> POST /prices
+- "Get price details?" -> GET /prices/{price_id}
+- "Partially update a price?" -> PATCH /prices/{price_id}
+- "Create a pricing-preview?" -> POST /pricing-preview
+- "List all products?" -> GET /products
+- "Create a product?" -> POST /products
+- "Get product details?" -> GET /products/{product_id}
+- "Partially update a product?" -> PATCH /products/{product_id}
+- "List all reports?" -> GET /reports
+- "Create a report?" -> POST /reports
+- "Get report details?" -> GET /reports/{report_id}
+- "List all download-url?" -> GET /reports/{report_id}/download-url
+- "List all simulation-types?" -> GET /simulation-types
+- "List all simulations?" -> GET /simulations
+- "Create a simulation?" -> POST /simulations
+- "Get simulation details?" -> GET /simulations/{simulation_id}
+- "Partially update a simulation?" -> PATCH /simulations/{simulation_id}
+- "List all runs?" -> GET /simulations/{simulation_id}/runs
+- "Create a run?" -> POST /simulations/{simulation_id}/runs
+- "Get run details?" -> GET /simulations/{simulation_id}/runs/{simulation_run_id}
+- "List all events?" -> GET /simulations/{simulation_id}/runs/{simulation_run_id}/events
+- "Get event details?" -> GET /simulations/{simulation_id}/runs/{simulation_run_id}/events/{simulation_event_id}
+- "Create a replay?" -> POST /simulations/{simulation_id}/runs/{simulation_run_id}/events/{simulation_event_id}/replay
+- "List all subscriptions?" -> GET /subscriptions
+- "Get subscription details?" -> GET /subscriptions/{subscription_id}
+- "Partially update a subscription?" -> PATCH /subscriptions/{subscription_id}
+- "Create a cancel?" -> POST /subscriptions/{subscription_id}/cancel
+- "Create a pause?" -> POST /subscriptions/{subscription_id}/pause
+- "Create a resume?" -> POST /subscriptions/{subscription_id}/resume
+- "Create a activate?" -> POST /subscriptions/{subscription_id}/activate
+- "List all update-payment-method-transaction?" -> GET /subscriptions/{subscription_id}/update-payment-method-transaction
+- "Create a charge?" -> POST /subscriptions/{subscription_id}/charge
+- "Create a preview?" -> POST /subscriptions/{subscription_id}/charge/preview
+- "List all transactions?" -> GET /transactions
+- "Create a transaction?" -> POST /transactions
+- "Get transaction details?" -> GET /transactions/{transaction_id}
+- "Partially update a transaction?" -> PATCH /transactions/{transaction_id}
+- "Create a preview?" -> POST /transactions/preview
+- "Create a revise?" -> POST /transactions/{transaction_id}/revise
+- "List all invoice?" -> GET /transactions/{transaction_id}/invoice
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

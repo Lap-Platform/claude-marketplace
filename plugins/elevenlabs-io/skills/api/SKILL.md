@@ -381,97 +381,254 @@ Not specified.
 |--------|------|-------------|
 | GET | /docs | Redirect To Mintlify |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I convert text to speech?" -> POST /v1/text-to-speech/{voice_id}
-- "How can I stream audio in real time?" -> POST /v1/text-to-speech/{voice_id}/stream
-- "What voices are available in my account?" -> GET /v2/voices
-- "How many characters do I have left this month?" -> GET /v1/user/subscription
-- "How do I clone my voice?" -> POST /v1/voices/pvc
-- "Can I generate a sound effect from a text description?" -> POST /v1/sound-generation
-- "How do I dub a video into another language?" -> POST /v1/dubbing
-- "How do I create a conversational AI agent?" -> POST /v1/convai/agents/create
-- "How do I check my generation history?" -> GET /v1/history
-- "How do I generate music from a prompt?" -> POST /v1/music
-- "How do I get word-level timestamps for generated speech?" -> POST /v1/text-to-speech/{voice_id}/with-timestamps
-- "How do I design a new voice from a description?" -> POST /v1/text-to-voice/create-previews
-- "How do I transcribe an audio file?" -> POST /v1/speech-to-text
-- "How do I create a multi-speaker dialogue?" -> POST /v1/text-to-dialogue
-- "How do I remove background noise from audio?" -> POST /v1/audio-isolation
-
-## Response Tips
-
-- **History endpoints**: Paginated via `start_after_history_item_id` cursor (not page numbers); check `has_more` to continue fetching. Audio endpoints return raw binary, not JSON.
-- **Voice endpoints**: v2 uses `next_page_token` cursor pagination with `total_count`; v1 returns all voices at once. Voice objects nest `labels` as a map and `settings` as a sub-object.
-- **TTS endpoints**: Non-timestamp variants return raw audio bytes (check `Content-Type` header). Timestamp variants return JSON with `audio_base64`, `alignment`, and `normalized_alignment`.
-- **Dubbing endpoints**: Paginated via `cursor`/`has_more`. The resource endpoint returns deeply nested `speaker_tracks`, `speaker_segments`, and `renders` maps keyed by language. Errors 403/404/425 on audio download mean not-authorized, not-found, or still-processing.
-- **ConvAI endpoints**: Agent config is deeply nested (conversation_config > agent > prompt > tools). Conversations and agents both use cursor pagination. 422 is the universal validation error.
-- **Studio endpoints**: Projects contain chapters; snapshots represent converted audio. The `state` field tracks conversion progress. Content blocks are nested inside `content.blocks`.
-- **Music endpoints**: `POST /v1/music/plan` returns a composition plan you feed into `POST /v1/music`. Raw audio is returned from the generation endpoint.
-- **Subscription/User**: `character_count` vs `character_limit` gives current usage. `next_character_count_reset_unix` is the reset timestamp.
-
-## Anomaly Flags
-
-- **Character quota approaching**: Surface a warning when `character_count` exceeds 80% of `character_limit` (from `GET /v1/user/subscription`). Alert on `can_extend_character_limit: false` when near the cap.
-- **Voice slot limits**: Flag when `voice_slots_used` equals `voice_limit` -- the next voice add will fail.
-- **Dubbing still processing**: A 425 response on `GET /v1/dubbing/{dubbing_id}/audio/{language_code}` means the dub is not ready. Poll the status endpoint and surface estimated wait time based on `expected_duration_sec`.
-- **Conversion failures**: Studio project/chapter conversion can fail silently. Check `state` field and `last_conversion_error` after calling convert endpoints.
-- **PVC voice training state**: After uploading samples and calling train, the voice may take time. Surface the training status and captcha verification requirements proactively.
-- **Model deprecation**: When using ConvAI LLMs, check `GET /v1/convai/llm/list` for `default_deprecation_config` -- warn if selected models are approaching fallback dates.
-- **Rate limit / 422 patterns**: All endpoints return 422 on validation errors. Surface the specific field that failed rather than generic "request failed" messages.
-- **Batch call status**: After submitting batch calls, monitor `status` field. Flag `failed` or stalled batches where `total_calls_finished` lags `total_calls_dispatched`.
-
-## Playbook
-
-### 1. Generate Speech from Text and Download
-
-1. List available voices: `GET /v2/voices` (filter by `voice_type` or `search` if needed).
-2. Pick a voice_id from the results.
-3. Check subscription: `GET /v1/user/subscription` to confirm enough characters remain.
-4. Generate audio: `POST /v1/text-to-speech/{voice_id}` with your text, desired `model_id` (default `eleven_multilingual_v2`), and `output_format`.
-5. Save the binary response as an audio file (Content-Type tells you the format).
-6. Optionally verify the generation appeared in history: `GET /v1/history`.
-
-### 2. Clone a Voice with Professional Voice Cloning (PVC)
-
-1. Create the PVC voice: `POST /v1/voices/pvc` with name and language.
-2. Upload audio samples: `POST /v1/voices/pvc/{voice_id}/samples` (multiple samples improve quality).
-3. Review and trim each sample: `POST /v1/voices/pvc/{voice_id}/samples/{sample_id}` with trim parameters.
-4. If multi-speaker audio, separate speakers: `POST /v1/voices/pvc/{voice_id}/samples/{sample_id}/separate-speakers`, then select the right speaker.
-5. Complete captcha verification: `GET /v1/voices/pvc/{voice_id}/captcha` then `POST /v1/voices/pvc/{voice_id}/captcha`.
-6. Submit for training: `POST /v1/voices/pvc/{voice_id}/train`.
-7. Use the voice with TTS once training completes.
-
-### 3. Dub a Video into Multiple Languages
-
-1. Submit the dubbing job: `POST /v1/dubbing` with your source video/audio file and target languages.
-2. Poll status: `GET /v1/dubbing/{dubbing_id}` until `status` is `dubbed`.
-3. Review the resource: `GET /v1/dubbing/resource/{dubbing_id}` to inspect speaker segments and translations.
-4. Edit segments if needed: `PATCH /v1/dubbing/resource/{dubbing_id}/segment/{segment_id}/{language}` to fix text or timing.
-5. Re-dub edited segments: `POST /v1/dubbing/resource/{dubbing_id}/dub` with the changed segment IDs.
-6. Render the final output: `POST /v1/dubbing/resource/{dubbing_id}/render/{language}` with desired format (mp4, mp3, etc.).
-7. Download audio: `GET /v1/dubbing/{dubbing_id}/audio/{language_code}`.
-8. Download transcript: `GET /v1/dubbing/{dubbing_id}/transcript/{language_code}` in srt/webvtt/json.
-
-### 4. Build and Deploy a Conversational AI Agent
-
-1. Create a knowledge base document: `POST /v1/convai/knowledge-base/url` or `/file` or `/text`.
-2. Index it for RAG: `POST /v1/convai/knowledge-base/{documentation_id}/rag-index` with your embedding model.
-3. Create a tool if the agent needs external actions: `POST /v1/convai/tools`.
-4. Create the agent: `POST /v1/convai/agents/create` with conversation config (voice, prompt, knowledge base references, tool IDs).
-5. Test with simulation: `POST /v1/convai/agents/{agent_id}/simulate-conversation` to validate behavior.
-6. Get a widget config for embedding: `GET /v1/convai/agents/{agent_id}/widget`.
-7. Monitor live conversations: `GET /v1/convai/conversations` filtered by `agent_id`, and check `GET /v1/convai/analytics/live-count`.
-
-### 5. Generate Music from a Prompt
-
-1. Plan the composition: `POST /v1/music/plan` with your text prompt to get style tags and sections.
-2. Review and adjust the composition plan (modify sections, durations, styles).
-3. Generate the track: `POST /v1/music` with the composition plan, or use `POST /v1/music/stream` for streaming output.
-4. For detailed control with timestamps: `POST /v1/music/detailed` with `with_timestamps: true`.
-5. Optionally separate stems: `POST /v1/music/stem-separation` to isolate vocals, drums, bass, etc.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Search history?" -> GET /v1/history
+- "Get history details?" -> GET /v1/history/{history_item_id}
+- "Delete a history?" -> DELETE /v1/history/{history_item_id}
+- "List all audio?" -> GET /v1/history/{history_item_id}/audio
+- "Create a download?" -> POST /v1/history/download
+- "Create a sound-generation?" -> POST /v1/sound-generation
+- "Create a audio-isolation?" -> POST /v1/audio-isolation
+- "Create a stream?" -> POST /v1/audio-isolation/stream
+- "Delete a sample?" -> DELETE /v1/voices/{voice_id}/samples/{sample_id}
+- "List all audio?" -> GET /v1/voices/{voice_id}/samples/{sample_id}/audio
+- "Create a with-timestamp?" -> POST /v1/text-to-speech/{voice_id}/with-timestamps
+- "Create a stream?" -> POST /v1/text-to-speech/{voice_id}/stream
+- "Create a with-timestamp?" -> POST /v1/text-to-speech/{voice_id}/stream/with-timestamps
+- "Create a text-to-dialogue?" -> POST /v1/text-to-dialogue
+- "Create a stream?" -> POST /v1/text-to-dialogue/stream
+- "Create a with-timestamp?" -> POST /v1/text-to-dialogue/stream/with-timestamps
+- "Create a with-timestamp?" -> POST /v1/text-to-dialogue/with-timestamps
+- "Create a stream?" -> POST /v1/speech-to-speech/{voice_id}/stream
+- "Create a create-preview?" -> POST /v1/text-to-voice/create-previews
+- "Create a text-to-voice?" -> POST /v1/text-to-voice
+- "Create a design?" -> POST /v1/text-to-voice/design
+- "Create a remix?" -> POST /v1/text-to-voice/{voice_id}/remix
+- "List all stream?" -> GET /v1/text-to-voice/{generated_voice_id}/stream
+- "List all subscription?" -> GET /v1/user/subscription
+- "List all user?" -> GET /v1/user
+- "List all voices?" -> GET /v1/voices
+- "Search voices?" -> GET /v2/voices
+- "List all default?" -> GET /v1/voices/settings/default
+- "List all settings?" -> GET /v1/voices/{voice_id}/settings
+- "Get voice details?" -> GET /v1/voices/{voice_id}
+- "Delete a voice?" -> DELETE /v1/voices/{voice_id}
+- "Create a edit?" -> POST /v1/voices/{voice_id}/settings/edit
+- "Create a add?" -> POST /v1/voices/add
+- "Create a edit?" -> POST /v1/voices/{voice_id}/edit
+- "Create a podcast?" -> POST /v1/studio/podcasts
+- "Create a pronunciation-dictionary?" -> POST /v1/studio/projects/{project_id}/pronunciation-dictionaries
+- "List all projects?" -> GET /v1/studio/projects
+- "Create a project?" -> POST /v1/studio/projects
+- "Get project details?" -> GET /v1/studio/projects/{project_id}
+- "Delete a project?" -> DELETE /v1/studio/projects/{project_id}
+- "Create a content?" -> POST /v1/studio/projects/{project_id}/content
+- "Create a convert?" -> POST /v1/studio/projects/{project_id}/convert
+- "List all snapshots?" -> GET /v1/studio/projects/{project_id}/snapshots
+- "Get snapshot details?" -> GET /v1/studio/projects/{project_id}/snapshots/{project_snapshot_id}
+- "Create a stream?" -> POST /v1/studio/projects/{project_id}/snapshots/{project_snapshot_id}/stream
+- "Create a archive?" -> POST /v1/studio/projects/{project_id}/snapshots/{project_snapshot_id}/archive
+- "List all chapters?" -> GET /v1/studio/projects/{project_id}/chapters
+- "Create a chapter?" -> POST /v1/studio/projects/{project_id}/chapters
+- "Get chapter details?" -> GET /v1/studio/projects/{project_id}/chapters/{chapter_id}
+- "Delete a chapter?" -> DELETE /v1/studio/projects/{project_id}/chapters/{chapter_id}
+- "Create a convert?" -> POST /v1/studio/projects/{project_id}/chapters/{chapter_id}/convert
+- "List all snapshots?" -> GET /v1/studio/projects/{project_id}/chapters/{chapter_id}/snapshots
+- "Get snapshot details?" -> GET /v1/studio/projects/{project_id}/chapters/{chapter_id}/snapshots/{chapter_snapshot_id}
+- "Create a stream?" -> POST /v1/studio/projects/{project_id}/chapters/{chapter_id}/snapshots/{chapter_snapshot_id}/stream
+- "List all muted-tracks?" -> GET /v1/studio/projects/{project_id}/muted-tracks
+- "Get resource details?" -> GET /v1/dubbing/resource/{dubbing_id}
+- "Create a language?" -> POST /v1/dubbing/resource/{dubbing_id}/language
+- "Create a segment?" -> POST /v1/dubbing/resource/{dubbing_id}/speaker/{speaker_id}/segment
+- "Partially update a segment?" -> PATCH /v1/dubbing/resource/{dubbing_id}/segment/{segment_id}/{language}
+- "Create a migrate-segment?" -> POST /v1/dubbing/resource/{dubbing_id}/migrate-segments
+- "Delete a segment?" -> DELETE /v1/dubbing/resource/{dubbing_id}/segment/{segment_id}
+- "Create a transcribe?" -> POST /v1/dubbing/resource/{dubbing_id}/transcribe
+- "Create a translate?" -> POST /v1/dubbing/resource/{dubbing_id}/translate
+- "Create a dub?" -> POST /v1/dubbing/resource/{dubbing_id}/dub
+- "Partially update a speaker?" -> PATCH /v1/dubbing/resource/{dubbing_id}/speaker/{speaker_id}
+- "Create a speaker?" -> POST /v1/dubbing/resource/{dubbing_id}/speaker
+- "List all similar-voices?" -> GET /v1/dubbing/resource/{dubbing_id}/speaker/{speaker_id}/similar-voices
+- "List all dubbing?" -> GET /v1/dubbing
+- "Create a dubbing?" -> POST /v1/dubbing
+- "Get dubbing details?" -> GET /v1/dubbing/{dubbing_id}
+- "Delete a dubbing?" -> DELETE /v1/dubbing/{dubbing_id}
+- "Get audio details?" -> GET /v1/dubbing/{dubbing_id}/audio/{language_code}
+- "Get transcript details?" -> GET /v1/dubbing/{dubbing_id}/transcript/{language_code}
+- "Get format details?" -> GET /v1/dubbing/{dubbing_id}/transcripts/{language_code}/format/{format_type}
+- "List all models?" -> GET /v1/models
+- "Create a audio-native?" -> POST /v1/audio-native
+- "List all settings?" -> GET /v1/audio-native/{project_id}/settings
+- "Create a content?" -> POST /v1/audio-native/{project_id}/content
+- "Create a content?" -> POST /v1/audio-native/content
+- "Search shared-voices?" -> GET /v1/shared-voices
+- "Create a similar-voice?" -> POST /v1/similar-voices
+- "List all character-stats?" -> GET /v1/usage/character-stats
+- "Create a add-from-file?" -> POST /v1/pronunciation-dictionaries/add-from-file
+- "Create a add-from-rule?" -> POST /v1/pronunciation-dictionaries/add-from-rules
+- "Partially update a pronunciation-dictionary?" -> PATCH /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}
+- "Get pronunciation-dictionary details?" -> GET /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}
+- "Create a set-rule?" -> POST /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}/set-rules
+- "Create a add-rule?" -> POST /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}/add-rules
+- "Create a remove-rule?" -> POST /v1/pronunciation-dictionaries/{pronunciation_dictionary_id}/remove-rules
+- "List all download?" -> GET /v1/pronunciation-dictionaries/{dictionary_id}/{version_id}/download
+- "List all pronunciation-dictionaries?" -> GET /v1/pronunciation-dictionaries
+- "List all api-keys?" -> GET /v1/service-accounts/{service_account_user_id}/api-keys
+- "Create a api-key?" -> POST /v1/service-accounts/{service_account_user_id}/api-keys
+- "Partially update a api-key?" -> PATCH /v1/service-accounts/{service_account_user_id}/api-keys/{api_key_id}
+- "Delete a api-key?" -> DELETE /v1/service-accounts/{service_account_user_id}/api-keys/{api_key_id}
+- "List all service-accounts?" -> GET /v1/service-accounts
+- "List all search?" -> GET /v1/workspace/groups/search
+- "Create a remove?" -> POST /v1/workspace/groups/{group_id}/members/remove
+- "Create a member?" -> POST /v1/workspace/groups/{group_id}/members
+- "Create a add?" -> POST /v1/workspace/invites/add
+- "Create a add-bulk?" -> POST /v1/workspace/invites/add-bulk
+- "Create a member?" -> POST /v1/workspace/members
+- "Get resource details?" -> GET /v1/workspace/resources/{resource_id}
+- "Create a share?" -> POST /v1/workspace/resources/{resource_id}/share
+- "Create a unshare?" -> POST /v1/workspace/resources/{resource_id}/unshare
+- "List all webhooks?" -> GET /v1/workspace/webhooks
+- "Create a webhook?" -> POST /v1/workspace/webhooks
+- "Partially update a webhook?" -> PATCH /v1/workspace/webhooks/{webhook_id}
+- "Delete a webhook?" -> DELETE /v1/workspace/webhooks/{webhook_id}
+- "Create a speech-to-text?" -> POST /v1/speech-to-text
+- "Get transcript details?" -> GET /v1/speech-to-text/transcripts/{transcription_id}
+- "Delete a transcript?" -> DELETE /v1/speech-to-text/transcripts/{transcription_id}
+- "Create a forced-alignment?" -> POST /v1/forced-alignment
+- "List all get-signed-url?" -> GET /v1/convai/conversation/get-signed-url
+- "List all get_signed_url?" -> GET /v1/convai/conversation/get_signed_url
+- "List all token?" -> GET /v1/convai/conversation/token
+- "Create a outbound-call?" -> POST /v1/convai/twilio/outbound-call
+- "Create a register-call?" -> POST /v1/convai/twilio/register-call
+- "Create a outbound-call?" -> POST /v1/convai/whatsapp/outbound-call
+- "Create a outbound-message?" -> POST /v1/convai/whatsapp/outbound-message
+- "Create a create?" -> POST /v1/convai/agents/create
+- "List all summaries?" -> GET /v1/convai/agents/summaries
+- "Get agent details?" -> GET /v1/convai/agents/{agent_id}
+- "Partially update a agent?" -> PATCH /v1/convai/agents/{agent_id}
+- "Delete a agent?" -> DELETE /v1/convai/agents/{agent_id}
+- "List all widget?" -> GET /v1/convai/agents/{agent_id}/widget
+- "List all link?" -> GET /v1/convai/agents/{agent_id}/link
+- "Create a avatar?" -> POST /v1/convai/agents/{agent_id}/avatar
+- "Search agents?" -> GET /v1/convai/agents
+- "List all size?" -> GET /v1/convai/agent/{agent_id}/knowledge-base/size
+- "Create a calculate?" -> POST /v1/convai/agent/{agent_id}/llm-usage/calculate
+- "Create a duplicate?" -> POST /v1/convai/agents/{agent_id}/duplicate
+- "Create a simulate-conversation?" -> POST /v1/convai/agents/{agent_id}/simulate-conversation
+- "Create a stream?" -> POST /v1/convai/agents/{agent_id}/simulate-conversation/stream
+- "Create a create?" -> POST /v1/convai/agent-testing/create
+- "Get agent-testing details?" -> GET /v1/convai/agent-testing/{test_id}
+- "Update a agent-testing?" -> PUT /v1/convai/agent-testing/{test_id}
+- "Delete a agent-testing?" -> DELETE /v1/convai/agent-testing/{test_id}
+- "Create a summary?" -> POST /v1/convai/agent-testing/summaries
+- "Search agent-testing?" -> GET /v1/convai/agent-testing
+- "List all test-invocations?" -> GET /v1/convai/test-invocations
+- "Create a run-test?" -> POST /v1/convai/agents/{agent_id}/run-tests
+- "Get test-invocation details?" -> GET /v1/convai/test-invocations/{test_invocation_id}
+- "Create a resubmit?" -> POST /v1/convai/test-invocations/{test_invocation_id}/resubmit
+- "Search conversations?" -> GET /v1/convai/conversations
+- "Search users?" -> GET /v1/convai/users
+- "Get conversation details?" -> GET /v1/convai/conversations/{conversation_id}
+- "Delete a conversation?" -> DELETE /v1/convai/conversations/{conversation_id}
+- "List all audio?" -> GET /v1/convai/conversations/{conversation_id}/audio
+- "Create a feedback?" -> POST /v1/convai/conversations/{conversation_id}/feedback
+- "List all text-search?" -> GET /v1/convai/conversations/messages/text-search
+- "List all smart-search?" -> GET /v1/convai/conversations/messages/smart-search
+- "Create a phone-number?" -> POST /v1/convai/phone-numbers
+- "List all phone-numbers?" -> GET /v1/convai/phone-numbers
+- "Get phone-number details?" -> GET /v1/convai/phone-numbers/{phone_number_id}
+- "Delete a phone-number?" -> DELETE /v1/convai/phone-numbers/{phone_number_id}
+- "Partially update a phone-number?" -> PATCH /v1/convai/phone-numbers/{phone_number_id}
+- "Create a calculate?" -> POST /v1/convai/llm-usage/calculate
+- "List all list?" -> GET /v1/convai/llm/list
+- "Create a file?" -> POST /v1/convai/conversations/{conversation_id}/files
+- "Delete a file?" -> DELETE /v1/convai/conversations/{conversation_id}/files/{file_id}
+- "List all live-count?" -> GET /v1/convai/analytics/live-count
+- "List all summaries?" -> GET /v1/convai/knowledge-base/summaries
+- "Create a knowledge-base?" -> POST /v1/convai/knowledge-base
+- "Search knowledge-base?" -> GET /v1/convai/knowledge-base
+- "Create a url?" -> POST /v1/convai/knowledge-base/url
+- "Create a file?" -> POST /v1/convai/knowledge-base/file
+- "Create a text?" -> POST /v1/convai/knowledge-base/text
+- "Create a folder?" -> POST /v1/convai/knowledge-base/folder
+- "Partially update a knowledge-base?" -> PATCH /v1/convai/knowledge-base/{documentation_id}
+- "Get knowledge-base details?" -> GET /v1/convai/knowledge-base/{documentation_id}
+- "Delete a knowledge-base?" -> DELETE /v1/convai/knowledge-base/{documentation_id}
+- "Create a rag-index?" -> POST /v1/convai/knowledge-base/rag-index
+- "List all rag-index?" -> GET /v1/convai/knowledge-base/rag-index
+- "Create a rag-index?" -> POST /v1/convai/knowledge-base/{documentation_id}/rag-index
+- "List all rag-index?" -> GET /v1/convai/knowledge-base/{documentation_id}/rag-index
+- "Delete a rag-index?" -> DELETE /v1/convai/knowledge-base/{documentation_id}/rag-index/{rag_index_id}
+- "List all dependent-agents?" -> GET /v1/convai/knowledge-base/{documentation_id}/dependent-agents
+- "List all content?" -> GET /v1/convai/knowledge-base/{documentation_id}/content
+- "List all source-file-url?" -> GET /v1/convai/knowledge-base/{documentation_id}/source-file-url
+- "Get chunk details?" -> GET /v1/convai/knowledge-base/{documentation_id}/chunk/{chunk_id}
+- "Create a move?" -> POST /v1/convai/knowledge-base/{document_id}/move
+- "Create a bulk-move?" -> POST /v1/convai/knowledge-base/bulk-move
+- "Create a tool?" -> POST /v1/convai/tools
+- "Search tools?" -> GET /v1/convai/tools
+- "Get tool details?" -> GET /v1/convai/tools/{tool_id}
+- "Partially update a tool?" -> PATCH /v1/convai/tools/{tool_id}
+- "Delete a tool?" -> DELETE /v1/convai/tools/{tool_id}
+- "List all dependent-agents?" -> GET /v1/convai/tools/{tool_id}/dependent-agents
+- "List all settings?" -> GET /v1/convai/settings
+- "List all dashboard?" -> GET /v1/convai/settings/dashboard
+- "Create a secret?" -> POST /v1/convai/secrets
+- "List all secrets?" -> GET /v1/convai/secrets
+- "Delete a secret?" -> DELETE /v1/convai/secrets/{secret_id}
+- "Partially update a secret?" -> PATCH /v1/convai/secrets/{secret_id}
+- "Create a submit?" -> POST /v1/convai/batch-calling/submit
+- "List all workspace?" -> GET /v1/convai/batch-calling/workspace
+- "Get batch-calling details?" -> GET /v1/convai/batch-calling/{batch_id}
+- "Delete a batch-calling?" -> DELETE /v1/convai/batch-calling/{batch_id}
+- "Create a cancel?" -> POST /v1/convai/batch-calling/{batch_id}/cancel
+- "Create a retry?" -> POST /v1/convai/batch-calling/{batch_id}/retry
+- "Create a outbound-call?" -> POST /v1/convai/sip-trunk/outbound-call
+- "Create a mcp-server?" -> POST /v1/convai/mcp-servers
+- "List all mcp-servers?" -> GET /v1/convai/mcp-servers
+- "Get mcp-server details?" -> GET /v1/convai/mcp-servers/{mcp_server_id}
+- "Delete a mcp-server?" -> DELETE /v1/convai/mcp-servers/{mcp_server_id}
+- "Partially update a mcp-server?" -> PATCH /v1/convai/mcp-servers/{mcp_server_id}
+- "List all tools?" -> GET /v1/convai/mcp-servers/{mcp_server_id}/tools
+- "Create a tool-approval?" -> POST /v1/convai/mcp-servers/{mcp_server_id}/tool-approvals
+- "Delete a tool-approval?" -> DELETE /v1/convai/mcp-servers/{mcp_server_id}/tool-approvals/{tool_name}
+- "Create a tool-config?" -> POST /v1/convai/mcp-servers/{mcp_server_id}/tool-configs
+- "Get tool-config details?" -> GET /v1/convai/mcp-servers/{mcp_server_id}/tool-configs/{tool_name}
+- "Partially update a tool-config?" -> PATCH /v1/convai/mcp-servers/{mcp_server_id}/tool-configs/{tool_name}
+- "Delete a tool-config?" -> DELETE /v1/convai/mcp-servers/{mcp_server_id}/tool-configs/{tool_name}
+- "Get whatsapp-account details?" -> GET /v1/convai/whatsapp-accounts/{phone_number_id}
+- "Partially update a whatsapp-account?" -> PATCH /v1/convai/whatsapp-accounts/{phone_number_id}
+- "Delete a whatsapp-account?" -> DELETE /v1/convai/whatsapp-accounts/{phone_number_id}
+- "List all whatsapp-accounts?" -> GET /v1/convai/whatsapp-accounts
+- "Create a branche?" -> POST /v1/convai/agents/{agent_id}/branches
+- "List all branches?" -> GET /v1/convai/agents/{agent_id}/branches
+- "Get branche details?" -> GET /v1/convai/agents/{agent_id}/branches/{branch_id}
+- "Partially update a branche?" -> PATCH /v1/convai/agents/{agent_id}/branches/{branch_id}
+- "Create a merge?" -> POST /v1/convai/agents/{agent_id}/branches/{source_branch_id}/merge
+- "Create a deployment?" -> POST /v1/convai/agents/{agent_id}/deployments
+- "Create a draft?" -> POST /v1/convai/agents/{agent_id}/drafts
+- "Create a plan?" -> POST /v1/music/plan
+- "Create a music?" -> POST /v1/music
+- "Create a detailed?" -> POST /v1/music/detailed
+- "Create a stream?" -> POST /v1/music/stream
+- "Create a upload?" -> POST /v1/music/upload
+- "Create a stem-separation?" -> POST /v1/music/stem-separation
+- "Create a pvc?" -> POST /v1/voices/pvc
+- "Create a sample?" -> POST /v1/voices/pvc/{voice_id}/samples
+- "Delete a sample?" -> DELETE /v1/voices/pvc/{voice_id}/samples/{sample_id}
+- "List all audio?" -> GET /v1/voices/pvc/{voice_id}/samples/{sample_id}/audio
+- "List all waveform?" -> GET /v1/voices/pvc/{voice_id}/samples/{sample_id}/waveform
+- "List all speakers?" -> GET /v1/voices/pvc/{voice_id}/samples/{sample_id}/speakers
+- "Create a separate-speaker?" -> POST /v1/voices/pvc/{voice_id}/samples/{sample_id}/separate-speakers
+- "List all audio?" -> GET /v1/voices/pvc/{voice_id}/samples/{sample_id}/speakers/{speaker_id}/audio
+- "List all captcha?" -> GET /v1/voices/pvc/{voice_id}/captcha
+- "Create a captcha?" -> POST /v1/voices/pvc/{voice_id}/captcha
+- "Create a train?" -> POST /v1/voices/pvc/{voice_id}/train
+- "Create a verification?" -> POST /v1/voices/pvc/{voice_id}/verification
+- "List all docs?" -> GET /docs
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -4,189 +4,221 @@
 @base https://api.nookipedia.com/
 @version 1.7.0
 @auth ApiKey X-API-KEY in header
-@common_fields {X-API-KEY: str(uuid), Accept-Version: str}
+@common_fields {X-API-KEY: str(uuid) # Your UUID secret key, granted to you by the Nookipedia team. Required for accessing the API., Accept-Version: str # The version of the API you are calling, written as `1.0.0`. This is specified as required as good practice, but it is not actually enforced by the API. If you do not specify a version, you will be served the latest version, which may eventually result in breaking changes.}
 @endpoints 32
 @hint download_for_search
 @toc villagers(1), nh(31)
 
 @group villagers
 @endpoint GET /villagers
-@optional {name: str, species: str(alligator/anteater/bear/bear cub/bird/bull/cat/cub/chicken/cow/deer/dog/duck/eagle/elephant/frog/goat/gorilla/hamster/hippo/horse/koala/kangaroo/lion/monkey/mouse/octopus/ostrich/penguin/pig/rabbit/rhino/rhinoceros/sheep/squirrel/tiger/wolf), personality: str(big sister/cranky/jock/lazy/normal/peppy/sisterly/smug/snooty), game: [str], birthmonth: str, birthday: str, nhdetails: str, excludedetails: str, thumbsize: int}
-@returns(200)
-@errors {400, 401, 500}
+@desc Villagers
+@optional {name: str # Villager name. For most names you will get back an array with one object, but note that names are not a unique identifier across the series, as there are 3 names that are shared by multiple villagers (Lulu, Petunia, Carmen). For those 3 names you will get back an array with 2 objects. How you disambiguate between these villagers is up to you., species: str(alligator/anteater/bear/bear cub/bird/bull/cat/cub/chicken/cow/deer/dog/duck/eagle/elephant/frog/goat/gorilla/hamster/hippo/horse/koala/kangaroo/lion/monkey/mouse/octopus/ostrich/penguin/pig/rabbit/rhino/rhinoceros/sheep/squirrel/tiger/wolf) # Retrieve villagers of a certain species., personality: str(big sister/cranky/jock/lazy/normal/peppy/sisterly/smug/snooty) # Retrieve villagers with a certain personality. For 'sisterly', note that the community often also calls it 'uchi' or 'big sister'., game: [str] # Retrieve villagers that appear in all listed games. For example, if you want only villagers that appear in both *New Horizons* and *Pocket Camp*, you would send in `?game=nh&game=pc`., birthmonth: str # Retrieve villagers born in a specific month. Value may be the month's name (`jan`, `january`) or the integer representing the month (`01`, `1`)., birthday: str # Use with `birthmonth` to get villager(s) born on a specific day. Value should be an int, 1 through 31., nhdetails: str # When set to `true`, an `nh_details` object will be included that contains *New Horizons* details about the villager. If the villager does not appear in *New Horizons*, the returned `nh_details` field will be set to null., excludedetails: str # When set to `true`, only villager names are returned. Instead of an array of objects with all details, the return will be an array of strings., thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL. Note that requesting specific image sizes for long lists may result in a very long response time.}
+@returns(200) A JSON array of villagers.
+@errors {400: One of the inputs (usually query parameters) has an invalid value., 401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endgroup
 
 @group nh
 @endpoint GET /nh/fish
-@optional {month: str, excludedetails: str, thumbsize: int}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons fish
+@optional {month: str # Retrieve only the fish that are available in a specific month. Value may be the month's name (`jan`, `january`), the integer representing the month (`01`, `1`), or `current` for the current month. When `current` is specified, the return body will be an object with two arrays inside, one called `north` and the other `south` containing the fish available in each respective hemisphere. Note that the current month is calculated based off the API server's time, so it may be slightly off for you at the beginning or end of the month., excludedetails: str # When set to `true`, only fish names are returned. Instead of an array of objects with all details, the return will be an array of strings. This is particularly useful when used with the `month` filter, for users who want just a list of fish in a given month but not all their respective details., thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL. Note that requesting specific image sizes for long lists may result in a very long response time.}
+@returns(200) A JSON array of fish.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/fish/{fish}
-@required {fish: str}
-@optional {thumbsize: int}
-@returns(200) {url: str, name: str, number: int, image_url: str, render_url: str, location: str, shadow_size: str, rarity: str, total_catch: int, sell_nook: int, sell_cj: int, tank_width: num(float), tank_length: num(float), catchphrases: [str], north: map{availability_array: [map], times_by_month: map{1: str, 2: str, 3: str, 4: str, 5: str, 6: str, 7: str, 8: str, 9: str, 10: str, 11: str, 12: str}, months: str, months_array: [int]}, south: map{availability_array: [map], times_by_month: map{1: str, 4: str, 5: str, 6: str, 7: str, 8: str, 9: str, 10: str, 11: str, 12: str, 2': str, 3': str}, months: str, months_array: [int]}}
-@errors {401, 404, 500}
+@desc Single New Horizons fish
+@required {fish: str # The name of the fish you wish to retrieve information about.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {url: str, name: str, number: int, image_url: str, render_url: str, location: str, shadow_size: str, rarity: str, total_catch: int, sell_nook: int, sell_cj: int, tank_width: num(float), tank_length: num(float), catchphrases: [str], north: map{availability_array: [map], times_by_month: map{1: str, 2: str, 3: str, 4: str, 5: str, 6: str, 7: str, 8: str, 9: str, 10: str, 11: str, 12: str}, months: str, months_array: [int]}, south: map{availability_array: [map], times_by_month: map{1: str, 4: str, 5: str, 6: str, 7: str, 8: str, 9: str, 10: str, 11: str, 12: str, 2': str, 3': str}, months: str, months_array: [int]}} # A JSON object describing the fish.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 404: Could not find the specified fish., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/bugs
-@optional {month: str, excludedetails: str, thumbsize: int}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons bugs
+@optional {month: str # Retrieve only the bug that are available in a specific month. Value may be the month's name (`jan`, `january`), the integer representing the month (`01`, `1`), or `current` for the current month. When `current` is specified, the return body will be an object with two arrays inside, one called `north` and the other `south` containing the bug available in each respective hemisphere. Note that the current month is calculated based off the API server's time, so it may be slightly off for you at the beginning or end of the month., excludedetails: str # When set to `true`, only bug names are returned. Instead of an array of objects with all details, the return will be an array of strings. This is particularly useful when used with the `month` filter, for users who want just a list of bugs in a given month but not all their respective details., thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL. Note that requesting specific image sizes for long lists may result in a very long response time.}
+@returns(200) A JSON array of bugs.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/bugs/{bug}
-@required {bug: str}
-@optional {thumbsize: int}
-@returns(200) {url: str, name: str, number: int, image_url: str, render_url: str, location: str, weather: str, rarity: str, total_catch: int, sell_nook: int, sell_flick: int, tank_width: num(float), tank_length: num(float), catchphrases: [str], north: map{availability_array: [map], times_by_month: map{1: str, 2: str, 3: str, 4: str, 5: str, 6: str, 7: str, 8: str, 9: str, 10: str, 11: str, 12: str}, months: str, months_array: [int]}, south: map{availability_array: [map], times_by_month: map{1: str, 2: str, 3: str, 4: str, 5: str, 6: str, 7: str, 8: str, 9: str, 10: str, 11: str, 12: str}, months: str, months_array: [int]}}
-@errors {401, 404, 500}
+@desc Single New Horizons bug
+@required {bug: str # The name of the bug you wish to retrieve information about.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {url: str, name: str, number: int, image_url: str, render_url: str, location: str, weather: str, rarity: str, total_catch: int, sell_nook: int, sell_flick: int, tank_width: num(float), tank_length: num(float), catchphrases: [str], north: map{availability_array: [map], times_by_month: map{1: str, 2: str, 3: str, 4: str, 5: str, 6: str, 7: str, 8: str, 9: str, 10: str, 11: str, 12: str}, months: str, months_array: [int]}, south: map{availability_array: [map], times_by_month: map{1: str, 2: str, 3: str, 4: str, 5: str, 6: str, 7: str, 8: str, 9: str, 10: str, 11: str, 12: str}, months: str, months_array: [int]}} # A JSON object describing the bug.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 404: Could not find the specified bug., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/sea
-@optional {month: str, excludedetails: str, thumbsize: int}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons sea creatures
+@optional {month: str # Retrieve only the sea creature that are available in a specific month. Value may be the month's name (`jan`, `january`), the integer representing the month (`01`, `1`), or `current` for the current month. When `current` is specified, the return body will be an object with two arrays inside, one called `north` and the other `south` containing the sea creature available in each respective hemisphere. Note that the current month is calculated based off the API server's time, so it may be slightly off for you at the beginning or end of the month., excludedetails: str # When set to `true`, only sea creature names are returned. Instead of an array of objects with all details, the return will be an array of strings. This is particularly useful when used with the `month` filter, for users who want just a list of sea creatures in a given month but not all their respective details., thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL. Note that requesting specific image sizes for long lists may result in a very long response time.}
+@returns(200) A JSON array of sea creatures.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/sea/{sea_creature}
-@required {sea_creature: str}
-@optional {thumbsize: int}
-@returns(200) {url: str, name: str, number: int, image_url: str, render_url: str, shadow_size: str, shadow_movement: str, rarity: str, total_catch: int, sell_nook: int, tank_width: num(float), tank_length: num(float), catchphrases: [str], north: map{availability_array: [map], times_by_month: map{1: str, 2: str, 3: str, 4: str, 5: str, 6: str, 7: str, 8: str, 9: str, 10: str, 11: str, 12: str}, months: str, months_array: [int]}, south: map{availability_array: [map], times_by_month: map{1: str, 2: str, 3: str, 4: str, 5: str, 6: str, 7: str, 8: str, 9: str, 10: str, 11: str, 12: str}, months: str, months_array: [int]}}
-@errors {401, 404, 500}
+@desc Single New Horizons sea creature
+@required {sea_creature: str # The name of the sea creature you wish to retrieve information about.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {url: str, name: str, number: int, image_url: str, render_url: str, shadow_size: str, shadow_movement: str, rarity: str, total_catch: int, sell_nook: int, tank_width: num(float), tank_length: num(float), catchphrases: [str], north: map{availability_array: [map], times_by_month: map{1: str, 2: str, 3: str, 4: str, 5: str, 6: str, 7: str, 8: str, 9: str, 10: str, 11: str, 12: str}, months: str, months_array: [int]}, south: map{availability_array: [map], times_by_month: map{1: str, 2: str, 3: str, 4: str, 5: str, 6: str, 7: str, 8: str, 9: str, 10: str, 11: str, 12: str}, months: str, months_array: [int]}} # A JSON object describing the sea creature.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 404: Could not find the specified sea creature., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/events
-@optional {date: str, year: str, month: str, day: int}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons events
+@optional {date: str # Specify a specific date (in the current or next year) to retrieve events for. Accepts many date formats, such as `YYYY-MM-DD` or `Month Day, Year`, as well as `today` to retrieve the current day's events (UTC time)., year: str # Specify the year to retrieve events for. Must be the current or next year., month: str # Specify the month to retrieve events for (accepts multiple formats, such as `Oct`, `October`, or `10`). Most likely want to use alongside `year`, otherwise events in both the current and next year are returned., day: int # Specify the day of the month to retrieve events for.}
+@returns(200) A JSON array of events.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/art
-@optional {hasfake: str, excludedetails: str, thumbsize: int}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons artwork
+@optional {hasfake: str # When set to `true`, only artwork that has a fake will be returned. When set to `false`, only artwork without fakes will be returned., excludedetails: str # When set to `true`, only artwork names are returned. Instead of an array of objects with all details, the return will be an array of strings., thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL. Note that requesting specific image sizes for long lists may result in a very long response time.}
+@returns(200) A JSON array of artwork.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/art/{artwork}
-@required {artwork: str}
-@optional {thumbsize: int}
-@returns(200) {name: str, url: str, has_fake: bool, art_name: str, art_type: str, author: str, year: str, art_style: str, buy: int, sell: int, availability: str, width: num(float), length: num(float), real_info: map{image_url: str, texture_url: str, description: str}, fake_info: map{image_url: str, texture_url: str, description: str}}
-@errors {401, 500}
+@desc Single New Horizons artwork
+@required {artwork: str # The name of the artwork you wish to retrieve information about.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {name: str, url: str, has_fake: bool, art_name: str, art_type: str, author: str, year: str, art_style: str, buy: int, sell: int, availability: str, width: num(float), length: num(float), real_info: map{image_url: str, texture_url: str, description: str}, fake_info: map{image_url: str, texture_url: str, description: str}} # A JSON object describing the artwork.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/furniture
-@optional {category: str(Housewares/Miscellaneous/Wall-mounted/Ceiling decor), color: [str], excludedetails: str}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons furniture
+@optional {category: str(Housewares/Miscellaneous/Wall-mounted/Ceiling decor) # Specify the category of furniture to return (housewares, miscellaneous, wall-mounted, or ceiling decor)., color: [str] # Return furniture that matches the provided colors (may specify one or two colors)., excludedetails: str # When set to `true`, only furniture names are returned. Instead of an array of objects with all details, the return will be an array of strings.}
+@returns(200) A JSON array of furniture.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/furniture/{furniture}
-@required {furniture: str}
-@optional {thumbsize: int}
-@returns(200) {name: str, url: str, category: str, item_series: str, item_set: str, themes: [str], hha_category: str, hha_base: int, tag: str, lucky: bool, lucky_season: str, buy: [map], sell: int, variation_total: int, pattern_total: int, customizable: bool, custom_kits: int, custom_kit_type: str, custom_body_part: str, custom_pattern_part: str, grid_width: num(float), grid_length: num(float), height: num(float), door_decor: bool, version_added: str, unlocked: bool, functions: [str], availability: [map], variations: [map], notes: str}
-@errors {401, 500}
+@desc Single New Horizons furniture
+@required {furniture: str # The name of the furniture you wish to retrieve information about.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {name: str, url: str, category: str, item_series: str, item_set: str, themes: [str], hha_category: str, hha_base: int, tag: str, lucky: bool, lucky_season: str, buy: [map], sell: int, variation_total: int, pattern_total: int, customizable: bool, custom_kits: int, custom_kit_type: str, custom_body_part: str, custom_pattern_part: str, grid_width: num(float), grid_length: num(float), height: num(float), door_decor: bool, version_added: str, unlocked: bool, functions: [str], availability: [map], variations: [map], notes: str} # A JSON object describing the furniture.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/clothing
-@optional {category: str(Tops/Bottoms/Dress-up/Headwear/Accessories/Socks/Shoes/Bags/Umbrellas), color: [str], style: [str], labeltheme: str(Comfy/Everyday/Fairy tale/Formal/Goth/Outdoorsy/Party/Sporty/Theatrical/Vacation/Work), excludedetails: str}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons clothing
+@optional {category: str(Tops/Bottoms/Dress-up/Headwear/Accessories/Socks/Shoes/Bags/Umbrellas) # Specify the category of clothing to return., color: [str] # Return clothing that matches the provided colors (may specify one or two colors). Colors are used for gifting villagers., style: [str] # Return clothing that matches the provided styles (may specify one or two styles). Styles are used for gifting villagers., labeltheme: str(Comfy/Everyday/Fairy tale/Formal/Goth/Outdoorsy/Party/Sporty/Theatrical/Vacation/Work) # Return clothing that have the specified Label theme. This is used for completing the requested outfit theme for [Label](https://nookipedia.com/wiki/Label) when she visits the player's island., excludedetails: str # When set to `true`, only clothing names are returned. Instead of an array of objects with all details, the return will be an array of strings.}
+@returns(200) A JSON array of clothing.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/clothing/{clothing}
-@required {clothing: str}
-@optional {thumbsize: int}
-@returns(200) {name: str, url: str, category: str, sell: int, variation_total: int, vill_equip: bool, seasonality: str, version_added: str, unlocked: bool, notes: str, label_themes: [str], styles: [str], availability: [map], buy: [map], variations: [map]}
-@errors {401, 500}
+@desc Single New Horizons clothing
+@required {clothing: str # The name of the clothing you wish to retrieve information about.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {name: str, url: str, category: str, sell: int, variation_total: int, vill_equip: bool, seasonality: str, version_added: str, unlocked: bool, notes: str, label_themes: [str], styles: [str], availability: [map], buy: [map], variations: [map]} # A JSON object describing the clothing.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/interior
-@optional {category: str(Rugs/Wallpaper/Floors), color: [str], excludedetails: str}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons interior items
+@optional {category: str(Rugs/Wallpaper/Floors) # Specify the category of interior items to return (rugs, wallpaper, or floors)., color: [str] # Return furniture that matches the provided colors (may specify one or two colors)., excludedetails: str # When set to `true`, only interior item names are returned. Instead of an array of objects with all details, the return will be an array of strings.}
+@returns(200) A JSON array of interior items.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/interior/{item}
-@required {item: str}
-@optional {color: [str], thumbsize: int}
-@returns(200) {name: str, url: str, image_url: str, category: str, item_series: str, item_set: str, themes: [str], hha_category: str, hha_base: int, tag: str, sell: int, version_added: str, unlocked: bool, notes: str, grid_width: num(float), grid_length: num(float), colors: str, availability: [map], buy: [map]}
-@errors {401, 500}
+@desc Single New Horizons interior item
+@required {item: str # The name of the interior item you wish to retrieve information about.}
+@optional {color: [str] # Return furniture that matches the provided colors (may specify one or two colors)., thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {name: str, url: str, image_url: str, category: str, item_series: str, item_set: str, themes: [str], hha_category: str, hha_base: int, tag: str, sell: int, version_added: str, unlocked: bool, notes: str, grid_width: num(float), grid_length: num(float), colors: str, availability: [map], buy: [map]} # A JSON object describing the interior item.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/tools
-@optional {excludedetails: str}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons tools
+@optional {excludedetails: str # When set to `true`, only tool names are returned. Instead of an array of objects with all details, the return will be an array of strings.}
+@returns(200) A JSON array of interior items.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/tools/{tool}
-@required {tool: str}
-@optional {thumbsize: int}
-@returns(200) {name: str, url: str, uses: int, hha_base: int, sell: int, customizable: bool, custom_kits: int, custom_body_part: str, version_added: str, unlocked: bool, notes: str, availability: [map], buy: [map], variations: [map]}
-@errors {401, 500}
+@desc Single New Horizons tool
+@required {tool: str # The name of the interior item you wish to retrieve information about.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {name: str, url: str, uses: int, hha_base: int, sell: int, customizable: bool, custom_kits: int, custom_body_part: str, version_added: str, unlocked: bool, notes: str, availability: [map], buy: [map], variations: [map]} # A JSON object describing the tool.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/photos
-@optional {excludedetails: str}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons photos and posters
+@optional {excludedetails: str # When set to `true`, only item names are returned. Instead of an array of objects with all details, the return will be an array of strings.}
+@returns(200) A JSON array of photos and posters.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/photos/{item}
-@required {item: str}
-@optional {thumbsize: int}
-@returns(200) {name: str, url: str, category: str, sell: int, customizable: bool, custom_kits: int, custom_body_part: str, interactable: bool, version_added: str, unlocked: bool, grid_width: num(float), grid_length: num(float), availability: [map], buy: [map], variations: [map]}
-@errors {401, 500}
+@desc Single New Horizons photo or poster
+@required {item: str # The name of the photo or poster you wish to retrieve information about.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {name: str, url: str, category: str, sell: int, customizable: bool, custom_kits: int, custom_body_part: str, interactable: bool, version_added: str, unlocked: bool, grid_width: num(float), grid_length: num(float), availability: [map], buy: [map], variations: [map]} # A JSON object describing the photo or poster.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/items
-@optional {excludedetails: str}
-@returns(200)
-@errors {401, 500}
+@desc Miscellaneous New Horizons items
+@optional {excludedetails: str # When set to `true`, only item names are returned. Instead of an array of objects with all details, the return will be an array of strings.}
+@returns(200) A JSON array of items.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/items/{item}
-@required {item: str}
-@optional {thumbsize: int}
-@returns(200) {name: str, url: str, image_url: str, stack: int, hha_base: int, sell: int, is_fence: bool, material_type: str, material_seasonality: str, material_sort: int, material_name_sort: int, material_seasonality_sort: int, edible: bool, plant_type: str, version_added: str, unlocked: bool, notes: str, availability: [map], buy: [map]}
-@errors {401, 500}
+@desc Single New Horizons miscellaneous item
+@required {item: str # The name of the interior item you wish to retrieve information about.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {name: str, url: str, image_url: str, stack: int, hha_base: int, sell: int, is_fence: bool, material_type: str, material_seasonality: str, material_sort: int, material_name_sort: int, material_seasonality_sort: int, edible: bool, plant_type: str, version_added: str, unlocked: bool, notes: str, availability: [map], buy: [map]} # A JSON object describing the item.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/recipes
-@optional {material: str, excludedetails: str, thumbsize: int}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons recipes
+@optional {material: str # Specify a material to only get recipes that use that material. You can specify `material` up to six times (no recipe uses more than six materials)., excludedetails: str # When set to `true`, only recipe names are returned. Instead of an array of objects with all details, the return will be an array of strings., thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL. Note that requesting specific image sizes for long lists may result in a very long response time.}
+@returns(200) A JSON array of recipes.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/recipes/{item}
-@required {item: str}
-@optional {thumbsize: int}
-@returns(200) {name: str, url: str, image_url: str, serial_id: int, buy: [map], sell: int, recipes_to_unlock: int, availability: [map], materials: [map]}
-@errors {401, 500}
+@desc Single New Horizons recipe
+@required {item: str # The name of the item you wish to retrieve recipe information about.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {name: str, url: str, image_url: str, serial_id: int, buy: [map], sell: int, recipes_to_unlock: int, availability: [map], materials: [map]} # A JSON object describing the recipe.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/fossils/individuals
-@optional {thumbsize: int}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons fossils
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) A JSON array of individual fossils.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/fossils/individuals/{fossil}
-@required {fossil: str}
-@optional {thumbsize: int}
-@returns(200) {name: str, url: str, image_url: str, fossil_group: str, interactable: bool, sell: int, hha_base: int, width: int, length: int, colors: [str]}
-@errors {401, 500}
+@desc Single New Horizons fossil
+@required {fossil: str # The name of the individual fossil you wish to retrieve fossil information about.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {name: str, url: str, image_url: str, fossil_group: str, interactable: bool, sell: int, hha_base: int, width: int, length: int, colors: [str]} # A JSON object describing the individual fossil.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/fossils/groups
-@optional {thumbsize: int}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons fossil groups
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) A JSON array of fossil groups.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/fossils/groups/{fossil_group}
-@required {fossil_group: str}
-@optional {thumbsize: int}
-@returns(200) {name: str, url: str, room: int, description: str}
-@errors {401, 500}
+@desc Single New Horizons fossil group
+@required {fossil_group: str # The name of the fossil group you wish to retrieve information about.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {name: str, url: str, room: int, description: str} # A JSON object describing the fossil group.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/fossils/all
-@optional {thumbsize: int}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons fossil groups or individual fossil
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) A JSON array of fossil groups.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/fossils/all/{fossil}
-@required {fossil: str}
-@optional {thumbsize: int}
-@returns(200) {name: str, url: str, room: int, description: str, matched: map{type: str, name: str}, fossils: [map]}
-@errors {401, 500}
+@desc Single New Horizons fossil group with individual fossils
+@required {fossil: str # The name of the fossil OR fossil group you wish to retrieve information about. If a fossil is provided, a fossil group that the specified fossil belongs to will be returned.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {name: str, url: str, room: int, description: str, matched: map{type: str, name: str}, fossils: [map]} # A JSON object describing the fossil group.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/gyroids
-@optional {sound: str(crash/drum set/hi-hat/kick/melody/snare), excludedetails: str}
-@returns(200)
-@errors {401, 500}
+@desc All New Horizons gyroids
+@optional {sound: str(crash/drum set/hi-hat/kick/melody/snare) # Specify the sound of the gyroid., excludedetails: str # When set to `true`, only gyroid names are returned. Instead of an array of objects with all details, the return will be an array of strings.}
+@returns(200) A JSON array of gyroids.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endpoint GET /nh/gyroids/{gyroid}
-@required {gyroid: str}
-@optional {thumbsize: int}
-@returns(200) {name: str, url: str, hha_base: int, sell: int, customizable: bool, custom_kits: int, custom_kit_type: str, custom_body_part: str, cyrus_price: int, variation_total: int, grid_width: num(float), grid_length: num(float), sound: str, version_added: str, unlocked: bool, notes: str, availability: [map], buy: [map], variations: [map]}
-@errors {401, 500}
+@desc Single New Horizons gyroid
+@required {gyroid: str # The name of the gyroid you wish to retrieve information about.}
+@optional {thumbsize: int # Specify the desired width of returned image URLs. When unspecified, the linked image(s) returned by the API will be full-resolution. Note that images can only be reduced in size; specifying a width greater than than the maximum size will return the default full-size image URL.}
+@returns(200) {name: str, url: str, hha_base: int, sell: int, customizable: bool, custom_kits: int, custom_kit_type: str, custom_body_part: str, cyrus_price: int, variation_total: int, grid_width: num(float), grid_length: num(float), sound: str, version_added: str, unlocked: bool, notes: str, availability: [map], buy: [map], variations: [map]} # A JSON object describing the gyroid.
+@errors {401: Failed to authenticate user from `X-API-KEY`., 500: There was an error fetching the requested data.}
 
 @endgroup
 

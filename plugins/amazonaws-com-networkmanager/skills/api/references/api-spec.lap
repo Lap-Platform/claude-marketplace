@@ -9,6 +9,7 @@
 
 @group attachments
 @endpoint POST /attachments/{attachmentId}/accept
+@desc Accepts a core network attachment request.  Once the attachment request is accepted by a core network owner, the attachment is created and connected to a core network.
 @required {AttachmentId: str}
 @returns(200) {Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}}
 
@@ -16,20 +17,24 @@
 
 @group global-networks
 @endpoint POST /global-networks/{globalNetworkId}/connect-peer-associations
+@desc Associates a core network Connect peer with a device and optionally, with a link.  If you specify a link, it must be associated with the specified device. You can only associate core network Connect peers that have been created on a core network Connect attachment on a core network.
 @required {GlobalNetworkId: str, ConnectPeerId: str, DeviceId: str}
 @optional {LinkId: str}
 @returns(200) {ConnectPeerAssociation: ConnectPeerAssociation?{ConnectPeerId: str?, GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, State: str?}}
 
 @endpoint POST /global-networks/{globalNetworkId}/customer-gateway-associations
+@desc Associates a customer gateway with a device and optionally, with a link. If you specify a link, it must be associated with the specified device.  You can only associate customer gateways that are connected to a VPN attachment on a transit gateway or core network registered in your global network. When you register a transit gateway or core network, customer gateways that are connected to the transit gateway are automatically included in the global network. To list customer gateways that are connected to a transit gateway, use the DescribeVpnConnections EC2 API and filter by transit-gateway-id. You cannot associate a customer gateway with more than one device and link.
 @required {GlobalNetworkId: str, CustomerGatewayArn: str, DeviceId: str}
 @optional {LinkId: str}
 @returns(200) {CustomerGatewayAssociation: CustomerGatewayAssociation?{CustomerGatewayArn: str?, GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, State: str?}}
 
 @endpoint POST /global-networks/{globalNetworkId}/link-associations
+@desc Associates a link to a device. A device can be associated to multiple links and a link can be associated to multiple devices. The device and link must be in the same global network and the same site.
 @required {GlobalNetworkId: str, DeviceId: str, LinkId: str}
 @returns(200) {LinkAssociation: LinkAssociation?{GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, LinkAssociationState: str?}}
 
 @endpoint POST /global-networks/{globalNetworkId}/transit-gateway-connect-peer-associations
+@desc Associates a transit gateway Connect peer with a device, and optionally, with a link. If you specify a link, it must be associated with the specified device.  You can only associate transit gateway Connect peers that have been created on a transit gateway that's registered in your global network. You cannot associate a transit gateway Connect peer with more than one device and link.
 @required {GlobalNetworkId: str, TransitGatewayConnectPeerArn: str, DeviceId: str}
 @optional {LinkId: str}
 @returns(200) {TransitGatewayConnectPeerAssociation: TransitGatewayConnectPeerAssociation?{TransitGatewayConnectPeerArn: str?, GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, State: str?}}
@@ -38,6 +43,7 @@
 
 @group connect-attachments
 @endpoint POST /connect-attachments
+@desc Creates a core network Connect attachment from a specified core network attachment.  A core network Connect attachment is a GRE-based tunnel attachment that you can use to establish a connection between a core network and an appliance. A core network Connect attachment uses an existing VPC attachment as the underlying transport mechanism.
 @required {CoreNetworkId: str, EdgeLocation: str, TransportAttachmentId: str, Options: ConnectAttachmentOptions}
 @optional {Tags: [Tag], ClientToken: str}
 @returns(200) {ConnectAttachment: ConnectAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, TransportAttachmentId: str?, Options: ConnectAttachmentOptions?{Protocol: str?}}}
@@ -46,6 +52,7 @@
 
 @group connect-peers
 @endpoint POST /connect-peers
+@desc Creates a core network Connect peer for a specified core network connect attachment between a core network and an appliance. The peer address and transit gateway address must be the same IP address family (IPv4 or IPv6).
 @required {ConnectAttachmentId: str, PeerAddress: str}
 @optional {CoreNetworkAddress: str, BgpOptions: BgpOptions, InsideCidrBlocks: [str], Tags: [Tag], ClientToken: str, SubnetArn: str}
 @returns(200) {ConnectPeer: ConnectPeer?{CoreNetworkId: str?, ConnectAttachmentId: str?, ConnectPeerId: str?, EdgeLocation: str?, State: str?, CreatedAt: str(timestamp)?, Configuration: ConnectPeerConfiguration?{CoreNetworkAddress: str?, PeerAddress: str?, InsideCidrBlocks: [str]?, Protocol: str?, BgpConfigurations: [ConnectPeerBgpConfiguration]?}, Tags: [Tag]?, SubnetArn: str?, LastModificationErrors: [ConnectPeerError]?}}
@@ -54,6 +61,7 @@
 
 @group global-networks
 @endpoint POST /global-networks/{globalNetworkId}/connections
+@desc Creates a connection between two devices. The devices can be a physical or virtual appliance that connects to a third-party appliance in a VPC, or a physical appliance that connects to another physical appliance in an on-premises network.
 @required {GlobalNetworkId: str, DeviceId: str, ConnectedDeviceId: str}
 @optional {LinkId: str, ConnectedLinkId: str, Description: str, Tags: [Tag]}
 @returns(200) {Connection: Connection?{ConnectionId: str?, ConnectionArn: str?, GlobalNetworkId: str?, DeviceId: str?, ConnectedDeviceId: str?, LinkId: str?, ConnectedLinkId: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
@@ -62,6 +70,7 @@
 
 @group core-networks
 @endpoint POST /core-networks
+@desc Creates a core network as part of your global network, and optionally, with a core network policy.
 @required {GlobalNetworkId: str}
 @optional {Description: str, Tags: [Tag], PolicyDocument: str, ClientToken: str}
 @returns(200) {CoreNetwork: CoreNetwork?{GlobalNetworkId: str?, CoreNetworkId: str?, CoreNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Segments: [CoreNetworkSegment]?, NetworkFunctionGroups: [CoreNetworkNetworkFunctionGroup]?, Edges: [CoreNetworkEdge]?, Tags: [Tag]?}}
@@ -70,20 +79,24 @@
 
 @group global-networks
 @endpoint POST /global-networks/{globalNetworkId}/devices
+@desc Creates a new device in a global network. If you specify both a site ID and a location, the location of the site is used for visualization in the Network Manager console.
 @required {GlobalNetworkId: str}
 @optional {AWSLocation: AWSLocation, Description: str, Type: str, Vendor: str, Model: str, SerialNumber: str, Location: Location, SiteId: str, Tags: [Tag]}
 @returns(200) {Device: Device?{DeviceId: str?, DeviceArn: str?, GlobalNetworkId: str?, AWSLocation: AWSLocation?{Zone: str?, SubnetArn: str?}, Description: str?, Type: str?, Vendor: str?, Model: str?, SerialNumber: str?, Location: Location?{Address: str?, Latitude: str?, Longitude: str?}, SiteId: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
 
 @endpoint POST /global-networks
+@desc Creates a new, empty global network.
 @optional {Description: str, Tags: [Tag]}
 @returns(200) {GlobalNetwork: GlobalNetwork?{GlobalNetworkId: str?, GlobalNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
 
 @endpoint POST /global-networks/{globalNetworkId}/links
+@desc Creates a new link for a specified site.
 @required {GlobalNetworkId: str, Bandwidth: Bandwidth, SiteId: str}
 @optional {Description: str, Type: str, Provider: str, Tags: [Tag]}
 @returns(200) {Link: Link?{LinkId: str?, LinkArn: str?, GlobalNetworkId: str?, SiteId: str?, Description: str?, Type: str?, Bandwidth: Bandwidth?{UploadSpeed: int?, DownloadSpeed: int?}, Provider: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
 
 @endpoint POST /global-networks/{globalNetworkId}/sites
+@desc Creates a new site in a global network.
 @required {GlobalNetworkId: str}
 @optional {Description: str, Location: Location, Tags: [Tag]}
 @returns(200) {Site: Site?{SiteId: str?, SiteArn: str?, GlobalNetworkId: str?, Description: str?, Location: Location?{Address: str?, Latitude: str?, Longitude: str?}, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
@@ -92,6 +105,7 @@
 
 @group site-to-site-vpn-attachments
 @endpoint POST /site-to-site-vpn-attachments
+@desc Creates an Amazon Web Services site-to-site VPN attachment on an edge location of a core network.
 @required {CoreNetworkId: str, VpnConnectionArn: str}
 @optional {Tags: [Tag], ClientToken: str}
 @returns(200) {SiteToSiteVpnAttachment: SiteToSiteVpnAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, VpnConnectionArn: str?}}
@@ -100,6 +114,7 @@
 
 @group transit-gateway-peerings
 @endpoint POST /transit-gateway-peerings
+@desc Creates a transit gateway peering connection.
 @required {CoreNetworkId: str, TransitGatewayArn: str}
 @optional {Tags: [Tag], ClientToken: str}
 @returns(200) {TransitGatewayPeering: TransitGatewayPeering?{Peering: Peering?{CoreNetworkId: str?, CoreNetworkArn: str?, PeeringId: str?, OwnerAccountId: str?, PeeringType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, Tags: [Tag]?, CreatedAt: str(timestamp)?, LastModificationErrors: [PeeringError]?}, TransitGatewayArn: str?, TransitGatewayPeeringAttachmentId: str?}}
@@ -108,6 +123,7 @@
 
 @group transit-gateway-route-table-attachments
 @endpoint POST /transit-gateway-route-table-attachments
+@desc Creates a transit gateway route table attachment.
 @required {PeeringId: str, TransitGatewayRouteTableArn: str}
 @optional {Tags: [Tag], ClientToken: str}
 @returns(200) {TransitGatewayRouteTableAttachment: TransitGatewayRouteTableAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, PeeringId: str?, TransitGatewayRouteTableArn: str?}}
@@ -116,6 +132,7 @@
 
 @group vpc-attachments
 @endpoint POST /vpc-attachments
+@desc Creates a VPC attachment on an edge location of a core network.
 @required {CoreNetworkId: str, VpcArn: str, SubnetArns: [str]}
 @optional {Options: VpcOptions, Tags: [Tag], ClientToken: str}
 @returns(200) {VpcAttachment: VpcAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, SubnetArns: [str]?, Options: VpcOptions?{Ipv6Support: bool?, ApplianceModeSupport: bool?}}}
@@ -124,6 +141,7 @@
 
 @group attachments
 @endpoint DELETE /attachments/{attachmentId}
+@desc Deletes an attachment. Supports all attachment types.
 @required {AttachmentId: str}
 @returns(200) {Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}}
 
@@ -131,6 +149,7 @@
 
 @group connect-peers
 @endpoint DELETE /connect-peers/{connectPeerId}
+@desc Deletes a Connect peer.
 @required {ConnectPeerId: str}
 @returns(200) {ConnectPeer: ConnectPeer?{CoreNetworkId: str?, ConnectAttachmentId: str?, ConnectPeerId: str?, EdgeLocation: str?, State: str?, CreatedAt: str(timestamp)?, Configuration: ConnectPeerConfiguration?{CoreNetworkAddress: str?, PeerAddress: str?, InsideCidrBlocks: [str]?, Protocol: str?, BgpConfigurations: [ConnectPeerBgpConfiguration]?}, Tags: [Tag]?, SubnetArn: str?, LastModificationErrors: [ConnectPeerError]?}}
 
@@ -138,6 +157,7 @@
 
 @group global-networks
 @endpoint DELETE /global-networks/{globalNetworkId}/connections/{connectionId}
+@desc Deletes the specified connection in your global network.
 @required {GlobalNetworkId: str, ConnectionId: str}
 @returns(200) {Connection: Connection?{ConnectionId: str?, ConnectionArn: str?, GlobalNetworkId: str?, DeviceId: str?, ConnectedDeviceId: str?, LinkId: str?, ConnectedLinkId: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
 
@@ -145,10 +165,12 @@
 
 @group core-networks
 @endpoint DELETE /core-networks/{coreNetworkId}
+@desc Deletes a core network along with all core network policies. This can only be done if there are no attachments on a core network.
 @required {CoreNetworkId: str}
 @returns(200) {CoreNetwork: CoreNetwork?{GlobalNetworkId: str?, CoreNetworkId: str?, CoreNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Segments: [CoreNetworkSegment]?, NetworkFunctionGroups: [CoreNetworkNetworkFunctionGroup]?, Edges: [CoreNetworkEdge]?, Tags: [Tag]?}}
 
 @endpoint DELETE /core-networks/{coreNetworkId}/core-network-policy-versions/{policyVersionId}
+@desc Deletes a policy version from a core network. You can't delete the current LIVE policy.
 @required {CoreNetworkId: str, PolicyVersionId: int}
 @returns(200) {CoreNetworkPolicy: CoreNetworkPolicy?{CoreNetworkId: str?, PolicyVersionId: int?, Alias: str?, Description: str?, CreatedAt: str(timestamp)?, ChangeSetState: str?, PolicyErrors: [CoreNetworkPolicyError]?, PolicyDocument: str?}}
 
@@ -156,14 +178,17 @@
 
 @group global-networks
 @endpoint DELETE /global-networks/{globalNetworkId}/devices/{deviceId}
+@desc Deletes an existing device. You must first disassociate the device from any links and customer gateways.
 @required {GlobalNetworkId: str, DeviceId: str}
 @returns(200) {Device: Device?{DeviceId: str?, DeviceArn: str?, GlobalNetworkId: str?, AWSLocation: AWSLocation?{Zone: str?, SubnetArn: str?}, Description: str?, Type: str?, Vendor: str?, Model: str?, SerialNumber: str?, Location: Location?{Address: str?, Latitude: str?, Longitude: str?}, SiteId: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
 
 @endpoint DELETE /global-networks/{globalNetworkId}
+@desc Deletes an existing global network. You must first delete all global network objects (devices, links, and sites), deregister all transit gateways, and delete any core networks.
 @required {GlobalNetworkId: str}
 @returns(200) {GlobalNetwork: GlobalNetwork?{GlobalNetworkId: str?, GlobalNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
 
 @endpoint DELETE /global-networks/{globalNetworkId}/links/{linkId}
+@desc Deletes an existing link. You must first disassociate the link from any devices and customer gateways.
 @required {GlobalNetworkId: str, LinkId: str}
 @returns(200) {Link: Link?{LinkId: str?, LinkArn: str?, GlobalNetworkId: str?, SiteId: str?, Description: str?, Type: str?, Bandwidth: Bandwidth?{UploadSpeed: int?, DownloadSpeed: int?}, Provider: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
 
@@ -171,6 +196,7 @@
 
 @group peerings
 @endpoint DELETE /peerings/{peeringId}
+@desc Deletes an existing peering connection.
 @required {PeeringId: str}
 @returns(200) {Peering: Peering?{CoreNetworkId: str?, CoreNetworkArn: str?, PeeringId: str?, OwnerAccountId: str?, PeeringType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, Tags: [Tag]?, CreatedAt: str(timestamp)?, LastModificationErrors: [PeeringError]?}}
 
@@ -178,36 +204,44 @@
 
 @group resource-policy
 @endpoint DELETE /resource-policy/{resourceArn}
+@desc Deletes a resource policy for the specified resource. This revokes the access of the principals specified in the resource policy.
 @required {ResourceArn: str}
 
 @endgroup
 
 @group global-networks
 @endpoint DELETE /global-networks/{globalNetworkId}/sites/{siteId}
+@desc Deletes an existing site. The site cannot be associated with any device or link.
 @required {GlobalNetworkId: str, SiteId: str}
 @returns(200) {Site: Site?{SiteId: str?, SiteArn: str?, GlobalNetworkId: str?, Description: str?, Location: Location?{Address: str?, Latitude: str?, Longitude: str?}, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
 
 @endpoint DELETE /global-networks/{globalNetworkId}/transit-gateway-registrations/{transitGatewayArn}
+@desc Deregisters a transit gateway from your global network. This action does not delete your transit gateway, or modify any of its attachments. This action removes any customer gateway associations.
 @required {GlobalNetworkId: str, TransitGatewayArn: str}
 @returns(200) {TransitGatewayRegistration: TransitGatewayRegistration?{GlobalNetworkId: str?, TransitGatewayArn: str?, State: TransitGatewayRegistrationStateReason?{Code: str?, Message: str?}}}
 
 @endpoint GET /global-networks
+@desc Describes one or more global networks. By default, all global networks are described. To describe the objects in your global network, you must use the appropriate Get* action. For example, to list the transit gateways in your global network, use GetTransitGatewayRegistrations.
 @optional {globalNetworkIds: [str], maxResults: int, nextToken: str}
 @returns(200) {GlobalNetworks: [GlobalNetwork]?, NextToken: str?}
 
 @endpoint DELETE /global-networks/{globalNetworkId}/connect-peer-associations/{connectPeerId}
+@desc Disassociates a core network Connect peer from a device and a link.
 @required {GlobalNetworkId: str, ConnectPeerId: str}
 @returns(200) {ConnectPeerAssociation: ConnectPeerAssociation?{ConnectPeerId: str?, GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, State: str?}}
 
 @endpoint DELETE /global-networks/{globalNetworkId}/customer-gateway-associations/{customerGatewayArn}
+@desc Disassociates a customer gateway from a device and a link.
 @required {GlobalNetworkId: str, CustomerGatewayArn: str}
 @returns(200) {CustomerGatewayAssociation: CustomerGatewayAssociation?{CustomerGatewayArn: str?, GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, State: str?}}
 
 @endpoint DELETE /global-networks/{globalNetworkId}/link-associations
+@desc Disassociates an existing device from a link. You must first disassociate any customer gateways that are associated with the link.
 @required {GlobalNetworkId: str, deviceId: str, linkId: str}
 @returns(200) {LinkAssociation: LinkAssociation?{GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, LinkAssociationState: str?}}
 
 @endpoint DELETE /global-networks/{globalNetworkId}/transit-gateway-connect-peer-associations/{transitGatewayConnectPeerArn}
+@desc Disassociates a transit gateway Connect peer from a device and link.
 @required {GlobalNetworkId: str, TransitGatewayConnectPeerArn: str}
 @returns(200) {TransitGatewayConnectPeerAssociation: TransitGatewayConnectPeerAssociation?{TransitGatewayConnectPeerArn: str?, GlobalNetworkId: str?, DeviceId: str?, LinkId: str?, State: str?}}
 
@@ -215,12 +249,14 @@
 
 @group core-networks
 @endpoint POST /core-networks/{coreNetworkId}/core-network-change-sets/{policyVersionId}/execute
+@desc Executes a change set on your core network. Deploys changes globally based on the policy submitted..
 @required {CoreNetworkId: str, PolicyVersionId: int}
 
 @endgroup
 
 @group connect-attachments
 @endpoint GET /connect-attachments/{attachmentId}
+@desc Returns information about a core network Connect attachment.
 @required {AttachmentId: str}
 @returns(200) {ConnectAttachment: ConnectAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, TransportAttachmentId: str?, Options: ConnectAttachmentOptions?{Protocol: str?}}}
 
@@ -228,6 +264,7 @@
 
 @group connect-peers
 @endpoint GET /connect-peers/{connectPeerId}
+@desc Returns information about a core network Connect peer.
 @required {ConnectPeerId: str}
 @returns(200) {ConnectPeer: ConnectPeer?{CoreNetworkId: str?, ConnectAttachmentId: str?, ConnectPeerId: str?, EdgeLocation: str?, State: str?, CreatedAt: str(timestamp)?, Configuration: ConnectPeerConfiguration?{CoreNetworkAddress: str?, PeerAddress: str?, InsideCidrBlocks: [str]?, Protocol: str?, BgpConfigurations: [ConnectPeerBgpConfiguration]?}, Tags: [Tag]?, SubnetArn: str?, LastModificationErrors: [ConnectPeerError]?}}
 
@@ -235,11 +272,13 @@
 
 @group global-networks
 @endpoint GET /global-networks/{globalNetworkId}/connect-peer-associations
+@desc Returns information about a core network Connect peer associations.
 @required {GlobalNetworkId: str}
 @optional {connectPeerIds: [str], maxResults: int, nextToken: str}
 @returns(200) {ConnectPeerAssociations: [ConnectPeerAssociation]?, NextToken: str?}
 
 @endpoint GET /global-networks/{globalNetworkId}/connections
+@desc Gets information about one or more of your connections in a global network.
 @required {GlobalNetworkId: str}
 @optional {connectionIds: [str], deviceId: str, maxResults: int, nextToken: str}
 @returns(200) {Connections: [Connection]?, NextToken: str?}
@@ -248,20 +287,24 @@
 
 @group core-networks
 @endpoint GET /core-networks/{coreNetworkId}
+@desc Returns information about the LIVE policy for a core network.
 @required {CoreNetworkId: str}
 @returns(200) {CoreNetwork: CoreNetwork?{GlobalNetworkId: str?, CoreNetworkId: str?, CoreNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Segments: [CoreNetworkSegment]?, NetworkFunctionGroups: [CoreNetworkNetworkFunctionGroup]?, Edges: [CoreNetworkEdge]?, Tags: [Tag]?}}
 
 @endpoint GET /core-networks/{coreNetworkId}/core-network-change-events/{policyVersionId}
+@desc Returns information about a core network change event.
 @required {CoreNetworkId: str, PolicyVersionId: int}
 @optional {maxResults: int, nextToken: str}
 @returns(200) {CoreNetworkChangeEvents: [CoreNetworkChangeEvent]?, NextToken: str?}
 
 @endpoint GET /core-networks/{coreNetworkId}/core-network-change-sets/{policyVersionId}
+@desc Returns a change set between the LIVE core network policy and a submitted policy.
 @required {CoreNetworkId: str, PolicyVersionId: int}
 @optional {maxResults: int, nextToken: str}
 @returns(200) {CoreNetworkChanges: [CoreNetworkChange]?, NextToken: str?}
 
 @endpoint GET /core-networks/{coreNetworkId}/core-network-policy
+@desc Returns details about a core network policy. You can get details about your current live policy or any previous policy version.
 @required {CoreNetworkId: str}
 @optional {policyVersionId: int, alias: str}
 @returns(200) {CoreNetworkPolicy: CoreNetworkPolicy?{CoreNetworkId: str?, PolicyVersionId: int?, Alias: str?, Description: str?, CreatedAt: str(timestamp)?, ChangeSetState: str?, PolicyErrors: [CoreNetworkPolicyError]?, PolicyDocument: str?}}
@@ -270,46 +313,55 @@
 
 @group global-networks
 @endpoint GET /global-networks/{globalNetworkId}/customer-gateway-associations
+@desc Gets the association information for customer gateways that are associated with devices and links in your global network.
 @required {GlobalNetworkId: str}
 @optional {customerGatewayArns: [str], maxResults: int, nextToken: str}
 @returns(200) {CustomerGatewayAssociations: [CustomerGatewayAssociation]?, NextToken: str?}
 
 @endpoint GET /global-networks/{globalNetworkId}/devices
+@desc Gets information about one or more of your devices in a global network.
 @required {GlobalNetworkId: str}
 @optional {deviceIds: [str], siteId: str, maxResults: int, nextToken: str}
 @returns(200) {Devices: [Device]?, NextToken: str?}
 
 @endpoint GET /global-networks/{globalNetworkId}/link-associations
+@desc Gets the link associations for a device or a link. Either the device ID or the link ID must be specified.
 @required {GlobalNetworkId: str}
 @optional {deviceId: str, linkId: str, maxResults: int, nextToken: str}
 @returns(200) {LinkAssociations: [LinkAssociation]?, NextToken: str?}
 
 @endpoint GET /global-networks/{globalNetworkId}/links
+@desc Gets information about one or more links in a specified global network. If you specify the site ID, you cannot specify the type or provider in the same request. You can specify the type and provider in the same request.
 @required {GlobalNetworkId: str}
 @optional {linkIds: [str], siteId: str, type: str, provider: str, maxResults: int, nextToken: str}
 @returns(200) {Links: [Link]?, NextToken: str?}
 
 @endpoint GET /global-networks/{globalNetworkId}/network-resource-count
+@desc Gets the count of network resources, by resource type, for the specified global network.
 @required {GlobalNetworkId: str}
 @optional {resourceType: str, maxResults: int, nextToken: str}
 @returns(200) {NetworkResourceCounts: [NetworkResourceCount]?, NextToken: str?}
 
 @endpoint GET /global-networks/{globalNetworkId}/network-resource-relationships
+@desc Gets the network resource relationships for the specified global network.
 @required {GlobalNetworkId: str}
 @optional {coreNetworkId: str, registeredGatewayArn: str, awsRegion: str, accountId: str, resourceType: str, resourceArn: str, maxResults: int, nextToken: str}
 @returns(200) {Relationships: [Relationship]?, NextToken: str?}
 
 @endpoint GET /global-networks/{globalNetworkId}/network-resources
+@desc Describes the network resources for the specified global network. The results include information from the corresponding Describe call for the resource, minus any sensitive information such as pre-shared keys.
 @required {GlobalNetworkId: str}
 @optional {coreNetworkId: str, registeredGatewayArn: str, awsRegion: str, accountId: str, resourceType: str, resourceArn: str, maxResults: int, nextToken: str}
 @returns(200) {NetworkResources: [NetworkResource]?, NextToken: str?}
 
 @endpoint POST /global-networks/{globalNetworkId}/network-routes
+@desc Gets the network routes of the specified global network.
 @required {GlobalNetworkId: str, RouteTableIdentifier: RouteTableIdentifier}
 @optional {ExactCidrMatches: [str], LongestPrefixMatches: [str], SubnetOfMatches: [str], SupernetOfMatches: [str], PrefixListIds: [str], States: [str], Types: [str], DestinationFilters: map<str,[str]>}
 @returns(200) {RouteTableArn: str?, CoreNetworkSegmentEdge: CoreNetworkSegmentEdgeIdentifier?{CoreNetworkId: str?, SegmentName: str?, EdgeLocation: str?}, RouteTableType: str?, RouteTableTimestamp: str(timestamp)?, NetworkRoutes: [NetworkRoute]?}
 
 @endpoint GET /global-networks/{globalNetworkId}/network-telemetry
+@desc Gets the network telemetry of the specified global network.
 @required {GlobalNetworkId: str}
 @optional {coreNetworkId: str, registeredGatewayArn: str, awsRegion: str, accountId: str, resourceType: str, resourceArn: str, maxResults: int, nextToken: str}
 @returns(200) {NetworkTelemetry: [NetworkTelemetry]?, NextToken: str?}
@@ -318,6 +370,7 @@
 
 @group resource-policy
 @endpoint GET /resource-policy/{resourceArn}
+@desc Returns information about a resource policy.
 @required {ResourceArn: str}
 @returns(200) {PolicyDocument: str?}
 
@@ -325,13 +378,15 @@
 
 @group global-networks
 @endpoint GET /global-networks/{globalNetworkId}/route-analyses/{routeAnalysisId}
+@desc Gets information about the specified route analysis.
 @required {GlobalNetworkId: str, RouteAnalysisId: str}
-@returns(200) {RouteAnalysis: RouteAnalysis?{GlobalNetworkId: str?, OwnerAccountId: str?, RouteAnalysisId: str?, StartTimestamp: str(timestamp)?, Status: str?, Source: RouteAnalysisEndpointOptions?{TransitGatewayAttachmentArn: str?, TransitGatewayArn: str?, IpAddress: str?}, Destination: RouteAnalysisEndpointOptions?{TransitGatewayAttachmentArn: str?, TransitGatewayArn: str?, IpAddress: str?}, IncludeReturnPath: bool?, UseMiddleboxes: bool?, ForwardPath: RouteAnalysisPath?{CompletionStatus: RouteAnalysisCompletion?{ResultCode: str?, ReasonCode: str?, ReasonContext: map<str,str>?}, Path: [PathComponent]?}, ReturnPath: RouteAnalysisPath?{CompletionStatus: RouteAnalysisCompletion?{ResultCode: str?, ReasonCode: str?, ReasonContext: map<str,str>?}, Path: [PathComponent]?}}}
+@returns(200) {RouteAnalysis: RouteAnalysis?{GlobalNetworkId: str?, OwnerAccountId: str?, RouteAnalysisId: str?, StartTimestamp: str(timestamp)?, Status: str?, Source: RouteAnalysisEndpointOptions?{TransitGatewayAttachmentArn: str?, TransitGatewayArn: str?, IpAddress: str?}, Destination: RouteAnalysisEndpointOptions?{TransitGatewayAttachmentArn: str?, TransitGatewayArn: str?, IpAddress: str?}, IncludeReturnPath: bool?, UseMiddleboxes: bool?, ForwardPath: RouteAnalysisPath?{CompletionStatus: RouteAnalysisCompletion?{ResultCode: str?, ReasonCode: str?, ReasonContext: map<str, str>?: any}, Path: [PathComponent]?}, ReturnPath: RouteAnalysisPath?{CompletionStatus: RouteAnalysisCompletion?{ResultCode: str?, ReasonCode: str?, ReasonContext: map<str, str>?: any}, Path: [PathComponent]?}}}
 
 @endgroup
 
 @group site-to-site-vpn-attachments
 @endpoint GET /site-to-site-vpn-attachments/{attachmentId}
+@desc Returns information about a site-to-site VPN attachment.
 @required {AttachmentId: str}
 @returns(200) {SiteToSiteVpnAttachment: SiteToSiteVpnAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, VpnConnectionArn: str?}}
 
@@ -339,11 +394,13 @@
 
 @group global-networks
 @endpoint GET /global-networks/{globalNetworkId}/sites
+@desc Gets information about one or more of your sites in a global network.
 @required {GlobalNetworkId: str}
 @optional {siteIds: [str], maxResults: int, nextToken: str}
 @returns(200) {Sites: [Site]?, NextToken: str?}
 
 @endpoint GET /global-networks/{globalNetworkId}/transit-gateway-connect-peer-associations
+@desc Gets information about one or more of your transit gateway Connect peer associations in a global network.
 @required {GlobalNetworkId: str}
 @optional {transitGatewayConnectPeerArns: [str], maxResults: int, nextToken: str}
 @returns(200) {TransitGatewayConnectPeerAssociations: [TransitGatewayConnectPeerAssociation]?, NextToken: str?}
@@ -352,6 +409,7 @@
 
 @group transit-gateway-peerings
 @endpoint GET /transit-gateway-peerings/{peeringId}
+@desc Returns information about a transit gateway peer.
 @required {PeeringId: str}
 @returns(200) {TransitGatewayPeering: TransitGatewayPeering?{Peering: Peering?{CoreNetworkId: str?, CoreNetworkArn: str?, PeeringId: str?, OwnerAccountId: str?, PeeringType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, Tags: [Tag]?, CreatedAt: str(timestamp)?, LastModificationErrors: [PeeringError]?}, TransitGatewayArn: str?, TransitGatewayPeeringAttachmentId: str?}}
 
@@ -359,6 +417,7 @@
 
 @group global-networks
 @endpoint GET /global-networks/{globalNetworkId}/transit-gateway-registrations
+@desc Gets information about the transit gateway registrations in a specified global network.
 @required {GlobalNetworkId: str}
 @optional {transitGatewayArns: [str], maxResults: int, nextToken: str}
 @returns(200) {TransitGatewayRegistrations: [TransitGatewayRegistration]?, NextToken: str?}
@@ -367,6 +426,7 @@
 
 @group transit-gateway-route-table-attachments
 @endpoint GET /transit-gateway-route-table-attachments/{attachmentId}
+@desc Returns information about a transit gateway route table attachment.
 @required {AttachmentId: str}
 @returns(200) {TransitGatewayRouteTableAttachment: TransitGatewayRouteTableAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, PeeringId: str?, TransitGatewayRouteTableArn: str?}}
 
@@ -374,6 +434,7 @@
 
 @group vpc-attachments
 @endpoint GET /vpc-attachments/{attachmentId}
+@desc Returns information about a VPC attachment.
 @required {AttachmentId: str}
 @returns(200) {VpcAttachment: VpcAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, SubnetArns: [str]?, Options: VpcOptions?{Ipv6Support: bool?, ApplianceModeSupport: bool?}}}
 
@@ -381,6 +442,7 @@
 
 @group attachments
 @endpoint GET /attachments
+@desc Returns a list of core network attachments.
 @optional {coreNetworkId: str, attachmentType: str, edgeLocation: str, state: str, maxResults: int, nextToken: str}
 @returns(200) {Attachments: [Attachment]?, NextToken: str?}
 
@@ -388,6 +450,7 @@
 
 @group connect-peers
 @endpoint GET /connect-peers
+@desc Returns a list of core network Connect peers.
 @optional {coreNetworkId: str, connectAttachmentId: str, maxResults: int, nextToken: str}
 @returns(200) {ConnectPeers: [ConnectPeerSummary]?, NextToken: str?}
 
@@ -395,11 +458,13 @@
 
 @group core-networks
 @endpoint GET /core-networks/{coreNetworkId}/core-network-policy-versions
+@desc Returns a list of core network policy versions.
 @required {CoreNetworkId: str}
 @optional {maxResults: int, nextToken: str}
 @returns(200) {CoreNetworkPolicyVersions: [CoreNetworkPolicyVersion]?, NextToken: str?}
 
 @endpoint GET /core-networks
+@desc Returns a list of owned and shared core networks.
 @optional {maxResults: int, nextToken: str}
 @returns(200) {CoreNetworks: [CoreNetworkSummary]?, NextToken: str?}
 
@@ -407,6 +472,7 @@
 
 @group organizations
 @endpoint GET /organizations/service-access
+@desc Gets the status of the Service Linked Role (SLR) deployment for the accounts in a given Amazon Web Services Organization.
 @optional {maxResults: int, nextToken: str}
 @returns(200) {OrganizationStatus: OrganizationStatus?{OrganizationId: str?, OrganizationAwsServiceAccessStatus: str?, SLRDeploymentStatus: str?, AccountStatusList: [AccountStatus]?}, NextToken: str?}
 
@@ -414,6 +480,7 @@
 
 @group peerings
 @endpoint GET /peerings
+@desc Lists the peerings for a core network.
 @optional {coreNetworkId: str, peeringType: str, edgeLocation: str, state: str, maxResults: int, nextToken: str}
 @returns(200) {Peerings: [Peering]?, NextToken: str?}
 
@@ -421,6 +488,7 @@
 
 @group tags
 @endpoint GET /tags/{resourceArn}
+@desc Lists the tags for a specified resource.
 @required {ResourceArn: str}
 @returns(200) {TagList: [Tag]?}
 
@@ -428,6 +496,7 @@
 
 @group core-networks
 @endpoint POST /core-networks/{coreNetworkId}/core-network-policy
+@desc Creates a new, immutable version of a core network policy. A subsequent change set is created showing the differences between the LIVE policy and the submitted policy.
 @required {CoreNetworkId: str, PolicyDocument: str}
 @optional {Description: str, LatestVersionId: int, ClientToken: str}
 @returns(200) {CoreNetworkPolicy: CoreNetworkPolicy?{CoreNetworkId: str?, PolicyVersionId: int?, Alias: str?, Description: str?, CreatedAt: str(timestamp)?, ChangeSetState: str?, PolicyErrors: [CoreNetworkPolicyError]?, PolicyDocument: str?}}
@@ -436,12 +505,14 @@
 
 @group resource-policy
 @endpoint POST /resource-policy/{resourceArn}
+@desc Creates or updates a resource policy.
 @required {ResourceArn: str, PolicyDocument: str}
 
 @endgroup
 
 @group global-networks
 @endpoint POST /global-networks/{globalNetworkId}/transit-gateway-registrations
+@desc Registers a transit gateway in your global network. Not all Regions support transit gateways for global networks. For a list of the supported Regions, see Region Availability in the Amazon Web Services Transit Gateways for Global Networks User Guide. The transit gateway can be in any of the supported Amazon Web Services Regions, but it must be owned by the same Amazon Web Services account that owns the global network. You cannot register a transit gateway in more than one global network.
 @required {GlobalNetworkId: str, TransitGatewayArn: str}
 @returns(200) {TransitGatewayRegistration: TransitGatewayRegistration?{GlobalNetworkId: str?, TransitGatewayArn: str?, State: TransitGatewayRegistrationStateReason?{Code: str?, Message: str?}}}
 
@@ -449,6 +520,7 @@
 
 @group attachments
 @endpoint POST /attachments/{attachmentId}/reject
+@desc Rejects a core network attachment request.
 @required {AttachmentId: str}
 @returns(200) {Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}}
 
@@ -456,6 +528,7 @@
 
 @group core-networks
 @endpoint POST /core-networks/{coreNetworkId}/core-network-policy-versions/{policyVersionId}/restore
+@desc Restores a previous policy version as a new, immutable version of a core network policy. A subsequent change set is created showing the differences between the LIVE policy and restored policy.
 @required {CoreNetworkId: str, PolicyVersionId: int}
 @returns(200) {CoreNetworkPolicy: CoreNetworkPolicy?{CoreNetworkId: str?, PolicyVersionId: int?, Alias: str?, Description: str?, CreatedAt: str(timestamp)?, ChangeSetState: str?, PolicyErrors: [CoreNetworkPolicyError]?, PolicyDocument: str?}}
 
@@ -463,6 +536,7 @@
 
 @group organizations
 @endpoint POST /organizations/service-access
+@desc Enables the Network Manager service for an Amazon Web Services Organization. This can only be called by a management account within the organization.
 @required {Action: str}
 @returns(200) {OrganizationStatus: OrganizationStatus?{OrganizationId: str?, OrganizationAwsServiceAccessStatus: str?, SLRDeploymentStatus: str?, AccountStatusList: [AccountStatus]?}}
 
@@ -470,23 +544,27 @@
 
 @group global-networks
 @endpoint POST /global-networks/{globalNetworkId}/route-analyses
+@desc Starts analyzing the routing path between the specified source and destination. For more information, see Route Analyzer.
 @required {GlobalNetworkId: str, Source: RouteAnalysisEndpointOptionsSpecification, Destination: RouteAnalysisEndpointOptionsSpecification}
 @optional {IncludeReturnPath: bool, UseMiddleboxes: bool}
-@returns(200) {RouteAnalysis: RouteAnalysis?{GlobalNetworkId: str?, OwnerAccountId: str?, RouteAnalysisId: str?, StartTimestamp: str(timestamp)?, Status: str?, Source: RouteAnalysisEndpointOptions?{TransitGatewayAttachmentArn: str?, TransitGatewayArn: str?, IpAddress: str?}, Destination: RouteAnalysisEndpointOptions?{TransitGatewayAttachmentArn: str?, TransitGatewayArn: str?, IpAddress: str?}, IncludeReturnPath: bool?, UseMiddleboxes: bool?, ForwardPath: RouteAnalysisPath?{CompletionStatus: RouteAnalysisCompletion?{ResultCode: str?, ReasonCode: str?, ReasonContext: map<str,str>?}, Path: [PathComponent]?}, ReturnPath: RouteAnalysisPath?{CompletionStatus: RouteAnalysisCompletion?{ResultCode: str?, ReasonCode: str?, ReasonContext: map<str,str>?}, Path: [PathComponent]?}}}
+@returns(200) {RouteAnalysis: RouteAnalysis?{GlobalNetworkId: str?, OwnerAccountId: str?, RouteAnalysisId: str?, StartTimestamp: str(timestamp)?, Status: str?, Source: RouteAnalysisEndpointOptions?{TransitGatewayAttachmentArn: str?, TransitGatewayArn: str?, IpAddress: str?}, Destination: RouteAnalysisEndpointOptions?{TransitGatewayAttachmentArn: str?, TransitGatewayArn: str?, IpAddress: str?}, IncludeReturnPath: bool?, UseMiddleboxes: bool?, ForwardPath: RouteAnalysisPath?{CompletionStatus: RouteAnalysisCompletion?{ResultCode: str?, ReasonCode: str?, ReasonContext: map<str, str>?: any}, Path: [PathComponent]?}, ReturnPath: RouteAnalysisPath?{CompletionStatus: RouteAnalysisCompletion?{ResultCode: str?, ReasonCode: str?, ReasonContext: map<str, str>?: any}, Path: [PathComponent]?}}}
 
 @endgroup
 
 @group tags
 @endpoint POST /tags/{resourceArn}
+@desc Tags a specified resource.
 @required {ResourceArn: str, Tags: [Tag]}
 
 @endpoint DELETE /tags/{resourceArn}
+@desc Removes tags from a specified resource.
 @required {ResourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group global-networks
 @endpoint PATCH /global-networks/{globalNetworkId}/connections/{connectionId}
+@desc Updates the information for an existing connection. To remove information for any of the parameters, specify an empty string.
 @required {GlobalNetworkId: str, ConnectionId: str}
 @optional {LinkId: str, ConnectedLinkId: str, Description: str}
 @returns(200) {Connection: Connection?{ConnectionId: str?, ConnectionArn: str?, GlobalNetworkId: str?, DeviceId: str?, ConnectedDeviceId: str?, LinkId: str?, ConnectedLinkId: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
@@ -495,6 +573,7 @@
 
 @group core-networks
 @endpoint PATCH /core-networks/{coreNetworkId}
+@desc Updates the description of a core network.
 @required {CoreNetworkId: str}
 @optional {Description: str}
 @returns(200) {CoreNetwork: CoreNetwork?{GlobalNetworkId: str?, CoreNetworkId: str?, CoreNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Segments: [CoreNetworkSegment]?, NetworkFunctionGroups: [CoreNetworkNetworkFunctionGroup]?, Edges: [CoreNetworkEdge]?, Tags: [Tag]?}}
@@ -503,25 +582,30 @@
 
 @group global-networks
 @endpoint PATCH /global-networks/{globalNetworkId}/devices/{deviceId}
+@desc Updates the details for an existing device. To remove information for any of the parameters, specify an empty string.
 @required {GlobalNetworkId: str, DeviceId: str}
 @optional {AWSLocation: AWSLocation, Description: str, Type: str, Vendor: str, Model: str, SerialNumber: str, Location: Location, SiteId: str}
 @returns(200) {Device: Device?{DeviceId: str?, DeviceArn: str?, GlobalNetworkId: str?, AWSLocation: AWSLocation?{Zone: str?, SubnetArn: str?}, Description: str?, Type: str?, Vendor: str?, Model: str?, SerialNumber: str?, Location: Location?{Address: str?, Latitude: str?, Longitude: str?}, SiteId: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
 
 @endpoint PATCH /global-networks/{globalNetworkId}
+@desc Updates an existing global network. To remove information for any of the parameters, specify an empty string.
 @required {GlobalNetworkId: str}
 @optional {Description: str}
 @returns(200) {GlobalNetwork: GlobalNetwork?{GlobalNetworkId: str?, GlobalNetworkArn: str?, Description: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
 
 @endpoint PATCH /global-networks/{globalNetworkId}/links/{linkId}
+@desc Updates the details for an existing link. To remove information for any of the parameters, specify an empty string.
 @required {GlobalNetworkId: str, LinkId: str}
 @optional {Description: str, Type: str, Bandwidth: Bandwidth, Provider: str}
 @returns(200) {Link: Link?{LinkId: str?, LinkArn: str?, GlobalNetworkId: str?, SiteId: str?, Description: str?, Type: str?, Bandwidth: Bandwidth?{UploadSpeed: int?, DownloadSpeed: int?}, Provider: str?, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
 
 @endpoint PATCH /global-networks/{globalNetworkId}/network-resources/{resourceArn}/metadata
+@desc Updates the resource metadata for the specified global network.
 @required {GlobalNetworkId: str, ResourceArn: str, Metadata: map<str,str>}
 @returns(200) {ResourceArn: str?, Metadata: map<str,str>?}
 
 @endpoint PATCH /global-networks/{globalNetworkId}/sites/{siteId}
+@desc Updates the information for an existing site. To remove information for any of the parameters, specify an empty string.
 @required {GlobalNetworkId: str, SiteId: str}
 @optional {Description: str, Location: Location}
 @returns(200) {Site: Site?{SiteId: str?, SiteArn: str?, GlobalNetworkId: str?, Description: str?, Location: Location?{Address: str?, Latitude: str?, Longitude: str?}, CreatedAt: str(timestamp)?, State: str?, Tags: [Tag]?}}
@@ -530,6 +614,7 @@
 
 @group vpc-attachments
 @endpoint PATCH /vpc-attachments/{attachmentId}
+@desc Updates a VPC attachment.
 @required {AttachmentId: str}
 @optional {AddSubnetArns: [str], RemoveSubnetArns: [str], Options: VpcOptions}
 @returns(200) {VpcAttachment: VpcAttachment?{Attachment: Attachment?{CoreNetworkId: str?, CoreNetworkArn: str?, AttachmentId: str?, OwnerAccountId: str?, AttachmentType: str?, State: str?, EdgeLocation: str?, ResourceArn: str?, AttachmentPolicyRuleNumber: int?, SegmentName: str?, NetworkFunctionGroupName: str?, Tags: [Tag]?, ProposedSegmentChange: ProposedSegmentChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, SegmentName: str?}, ProposedNetworkFunctionGroupChange: ProposedNetworkFunctionGroupChange?{Tags: [Tag]?, AttachmentPolicyRuleNumber: int?, NetworkFunctionGroupName: str?}, CreatedAt: str(timestamp)?, UpdatedAt: str(timestamp)?, LastModificationErrors: [AttachmentError]?}, SubnetArns: [str]?, Options: VpcOptions?{Ipv6Support: bool?, ApplianceModeSupport: bool?}}}

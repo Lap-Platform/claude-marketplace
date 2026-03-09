@@ -9,95 +9,117 @@
 
 @group Files
 @endpoint GET /Files
-@optional {pagesize: int, page: int, sort: str(Name/Size/CreatedDateUTC), direction: str(ASC/DESC)}
-@returns(200) {TotalCount: int, Page: int, PerPage: int, Items: [map]}
+@desc Retrieves files
+@optional {pagesize: int # pass an optional page size value, page: int # number of records to skip for pagination, sort: str(Name/Size/CreatedDateUTC) # values to sort by, direction: str(ASC/DESC) # sort direction}
+@returns(200) {TotalCount: int, Page: int, PerPage: int, Items: [map]} # search results matching criteria
 
 @endpoint POST /Files
-@optional {Idempotency-Key: str}
-@returns(201) {Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)}
-@errors {400}
+@desc Uploads a File to the inbox
+@optional {Idempotency-Key: str # This allows you to safely retry requests without the risk of duplicate processing. 128 character max.}
+@returns(201) {Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)} # A successful request
+@errors {400: invalid input, object invalid}
 
 @endpoint GET /Files/{FileId}
-@required {FileId: str(uuid)}
-@returns(200) {Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)}
+@desc Retrieves a file by a unique file ID
+@required {FileId: str(uuid) # File id for single object}
+@returns(200) {Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)} # search results matching criteria
 
 @endpoint PUT /Files/{FileId}
-@required {FileId: str(uuid)}
-@optional {Idempotency-Key: str, Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id!: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)}
-@returns(200) {Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)}
-@errors {400}
+@desc Update a file
+@required {FileId: str(uuid) # File id for single object}
+@optional {Idempotency-Key: str # This allows you to safely retry requests without the risk of duplicate processing. 128 character max., Name: str # File Name, MimeType: str # MimeType of the file (image/png, image/jpeg, application/pdf, etc..), Size: int # Numeric value in bytes, CreatedDateUtc: str # Created date in UTC, UpdatedDateUtc: str # Updated date in UTC, User: map{Id!: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid) # File object's UUID, FolderId: str(uuid) # Folder relation object's UUID}
+@returns(200) {Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)} # A successful request
+@errors {400: invalid input, object invalid}
+@example_request "{ \"FolderId\": \"bf924975-7097-46f2-a143-1ecfbab3c8c3\" }"
 
 @endpoint DELETE /Files/{FileId}
-@required {FileId: str(uuid)}
-@returns(204)
+@desc Deletes a specific file
+@required {FileId: str(uuid) # File id for single object}
+@returns(204) Successful deletion - return response 204 no content
 
 @endpoint POST /Files/{FolderId}
-@required {FolderId: str(uuid)}
-@optional {Idempotency-Key: str}
-@returns(201) {Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)}
-@errors {400}
+@desc Uploads a File to a specific folder
+@required {FolderId: str(uuid) # pass required folder id to save file to specific folder}
+@optional {Idempotency-Key: str # This allows you to safely retry requests without the risk of duplicate processing. 128 character max.}
+@returns(201) {Name: str, MimeType: str, Size: int, CreatedDateUtc: str, UpdatedDateUtc: str, User: map{Id: str(uuid), Name: str, FirstName: str, LastName: str, FullName: str}, Id: str(uuid), FolderId: str(uuid)} # A successful request
+@errors {400: invalid input, object invalid}
 
 @endpoint GET /Files/{FileId}/Content
-@required {FileId: str(uuid)}
-@returns(200)
+@desc Retrieves the content of a specific file
+@required {FileId: str(uuid) # File id for single object}
+@returns(200) returns the byte array of the specific file based on id
 
 @endpoint GET /Files/{FileId}/Associations
-@required {FileId: str(uuid)}
-@returns(200)
+@desc Retrieves a specific file associations
+@required {FileId: str(uuid) # File id for single object}
+@returns(200) search results matching criteria
 
 @endpoint POST /Files/{FileId}/Associations
-@required {FileId: str(uuid)}
-@optional {Idempotency-Key: str, SendWithObject: bool, Name: str, Size: int, FileId: str(uuid), ObjectId: str(uuid), ObjectGroup: str(Account/BankTransaction/Contact/CreditNote/Invoice/Item/ManualJournal/Overpayment/Payment/Prepayment/Quote/Receipt), ObjectType: str(Unknown/Accpay/AccPayCredit/AccPayPayment/AccRec/AccRecCredit/AccRecPayment/Adjustment/ApCreditPayment/ApOverPayment/ApOverPaymentPayment/ApOverPaymentSourcePayment/ApPrepayment/ApPrepaymentPayment/ApPrepaymentSourcePayment/ArCreditPayment/ArOverPayment/ArOverpaymentPayment/ArOverpaymentSourcePayment/ArPrepayment/ArPrepaymentPayment/ArPrepaymentSourcePayment/CashPaid/CashRec/ExpPayment/ManJournal/PurchaseOrder/Receipt/Transfer/Account/Contact/Business/Employee/Person/User/Org/FixedAsset/PayRun/PriceListItem/Bank/Current/Equity/Expense/Fixed/Liability/Prepayment/Revenue/Sales/Overheads/Depreciatn/OtherIncome/DirectCosts/Currliab/Termliab/NonCurrent/SalesQuote)}
-@returns(201) {SendWithObject: bool, Name: str, Size: int, FileId: str(uuid), ObjectId: str(uuid), ObjectGroup: str, ObjectType: str}
-@errors {400}
+@desc Creates a new file association
+@required {FileId: str(uuid) # File id for single object}
+@optional {Idempotency-Key: str # This allows you to safely retry requests without the risk of duplicate processing. 128 character max., SendWithObject: bool # Boolean flag to determines whether the file is sent with the document it is attached to on client facing communications. Note- The SendWithObject element is only returned when using /Associations/{ObjectId} endpoint., Name: str # The name of the associated file. Note- The Name element is only returned when using /Associations/{ObjectId} endpoint., Size: int # The size of the associated file in bytes. Note- The Size element is only returned when using /Associations/{ObjectId} endpoint., FileId: str(uuid) # The unique identifier of the file, ObjectId: str(uuid) # The identifier of the object that the file is being associated with (e.g. InvoiceID, BankTransactionID, ContactID), ObjectGroup: str(Account/BankTransaction/Contact/CreditNote/Invoice/Item/ManualJournal/Overpayment/Payment/Prepayment/Quote/Receipt) # The Object Group that the object is in. These roughly correlate to the endpoints that can be used to retrieve the object via the core accounting API., ObjectType: str(Unknown/Accpay/AccPayCredit/AccPayPayment/AccRec/AccRecCredit/AccRecPayment/Adjustment/ApCreditPayment/ApOverPayment/ApOverPaymentPayment/ApOverPaymentSourcePayment/ApPrepayment/ApPrepaymentPayment/ApPrepaymentSourcePayment/ArCreditPayment/ArOverPayment/ArOverpaymentPayment/ArOverpaymentSourcePayment/ArPrepayment/ArPrepaymentPayment/ArPrepaymentSourcePayment/CashPaid/CashRec/ExpPayment/ManJournal/PurchaseOrder/Receipt/Transfer/Account/Contact/Business/Employee/Person/User/Org/FixedAsset/PayRun/PriceListItem/Bank/Current/Equity/Expense/Fixed/Liability/Prepayment/Revenue/Sales/Overheads/Depreciatn/OtherIncome/DirectCosts/Currliab/Termliab/NonCurrent/SalesQuote) # The Object Type}
+@returns(201) {SendWithObject: bool, Name: str, Size: int, FileId: str(uuid), ObjectId: str(uuid), ObjectGroup: str, ObjectType: str} # A successful request
+@errors {400: invalid input, object invalid}
+@example_request "{ \"ObjectId\": \"1270bf7c-5d18-473a-9231-1e36c4bd33ed\", \"ObjectGroup\": \"Contact\", \"ObjectType\": \"Business\" }"
 
 @endpoint DELETE /Files/{FileId}/Associations/{ObjectId}
-@required {FileId: str(uuid), ObjectId: str(uuid)}
-@returns(204)
+@desc Deletes an existing file association
+@required {FileId: str(uuid) # File id for single object, ObjectId: str(uuid) # Object id for single object}
+@returns(204) Successful deletion - return response 204 no content
 
 @endgroup
 
 @group Associations
 @endpoint GET /Associations/{ObjectId}
-@required {ObjectId: str(uuid)}
-@optional {pagesize: int, page: int, sort: str(Name/CreatedDateUTC), direction: str(ASC/DESC)}
-@returns(200)
+@desc Retrieves an association object using a unique object ID
+@required {ObjectId: str(uuid) # Object id for single object}
+@optional {pagesize: int # pass an optional page size value, page: int # number of records to skip for pagination, sort: str(Name/CreatedDateUTC) # values to sort by, direction: str(ASC/DESC) # direction to sort by}
+@returns(200) search results matching criteria
 
 @endpoint GET /Associations/Count
-@required {ObjectIds: [str(uuid)]}
-@returns(200)
+@desc Retrieves a count of associations for a list of objects.
+@required {ObjectIds: [str(uuid)] # A comma-separated list of object ids}
+@returns(200) A dictionary of the object Ids and associations count
 
 @endgroup
 
 @group Folders
 @endpoint GET /Folders
-@optional {sort: str(Name/Size/CreatedDateUTC)}
-@returns(200)
+@desc Retrieves folders
+@optional {sort: str(Name/Size/CreatedDateUTC) # values to sort by}
+@returns(200) search results matching criteria
 
 @endpoint POST /Folders
-@optional {Idempotency-Key: str, Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)}
-@returns(200) {Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)}
-@errors {400}
+@desc Creates a new folder
+@optional {Idempotency-Key: str # This allows you to safely retry requests without the risk of duplicate processing. 128 character max., Name: str # The name of the folder, FileCount: int # The number of files in the folder, Email: str # The email address used to email files to the inbox. Only the inbox will have this element., IsInbox: bool # to indicate if the folder is the Inbox. The Inbox cannot be renamed or deleted., Id: str(uuid) # Xero unique identifier for a folder  Files}
+@returns(200) {Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)} # search results matching criteria
+@errors {400: invalid input, object invalid}
+@example_request "{ \"Name\": \"My Docs\" }"
 
 @endpoint GET /Folders/{FolderId}
-@required {FolderId: str(uuid)}
-@returns(200) {Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)}
+@desc Retrieves specific folder by using a unique folder ID
+@required {FolderId: str(uuid) # Folder id for single object}
+@returns(200) {Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)} # search results matching criteria
 
 @endpoint PUT /Folders/{FolderId}
-@required {FolderId: str(uuid)}
-@optional {Idempotency-Key: str, Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)}
-@returns(200) {Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)}
-@errors {400}
+@desc Updates an existing folder
+@required {FolderId: str(uuid) # Folder id for single object}
+@optional {Idempotency-Key: str # This allows you to safely retry requests without the risk of duplicate processing. 128 character max., Name: str # The name of the folder, FileCount: int # The number of files in the folder, Email: str # The email address used to email files to the inbox. Only the inbox will have this element., IsInbox: bool # to indicate if the folder is the Inbox. The Inbox cannot be renamed or deleted., Id: str(uuid) # Xero unique identifier for a folder  Files}
+@returns(200) {Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)} # return the updated object
+@errors {400: invalid input, object invalid}
+@example_request "{ \"Name\": \"Your Docs\" }"
 
 @endpoint DELETE /Folders/{FolderId}
-@required {FolderId: str(uuid)}
-@returns(204)
+@desc Deletes a folder
+@required {FolderId: str(uuid) # Folder id for single object}
+@returns(204) Successful deletion - return response 204 no content
 
 @endgroup
 
 @group Inbox
 @endpoint GET /Inbox
-@returns(200) {Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)}
+@desc Retrieves inbox folder
+@returns(200) {Name: str, FileCount: int, Email: str, IsInbox: bool, Id: str(uuid)} # search results matching criteria
 
 @endgroup
 

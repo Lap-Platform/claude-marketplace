@@ -9,19 +9,23 @@
 
 @group get3dsAvailability
 @endpoint POST /get3dsAvailability
-@required {merchantAccount: str}
-@optional {additionalData: map, brands: [str], cardNumber: str, recurringDetailReference: str, shopperReference: str}
-@returns(200) {binDetails: map{issuerCountry: str}, dsPublicKeys: [map], threeDS1Supported: bool, threeDS2CardRangeDetails: [map], threeDS2supported: bool}
-@errors {400, 401, 403, 422, 500}
+@desc Check if 3D Secure is available
+@required {merchantAccount: str # The merchant account identifier.}
+@optional {additionalData: map # This field contains additional data, which may be required for a particular request.  The `additionalData` object consists of entries, each of which includes the key and value., brands: [str] # List of brands., cardNumber: str # Card number or BIN., recurringDetailReference: str # A recurring detail reference corresponding to a card., shopperReference: str # The shopper's reference to uniquely identify this shopper (e.g. user ID or account ID).}
+@returns(200) {binDetails: map{issuerCountry: str}, dsPublicKeys: [map], threeDS1Supported: bool, threeDS2CardRangeDetails: [map], threeDS2supported: bool} # OK - the request has succeeded.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"merchantAccount":"YOUR_MERCHANT_ACCOUNT","cardNumber":"4111111111111111"}
 
 @endgroup
 
 @group getCostEstimate
 @endpoint POST /getCostEstimate
-@required {amount: map{currency!: str, value!: int(int64)}, merchantAccount: str}
-@optional {assumptions: map{assume3DSecureAuthenticated: bool, assumeLevel3Data: bool, installments: int(int32)}, cardNumber: str, encryptedCardNumber: str, merchantDetails: map{countryCode: str, enrolledIn3DSecure: bool, mcc: str}, recurring: map{contract: str, recurringDetailName: str, recurringExpiry: str(date-time), recurringFrequency: str, tokenService: str}, selectedRecurringDetailReference: str, shopperInteraction: str(Ecommerce/ContAuth/Moto/POS), shopperReference: str}
-@returns(200) {cardBin: map{bin: str, commercial: bool, fundingSource: str, fundsAvailability: str, issuerBin: str, issuingBank: str, issuingCountry: str, issuingCurrency: str, paymentMethod: str, payoutEligible: str, summary: str}, costEstimateAmount: map{currency: str, value: int(int64)}, costEstimateReference: str, resultCode: str}
-@errors {400, 401, 403, 422, 500}
+@desc Get a fees cost estimate
+@required {amount: map{currency!: str, value!: int(int64)}, merchantAccount: str # The merchant account identifier you want to process the (transaction) request with.}
+@optional {assumptions: map{assume3DSecureAuthenticated: bool, assumeLevel3Data: bool, installments: int(int32)}, cardNumber: str # The card number (4-19 characters) for PCI compliant use cases. Do not use any separators.  > Either the `cardNumber` or `encryptedCardNumber` field must be provided in a payment request., encryptedCardNumber: str # Encrypted data that stores card information for non PCI-compliant use cases. The encrypted data must be created with the Checkout Card Component or Secured Fields Component, and must contain the `encryptedCardNumber` field.  > Either the `cardNumber` or `encryptedCardNumber` field must be provided in a payment request., merchantDetails: map{countryCode: str, enrolledIn3DSecure: bool, mcc: str}, recurring: map{contract: str, recurringDetailName: str, recurringExpiry: str(date-time), recurringFrequency: str, tokenService: str}, selectedRecurringDetailReference: str # The `recurringDetailReference` you want to use for this cost estimate. The value `LATEST` can be used to select the most recently stored recurring detail., shopperInteraction: str(Ecommerce/ContAuth/Moto/POS) # Specifies the sales channel, through which the shopper gives their card details, and whether the shopper is a returning customer. For the web service API, Adyen assumes Ecommerce shopper interaction by default.  This field has the following possible values: * `Ecommerce` - Online transactions where the cardholder is present (online). For better authorisation rates, we recommend sending the card security code (CSC) along with the request. * `ContAuth` - Card on file and/or subscription transactions, where the card holder is known to the merchant (returning customer). If the shopper is present (online), you can supply also the CSC to improve authorisation (one-click payment). * `Moto` - Mail-order and telephone-order transactions where the shopper is in contact with the merchant via email or telephone. * `POS` - Point-of-sale transactions where the shopper is physically present to make a payment using a secure payment terminal., shopperReference: str # Required for recurring payments.  Your reference to uniquely identify this shopper, for example user ID or account ID. The value is case-sensitive and must be at least three characters. > Your reference must not include personally identifiable information (PII) such as name or email address.}
+@returns(200) {cardBin: map{bin: str, commercial: bool, fundingSource: str, fundsAvailability: str, issuerBin: str, issuingBank: str, issuingCountry: str, issuingCurrency: str, paymentMethod: str, payoutEligible: str, summary: str}, costEstimateAmount: map{currency: str, value: int(int64)}, costEstimateReference: str, resultCode: str} # OK - the request has succeeded.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"amount":{"value":1234,"currency":"EUR"},"assumptions":{"assumeLevel3Data":true,"assume3DSecureAuthenticated":true},"cardNumber":"5101180000000007","merchantAccount":"YOUR_MERCHANT_ACCOUNT","merchantDetails":{"countryCode":"NL","mcc":"7411","enrolledIn3DSecure":true},"shopperInteraction":"Ecommerce"}
 
 @endgroup
 

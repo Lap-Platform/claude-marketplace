@@ -10,325 +10,392 @@
 
 @group emails
 @endpoint POST /emails
-@required {from: str, to: any, subject: str}
-@optional {Idempotency-Key: str, bcc: any, cc: any, reply_to: any, html: str, text: str, template: any, headers: map, scheduled_at: str, attachments: [map{content: str(binary), filename: str, path: str, content_type: str, content_id: str}], tags: [map{name: str, value: str}], topic_id: str}
-@returns(200) {id: str}
+@desc Send an email
+@required {from: str # Sender email address. To include a friendly name, use the format "Your Name <sender@domain.com>"., to: any # Recipient email address. For multiple addresses, send as an array of strings. Max 50., subject: str # Email subject.}
+@optional {Idempotency-Key: str # A unique identifier for the request to ensure emails are only sent once. [Learn more](https://resend.com/docs/dashboard/emails/idempotency-keys), bcc: any # Bcc recipient email address. For multiple addresses, send as an array of strings., cc: any # Cc recipient email address. For multiple addresses, send as an array of strings., reply_to: any # Reply-to email address. For multiple addresses, send as an array of strings., html: str # The HTML version of the message., text: str # The plain text version of the message., template: any, headers: map # Custom headers to add to the email., scheduled_at: str # Schedule email to be sent later. The date should be in ISO 8601 format., attachments: [map{content: str(binary), filename: str, path: str, content_type: str, content_id: str}], tags: [map{name: str, value: str}], topic_id: str # The topic ID to scope the email to. If the recipient is a contact and opted-in to the topic, the email is sent. If opted-out, the email is not sent. If the recipient is not a contact, the email is sent if the topic's default subscription is opt_in.}
+@returns(200) {id: str} # OK
 
 @endpoint GET /emails
-@optional {limit: int, after: str, before: str}
-@returns(200) {object: str, has_more: bool, data: [map]}
+@desc Retrieve a list of emails
+@optional {limit: int # Number of items to return., after: str # Return items after this cursor., before: str # Return items before this cursor.}
+@returns(200) {object: str, has_more: bool, data: [map]} # OK
 
 @endpoint GET /emails/{email_id}
-@required {email_id: str}
-@returns(200) {object: str, id: str, to: [str], from: str, created_at: str(date-time), subject: str, html: str, text: str, bcc: [str], cc: [str], reply_to: [str], last_event: str}
+@desc Retrieve a single email
+@required {email_id: str # The ID of the email.}
+@returns(200) {object: str, id: str, to: [str], from: str, created_at: str(date-time), subject: str, html: str, text: str, bcc: [str], cc: [str], reply_to: [str], last_event: str} # OK
 
 @endpoint PATCH /emails/{email_id}
-@required {email_id: str}
-@returns(200) {scheduled_at: str}
+@desc Update a single email
+@required {email_id: str # The ID of the email.}
+@returns(200) {scheduled_at: str} # OK
 
 @endpoint POST /emails/{email_id}/cancel
-@required {email_id: str}
-@returns(200) {object: str, id: str, to: [str], from: str, created_at: str(date-time), subject: str, html: str, text: str, bcc: [str], cc: [str], reply_to: [str], last_event: str}
+@desc Cancel the schedule of the e-mail.
+@required {email_id: str # The ID of the email.}
+@returns(200) {object: str, id: str, to: [str], from: str, created_at: str(date-time), subject: str, html: str, text: str, bcc: [str], cc: [str], reply_to: [str], last_event: str} # OK
 
 @endpoint POST /emails/batch
-@optional {Idempotency-Key: str}
-@returns(200) {data: [map]}
+@desc Trigger up to 100 batch emails at once.
+@optional {Idempotency-Key: str # A unique identifier for the request to ensure emails are only sent once. [Learn more](https://resend.com/docs/dashboard/emails/idempotency-keys)}
+@returns(200) {data: [map]} # OK
 
 @endpoint GET /emails/{email_id}/attachments
-@required {email_id: str(uuid)}
-@optional {limit: int, after: str(uuid), before: str(uuid)}
-@returns(200) {object: str, has_more: bool, data: [map]}
+@desc Retrieve a list of attachments for a sent email
+@required {email_id: str(uuid) # The ID of the email.}
+@optional {limit: int # Maximum number of attachments to return., after: str(uuid) # Pagination cursor to fetch results after this attachment ID. Cannot be used with 'before'., before: str(uuid) # Pagination cursor to fetch results before this attachment ID. Cannot be used with 'after'.}
+@returns(200) {object: str, has_more: bool, data: [map]} # OK
 
 @endpoint GET /emails/{email_id}/attachments/{attachment_id}
-@required {email_id: str(uuid), attachment_id: str(uuid)}
-@returns(200) {object: str, id: str(uuid), filename: str, content_type: str, content_id: str, content_disposition: str, download_url: str, expires_at: str(date-time), size: int}
+@desc Retrieve a single attachment for a sent email
+@required {email_id: str(uuid) # The ID of the email., attachment_id: str(uuid) # The ID of the attachment.}
+@returns(200) {object: str, id: str(uuid), filename: str, content_type: str, content_id: str, content_disposition: str, download_url: str, expires_at: str(date-time), size: int} # OK
 
 @endpoint GET /emails/receiving
-@optional {limit: int, after: str(uuid), before: str(uuid)}
-@returns(200) {object: str, has_more: bool, data: [map]}
+@desc Retrieve a list of received emails
+@optional {limit: int # Maximum number of received emails to return., after: str(uuid) # Pagination cursor to fetch results after this email ID. Cannot be used with 'before'., before: str(uuid) # Pagination cursor to fetch results before this email ID. Cannot be used with 'after'.}
+@returns(200) {object: str, has_more: bool, data: [map]} # OK
 
 @endpoint GET /emails/receiving/{email_id}
-@required {email_id: str(uuid)}
-@returns(200) {object: str, id: str(uuid), to: [str], from: str, subject: str, message_id: str, bcc: [str]?, cc: [str]?, reply_to: [str]?, html: str?, text: str?, headers: map?, created_at: str(date-time), attachments: [map]}
+@desc Retrieve a single received email
+@required {email_id: str(uuid) # The ID of the received email.}
+@returns(200) {object: str, id: str(uuid), to: [str], from: str, subject: str, message_id: str, bcc: [str]?, cc: [str]?, reply_to: [str]?, html: str?, text: str?, headers: map?, created_at: str(date-time), attachments: [map]} # OK
 
 @endpoint GET /emails/receiving/{email_id}/attachments
-@required {email_id: str(uuid)}
-@optional {limit: int, after: str(uuid), before: str(uuid)}
-@returns(200) {object: str, has_more: bool, data: [map]}
+@desc Retrieve a list of attachments for a received email
+@required {email_id: str(uuid) # The ID of the received email.}
+@optional {limit: int # Maximum number of attachments to return., after: str(uuid) # Pagination cursor to fetch results after this attachment ID. Cannot be used with 'before'., before: str(uuid) # Pagination cursor to fetch results before this attachment ID. Cannot be used with 'after'.}
+@returns(200) {object: str, has_more: bool, data: [map]} # OK
 
 @endpoint GET /emails/receiving/{email_id}/attachments/{attachment_id}
-@required {email_id: str(uuid), attachment_id: str(uuid)}
-@returns(200) {object: str, id: str(uuid), filename: str, content_type: str, content_id: str, content_disposition: str, download_url: str, expires_at: str(date-time), size: int}
+@desc Retrieve a single attachment for a received email
+@required {email_id: str(uuid) # The ID of the received email., attachment_id: str(uuid) # The ID of the attachment.}
+@returns(200) {object: str, id: str(uuid), filename: str, content_type: str, content_id: str, content_disposition: str, download_url: str, expires_at: str(date-time), size: int} # OK
 
 @endgroup
 
 @group domains
 @endpoint POST /domains
-@required {name: str}
-@optional {region: str(us-east-1/eu-west-1/sa-east-1/ap-northeast-1)=us-east-1, custom_return_path: str, open_tracking: bool, click_tracking: bool, tls: str(opportunistic/enforced)=opportunistic, capabilities: map{sending: str, receiving: str}}
-@returns(201) {id: str, name: str, created_at: str(date-time), status: str, capabilities: map{sending: str, receiving: str}, records: [map], region: str}
+@desc Create a new domain
+@required {name: str # The name of the domain you want to create.}
+@optional {region: str(us-east-1/eu-west-1/sa-east-1/ap-northeast-1)=us-east-1 # The region where emails will be sent from. Possible values are us-east-1 | eu-west-1 | sa-east-1 | ap-northeast-1, custom_return_path: str # For advanced use cases, choose a subdomain for the Return-Path address. Defaults to 'send' (i.e., send.yourdomain.tld)., open_tracking: bool # Track the open rate of each email., click_tracking: bool # Track clicks within the body of each HTML email., tls: str(opportunistic/enforced)=opportunistic # TLS mode. Opportunistic attempts secure connection but falls back to unencrypted. Enforced requires TLS or email won't be sent., capabilities: map{sending: str, receiving: str} # Configure the domain capabilities for sending and receiving emails. At least one capability must be enabled.}
+@returns(201) {id: str, name: str, created_at: str(date-time), status: str, capabilities: map{sending: str, receiving: str}, records: [map], region: str} # OK
 
 @endpoint GET /domains
-@optional {limit: int, after: str, before: str}
-@returns(200) {object: str, has_more: bool, data: [map]}
+@desc Retrieve a list of domains
+@optional {limit: int # Number of items to return., after: str # Return items after this cursor., before: str # Return items before this cursor.}
+@returns(200) {object: str, has_more: bool, data: [map]} # OK
 
 @endpoint GET /domains/{domain_id}
-@required {domain_id: str}
-@returns(200) {object: str, id: str, name: str, status: str, created_at: str(date-time), region: str, capabilities: map{sending: str, receiving: str}, records: [map]}
+@desc Retrieve a single domain
+@required {domain_id: str # The ID of the domain.}
+@returns(200) {object: str, id: str, name: str, status: str, created_at: str(date-time), region: str, capabilities: map{sending: str, receiving: str}, records: [map]} # OK
 
 @endpoint PATCH /domains/{domain_id}
-@required {domain_id: str}
-@optional {open_tracking: bool, click_tracking: bool, tls: str=opportunistic, capabilities: map{sending: str, receiving: str}}
-@returns(200) {id: str, object: str}
+@desc Update an existing domain
+@required {domain_id: str # The ID of the domain.}
+@optional {open_tracking: bool # Track the open rate of each email., click_tracking: bool # Track clicks within the body of each HTML email., tls: str=opportunistic # enforced | opportunistic., capabilities: map{sending: str, receiving: str} # Configure the domain capabilities for sending and receiving emails. At least one capability must be enabled.}
+@returns(200) {id: str, object: str} # OK
 
 @endpoint DELETE /domains/{domain_id}
-@required {domain_id: str}
-@returns(200) {object: str, id: str, deleted: bool}
+@desc Remove an existing domain
+@required {domain_id: str # The ID of the domain.}
+@returns(200) {object: str, id: str, deleted: bool} # OK
 
 @endpoint POST /domains/{domain_id}/verify
-@required {domain_id: str}
-@returns(200) {object: str, id: str}
+@desc Verify an existing domain
+@required {domain_id: str # The ID of the domain.}
+@returns(200) {object: str, id: str} # OK
 
 @endgroup
 
 @group api-keys
 @endpoint POST /api-keys
-@required {name: str}
-@optional {permission: str(full_access/sending_access), domain_id: str}
-@returns(201) {id: str, token: str}
+@desc Create a new API key
+@required {name: str # The API key name.}
+@optional {permission: str(full_access/sending_access) # The API key can have full access to Resend’s API or be only restricted to send emails. * full_access - Can create, delete, get, and update any resource. * sending_access - Can only send emails., domain_id: str # Restrict an API key to send emails only from a specific domain. Only used when the permission is sending_acces.}
+@returns(201) {id: str, token: str} # OK
 
 @endpoint GET /api-keys
-@optional {limit: int, after: str, before: str}
-@returns(200) {object: str, has_more: bool, data: [map]}
+@desc Retrieve a list of API keys
+@optional {limit: int # Number of items to return., after: str # Return items after this cursor., before: str # Return items before this cursor.}
+@returns(200) {object: str, has_more: bool, data: [map]} # OK
 
 @endpoint DELETE /api-keys/{api_key_id}
-@required {api_key_id: str}
-@returns(200)
+@desc Remove an existing API key
+@required {api_key_id: str # The API key ID.}
+@returns(200) OK
 
 @endgroup
 
 @group templates
 @endpoint POST /templates
-@required {name: str, html: str}
-@optional {alias: str, from: str, subject: str, reply_to: [str], text: str, variables: [map{key!: str, type!: str, fallback_value: any}]}
-@returns(201) {id: str, object: str}
+@desc Create a template
+@required {name: str # The name of the template., html: str # The HTML version of the template.}
+@optional {alias: str # The alias of the template., from: str # Sender email address. To include a friendly name, use the format "Your Name <sender@domain.com>"., subject: str # Email subject., reply_to: [str] # Reply-to email addresses., text: str # The plain text version of the template., variables: [map{key!: str, type!: str, fallback_value: any}]}
+@returns(201) {id: str, object: str} # OK
 
 @endpoint GET /templates
-@optional {limit: int, after: str, before: str}
-@returns(200) {object: str, data: [map], has_more: bool}
+@desc Retrieve a list of templates
+@optional {limit: int # Number of items to return., after: str # Return items after this cursor., before: str # Return items before this cursor.}
+@returns(200) {object: str, data: [map], has_more: bool} # OK
 
 @endpoint GET /templates/{id}
-@required {id: str}
-@returns(200) {object: str, id: str, current_version_id: str, name: str, alias: str, from: str, subject: str, reply_to: [str]?, html: str, text: str, variables: [map], created_at: str(date-time), updated_at: str(date-time), status: str, published_at: str(date-time)?, has_unpublished_versions: bool}
+@desc Retrieve a single template
+@required {id: str # The Template ID or alias.}
+@returns(200) {object: str, id: str, current_version_id: str, name: str, alias: str, from: str, subject: str, reply_to: [str]?, html: str, text: str, variables: [map], created_at: str(date-time), updated_at: str(date-time), status: str, published_at: str(date-time)?, has_unpublished_versions: bool} # OK
 
 @endpoint PATCH /templates/{id}
-@required {id: str}
-@optional {name: str, alias: str, from: str, subject: str, reply_to: [str], html: str, text: str, variables: [map{key!: str, type!: str, fallback_value: any}]}
-@returns(200) {id: str, object: str}
+@desc Update an existing template
+@required {id: str # The Template ID or alias.}
+@optional {name: str # The name of the template., alias: str # The alias of the template., from: str # Sender email address. To include a friendly name, use the format "Your Name <sender@domain.com>"., subject: str # Email subject., reply_to: [str] # Reply-to email addresses., html: str # The HTML version of the template., text: str # The plain text version of the template., variables: [map{key!: str, type!: str, fallback_value: any}]}
+@returns(200) {id: str, object: str} # OK
 
 @endpoint DELETE /templates/{id}
-@required {id: str}
-@returns(200) {object: str, id: str, deleted: bool}
+@desc Remove an existing template
+@required {id: str # The Template ID or alias.}
+@returns(200) {object: str, id: str, deleted: bool} # OK
 
 @endpoint POST /templates/{id}/publish
-@required {id: str}
-@returns(200) {id: str, object: str}
+@desc Publish a template
+@required {id: str # The Template ID or alias.}
+@returns(200) {id: str, object: str} # OK
 
 @endpoint POST /templates/{id}/duplicate
-@required {id: str}
-@returns(200) {id: str, object: str}
+@desc Duplicate a template
+@required {id: str # The Template ID or alias.}
+@returns(200) {id: str, object: str} # OK
 
 @endgroup
 
 @group audiences
 @endpoint POST /audiences
-@required {name: str}
-@returns(201) {id: str, object: str, name: str}
+@desc Create a list of contacts
+@required {name: str # The name of the audience you want to create.}
+@returns(201) {id: str, object: str, name: str} # OK
 
 @endpoint GET /audiences
-@returns(200) {object: str, data: [map]}
+@desc Retrieve a list of audiences
+@returns(200) {object: str, data: [map]} # OK
 
 @endpoint DELETE /audiences/{id}
-@required {id: str}
-@returns(200) {id: str, object: str, deleted: bool}
+@desc Remove an existing audience
+@required {id: str # The Audience ID.}
+@returns(200) {id: str, object: str, deleted: bool} # OK
 
 @endpoint GET /audiences/{id}
-@required {id: str}
-@returns(200) {id: str, object: str, name: str, created_at: str}
+@desc Retrieve a single audience
+@required {id: str # The Audience ID.}
+@returns(200) {id: str, object: str, name: str, created_at: str} # OK
 
 @endgroup
 
 @group contacts
 @endpoint POST /contacts
-@required {email: str}
-@optional {first_name: str, last_name: str, unsubscribed: bool, properties: map, segments: [str], topics: [map{id: str, subscription: str}], audience_id: str}
-@returns(201) {object: str, id: str}
+@desc Create a new contact
+@required {email: str # Email address of the contact.}
+@optional {first_name: str # First name of the contact., last_name: str # Last name of the contact., unsubscribed: bool # The Contact's global subscription status. If set to true, the contact will be unsubscribed from all Broadcasts., properties: map # A map of custom property keys and values to create., segments: [str] # Array of segment IDs to add the contact to., topics: [map{id: str, subscription: str}] # Array of topic subscriptions for the contact., audience_id: str # Unique identifier of the audience to which the contact belongs.}
+@returns(201) {object: str, id: str} # OK
 
 @endpoint GET /contacts
-@optional {segment_id: str, limit: int, after: str, before: str}
-@returns(200) {object: str, data: [map]}
+@desc Retrieve a list of contacts
+@optional {segment_id: str # Filter contacts by segment ID., limit: int # Number of items to return., after: str # Return items after this cursor., before: str # Return items before this cursor.}
+@returns(200) {object: str, data: [map]} # OK
 
 @endpoint GET /contacts/{id}
-@required {id: str}
-@returns(200) {object: str, id: str, email: str, first_name: str, last_name: str, created_at: str(date-time), unsubscribed: bool, properties: map}
+@desc Retrieve a single contact by ID or email
+@required {id: str # The Contact ID or email address.}
+@returns(200) {object: str, id: str, email: str, first_name: str, last_name: str, created_at: str(date-time), unsubscribed: bool, properties: map} # OK
 
 @endpoint PATCH /contacts/{id}
-@required {id: str}
-@optional {email: str, first_name: str, last_name: str, unsubscribed: bool, properties: map}
-@returns(200) {object: str, id: str}
+@desc Update a single contact by ID or email
+@required {id: str # The Contact ID or email address.}
+@optional {email: str # Email address of the contact., first_name: str # First name of the contact., last_name: str # Last name of the contact., unsubscribed: bool # The Contact's global subscription status. If set to true, the contact will be unsubscribed from all Broadcasts., properties: map # A map of custom property keys and values to update.}
+@returns(200) {object: str, id: str} # OK
 
 @endpoint DELETE /contacts/{id}
-@required {id: str}
-@returns(200) {object: str, id: str, deleted: bool}
+@desc Remove an existing contact by ID or email
+@required {id: str # The Contact ID or email address.}
+@returns(200) {object: str, id: str, deleted: bool} # OK
 
 @endgroup
 
 @group broadcasts
 @endpoint POST /broadcasts
-@required {segment_id: str, from: str, subject: str}
-@optional {name: str, audience_id: str, reply_to: [str], preview_text: str, html: str, text: str, topic_id: str, send: bool, scheduled_at: str}
-@returns(201) {id: str, object: str}
+@desc Create a broadcast
+@required {segment_id: str # Unique identifier of the segment this broadcast will be sent to., from: str # The email address of the sender., subject: str # The subject line of the email.}
+@optional {name: str # Name of the broadcast., audience_id: str # Use `segment_id` instead. Unique identifier of the segment this broadcast will be sent to., reply_to: [str] # The email addresses to which replies should be sent., preview_text: str # The preview text of the email., html: str # The HTML version of the message., text: str # The plain text version of the message., topic_id: str # The topic ID that the broadcast will be scoped to., send: bool # Whether to send the broadcast immediately or keep it as a draft., scheduled_at: str # Schedule time to send the broadcast. Can only be used if `send` is true.}
+@returns(201) {id: str, object: str} # OK
 
 @endpoint GET /broadcasts
-@optional {limit: int, after: str, before: str}
-@returns(200) {object: str, has_more: bool, data: [map]}
+@desc Retrieve a list of broadcasts
+@optional {limit: int # Number of items to return., after: str # Return items after this cursor., before: str # Return items before this cursor.}
+@returns(200) {object: str, has_more: bool, data: [map]} # OK
 
 @endpoint DELETE /broadcasts/{id}
-@required {id: str}
-@returns(200) {id: str, object: str, deleted: bool}
+@desc Remove an existing broadcast that is in the draft status
+@required {id: str # The Broadcast ID.}
+@returns(200) {id: str, object: str, deleted: bool} # OK
 
 @endpoint GET /broadcasts/{id}
-@required {id: str}
-@returns(200) {id: str, name: str, audience_id: str?, segment_id: str?, from: str, subject: str, reply_to: [str], preview_text: str, status: str, created_at: str(date-time), scheduled_at: str(date-time), sent_at: str(date-time), text: str?, html: str?, topic_id: str?}
+@desc Retrieve a single broadcast
+@required {id: str # The Broadcast ID.}
+@returns(200) {id: str, name: str, audience_id: str?, segment_id: str?, from: str, subject: str, reply_to: [str], preview_text: str, status: str, created_at: str(date-time), scheduled_at: str(date-time), sent_at: str(date-time), text: str?, html: str?, topic_id: str?} # OK
 
 @endpoint PATCH /broadcasts/{id}
-@required {id: str}
-@optional {name: str, audience_id: str, segment_id: str, from: str, subject: str, reply_to: [str], preview_text: str, html: str, text: str, topic_id: str}
-@returns(200) {id: str, object: str}
+@desc Update an existing broadcast
+@required {id: str # The Broadcast ID.}
+@optional {name: str # Name of the broadcast., audience_id: str # Use `segment_id` instead. Unique identifier of the audience this broadcast will be sent to., segment_id: str # Unique identifier of the segment this broadcast will be sent to., from: str # The email address of the sender., subject: str # The subject line of the email., reply_to: [str] # The email addresses to which replies should be sent., preview_text: str # The preview text of the email., html: str # The HTML version of the message., text: str # The plain text version of the message., topic_id: str # The topic ID that the broadcast will be scoped to.}
+@returns(200) {id: str, object: str} # OK
 
 @endpoint POST /broadcasts/{id}/send
-@required {id: str}
-@optional {scheduled_at: str}
-@returns(200) {id: str}
+@desc Send or schedule a broadcast
+@required {id: str # The Broadcast ID.}
+@optional {scheduled_at: str # Schedule email to be sent later. The date should be in ISO 8601 format.}
+@returns(200) {id: str} # OK
 
 @endgroup
 
 @group webhooks
 @endpoint POST /webhooks
-@required {endpoint: str, events: [str]}
-@returns(201) {object: str, id: str(uuid), signing_secret: str}
+@desc Create a new webhook
+@required {endpoint: str # The URL where webhook events will be sent., events: [str] # Array of event types to subscribe to.}
+@returns(201) {object: str, id: str(uuid), signing_secret: str} # Created
 
 @endpoint GET /webhooks
-@optional {limit: int, after: str(uuid), before: str(uuid)}
-@returns(200) {object: str, has_more: bool, data: [map]}
+@desc Retrieve a list of webhooks
+@optional {limit: int # Maximum number of webhooks to return., after: str(uuid) # Pagination cursor to fetch results after this webhook ID. Cannot be used with 'before'., before: str(uuid) # Pagination cursor to fetch results before this webhook ID. Cannot be used with 'after'.}
+@returns(200) {object: str, has_more: bool, data: [map]} # OK
 
 @endpoint GET /webhooks/{webhook_id}
-@required {webhook_id: str(uuid)}
-@returns(200) {object: str, id: str(uuid), endpoint: str, events: [str]?, status: str, created_at: str(date-time), signing_secret: str}
+@desc Retrieve a single webhook
+@required {webhook_id: str(uuid) # The Webhook ID.}
+@returns(200) {object: str, id: str(uuid), endpoint: str, events: [str]?, status: str, created_at: str(date-time), signing_secret: str} # OK
 
 @endpoint PATCH /webhooks/{webhook_id}
-@required {webhook_id: str(uuid)}
-@optional {endpoint: str, events: [str], status: str(enabled/disabled)}
-@returns(200) {object: str, id: str(uuid)}
+@desc Update an existing webhook
+@required {webhook_id: str(uuid) # The Webhook ID.}
+@optional {endpoint: str # The URL where webhook events will be sent., events: [str] # Array of event types to subscribe to., status: str(enabled/disabled) # The status of the webhook.}
+@returns(200) {object: str, id: str(uuid)} # OK
 
 @endpoint DELETE /webhooks/{webhook_id}
-@required {webhook_id: str(uuid)}
-@returns(200) {object: str, id: str(uuid), deleted: bool}
+@desc Remove an existing webhook
+@required {webhook_id: str(uuid) # The Webhook ID.}
+@returns(200) {object: str, id: str(uuid), deleted: bool} # OK
 
 @endgroup
 
 @group segments
 @endpoint POST /segments
-@required {name: str}
-@optional {audience_id: str, filter: map}
-@returns(201) {id: str, object: str}
+@desc Create a new segment
+@required {name: str # The name of the segment.}
+@optional {audience_id: str # The ID of the audience this segment belongs to., filter: map # Filter conditions for the segment.}
+@returns(201) {id: str, object: str} # OK
 
 @endpoint GET /segments
-@optional {limit: int, after: str, before: str}
-@returns(200) {object: str, has_more: bool, data: [map]}
+@desc Retrieve a list of segments
+@optional {limit: int # Number of items to return., after: str # Return items after this cursor., before: str # Return items before this cursor.}
+@returns(200) {object: str, has_more: bool, data: [map]} # OK
 
 @endpoint GET /segments/{id}
-@required {id: str}
-@returns(200) {id: str, object: str, name: str, audience_id: str, filter: map, created_at: str(date-time)}
+@desc Retrieve a single segment
+@required {id: str # The Segment ID.}
+@returns(200) {id: str, object: str, name: str, audience_id: str, filter: map, created_at: str(date-time)} # OK
 
 @endpoint DELETE /segments/{id}
-@required {id: str}
-@returns(200) {id: str, object: str, deleted: bool}
+@desc Remove an existing segment
+@required {id: str # The Segment ID.}
+@returns(200) {id: str, object: str, deleted: bool} # OK
 
 @endgroup
 
 @group topics
 @endpoint POST /topics
-@required {name: str, default_subscription: str(opt_in/opt_out)}
-@optional {description: str, visibility: str(public/private)=private}
-@returns(201) {id: str, object: str}
+@desc Create a new topic
+@required {name: str # The name of the topic. Max 50 characters., default_subscription: str(opt_in/opt_out) # The default subscription status for the topic. Cannot be changed after creation.}
+@optional {description: str # A description of the topic. Max 200 characters., visibility: str(public/private)=private # The visibility of the topic. Public topics are visible to all contacts on the unsubscribe page. Private topics are only visible to opted-in contacts.}
+@returns(201) {id: str, object: str} # OK
 
 @endpoint GET /topics
-@optional {limit: int, after: str, before: str}
-@returns(200) {object: str, has_more: bool, data: [map]}
+@desc Retrieve a list of topics
+@optional {limit: int # Number of items to return., after: str # Return items after this cursor., before: str # Return items before this cursor.}
+@returns(200) {object: str, has_more: bool, data: [map]} # OK
 
 @endpoint GET /topics/{id}
-@required {id: str}
-@returns(200) {id: str, object: str, name: str, description: str, default_subscription: str, visibility: str, created_at: str(date-time)}
+@desc Retrieve a single topic
+@required {id: str # The Topic ID.}
+@returns(200) {id: str, object: str, name: str, description: str, default_subscription: str, visibility: str, created_at: str(date-time)} # OK
 
 @endpoint PATCH /topics/{id}
-@required {id: str}
-@optional {name: str, description: str, visibility: str(public/private)}
-@returns(200) {id: str, object: str}
+@desc Update an existing topic
+@required {id: str # The Topic ID.}
+@optional {name: str # The name of the topic. Max 50 characters., description: str # A description of the topic. Max 200 characters., visibility: str(public/private) # The visibility of the topic.}
+@returns(200) {id: str, object: str} # OK
 
 @endpoint DELETE /topics/{id}
-@required {id: str}
-@returns(200) {id: str, object: str, deleted: bool}
+@desc Remove an existing topic
+@required {id: str # The Topic ID.}
+@returns(200) {id: str, object: str, deleted: bool} # OK
 
 @endgroup
 
 @group contact-properties
 @endpoint POST /contact-properties
-@required {key: str, type: str(string/number)}
-@optional {fallback_value: any}
-@returns(201) {id: str, object: str}
+@desc Create a new contact property
+@required {key: str # The property key. Max length is 50 characters. Only alphanumeric characters and underscores are allowed., type: str(string/number) # The property type.}
+@optional {fallback_value: any # The default value to use when the property is not set for a contact. Must match the type specified in the type field.}
+@returns(201) {id: str, object: str} # OK
 
 @endpoint GET /contact-properties
-@optional {limit: int, after: str, before: str}
-@returns(200) {object: str, has_more: bool, data: [map]}
+@desc Retrieve a list of contact properties
+@optional {limit: int # Number of items to return., after: str # Return items after this cursor., before: str # Return items before this cursor.}
+@returns(200) {object: str, has_more: bool, data: [map]} # OK
 
 @endpoint GET /contact-properties/{id}
-@required {id: str}
-@returns(200) {object: str, id: str, key: str, type: str, fallback_value: any, created_at: str(date-time)}
+@desc Retrieve a single contact property
+@required {id: str # The Contact Property ID.}
+@returns(200) {object: str, id: str, key: str, type: str, fallback_value: any, created_at: str(date-time)} # OK
 
 @endpoint PATCH /contact-properties/{id}
-@required {id: str}
-@optional {fallback_value: any}
-@returns(200) {id: str, object: str}
+@desc Update an existing contact property
+@required {id: str # The Contact Property ID.}
+@optional {fallback_value: any # The default value to use when the property is not set for a contact. Must match the type of the property.}
+@returns(200) {id: str, object: str} # OK
 
 @endpoint DELETE /contact-properties/{id}
-@required {id: str}
-@returns(200) {id: str, object: str, deleted: bool}
+@desc Remove an existing contact property
+@required {id: str # The Contact Property ID.}
+@returns(200) {id: str, object: str, deleted: bool} # OK
 
 @endgroup
 
 @group contacts
 @endpoint GET /contacts/{contact_id}/segments
-@required {contact_id: str}
-@optional {limit: int, after: str, before: str}
-@returns(200) {object: str, has_more: bool, data: [map]}
+@desc Retrieve a list of segments for a contact
+@required {contact_id: str # The Contact ID or email address.}
+@optional {limit: int # Number of items to return., after: str # Return items after this cursor., before: str # Return items before this cursor.}
+@returns(200) {object: str, has_more: bool, data: [map]} # OK
 
 @endpoint POST /contacts/{contact_id}/segments/{segment_id}
-@required {contact_id: str, segment_id: str}
-@returns(200) {object: str, contact_id: str, segment_id: str}
+@desc Add a contact to a segment
+@required {contact_id: str # The Contact ID or email address., segment_id: str # The Segment ID.}
+@returns(200) {object: str, contact_id: str, segment_id: str} # OK
 
 @endpoint DELETE /contacts/{contact_id}/segments/{segment_id}
-@required {contact_id: str, segment_id: str}
-@returns(200) {object: str, contact_id: str, segment_id: str, deleted: bool}
+@desc Remove a contact from a segment
+@required {contact_id: str # The Contact ID or email address., segment_id: str # The Segment ID.}
+@returns(200) {object: str, contact_id: str, segment_id: str, deleted: bool} # OK
 
 @endpoint GET /contacts/{contact_id}/topics
-@required {contact_id: str}
-@optional {limit: int, after: str, before: str}
-@returns(200) {object: str, has_more: bool, data: [map]}
+@desc Retrieve topics for a contact
+@required {contact_id: str # The Contact ID or email address.}
+@optional {limit: int # Number of items to return., after: str # Return items after this cursor., before: str # Return items before this cursor.}
+@returns(200) {object: str, has_more: bool, data: [map]} # OK
 
 @endpoint PATCH /contacts/{contact_id}/topics
-@required {contact_id: str, topics: [map{id: str, subscription: str}]}
-@returns(200) {object: str, contact_id: str, topics: [map]}
+@desc Update topics for a contact
+@required {contact_id: str # The Contact ID or email address., topics: [map{id: str, subscription: str}]}
+@returns(200) {object: str, contact_id: str, topics: [map]} # OK
 
 @endgroup
 

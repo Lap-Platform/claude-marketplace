@@ -9,41 +9,49 @@
 
 @group Assets
 @endpoint GET /Assets
-@required {status: str}
-@optional {page: int, pageSize: int, orderBy: str(AssetType/AssetName/AssetNumber/PurchaseDate/PurchasePrice/DisposalDate/DisposalPrice), sortDirection: str(asc/desc), filterBy: str}
-@returns(200) {pagination: any, items: [map]}
-@errors {400}
+@desc searches fixed asset
+@required {status: str # Required when retrieving a collection of assets. See Asset Status Codes}
+@optional {page: int # Results are paged. This specifies which page of the results to return. The default page is 1., pageSize: int # The number of records returned per page. By default the number of records returned is 10., orderBy: str(AssetType/AssetName/AssetNumber/PurchaseDate/PurchasePrice/DisposalDate/DisposalPrice) # Requests can be ordered by AssetType, AssetName, AssetNumber, PurchaseDate and PurchasePrice. If the asset status is DISPOSED it also allows DisposalDate and DisposalPrice., sortDirection: str(asc/desc) # ASC or DESC, filterBy: str # A string that can be used to filter the list to only return assets containing the text. Checks it against the AssetName, AssetNumber, Description and AssetTypeName fields.}
+@returns(200) {pagination: any, items: [map]} # search results matching criteria
+@errors {400: bad input parameter}
 
 @endpoint POST /Assets
-@required {assetName: str}
-@optional {Idempotency-Key: str, assetId: str(uuid), assetTypeId: str(uuid), assetNumber: str, purchaseDate: str(date), purchasePrice: num(double), disposalDate: str(date), disposalPrice: num(double), assetStatus: str(Draft/Registered/Disposed), warrantyExpiryDate: str, serialNumber: str, bookDepreciationSetting: any, bookDepreciationDetail: any, canRollback: bool, accountingBookValue: num(double), isDeleteEnabledForDate: bool}
-@returns(200) {assetId: str(uuid), assetName: str, assetTypeId: str(uuid), assetNumber: str, purchaseDate: str(date), purchasePrice: num(double), disposalDate: str(date), disposalPrice: num(double), assetStatus: str, warrantyExpiryDate: str, serialNumber: str, bookDepreciationSetting: any, bookDepreciationDetail: any, canRollback: bool, accountingBookValue: num(double), isDeleteEnabledForDate: bool}
-@errors {400}
+@desc adds a fixed asset
+@required {assetName: str # The name of the asset}
+@optional {Idempotency-Key: str # This allows you to safely retry requests without the risk of duplicate processing. 128 character max., assetId: str(uuid) # The Xero-generated Id for the asset, assetTypeId: str(uuid) # The Xero-generated Id for the asset type, assetNumber: str # Must be unique., purchaseDate: str(date) # The date the asset was purchased YYYY-MM-DD, purchasePrice: num(double) # The purchase price of the asset, disposalDate: str(date) # The date the asset was disposed, disposalPrice: num(double) # The price the asset was disposed at, assetStatus: str(Draft/Registered/Disposed) # See Asset Status Codes., warrantyExpiryDate: str # The date the asset’s warranty expires (if needed) YYYY-MM-DD, serialNumber: str # The asset's serial number, bookDepreciationSetting: any, bookDepreciationDetail: any, canRollback: bool # Boolean to indicate whether depreciation can be rolled back for this asset individually. This is true if it doesn't have 'legacy' journal entries and if there is no lock period that would prevent this asset from rolling back., accountingBookValue: num(double) # The accounting value of the asset, isDeleteEnabledForDate: bool # Boolean to indicate whether delete is enabled}
+@returns(200) {assetId: str(uuid), assetName: str, assetTypeId: str(uuid), assetNumber: str, purchaseDate: str(date), purchasePrice: num(double), disposalDate: str(date), disposalPrice: num(double), assetStatus: str, warrantyExpiryDate: str, serialNumber: str, bookDepreciationSetting: any, bookDepreciationDetail: any, canRollback: bool, accountingBookValue: num(double), isDeleteEnabledForDate: bool} # return single object - create new asset
+@errors {400: invalid input, object invalid}
+@example_request {"assetName":"Computer74863","assetNumber":"123477544","purchaseDate":"2020-01-01","purchasePrice":100.0,"disposalPrice":23.23,"assetStatus":"Draft","bookDepreciationSetting":{"depreciationMethod":"StraightLine","averagingMethod":"ActualDays","depreciationRate":0.5,"depreciationCalculationMethod":"None"},"bookDepreciationDetail":{"currentCapitalGain":5.32,"currentGainLoss":3.88,"depreciationStartDate":"2020-01-02","costLimit":100.0,"currentAccumDepreciationAmount":2.25},"AccountingBookValue":99.5}
 
 @endpoint GET /Assets/{id}
-@required {id: str(uuid)}
-@returns(200) {assetId: str(uuid), assetName: str, assetTypeId: str(uuid), assetNumber: str, purchaseDate: str(date), purchasePrice: num(double), disposalDate: str(date), disposalPrice: num(double), assetStatus: str, warrantyExpiryDate: str, serialNumber: str, bookDepreciationSetting: any, bookDepreciationDetail: any, canRollback: bool, accountingBookValue: num(double), isDeleteEnabledForDate: bool}
-@errors {400}
+@desc Retrieves fixed asset by id
+@required {id: str(uuid) # fixed asset id for single object}
+@returns(200) {assetId: str(uuid), assetName: str, assetTypeId: str(uuid), assetNumber: str, purchaseDate: str(date), purchasePrice: num(double), disposalDate: str(date), disposalPrice: num(double), assetStatus: str, warrantyExpiryDate: str, serialNumber: str, bookDepreciationSetting: any, bookDepreciationDetail: any, canRollback: bool, accountingBookValue: num(double), isDeleteEnabledForDate: bool} # search results matching criteria
+@errors {400: bad input parameter}
 
 @endgroup
 
 @group AssetTypes
 @endpoint GET /AssetTypes
-@returns(200)
-@errors {400}
+@desc searches fixed asset types
+@returns(200) search results matching criteria
+@errors {400: bad input parameter}
 
 @endpoint POST /AssetTypes
-@required {assetTypeName: str, bookDepreciationSetting: any}
-@optional {Idempotency-Key: str, assetTypeId: str(uuid), fixedAssetAccountId: str(uuid), depreciationExpenseAccountId: str(uuid), accumulatedDepreciationAccountId: str(uuid), locks: int}
-@returns(200) {assetTypeId: str(uuid), assetTypeName: str, fixedAssetAccountId: str(uuid), depreciationExpenseAccountId: str(uuid), accumulatedDepreciationAccountId: str(uuid), bookDepreciationSetting: any, locks: int}
-@errors {400, 409}
+@desc adds a fixed asset type
+@required {assetTypeName: str # The name of the asset type, bookDepreciationSetting: any}
+@optional {Idempotency-Key: str # This allows you to safely retry requests without the risk of duplicate processing. 128 character max., assetTypeId: str(uuid) # Xero generated unique identifier for asset types, fixedAssetAccountId: str(uuid) # The asset account for fixed assets of this type, depreciationExpenseAccountId: str(uuid) # The expense account for the depreciation of fixed assets of this type, accumulatedDepreciationAccountId: str(uuid) # The account for accumulated depreciation of fixed assets of this type, locks: int # All asset types that have accumulated depreciation for any assets that use them are deemed ‘locked’ and cannot be removed.}
+@returns(200) {assetTypeId: str(uuid), assetTypeName: str, fixedAssetAccountId: str(uuid), depreciationExpenseAccountId: str(uuid), accumulatedDepreciationAccountId: str(uuid), bookDepreciationSetting: any, locks: int} # results single object -  created fixed type
+@errors {400: invalid input, object invalid, 409: a type already exists}
+@example_request {"assetTypeName":"Machinery11004","fixedAssetAccountId":"3d8d063a-c148-4bb8-8b3c-a5e2ad3b1e82","depreciationExpenseAccountId":"d1602f69-f900-4616-8d34-90af393fa368","accumulatedDepreciationAccountId":"9195cadd-8645-41e6-9f67-7bcd421defe8","bookDepreciationSetting":{"depreciationMethod":"DiminishingValue100","averagingMethod":"ActualDays","depreciationRate":0.05,"depreciationCalculationMethod":"None"}}
 
 @endgroup
 
 @group Settings
 @endpoint GET /Settings
-@returns(200) {assetNumberPrefix: str, assetNumberSequence: str, assetStartDate: str(date), lastDepreciationDate: str(date), defaultGainOnDisposalAccountId: str(uuid), defaultLossOnDisposalAccountId: str(uuid), defaultCapitalGainOnDisposalAccountId: str(uuid), optInForTax: bool}
-@errors {400}
+@desc searches fixed asset settings
+@returns(200) {assetNumberPrefix: str, assetNumberSequence: str, assetStartDate: str(date), lastDepreciationDate: str(date), defaultGainOnDisposalAccountId: str(uuid), defaultLossOnDisposalAccountId: str(uuid), defaultCapitalGainOnDisposalAccountId: str(uuid), optInForTax: bool} # search results matching criteria
+@errors {400: bad input parameter}
 
 @endgroup
 

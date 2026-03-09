@@ -149,90 +149,94 @@ https://api.tradematic.com
 | GET | /marketplace/products/{productid}/rates | Get product rates by product ID |
 | GET | /marketplace/groups | Get product groups list |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Is the API up?" -> GET /ping
-- "What time does the server report?" -> GET /time
-- "List all users" -> GET /client/users
-- "Find a user by username?" -> GET /client/users?username={username}
-- "How do I authenticate a user?" -> POST /client/users/login
-- "What trading strategies are available?" -> GET /autofollow/strategies
-- "Show me the positions for a strategy" -> GET /autofollow/strategies/{strategyid}/positions
-- "What signals has a strategy generated?" -> GET /autofollow/strategies/{strategyid}/signals
-- "How is my backtest task performing?" -> GET /taskmanager/tasks/{taskid}/performance
-- "Show equity curve for a task" -> GET /taskmanager/tasks/{taskid}/equity
-- "Get historical price data for a symbol" -> GET /marketdata/symbols/{name}/histdata
-- "What broker accounts do I have?" -> GET /cloud/accounts
-- "Place an order on my account" -> POST /cloud/accounts/{accountid}/orders
-- "Close all positions on an account" -> POST /cloud/accounts/{accountid}/closeall
-- "What's my marketplace balance?" -> GET /marketplace/balance
-
-## Response Tips
-
-- **ping/time**: Flat responses; 200 means healthy, 500 means service degradation -- use for connectivity checks before workflows.
-- **client**: User objects may nest role info; 404 on user lookup means invalid userid, not empty result.
-- **autofollow**: Strategy lists support `filter` for narrowing; positions/signals are sub-resources that require a valid strategyid or return 404.
-- **taskmanager**: Task creation returns 202 (accepted, not complete) -- poll `/tasks/{taskid}/status` for progress. Equity/drawdown endpoints accept `from`, `to`, `count` for windowed results.
-- **marketdata**: histdata requires `symbol`, `tf` (timeframe) as query params; snapshots endpoint takes a body array of symbol names for batch lookups.
-- **cloud**: Order and strategy start/stop return 202 (async); check `/commands/{commandid}` for execution status. Connections are broker link configs.
-- **marketplace**: Products may include nested rate structures; use `/products/{id}/rates` for pricing details separate from product metadata.
-
-## Anomaly Flags
-
-- **202 on write operations**: Cloud orders, strategy start/stop, closeall, and task creation are async. Agent should remind the user to poll for completion status rather than assuming success.
-- **Dual result endpoints**: `/tasks/{taskid}/result` and `/result2` exist -- surface both when the user asks for task results, as they may contain different result formats.
-- **Missing 404 on list endpoints**: Most list endpoints (strategies, tasks, accounts) only return 500, not 404. An empty list is a valid 200, not an error -- flag if user expects a "not found" response from a collection.
-- **Sync has dual methods**: `POST /cloud/accounts/{accountid}/sync` triggers a sync (202), while `GET` on the same path checks sync state (200). Agent should clarify which the user intends.
-- **No pagination parameters on most lists**: Endpoints like `/cloud/accounts`, `/autofollow/strategies`, `/marketplace/products` lack `count`/`from`/`to` -- large result sets may arrive in full. Flag if responses seem unusually large.
-- **API key scope ambiguity**: `/client/apikeys` allows creating and deleting keys. Agent should warn before DELETE operations on API keys, as this may revoke active access.
-
-## Playbook
-
-### 1. Set Up a New User and Generate an API Key
-
-1. POST /client/users/register with user details in body
-2. POST /client/users/login to authenticate and receive a session/token
-3. POST /client/apikeys to generate a new API key
-4. Store the returned key securely for `X-API-Key` header use
-
-### 2. Browse and Follow a Trading Strategy
-
-1. GET /autofollow/strategies to list available strategies (use `filter` to narrow)
-2. GET /autofollow/strategies/{strategyid} to inspect a specific strategy
-3. GET /autofollow/strategies/risklevels to understand risk options
-4. GET /autofollow/strategies/{strategyid}/signals?count=10 to review recent signals
-5. POST /autofollow/strategies/{strategyid}/positions to open a position based on signals
-
-### 3. Run a Backtest and Analyze Results
-
-1. POST /taskmanager/tasks with strategy config in body (returns 202)
-2. GET /taskmanager/tasks/{taskid}/status -- poll until complete
-3. GET /taskmanager/tasks/{taskid}/result for primary results
-4. GET /taskmanager/tasks/{taskid}/performance for summary metrics
-5. GET /taskmanager/tasks/{taskid}/equity?from={date}&to={date} for equity curve
-6. GET /taskmanager/tasks/{taskid}/drawdown for risk analysis
-7. GET /taskmanager/tasks/{taskid}/bymonths for monthly breakdown
-
-### 4. Connect a Broker and Place a Trade
-
-1. GET /cloud/connectors to list supported broker connectors
-2. POST /cloud/connections with connector ID and credentials in body
-3. GET /cloud/accounts to confirm the account appeared
-4. POST /cloud/accounts/{accountid}/sync to pull current state (returns 202)
-5. GET /cloud/accounts/{accountid}/sync to verify sync completed
-6. POST /cloud/accounts/{accountid}/orders with order details (returns 202)
-7. GET /cloud/commands/{commandid} to confirm order execution status
-
-### 5. Monitor Live Strategy and Manage Positions
-
-1. GET /cloud/strategies to list running strategies
-2. GET /cloud/strategies/{strategyid} for current state and config
-3. GET /cloud/accounts/{accountid}/trades?count=20 to review recent trades
-4. GET /cloud/accounts/{accountid}/snapshots for account equity snapshots
-5. POST /cloud/accounts/{accountid}/close with position details to exit a specific position
-6. POST /cloud/strategies/{strategyid}/stop to halt the strategy (returns 202)
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all ping?" -> GET /ping
+- "List all time?" -> GET /time
+- "List all users?" -> GET /client/users
+- "Get user details?" -> GET /client/users/{userid}
+- "Create a login?" -> POST /client/users/login
+- "Create a register?" -> POST /client/users/register
+- "List all roles?" -> GET /client/users/roles
+- "Create a check?" -> POST /client/users/check
+- "List all apikeys?" -> GET /client/apikeys
+- "Create a apikey?" -> POST /client/apikeys
+- "Delete a apikey?" -> DELETE /client/apikeys/{keyid}
+- "List all strategies?" -> GET /autofollow/strategies
+- "Create a strategy?" -> POST /autofollow/strategies
+- "Get strategy details?" -> GET /autofollow/strategies/{strategyid}
+- "Update a strategy?" -> PUT /autofollow/strategies/{strategyid}
+- "List all positions?" -> GET /autofollow/strategies/{strategyid}/positions
+- "Create a position?" -> POST /autofollow/strategies/{strategyid}/positions
+- "List all signals?" -> GET /autofollow/strategies/{strategyid}/signals
+- "Create a signal?" -> POST /autofollow/strategies/{strategyid}/signals
+- "List all risklevels?" -> GET /autofollow/strategies/risklevels
+- "List all rates?" -> GET /autofollow/strategies/rates
+- "List all statuses?" -> GET /autofollow/strategies/statuses
+- "List all authors?" -> GET /autofollow/authors
+- "List all tasks?" -> GET /taskmanager/tasks
+- "Create a task?" -> POST /taskmanager/tasks
+- "Get task details?" -> GET /taskmanager/tasks/{taskid}
+- "List all status?" -> GET /taskmanager/tasks/{taskid}/status
+- "List all folder?" -> GET /taskmanager/tasks/{taskid}/folder
+- "List all result?" -> GET /taskmanager/tasks/{taskid}/result
+- "List all result2?" -> GET /taskmanager/tasks/{taskid}/result2
+- "List all equity?" -> GET /taskmanager/tasks/{taskid}/equity
+- "List all equitypct?" -> GET /taskmanager/tasks/{taskid}/equitypct
+- "List all equitypctsm?" -> GET /taskmanager/tasks/{taskid}/equitypctsm
+- "List all drawdown?" -> GET /taskmanager/tasks/{taskid}/drawdown
+- "List all performance?" -> GET /taskmanager/tasks/{taskid}/performance
+- "List all trades?" -> GET /taskmanager/tasks/{taskid}/trades
+- "List all contribution?" -> GET /taskmanager/tasks/{taskid}/contribution
+- "List all bymonths?" -> GET /taskmanager/tasks/{taskid}/bymonths
+- "List all byquarters?" -> GET /taskmanager/tasks/{taskid}/byquarters
+- "List all byyears?" -> GET /taskmanager/tasks/{taskid}/byyears
+- "List all rules?" -> GET /builder/rules
+- "Get rule details?" -> GET /builder/rules/{ruleid}
+- "List all markets?" -> GET /marketdata/markets
+- "Get market details?" -> GET /marketdata/markets/{name}
+- "List all indicators?" -> GET /marketdata/indicators
+- "Get indicator details?" -> GET /marketdata/indicators/{name}
+- "List all histdata?" -> GET /marketdata/indicators/{name}/histdata
+- "List all symbols?" -> GET /marketdata/symbols
+- "Get symbol details?" -> GET /marketdata/symbols/{name}
+- "List all histdata?" -> GET /marketdata/symbols/{name}/histdata
+- "List all snapshot?" -> GET /marketdata/symbols/{name}/snapshot
+- "List all snapshots?" -> GET /marketdata/symbols/snapshots
+- "List all accounts?" -> GET /cloud/accounts
+- "Get account details?" -> GET /cloud/accounts/{accountid}
+- "List all orders?" -> GET /cloud/accounts/{accountid}/orders
+- "Create a order?" -> POST /cloud/accounts/{accountid}/orders
+- "Delete a order?" -> DELETE /cloud/accounts/{accountid}/orders/{orderid}
+- "List all trades?" -> GET /cloud/accounts/{accountid}/trades
+- "List all snapshots?" -> GET /cloud/accounts/{accountid}/snapshots
+- "Create a closeall?" -> POST /cloud/accounts/{accountid}/closeall
+- "Create a close?" -> POST /cloud/accounts/{accountid}/close
+- "Create a sync?" -> POST /cloud/accounts/{accountid}/sync
+- "List all sync?" -> GET /cloud/accounts/{accountid}/sync
+- "List all commands?" -> GET /cloud/accounts/{accountid}/commands
+- "List all commands?" -> GET /cloud/commands
+- "Get command details?" -> GET /cloud/commands/{commandid}
+- "List all sessions?" -> GET /cloud/sessions
+- "Get session details?" -> GET /cloud/sessions/{sessionid}
+- "List all strategies?" -> GET /cloud/strategies
+- "Get strategy details?" -> GET /cloud/strategies/{strategyid}
+- "Create a start?" -> POST /cloud/strategies/start
+- "Create a stop?" -> POST /cloud/strategies/{strategyid}/stop
+- "List all connectors?" -> GET /cloud/connectors
+- "Get connector details?" -> GET /cloud/connectors/{connectorid}
+- "List all connections?" -> GET /cloud/connections
+- "Create a connection?" -> POST /cloud/connections
+- "Get connection details?" -> GET /cloud/connections/{connectionid}
+- "Update a connection?" -> PUT /cloud/connections/{connectionid}
+- "Delete a connection?" -> DELETE /cloud/connections/{connectionid}
+- "List all balance?" -> GET /marketplace/balance
+- "List all products?" -> GET /marketplace/products
+- "Get product details?" -> GET /marketplace/products/{productid}
+- "List all rates?" -> GET /marketplace/products/{productid}/rates
+- "List all groups?" -> GET /marketplace/groups
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -69,92 +69,39 @@ Not specified.
 | DELETE | /v1/email/tags | Remove one or more tags (keys and values) from a specified resource. |
 | PUT | /v1/email/configuration-sets/{ConfigurationSetName}/event-destinations/{EventDestinationName} | Update the configuration of an event destination for a configuration set. In Amazon Pinpoint, events include message sends, deliveries, opens, clicks, bounces, and complaints. Event destinations are places that you can send information about these events to. For example, you can send event data to Amazon SNS to receive notifications when you receive bounces or complaints, or you can use Amazon Kinesis Data Firehose to stream data to Amazon S3 for long-term storage. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I send an email?" -> POST /v1/email/outbound-emails
-- "What is my current sending quota and rate limit?" -> GET /v1/email/account
-- "How do I verify a new email identity or domain?" -> POST /v1/email/identities
-- "Is my domain verified for sending?" -> GET /v1/email/identities/{EmailIdentity}
-- "How do I run a deliverability test for my email?" -> POST /v1/email/deliverability-dashboard/test
-- "What were the results of my deliverability test?" -> GET /v1/email/deliverability-dashboard/test-reports/{ReportId}
-- "How do I create a configuration set for tracking?" -> POST /v1/email/configuration-sets
-- "Which IPs are warming up and what percentage are they at?" -> GET /v1/email/dedicated-ips
-- "How do I move a dedicated IP to a different pool?" -> PUT /v1/email/dedicated-ips/{IP}/pool
-- "What campaigns ran on my domain this month?" -> GET /v1/email/deliverability-dashboard/domains/{SubscribedDomain}/campaigns
-- "Is my domain blacklisted anywhere?" -> GET /v1/email/deliverability-dashboard/blacklist-report
-- "How do I enable or disable sending for my account?" -> PUT /v1/email/account/sending
-- "What are the inbox vs spam placement stats for my domain?" -> GET /v1/email/deliverability-dashboard/statistics-report/{Domain}
-- "How do I set up event destinations for bounce/complaint tracking?" -> POST /v1/email/configuration-sets/{ConfigurationSetName}/event-destinations
-
-## Response Tips
-
-- **Account & Sending:** `SendQuota` nests `Max24HourSend`, `MaxSendRate`, and `SentLast24Hours` as floats -- compare `SentLast24Hours` against `Max24HourSend` to gauge headroom.
-- **List endpoints (configuration-sets, IPs, identities, pools, test-reports, campaigns):** All paginate via `NextToken` + `PageSize`; keep calling until `NextToken` is null.
-- **Identity creation:** Returns partial verification state immediately; `DkimAttributes.Status` will be `PENDING` until DNS records propagate -- poll with the GET endpoint.
-- **Deliverability test reports:** `OverallPlacement` percentages (Inbox, Spam, Missing, SPF, DKIM) are floats 0-100; `IspPlacements` is an array breaking this down per ISP.
-- **Campaign stats:** Counts (`InboxCount`, `SpamCount`) are i64 integers; rates (`ReadRate`, `DeleteRate`) are floats between 0 and 1.
-- **Blacklist report:** Returns `map<str, [BlacklistEntry]>` keyed by IP address -- iterate keys to check each IP's listing status.
-- **Send email:** Success returns `{ MessageId }` -- a null or missing `MessageId` with a 200 is abnormal and should be flagged.
-
-## Anomaly Flags
-
-- **Sending quota near limit:** Surface a warning when `SentLast24Hours` exceeds 80% of `Max24HourSend` from GET /v1/email/account.
-- **Sending disabled:** Alert if `SendingEnabled` is `false` on the account or on a configuration set the user is trying to use.
-- **DKIM not verified:** Flag when `DkimAttributes.Status` is anything other than `SUCCESS` after identity creation, especially `FAILED` or `TEMPORARY_FAILURE`.
-- **IP warmup incomplete:** Warn when `WarmupStatus` is `IN_PROGRESS` and `WarmupPercentage` is below 50% -- sending high volume on cold IPs harms reputation.
-- **Blacklist detections:** Proactively surface any non-empty entries in the blacklist report response.
-- **Deliverability dashboard expired or inactive:** Flag if `DashboardEnabled` is `false` or `SubscriptionExpiryDate` is in the past.
-- **High spam placement:** Alert when `SpamPercentage` exceeds 5% in deliverability test results or domain statistics.
-- **Production access not enabled:** Warn if `ProductionAccessEnabled` is `false` -- the account is in sandbox mode and can only send to verified identities.
-- **Mail-from domain misconfigured:** Flag when `MailFromDomainStatus` is `FAILED` on an identity, as this degrades authentication alignment.
-
-## Playbook
-
-### 1. Set Up a New Sending Domain from Scratch
-
-1. Create the email identity: POST /v1/email/identities with `EmailIdentity` set to your domain.
-2. Note the `DkimAttributes.Tokens` array from the response -- create CNAME DNS records for each token.
-3. Poll GET /v1/email/identities/{EmailIdentity} until `DkimAttributes.Status` becomes `SUCCESS`.
-4. Optionally configure a custom MAIL FROM domain: PUT /v1/email/identities/{EmailIdentity}/mail-from.
-5. Verify account sending is enabled: GET /v1/email/account, check `SendingEnabled` and `ProductionAccessEnabled`.
-6. Send a test email: POST /v1/email/outbound-emails.
-
-### 2. Run a Deliverability Test and Analyze Results
-
-1. Create a deliverability test: POST /v1/email/deliverability-dashboard/test with `FromEmailAddress` and `Content`.
-2. Note the `ReportId` from the response.
-3. Poll GET /v1/email/deliverability-dashboard/test-reports/{ReportId} until `DeliverabilityTestStatus` is `COMPLETED`.
-4. Review `OverallPlacement` for inbox vs spam percentages.
-5. Drill into `IspPlacements` to identify ISPs with low inbox rates.
-6. If spam placement is high, check GET /v1/email/deliverability-dashboard/blacklist-report for IP reputation issues.
-
-### 3. Configure Event Tracking for Bounces and Complaints
-
-1. Create a configuration set: POST /v1/email/configuration-sets with a descriptive `ConfigurationSetName`.
-2. Enable reputation metrics: PUT /v1/email/configuration-sets/{ConfigurationSetName}/reputation-options with `ReputationMetricsEnabled: true`.
-3. Add an event destination (e.g., SNS, CloudWatch, Kinesis): POST /v1/email/configuration-sets/{ConfigurationSetName}/event-destinations.
-4. Enable sending on the configuration set: PUT /v1/email/configuration-sets/{ConfigurationSetName}/sending with `SendingEnabled: true`.
-5. Reference `ConfigurationSetName` in POST /v1/email/outbound-emails to route events through this configuration.
-
-### 4. Manage Dedicated IP Warm-Up
-
-1. Create a dedicated IP pool: POST /v1/email/dedicated-ip-pools with a `PoolName`.
-2. List dedicated IPs: GET /v1/email/dedicated-ips to find IPs and their current pool assignments.
-3. Move an IP into your pool: PUT /v1/email/dedicated-ips/{IP}/pool with `DestinationPoolName`.
-4. Enable auto warm-up at the account level: PUT /v1/email/account/dedicated-ips/warmup with `AutoWarmupEnabled: true`.
-5. Monitor warm-up progress: GET /v1/email/dedicated-ips/{IP} -- check `WarmupPercentage` and `WarmupStatus`.
-6. Optionally set a manual warm-up percentage: PUT /v1/email/dedicated-ips/{IP}/warmup.
-
-### 5. Audit Domain Reputation and Campaign Performance
-
-1. Check overall deliverability dashboard status: GET /v1/email/deliverability-dashboard.
-2. Pull domain statistics for a date range: GET /v1/email/deliverability-dashboard/statistics-report/{Domain} with `StartDate` and `EndDate`.
-3. Review `OverallVolume.VolumeStatistics` for inbox vs spam raw counts and projections.
-4. List campaigns for the domain: GET /v1/email/deliverability-dashboard/domains/{SubscribedDomain}/campaigns.
-5. For each campaign, check `ReadRate` and `DeleteRate` -- a high delete rate signals content or targeting issues.
-6. Cross-reference with blacklist data: GET /v1/email/deliverability-dashboard/blacklist-report to rule out IP reputation problems.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a configuration-set?" -> POST /v1/email/configuration-sets
+- "Create a event-destination?" -> POST /v1/email/configuration-sets/{ConfigurationSetName}/event-destinations
+- "Create a dedicated-ip-pool?" -> POST /v1/email/dedicated-ip-pools
+- "Create a test?" -> POST /v1/email/deliverability-dashboard/test
+- "Create a identity?" -> POST /v1/email/identities
+- "Delete a configuration-set?" -> DELETE /v1/email/configuration-sets/{ConfigurationSetName}
+- "Delete a event-destination?" -> DELETE /v1/email/configuration-sets/{ConfigurationSetName}/event-destinations/{EventDestinationName}
+- "Delete a dedicated-ip-pool?" -> DELETE /v1/email/dedicated-ip-pools/{PoolName}
+- "Delete a identity?" -> DELETE /v1/email/identities/{EmailIdentity}
+- "List all account?" -> GET /v1/email/account
+- "List all blacklist-report?" -> GET /v1/email/deliverability-dashboard/blacklist-report
+- "Get configuration-set details?" -> GET /v1/email/configuration-sets/{ConfigurationSetName}
+- "List all event-destinations?" -> GET /v1/email/configuration-sets/{ConfigurationSetName}/event-destinations
+- "Get dedicated-ip details?" -> GET /v1/email/dedicated-ips/{IP}
+- "List all dedicated-ips?" -> GET /v1/email/dedicated-ips
+- "List all deliverability-dashboard?" -> GET /v1/email/deliverability-dashboard
+- "Get test-report details?" -> GET /v1/email/deliverability-dashboard/test-reports/{ReportId}
+- "Get campaign details?" -> GET /v1/email/deliverability-dashboard/campaigns/{CampaignId}
+- "Get statistics-report details?" -> GET /v1/email/deliverability-dashboard/statistics-report/{Domain}
+- "Get identity details?" -> GET /v1/email/identities/{EmailIdentity}
+- "List all configuration-sets?" -> GET /v1/email/configuration-sets
+- "List all dedicated-ip-pools?" -> GET /v1/email/dedicated-ip-pools
+- "List all test-reports?" -> GET /v1/email/deliverability-dashboard/test-reports
+- "List all campaigns?" -> GET /v1/email/deliverability-dashboard/domains/{SubscribedDomain}/campaigns
+- "List all identities?" -> GET /v1/email/identities
+- "List all tags?" -> GET /v1/email/tags
+- "Create a outbound-email?" -> POST /v1/email/outbound-emails
+- "Create a tag?" -> POST /v1/email/tags
+- "Update a event-destination?" -> PUT /v1/email/configuration-sets/{ConfigurationSetName}/event-destinations/{EventDestinationName}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -291,91 +291,184 @@ https://api.stytch.com
 | PUT | /v1/webauthn/{webauthn_registration_id} | Update |
 | GET | /v1/webauthn/credentials/{user_id}/{domain} | Listcredentials |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new user with email and password?" -> POST /v1/passwords
-- "How do I authenticate a user session?" -> POST /v1/sessions/authenticate
-- "How do I search for B2B organization members?" -> POST /v1/b2b/organizations/members/search
-- "How do I send a magic link to a user's email?" -> POST /v1/magic_links/email/send
-- "How do I rotate an M2M client secret?" -> POST /v1/m2m/clients/{client_id}/secrets/rotate/start
-- "How do I check if an email is risky or disposable?" -> POST /v1/email/risk
-- "How do I set up SAML SSO for a B2B organization?" -> POST /v1/b2b/sso/saml/{organization_id}
-- "How do I revoke all sessions for a user?" -> POST /v1/sessions/revoke
-- "How do I look up a device fingerprint verdict?" -> POST /v1/fingerprint/lookup
-- "How do I create a new B2B organization and invite a member?" -> POST /v1/b2b/organizations then POST /v1/b2b/magic_links/email/invite
-- "How do I migrate passwords from another auth provider?" -> POST /v1/passwords/migrate
-- "How do I verify my API credentials are working?" -> GET /v1/debug/whoami
-- "How do I create and configure a connected app (OAuth client)?" -> POST /v1/connected_apps/clients
-- "How do I set fraud rules to block a suspicious visitor?" -> POST /v1/rules/set
-- "How do I check what RBAC policy is configured?" -> GET /v1/rbac/policy
-
-## Response Tips
-
-- **Search endpoints** (`/search`): Paginated via `cursor`/`limit` in request body; check `results_metadata.next_cursor` -- null or empty means last page. `results_metadata.total` gives the full count.
-- **Authentication endpoints**: Always return `session_token` + `session_jwt` pair; B2B variants may return `member_authenticated: false` with `intermediate_session_token` and `mfa_required` when MFA is needed -- do not treat this as a failure.
-- **User/Member responses**: Deeply nested -- user object contains arrays of `emails`, `phone_numbers`, `webauthn_registrations`, `providers`, `totps`, `crypto_wallets`; B2B member object nests `scim_registration.scim_attributes` several levels deep.
-- **Secret rotation endpoints**: Three-phase pattern (`rotate/start` -> deploy new secret -> `rotate` to complete, or `rotate/cancel` to abort); `start` returns the `next_client_secret` in plaintext, subsequent calls only show `last_four`.
-- **Organization responses**: B2B endpoints return full `organization` and `member` objects alongside the primary data -- use these to avoid extra GET calls.
-- **Error responses**: All endpoints share the same error codes (400/401/429/500); `request_id` is always present for support debugging.
-- **Discovery endpoints**: Return `discovered_organizations` array and `intermediate_session_token` -- these are transient and must be exchanged before expiry.
-
-## Anomaly Flags
-
-- **429 status code**: Rate limit hit. Surface immediately and suggest backing off. All endpoints can return this.
-- **`mfa_required` in auth response**: Authentication succeeded but MFA step is pending. Alert the user that `intermediate_session_token` must be used with a TOTP/SMS/recovery code endpoint to complete login.
-- **`member_authenticated: false`**: B2B auth did not fully complete -- could indicate MFA required, primary auth required, or org-level policy blocking. Check `mfa_required` and `primary_required` fields.
-- **`is_locked: true` on user/member**: Account is locked. Surface `lock_created_at` and `lock_expires_at` to help diagnose.
-- **`breached_password: true`** from strength check: Password appears in known breach databases. Flag this as a security concern even if `valid_password` is true.
-- **`requires_reset: true`** on password object: User's password has been flagged for mandatory reset -- warn before attempting password auth.
-- **`bearer_token_expires_at`** on SCIM connections: If close to expiry, proactively suggest token rotation.
-- **`next_client_secret_last_four` is non-empty**: A secret rotation is in progress. Surface this to prevent accidental double-rotation or forgetting to complete.
-- **`recovery_codes_remaining`** is low (< 3): After recovery code auth, warn the user to rotate recovery codes.
-- **Fingerprint verdict `action: BLOCK`**: Device was flagged as fraudulent. Surface the `reasons` array for investigation.
-
-## Playbook
-
-### 1. B2B Member Onboarding (Create Org, Invite Member, Set Up SSO)
-
-1. Create the organization: `POST /v1/b2b/organizations` with `organization_name` and desired auth policies (`email_allowed_domains`, `auth_methods`, `mfa_policy`).
-2. Save the `organization_id` from the response.
-3. Create an SSO connection if needed: `POST /v1/b2b/sso/oidc/{organization_id}` or `POST /v1/b2b/sso/saml/{organization_id}` with the identity provider details.
-4. Configure the SSO connection: `PUT /v1/b2b/sso/oidc/{organization_id}/connections/{connection_id}` with `client_id`, `client_secret`, and URLs from the IdP.
-5. Invite the first member: `POST /v1/b2b/magic_links/email/invite` with `organization_id`, `email_address`, and optional `roles`.
-6. After the member accepts, verify their session: `POST /v1/b2b/sessions/authenticate`.
-
-### 2. Password Reset Flow (Consumer)
-
-1. Initiate the reset: `POST /v1/passwords/email/reset/start` with the user's `email` and `reset_password_redirect_url`.
-2. User clicks the link in their email and lands on your page with a `token` parameter.
-3. Optionally check password strength first: `POST /v1/passwords/strength_check` with the new password.
-4. Complete the reset: `POST /v1/passwords/email/reset` with the `token` and new `password`.
-5. A `session_token` + `session_jwt` are returned -- the user is now logged in.
-
-### 3. M2M Client Secret Rotation (Zero-Downtime)
-
-1. Start rotation: `POST /v1/m2m/clients/{client_id}/secrets/rotate/start`. Save the `next_client_secret` from the response.
-2. Deploy the new secret to all services that use this M2M client. Both old and new secrets are valid during this window.
-3. Complete rotation: `POST /v1/m2m/clients/{client_id}/secrets/rotate`. The old secret is now invalidated.
-4. If something goes wrong before completing, cancel: `POST /v1/m2m/clients/{client_id}/secrets/rotate/cancel`.
-
-### 4. Fraud Detection and Rule Management
-
-1. Look up a device fingerprint: `POST /v1/fingerprint/lookup` with the `telemetry_id` from your frontend SDK.
-2. Inspect the `verdict.action` field (`ALLOW`, `CHALLENGE`, `BLOCK`) and `verdict.reasons`.
-3. If you want to override a verdict reason globally: `POST /v1/verdict_reasons/override` with `verdict_reason` and `override_action`.
-4. To block a specific visitor or IP range: `POST /v1/rules/set` with `action: BLOCK` and the identifier (`visitor_id`, `cidr_block`, `country_code`, etc.).
-5. Review active rules: `POST /v1/rules/list`.
-
-### 5. B2B Multi-Org Session Exchange
-
-1. Authenticate the member in their primary org via any method (password, magic link, SSO, OAuth).
-2. Discover available organizations: `POST /v1/b2b/discovery/organizations` with the current `session_token`.
-3. Present the `discovered_organizations` list to the user.
-4. Exchange into the target org: `POST /v1/b2b/sessions/exchange` with the target `organization_id` and current `session_token`.
-5. If `mfa_required` is returned, complete MFA: `POST /v1/b2b/otps/sms/authenticate` or `POST /v1/b2b/totp/authenticate`.
-6. Use the new `session_token` + `session_jwt` for subsequent requests scoped to the target organization.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get client details?" -> GET /v1/connected_apps/clients/{client_id}
+- "Update a client?" -> PUT /v1/connected_apps/clients/{client_id}
+- "Delete a client?" -> DELETE /v1/connected_apps/clients/{client_id}
+- "Create a search?" -> POST /v1/connected_apps/clients/search
+- "Create a client?" -> POST /v1/connected_apps/clients
+- "Create a start?" -> POST /v1/connected_apps/clients/{client_id}/secrets/rotate/start
+- "Create a cancel?" -> POST /v1/connected_apps/clients/{client_id}/secrets/rotate/cancel
+- "Create a rotate?" -> POST /v1/connected_apps/clients/{client_id}/secrets/rotate
+- "Update a connection?" -> PUT /v1/b2b/scim/{organization_id}/connection/{connection_id}
+- "Delete a connection?" -> DELETE /v1/b2b/scim/{organization_id}/connection/{connection_id}
+- "Get connection details?" -> GET /v1/b2b/scim/{organization_id}/connection/{connection_id}
+- "Create a start?" -> POST /v1/b2b/scim/{organization_id}/connection/{connection_id}/rotate/start
+- "Create a complete?" -> POST /v1/b2b/scim/{organization_id}/connection/{connection_id}/rotate/complete
+- "Create a cancel?" -> POST /v1/b2b/scim/{organization_id}/connection/{connection_id}/rotate/cancel
+- "Create a connection?" -> POST /v1/b2b/scim/{organization_id}/connection
+- "List all connection?" -> GET /v1/b2b/scim/{organization_id}/connection
+- "Create a organization?" -> POST /v1/b2b/organizations
+- "Get organization details?" -> GET /v1/b2b/organizations/{organization_id}
+- "Update a organization?" -> PUT /v1/b2b/organizations/{organization_id}
+- "Delete a organization?" -> DELETE /v1/b2b/organizations/{organization_id}
+- "Create a search?" -> POST /v1/b2b/organizations/search
+- "List all metrics?" -> GET /v1/b2b/organizations/{organization_id}/metrics
+- "List all connected_apps?" -> GET /v1/b2b/organizations/{organization_id}/connected_apps
+- "Get connected_app details?" -> GET /v1/b2b/organizations/{organization_id}/connected_apps/{connected_app_id}
+- "Update a member?" -> PUT /v1/b2b/organizations/{organization_id}/members/{member_id}
+- "Delete a member?" -> DELETE /v1/b2b/organizations/{organization_id}/members/{member_id}
+- "Delete a mfa_phone_number?" -> DELETE /v1/b2b/organizations/{organization_id}/members/mfa_phone_numbers/{member_id}
+- "Create a search?" -> POST /v1/b2b/organizations/members/search
+- "Delete a password?" -> DELETE /v1/b2b/organizations/{organization_id}/members/passwords/{member_password_id}
+- "Get dangerously_get details?" -> GET /v1/b2b/organizations/members/dangerously_get/{member_id}
+- "List all oidc_providers?" -> GET /v1/b2b/organizations/{organization_id}/members/{member_id}/oidc_providers
+- "Create a unlink_retired_email?" -> POST /v1/b2b/organizations/{organization_id}/members/{member_id}/unlink_retired_email
+- "Create a start_email_update?" -> POST /v1/b2b/organizations/{organization_id}/members/{member_id}/start_email_update
+- "List all connected_apps?" -> GET /v1/b2b/organizations/{organization_id}/members/{member_id}/connected_apps
+- "Create a member?" -> POST /v1/b2b/organizations/{organization_id}/members
+- "List all member?" -> GET /v1/b2b/organizations/{organization_id}/member
+- "List all google?" -> GET /v1/b2b/organizations/{organization_id}/members/{member_id}/oauth_providers/google
+- "List all microsoft?" -> GET /v1/b2b/organizations/{organization_id}/members/{member_id}/oauth_providers/microsoft
+- "List all slack?" -> GET /v1/b2b/organizations/{organization_id}/members/{member_id}/oauth_providers/slack
+- "List all hubspot?" -> GET /v1/b2b/organizations/{organization_id}/members/{member_id}/oauth_providers/hubspot
+- "List all github?" -> GET /v1/b2b/organizations/{organization_id}/members/{member_id}/oauth_providers/github
+- "Create a revoke?" -> POST /v1/b2b/organizations/{organization_id}/members/{member_id}/connected_apps/{connected_app_id}/revoke
+- "Create a start?" -> POST /v1/b2b/idp/oauth/authorize/start
+- "Create a authorize?" -> POST /v1/b2b/idp/oauth/authorize
+- "Create a user?" -> POST /v1/users
+- "Get user details?" -> GET /v1/users/{user_id}
+- "Update a user?" -> PUT /v1/users/{user_id}
+- "Delete a user?" -> DELETE /v1/users/{user_id}
+- "Create a search?" -> POST /v1/users/search
+- "Delete a email?" -> DELETE /v1/users/emails/{email_id}
+- "Delete a phone_number?" -> DELETE /v1/users/phone_numbers/{phone_id}
+- "Delete a webauthn_registration?" -> DELETE /v1/users/webauthn_registrations/{webauthn_registration_id}
+- "Delete a biometric_registration?" -> DELETE /v1/users/biometric_registrations/{biometric_registration_id}
+- "Delete a totp?" -> DELETE /v1/users/totps/{totp_id}
+- "Delete a crypto_wallet?" -> DELETE /v1/users/crypto_wallets/{crypto_wallet_id}
+- "Delete a password?" -> DELETE /v1/users/passwords/{password_id}
+- "Delete a oauth?" -> DELETE /v1/users/oauth/{oauth_user_registration_id}
+- "List all connected_apps?" -> GET /v1/users/{user_id}/connected_apps
+- "Create a revoke?" -> POST /v1/users/{user_id}/connected_apps/{connected_app_id}/revoke
+- "List all sessions?" -> GET /v1/sessions
+- "Create a authenticate?" -> POST /v1/sessions/authenticate
+- "Create a revoke?" -> POST /v1/sessions/revoke
+- "Create a migrate?" -> POST /v1/sessions/migrate
+- "Create a exchange_access_token?" -> POST /v1/sessions/exchange_access_token
+- "Get jwk details?" -> GET /v1/sessions/jwks/{project_id}
+- "Create a attest?" -> POST /v1/sessions/attest
+- "List all sessions?" -> GET /v1/b2b/sessions
+- "Create a authenticate?" -> POST /v1/b2b/sessions/authenticate
+- "Create a revoke?" -> POST /v1/b2b/sessions/revoke
+- "Create a exchange?" -> POST /v1/b2b/sessions/exchange
+- "Create a exchange_access_token?" -> POST /v1/b2b/sessions/exchange_access_token
+- "Create a attest?" -> POST /v1/b2b/sessions/attest
+- "Create a migrate?" -> POST /v1/b2b/sessions/migrate
+- "Get jwk details?" -> GET /v1/b2b/sessions/jwks/{project_id}
+- "Create a authenticate?" -> POST /v1/b2b/impersonation/authenticate
+- "List all policy?" -> GET /v1/b2b/rbac/policy
+- "Get organization details?" -> GET /v1/b2b/rbac/organizations/{organization_id}
+- "Update a organization?" -> PUT /v1/b2b/rbac/organizations/{organization_id}
+- "Create a recover?" -> POST /v1/b2b/recovery_codes/recover
+- "Get recovery_code details?" -> GET /v1/b2b/recovery_codes/{organization_id}/{member_id}
+- "Create a rotate?" -> POST /v1/b2b/recovery_codes/rotate
+- "Create a totp?" -> POST /v1/b2b/totp
+- "Create a authenticate?" -> POST /v1/b2b/totp/authenticate
+- "Create a migrate?" -> POST /v1/b2b/totp/migrate
+- "List all policy?" -> GET /v1/rbac/policy
+- "Create a start?" -> POST /v1/crypto_wallets/authenticate/start
+- "Create a authenticate?" -> POST /v1/crypto_wallets/authenticate
+- "List all whoami?" -> GET /v1/debug/whoami
+- "Create a exchange?" -> POST /v1/b2b/discovery/intermediate_sessions/exchange
+- "Create a create?" -> POST /v1/b2b/discovery/organizations/create
+- "Create a organization?" -> POST /v1/b2b/discovery/organizations
+- "Create a lookup?" -> POST /v1/fingerprint/lookup
+- "Create a set?" -> POST /v1/rules/set
+- "Create a list?" -> POST /v1/rules/list
+- "Create a override?" -> POST /v1/verdict_reasons/override
+- "Create a list?" -> POST /v1/verdict_reasons/list
+- "Create a risk?" -> POST /v1/email/risk
+- "Create a start?" -> POST /v1/idp/oauth/authorize/start
+- "Create a authorize?" -> POST /v1/idp/oauth/authorize
+- "Create a authenticate?" -> POST /v1/impersonation/authenticate
+- "Get client details?" -> GET /v1/m2m/clients/{client_id}
+- "Update a client?" -> PUT /v1/m2m/clients/{client_id}
+- "Delete a client?" -> DELETE /v1/m2m/clients/{client_id}
+- "Create a search?" -> POST /v1/m2m/clients/search
+- "Create a client?" -> POST /v1/m2m/clients
+- "Create a start?" -> POST /v1/m2m/clients/{client_id}/secrets/rotate/start
+- "Create a cancel?" -> POST /v1/m2m/clients/{client_id}/secrets/rotate/cancel
+- "Create a rotate?" -> POST /v1/m2m/clients/{client_id}/secrets/rotate
+- "Create a authenticate?" -> POST /v1/magic_links/authenticate
+- "Create a magic_link?" -> POST /v1/magic_links
+- "Create a send?" -> POST /v1/magic_links/email/send
+- "Create a login_or_create?" -> POST /v1/magic_links/email/login_or_create
+- "Create a invite?" -> POST /v1/magic_links/email/invite
+- "Create a revoke_invite?" -> POST /v1/magic_links/email/revoke_invite
+- "Create a authenticate?" -> POST /v1/b2b/magic_links/authenticate
+- "Create a login_or_signup?" -> POST /v1/b2b/magic_links/email/login_or_signup
+- "Create a invite?" -> POST /v1/b2b/magic_links/email/invite
+- "Create a send?" -> POST /v1/b2b/magic_links/email/discovery/send
+- "Create a authenticate?" -> POST /v1/b2b/magic_links/discovery/authenticate
+- "Create a authenticate?" -> POST /v1/b2b/oauth/authenticate
+- "Create a authenticate?" -> POST /v1/b2b/oauth/discovery/authenticate
+- "Create a send?" -> POST /v1/b2b/otps/sms/send
+- "Create a authenticate?" -> POST /v1/b2b/otps/sms/authenticate
+- "Create a login_or_signup?" -> POST /v1/b2b/otps/email/login_or_signup
+- "Create a authenticate?" -> POST /v1/b2b/otps/email/authenticate
+- "Create a send?" -> POST /v1/b2b/otps/email/discovery/send
+- "Create a authenticate?" -> POST /v1/b2b/otps/email/discovery/authenticate
+- "Create a password?" -> POST /v1/passwords
+- "Create a authenticate?" -> POST /v1/passwords/authenticate
+- "Create a strength_check?" -> POST /v1/passwords/strength_check
+- "Create a migrate?" -> POST /v1/passwords/migrate
+- "Create a start?" -> POST /v1/passwords/email/reset/start
+- "Create a reset?" -> POST /v1/passwords/email/reset
+- "Create a reset?" -> POST /v1/passwords/existing_password/reset
+- "Create a reset?" -> POST /v1/passwords/session/reset
+- "Create a strength_check?" -> POST /v1/b2b/passwords/strength_check
+- "Create a migrate?" -> POST /v1/b2b/passwords/migrate
+- "Create a authenticate?" -> POST /v1/b2b/passwords/authenticate
+- "Create a start?" -> POST /v1/b2b/passwords/email/reset/start
+- "Create a reset?" -> POST /v1/b2b/passwords/email/reset
+- "Create a require_reset?" -> POST /v1/b2b/passwords/email/require_reset
+- "Create a reset?" -> POST /v1/b2b/passwords/session/reset
+- "Create a reset?" -> POST /v1/b2b/passwords/existing_password/reset
+- "Create a authenticate?" -> POST /v1/b2b/passwords/discovery/authenticate
+- "Create a start?" -> POST /v1/b2b/passwords/discovery/email/reset/start
+- "Create a reset?" -> POST /v1/b2b/passwords/discovery/email/reset
+- "Create a attach?" -> POST /v1/oauth/attach
+- "Create a authenticate?" -> POST /v1/oauth/authenticate
+- "Create a authenticate?" -> POST /v1/otps/authenticate
+- "Create a send?" -> POST /v1/otps/sms/send
+- "Create a login_or_create?" -> POST /v1/otps/sms/login_or_create
+- "Create a send?" -> POST /v1/otps/whatsapp/send
+- "Create a login_or_create?" -> POST /v1/otps/whatsapp/login_or_create
+- "Create a send?" -> POST /v1/otps/email/send
+- "Create a login_or_create?" -> POST /v1/otps/email/login_or_create
+- "List all metrics?" -> GET /v1/projects/metrics
+- "Get sso details?" -> GET /v1/b2b/sso/{organization_id}
+- "Delete a connection?" -> DELETE /v1/b2b/sso/{organization_id}/connections/{connection_id}
+- "Create a authenticate?" -> POST /v1/b2b/sso/authenticate
+- "Update a connection?" -> PUT /v1/b2b/sso/oidc/{organization_id}/connections/{connection_id}
+- "Update a connection?" -> PUT /v1/b2b/sso/saml/{organization_id}/connections/{connection_id}
+- "Delete a verification_certificate?" -> DELETE /v1/b2b/sso/saml/{organization_id}/connections/{connection_id}/verification_certificates/{certificate_id}
+- "Delete a encryption_private_key?" -> DELETE /v1/b2b/sso/saml/{organization_id}/connections/{connection_id}/encryption_private_keys/{private_key_id}
+- "Update a connection?" -> PUT /v1/b2b/sso/external/{organization_id}/connections/{connection_id}
+- "Create a totp?" -> POST /v1/totps
+- "Create a authenticate?" -> POST /v1/totps/authenticate
+- "Create a recovery_code?" -> POST /v1/totps/recovery_codes
+- "Create a recover?" -> POST /v1/totps/recover
+- "Create a start?" -> POST /v1/webauthn/register/start
+- "Create a register?" -> POST /v1/webauthn/register
+- "Create a start?" -> POST /v1/webauthn/authenticate/start
+- "Create a authenticate?" -> POST /v1/webauthn/authenticate
+- "Update a webauthn?" -> PUT /v1/webauthn/{webauthn_registration_id}
+- "Get credential details?" -> GET /v1/webauthn/credentials/{user_id}/{domain}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

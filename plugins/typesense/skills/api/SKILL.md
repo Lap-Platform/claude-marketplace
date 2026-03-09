@@ -12,7 +12,7 @@ API version: 30.0
 ApiKey X-TYPESENSE-API-KEY in header
 
 ## Base URL
-{protocol}://{hostname}:{port}
+http://localhost:8108
 
 ## Setup
 1. Set your API key in the appropriate header
@@ -174,88 +174,87 @@ ApiKey X-TYPESENSE-API-KEY in header
 | PUT | /nl_search_models/{modelId} | Update a NL search model |
 | DELETE | /nl_search_models/{modelId} | Delete a NL search model |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I search for documents in a collection?" -> GET /collections/{collectionName}/documents/search
-- "How do I create a new collection with specific fields?" -> POST /collections
-- "How do I add a document to my collection?" -> POST /collections/{collectionName}/documents
-- "How do I bulk import documents?" -> POST /collections/{collectionName}/documents/import
-- "How do I delete documents matching a filter?" -> DELETE /collections/{collectionName}/documents
-- "How do I update a specific document by ID?" -> PATCH /collections/{collectionName}/documents/{documentId}
-- "How do I create a scoped API key for a single collection?" -> POST /keys
-- "How do I set up an alias so I can swap collections without downtime?" -> PUT /aliases/{aliasName}
-- "How do I run multiple searches in one request?" -> POST /multi_search
-- "How do I check if my Typesense server is healthy?" -> GET /health
-- "How do I add synonyms so 'sneakers' matches 'shoes'?" -> PUT /synonym_sets/{synonymSetName}/items/{itemId}
-- "How do I pin or hide specific results for a query?" -> PUT /curation_sets/{curationSetName}/items/{itemId}
-- "How do I track which searches return no results?" -> POST /analytics/rules + GET /analytics/status
-- "How do I export all documents from a collection?" -> GET /collections/{collectionName}/documents/export
-- "How do I see server performance metrics like latency and throughput?" -> GET /stats.json
-
-## Response Tips
-
-- **Search**: `hits` array contains matched documents; check `found` for total count, `search_cutoff` for incomplete scans, and `facet_counts` for drill-down values. Paginate with `page` and `per_page` in request params.
-- **Collections**: Returns the full schema on create/get/update; `fields` array describes every indexed attribute. 409 means a collection with that name already exists.
-- **Documents**: Import returns one JSONL line per document (success or error); parse each line individually. Bulk update/delete return `num_updated`/`num_deleted` counts.
-- **Multi-search**: `results` is an array matching the order of your `searches` input; each element mirrors a single search response. Check each result independently for errors.
-- **Keys**: POST returns the full key value only once at creation time; subsequent GET calls return a prefix-only version. Store the key immediately.
-- **Analytics**: `events` responses use flat maps; `status` shows queue depths as integers -- zero values indicate the pipeline is caught up.
-- **Operations**: All operation endpoints return `{success: bool}`; a 200 with `success: false` is possible and should be treated as a failure.
-
-## Anomaly Flags
-
-- **Search cutoff detected**: Surface `search_cutoff: true` in search responses -- indicates the query timed out before scanning all documents, results may be incomplete.
-- **Overloaded server**: Flag `overloaded_requests_per_second > 0` from `/stats.json` -- the node is rejecting requests under load.
-- **Pending write batches**: Alert when `pending_write_batches` from `/stats.json` grows steadily -- write pressure is outpacing disk flushes.
-- **Import partial failures**: When `/documents/import` returns 200, individual lines may still contain errors; scan each JSONL line for `success: false`.
-- **API key expiration**: Keys accept `expires_at` (epoch timestamp); proactively warn when a key used in the current session is within 24 hours of expiry.
-- **Health degraded**: If `GET /health` returns `ok: false` or a non-200 status, surface immediately -- the node may be unresponsive or partitioned.
-- **Collection conflict (409)**: When creating a collection, a 409 means the name is taken; suggest checking existing collections or using an alias for zero-downtime swaps.
-- **Slow request logging**: If `POST /config` has been used to set `log-slow-requests-time-ms`, remind the user to check server logs for flagged queries.
-
-## Playbook
-
-### 1. Create a Collection and Index Documents
-
-1. POST /collections with `name`, `fields` (define at least one field with `name` and `type`), and optionally `default_sorting_field`
-2. Verify creation with GET /collections/{collectionName} to confirm the schema
-3. POST /collections/{collectionName}/documents/import with JSONL body and `action=create` to bulk-load documents
-4. Parse each response line to confirm all rows succeeded; retry any with `success: false`
-5. GET /collections/{collectionName}/documents/search with `q=*` to verify documents are indexed
-
-### 2. Zero-Downtime Collection Swap via Aliases
-
-1. POST /collections to create a new collection (e.g., `products_v2`) with the updated schema
-2. POST /collections/products_v2/documents/import to load data into the new collection
-3. GET /collections/products_v2/documents/search to validate search quality on the new collection
-4. PUT /aliases/{aliasName} with `collection_name: "products_v2"` to atomically point the alias to the new collection
-5. DELETE /collections/{oldCollectionName} to remove the previous collection once traffic has shifted
-
-### 3. Set Up Search Analytics and Curation
-
-1. POST /analytics/rules to create a rule that captures search queries into a destination analytics collection
-2. Wait for query volume to accumulate, then GET /analytics/status to confirm events are flowing
-3. GET /analytics/events with `user_id` and `name` to review popular and no-result queries
-4. PUT /curation_sets/{curationSetName} to create a curation set with pinned (`includes`) and hidden (`excludes`) results for problem queries
-5. Verify by running GET /collections/{collectionName}/documents/search with the curated query term and confirming promoted results appear at expected positions
-
-### 4. Configure Synonyms for Better Recall
-
-1. PUT /synonym_sets/{synonymSetName} to create a named synonym set with an empty or initial items list
-2. PUT /synonym_sets/{synonymSetName}/items/{itemId} with `synonyms: ["sneakers", "shoes", "trainers"]` to add a multi-way synonym group
-3. For one-way synonyms, include `root: "footwear"` so that "footwear" expands to the synonyms but not vice versa
-4. PATCH /collections/{collectionName} with `synonym_sets: ["{synonymSetName}"]` to attach the set to a collection
-5. Test with GET /collections/{collectionName}/documents/search using one of the synonym terms and confirm expanded results
-
-### 5. Create Scoped API Keys for Frontend Search
-
-1. GET /keys to review existing keys and their scopes
-2. POST /keys with `actions: ["documents:search"]`, `collections: ["products"]`, and `description: "Frontend search-only"` to create a restricted key
-3. Optionally set `expires_at` to an epoch timestamp for automatic expiration
-4. Store the returned key value immediately (it is only shown once at creation time)
-5. Use the scoped key in your frontend client; if it leaks, DELETE /keys/{keyId} to revoke and POST /keys to issue a replacement
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all collections?" -> GET /collections
+- "Create a collection?" -> POST /collections
+- "Get collection details?" -> GET /collections/{collectionName}
+- "Partially update a collection?" -> PATCH /collections/{collectionName}
+- "Delete a collection?" -> DELETE /collections/{collectionName}
+- "Create a document?" -> POST /collections/{collectionName}/documents
+- "List all search?" -> GET /collections/{collectionName}/documents/search
+- "List all synonym_sets?" -> GET /synonym_sets
+- "Get synonym_set details?" -> GET /synonym_sets/{synonymSetName}
+- "Update a synonym_set?" -> PUT /synonym_sets/{synonymSetName}
+- "Delete a synonym_set?" -> DELETE /synonym_sets/{synonymSetName}
+- "List all items?" -> GET /synonym_sets/{synonymSetName}/items
+- "Get item details?" -> GET /synonym_sets/{synonymSetName}/items/{itemId}
+- "Update a item?" -> PUT /synonym_sets/{synonymSetName}/items/{itemId}
+- "Delete a item?" -> DELETE /synonym_sets/{synonymSetName}/items/{itemId}
+- "List all curation_sets?" -> GET /curation_sets
+- "Get curation_set details?" -> GET /curation_sets/{curationSetName}
+- "Update a curation_set?" -> PUT /curation_sets/{curationSetName}
+- "Delete a curation_set?" -> DELETE /curation_sets/{curationSetName}
+- "List all items?" -> GET /curation_sets/{curationSetName}/items
+- "Get item details?" -> GET /curation_sets/{curationSetName}/items/{itemId}
+- "Update a item?" -> PUT /curation_sets/{curationSetName}/items/{itemId}
+- "Delete a item?" -> DELETE /curation_sets/{curationSetName}/items/{itemId}
+- "List all export?" -> GET /collections/{collectionName}/documents/export
+- "Create a import?" -> POST /collections/{collectionName}/documents/import
+- "Get document details?" -> GET /collections/{collectionName}/documents/{documentId}
+- "Partially update a document?" -> PATCH /collections/{collectionName}/documents/{documentId}
+- "Delete a document?" -> DELETE /collections/{collectionName}/documents/{documentId}
+- "List all models?" -> GET /conversations/models
+- "Create a model?" -> POST /conversations/models
+- "Get model details?" -> GET /conversations/models/{modelId}
+- "Update a model?" -> PUT /conversations/models/{modelId}
+- "Delete a model?" -> DELETE /conversations/models/{modelId}
+- "List all keys?" -> GET /keys
+- "Create a key?" -> POST /keys
+- "Get key details?" -> GET /keys/{keyId}
+- "Delete a key?" -> DELETE /keys/{keyId}
+- "List all aliases?" -> GET /aliases
+- "Update a aliase?" -> PUT /aliases/{aliasName}
+- "Get aliase details?" -> GET /aliases/{aliasName}
+- "Delete a aliase?" -> DELETE /aliases/{aliasName}
+- "List all debug?" -> GET /debug
+- "List all health?" -> GET /health
+- "List all schema_changes?" -> GET /operations/schema_changes
+- "Create a snapshot?" -> POST /operations/snapshot
+- "Create a vote?" -> POST /operations/vote
+- "Create a clear?" -> POST /operations/cache/clear
+- "Create a compact?" -> POST /operations/db/compact
+- "Create a config?" -> POST /config
+- "Create a multi_search?" -> POST /multi_search
+- "Create a event?" -> POST /analytics/events
+- "List all events?" -> GET /analytics/events
+- "Create a flush?" -> POST /analytics/flush
+- "List all status?" -> GET /analytics/status
+- "Create a rule?" -> POST /analytics/rules
+- "List all rules?" -> GET /analytics/rules
+- "Update a rule?" -> PUT /analytics/rules/{ruleName}
+- "Get rule details?" -> GET /analytics/rules/{ruleName}
+- "Delete a rule?" -> DELETE /analytics/rules/{ruleName}
+- "List all metrics.json?" -> GET /metrics.json
+- "List all stats.json?" -> GET /stats.json
+- "List all stopwords?" -> GET /stopwords
+- "Update a stopword?" -> PUT /stopwords/{setId}
+- "Get stopword details?" -> GET /stopwords/{setId}
+- "Delete a stopword?" -> DELETE /stopwords/{setId}
+- "List all presets?" -> GET /presets
+- "Get preset details?" -> GET /presets/{presetId}
+- "Update a preset?" -> PUT /presets/{presetId}
+- "Delete a preset?" -> DELETE /presets/{presetId}
+- "List all dictionaries?" -> GET /stemming/dictionaries
+- "Get dictionary details?" -> GET /stemming/dictionaries/{dictionaryId}
+- "Create a import?" -> POST /stemming/dictionaries/import
+- "List all nl_search_models?" -> GET /nl_search_models
+- "Create a nl_search_model?" -> POST /nl_search_models
+- "Get nl_search_model details?" -> GET /nl_search_models/{modelId}
+- "Update a nl_search_model?" -> PUT /nl_search_models/{modelId}
+- "Delete a nl_search_model?" -> DELETE /nl_search_models/{modelId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

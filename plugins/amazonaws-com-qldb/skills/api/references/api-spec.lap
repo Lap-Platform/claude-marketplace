@@ -8,49 +8,60 @@
 
 @group ledgers
 @endpoint DELETE /ledgers/{name}/journal-kinesis-streams/{streamId}
+@desc Ends a given Amazon QLDB journal stream. Before a stream can be canceled, its current status must be ACTIVE. You can't restart a stream after you cancel it. Canceled QLDB stream resources are subject to a 7-day retention period, so they are automatically deleted after this limit expires.
 @required {LedgerName: str, StreamId: str}
 @returns(200) {StreamId: str?}
 
 @endpoint POST /ledgers
+@desc Creates a new ledger in your Amazon Web Services account in the current Region.
 @required {Name: str, PermissionsMode: str}
 @optional {Tags: map<str,str>, DeletionProtection: bool, KmsKey: str}
 @returns(200) {Name: str?, Arn: str?, State: str?, CreationDateTime: str(timestamp)?, PermissionsMode: str?, DeletionProtection: bool?, KmsKeyArn: str?}
 
 @endpoint DELETE /ledgers/{name}
+@desc Deletes a ledger and all of its contents. This action is irreversible. If deletion protection is enabled, you must first disable it before you can delete the ledger. You can disable it by calling the UpdateLedger operation to set this parameter to false.
 @required {Name: str}
 
 @endpoint GET /ledgers/{name}/journal-kinesis-streams/{streamId}
+@desc Returns detailed information about a given Amazon QLDB journal stream. The output includes the Amazon Resource Name (ARN), stream name, current status, creation time, and the parameters of the original stream creation request. This action does not return any expired journal streams. For more information, see Expiration for terminal streams in the Amazon QLDB Developer Guide.
 @required {LedgerName: str, StreamId: str}
 @returns(200) {Stream: JournalKinesisStreamDescription?{LedgerName: str, CreationTime: str(timestamp)?, InclusiveStartTime: str(timestamp)?, ExclusiveEndTime: str(timestamp)?, RoleArn: str, StreamId: str, Arn: str?, Status: str, KinesisConfiguration: KinesisConfiguration{StreamArn: str, AggregationEnabled: bool?}, ErrorCause: str?, StreamName: str}}
 
 @endpoint GET /ledgers/{name}/journal-s3-exports/{exportId}
+@desc Returns information about a journal export job, including the ledger name, export ID, creation time, current status, and the parameters of the original export creation request. This action does not return any expired export jobs. For more information, see Export job expiration in the Amazon QLDB Developer Guide. If the export job with the given ExportId doesn't exist, then throws ResourceNotFoundException. If the ledger with the given Name doesn't exist, then throws ResourceNotFoundException.
 @required {Name: str, ExportId: str}
 @returns(200) {ExportDescription: JournalS3ExportDescription{LedgerName: str, ExportId: str, ExportCreationTime: str(timestamp), Status: str, InclusiveStartTime: str(timestamp), ExclusiveEndTime: str(timestamp), S3ExportConfiguration: S3ExportConfiguration{Bucket: str, Prefix: str, EncryptionConfiguration: S3EncryptionConfiguration{ObjectEncryptionType: str, KmsKeyArn: str?}}, RoleArn: str, OutputFormat: str?}}
 
 @endpoint GET /ledgers/{name}
+@desc Returns information about a ledger, including its state, permissions mode, encryption at rest settings, and when it was created.
 @required {Name: str}
 @returns(200) {Name: str?, Arn: str?, State: str?, CreationDateTime: str(timestamp)?, PermissionsMode: str?, DeletionProtection: bool?, EncryptionDescription: LedgerEncryptionDescription?{KmsKeyArn: str, EncryptionStatus: str, InaccessibleKmsKeyDateTime: str(timestamp)?}}
 
 @endpoint POST /ledgers/{name}/journal-s3-exports
+@desc Exports journal contents within a date and time range from a ledger into a specified Amazon Simple Storage Service (Amazon S3) bucket. A journal export job can write the data objects in either the text or binary representation of Amazon Ion format, or in JSON Lines text format. If the ledger with the given Name doesn't exist, then throws ResourceNotFoundException. If the ledger with the given Name is in CREATING status, then throws ResourcePreconditionNotMetException. You can initiate up to two concurrent journal export requests for each ledger. Beyond this limit, journal export requests throw LimitExceededException.
 @required {Name: str, InclusiveStartTime: str(timestamp), ExclusiveEndTime: str(timestamp), S3ExportConfiguration: S3ExportConfiguration, RoleArn: str}
 @optional {OutputFormat: str}
 @returns(200) {ExportId: str}
 
 @endpoint POST /ledgers/{name}/block
+@desc Returns a block object at a specified address in a journal. Also returns a proof of the specified block for verification if DigestTipAddress is provided. For information about the data contents in a block, see Journal contents in the Amazon QLDB Developer Guide. If the specified ledger doesn't exist or is in DELETING status, then throws ResourceNotFoundException. If the specified ledger is in CREATING status, then throws ResourcePreconditionNotMetException. If no block exists with the specified address, then throws InvalidParameterException.
 @required {Name: str, BlockAddress: ValueHolder}
 @optional {DigestTipAddress: ValueHolder}
 @returns(200) {Block: ValueHolder{IonText: str?}, Proof: ValueHolder?{IonText: str?}}
 
 @endpoint POST /ledgers/{name}/digest
+@desc Returns the digest of a ledger at the latest committed block in the journal. The response includes a 256-bit hash value and a block address.
 @required {Name: str}
 @returns(200) {Digest: bytes, DigestTipAddress: ValueHolder{IonText: str?}}
 
 @endpoint POST /ledgers/{name}/revision
+@desc Returns a revision data object for a specified document ID and block address. Also returns a proof of the specified revision for verification if DigestTipAddress is provided.
 @required {Name: str, BlockAddress: ValueHolder, DocumentId: str}
 @optional {DigestTipAddress: ValueHolder}
 @returns(200) {Proof: ValueHolder?{IonText: str?}, Revision: ValueHolder{IonText: str?}}
 
 @endpoint GET /ledgers/{name}/journal-kinesis-streams
+@desc Returns all Amazon QLDB journal streams for a given ledger. This action does not return any expired journal streams. For more information, see Expiration for terminal streams in the Amazon QLDB Developer Guide. This action returns a maximum of MaxResults items. It is paginated so that you can retrieve all the items by calling ListJournalKinesisStreamsForLedger multiple times.
 @required {LedgerName: str}
 @optional {max_results: int, next_token: str}
 @returns(200) {Streams: [JournalKinesisStreamDescription]?, NextToken: str?}
@@ -59,6 +70,7 @@
 
 @group journal-s3-exports
 @endpoint GET /journal-s3-exports
+@desc Returns all journal export jobs for all ledgers that are associated with the current Amazon Web Services account and Region. This action returns a maximum of MaxResults items, and is paginated so that you can retrieve all the items by calling ListJournalS3Exports multiple times. This action does not return any expired export jobs. For more information, see Export job expiration in the Amazon QLDB Developer Guide.
 @optional {max_results: int, next_token: str}
 @returns(200) {JournalS3Exports: [JournalS3ExportDescription]?, NextToken: str?}
 
@@ -66,11 +78,13 @@
 
 @group ledgers
 @endpoint GET /ledgers/{name}/journal-s3-exports
+@desc Returns all journal export jobs for a specified ledger. This action returns a maximum of MaxResults items, and is paginated so that you can retrieve all the items by calling ListJournalS3ExportsForLedger multiple times. This action does not return any expired export jobs. For more information, see Export job expiration in the Amazon QLDB Developer Guide.
 @required {Name: str}
 @optional {max_results: int, next_token: str}
 @returns(200) {JournalS3Exports: [JournalS3ExportDescription]?, NextToken: str?}
 
 @endpoint GET /ledgers
+@desc Returns all ledgers that are associated with the current Amazon Web Services account and Region. This action returns a maximum of MaxResults items and is paginated so that you can retrieve all the items by calling ListLedgers multiple times.
 @optional {max_results: int, next_token: str}
 @returns(200) {Ledgers: [LedgerSummary]?, NextToken: str?}
 
@@ -78,6 +92,7 @@
 
 @group tags
 @endpoint GET /tags/{resourceArn}
+@desc Returns all tags for a specified Amazon QLDB resource.
 @required {ResourceArn: str}
 @returns(200) {Tags: map<str,str>?}
 
@@ -85,6 +100,7 @@
 
 @group ledgers
 @endpoint POST /ledgers/{name}/journal-kinesis-streams
+@desc Creates a journal stream for a given Amazon QLDB ledger. The stream captures every document revision that is committed to the ledger's journal and delivers the data to a specified Amazon Kinesis Data Streams resource.
 @required {LedgerName: str, RoleArn: str, InclusiveStartTime: str(timestamp), KinesisConfiguration: KinesisConfiguration, StreamName: str}
 @optional {Tags: map<str,str>, ExclusiveEndTime: str(timestamp)}
 @returns(200) {StreamId: str?}
@@ -93,20 +109,24 @@
 
 @group tags
 @endpoint POST /tags/{resourceArn}
+@desc Adds one or more tags to a specified Amazon QLDB resource. A resource can have up to 50 tags. If you try to create more than 50 tags for a resource, your request fails and returns an error.
 @required {ResourceArn: str, Tags: map<str,str>}
 
 @endpoint DELETE /tags/{resourceArn}
+@desc Removes one or more tags from a specified Amazon QLDB resource. You can specify up to 50 tag keys to remove.
 @required {ResourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group ledgers
 @endpoint PATCH /ledgers/{name}
+@desc Updates properties on a ledger.
 @required {Name: str}
 @optional {DeletionProtection: bool, KmsKey: str}
 @returns(200) {Name: str?, Arn: str?, State: str?, CreationDateTime: str(timestamp)?, DeletionProtection: bool?, EncryptionDescription: LedgerEncryptionDescription?{KmsKeyArn: str, EncryptionStatus: str, InaccessibleKmsKeyDateTime: str(timestamp)?}}
 
 @endpoint PATCH /ledgers/{name}/permissions-mode
+@desc Updates the permissions mode of a ledger.  Before you switch to the STANDARD permissions mode, you must first create all required IAM policies and table tags to avoid disruption to your users. To learn more, see Migrating to the standard permissions mode in the Amazon QLDB Developer Guide.
 @required {Name: str, PermissionsMode: str}
 @returns(200) {Name: str?, Arn: str?, PermissionsMode: str?}
 

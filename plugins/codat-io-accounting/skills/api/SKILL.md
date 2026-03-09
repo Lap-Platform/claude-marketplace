@@ -162,90 +162,145 @@ https://api.codat.io
 | GET | /companies/{companyId}/reports/agedCreditor/available | Aged creditors report available |
 | GET | /companies/{companyId}/reports/agedCreditor | Aged creditors report |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What invoices does this company have?" -> GET /companies/{companyId}/data/invoices
-- "Show me the details of a specific bill" -> GET /companies/{companyId}/data/bills/{billId}
-- "How do I create a new supplier in the accounting system?" -> POST /companies/{companyId}/connections/{connectionId}/push/suppliers
-- "What fields are required to push a new invoice?" -> GET /companies/{companyId}/connections/{connectionId}/options/invoices
-- "Download the PDF for this invoice" -> GET /companies/{companyId}/data/invoices/{invoiceId}/pdf
-- "What is the company's profit and loss for the last 3 months?" -> GET /companies/{companyId}/data/financials/profitAndLoss
-- "Show me the aged debtor report" -> GET /companies/{companyId}/reports/agedDebtor
-- "List all bank transactions for a specific account" -> GET /companies/{companyId}/connections/{connectionId}/data/bankAccounts/{accountId}/bankTransactions
-- "Record a direct cost against this connection" -> POST /companies/{companyId}/connections/{connectionId}/push/directCosts
-- "Update an existing bill credit note" -> PUT /companies/{companyId}/connections/{connectionId}/push/billCreditNotes/{billCreditNoteId}
-- "Delete a journal entry that was pushed in error" -> DELETE /companies/{companyId}/connections/{connectionId}/push/journalEntries/{journalEntryId}
-- "What attachments are on this purchase order?" -> GET /companies/{companyId}/connections/{connectionId}/data/purchaseOrders/{purchaseOrderId}/attachments
-- "Get the company's balance sheet for year-over-year comparison" -> GET /companies/{companyId}/data/financials/balanceSheet
-- "What tax rates are configured for this company?" -> GET /companies/{companyId}/data/taxRates
-- "Attach a file to this bill" -> POST /companies/{companyId}/connections/{connectionId}/push/bills/{billId}/attachments
-
-## Response Tips
-
-- **List endpoints** (invoices, bills, accounts, etc.): Paginated with `page` (default 1) and `pageSize` (default 100); always check if more pages exist before assuming the full dataset is returned.
-- **Single-resource GETs** (by ID): Return the object directly; a 404 means the ID is wrong or the data hasn't synced yet -- do not retry blindly.
-- **Push/write endpoints** (POST, PUT, DELETE): Return a push operation object with `status`, `pushOperationKey`, `validation`, and `errorMessage` -- check `status` for completion and inspect `validation.errors` on failure.
-- **Options endpoints**: Return a schema descriptor with `properties`, `options`, and `validation` -- use these to discover required fields and allowed values before pushing data.
-- **Financial reports** (P&L, balance sheet, cash flow): Return `reports` array with nested line items, plus `mostRecentAvailableMonth` and `earliestAvailableMonth` to know the data range.
-- **Aged reports** (debtor/creditor): Return `data` array grouped by customer/supplier with aging buckets; call the `/available` endpoint first to confirm the report can be generated.
-- **Attachment endpoints**: List returns `{attachments: [map]?}` -- the array may be null if none exist; download endpoints return raw file bytes.
-- **Delete operations**: Return full push operation metadata including `changes` array -- inspect this to confirm what was actually modified.
-
-## Anomaly Flags
-
-- **429 Too Many Requests**: Every endpoint can return 429. Surface rate limit hits immediately and back off before retrying. If multiple 429s occur in sequence, pause all requests and alert the user.
-- **402 Payment Required**: Present on all endpoints. Indicates the Codat subscription may be expired or the data type isn't covered by the current plan -- flag this as a billing/plan issue, not a code bug.
-- **409 Conflict**: Returned by read endpoints when data is being synced or is in a conflicted state. Surface this as "data sync in progress" rather than an error.
-- **503 Service Unavailable**: The underlying accounting platform may be down. Distinguish from 500 (Codat-side error) and advise checking platform status.
-- **Push operation `status` not `Success`**: After any POST/PUT/DELETE, if the returned push operation shows a non-success status or has `validation.errors`, surface the specific validation messages proactively.
-- **`errorMessage` non-null on push results**: Always surface push error messages -- they contain platform-specific details that are easy to miss.
-- **Empty `reports` array on financial statements**: If `mostRecentAvailableMonth` is far in the past or the reports array is empty, flag that the financial data may not be synced or the platform doesn't support this report type.
-- **`forceUpdate` parameter usage**: When PUT endpoints are called with `forceUpdate=True`, warn that this overrides version checks and may clobber concurrent changes.
-
-## Playbook
-
-### Reconcile outstanding bills for a company
-
-1. List all bills: GET /companies/{companyId}/data/bills with `query` filter for unpaid status
-2. For each bill, check bill payments: GET /companies/{companyId}/data/billPayments with `query` filtering by bill reference
-3. Identify bills with no matching payment or partial payment
-4. Cross-reference with the aged creditor report: GET /companies/{companyId}/reports/agedCreditor to see aging buckets
-5. Surface any bills past their aging threshold as action items
-
-### Push a new invoice with attachment
-
-1. Check what fields are needed: GET /companies/{companyId}/connections/{connectionId}/options/invoices
-2. Review the `properties`, `required` flags, and `options` arrays to build a valid payload
-3. Look up the customer: GET /companies/{companyId}/data/customers with `query` to find the customer ID
-4. Push the invoice: POST /companies/{companyId}/connections/{connectionId}/push/invoices with the constructed body
-5. Inspect the push operation response -- confirm `status` is `Success` and `validation.errors` is empty
-6. Attach a file: POST /companies/{companyId}/connections/{connectionId}/push/invoices/{invoiceId}/attachment
-
-### Generate a financial health snapshot
-
-1. Pull the balance sheet: GET /companies/{companyId}/data/financials/balanceSheet with `periodLength=1&periodsToCompare=12` for monthly data
-2. Pull profit and loss: GET /companies/{companyId}/data/financials/profitAndLoss with the same period parameters
-3. Pull cash flow: GET /companies/{companyId}/data/financials/cashFlowStatement with matching parameters
-4. Check `mostRecentAvailableMonth` on each response to confirm data freshness
-5. Combine the three reports to present assets, liabilities, revenue, expenses, and cash position
-
-### Set up a new supplier and record a direct cost
-
-1. Check supplier push options: GET /companies/{companyId}/connections/{connectionId}/options/suppliers
-2. Create the supplier: POST /companies/{companyId}/connections/{connectionId}/push/suppliers with required fields
-3. Verify push succeeded by checking `status` in the response
-4. Check direct cost options: GET /companies/{companyId}/connections/{connectionId}/options/directCosts
-5. Push the direct cost: POST /companies/{companyId}/connections/{connectionId}/push/directCosts with `contactRef` pointing to the new supplier, line items, payment allocations, and currency
-
-### Audit account transactions and journal entries
-
-1. List chart of accounts: GET /companies/{companyId}/data/accounts to identify account IDs of interest
-2. Pull account transactions for a specific connection: GET /companies/{companyId}/connections/{connectionId}/data/accountTransactions with `query` filter on date range
-3. Cross-reference with journal entries: GET /companies/{companyId}/data/journalEntries filtered to the same period
-4. Compare totals and flag any journal entries without matching account transactions
-5. Check tracking categories: GET /companies/{companyId}/data/trackingCategories to validate categorization consistency
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Search accountTransactions?" -> GET /companies/{companyId}/connections/{connectionId}/data/accountTransactions
+- "Get accountTransaction details?" -> GET /companies/{companyId}/connections/{connectionId}/data/accountTransactions/{accountTransactionId}
+- "Search accounts?" -> GET /companies/{companyId}/data/accounts
+- "Get account details?" -> GET /companies/{companyId}/data/accounts/{accountId}
+- "List all chartOfAccounts?" -> GET /companies/{companyId}/connections/{connectionId}/options/chartOfAccounts
+- "Create a account?" -> POST /companies/{companyId}/connections/{connectionId}/push/accounts
+- "Search billCreditNotes?" -> GET /companies/{companyId}/data/billCreditNotes
+- "Get billCreditNote details?" -> GET /companies/{companyId}/data/billCreditNotes/{billCreditNoteId}
+- "List all billCreditNotes?" -> GET /companies/{companyId}/connections/{connectionId}/options/billCreditNotes
+- "Create a billCreditNote?" -> POST /companies/{companyId}/connections/{connectionId}/push/billCreditNotes
+- "Update a billCreditNote?" -> PUT /companies/{companyId}/connections/{connectionId}/push/billCreditNotes/{billCreditNoteId}
+- "Create a attachment?" -> POST /companies/{companyId}/connections/{connectionId}/push/billCreditNotes/{billCreditNoteId}/attachment
+- "Search billPayments?" -> GET /companies/{companyId}/data/billPayments
+- "Get billPayment details?" -> GET /companies/{companyId}/data/billPayments/{billPaymentId}
+- "Create a billPayment?" -> POST /companies/{companyId}/connections/{connectionId}/push/billPayments
+- "List all billPayments?" -> GET /companies/{companyId}/connections/{connectionId}/options/billPayments
+- "Delete a billPayment?" -> DELETE /companies/{companyId}/connections/{connectionId}/push/billPayments/{billPaymentId}
+- "Search bills?" -> GET /companies/{companyId}/data/bills
+- "Get bill details?" -> GET /companies/{companyId}/data/bills/{billId}
+- "List all bills?" -> GET /companies/{companyId}/connections/{connectionId}/options/bills
+- "Create a bill?" -> POST /companies/{companyId}/connections/{connectionId}/push/bills
+- "Update a bill?" -> PUT /companies/{companyId}/connections/{connectionId}/push/bills/{billId}
+- "Delete a bill?" -> DELETE /companies/{companyId}/connections/{connectionId}/push/bills/{billId}
+- "List all attachments?" -> GET /companies/{companyId}/connections/{connectionId}/data/bills/{billId}/attachments
+- "Get attachment details?" -> GET /companies/{companyId}/connections/{connectionId}/data/bills/{billId}/attachments/{attachmentId}
+- "List all download?" -> GET /companies/{companyId}/connections/{connectionId}/data/bills/{billId}/attachments/{attachmentId}/download
+- "Create a attachment?" -> POST /companies/{companyId}/connections/{connectionId}/push/bills/{billId}/attachments
+- "Search creditNotes?" -> GET /companies/{companyId}/data/creditNotes
+- "Get creditNote details?" -> GET /companies/{companyId}/data/creditNotes/{creditNoteId}
+- "List all creditNotes?" -> GET /companies/{companyId}/connections/{connectionId}/options/creditNotes
+- "Create a creditNote?" -> POST /companies/{companyId}/connections/{connectionId}/push/creditNotes
+- "Update a creditNote?" -> PUT /companies/{companyId}/connections/{connectionId}/push/creditNotes/{creditNoteId}
+- "Search customers?" -> GET /companies/{companyId}/data/customers
+- "Get customer details?" -> GET /companies/{companyId}/data/customers/{customerId}
+- "List all customers?" -> GET /companies/{companyId}/connections/{connectionId}/options/customers
+- "Create a customer?" -> POST /companies/{companyId}/connections/{connectionId}/push/customers
+- "Update a customer?" -> PUT /companies/{companyId}/connections/{connectionId}/push/customers/{customerId}
+- "List all attachments?" -> GET /companies/{companyId}/connections/{connectionId}/data/customers/{customerId}/attachments
+- "Get attachment details?" -> GET /companies/{companyId}/connections/{connectionId}/data/customers/{customerId}/attachments/{attachmentId}
+- "List all download?" -> GET /companies/{companyId}/connections/{connectionId}/data/customers/{customerId}/attachments/{attachmentId}/download
+- "Search directCosts?" -> GET /companies/{companyId}/connections/{connectionId}/data/directCosts
+- "Get directCost details?" -> GET /companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}
+- "List all directCosts?" -> GET /companies/{companyId}/connections/{connectionId}/options/directCosts
+- "Create a directCost?" -> POST /companies/{companyId}/connections/{connectionId}/push/directCosts
+- "Delete a directCost?" -> DELETE /companies/{companyId}/connections/{connectionId}/push/directCosts/{directCostId}
+- "Create a attachment?" -> POST /companies/{companyId}/connections/{connectionId}/push/directCosts/{directCostId}/attachment
+- "Get attachment details?" -> GET /companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}/attachments/{attachmentId}
+- "List all download?" -> GET /companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}/attachments/{attachmentId}/download
+- "List all attachments?" -> GET /companies/{companyId}/connections/{connectionId}/data/directCosts/{directCostId}/attachments
+- "Search directIncomes?" -> GET /companies/{companyId}/connections/{connectionId}/data/directIncomes
+- "Get directIncome details?" -> GET /companies/{companyId}/connections/{connectionId}/data/directIncomes/{directIncomeId}
+- "List all directIncomes?" -> GET /companies/{companyId}/connections/{connectionId}/options/directIncomes
+- "Create a directIncome?" -> POST /companies/{companyId}/connections/{connectionId}/push/directIncomes
+- "Create a attachment?" -> POST /companies/{companyId}/connections/{connectionId}/push/directIncomes/{directIncomeId}/attachment
+- "Get attachment details?" -> GET /companies/{companyId}/connections/{connectionId}/data/directIncomes/{directIncomeId}/attachments/{attachmentId}
+- "List all download?" -> GET /companies/{companyId}/connections/{connectionId}/data/directIncomes/{directIncomeId}/attachments/{attachmentId}/download
+- "List all attachments?" -> GET /companies/{companyId}/connections/{connectionId}/data/directIncomes/{directIncomeId}/attachments
+- "List all balanceSheet?" -> GET /companies/{companyId}/data/financials/balanceSheet
+- "List all profitAndLoss?" -> GET /companies/{companyId}/data/financials/profitAndLoss
+- "List all cashFlowStatement?" -> GET /companies/{companyId}/data/financials/cashFlowStatement
+- "List all info?" -> GET /companies/{companyId}/data/info
+- "Create a info?" -> POST /companies/{companyId}/data/info
+- "Search invoices?" -> GET /companies/{companyId}/data/invoices
+- "Get invoice details?" -> GET /companies/{companyId}/data/invoices/{invoiceId}
+- "List all pdf?" -> GET /companies/{companyId}/data/invoices/{invoiceId}/pdf
+- "List all attachments?" -> GET /companies/{companyId}/connections/{connectionId}/data/invoices/{invoiceId}/attachments
+- "Get attachment details?" -> GET /companies/{companyId}/connections/{connectionId}/data/invoices/{invoiceId}/attachments/{attachmentId}
+- "List all download?" -> GET /companies/{companyId}/connections/{connectionId}/data/invoices/{invoiceId}/attachments/{attachmentId}/download
+- "List all invoices?" -> GET /companies/{companyId}/connections/{connectionId}/options/invoices
+- "Create a invoice?" -> POST /companies/{companyId}/connections/{connectionId}/push/invoices
+- "Update a invoice?" -> PUT /companies/{companyId}/connections/{connectionId}/push/invoices/{invoiceId}
+- "Delete a invoice?" -> DELETE /companies/{companyId}/connections/{connectionId}/push/invoices/{invoiceId}
+- "Create a attachment?" -> POST /companies/{companyId}/connections/{connectionId}/push/invoices/{invoiceId}/attachment
+- "Search itemReceipts?" -> GET /companies/{companyId}/connections/{connectionId}/data/itemReceipts
+- "Get itemReceipt details?" -> GET /companies/{companyId}/connections/{connectionId}/data/itemReceipts/{itemReceiptId}
+- "Search items?" -> GET /companies/{companyId}/data/items
+- "Get item details?" -> GET /companies/{companyId}/data/items/{itemId}
+- "List all items?" -> GET /companies/{companyId}/connections/{connectionId}/options/items
+- "Create a item?" -> POST /companies/{companyId}/connections/{connectionId}/push/items
+- "Search journalEntries?" -> GET /companies/{companyId}/data/journalEntries
+- "Get journalEntry details?" -> GET /companies/{companyId}/data/journalEntries/{journalEntryId}
+- "List all journalEntries?" -> GET /companies/{companyId}/connections/{connectionId}/options/journalEntries
+- "Create a journalEntry?" -> POST /companies/{companyId}/connections/{connectionId}/push/journalEntries
+- "Delete a journalEntry?" -> DELETE /companies/{companyId}/connections/{connectionId}/push/journalEntries/{journalEntryId}
+- "Search journals?" -> GET /companies/{companyId}/data/journals
+- "Get journal details?" -> GET /companies/{companyId}/data/journals/{journalId}
+- "List all journals?" -> GET /companies/{companyId}/connections/{connectionId}/options/journals
+- "Create a journal?" -> POST /companies/{companyId}/connections/{connectionId}/push/journals
+- "Search paymentMethods?" -> GET /companies/{companyId}/data/paymentMethods
+- "Get paymentMethod details?" -> GET /companies/{companyId}/data/paymentMethods/{paymentMethodId}
+- "Search payments?" -> GET /companies/{companyId}/data/payments
+- "Get payment details?" -> GET /companies/{companyId}/data/payments/{paymentId}
+- "Search payments?" -> GET /companies/{companyId}/connections/{connectionId}/data/payments
+- "List all payments?" -> GET /companies/{companyId}/connections/{connectionId}/options/payments
+- "Create a payment?" -> POST /companies/{companyId}/connections/{connectionId}/push/payments
+- "Search purchaseOrders?" -> GET /companies/{companyId}/data/purchaseOrders
+- "Get purchaseOrder details?" -> GET /companies/{companyId}/data/purchaseOrders/{purchaseOrderId}
+- "List all purchaseOrders?" -> GET /companies/{companyId}/connections/{connectionId}/options/purchaseOrders
+- "Create a purchaseOrder?" -> POST /companies/{companyId}/connections/{connectionId}/push/purchaseOrders
+- "Update a purchaseOrder?" -> PUT /companies/{companyId}/connections/{connectionId}/push/purchaseOrders/{purchaseOrderId}
+- "List all pdf?" -> GET /companies/{companyId}/data/purchaseOrders/{purchaseOrderId}/pdf
+- "List all attachments?" -> GET /companies/{companyId}/connections/{connectionId}/data/purchaseOrders/{purchaseOrderId}/attachments
+- "Get attachment details?" -> GET /companies/{companyId}/connections/{connectionId}/data/purchaseOrders/{purchaseOrderId}/attachments/{attachmentId}
+- "List all download?" -> GET /companies/{companyId}/connections/{connectionId}/data/purchaseOrders/{purchaseOrderId}/attachments/{attachmentId}/download
+- "Search salesOrders?" -> GET /companies/{companyId}/data/salesOrders
+- "Get salesOrder details?" -> GET /companies/{companyId}/data/salesOrders/{salesOrderId}
+- "Search suppliers?" -> GET /companies/{companyId}/data/suppliers
+- "Get supplier details?" -> GET /companies/{companyId}/data/suppliers/{supplierId}
+- "List all suppliers?" -> GET /companies/{companyId}/connections/{connectionId}/options/suppliers
+- "Create a supplier?" -> POST /companies/{companyId}/connections/{connectionId}/push/suppliers
+- "Update a supplier?" -> PUT /companies/{companyId}/connections/{connectionId}/push/suppliers/{supplierId}
+- "List all attachments?" -> GET /companies/{companyId}/connections/{connectionId}/data/suppliers/{supplierId}/attachments
+- "Get attachment details?" -> GET /companies/{companyId}/connections/{connectionId}/data/suppliers/{supplierId}/attachments/{attachmentId}
+- "List all download?" -> GET /companies/{companyId}/connections/{connectionId}/data/suppliers/{supplierId}/attachments/{attachmentId}/download
+- "Search taxRates?" -> GET /companies/{companyId}/data/taxRates
+- "Get taxRate details?" -> GET /companies/{companyId}/data/taxRates/{taxRateId}
+- "Search trackingCategories?" -> GET /companies/{companyId}/data/trackingCategories
+- "Get trackingCategory details?" -> GET /companies/{companyId}/data/trackingCategories/{trackingCategoryId}
+- "Search transfers?" -> GET /companies/{companyId}/connections/{connectionId}/data/transfers
+- "Create a attachment?" -> POST /companies/{companyId}/connections/{connectionId}/push/transfers/{transferId}/attachment
+- "Get transfer details?" -> GET /companies/{companyId}/connections/{connectionId}/data/transfers/{transferId}
+- "List all transfers?" -> GET /companies/{companyId}/connections/{connectionId}/options/transfers
+- "Create a transfer?" -> POST /companies/{companyId}/connections/{connectionId}/push/transfers
+- "Search bankAccounts?" -> GET /companies/{companyId}/connections/{connectionId}/data/bankAccounts
+- "Get bankAccount details?" -> GET /companies/{companyId}/connections/{connectionId}/data/bankAccounts/{accountId}
+- "List all bankAccounts?" -> GET /companies/{companyId}/connections/{connectionId}/options/bankAccounts
+- "Create a bankAccount?" -> POST /companies/{companyId}/connections/{connectionId}/push/bankAccounts
+- "Update a bankAccount?" -> PUT /companies/{companyId}/connections/{connectionId}/push/bankAccounts/{bankAccountId}
+- "Search bankTransactions?" -> GET /companies/{companyId}/connections/{connectionId}/data/bankAccounts/{accountId}/bankTransactions
+- "List all bankTransactions?" -> GET /companies/{companyId}/connections/{connectionId}/options/bankAccounts/{accountId}/bankTransactions
+- "Create a bankTransaction?" -> POST /companies/{companyId}/connections/{connectionId}/push/bankAccounts/{accountId}/bankTransactions
+- "List all available?" -> GET /companies/{companyId}/reports/agedDebtor/available
+- "List all agedDebtor?" -> GET /companies/{companyId}/reports/agedDebtor
+- "List all available?" -> GET /companies/{companyId}/reports/agedCreditor/available
+- "List all agedCreditor?" -> GET /companies/{companyId}/reports/agedCreditor
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

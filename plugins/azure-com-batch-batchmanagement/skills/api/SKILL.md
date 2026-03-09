@@ -66,86 +66,45 @@ https://management.azure.com
 |--------|------|-------------|
 | GET | /providers/Microsoft.Batch/operations | Lists available operations for the Microsoft.Batch provider |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new Batch account?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}
-- "How do I update an existing Batch account's settings?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}
-- "How do I delete a Batch account?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}
-- "What Batch accounts exist in my subscription?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Batch/batchAccounts
-- "Is this Batch account name available in my region?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Batch/locations/{locationName}/checkNameAvailability
-- "How do I get the access keys for my Batch account?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/listKeys
-- "How do I rotate a Batch account key?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/regenerateKeys
-- "How do I create a compute pool in my Batch account?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/pools/{poolName}
-- "How do I stop a pool from resizing?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/pools/{poolName}/stopResize
-- "How do I turn off autoscale on a pool?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/pools/{poolName}/disableAutoScale
-- "How do I upload an application package version and activate it?" -> PUT .../applications/{applicationName}/versions/{versionName} then POST .../versions/{versionName}/activate
-- "How do I add a certificate to my Batch account?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/certificates/{certificateName}
-- "A certificate delete failed -- how do I cancel it?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/certificates/{certificateName}/cancelDelete
-- "What are my Batch quotas in a given region?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Batch/locations/{locationName}/quotas
-- "What management operations does the Batch resource provider support?" -> GET /providers/Microsoft.Batch/operations
-
-## Response Tips
-
-- **Account/Pool/Certificate lists**: Paginated via `nextLink` in the response body; follow it until absent. Use `maxresults` query param to control page size.
-- **Async operations (202 responses)**: Account create, account delete, pool delete, and certificate delete return 202 with a `Location` or `Azure-AsyncOperation` header -- poll that URL until terminal state.
-- **Key operations (listKeys, regenerateKeys)**: Return `primary` and `secondary` key fields directly; no pagination.
-- **Quota responses**: Flat object with `accountQuota` for the region; no nested collections.
-- **Error responses**: All endpoints return an `error` object with `code` and `message`; nested `details` array may contain per-field validation failures.
-- **ETag support**: Certificate and pool PUT/PATCH accept `If-Match` and `If-None-Match` headers; the response `ETag` header should be captured for subsequent conditional updates.
-
-## Anomaly Flags
-
-- **202 Accepted without completion**: Surface when account create, account delete, pool delete, or certificate delete returns 202 -- the operation is still running and needs polling.
-- **204 on delete**: A 204 means the resource was already gone; flag if the caller expected it to exist.
-- **Quota limits approaching**: After fetching quotas, compare current account count against `accountQuota` and warn if utilization exceeds 80%.
-- **Certificate delete stuck**: If a certificate delete returns 202 and subsequent GETs show `deleteFailed` provisioning state, proactively suggest the cancelDelete endpoint.
-- **ETag mismatch (412 Precondition Failed)**: Surface when conditional updates on pools or certificates are rejected due to stale ETags -- the resource was modified concurrently.
-- **Deprecated certificate endpoints**: Azure Batch certificates feature is on a deprecation path; flag usage and suggest migrating to Azure Key Vault references.
-- **Pool resize errors**: After a stopResize call, check pool state for `allocationFailed` or `resizeFailed` allocation states and surface them.
-
-## Playbook
-
-### 1. Provision a New Batch Account
-
-1. Check name availability: POST `.../locations/{location}/checkNameAvailability` with `{ "name": "myaccount", "type": "Microsoft.Batch/batchAccounts" }`.
-2. If available, create the account: PUT `.../batchAccounts/{accountName}` with location and auto-storage configuration in the request body.
-3. Poll the `Location` header URL if you receive 202 until provisioning completes (200 with `provisioningState: Succeeded`).
-4. Retrieve account keys: POST `.../batchAccounts/{accountName}/listKeys`.
-5. Sync auto-storage keys if using auto-storage: POST `.../batchAccounts/{accountName}/syncAutoStorageKeys`.
-
-### 2. Deploy an Application Package
-
-1. Create the application: PUT `.../applications/{applicationName}` with display name and default version in the body.
-2. Create a version placeholder: PUT `.../applications/{applicationName}/versions/{versionName}`.
-3. Upload the package binary to the `storageUrl` returned in the version response.
-4. Activate the version: POST `.../versions/{versionName}/activate` with `{ "format": "zip" }`.
-5. Verify: GET `.../applications/{applicationName}` and confirm `defaultVersion` and `allowUpdates` are set correctly.
-
-### 3. Set Up and Manage a Compute Pool
-
-1. Create the pool: PUT `.../pools/{poolName}` with VM size, scale settings, and node configuration. Include `If-None-Match: *` to prevent overwriting an existing pool.
-2. Monitor provisioning: GET `.../pools/{poolName}` and check `allocationState` until it reaches `steady`.
-3. To resize, PATCH `.../pools/{poolName}` with updated `scaleSettings`.
-4. To stop an in-progress resize: POST `.../pools/{poolName}/stopResize`.
-5. To disable autoscale: POST `.../pools/{poolName}/disableAutoScale`, then PATCH with fixed `targetDedicatedNodes`.
-
-### 4. Manage Certificates on a Batch Account
-
-1. List current certificates: GET `.../certificates` (use `$select` and `$filter` to narrow results).
-2. Add a certificate: PUT `.../certificates/{certificateName}` with the PFX/CER data and thumbprint. Use `If-None-Match: *` for create-only semantics.
-3. To update, PATCH `.../certificates/{certificateName}` with `If-Match` set to the current ETag.
-4. To remove, DELETE `.../certificates/{certificateName}` -- poll if 202 is returned.
-5. If delete fails, cancel it: POST `.../certificates/{certificateName}/cancelDelete`, fix the issue (e.g., remove pool references), then retry the delete.
-
-### 5. Key Rotation
-
-1. List current keys: POST `.../batchAccounts/{accountName}/listKeys` and note which key (`primary` or `secondary`) is active in your applications.
-2. Regenerate the inactive key: POST `.../batchAccounts/{accountName}/regenerateKeys` with `{ "keyName": "Secondary" }`.
-3. Update all clients to use the newly regenerated key.
-4. Regenerate the old active key: POST `.../regenerateKeys` with `{ "keyName": "Primary" }`.
-5. Verify connectivity with the new keys by calling GET `.../batchAccounts/{accountName}`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Update a batchAccount?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}
+- "Partially update a batchAccount?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}
+- "Delete a batchAccount?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}
+- "Get batchAccount details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}
+- "List all batchAccounts?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Batch/batchAccounts
+- "List all batchAccounts?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts
+- "Create a syncAutoStorageKey?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/syncAutoStorageKeys
+- "Create a regenerateKey?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/regenerateKeys
+- "Create a listKey?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/listKeys
+- "Create a activate?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/applications/{applicationName}/versions/{versionName}/activate
+- "Update a application?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/applications/{applicationName}
+- "Delete a application?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/applications/{applicationName}
+- "Get application details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/applications/{applicationName}
+- "Partially update a application?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/applications/{applicationName}
+- "Update a version?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/applications/{applicationName}/versions/{versionName}
+- "Delete a version?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/applications/{applicationName}/versions/{versionName}
+- "Get version details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/applications/{applicationName}/versions/{versionName}
+- "List all applications?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/applications
+- "List all versions?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/applications/{applicationName}/versions
+- "List all quotas?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Batch/locations/{locationName}/quotas
+- "List all operations?" -> GET /providers/Microsoft.Batch/operations
+- "Create a checkNameAvailability?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Batch/locations/{locationName}/checkNameAvailability
+- "List all certificates?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/certificates
+- "Update a certificate?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/certificates/{certificateName}
+- "Partially update a certificate?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/certificates/{certificateName}
+- "Delete a certificate?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/certificates/{certificateName}
+- "Get certificate details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/certificates/{certificateName}
+- "Create a cancelDelete?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/certificates/{certificateName}/cancelDelete
+- "List all pools?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/pools
+- "Update a pool?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/pools/{poolName}
+- "Partially update a pool?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/pools/{poolName}
+- "Delete a pool?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/pools/{poolName}
+- "Get pool details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/pools/{poolName}
+- "Create a disableAutoScale?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/pools/{poolName}/disableAutoScale
+- "Create a stopResize?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Batch/batchAccounts/{accountName}/pools/{poolName}/stopResize
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

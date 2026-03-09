@@ -190,87 +190,131 @@ https://api.callfire.com/v2
 | PUT | /webhooks/{id} | Update a webhook |
 | DELETE | /webhooks/{id} | Delete a webhook |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I send a voice call to a list of phone numbers?" -> POST /calls
-- "How do I send a text message to someone?" -> POST /texts
-- "What calls have been made in the last 24 hours?" -> GET /calls (with intervalBegin/intervalEnd)
-- "How do I create a text broadcast campaign?" -> POST /texts/broadcasts
-- "How do I check my account balance and credit usage?" -> GET /me/billing/credit-usage
-- "Is the keyword PROMO available to lease?" -> GET /keywords/{keyword}/available
-- "How do I add a number to the Do Not Call list?" -> POST /contacts/dncs
-- "How do I upload a contact list from a CSV file?" -> POST /contacts/lists/upload
-- "How do I stop a running call broadcast?" -> POST /calls/broadcasts/{id}/stop
-- "What phone numbers are available in California?" -> GET /numbers/local (with state=CA)
-- "How do I set up a webhook for incoming texts?" -> POST /webhooks
-- "How do I download a call recording as MP3?" -> GET /calls/recordings/{id}.mp3
-- "What is the delivery status of my text messages?" -> GET /reports/delivery
-- "How do I verify a caller ID number?" -> POST /me/callerids/{callerid}/verification-code
-- "How do I purchase a toll-free number?" -> POST /orders/numbers
-
-## Response Tips
-
-- **Calls & Texts lists**: Paginated via `limit`/`offset`; default limit varies, always check `totalCount` in response to know if more pages exist.
-- **Broadcast operations** (start/stop/archive): Return no body on success (2xx); rely on status code alone to confirm action.
-- **Create endpoints** (POST broadcasts, orders): Return `201` with the created resource `id` in the response body; use that `id` for all subsequent operations.
-- **Contact/DNC lookups**: Nested objects may contain custom property maps; iterate `properties` keys rather than assuming fixed fields.
-- **Recording downloads** (.mp3/.wav): Return binary streams, not JSON; set `Accept` header accordingly and handle as file data.
-- **Error responses** (400-500): Return a JSON object with `errorCode`, `message`, and `details` array; parse `details` for field-level validation failures.
-
-## Anomaly Flags
-
-- **401 on any endpoint**: API credentials may be expired or disabled; check credential status via `GET /me/api/credentials` and re-enable if needed with `POST /me/api/credentials/{id}/enable`.
-- **Strict validation failures (400)**: When `strictValidation=true`, invalid phone numbers in batch sends are rejected entirely rather than skipped; surface which recipients failed.
-- **Broadcast stuck in non-running state**: If `POST .../start` returns success but `GET .../stats` shows zero activity, the broadcast may have no valid recipients or the account may lack credits.
-- **DNC conflicts**: A 400 when sending calls/texts may indicate recipients are on the Do Not Call list; proactively check `GET /contacts/dncs/{number}` before large campaigns.
-- **Credit depletion**: Monitor `GET /me/billing/credit-usage` and `GET /me/billing/plan-usage`; surface warnings when usage approaches plan limits.
-- **Order status not FINISHED**: After `POST /orders/numbers` or `POST /orders/keywords`, poll `GET /orders/{id}` and flag if status stays PENDING beyond a reasonable window.
-- **Deprecated or disabled credentials**: `GET /me/api/credentials` may show credentials with disabled status; flag any that the user might unknowingly be relying on.
-
-## Playbook
-
-### 1. Launch a Text Broadcast Campaign
-
-1. Create or select a contact list: `POST /contacts/lists` or `POST /contacts/lists/upload` (CSV)
-2. Create the text broadcast: `POST /texts/broadcasts` with message body and recipient list reference
-3. Start the broadcast: `POST /texts/broadcasts/{id}/start`
-4. Monitor progress: `GET /texts/broadcasts/{id}/stats` (poll periodically)
-5. Review individual message results: `GET /texts/broadcasts/{id}/texts`
-6. When finished, archive: `POST /texts/broadcasts/{id}/archive`
-
-### 2. Purchase a Number and Configure It
-
-1. Search available local numbers: `GET /numbers/local` (filter by state, city, zipcode, or prefix)
-2. Alternatively, search toll-free: `GET /numbers/tollfree` (filter by pattern)
-3. Place the order: `POST /orders/numbers` with selected number(s)
-4. Confirm order completion: `GET /orders/{id}` (check status = FINISHED)
-5. Configure the leased number: `PUT /numbers/leases/configs/{number}` (set call/text forwarding, IVR, etc.)
-
-### 3. Set Up Webhook Notifications for Inbound Texts
-
-1. List available webhook resources and events: `GET /webhooks/resources`
-2. Inspect events for the text resource: `GET /webhooks/resources/TextBroadcast` (or relevant resource name)
-3. Create the webhook: `POST /webhooks` with `resource`, `event`, `callback` URL, and `enabled: true`
-4. Verify it was registered: `GET /webhooks` and confirm your entry appears
-5. Test by sending an inbound text to your leased number and checking your callback endpoint
-
-### 4. Manage Do Not Call (DNC) Compliance
-
-1. Check if a number is on your DNC list: `GET /contacts/dncs/{number}`
-2. Check universal DNC registry: `GET /contacts/dncs/universals/{toNumber}` (with your fromNumber)
-3. Add numbers to DNC: `POST /contacts/dncs` with the number(s) and source
-4. Remove a number from DNC if consent is re-obtained: `DELETE /contacts/dncs/{number}`
-5. Before any campaign, filter recipients: `GET /contacts/dncs` with relevant prefix/campaign filters
-
-### 5. Review Call Recordings
-
-1. Find calls for a specific broadcast or time range: `GET /calls` (filter by campaignId, intervalBegin, intervalEnd)
-2. List recordings for a specific call: `GET /calls/{id}/recordings`
-3. Get recording metadata: `GET /calls/recordings/{id}`
-4. Download the audio file: `GET /calls/recordings/{id}.mp3`
-5. For named recordings: `GET /calls/{id}/recordings/{name}.mp3`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all calls?" -> GET /calls
+- "Create a call?" -> POST /calls
+- "List all broadcasts?" -> GET /calls/broadcasts
+- "Create a broadcast?" -> POST /calls/broadcasts
+- "Get broadcast details?" -> GET /calls/broadcasts/{id}
+- "Update a broadcast?" -> PUT /calls/broadcasts/{id}
+- "Create a archive?" -> POST /calls/broadcasts/{id}/archive
+- "List all batches?" -> GET /calls/broadcasts/{id}/batches
+- "Create a batche?" -> POST /calls/broadcasts/{id}/batches
+- "List all calls?" -> GET /calls/broadcasts/{id}/calls
+- "Create a recipient?" -> POST /calls/broadcasts/{id}/recipients
+- "Create a start?" -> POST /calls/broadcasts/{id}/start
+- "List all stats?" -> GET /calls/broadcasts/{id}/stats
+- "Create a stop?" -> POST /calls/broadcasts/{id}/stop
+- "Create a toggleRecipientsStatus?" -> POST /calls/broadcasts/{id}/toggleRecipientsStatus
+- "Get recording details?" -> GET /calls/recordings/{id}
+- "Get recording details?" -> GET /calls/recordings/{id}.mp3
+- "Get call details?" -> GET /calls/{id}
+- "List all recordings?" -> GET /calls/{id}/recordings
+- "Get recording details?" -> GET /calls/{id}/recordings/{name}
+- "Get recording details?" -> GET /calls/{id}/recordings/{name}.mp3
+- "Get batche details?" -> GET /campaigns/batches/{id}
+- "Update a batche?" -> PUT /campaigns/batches/{id}
+- "List all sounds?" -> GET /campaigns/sounds
+- "Create a call?" -> POST /campaigns/sounds/calls
+- "Create a file?" -> POST /campaigns/sounds/files
+- "Create a tt?" -> POST /campaigns/sounds/tts
+- "Get sound details?" -> GET /campaigns/sounds/{id}
+- "Delete a sound?" -> DELETE /campaigns/sounds/{id}
+- "Get sound details?" -> GET /campaigns/sounds/{id}.mp3
+- "Get sound details?" -> GET /campaigns/sounds/{id}.wav
+- "List all contacts?" -> GET /contacts
+- "Create a contact?" -> POST /contacts
+- "List all dncs?" -> GET /contacts/dncs
+- "Create a dnc?" -> POST /contacts/dncs
+- "Delete a source?" -> DELETE /contacts/dncs/sources/{source}
+- "Get universal details?" -> GET /contacts/dncs/universals/{toNumber}
+- "Get dnc details?" -> GET /contacts/dncs/{number}
+- "Update a dnc?" -> PUT /contacts/dncs/{number}
+- "Delete a dnc?" -> DELETE /contacts/dncs/{number}
+- "List all lists?" -> GET /contacts/lists
+- "Create a list?" -> POST /contacts/lists
+- "Create a upload?" -> POST /contacts/lists/upload
+- "Get list details?" -> GET /contacts/lists/{id}
+- "Update a list?" -> PUT /contacts/lists/{id}
+- "Delete a list?" -> DELETE /contacts/lists/{id}
+- "List all items?" -> GET /contacts/lists/{id}/items
+- "Create a item?" -> POST /contacts/lists/{id}/items
+- "Delete a item?" -> DELETE /contacts/lists/{id}/items/{contactId}
+- "Get contact details?" -> GET /contacts/{id}
+- "Update a contact?" -> PUT /contacts/{id}
+- "Delete a contact?" -> DELETE /contacts/{id}
+- "List all history?" -> GET /contacts/{id}/history
+- "List all keywords?" -> GET /keywords
+- "List all leases?" -> GET /keywords/leases
+- "List all configs?" -> GET /keywords/leases/configs
+- "Get config details?" -> GET /keywords/leases/configs/{keyword}
+- "Update a config?" -> PUT /keywords/leases/configs/{keyword}
+- "Get id details?" -> GET /keywords/leases/id/{id}
+- "Get lease details?" -> GET /keywords/leases/{keyword}
+- "Update a lease?" -> PUT /keywords/leases/{keyword}
+- "List all available?" -> GET /keywords/{keyword}/available
+- "List all account?" -> GET /me/account
+- "List all credentials?" -> GET /me/api/credentials
+- "Create a credential?" -> POST /me/api/credentials
+- "Get credential details?" -> GET /me/api/credentials/{id}
+- "Delete a credential?" -> DELETE /me/api/credentials/{id}
+- "Create a disable?" -> POST /me/api/credentials/{id}/disable
+- "Create a enable?" -> POST /me/api/credentials/{id}/enable
+- "List all credit-usage?" -> GET /me/billing/credit-usage
+- "Get grouped details?" -> GET /me/billing/credit-usage/grouped/{rollupBinType}
+- "List all plan-usage?" -> GET /me/billing/plan-usage
+- "List all callerids?" -> GET /me/callerids
+- "Create a verification-code?" -> POST /me/callerids/{callerid}/verification-code
+- "List all media?" -> GET /media
+- "Create a media?" -> POST /media
+- "Get public details?" -> GET /media/public/{key}.{extension}
+- "Get media details?" -> GET /media/{id}
+- "Get media details?" -> GET /media/{id}.{extension}
+- "List all file?" -> GET /media/{id}/file
+- "List all leases?" -> GET /numbers/leases
+- "List all configs?" -> GET /numbers/leases/configs
+- "Get config details?" -> GET /numbers/leases/configs/{number}
+- "Update a config?" -> PUT /numbers/leases/configs/{number}
+- "Get lease details?" -> GET /numbers/leases/{number}
+- "Update a lease?" -> PUT /numbers/leases/{number}
+- "List all local?" -> GET /numbers/local
+- "List all regions?" -> GET /numbers/regions
+- "List all tollfree?" -> GET /numbers/tollfree
+- "List all orders?" -> GET /orders
+- "Create a keyword?" -> POST /orders/keywords
+- "Create a number?" -> POST /orders/numbers
+- "Get order details?" -> GET /orders/{id}
+- "List all delivery?" -> GET /reports/delivery
+- "List all texts?" -> GET /texts
+- "Create a text?" -> POST /texts
+- "List all auto-replys?" -> GET /texts/auto-replys
+- "Create a auto-reply?" -> POST /texts/auto-replys
+- "Get auto-reply details?" -> GET /texts/auto-replys/{id}
+- "Delete a auto-reply?" -> DELETE /texts/auto-replys/{id}
+- "List all broadcasts?" -> GET /texts/broadcasts
+- "Create a broadcast?" -> POST /texts/broadcasts
+- "Get broadcast details?" -> GET /texts/broadcasts/{id}
+- "Update a broadcast?" -> PUT /texts/broadcasts/{id}
+- "Create a archive?" -> POST /texts/broadcasts/{id}/archive
+- "List all batches?" -> GET /texts/broadcasts/{id}/batches
+- "Create a batche?" -> POST /texts/broadcasts/{id}/batches
+- "Create a recipient?" -> POST /texts/broadcasts/{id}/recipients
+- "Create a start?" -> POST /texts/broadcasts/{id}/start
+- "List all stats?" -> GET /texts/broadcasts/{id}/stats
+- "Create a stop?" -> POST /texts/broadcasts/{id}/stop
+- "List all texts?" -> GET /texts/broadcasts/{id}/texts
+- "Create a toggleRecipientsStatus?" -> POST /texts/broadcasts/{id}/toggleRecipientsStatus
+- "Get text details?" -> GET /texts/{id}
+- "List all webhooks?" -> GET /webhooks
+- "Create a webhook?" -> POST /webhooks
+- "List all resources?" -> GET /webhooks/resources
+- "Get resource details?" -> GET /webhooks/resources/{resource}
+- "Get webhook details?" -> GET /webhooks/{id}
+- "Update a webhook?" -> PUT /webhooks/{id}
+- "Delete a webhook?" -> DELETE /webhooks/{id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

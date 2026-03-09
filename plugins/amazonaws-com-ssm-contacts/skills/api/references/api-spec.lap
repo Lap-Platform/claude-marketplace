@@ -8,161 +8,200 @@
 @toc root(39)
 
 @endpoint POST /
+@desc Used to acknowledge an engagement to a contact channel during an incident.
 @required {PageId: str, AcceptType: str, AcceptCode: str}
 @optional {ContactChannelId: str, Note: str, AcceptCodeValidation: str}
 
 @endpoint POST /
+@desc Activates a contact's contact channel. Incident Manager can't engage a contact until the contact channel has been activated.
 @required {ContactChannelId: str, ActivationCode: str}
 
 @endpoint POST /
+@desc Contacts are either the contacts that Incident Manager engages during an incident or the escalation plans that Incident Manager uses to engage contacts in phases during an incident.
 @required {Alias: str, Type: str, Plan: Plan}
 @optional {DisplayName: str, Tags: [Tag], IdempotencyToken: str}
 @returns(200) {ContactArn: str}
 
 @endpoint POST /
+@desc A contact channel is the method that Incident Manager uses to engage your contact.
 @required {ContactId: str, Name: str, Type: str, DeliveryAddress: ContactChannelAddress}
 @optional {DeferActivation: bool, IdempotencyToken: str}
 @returns(200) {ContactChannelArn: str}
 
 @endpoint POST /
+@desc Creates a rotation in an on-call schedule.
 @required {Name: str, ContactIds: [str], TimeZoneId: str, Recurrence: RecurrenceSettings}
 @optional {StartTime: str(timestamp), Tags: [Tag], IdempotencyToken: str}
 @returns(200) {RotationArn: str}
 
 @endpoint POST /
+@desc Creates an override for a rotation in an on-call schedule.
 @required {RotationId: str, NewContactIds: [str], StartTime: str(timestamp), EndTime: str(timestamp)}
 @optional {IdempotencyToken: str}
 @returns(200) {RotationOverrideId: str}
 
 @endpoint POST /
+@desc To no longer receive Incident Manager engagements to a contact channel, you can deactivate the channel.
 @required {ContactChannelId: str}
 
 @endpoint POST /
+@desc To remove a contact from Incident Manager, you can delete the contact. Deleting a contact removes them from all escalation plans and related response plans. Deleting an escalation plan removes it from all related response plans. You will have to recreate the contact and its contact channels before you can use it again.
 @required {ContactId: str}
 
 @endpoint POST /
+@desc To no longer receive engagements on a contact channel, you can delete the channel from a contact. Deleting the contact channel removes it from the contact's engagement plan. If you delete the only contact channel for a contact, you won't be able to engage that contact during an incident.
 @required {ContactChannelId: str}
 
 @endpoint POST /
+@desc Deletes a rotation from the system. If a rotation belongs to more than one on-call schedule, this operation deletes it from all of them.
 @required {RotationId: str}
 
 @endpoint POST /
+@desc Deletes an existing override for an on-call rotation.
 @required {RotationId: str, RotationOverrideId: str}
 
 @endpoint POST /
+@desc Incident Manager uses engagements to engage contacts and escalation plans during an incident. Use this command to describe the engagement that occurred during an incident.
 @required {EngagementId: str}
 @returns(200) {ContactArn: str, EngagementArn: str, Sender: str, Subject: str, Content: str, PublicSubject: str?, PublicContent: str?, IncidentId: str?, StartTime: str(timestamp)?, StopTime: str(timestamp)?}
 
 @endpoint POST /
+@desc Lists details of the engagement to a contact channel.
 @required {PageId: str}
 @returns(200) {PageArn: str, EngagementArn: str, ContactArn: str, Sender: str, Subject: str, Content: str, PublicSubject: str?, PublicContent: str?, IncidentId: str?, SentTime: str(timestamp)?, ReadTime: str(timestamp)?, DeliveryTime: str(timestamp)?}
 
 @endpoint POST /
+@desc Retrieves information about the specified contact or escalation plan.
 @required {ContactId: str}
 @returns(200) {ContactArn: str, Alias: str, DisplayName: str?, Type: str, Plan: Plan{Stages: [Stage]?, RotationIds: [str]?}}
 
 @endpoint POST /
+@desc List details about a specific contact channel.
 @required {ContactChannelId: str}
 @returns(200) {ContactArn: str, ContactChannelArn: str, Name: str, Type: str, DeliveryAddress: ContactChannelAddress{SimpleAddress: str?}, ActivationStatus: str?}
 
 @endpoint POST /
+@desc Retrieves the resource policies attached to the specified contact or escalation plan.
 @required {ContactArn: str}
 @returns(200) {ContactArn: str?, Policy: str?}
 
 @endpoint POST /
+@desc Retrieves information about an on-call rotation.
 @required {RotationId: str}
-@returns(200) {RotationArn: str, Name: str, ContactIds: [str], StartTime: str(timestamp), TimeZoneId: str, Recurrence: RecurrenceSettings{MonthlySettings: [MonthlySetting]?, WeeklySettings: [WeeklySetting]?, DailySettings: [HandOffTime]?, NumberOfOnCalls: int, ShiftCoverages: map<str,[CoverageTime]>?, RecurrenceMultiplier: int}}
+@returns(200) {RotationArn: str, Name: str, ContactIds: [str], StartTime: str(timestamp), TimeZoneId: str, Recurrence: RecurrenceSettings{MonthlySettings: [MonthlySetting]?, WeeklySettings: [WeeklySetting]?, DailySettings: [HandOffTime]?, NumberOfOnCalls: int, ShiftCoverages: map<str, [CoverageTime]>?: any, RecurrenceMultiplier: int}}
 
 @endpoint POST /
+@desc Retrieves information about an override to an on-call rotation.
 @required {RotationId: str, RotationOverrideId: str}
 @returns(200) {RotationOverrideId: str?, RotationArn: str?, NewContactIds: [str]?, StartTime: str(timestamp)?, EndTime: str(timestamp)?, CreateTime: str(timestamp)?}
 
 @endpoint POST /
+@desc Lists all contact channels for the specified contact.
 @required {ContactId: str}
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {NextToken: str?, ContactChannels: [ContactChannel]}
 
 @endpoint POST /
+@desc Lists all contacts and escalation plans in Incident Manager.
 @optional {NextToken: str, MaxResults: int, AliasPrefix: str, Type: str}
 @returns(200) {NextToken: str?, Contacts: [Contact]?}
 
 @endpoint POST /
+@desc Lists all engagements that have happened in an incident.
 @optional {NextToken: str, MaxResults: int, IncidentId: str, TimeRangeValue: TimeRange}
 @returns(200) {NextToken: str?, Engagements: [Engagement]}
 
 @endpoint POST /
+@desc Lists all of the engagements to contact channels that have been acknowledged.
 @required {PageId: str}
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {NextToken: str?, Receipts: [Receipt]?}
 
 @endpoint POST /
+@desc Returns the resolution path of an engagement. For example, the escalation plan engaged in an incident might target an on-call schedule that includes several contacts in a rotation, but just one contact on-call when the incident starts. The resolution path indicates the hierarchy of escalation plan &gt; on-call schedule &gt; contact.
 @required {PageId: str}
 @optional {NextToken: str}
 @returns(200) {NextToken: str?, PageResolutions: [ResolutionContact]}
 
 @endpoint POST /
+@desc Lists the engagements to a contact's contact channels.
 @required {ContactId: str}
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {NextToken: str?, Pages: [Page]}
 
 @endpoint POST /
+@desc Lists the engagements to contact channels that occurred by engaging a contact.
 @required {EngagementId: str}
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {NextToken: str?, Pages: [Page]}
 
 @endpoint POST /
+@desc Returns a list of shifts based on rotation configuration parameters.  The Incident Manager primarily uses this operation to populate the Preview calendar. It is not typically run by end users.
 @required {EndTime: str(timestamp), Members: [str], TimeZoneId: str, Recurrence: RecurrenceSettings}
 @optional {RotationStartTime: str(timestamp), StartTime: str(timestamp), Overrides: [PreviewOverride], NextToken: str, MaxResults: int}
 @returns(200) {RotationShifts: [RotationShift]?, NextToken: str?}
 
 @endpoint POST /
+@desc Retrieves a list of overrides currently specified for an on-call rotation.
 @required {RotationId: str, StartTime: str(timestamp), EndTime: str(timestamp)}
 @optional {NextToken: str, MaxResults: int}
 @returns(200) {RotationOverrides: [RotationOverride]?, NextToken: str?}
 
 @endpoint POST /
+@desc Returns a list of shifts generated by an existing rotation in the system.
 @required {RotationId: str, EndTime: str(timestamp)}
 @optional {StartTime: str(timestamp), NextToken: str, MaxResults: int}
 @returns(200) {RotationShifts: [RotationShift]?, NextToken: str?}
 
 @endpoint POST /
+@desc Retrieves a list of on-call rotations.
 @optional {RotationNamePrefix: str, NextToken: str, MaxResults: int}
 @returns(200) {NextToken: str?, Rotations: [Rotation]}
 
 @endpoint POST /
+@desc Lists the tags of an escalation plan or contact.
 @required {ResourceARN: str}
 @returns(200) {Tags: [Tag]?}
 
 @endpoint POST /
+@desc Adds a resource policy to the specified contact or escalation plan. The resource policy is used to share the contact or escalation plan using Resource Access Manager (RAM). For more information about cross-account sharing, see Setting up cross-account functionality.
 @required {ContactArn: str, Policy: str}
 
 @endpoint POST /
+@desc Sends an activation code to a contact channel. The contact can use this code to activate the contact channel in the console or with the ActivateChannel operation. Incident Manager can't engage a contact channel until it has been activated.
 @required {ContactChannelId: str}
 
 @endpoint POST /
+@desc Starts an engagement to a contact or escalation plan. The engagement engages each contact specified in the incident.
 @required {ContactId: str, Sender: str, Subject: str, Content: str}
 @optional {PublicSubject: str, PublicContent: str, IncidentId: str, IdempotencyToken: str}
 @returns(200) {EngagementArn: str}
 
 @endpoint POST /
+@desc Stops an engagement before it finishes the final stage of the escalation plan or engagement plan. Further contacts aren't engaged.
 @required {EngagementId: str}
 @optional {Reason: str}
 
 @endpoint POST /
+@desc Tags a contact or escalation plan. You can tag only contacts and escalation plans in the first region of your replication set.
 @required {ResourceARN: str, Tags: [Tag]}
 
 @endpoint POST /
+@desc Removes tags from the specified resource.
 @required {ResourceARN: str, TagKeys: [str]}
 
 @endpoint POST /
+@desc Updates the contact or escalation plan specified.
 @required {ContactId: str}
 @optional {DisplayName: str, Plan: Plan}
 
 @endpoint POST /
+@desc Updates a contact's contact channel.
 @required {ContactChannelId: str}
 @optional {Name: str, DeliveryAddress: ContactChannelAddress}
 
 @endpoint POST /
+@desc Updates the information specified for an on-call rotation.
 @required {RotationId: str, Recurrence: RecurrenceSettings}
 @optional {ContactIds: [str], StartTime: str(timestamp), TimeZoneId: str}
 

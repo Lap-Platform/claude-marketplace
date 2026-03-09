@@ -64,87 +64,10 @@ Not specified.
 | POST | / | Assigns one or more tags (key-value pairs) to the specified CloudWatch resource. Currently, the only CloudWatch resources that can be tagged are alarms and Contributor Insights rules. Tags can help you organize and categorize your resources. You can also use them to scope user permissions by granting a user permission to access or change only resources with certain tag values. Tags don't have any semantic meaning to Amazon Web Services and are interpreted strictly as strings of characters. You can use the TagResource action with an alarm that already has tags. If you specify a new tag key for the alarm, this tag is appended to the list of tags associated with the alarm. If you specify a tag key that is already associated with the alarm, the new tag value that you specify replaces the previous value for that tag. You can associate as many as 50 tags with a CloudWatch resource. |
 | POST | / | Removes one or more tags from the specified resource. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What alarms are currently firing?" -> POST / (DescribeAlarms with StateValue: "ALARM")
-- "Show me CPU utilization for the last hour" -> POST / (GetMetricStatistics with MetricName: "CPUUtilization", Namespace: "AWS/EC2")
-- "What metrics are available in a given namespace?" -> POST / (ListMetrics with Namespace filter)
-- "Create an alarm when error rate exceeds a threshold" -> POST / (PutMetricAlarm with ComparisonOperator: "GreaterThanThreshold")
-- "What happened with this alarm recently?" -> POST / (DescribeAlarmHistory with AlarmName)
-- "Get a dashboard's JSON definition" -> POST / (GetDashboard with DashboardName)
-- "Which alarms are attached to a specific metric?" -> POST / (DescribeAlarmsForMetric with MetricName + Namespace)
-- "Query multiple metrics with math expressions" -> POST / (GetMetricData with MetricDataQueries)
-- "Render a metric graph as an image" -> POST / (GetMetricWidgetImage with MetricWidget JSON)
-- "Silence alarm actions during maintenance" -> POST / (DisableAlarmActions with AlarmNames)
-- "List all dashboards in my account" -> POST / (ListDashboards)
-- "Who are the top contributors to a Contributor Insights rule?" -> POST / (GetInsightRuleReport with RuleName, StartTime, EndTime, Period)
-- "Stream metrics to Firehose in real time" -> POST / (PutMetricStream with Name, FirehoseArn, RoleArn, OutputFormat)
-- "Publish custom application metrics" -> POST / (PutMetricData with Namespace, MetricData)
-- "Manually set an alarm to ALARM state for testing" -> POST / (SetAlarmState with AlarmName, StateValue, StateReason)
-
-## Response Tips
-
-- **Alarms (Describe/Put/Delete):** CompositeAlarms and MetricAlarms are returned as separate arrays; check both. StateValue is one of OK, ALARM, INSUFFICIENT_DATA.
-- **Metric data (GetMetricStatistics, GetMetricData):** Datapoints are unordered; sort by Timestamp client-side. GetMetricData paginates via NextToken and may include Messages with warnings about incomplete results.
-- **Dashboards:** DashboardBody is a JSON string that must be parsed separately. PutDashboard returns DashboardValidationMessages -- empty means success, non-empty means warnings (dashboard is still saved).
-- **Insight Rules:** Bulk operations (Delete/Enable/Disable) return a Failures array of PartialFailure objects; empty array means full success.
-- **Pagination:** Endpoints returning NextToken (DescribeAlarms, ListMetrics, GetMetricData, etc.) require re-calling with that token. MaxRecords/MaxResults caps page size, not total results.
-- **Metric Streams:** GetMetricStream returns State as "running" or "stopped"; check CreationDate/LastUpdateDate timestamps for staleness.
-- **Widget Images:** GetMetricWidgetImage returns raw bytes (base64 in SDK), not JSON. OutputFormat defaults to PNG.
-
-## Anomaly Flags
-
-- **Partial failures on bulk operations:** When DeleteInsightRules, EnableInsightRules, DisableInsightRules, or PutManagedInsightRules return non-empty Failures arrays, surface each PartialFailure with its FailureResource and FailureDescription.
-- **Dashboard validation warnings:** PutDashboard may succeed but return DashboardValidationMessages indicating malformed widget definitions or invalid metric references. Always surface these.
-- **Messages in GetMetricData:** The Messages array can contain warnings about truncated results, permission issues on cross-account queries, or metrics with no data. Surface any message where Code is not empty.
-- **INSUFFICIENT_DATA alarm state:** Alarms in this state may indicate misconfigured dimensions, missing metrics, or a namespace that stopped publishing. Flag alarms stuck in this state for more than one evaluation period.
-- **Metric stream stopped unexpectedly:** If GetMetricStream shows State "stopped" but LastUpdateDate is recent, the stream may have been interrupted by a permissions change on the Firehose or IAM role.
-- **Rate limiting (throttling):** AWS CloudWatch enforces per-API and per-account rate limits. Surface any ThrottlingException or RequestLimitExceeded errors and recommend exponential backoff.
-- **Deprecated anomaly detector parameters:** The top-level Namespace/MetricName/Stat/Dimensions fields on PutAnomalyDetector and DeleteAnomalyDetector are deprecated in favor of SingleMetricAnomalyDetector. Flag usage of the legacy fields.
-
-## Playbook
-
-### 1. Set Up a Metric Alarm with Notification
-
-1. Call ListMetrics with the target Namespace to confirm the MetricName and available Dimensions.
-2. Call GetMetricStatistics with the metric, a recent time range, and the desired Statistic to validate data is flowing and establish a reasonable threshold.
-3. Call PutMetricAlarm with AlarmName, MetricName, Namespace, Dimensions, Period, EvaluationPeriods, ComparisonOperator, Threshold, and AlarmActions (SNS topic ARN).
-4. Call DescribeAlarms with the new AlarmName to confirm creation and verify the alarm configuration.
-5. Optionally call SetAlarmState with StateValue "ALARM" and a test StateReason to trigger a test notification, then reset to "OK".
-
-### 2. Build and Deploy a Custom Dashboard
-
-1. Call ListDashboards to see existing dashboards and avoid name collisions.
-2. Construct a DashboardBody JSON string with widget definitions (metric graphs, text, alarms).
-3. Call PutDashboard with DashboardName and DashboardBody.
-4. Check the response for DashboardValidationMessages; fix any reported issues and re-call PutDashboard if needed.
-5. Call GetDashboard with the DashboardName to verify the saved body matches expectations.
-
-### 3. Investigate an Alarm That Fired
-
-1. Call DescribeAlarms with the AlarmName to get current state, configuration, and linked metric details.
-2. Call DescribeAlarmHistory with the AlarmName, setting StartDate/EndDate around the incident window and HistoryItemType "StateUpdate" to see state transitions.
-3. Call GetMetricStatistics (for a single metric) or GetMetricData (for metric math) using the alarm's metric configuration and the same time window to see the underlying data.
-4. If an anomaly detector is involved, call DescribeAnomalyDetectors filtered to the metric to inspect the anomaly band configuration.
-5. After resolution, optionally call SetAlarmState to "OK" with a StateReason documenting the root cause.
-
-### 4. Stream Metrics to S3 via Firehose
-
-1. Call ListMetricStreams to check for existing streams and avoid conflicts.
-2. Call PutMetricStream with a Name, the Firehose delivery stream ARN, an IAM RoleArn with cloudwatch:PutMetricStream and firehose:PutRecord permissions, OutputFormat ("json" or "opentelemetry1.0"), and optional IncludeFilters/ExcludeFilters to scope namespaces.
-3. Call GetMetricStream with the Name to verify configuration and confirm State is "running".
-4. Call StartMetricStreams with the stream Name if the state shows "stopped".
-5. Monitor by periodically calling GetMetricStream and checking LastUpdateDate progresses.
-
-### 5. Publish and Monitor Custom Application Metrics
-
-1. Call PutMetricData with a custom Namespace (e.g., "MyApp/Performance") and a MetricData array containing MetricDatum entries with MetricName, Value, Unit, Timestamp, and optional Dimensions.
-2. Call ListMetrics with the custom Namespace to confirm metrics appear (may take a few minutes for first publish).
-3. Call GetMetricStatistics with the custom MetricName, Namespace, and a time range to verify data points are recorded.
-4. Call PutMetricAlarm to set thresholds on the custom metric for proactive alerting.
-5. Optionally call PutAnomalyDetector with SingleMetricAnomalyDetector referencing the custom metric to enable anomaly-based alarming.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -3,252 +3,295 @@
 @api Postmark API
 @base https://api.postmarkapp.com/
 @version 1.0.0
-@common_fields {X-Postmark-Server-Token: any}
+@common_fields {X-Postmark-Server-Token: any # The token associated with the Server on which this request will operate.}
 @endpoints 43
 @hint download_for_search
 @toc email(4), deliverystats(1), bounces(4), messages(11), templates(6), stats(12), triggers(3), server(2)
 
 @group email
 @endpoint POST /email
+@desc Send a single email
 @optional {body: any}
-@returns(200)
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint POST /email/batch
+@desc Send a batch of emails
 @optional {body: [any]}
-@returns(200)
+@returns(200) OK
 @errors {422, 500}
 
 @endgroup
 
 @group deliverystats
 @endpoint GET /deliverystats
-@returns(200)
+@desc Get delivery stats
+@returns(200) OK
 @errors {422, 500}
 
 @endgroup
 
 @group bounces
 @endpoint GET /bounces
-@required {count: any, offset: any}
-@optional {type: any, inactive: any, emailFilter: any, messageID: any, tag: any, todate: any, fromdate: any}
-@returns(200)
+@desc Get bounces
+@required {count: any # Number of bounces to return per request. Max 500., offset: any # Number of bounces to skip.}
+@optional {type: any # Filter by type of bounce, inactive: any # Filter by emails that were deactivated by Postmark due to the bounce. Set to true or false. If this isn't specified it will return both active and inactive., emailFilter: any # Filter by email address, messageID: any # Filter by messageID, tag: any # Filter by tag, todate: any # Filter messages up to the date specified. e.g. `2014-02-01`, fromdate: any # Filter messages starting from the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /bounces/{bounceid}
-@required {bounceid: any}
-@returns(200)
+@desc Get a single bounce
+@required {bounceid: any # The ID of the bounce to retrieve.}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /bounces/{bounceid}/dump
-@required {bounceid: any}
-@returns(200)
+@desc Get bounce dump
+@required {bounceid: any # The ID for the bounce dump to retrieve.}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint PUT /bounces/{bounceid}/activate
-@required {bounceid: any}
-@returns(200)
+@desc Activate a bounce
+@required {bounceid: any # The ID of the Bounce to activate.}
+@returns(200) OK
 @errors {422, 500}
 
 @endgroup
 
 @group messages
 @endpoint GET /messages/outbound
-@required {count: any, offset: any}
-@optional {recipient: any, fromemail: any, tag: any, status: any, todate: any, fromdate: any}
-@returns(200)
+@desc Outbound message search
+@required {count: any # Number of messages to return per request. Max 500., offset: any # Number of messages to skip}
+@optional {recipient: any # Filter by the user who was receiving the email, fromemail: any # Filter by the sender email address, tag: any # Filter by tag, status: any # Filter by status (`queued` or `sent`), todate: any # Filter messages up to the date specified. e.g. `2014-02-01`, fromdate: any # Filter messages starting from the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /messages/outbound/{messageid}/details
-@required {messageid: any}
-@returns(200)
+@desc Outbound message details
+@required {messageid: any # The ID of the message for which to retrieve details.}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /messages/outbound/{messageid}/dump
-@required {messageid: any}
-@returns(200)
+@desc Outbound message dump
+@required {messageid: any # The ID of the message for which to retrieve a dump.}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /messages/inbound
-@required {count: any, offset: any}
-@optional {recipient: any, fromemail: any, subject: any, mailboxhash: any, tag: any, status: any, todate: any, fromdate: any}
-@returns(200)
+@desc Inbound message search
+@required {count: any # Number of messages to return per request. Max 500., offset: any # Number of messages to skip}
+@optional {recipient: any # Filter by the user who was receiving the email, fromemail: any # Filter by the sender email address, subject: any # Filter by email subject, mailboxhash: any # Filter by mailboxhash, tag: any # Filter by tag, status: any # Filter by status (`blocked`, `processed`, `queued`, `failed`, `scheduled`), todate: any # Filter messages up to the date specified. e.g. `2014-02-01`, fromdate: any # Filter messages starting from the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /messages/inbound/{messageid}/details
-@required {messageid: any}
-@returns(200)
+@desc Inbound message details
+@required {messageid: any # The ID of the message for which to details will be retrieved.}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint PUT /messages/inbound/{messageid}/bypass
-@required {messageid: any}
-@returns(200)
+@desc Bypass rules for a blocked inbound message
+@required {messageid: any # The ID of the message which should bypass inbound rules.}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint PUT /messages/inbound/{messageid}/retry
-@required {messageid: any}
-@returns(200)
+@desc Retry a failed inbound message for processing
+@required {messageid: any # The ID of the inbound message on which we should retry processing.}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /messages/outbound/opens
-@required {count: any, offset: any}
-@optional {recipient: any, tag: any, client_name: any, client_company: any, client_family: any, os_name: any, os_family: any, os_company: any, platform: any, country: any, region: any, city: any}
-@returns(200)
+@desc Opens for all messages
+@required {count: any # Number of message opens to return per request. Max 500., offset: any # Number of messages to skip}
+@optional {recipient: any # Filter by To, Cc, Bcc, tag: any # Filter by tag, client_name: any # Filter by client name, i.e. Outlook, Gmail, client_company: any # Filter by company, i.e. Microsoft, Apple, Google, client_family: any # Filter by client family, i.e. OS X, Chrome, os_name: any # Filter by full OS name and specific version, i.e. OS X 10.9 Mavericks, Windows 7, os_family: any # Filter by kind of OS used without specific version, i.e. OS X, Windows, os_company: any # Filter by company which produced the OS, i.e. Apple Computer, Inc., Microsoft Corporation, platform: any # Filter by platform, i.e. webmail, desktop, mobile, country: any # Filter by country messages were opened in, i.e. Denmark, Russia, region: any # Filter by full name of region messages were opened in, i.e. Moscow, New York, city: any # Filter by full name of region messages were opened in, i.e. Moscow, New York}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /messages/outbound/opens/{messageid}
-@required {messageid: any, count: any, offset: any}
-@returns(200)
+@desc Retrieve Message Opens
+@required {messageid: any # The ID of the Outbound Message for which open statistics should be retrieved., count: any # Number of message opens to return per request. Max 500., offset: any # Number of messages to skip.}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /messages/outbound/clicks
-@required {count: any, offset: any}
-@optional {recipient: any, tag: any, client_name: any, client_company: any, client_family: any, os_name: any, os_family: any, os_company: any, platform: any, country: any, region: any, city: any}
-@returns(200)
+@desc Clicks for a all messages
+@required {count: any # Number of message clicks to return per request. Max 500., offset: any # Number of messages to skip}
+@optional {recipient: any # Filter by To, Cc, Bcc, tag: any # Filter by tag, client_name: any # Filter by client name, i.e. Outlook, Gmail, client_company: any # Filter by company, i.e. Microsoft, Apple, Google, client_family: any # Filter by client family, i.e. OS X, Chrome, os_name: any # Filter by full OS name and specific version, i.e. OS X 10.9 Mavericks, Windows 7, os_family: any # Filter by kind of OS used without specific version, i.e. OS X, Windows, os_company: any # Filter by company which produced the OS, i.e. Apple Computer, Inc., Microsoft Corporation, platform: any # Filter by platform, i.e. webmail, desktop, mobile, country: any # Filter by country messages were opened in, i.e. Denmark, Russia, region: any # Filter by full name of region messages were opened in, i.e. Moscow, New York, city: any # Filter by full name of region messages were opened in, i.e. Moscow, New York}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /messages/outbound/clicks/{messageid}
-@required {messageid: any, count: any, offset: any}
-@returns(200)
+@desc Retrieve Message Clicks
+@required {messageid: any # The ID of the Outbound Message for which click statistics should be retrieved., count: any # Number of message clicks to return per request. Max 500., offset: any # Number of messages to skip.}
+@returns(200) OK
 @errors {422, 500}
 
 @endgroup
 
 @group email
 @endpoint POST /email/withTemplate
+@desc Send an email using a Template
 @required {body: any}
-@returns(200)
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint POST /email/batchWithTemplates
+@desc Send a batch of email using templates.
 @required {body: any}
-@returns(200)
+@returns(200) OK
 @errors {422, 500}
 
 @endgroup
 
 @group templates
 @endpoint GET /templates
-@required {Count: any, Offset: any}
-@returns(200)
+@desc Get the Templates associated with this Server
+@required {Count: any # The number of Templates to return, Offset: any # The number of Templates to "skip" before returning results.}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint POST /templates
+@desc Create a Template
 @required {body: any}
-@returns(200)
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /templates/{templateIdOrAlias}
-@required {templateIdOrAlias: any}
-@returns(200)
+@desc Get a Template
+@required {templateIdOrAlias: any # The 'TemplateID' or 'Alias' value for the Template you wish to retrieve.}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint PUT /templates/{templateIdOrAlias}
-@required {templateIdOrAlias: any, body: any}
-@returns(200)
+@desc Update a Template
+@required {templateIdOrAlias: any # The 'TemplateID' or 'Alias' value for the Template you wish to update., body: any}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint DELETE /templates/{templateIdOrAlias}
-@required {templateIdOrAlias: any}
-@returns(200)
+@desc Delete a Template
+@required {templateIdOrAlias: any # The 'TemplateID' or 'Alias' value for the Template you wish to delete.}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint POST /templates/validate
+@desc Test Template Content
 @optional {body: any}
-@returns(200)
+@returns(200) OK
 @errors {422, 500}
 
 @endgroup
 
 @group stats
 @endpoint GET /stats/outbound
-@optional {tag: any, fromdate: any, todate: any}
-@returns(200)
+@desc Get outbound overview
+@optional {tag: any # Filter by tag, fromdate: any # Filter stats starting from the date specified. e.g. `2014-01-01`, todate: any # Filter stats up to the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /stats/outbound/sends
-@optional {tag: any, fromdate: any, todate: any}
-@returns(200)
+@desc Get sent counts
+@optional {tag: any # Filter by tag, fromdate: any # Filter stats starting from the date specified. e.g. `2014-01-01`, todate: any # Filter stats up to the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /stats/outbound/bounces
-@optional {tag: any, fromdate: any, todate: any}
-@returns(200)
+@desc Get bounce counts
+@optional {tag: any # Filter by tag, fromdate: any # Filter stats starting from the date specified. e.g. `2014-01-01`, todate: any # Filter stats up to the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /stats/outbound/spam
-@optional {tag: any, fromdate: any, todate: any}
-@returns(200)
+@desc Get spam complaints
+@optional {tag: any # Filter by tag, fromdate: any # Filter stats starting from the date specified. e.g. `2014-01-01`, todate: any # Filter stats up to the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /stats/outbound/tracked
-@optional {tag: any, fromdate: any, todate: any}
-@returns(200)
+@desc Get tracked email counts
+@optional {tag: any # Filter by tag, fromdate: any # Filter stats starting from the date specified. e.g. `2014-01-01`, todate: any # Filter stats starting from the date specified. e.g. `2014-01-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /stats/outbound/opens
-@optional {tag: any, fromdate: any, todate: any}
-@returns(200)
+@desc Get email open counts
+@optional {tag: any # Filter by tag, fromdate: any # Filter stats starting from the date specified. e.g. `2014-01-01`, todate: any # Filter stats up to the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /stats/outbound/opens/platforms
-@optional {tag: any, fromdate: any, todate: any}
-@returns(200)
+@desc Get email platform usage
+@optional {tag: any # Filter by tag, fromdate: any # Filter stats starting from the date specified. e.g. `2014-01-01`, todate: any # Filter stats up to the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /stats/outbound/opens/emailclients
-@optional {tag: any, fromdate: any, todate: any}
-@returns(200)
+@desc Get email client usage
+@optional {tag: any # Filter by tag, fromdate: any # Filter stats starting from the date specified. e.g. `2014-01-01`, todate: any # Filter stats up to the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /stats/outbound/clicks
-@optional {tag: any, fromdate: any, todate: any}
-@returns(200)
+@desc Get click counts
+@optional {tag: any # Filter by tag, fromdate: any # Filter stats starting from the date specified. e.g. `2014-01-01`, todate: any # Filter stats up to the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /stats/outbound/clicks/browserfamilies
-@optional {tag: any, fromdate: any, todate: any}
-@returns(200)
+@desc Get browser usage by family
+@optional {tag: any # Filter by tag, fromdate: any # Filter stats starting from the date specified. e.g. `2014-01-01`, todate: any # Filter stats up to the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /stats/outbound/clicks/platforms
-@optional {tag: any, fromdate: any, todate: any}
-@returns(200)
+@desc Get browser plaform usage
+@optional {tag: any # Filter by tag, fromdate: any # Filter stats starting from the date specified. e.g. `2014-01-01`, todate: any # Filter stats up to the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /stats/outbound/clicks/location
-@optional {tag: any, fromdate: any, todate: any}
-@returns(200)
+@desc Get clicks by body location
+@optional {tag: any # Filter by tag, fromdate: any # Filter stats starting from the date specified. e.g. `2014-01-01`, todate: any # Filter stats up to the date specified. e.g. `2014-02-01`}
+@returns(200) OK
 @errors {422, 500}
 
 @endgroup
 
 @group triggers
 @endpoint POST /triggers/inboundrules
+@desc Create an inbound rule trigger
 @optional {body: any}
-@returns(200)
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint GET /triggers/inboundrules
-@required {count: any, offset: any}
-@returns(200)
+@desc List inbound rule triggers
+@required {count: any # Number of records to return per request., offset: any # Number of records to skip.}
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint DELETE /triggers/inboundrules/{triggerid}
-@required {triggerid: any}
-@returns(200)
+@desc Delete a single trigger
+@required {triggerid: any # The ID of the Inbound Rule that should be deleted.}
+@returns(200) OK
 @errors {422, 500}
 
 @endgroup
 
 @group server
 @endpoint GET /server
-@returns(200)
+@desc Get Server Configuration
+@returns(200) OK
 @errors {422, 500}
 
 @endpoint PUT /server
-@optional {body: any}
-@returns(200)
+@desc Edit Server Configuration
+@optional {body: any # The settings that should be modified for the current server.}
+@returns(200) OK
 @errors {422, 500}
 
 @endgroup

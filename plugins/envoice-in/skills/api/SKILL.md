@@ -88,90 +88,71 @@ https://www.envoice.in
 | POST | /api/worktype/delete | Delete an existing work type |
 | GET | /api/worktype/details | Return work type details |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Show me all my clients" -> GET /api/client/all
-- "Create a new client" -> POST /api/client/new
-- "Can I safely delete this client?" -> GET /api/client/candelete
-- "Get the details for a specific invoice" -> GET /api/invoice/details
-- "List all invoices with pagination" -> GET /api/invoice/all
-- "Send an invoice to my client" -> POST /api/invoice/sendtoclient
-- "Download an invoice as PDF" -> GET /api/invoice/pdf
-- "Convert an estimation into an invoice" -> POST /api/estimation/convert
-- "Create a new estimation and send it to the client" -> POST /api/estimation/new + POST /api/estimation/sendtoclient
-- "What payment methods are supported?" -> GET /api/payment/supported
-- "Create a payment link for a client" -> POST /api/paymentlink/new
-- "List all products in my catalog" -> GET /api/product/all
-- "Search work types by name" -> GET /api/worktype/search
-- "What tax rates do I have configured?" -> GET /api/tax/all
-- "Change the status of an order" -> POST /api/order/changestatus
-
-## Response Tips
-
-- **Client endpoints**: Returns flat client objects; `candelete` returns a boolean check -- always call before `delete` to avoid orphan references.
-- **Invoice/Estimation lists**: Paginated via `queryOptions.page` and `queryOptions.pageSize`; omitting these returns the first page with default size. Check response for total count to know if more pages exist.
-- **Detail endpoints**: Return a single entity by `id` query parameter; a missing or invalid ID typically yields an empty body with 200 rather than 404.
-- **Status endpoints**: Return the current status string/enum for an entity; `changestatus` accepts a `statusModel` map with the target state.
-- **Delete endpoints**: Most accept a `deleteModel` map (not just an ID) -- include the full model as returned by the detail endpoint.
-- **General reference data** (`countries`, `currencies`, `uilanguages`, `dateformats`): Static lists, safe to cache for the session lifetime.
-- **204 responses** (`client/update`, `order/changestatus`, `order/changeshippingdetails`, `product/update`, `tax/update`, `worktype/update`): No response body on success -- treat any non-204 as an error.
-
-## Anomaly Flags
-
-- **Mixed response codes across similar operations**: Some updates return 200, others 204. Surface a warning if a 200-returning update suddenly returns 204 or vice versa, as this may indicate API version drift.
-- **Delete without candelete check**: Only `client` has a `candelete` guard. Flag when deleting invoices, products, or orders without first verifying dependencies manually.
-- **Estimation-to-invoice conversion**: `POST /api/estimation/convert` accepts `id` as `int(int32)` -- the only endpoint with a typed parameter. Flag if the estimation status is not in a convertible state.
-- **Missing pagination parameters**: If a list response returns a suspiciously round number of items (e.g., exactly 10, 20, 50), warn that results may be truncated and suggest adding `queryOptions.page` / `queryOptions.pageSize`.
-- **Auth header presence**: Both `x-auth-key` and `x-auth-secret` are required on every request. Flag immediately if either is missing or returns 401/403.
-- **Typo in official spec**: The `updatecategory` endpoint uses `invoiceCateogry` (misspelled). Agents must use the misspelled key or the request will fail.
-
-## Playbook
-
-### 1. Create and Send an Invoice
-
-1. Fetch client list: `GET /api/client/all` -- pick the target client ID.
-2. Fetch products: `GET /api/product/all` -- select line items.
-3. Fetch tax rates: `GET /api/tax/all` -- attach applicable taxes.
-4. Create the invoice: `POST /api/invoice/new` with the `invoice` map including client, line items, and tax references.
-5. Verify creation: `GET /api/invoice/details?id={newId}`.
-6. Send to client: `POST /api/invoice/sendtoclient` with `deliveryOptions` (email, subject, message).
-7. Confirm status: `GET /api/invoice/status?id={newId}` -- should reflect "sent".
-
-### 2. Estimation to Invoice Workflow
-
-1. Create an estimation: `POST /api/estimation/new` with the `estimation` map.
-2. Send to client for approval: `POST /api/estimation/sendtoclient` with `deliveryOptions`.
-3. Check status periodically: `GET /api/estimation/status?id={id}` -- wait for client approval.
-4. Convert to invoice: `POST /api/estimation/convert` with the estimation `id` (int32).
-5. Retrieve the new invoice: `GET /api/invoice/all` to find the converted invoice.
-6. Send the invoice: `POST /api/invoice/sendtoclient`.
-
-### 3. Manage Product Catalog
-
-1. List current products: `GET /api/product/all` with pagination.
-2. Add a new product: `POST /api/product/new` with the `product` map.
-3. Update pricing or details: `POST /api/product/update` -- expects 204 (no body) on success.
-4. Remove discontinued product: `POST /api/product/delete` with the full `product` map.
-5. Verify removal: `GET /api/product/all` and confirm the product is gone.
-
-### 4. Order Fulfillment
-
-1. List all orders: `GET /api/order/all` with pagination.
-2. View order details: `GET /api/order/details?id={id}`.
-3. Update shipping info: `POST /api/order/changeshippingdetails` with `orderId` and `shippingDetails` map -- expects 204.
-4. Advance order status: `POST /api/order/changestatus` with the `status` map -- expects 204.
-5. Generate payment link: `POST /api/paymentlink/new` if payment is still needed.
-6. Share payment link: `GET /api/paymentlink/uri?id={linkId}` to get the shareable URL.
-
-### 5. Safe Client Cleanup
-
-1. List all clients: `GET /api/client/all`.
-2. Check deletion safety: `GET /api/client/candelete?id={clientId}` -- if false, the client has linked invoices or orders.
-3. Review linked records: `GET /api/client/details?id={clientId}` to understand dependencies.
-4. Delete if safe: `POST /api/client/delete` with the `deleteModel` map.
-5. Verify: `GET /api/client/all` to confirm removal.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all all?" -> GET /api/client/all
+- "Create a new?" -> POST /api/client/new
+- "Create a update?" -> POST /api/client/update
+- "List all candelete?" -> GET /api/client/candelete
+- "Create a delete?" -> POST /api/client/delete
+- "List all details?" -> GET /api/client/details
+- "List all all?" -> GET /api/estimation/all
+- "Create a new?" -> POST /api/estimation/new
+- "Create a update?" -> POST /api/estimation/update
+- "Create a delete?" -> POST /api/estimation/delete
+- "Create a changestatus?" -> POST /api/estimation/changestatus
+- "List all status?" -> GET /api/estimation/status
+- "List all details?" -> GET /api/estimation/details
+- "List all uri?" -> GET /api/estimation/uri
+- "Create a convert?" -> POST /api/estimation/convert
+- "Create a sendtoclient?" -> POST /api/estimation/sendtoclient
+- "List all countries?" -> GET /api/general/countries
+- "List all currencies?" -> GET /api/general/currencies
+- "List all uilanguages?" -> GET /api/general/uilanguages
+- "List all dateformats?" -> GET /api/general/dateformats
+- "List all all?" -> GET /api/invoice/all
+- "Search allcategories?" -> GET /api/invoice/allcategories
+- "Create a new?" -> POST /api/invoice/new
+- "Create a newcategory?" -> POST /api/invoice/newcategory
+- "Create a update?" -> POST /api/invoice/update
+- "Create a updatecategory?" -> POST /api/invoice/updatecategory
+- "Create a delete?" -> POST /api/invoice/delete
+- "Create a deletecategory?" -> POST /api/invoice/deletecategory
+- "Create a sendtoclient?" -> POST /api/invoice/sendtoclient
+- "Create a sendtoaccountant?" -> POST /api/invoice/sendtoaccountant
+- "Create a changestatus?" -> POST /api/invoice/changestatus
+- "List all status?" -> GET /api/invoice/status
+- "List all details?" -> GET /api/invoice/details
+- "List all uri?" -> GET /api/invoice/uri
+- "List all pdf?" -> GET /api/invoice/pdf
+- "List all all?" -> GET /api/order/all
+- "Create a new?" -> POST /api/order/new
+- "Create a delete?" -> POST /api/order/delete
+- "Create a changeshippingdetail?" -> POST /api/order/changeshippingdetails
+- "Create a changestatus?" -> POST /api/order/changestatus
+- "List all details?" -> GET /api/order/details
+- "List all supported?" -> GET /api/payment/supported
+- "List all uri?" -> GET /api/paymentlink/uri
+- "List all all?" -> GET /api/paymentlink/all
+- "Create a new?" -> POST /api/paymentlink/new
+- "Create a delete?" -> POST /api/paymentlink/delete
+- "List all all?" -> GET /api/product/all
+- "Create a new?" -> POST /api/product/new
+- "Create a update?" -> POST /api/product/update
+- "Create a delete?" -> POST /api/product/delete
+- "List all details?" -> GET /api/product/details
+- "List all all?" -> GET /api/tax/all
+- "Create a new?" -> POST /api/tax/new
+- "Create a update?" -> POST /api/tax/update
+- "Create a delete?" -> POST /api/tax/delete
+- "List all all?" -> GET /api/worktype/all
+- "List all search?" -> GET /api/worktype/search
+- "Create a new?" -> POST /api/worktype/new
+- "Create a update?" -> POST /api/worktype/update
+- "Create a delete?" -> POST /api/worktype/delete
+- "List all details?" -> GET /api/worktype/details
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

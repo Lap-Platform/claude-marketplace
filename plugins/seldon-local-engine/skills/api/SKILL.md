@@ -12,7 +12,7 @@ API version: 0.1
 Bearer bearer
 
 ## Base URL
-https://{host}:{port}
+https://localhost:80
 
 ## Setup
 1. Set Authorization header with your Bearer token

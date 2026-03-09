@@ -96,87 +96,40 @@ https://api.ebay.com{basePath}
 | GET | /location | This call retrieves all defined details for every inventory location associated with the seller's account. There are no required parameters for this call and no request payload. However, there are two optional query parameters, <strong>limit</strong> and <strong>offset</strong>. The <strong>limit</strong> query parameter sets the maximum number of inventory locations returned on one page of data, and the <strong>offset</strong> query parameter specifies the page of data to return. These query parameters are discussed more in the <strong>URI parameters</strong> table below. <p>The <code>authorization</code> HTTP header is the only required request header for this call. </p><p>A successful call will return an HTTP status value of <i>200 OK</i>.</p> |
 | POST | /location/{merchantLocationKey}/update_location_details | <p>Use this call to update non-physical location details for an existing inventory location. Specify the inventory location you want to update using the <b>merchantLocationKey</b> path parameter. <br><br>You can update the following text-based fields: <strong>name</strong>, <strong>phone</strong>, <strong>locationWebUrl</strong>, <strong>locationInstructions</strong> and <strong>locationAdditionalInformation</strong>. Whatever text is passed in for these fields in an <strong>updateInventoryLocation</strong> call will replace the current text strings defined for these fields. For store inventory locations, the operating hours and/or the special hours can also be updated. <br><br> The merchant location key, the physical location of the store, and its geo-location coordinates can not be updated with an <strong>updateInventoryLocation</strong> call </p><p>Unless one or more errors and/or warnings occurs with the call, there is no response payload for this call. A successful call will return an HTTP status value of <i>204 No Content</i>.</p> |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I add a new product to my eBay inventory?" -> PUT /inventory_item/{sku}
-- "How do I check the details of a specific inventory item?" -> GET /inventory_item/{sku}
-- "How do I list all my inventory items?" -> GET /inventory_item
-- "How do I delete an inventory item by SKU?" -> DELETE /inventory_item/{sku}
-- "How do I update prices and quantities for multiple items at once?" -> POST /bulk_update_price_quantity
-- "How do I create a listing offer for an inventory item?" -> POST /offer
-- "How do I publish an offer to make it live on eBay?" -> POST /offer/{offerId}/publish/
-- "How do I withdraw a live listing from eBay?" -> POST /offer/{offerId}/withdraw
-- "How do I check the listing fees before publishing?" -> POST /offer/get_listing_fees
-- "How do I create a multi-variation listing (e.g., sizes/colors)?" -> PUT /inventory_item_group/{inventoryItemGroupKey}
-- "How do I migrate old-style listings to the new inventory system?" -> POST /bulk_migrate_listing
-- "How do I add vehicle compatibility info to a part?" -> PUT /inventory_item/{sku}/product_compatibility
-- "How do I set up a new warehouse or store location?" -> POST /location/{merchantLocationKey}
-- "How do I temporarily disable a fulfillment location?" -> POST /location/{merchantLocationKey}/disable
-- "How do I publish a multi-variation group listing?" -> POST /offer/publish_by_inventory_item_group/
-
-## Response Tips
-
-- **Inventory items**: `GET /inventory_item` returns paginated results with `href`, `next`, `prev`, `total`, and `size` -- follow `next` to iterate; items are in the `inventoryItems` array.
-- **Offers**: `GET /offer` uses the same pagination envelope (`href`, `next`, `prev`, `total`); filter server-side with `sku`, `format`, and `marketplace_id` query params to reduce pages.
-- **Locations**: `GET /location` paginates with `offset`/`limit` params; results are in the `locations` array.
-- **Bulk operations**: All bulk endpoints may return HTTP 207 (multi-status) -- each element in `responses` has its own status code and errors; never assume all items succeeded from the top-level status.
-- **Create/update items**: PUT to inventory_item returns 200 (updated), 201 (created), or 204 (no content) -- always check the `warnings` array in 200/201 responses for non-fatal issues.
-- **Offers**: POST /offer returns 201 with `offerId` in the body; use this ID for all subsequent publish/update/withdraw calls.
-- **Deletes and disables**: Return 204 with no body on success -- a non-204 response always indicates failure.
-- **Errors**: 400 responses contain validation details; 404 means the SKU, offerId, or locationKey does not exist; 500 is a server-side retry candidate.
-
-## Anomaly Flags
-
-- **207 multi-status on bulk calls**: Surface individual item failures immediately -- partial success is common and easy to miss.
-- **Warnings array non-empty**: Flag any `warnings` returned from PUT/POST inventory items, offers, or compatibility -- these indicate data quality issues eBay may enforce later.
-- **Listing status is on hold**: When `GET /offer/{offerId}` returns `listing.listingOnHold: true`, alert the user -- the listing is suspended and needs attention.
-- **Quantity zero or negative**: If `shipToLocationAvailability.quantity` is 0 after an update, warn that the listing will show as out of stock.
-- **Missing required policies**: Offers require `fulfillmentPolicyId`, `paymentPolicyId`, and `returnPolicyId` -- surface early if any are absent before attempting publish.
-- **409 on location creation**: Indicates a duplicate `merchantLocationKey` -- surface the conflict and suggest retrieving the existing location.
-- **OAuth token scope**: All endpoints require OAuth2 -- flag 401/403 responses as likely token expiration or missing scopes rather than letting the user debug request bodies.
-
-## Playbook
-
-### List a new single-item product on eBay
-
-1. Create the inventory item: `PUT /inventory_item/{sku}` with product details (title, description, imageUrls, condition), availability (quantity), and package weight/size.
-2. Check the response `warnings` array and fix any flagged issues.
-3. Create an offer: `POST /offer` with the `sku`, `marketplaceId`, `categoryId`, pricing (`pricingSummary.price`), and listing policies (fulfillment, payment, return policy IDs).
-4. Note the `offerId` returned in the 201 response.
-5. Optionally check fees: `POST /offer/get_listing_fees` with the `offerId`.
-6. Publish the offer: `POST /offer/{offerId}/publish/` and capture the returned `listingId`.
-
-### Create a multi-variation listing (e.g., shirt in multiple sizes)
-
-1. Create each variant as a separate inventory item: `PUT /inventory_item/{sku}` for each size/color SKU.
-2. Create the inventory item group: `PUT /inventory_item_group/{inventoryItemGroupKey}` with shared title, description, images, `variantSKUs` listing all variant SKUs, and `variesBy` specifying which aspects differ.
-3. Create an offer for each variant SKU: `POST /offer` for each, using the same `categoryId` and policies.
-4. Publish the group: `POST /offer/publish_by_inventory_item_group/` with the `inventoryItemGroupKey` and `marketplaceId`.
-
-### Bulk update prices and quantities
-
-1. Gather the SKUs and offer IDs to update.
-2. Call `POST /bulk_update_price_quantity` with a `requests` array, each entry containing `sku`, `shipToLocationAvailability.quantity`, and `offers` with `offerId` and `price`.
-3. Inspect the response -- it may be 207. Iterate over `responses` and check each item for individual errors.
-4. For any failed items, fix the issue and retry only those entries.
-
-### Migrate legacy listings to inventory-based management
-
-1. Collect the `listingId` values of old-format listings to migrate.
-2. Call `POST /bulk_migrate_listing` with the list of listing IDs.
-3. Check for 207 multi-status and inspect each item in `responses` for success or failure.
-4. For successfully migrated listings, retrieve the new inventory items via `GET /inventory_item/{sku}` to verify data.
-5. Create or update offers as needed for the migrated items.
-
-### Set up and manage a fulfillment location
-
-1. Create the location: `POST /location/{merchantLocationKey}` with address, name, location types, and operating hours.
-2. Verify creation: `GET /location/{merchantLocationKey}` to confirm details.
-3. To temporarily stop fulfilling from this location: `POST /location/{merchantLocationKey}/disable`.
-4. To reactivate: `POST /location/{merchantLocationKey}/enable`.
-5. To update hours or contact info without recreating: `POST /location/{merchantLocationKey}/update_location_details`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a bulk_create_or_replace_inventory_item?" -> POST /bulk_create_or_replace_inventory_item
+- "Create a bulk_get_inventory_item?" -> POST /bulk_get_inventory_item
+- "Create a bulk_update_price_quantity?" -> POST /bulk_update_price_quantity
+- "Get inventory_item details?" -> GET /inventory_item/{sku}
+- "Update a inventory_item?" -> PUT /inventory_item/{sku}
+- "Delete a inventory_item?" -> DELETE /inventory_item/{sku}
+- "List all inventory_item?" -> GET /inventory_item
+- "List all product_compatibility?" -> GET /inventory_item/{sku}/product_compatibility
+- "Get inventory_item_group details?" -> GET /inventory_item_group/{inventoryItemGroupKey}
+- "Update a inventory_item_group?" -> PUT /inventory_item_group/{inventoryItemGroupKey}
+- "Delete a inventory_item_group?" -> DELETE /inventory_item_group/{inventoryItemGroupKey}
+- "Create a bulk_migrate_listing?" -> POST /bulk_migrate_listing
+- "Create a bulk_create_offer?" -> POST /bulk_create_offer
+- "Create a bulk_publish_offer?" -> POST /bulk_publish_offer
+- "List all offer?" -> GET /offer
+- "Create a offer?" -> POST /offer
+- "Get offer details?" -> GET /offer/{offerId}
+- "Update a offer?" -> PUT /offer/{offerId}
+- "Delete a offer?" -> DELETE /offer/{offerId}
+- "Create a get_listing_fee?" -> POST /offer/get_listing_fees
+- "Create a publish?" -> POST /offer/{offerId}/publish/
+- "Create a publish_by_inventory_item_group?" -> POST /offer/publish_by_inventory_item_group/
+- "Create a withdraw?" -> POST /offer/{offerId}/withdraw
+- "Create a withdraw_by_inventory_item_group?" -> POST /offer/withdraw_by_inventory_item_group
+- "Get location details?" -> GET /location/{merchantLocationKey}
+- "Delete a location?" -> DELETE /location/{merchantLocationKey}
+- "Create a disable?" -> POST /location/{merchantLocationKey}/disable
+- "Create a enable?" -> POST /location/{merchantLocationKey}/enable
+- "List all location?" -> GET /location
+- "Create a update_location_detail?" -> POST /location/{merchantLocationKey}/update_location_details
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

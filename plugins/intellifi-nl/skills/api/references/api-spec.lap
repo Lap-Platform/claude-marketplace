@@ -1,7 +1,7 @@
 @lap v0.3
 # Machine-readable API spec. Each @endpoint block is one API call.
 @api Brain Web API
-@base {protocol}://{customer}.intellifi.{tld}/api
+@base https://brain.intellifi.cloud/api
 @version 2.27.2+0.gd5006bf.dirty
 @auth ApiKey key in query | ApiKey X-Api-Key in header | ApiKey brain.sid in cookie
 @endpoints 77
@@ -10,362 +10,439 @@
 
 @group authinfo
 @endpoint GET /authinfo
-@returns(200) {api_key_id: str, auth_method: str, authenticated: bool, permissions: map{mutate: bool}, url: str, user_id: str}
+@desc Authentication information
+@returns(200) {api_key_id: str, auth_method: str, authenticated: bool, permissions: map{mutate: bool}, url: str, user_id: str} # A JSON object containing the authentication information
 
 @endgroup
 
 @group blobs
 @endpoint GET /blobs
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), hash: str, blob_key: str, content_type: str, filename: str, time_last_accessed: str}
-@returns(200)
+@desc Get all binary large objects (blob)
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., time_updated: str(dateTime) # Filter on the time the resource was last updated, hash: str # Filter based on the hash of the blob., blob_key: str # Filter based on the unique blob_key, content_type: str # Filter based on the content type of the blob., filename: str # Filter based on the filename of the blob., time_last_accessed: str # Filter based on the last time the blob was accessed}
+@returns(200) A JSON object containing a list of blobs
 
 @endpoint POST /blobs
-@optional {content_type: str, download_url: str, filename: str, hash: str, id: str, blob_key: str, time_created: str(dateTime), time_last_accessed: str(dateTime), time_updated: str(dateTime), upload_url: str, url: str}
-@returns(201) {resource: map{id: str, url: str}, status: int}
+@desc Create binary large object (blob) metadata
+@optional {content_type: str # Media type of the resource. Automatically detected when not given in a POST., download_url: str # Url to the individual resource., filename: str # Filename of the blob, hash: str # Hash of the blob, id: str # Unique identifier for resource., blob_key: str # Unique key to the blob, time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_last_accessed: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was last accessed., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was updated., upload_url: str # Url to the individual resource., url: str # Url to the individual resource.}
+@returns(201) {resource: map{id: str, url: str}, status: int} # A JSON object containing the newly added resource
 
 @endpoint GET /blobs/{id}
-@required {id: str}
-@returns(200) {content_type: str, download_url: str, filename: str, hash: str, id: str, blob_key: str, time_created: str(dateTime), time_last_accessed: str(dateTime), time_updated: str(dateTime), upload_url: str, url: str}
+@desc Get binary large object (blob)
+@required {id: str # Unique identifier}
+@returns(200) {content_type: str, download_url: str, filename: str, hash: str, id: str, blob_key: str, time_created: str(dateTime), time_last_accessed: str(dateTime), time_updated: str(dateTime), upload_url: str, url: str} # A JSON object containing the blob
 
 @endpoint DELETE /blobs/{id}
-@required {id: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Delete binary large object (blob)
+@required {id: str # Unique identifier}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the deleted resource
 
 @endpoint GET /blobs/{id}/download/{filename}
-@required {id: str, filename: str}
-@returns(200)
+@desc Download a binary large object (blob)
+@required {id: str # Unique identifier, filename: str # Filename of the blob.}
+@returns(200) The stored binary blob
 
 @endpoint POST /blobs/{id}/upload
-@required {id: str}
-@returns(200)
+@desc Create binary large object (blob)
+@required {id: str # Unique identifier}
+@returns(200) Upload was successful
 
 @endgroup
 
 @group events
 @endpoint GET /events
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), topic.resource_type: str, topic.action: str, topic.resource: str, time_event: str(dateTime), time_expire: str(dateTime)}
-@returns(200)
+@desc Get all events
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., topic.resource_type: str # Filter on the topic resource type, topic.action: str # Filter on the topic action, topic.resource: str # Filter on the topic resource id, time_event: str(dateTime) # Filter on the time the event was generated on the device., time_expire: str(dateTime) # Filter on the time the event will expire.}
+@returns(200) A JSON object containing a list of events
 
 @endpoint GET /events/{id}
-@required {id: str}
-@returns(200) {id: str, payload: any, time_created: str(dateTime), time_event: str(dateTime), time_expire: str(dateTime), topic: map{action: str, arguments: any, resource_id: str, resource_type: str, resource_url: str}, url: str}
+@desc Get event
+@required {id: str # Unique identifier}
+@returns(200) {id: str, payload: any, time_created: str(dateTime), time_event: str(dateTime), time_expire: str(dateTime), topic: map{action: str, arguments: any, resource_id: str, resource_type: str, resource_url: str}, url: str} # A JSON object containing the event
 
 @endgroup
 
 @group items
 @endpoint GET /items
-@optional {after: str(date-time), after_id: str, after_code: str, before: str(dateTime), before_id: str, before_code: str, from: str(dateTime), from_id: str, from_code: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, until_code: str, id: str, time_created: str(dateTime), time_updated: str(dateTime), code_hex: str, is_present: bool, label: str, location: str, metadata: str, move_count: int, protocol: str, sets: str, technology: str, text: str, time_last_present: str, time_moved: str(dateTime), type: str}
-@returns(200)
+@desc Get all items
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., after_code: str # Limits directly on `code_hex`. Marks the start of a range, optionally use `before_code` to set the end. Result output excludes the given `code_hex` value., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., before_code: str # Limits directly on `code_hex`. Marks the end of a range, optionally use `after_code` to set the start. Result output excludes the given `code_hex` value., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., from_code: str # Limits on `code_hex`. Marks the start of a range, optionally use `until_code` to set the end. Result output includes the given `code_hex` value., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., until_code: str # Limits on `code_hex`. Marks the end of a range, optionally use `from_code` to set the start. Result output includes the given `code_hex` value., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., time_updated: str(dateTime) # Filter on the time the resource was last updated, code_hex: str # Filter based on the hexadecimal string representation of the item. Supports wildcards: `*`., is_present: bool # Only show items which are present of not., label: str # Filter based on the label value. Supports wildcards: `*`, location: str # Filter based on the location, metadata: str # Filter based on metadata. Does a partial match on any value in the metadata object. It is also possible to do an exact/wildcard match on specific properties, e.g. `metadata.foo=bar`, move_count: int # Filter based on move count, protocol: str # Filter based on the detected protocol of an item., sets: str # Filter based on the set the resource is in., technology: str # Filter based on the detected technology of an item., text: str # Filter based on a full text search. Searched properties depend on the resource type. Matches on any of the given words. Supports quote (exact words) and minus (exclude) operators., time_last_present: str # Filter based on the time last present, time_moved: str(dateTime) # Filter based on time last moved, type: str # Filter based on the type of an item.}
+@returns(200) A JSON object containing a list of items
 
 @endpoint POST /items
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Create item
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the newly added resource
 
 @endpoint GET /items/{id}
-@required {id: str}
-@returns(200)
+@desc Get item
+@required {id: str # Unique identifier}
+@returns(200) A JSON object containing the items
 
 @endpoint PUT /items/{id}
-@required {id: str}
-@optional {config_request: map, custom: any, label: str, location_request: str, metadata: map}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Update existing item
+@required {id: str # Unique identifier}
+@optional {config_request: map # Object containing the new configuration. This will be applied automatically when the values are valid., custom: any # The `custom` value is only for your custom references, you may use it to save additional attributes. The custom value is not used in any other place. This field may contain any datatype that you like: null (default), string, integer, boolean, object etc..., label: str # A name or a label for this resource. This is used in the user interface, may be empty., location_request: str # Instruction for the location engine to forcibly localize the item at the specified location id as soon as possible. Cleared automatically., metadata: map # Object of searchable metadata for this resource. Can be freely used to store metadata properties.}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the modified resource
 
 @endpoint DELETE /items/{id}
-@required {id: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Delete item
+@required {id: str # Unique identifier}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the deleted resource
 
 @endgroup
 
 @group keys
 @endpoint GET /keys
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), secret: str, label: str, is_read_only: bool}
-@returns(200)
+@desc Get all keys
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., time_updated: str(dateTime) # Filter on the time the resource was last updated, secret: str # Filter on the secret token., label: str # Filter on the label., is_read_only: bool # Filter on read only status.}
+@returns(200) A JSON object containing a list of keys
 
 @endpoint POST /keys
-@optional {id: str, is_read_only: bool, label: str, secret: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
-@returns(201) {resource: map{id: str, url: str}, status: int}
+@desc Create key
+@optional {id: str # Unique identifier for resource., is_read_only: bool # Whether or not this key can only read and not write., label: str # Custom label for this API key., secret: str # The secret token for authentication., time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was updated., url: str # Url to the individual resource.}
+@returns(201) {resource: map{id: str, url: str}, status: int} # A JSON object containing the newly added resource
 
 @endpoint GET /keys/{id}
-@required {id: str}
-@returns(200) {id: str, is_read_only: bool, label: str, secret: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+@desc Get key
+@required {id: str # Unique identifier}
+@returns(200) {id: str, is_read_only: bool, label: str, secret: str, time_created: str(dateTime), time_updated: str(dateTime), url: str} # A JSON object containing the key
 
 @endpoint PUT /keys/{id}
-@required {id: str}
-@optional {id: str, is_read_only: bool, label: str, secret: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Update existing key
+@required {id: str # Unique identifier}
+@optional {id: str # Unique identifier for resource., is_read_only: bool # Whether or not this key can only read and not write., label: str # Custom label for this API key., secret: str # The secret token for authentication., time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was updated., url: str # Url to the individual resource.}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the modified resource
 
 @endpoint DELETE /keys/{id}
-@required {id: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Delete key
+@required {id: str # Unique identifier}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the deleted resource
 
 @endgroup
 
 @group kvpairs
 @endpoint GET /kvpairs
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), kv_key: str}
-@returns(200)
+@desc Get all key-value pairs
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., time_updated: str(dateTime) # Filter on the time the resource was last updated, kv_key: str # Filter on the key-value pair key value.}
+@returns(200) A JSON object containing a list of key-value pairs
 
 @endpoint POST /kvpairs
-@returns(201) {resource: map{id: str, url: str}, status: int}
+@desc Create key-value pair
+@returns(201) {resource: map{id: str, url: str}, status: int} # A JSON object containing the newly added resource
 
 @endpoint GET /kvpairs/{id}
-@required {id: str}
-@returns(200)
+@desc Get key-value pair
+@required {id: str # Unique identifier}
+@returns(200) A JSON object containing the subscription
 
 @endpoint PUT /kvpairs/{id}
-@required {id: str}
-@optional {kv_value: any}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Update existing Key-value pair
+@required {id: str # Unique identifier}
+@optional {kv_value: any # The value of the key value pair.}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the modified resource
 
 @endpoint DELETE /kvpairs/{id}
-@required {id: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Delete key-value pair
+@required {id: str # Unique identifier}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the deleted resource
 
 @endgroup
 
 @group locations
 @endpoint GET /locations
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), label: str, metadata: str, text: str}
-@returns(200)
+@desc Get all locations
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., time_updated: str(dateTime) # Filter on the time the resource was last updated, label: str # Filter based on the label value. Supports wildcards: `*`, metadata: str # Filter based on metadata. Does a partial match on any value in the metadata object. It is also possible to do an exact/wildcard match on specific properties, e.g. `metadata.foo=bar`, text: str # Filter based on a full text search. Searched properties depend on the resource type. Matches on any of the given words. Supports quote (exact words) and minus (exclude) operators.}
+@returns(200) A JSON object containing a list of locations
 
 @endpoint POST /locations
-@optional {custom: any, id: str, label: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), url: str}
-@returns(201) {resource: map{id: str, url: str}, status: int}
+@desc Create location
+@optional {custom: any # The `custom` value is only for your custom references, you may use it to save additional attributes. The custom value is not used in any other place. This field may contain any datatype that you like: null (default), string, integer, boolean, object etc..., id: str # Unique identifier for resource., label: str # A name or a label for this resource. This is used in the user interface, may be empty., metadata: map # Object of searchable metadata for this resource. Can be freely used to store metadata properties., time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was updated., url: str # Url to the individual resource.}
+@returns(201) {resource: map{id: str, url: str}, status: int} # A JSON object containing the newly added resource
 
 @endpoint GET /locations/{id}
-@required {id: str}
-@returns(200) {custom: any?, id: str, label: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+@desc Get location
+@required {id: str # Unique identifier}
+@returns(200) {custom: any?, id: str, label: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), url: str} # A JSON object containing the location
 
 @endpoint PUT /locations/{id}
-@required {id: str}
-@optional {custom: any, id: str, label: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), url: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Update existing location
+@required {id: str # Unique identifier}
+@optional {custom: any # The `custom` value is only for your custom references, you may use it to save additional attributes. The custom value is not used in any other place. This field may contain any datatype that you like: null (default), string, integer, boolean, object etc..., id: str # Unique identifier for resource., label: str # A name or a label for this resource. This is used in the user interface, may be empty., metadata: map # Object of searchable metadata for this resource. Can be freely used to store metadata properties., time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was updated., url: str # Url to the individual resource.}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the modified resource
 
 @endpoint DELETE /locations/{id}
-@required {id: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Delete location
+@required {id: str # Unique identifier}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the deleted resource
 
 @endgroup
 
 @group locationrules
 @endpoint GET /locationrules
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), label: str, type: str, enabled: bool}
-@returns(200)
+@desc Get all location rules
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., time_updated: str(dateTime) # Filter on the time the resource was last updated, label: str # Filter based on the label value. Supports wildcards: `*`, type: str # Filter based on the type of location rule., enabled: bool # Filter based on the `enabled` property.}
+@returns(200) A JSON object containing a list of location rules
 
 @endpoint POST /locationrules
-@optional {conditions: map{from_location: str, to_location: str}, enabled: bool, label: str, parameters: map, type: str(allow/disallow/disappeared/debounce)}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Create location rule
+@optional {conditions: map{from_location: str, to_location: str} # Scope of this rule, e.g. moves at or away from a specific location or towards a specific location. The `from_location` is mandatory. The `to_location` is either mandatory, optional or not allowed depending on rule type., enabled: bool # Whether this rule should be in effect (`true`) or on hold (`false`)., label: str # A name or a label for this resource. This is used in the user interface, may be empty., parameters: map # Parameters for this rule; depends on the rule type. Refer to the rule type specification for details., type: str(allow/disallow/disappeared/debounce) # The type of location rule to be applied. Allow: items at `conditions.from_location` can only move to `conditions.to_location` and locations allowed in other `allow` rules (destination whitelist). Disallow: items at `conditions.from_location` cannot be moved to `conditions.to_location` and locations disallowed in other `disallow` rules (destination blacklist). Disappeared: items disappearing at `conditions.from_location` will be moved to `parameters.location` after `parameters.time_s` seconds. Debounce: items moves from `conditions.from_location` (and optionally to `conditions.to_location`) will be debounced with a period of `parameters.time_s` seconds, for a maximum of `parameters.max_periods` periods.}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the newly added resource
 
 @endpoint GET /locationrules/{id}
-@required {id: str}
-@returns(200) {conditions: any, enabled: bool, id: str, label: str, parameters: map, time_created: str(dateTime), time_updated: str(dateTime), type: str, url: str}
+@desc Get location rule
+@required {id: str # Unique identifier}
+@returns(200) {conditions: any, enabled: bool, id: str, label: str, parameters: map, time_created: str(dateTime), time_updated: str(dateTime), type: str, url: str} # A JSON object containing the location rule
 
 @endpoint PUT /locationrules/{id}
-@required {id: str}
-@optional {conditions: map{from_location: str, to_location: str}, enabled: bool, label: str, parameters: map, type: str(allow/disallow/disappeared/debounce)}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Update existing location rule
+@required {id: str # Unique identifier}
+@optional {conditions: map{from_location: str, to_location: str} # Scope of this rule, e.g. moves at or away from a specific location or towards a specific location. The `from_location` is mandatory. The `to_location` is either mandatory, optional or not allowed depending on rule type., enabled: bool # Whether this rule should be in effect (`true`) or on hold (`false`)., label: str # A name or a label for this resource. This is used in the user interface, may be empty., parameters: map # Parameters for this rule; depends on the rule type. Refer to the rule type specification for details., type: str(allow/disallow/disappeared/debounce) # The type of location rule to be applied. Allow: items at `conditions.from_location` can only move to `conditions.to_location` and locations allowed in other `allow` rules (destination whitelist). Disallow: items at `conditions.from_location` cannot be moved to `conditions.to_location` and locations disallowed in other `disallow` rules (destination blacklist). Disappeared: items disappearing at `conditions.from_location` will be moved to `parameters.location` after `parameters.time_s` seconds. Debounce: items moves from `conditions.from_location` (and optionally to `conditions.to_location`) will be debounced with a period of `parameters.time_s` seconds, for a maximum of `parameters.max_periods` periods.}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the modified resource
 
 @endpoint DELETE /locationrules/{id}
-@required {id: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Delete location rule
+@required {id: str # Unique identifier}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the deleted resource
 
 @endgroup
 
 @group presences
 @endpoint GET /presences
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), item: str, location: str, proximity: str, technology: str}
-@returns(200)
+@desc Get all presences
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., time_updated: str(dateTime) # Filter on the time the resource was last updated, item: str # Filter based on the item, location: str # Filter based on the location, proximity: str # Filter based on the proximity., technology: str # Filter based on the detected technology of an item.}
+@returns(200) A JSON object containing a list of presences
 
 @endpoint GET /presences/{id}
-@required {id: str}
-@returns(200) {id: str, item: any, item_id: str, item_url: str, location: map{custom: any?, id: str, label: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), url: str}, location_id: str, location_url: str, proximity: str, technology: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+@desc Get presence
+@required {id: str # Unique identifier}
+@returns(200) {id: str, item: any, item_id: str, item_url: str, location: map{custom: any?, id: str, label: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), url: str}, location_id: str, location_url: str, proximity: str, technology: str, time_created: str(dateTime), time_updated: str(dateTime), url: str} # A JSON object containing the presence
 
 @endgroup
 
 @group services
 @endpoint GET /services
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), name: str}
-@returns(200)
+@desc Get all services
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., time_updated: str(dateTime) # Filter on the time the resource was last updated, name: str # Filter based on the name of the resource. Supports wildcards: `*`}
+@returns(200) A JSON object containing a list of services
 
 @endpoint GET /services/{id}
-@required {id: str}
-@returns(200) {boot_count: int, config: map, config_request: map, id: str, name: str, restart_request: bool, time_created: str(dateTime), time_updated: str(dateTime), url: str, version: str}
+@desc Get service
+@required {id: str # Unique identifier}
+@returns(200) {boot_count: int, config: map, config_request: map, id: str, name: str, restart_request: bool, time_created: str(dateTime), time_updated: str(dateTime), url: str, version: str} # A JSON object containing the service
 
 @endpoint PUT /services/{id}
-@required {id: str}
-@optional {boot_count: int, config: map, config_request: map, id: str, name: str, restart_request: bool, time_created: str(dateTime), time_updated: str(dateTime), url: str, version: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Update existing service
+@required {id: str # Unique identifier}
+@optional {boot_count: int # Is increased with 1 when the service starts. Is never cleared (unless the database is adjusted)., config: map # JSON object with possible settings. Refer to individual service documentation for a good overview., config_request: map # Object containing the new configuration. This will be applied automatically when the values are valid., id: str # Unique identifier for resource., name: str # Human readable name for the resource., restart_request: bool # Set this to `true` to send a reset request for the specific resource., time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was updated., url: str # Url to the individual resource., version: str # Current running version of the resource.}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the modified resource
 
 @endgroup
 
 @group sets
 @endpoint GET /sets/itemlists
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), label: str, metadata: str, text: str, total: int, sha1: str}
-@returns(200)
+@desc Get all item lists
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., time_updated: str(dateTime) # Filter on the time the resource was last updated, label: str # Filter based on the label value. Supports wildcards: `*`, metadata: str # Filter based on metadata. Does a partial match on any value in the metadata object. It is also possible to do an exact/wildcard match on specific properties, e.g. `metadata.foo=bar`, text: str # Filter based on a full text search. Searched properties depend on the resource type. Matches on any of the given words. Supports quote (exact words) and minus (exclude) operators., total: int # Filter based on the total amount of items in the list, sha1: str # The sha1 checksum of the list. This will change when the list is mutated.}
+@returns(200) A JSON object containing a list of item lists
 
 @endpoint POST /sets/itemlists
-@optional {custom: any, id: str, label: str, list: str, metadata: map, sha1: str, time_created: str(dateTime), time_updated: str(dateTime), total: int}
-@returns(201) {resource: map{id: str, url: str}, status: int}
+@desc Create item list
+@optional {custom: any # The `custom` value is only for your custom references, you may use it to save additional attributes. The custom value is not used in any other place. This field may contain any datatype that you like: null (default), string, integer, boolean, object etc..., id: str # Unique identifier for resource., label: str # A name or a label for this resource. This is used in the user interface, may be empty., list: str # Url to the individual resource., metadata: map # Object of searchable metadata for this resource. Can be freely used to store metadata properties., sha1: str # The sha1 checksum of the list. This will change when the list is mutated., time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was updated., total: int # Total amount of items in this set}
+@returns(201) {resource: map{id: str, url: str}, status: int} # A JSON object containing the newly added resource
 
 @endpoint GET /sets/itemlists/{id}
-@required {id: str}
-@returns(200) {custom: any?, id: str, label: str, list: str, metadata: map, sha1: str, time_created: str(dateTime), time_updated: str(dateTime), total: int}
+@desc Get item list
+@required {id: str # Unique identifier}
+@returns(200) {custom: any?, id: str, label: str, list: str, metadata: map, sha1: str, time_created: str(dateTime), time_updated: str(dateTime), total: int} # A JSON object containing the item list
 
 @endpoint PUT /sets/itemlists/{id}
-@required {id: str}
-@optional {custom: any, id: str, label: str, list: str, metadata: map, sha1: str, time_created: str(dateTime), time_updated: str(dateTime), total: int}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Update existing item list
+@required {id: str # Unique identifier}
+@optional {custom: any # The `custom` value is only for your custom references, you may use it to save additional attributes. The custom value is not used in any other place. This field may contain any datatype that you like: null (default), string, integer, boolean, object etc..., id: str # Unique identifier for resource., label: str # A name or a label for this resource. This is used in the user interface, may be empty., list: str # Url to the individual resource., metadata: map # Object of searchable metadata for this resource. Can be freely used to store metadata properties., sha1: str # The sha1 checksum of the list. This will change when the list is mutated., time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was updated., total: int # Total amount of items in this set}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the modified resource
 
 @endpoint DELETE /sets/itemlists/{id}
-@required {id: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Delete item list
+@required {id: str # Unique identifier}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the deleted resource
 
 @endpoint GET /sets/itemlists/{id}/ids
-@required {id: str}
-@returns(200)
+@desc Get item ids for this list
+@required {id: str # Unique identifier}
+@returns(200) An array object containing the item ids for this list
 
 @endpoint POST /sets/itemlists/{id}/ids
-@required {id: str}
-@returns(200) {status: int, total: int}
+@desc Add items to an existing list
+@required {id: str # Unique identifier}
+@returns(200) {status: int, total: int} # A JSON object containing the status and the total amount of items in the newly added list
 
 @endpoint DELETE /sets/itemlists/{id}/ids/{itemId}
-@required {id: str, itemId: str}
-@returns(200) {status: int, total: int}
+@desc Delete item from list
+@required {id: str # Unique identifier, itemId: str # Item ID.}
+@returns(200) {status: int, total: int} # A JSON object containing the status and the total amount of items in the list
 
 @endpoint GET /sets/spotlists
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), label: str, metadata: str, text: str, total: int}
-@returns(200)
+@desc Get all spot lists
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., time_updated: str(dateTime) # Filter on the time the resource was last updated, label: str # Filter based on the label value. Supports wildcards: `*`, metadata: str # Filter based on metadata. Does a partial match on any value in the metadata object. It is also possible to do an exact/wildcard match on specific properties, e.g. `metadata.foo=bar`, text: str # Filter based on a full text search. Searched properties depend on the resource type. Matches on any of the given words. Supports quote (exact words) and minus (exclude) operators., total: int # Filter based on the total amount of spots in the list}
+@returns(200) A JSON object containing a list of spot lists
 
 @endpoint POST /sets/spotlists
-@optional {custom: any, id: str, label: str, list: str, metadata: map, sha1: str, time_created: str(dateTime), time_updated: str(dateTime), total: int}
-@returns(201) {resource: map{id: str, url: str}, status: int}
+@desc Create spot list
+@optional {custom: any # The `custom` value is only for your custom references, you may use it to save additional attributes. The custom value is not used in any other place. This field may contain any datatype that you like: null (default), string, integer, boolean, object etc..., id: str # Unique identifier for resource., label: str # A name or a label for this resource. This is used in the user interface, may be empty., list: str # Url to the individual resource., metadata: map # Object of searchable metadata for this resource. Can be freely used to store metadata properties., sha1: str # The sha1 checksum of the list. This will change when the list is mutated., time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was updated., total: int # Total amount of items in this set}
+@returns(201) {resource: map{id: str, url: str}, status: int} # A JSON object containing the newly added resource
 
 @endpoint GET /sets/spotlists/{id}
-@required {id: str}
-@returns(200) {custom: any?, id: str, label: str, list: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), total: int}
+@desc Info for a specific spot list
+@required {id: str # Unique identifier}
+@returns(200) {custom: any?, id: str, label: str, list: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), total: int} # A JSON object containing the spot list
 
 @endpoint PUT /sets/spotlists/{id}
-@required {id: str}
-@optional {custom: any, id: str, label: str, list: str, metadata: map, time_created: str(dateTime), time_updated: str(dateTime), total: int}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Update existing spot list
+@required {id: str # Unique identifier}
+@optional {custom: any # The `custom` value is only for your custom references, you may use it to save additional attributes. The custom value is not used in any other place. This field may contain any datatype that you like: null (default), string, integer, boolean, object etc..., id: str # Unique identifier for resource., label: str # A name or a label for this resource. This is used in the user interface, may be empty., list: str # Url to the individual resource., metadata: map # Object of searchable metadata for this resource. Can be freely used to store metadata properties., time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was updated., total: int # Total amount of spots in this set}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the modified resource
 
 @endpoint DELETE /sets/spotlists/{id}
-@required {id: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Delete spot list
+@required {id: str # Unique identifier}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the deleted resource
 
 @endpoint GET /sets/spotlists/{id}/ids
-@required {id: str}
-@returns(200)
+@desc Get spot ids for this list
+@required {id: str # Unique identifier}
+@returns(200) An array object containing the item ids for this list
 
 @endpoint POST /sets/spotlists/{id}/ids
-@required {id: str}
-@returns(200) {status: int, total: int}
+@desc Add spots to an existing list
+@required {id: str # Unique identifier}
+@returns(200) {status: int, total: int} # A JSON object containing the status and the total amount of items in the newly added list
 
 @endpoint DELETE /sets/spotlists/{id}/ids/{itemId}
-@required {id: str, itemId: str}
-@returns(200) {status: int, total: int}
+@desc Delete spot from list
+@required {id: str # Unique identifier, itemId: str # Item ID.}
+@returns(200) {status: int, total: int} # A JSON object containing the status and the total amount of items in the list
 
 @endgroup
 
 @group spots
 @endpoint GET /spots
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), is_online: bool, request_counter: int, serial_number: int}
-@returns(200)
+@desc Get all spots
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., time_updated: str(dateTime) # Filter on the time the resource was last updated, is_online: bool # Filter based on the online status., request_counter: int # Filter based on the amount of request made, serial_number: int # Filter based on the serial number.}
+@returns(200) A JSON object containing a list of spots
 
 @endpoint GET /spots/{id}
-@required {id: str}
-@returns(200)
+@desc Get spot
+@required {id: str # Unique identifier}
+@returns(200) A JSON object containing the spot
 
 @endpoint PUT /spots/{id}
-@required {id: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Update existing spot
+@required {id: str # Unique identifier}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the modified resource
 
 @endpoint GET /spots/{id}/sets
-@required {id: str}
-@returns(200)
+@desc Get spotsets
+@required {id: str # Unique identifier}
+@returns(200) A JSON object containing the spotset
 
 @endpoint POST /spots/{id}/sets
-@required {id: str}
-@returns(201) {resource: map{id: str, url: str}, status: int}
+@desc Create spotset
+@required {id: str # Unique identifier}
+@returns(201) {resource: map{id: str, url: str}, status: int} # A JSON object containing the newly added resource
 
 @endpoint PUT /spots/{id}/sets/{setId}
-@required {id: str, setId: str}
-@optional {delete: bool}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Update existing spotset
+@required {id: str # Unique identifier, setId: str # Unique spot set identifier}
+@optional {delete: bool # Request to delete a set. Remove request needs to be synchronized to the device, so it may take some time before the resource is being removed.}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the modified resource
 
 @endpoint GET /spots/{id}/sets/{setId}
-@required {id: str, setId: str}
-@returns(200)
+@desc Get spotset
+@required {id: str # Unique identifier, setId: str # Unique spot set identifier}
+@returns(200) A JSON object containing the spotset
 
 @endgroup
 
 @group spotsets
 @endpoint GET /spotsets
-@returns(200)
+@desc Get spotsets
+@returns(200) A JSON object containing the spotset
 
 @endpoint POST /spotsets
-@returns(201) {resource: map{id: str, url: str}, status: int}
+@desc Create spotset
+@returns(201) {resource: map{id: str, url: str}, status: int} # A JSON object containing the newly added resource
 
 @endpoint PUT /spotsets/{id}
-@required {id: str}
-@optional {delete: bool}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Update existing spotset
+@required {id: str # Unique identifier}
+@optional {delete: bool # Request to delete a set. Remove request needs to be synchronized to the device, so it may take some time before the resource is being removed.}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the modified resource
 
 @endpoint GET /spotsets/{id}
-@required {id: str}
-@returns(200)
+@desc Get spotset
+@required {id: str # Unique identifier}
+@returns(200) A JSON object containing the spotset
 
 @endgroup
 
 @group subscriptions
 @endpoint GET /subscriptions
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), topic_filter: str, description: str, database_hold_time_h: int, populate_events: bool, verify_target_certificate: bool}
-@returns(200)
+@desc Get all subscriptions
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., time_updated: str(dateTime) # Filter on the time the resource was last updated, topic_filter: str # Filter on the topic filter. Make sure to use [percent-encoding](https://en.wikipedia.org/wiki/Percent-encoding) in the query parameter., description: str # Filter based on the description., database_hold_time_h: int # Filter based on the number of hours events are retained in the database., populate_events: bool # Filter based on subscriptions that populate the events, verify_target_certificate: bool # Filter on the verification of the target certificate.}
+@returns(200) A JSON object containing a list of subscriptions
 
 @endpoint POST /subscriptions
-@optional {custom: any, database_hold_time_h: int, description: str, events_url: str, id: str, populate_events: bool, target_delivery_last_failure: map, target_delivery_status: map, target_retry: bool, target_url: str, time_created: str(dateTime), time_updated: str(dateTime), topic_filter: str, url: str, verify_target_certificate: bool}
-@returns(201) {resource: map{id: str, url: str}, status: int}
+@desc Create subscription
+@optional {custom: any # The `custom` value is only for your custom references, you may use it to save additional attributes. The custom value is not used in any other place. This field may contain any datatype that you like: null (default), string, integer, boolean, object etc..., database_hold_time_h: int # The number of hours this event is retained in the database. *Only use larger numbers if you know what you are doing.* A couple of hours is enough for most use cases., description: str # Additional field to add some notes about this subscription., events_url: str # Url to the individual resource., id: str # Unique identifier for resource., populate_events: bool # If set to `true`, resource references in an event (e.g. the location an item moved to) are resolved and populated with data instead of giving just an ID., target_delivery_last_failure: map # If `target_url` is set or has been set before, and delivery to the target URL failed at least once, this contains debugging information about the nature of the most recent failure., target_delivery_status: map # If `target_url` is set, `target_delivery_status.ok` will be `true` or `false` depending on whether events are being succesfully delivered. `target_delivery_status.since` indicates when t his status last changed., target_retry: bool # Set to `true` if you want our server to retry if `target_url` is not giving back a `2xx` success code., target_url: str # Url to an external service that all applicable events are pushed to (webhook). Configure to `null` if you don't wish to use this (default)., time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was updated., topic_filter: str # MQTT filter that is applied to all events. Allows you to select and filter events. See [Event filtering](https://intellifi.zendesk.com/hc/en-us/articles/360008791494) for more information, url: str # Url to the individual resource., verify_target_certificate: bool # Whether or not the `target_url` endpoint TLS certificate is verified to be valid.}
+@returns(201) {resource: map{id: str, url: str}, status: int} # A JSON object containing the newly added resource
 
 @endpoint GET /subscriptions/{id}
-@required {id: str}
-@returns(200) {custom: any?, database_hold_time_h: int, description: str?, events_url: str, id: str, populate_events: bool, target_delivery_last_failure: map, target_delivery_status: map, target_retry: bool, target_url: str, time_created: str(dateTime), time_updated: str(dateTime), topic_filter: str, url: str, verify_target_certificate: bool}
+@desc Get subscription
+@required {id: str # Unique identifier}
+@returns(200) {custom: any?, database_hold_time_h: int, description: str?, events_url: str, id: str, populate_events: bool, target_delivery_last_failure: map, target_delivery_status: map, target_retry: bool, target_url: str, time_created: str(dateTime), time_updated: str(dateTime), topic_filter: str, url: str, verify_target_certificate: bool} # A JSON object containing the subscription
 
 @endpoint PUT /subscriptions/{id}
-@required {id: str}
-@optional {custom: any, database_hold_time_h: int, description: str, events_url: str, id: str, populate_events: bool, target_delivery_last_failure: map, target_delivery_status: map, target_retry: bool, target_url: str, time_created: str(dateTime), time_updated: str(dateTime), topic_filter: str, url: str, verify_target_certificate: bool}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Update existing subscription
+@required {id: str # Unique identifier}
+@optional {custom: any # The `custom` value is only for your custom references, you may use it to save additional attributes. The custom value is not used in any other place. This field may contain any datatype that you like: null (default), string, integer, boolean, object etc..., database_hold_time_h: int # The number of hours this event is retained in the database. *Only use larger numbers if you know what you are doing.* A couple of hours is enough for most use cases., description: str # Additional field to add some notes about this subscription., events_url: str # Url to the individual resource., id: str # Unique identifier for resource., populate_events: bool # If set to `true`, resource references in an event (e.g. the location an item moved to) are resolved and populated with data instead of giving just an ID., target_delivery_last_failure: map # If `target_url` is set or has been set before, and delivery to the target URL failed at least once, this contains debugging information about the nature of the most recent failure., target_delivery_status: map # If `target_url` is set, `target_delivery_status.ok` will be `true` or `false` depending on whether events are being succesfully delivered. `target_delivery_status.since` indicates when t his status last changed., target_retry: bool # Set to `true` if you want our server to retry if `target_url` is not giving back a `2xx` success code., target_url: str # Url to an external service that all applicable events are pushed to (webhook). Configure to `null` if you don't wish to use this (default)., time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was updated., topic_filter: str # MQTT filter that is applied to all events. Allows you to select and filter events. See [Event filtering](https://intellifi.zendesk.com/hc/en-us/articles/360008791494) for more information, url: str # Url to the individual resource., verify_target_certificate: bool # Whether or not the `target_url` endpoint TLS certificate is verified to be valid.}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the modified resource
 
 @endpoint DELETE /subscriptions/{id}
-@required {id: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Delete subscription
+@required {id: str # Unique identifier}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the deleted resource
 
 @endpoint GET /subscriptions/{id}/events
-@required {id: str}
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), topic.resource_type: str, topic.action: str, topic.resource: str, time_event: str(dateTime), time_expire: str(dateTime)}
-@returns(200)
+@desc Get subscription events
+@required {id: str # Unique identifier}
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., topic.resource_type: str # Filter on the topic resource type, topic.action: str # Filter on the topic action, topic.resource: str # Filter on the topic resource id, time_event: str(dateTime) # Filter on the time the event was generated on the device., time_expire: str(dateTime) # Filter on the time the event will expire.}
+@returns(200) A JSON object containing the events for a specific subscription
 
 @endgroup
 
 @group users
 @endpoint GET /users
-@optional {after: str(date-time), after_id: str, before: str(dateTime), before_id: str, from: str(dateTime), from_id: str, id_only: bool=False, limit: int=100, populate: str, results_only: bool=False, select: str, sort: str=-id, until: str(dateTime), until_id: str, timeout_s: num, id: str, time_created: str(dateTime), time_updated: str(dateTime), email: str, first_name: str, last_name: str, is_admin: bool, is_locked: bool}
-@returns(200)
+@desc Get all users
+@optional {after: str(date-time) # Limits on `time_created`, Marks the start of a range, optionally use `before` to set the end. Result output excludes the given timestamp., after_id: str # Limits directly on `id`. Marks the start of a range, optionally use `before_id` to set the end. Result output excludes the given `id` value. Please note that `id` is in chronological order., before: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `after` to set the start. Result output excludes the given timestamp., before_id: str # Limits directly on `id`. Marks the end of a range, optionally use `after_id` to set the start. Result output excludes the given `id` value. Please note that `id` is in chronological order., from: str(dateTime) # Limits on `time_created`. Marks the start of a range, optionally use `until` to set the end. Result output includes the given timestamp., from_id: str # Limits on `id`. Marks the start of a range, optionally use `until_id` to set the end. Result output includes the given `id` value. Please note that `id` is in chronological order., id_only: bool=false # Removes `url` fields from output and shows `_id` instead of `_url` in references., limit: int=100 # Sets the maximum number of returned resources. You may increase this number to large values, keep in mind that query times could become large. We advise you to use the pagination feature whenever you can., populate: str # Expand a reference into the actual resource (lookup). You may add multiple fields by giving a comma separated value., results_only: bool=false # Removes response envelope with information about query, only sends back a JSON array with the applicable resources., select: str # Select which properties should be returned. You may add multiple fields by giving a comma separated value. Select can also be used together with populate: Specify the resource first, then a period(.) followed by the field., sort: str=-id # Allows you to sort on on or more fields in the resource. You may append a minus sign (`-`) to request reverse order (new to old)., until: str(dateTime) # Limits on `time_created`. Marks the end of a range, optionally use `from` to set the start. Result output includes the given timestamp., until_id: str # Limits on `id`. Marks the end of a range, optionally use `from_id` to set the start. Result output includes the given `id` value. Please note that `id` is in chronological order., timeout_s: num # Overrides the default query timeout (in seconds). A value of 0 means unlimited. IMPORTANT: using high timeouts in production code is strongly discouraged as it may lead to stability issues., id: str # Unique identifier, time_created: str(dateTime) # Filter on the time the resource was created., time_updated: str(dateTime) # Filter on the time the resource was last updated, email: str # Filter on the email address., first_name: str # Filter on the first name., last_name: str # Filter on the last name., is_admin: bool # Filter on the administrator status., is_locked: bool # Filter on the locked status.}
+@returns(200) A JSON object containing a list of users
 
 @endpoint POST /users
-@optional {email: str, first_name: str, id: str, is_admin: bool, is_locked: bool, last_name: str, password: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
-@returns(201) {resource: map{id: str, url: str}, status: int}
+@desc Create user
+@optional {email: str # Email address, first_name: str # First name, id: str # Unique identifier for resource., is_admin: bool # Whether or not this is an administrator., is_locked: bool # Whether or not this user is locked and can't change the password., last_name: str # Last name, password: str # Password of the user, time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., url: str # Url to the individual resource.}
+@returns(201) {resource: map{id: str, url: str}, status: int} # A JSON object containing the newly added resource
 
 @endpoint GET /users/{id}
-@required {id: str}
-@returns(200) {email: str, first_name: str, id: str, is_admin: bool, is_locked: bool, last_name: str, password: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
+@desc Get user
+@required {id: str # Unique identifier}
+@returns(200) {email: str, first_name: str, id: str, is_admin: bool, is_locked: bool, last_name: str, password: str, time_created: str(dateTime), time_updated: str(dateTime), url: str} # A JSON object containing the user
 
 @endpoint PUT /users/{id}
-@required {id: str}
-@optional {email: str, first_name: str, id: str, is_admin: bool, is_locked: bool, last_name: str, password: str, time_created: str(dateTime), time_updated: str(dateTime), url: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Update existing user
+@required {id: str # Unique identifier}
+@optional {email: str # Email address, first_name: str # First name, id: str # Unique identifier for resource., is_admin: bool # Whether or not this is an administrator., is_locked: bool # Whether or not this user is locked and can't change the password., last_name: str # Last name, password: str # Password of the user, time_created: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., time_updated: str(dateTime) # [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) formatted string for when this resource was created., url: str # Url to the individual resource.}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the modified resource
 
 @endpoint DELETE /users/{id}
-@required {id: str}
-@returns(200) {resource: map{id: str, url: str}, status: int}
+@desc Delete user
+@required {id: str # Unique identifier}
+@returns(200) {resource: map{id: str, url: str}, status: int} # A JSON object containing the deleted resource
 
 @endgroup
 

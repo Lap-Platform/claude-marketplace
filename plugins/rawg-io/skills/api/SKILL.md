@@ -88,82 +88,40 @@ https://api.rawg.io/api
 | GET | /tags | Get a list of tags. |
 | GET | /tags/{id} | Get details of the tag. |
 
-## Enhanced Skill Content
+## Common Questions
 
-
-## Question Mapping
-
-- "What games are available for PlayStation?" -> GET /games?platforms={platform_id}
-- "Search for a game by name" -> GET /games?search={query}
-- "Get details about a specific game" -> GET /games/{id}
-- "What platforms can I filter by?" -> GET /platforms
-- "Show me all genres" -> GET /genres
-- "What DLC or additions does this game have?" -> GET /games/{game_pk}/additions
-- "Who developed this game?" -> GET /games/{game_pk}/development-team
-- "What other games are in this series?" -> GET /games/{game_pk}/game-series
-- "Show screenshots for a game" -> GET /games/{game_pk}/screenshots
-- "Where can I buy this game?" -> GET /games/{game_pk}/stores
-- "What are the top-rated games?" -> GET /games?ordering=-metacritic
-- "List all publishers" -> GET /publishers
-- "What achievements does this game have?" -> GET /games/{id}/achievements
-- "Find games released in a date range" -> GET /games?dates={start},{end}
-- "What tags are available for filtering?" -> GET /tags
-
-## Response Tips
-
-- **List endpoints** (`/games`, `/genres`, `/platforms`, etc.): Return paginated objects with `count`, `next`, `previous`, and `results` array. Follow `next` URL to paginate.
-- **Detail endpoints** (`/games/{id}`, `/genres/{id}`, etc.): Return a flat object with nested arrays for related data (platforms, genres, tags, screenshots).
-- **Sub-resource endpoints** (`/games/{id}/achievements`, `/screenshots`, etc.): Same paginated wrapper as list endpoints. The `game_pk` or `id` path param can be a slug or numeric ID.
-- **Errors**: Expect `{"detail": "Not found."}` for invalid IDs. Auth failures return 401/403 when the API key is missing or invalid.
-
-## Anomaly Flags
-
-- **Missing API key**: All requests require a `key` query parameter. Surface a clear error if responses return 401 or 403.
-- **Empty results**: If `count` is 0 and `results` is empty, flag that the search/filter may be too restrictive.
-- **Pagination depth**: If `count` is very large (10,000+), warn the user that full iteration will require many requests.
-- **Null nested fields**: Game detail responses may have `null` for `metacritic`, `reddit_url`, `website`, or `clip`. Do not assume these fields are always populated.
-- **Slug vs ID ambiguity**: Path params accept both numeric IDs and string slugs. If a slug looks numeric, it may resolve to the wrong game. Prefer numeric IDs when available.
-- **Rate limiting**: RAWG may throttle requests. If responses slow down or return 429, back off and retry with exponential delay.
-
-## Playbook
-
-### 1. Find and explore a specific game
-
-1. `GET /games?search={name}&search_precise=true` to find the game
-2. Pick the best match from `results` by checking `name` and `released`
-3. `GET /games/{id}` for full details (description, metacritic, platforms, genres)
-4. `GET /games/{id}/screenshots` for media
-5. `GET /games/{game_pk}/stores` to find purchase links
-
-### 2. Browse games by genre and platform
-
-1. `GET /genres` to list available genres, note the `id` of the desired genre
-2. `GET /platforms` to list platforms, note the `id` of the desired platform
-3. `GET /games?genres={genre_id}&platforms={platform_id}&ordering=-rating` to get top-rated matches
-4. Page through results using the `next` URL until you have enough entries
-
-### 3. Discover a game series and its DLC
-
-1. `GET /games/{id}` to get the base game details
-2. `GET /games/{game_pk}/game-series` to find all entries in the series
-3. `GET /games/{game_pk}/additions` to list DLC and expansions
-4. `GET /games/{game_pk}/parent-games` to find the original if starting from a DLC
-
-### 4. Research a game's community and media presence
-
-1. `GET /games/{id}` for the base game info
-2. `GET /games/{id}/reddit` for Reddit posts and discussions
-3. `GET /games/{id}/youtube` for YouTube videos
-4. `GET /games/{id}/twitch` for Twitch streams
-5. `GET /games/{id}/movies` for trailers and gameplay videos
-
-### 5. Explore developers and their game catalogs
-
-1. `GET /developers?page_size=20` to browse developers
-2. `GET /developers/{id}` for developer details including game count
-3. `GET /games?developers={developer_id}&ordering=-added` to list their games sorted by popularity
-4. Optionally filter further with `&metacritic=80,100` to show only highly-rated titles
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all creator-roles?" -> GET /creator-roles
+- "List all creators?" -> GET /creators
+- "Get creator details?" -> GET /creators/{id}
+- "List all developers?" -> GET /developers
+- "Get developer details?" -> GET /developers/{id}
+- "Search games?" -> GET /games
+- "List all additions?" -> GET /games/{game_pk}/additions
+- "List all development-team?" -> GET /games/{game_pk}/development-team
+- "List all game-series?" -> GET /games/{game_pk}/game-series
+- "List all parent-games?" -> GET /games/{game_pk}/parent-games
+- "List all screenshots?" -> GET /games/{game_pk}/screenshots
+- "List all stores?" -> GET /games/{game_pk}/stores
+- "Get game details?" -> GET /games/{id}
+- "List all achievements?" -> GET /games/{id}/achievements
+- "List all movies?" -> GET /games/{id}/movies
+- "List all reddit?" -> GET /games/{id}/reddit
+- "List all suggested?" -> GET /games/{id}/suggested
+- "List all twitch?" -> GET /games/{id}/twitch
+- "List all youtube?" -> GET /games/{id}/youtube
+- "List all genres?" -> GET /genres
+- "Get genre details?" -> GET /genres/{id}
+- "List all platforms?" -> GET /platforms
+- "List all parents?" -> GET /platforms/lists/parents
+- "Get platform details?" -> GET /platforms/{id}
+- "List all publishers?" -> GET /publishers
+- "Get publisher details?" -> GET /publishers/{id}
+- "List all stores?" -> GET /stores
+- "Get store details?" -> GET /stores/{id}
+- "List all tags?" -> GET /tags
+- "Get tag details?" -> GET /tags/{id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

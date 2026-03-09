@@ -9,1187 +9,1445 @@
 @toc v0.1(265)
 
 @endpoint POST /v0.1/users/{user_id}/devices/register
-@required {user_id: any, body: any}
-@returns(200)
-@errors {404}
+@desc Registers a user for an existing device
+@required {user_id: any # The ID of the user, body: any # The device info.}
+@returns(200) Success
+@errors {404:<b>not_found</b>: The user or the device can't be found.}
 
 @endpoint GET /v0.1/user/notifications/emailSettings
-@returns(200)
+@desc Get Default email notification settings for the user
+@returns(200) Success
 
 @endpoint GET /v0.1/user/metadata/optimizely
-@returns(200)
+@returns(200) Success
 
 @endpoint POST /v0.1/user/invitations/orgs/{invitation_token}/reject
-@required {invitation_token: any}
-@optional {empty_body: map}
-@returns(204)
+@desc Rejects a pending organization invitation
+@required {invitation_token: any # The app invitation token that was sent to the user}
+@optional {empty_body: map # allow empty body for custom http-client lib}
+@returns(204) Success
 
 @endpoint POST /v0.1/user/invitations/orgs/{invitation_token}/accept
-@required {invitation_token: any}
-@optional {empty_body: map}
-@returns(204)
+@desc Accepts a pending organization invitation for the specified user
+@required {invitation_token: any # The app invitation token that was sent to the user}
+@optional {empty_body: map # allow empty body for custom http-client lib}
+@returns(204) Success
 
 @endpoint POST /v0.1/user/invitations/distribution_groups/accept
-@optional {empty_body: map}
-@returns(204)
+@desc Accepts all pending invitations to distribution groups for the specified user
+@optional {empty_body: map # allow empty body for custom http-client lib}
+@returns(204) Success
 
 @endpoint POST /v0.1/user/invitations/apps/{invitation_token}/reject
-@required {invitation_token: any}
-@optional {empty_body: map}
-@returns(204)
+@desc Rejects a pending invitation for the specified user
+@required {invitation_token: any # The app invitation token that was sent to the user}
+@optional {empty_body: map # allow empty body for custom http-client lib}
+@returns(204) Success
 
 @endpoint POST /v0.1/user/invitations/apps/{invitation_token}/accept
-@required {invitation_token: any}
-@optional {empty_body: map}
-@returns(204)
+@desc Accepts a pending invitation for the specified user
+@required {invitation_token: any # The app invitation token that was sent to the user}
+@optional {empty_body: map # allow empty body for custom http-client lib}
+@returns(204) Success
 
 @endpoint GET /v0.1/user/export/serviceConnections
-@returns(200)
+@desc Gets all service connections of the service type for GDPR export.
+@returns(200) Success
 
 @endpoint POST /v0.1/user/dsr/export/{token}/cancel
-@required {token: any}
-@returns(202)
-@errors {503}
+@required {token: any # Unique request ID (GUID)}
+@returns(202) Data subject right cancel export request has been accepted.
+@errors {503: Cancel export request cannot be processed yet.}
 
 @endpoint GET /v0.1/user/dsr/export/{token}
-@required {token: any}
-@returns(200)
+@required {token: any # Unique request ID (GUID)}
+@returns(200) Data subject right export request status successfully retrieved.
 
 @endpoint POST /v0.1/user/dsr/export
-@returns(202)
+@returns(202) Data subject right export request has been accepted.
 
 @endpoint POST /v0.1/user/dsr/delete/{token}/cancel
-@required {token: any}
+@required {token: any # Unique request ID (GUID)}
 @optional {email: map}
-@returns(202)
-@errors {503}
+@returns(202) Data subject right cancel delete request has been accepted.
+@errors {503: Cancel delete request cannot be processed yet.}
 
 @endpoint GET /v0.1/user/dsr/delete/{token}
-@required {token: any, email: any}
-@returns(200)
+@required {token: any # Unique request ID (GUID), email: any # Email used for delete with x-authz-bypass headers}
+@returns(200) Data subject right delete request status successfully retrieved.
 
 @endpoint POST /v0.1/user/dsr/delete
-@returns(202)
+@returns(202) Data subject right delete request has been accepted.
 
 @endpoint GET /v0.1/user/devices/{device_udid}
-@required {device_udid: any}
-@returns(200)
-@errors {400, 403, 404}
+@desc Returns the device details.
+@required {device_udid: any # The UDID of the device}
+@returns(200) Success
+@errors {400:<b>bad_request</b>: Devices information can only be requested for iOS apps., 403:<b>forbidden</b>: The user is not allowed to view someone else's device., 404:<b>not_found</b>: The user or device can't be found.}
 
 @endpoint DELETE /v0.1/user/devices/{device_udid}
-@required {device_udid: any}
-@returns(200)
-@errors {403, 404}
+@desc Removes an existing device from a user
+@required {device_udid: any # The UDID of the device}
+@returns(200) Success
+@errors {403:<b>forbidden</b>: The user is not allowed to delete someone else's device., 404:<b>not_found</b>: The user or the device can't be found.}
 
 @endpoint GET /v0.1/user/devices
-@returns(200)
-@errors {400, 403}
+@desc Returns all devices associated with the given user.
+@returns(200) Success
+@errors {400:<b>bad_request</b>: Devices information can only be requested for iOS apps., 403:<b>forbidden</b>: The user is not allowed to view someone else's devices.}
 
 @endpoint GET /v0.1/user
-@returns(200)
+@desc Returns the user profile data
+@returns(200) Success
 
 @endpoint PATCH /v0.1/user
-@required {user: any}
-@returns(200)
+@desc Updates the user profile and returns the updated user data
+@required {user: any # The data for the created user}
+@returns(200) Success
 
 @endpoint GET /v0.1/sdk/apps/{app_secret}/releases/{release_hash}
-@required {app_secret: any, release_hash: any}
-@optional {udid: any}
-@returns(200)
-@errors {404}
+@desc If 'latest' is not specified then it will return the specified release if it's enabled. If 'latest' is specified, regardless of whether a release hash is provided, the latest enabled release is returned.
+@required {app_secret: any # The secret of the target application, release_hash: any # The hash of the release or 'latest' to get the latest release from all the distribution groups assigned to the current user.}
+@optional {udid: any # When passing `udid` in the query string, a provisioning check for the given device ID will be done. Will be ignored for non-iOS platforms.}
+@returns(200) If called with a specific `release_hash` return the app's 'display_name'' and 'buildIdentifier'. If 'release_hash' is 'latest' return the full release details of the latest release that was distributed to the current user (from all the distribution groups).
+@errors {404: Error codes: - `not_found` - A release or an app can't be found. - `no_releases_for_user` - No releases available for that user (will only be returned when `release_hash` is `latest`)}
 
 @endpoint GET /v0.1/sdk/apps/{app_secret}/releases/private/latest
-@required {app_secret: any}
-@optional {udid: any}
-@returns(200)
-@errors {404}
+@desc Get the latest release distributed to a private group the given user is a member of for the given app.
+@required {app_secret: any # The secret of the target application}
+@optional {udid: any # When passing `udid` in the query string, a provisioning check for the given device ID will be done. Will be ignored for non-iOS platforms.}
+@returns(200) Return the full release details of the latest release that was distributed to the current user (from all the private distribution groups).
+@errors {404: Error codes: - `not_found` - A release or an app can't be found. - `no_releases_for_user` - No releases available for that user.}
 
 @endpoint GET /v0.1/public/sparkle/apps/{app_secret}
-@required {app_secret: any}
-@returns(200)
+@desc Gets the sparkle feed of the releases that are distributed to all the public distribution groups.
+@required {app_secret: any # The secret of the application.}
+@returns(200) The RSS feed of releases.
 
 @endpoint GET /v0.1/public/sdk/apps/{app_secret}/releases/{release_hash}/public_distribution_groups
-@required {app_secret: any, release_hash: any}
-@returns(200)
-@errors {404}
+@desc Get all public distribution groups that a given release has been distributed to
+@required {app_secret: any # The secret of the target application, release_hash: any # The hash of the release}
+@returns(200) The public distribution groups that the release has been distributed to
+@errors {404: Error Codes: - `not_found` - The app doesn't exist}
 
 @endpoint GET /v0.1/public/sdk/apps/{app_secret}/releases/latest
-@required {app_secret: any}
-@returns(200)
-@errors {404}
+@desc Get the latest public release for the given app.
+@required {app_secret: any # The secret of the target application}
+@returns(200) The full release details of the latest release that was distributed to a public group.
+@errors {404: Error Codes: - `not_found` - The app doesn't exist - `no_releases_for_app` - The app has no public releases.}
 
 @endpoint GET /v0.1/public/sdk/apps/{app_secret}/distribution_groups/{distribution_group_id}/releases/latest
-@required {app_secret: any, distribution_group_id: any}
-@optional {is_install_page: any}
-@returns(200)
-@errors {403, 404}
+@desc Get a release with 'latest' for the given public group.
+@required {app_secret: any # The secret of the target application, distribution_group_id: any # the id for destination}
+@optional {is_install_page: any # The check if the request is from Install page}
+@returns(200) The full release details of the latest release that was distributed from the given public group.
+@errors {403: Error Codes: - `forbidden` - Unauthorized to access private distribution group, 404: Error Codes: - `not_found` - Distribution group or the app doesn't exist - `no_releases_for_app` - App has no releases.}
 
 @endpoint POST /v0.1/public/apps/{owner_name}/{app_name}/install_analytics
-@required {owner_name: any, app_name: any, body: any}
-@returns(204)
+@desc Notify download(s) for the provided distribution release(s).
+@required {owner_name: any # The name of the app owner, app_name: any # The name of the app, body: any # The install analytics request payload}
+@returns(204) Install Analytics Notification Sent Successfully.
 
 @endpoint GET /v0.1/public/apps/{app_id}/releases/{release_id}/ios_manifest
-@required {app_id: any, release_id: any, token: any}
-@returns(200)
-@errors {400, 403, 404}
+@desc Returns the manifest.plist in XML format for installing the release on a device. Only available for iOS.
+@required {app_id: any # The ID of the application, release_id: any # The release_id, token: any # A hash that authorizes the download if it matches the release info.}
+@returns(200) Success
+@errors {400: The app's OS is not iOS., 403: Forbidden - The token provided doesn't match the release's token., 404: The app or release can't be found.}
 
 @endpoint GET /v0.1/orgs/{org_name}/users/{user_name}/apps
-@required {org_name: any, user_name: any}
-@returns(200)
+@desc Get a user apps information from an organization by name
+@required {org_name: any # The organization's name, user_name: any # The slug name of the user}
+@returns(200) Success
 
 @endpoint PATCH /v0.1/orgs/{org_name}/users/{user_name}
-@required {org_name: any, user_name: any, organization_user: any}
-@returns(200)
+@desc Updates the given organization user
+@required {org_name: any # The organization's name, user_name: any # The slug name of the user, organization_user: any}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/orgs/{org_name}/users/{user_name}
-@required {org_name: any, user_name: any}
-@returns(204)
+@desc Removes a user from an organization.
+@required {org_name: any # The organization's name, user_name: any # The slug name of the user}
+@returns(204) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/users/{user_name}
-@required {org_name: any, user_name: any}
-@returns(200)
+@desc Get a user information from an organization by name - if there is explicit permission return it, if not if not return highest implicit permission
+@required {org_name: any # The organization's name, user_name: any # The slug name of the user}
+@returns(200) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/users
-@required {org_name: any}
-@returns(200)
+@desc Returns a list of users that belong to an organization
+@required {org_name: any # The organization's name}
+@returns(200) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/testers
-@required {org_name: any}
-@returns(200)
+@desc Returns a unique list of users including the whole organization members plus testers in any shared group of that org
+@required {org_name: any # The organization's name}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/orgs/{org_name}/teams/{team_name}/users/{user_name}
-@required {org_name: any, team_name: any, user_name: any}
-@returns(204)
+@desc Removes a user from a team that is owned by an organization
+@required {org_name: any # The organization's name, team_name: any # The team's name, user_name: any # The slug name of the user}
+@returns(204) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/teams/{team_name}/users
-@required {org_name: any, team_name: any}
-@returns(200)
+@desc Returns the users of a team which is owned by an organization
+@required {org_name: any # The organization's name, team_name: any # The team's name}
+@returns(200) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/teams/{team_name}/users
-@required {org_name: any, team_name: any, user_email: any}
-@returns(201)
+@desc Adds a new user to a team that is owned by an organization
+@required {org_name: any # The organization's name, team_name: any # The team's name, user_email: any # The email of the user to add to the team}
+@returns(201) Success
 
 @endpoint PATCH /v0.1/orgs/{org_name}/teams/{team_name}/apps/{app_name}
-@required {org_name: any, team_name: any, app_name: any, team: any}
-@returns(200)
+@desc Updates the permissions the team has to the app
+@required {org_name: any # The organization's name, team_name: any # The team's name, app_name: any # The name of the application, team: any}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/orgs/{org_name}/teams/{team_name}/apps/{app_name}
-@required {org_name: any, team_name: any, app_name: any}
-@returns(204)
+@desc Removes an app from a team
+@required {org_name: any # The organization's name, team_name: any # The team's name, app_name: any # The name of the application}
+@returns(204) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/teams/{team_name}/apps
-@required {org_name: any, team_name: any, app: any}
-@returns(201)
+@desc Adds an app to a team
+@required {org_name: any # The organization's name, team_name: any # The team's name, app: any # The name of the app to be added to the team. The app has to be owned by the organization.}
+@returns(201) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/teams/{team_name}/apps
-@required {org_name: any, team_name: any}
-@returns(200)
+@desc Returns the apps a team has access to
+@required {org_name: any # The organization's name, team_name: any # The team's name}
+@returns(200) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/teams/{team_name}
-@required {org_name: any, team_name: any}
-@returns(200)
+@desc Returns the details of a single team
+@required {org_name: any # The organization's name, team_name: any # The team's name}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/orgs/{org_name}/teams/{team_name}
-@required {org_name: any, team_name: any}
-@returns(204)
+@desc Deletes a single team
+@required {org_name: any # The organization's name, team_name: any # The team's name}
+@returns(204) Success
 
 @endpoint PATCH /v0.1/orgs/{org_name}/teams/{team_name}
-@required {org_name: any, team_name: any, team: any}
-@returns(200)
+@desc Updates a single team
+@required {org_name: any # The organization's name, team_name: any # The team's name, team: any # The information used to update the team}
+@returns(200) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/teams
-@required {org_name: any}
-@returns(200)
+@desc Returns the list of all teams in this org
+@required {org_name: any # The organization's name}
+@returns(200) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/teams
-@required {org_name: any, team: any}
-@returns(201)
+@desc Creates a team and returns it
+@required {org_name: any # The organization's name, team: any # The information used to create the team}
+@returns(201) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/invitations/{email}/revoke
-@required {org_name: any, email: any}
-@optional {empty_body: map}
-@returns(204)
+@desc Removes a user's invitation to an organization
+@required {org_name: any # The organization's name, email: any # The email address of the user to send the password reset mail to.}
+@optional {empty_body: map # allow empty body for custom http-client lib}
+@returns(204) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/invitations/{email}/resend
-@required {org_name: any, email: any}
-@optional {role: any}
-@returns(204)
+@desc Cancels an existing organization invitation for the user and sends a new one
+@required {org_name: any # The organization's name, email: any # The email address of the user to send the password reset mail to.}
+@optional {role: any # The role of the user to be added}
+@returns(204) Success
 
 @endpoint PATCH /v0.1/orgs/{org_name}/invitations/{email}
-@required {org_name: any, email: any, user_role: any}
-@returns(204)
+@desc Allows the role of an invited user to be changed
+@required {org_name: any # The organization's name, email: any # The email address of the user to send the password reset mail to., user_role: any # The new role of the user}
+@returns(204) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/invitations
-@required {org_name: any, user_email: any}
-@returns(204)
+@desc Invites a new or existing user to an organization
+@required {org_name: any # The organization's name, user_email: any # The email of the user to invite}
+@returns(204) Success
 
 @endpoint DELETE /v0.1/orgs/{org_name}/invitations
-@required {org_name: any, user_email: any}
-@returns(204)
+@desc Removes a user's invitation to an organization
+@required {org_name: any # The organization's name, user_email: any # The email of the user whose invitation should be removed}
+@returns(204) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/invitations
-@required {org_name: any}
-@returns(200)
+@desc Gets the pending invitations for the organization
+@required {org_name: any # The organization's name}
+@returns(200) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/distribution_groups_details
-@required {org_name: any}
-@optional {apps_limit: any}
-@returns(200)
+@desc Returns a list of distribution groups with details for an organization
+@required {org_name: any # The organization's name}
+@optional {apps_limit: any # The max number of apps to include in the response}
+@returns(200) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/resend_invite
-@required {org_name: any, distribution_group_name: any, members: any}
-@returns(204)
+@desc Resend shared distribution group invite notification to previously invited testers
+@required {org_name: any # The organization's name, distribution_group_name: any # The name of the distribution group, members: any # The list of members to add}
+@returns(204) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/members/bulk_delete
-@required {org_name: any, distribution_group_name: any, members: any}
-@returns(204)
+@desc Delete testers from distribution group in an org
+@required {org_name: any # The organization's name, distribution_group_name: any # The name of the distribution group, members: any # The list of members to add}
+@returns(204) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/members
-@required {org_name: any, distribution_group_name: any}
-@returns(200)
+@desc Returns a list of member in the distribution group specified
+@required {org_name: any # The organization's name, distribution_group_name: any # The name of the distribution group}
+@returns(200) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/members
-@required {org_name: any, distribution_group_name: any, member_emails: any}
-@returns(200)
+@desc Accepts an array of user email addresses to get added to the specified group
+@required {org_name: any # The organization's name, distribution_group_name: any # The name of the distribution group, member_emails: any # list of user email addresses that should get added as members to the specified group}
+@returns(200) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/apps/bulk_delete
-@required {org_name: any, distribution_group_name: any, apps: any}
-@returns(204)
+@desc Delete apps from distribution group in an org
+@required {org_name: any # The organization's name, distribution_group_name: any # The name of the distribution group, apps: any # The name of the apps to be deleted from the distribution group. The apps have to be owned by the organization.}
+@returns(204) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/apps
-@required {org_name: any, distribution_group_name: any}
-@returns(200)
+@desc Get apps from a distribution group in an org
+@required {org_name: any # The organization's name, distribution_group_name: any # The name of the distribution group}
+@returns(200) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}/apps
-@required {org_name: any, distribution_group_name: any, apps: any}
-@returns(204)
+@desc Add apps to distribution group in an org
+@required {org_name: any # The organization's name, distribution_group_name: any # The name of the distribution group, apps: any # The name of the apps to be added to the distribution group. The apps have to be owned by the organization.}
+@returns(204) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}
-@required {org_name: any, distribution_group_name: any}
-@returns(200)
+@desc Returns a single distribution group in org for a given distribution group name
+@required {org_name: any # The organization's name, distribution_group_name: any # The name of the distribution group}
+@returns(200) Success
 
 @endpoint PATCH /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}
-@required {org_name: any, distribution_group_name: any}
-@optional {distribution_group_for_org: any}
-@returns(200)
+@desc Update one given distribution group name in an org
+@required {org_name: any # The organization's name, distribution_group_name: any # The name of the distribution group}
+@optional {distribution_group_for_org: any # The attributes to update for the distribution group}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/orgs/{org_name}/distribution_groups/{distribution_group_name}
-@required {org_name: any, distribution_group_name: any}
-@returns(200)
+@desc Deletes a single distribution group from an org with a given distribution group name
+@required {org_name: any # The organization's name, distribution_group_name: any # The name of the distribution group}
+@returns(200) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/distribution_groups
-@required {org_name: any, distribution_group: any}
-@returns(201)
+@desc Creates a disribution goup which can be shared across apps under an organization
+@required {org_name: any # The organization's name, distribution_group: any # The attributes to update for the distribution group}
+@returns(201) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/distribution_groups
-@required {org_name: any}
-@returns(201)
+@desc Returns a list of distribution groups in the org specified
+@required {org_name: any # The organization's name}
+@returns(201) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/azure_subscriptions
-@required {org_name: any}
-@returns(200)
+@desc Returns a list of azure subscriptions for the organization
+@required {org_name: any # The organization's name}
+@returns(200) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/avatar
-@required {org_name: any}
-@optional {avatar: any}
-@returns(200)
+@desc Sets the organization avatar
+@required {org_name: any # The organization's name}
+@optional {avatar: any # The image for an Organization avatar to upload.}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/orgs/{org_name}/avatar
-@required {org_name: any}
-@returns(200)
+@desc Deletes the uploaded organization avatar
+@required {org_name: any # The organization's name}
+@returns(200) Success
 
 @endpoint POST /v0.1/orgs/{org_name}/apps
-@required {org_name: any, app: any}
-@returns(200)
-@returns(201)
+@desc Creates a new app for the organization and returns it to the caller
+@required {org_name: any # The organization's name, app: any # The data for the app}
+@returns(200) Success
+@returns(201) Success
 
 @endpoint GET /v0.1/orgs/{org_name}/apps
-@required {org_name: any}
-@returns(200)
+@desc Returns a list of apps for the organization
+@required {org_name: any # The organization's name}
+@returns(200) Success
 
 @endpoint GET /v0.1/orgs/{org_name}
-@required {org_name: any}
-@returns(200)
+@desc Returns the details of a single organization
+@required {org_name: any # The organization's name}
+@returns(200) Success
 
 @endpoint PATCH /v0.1/orgs/{org_name}
-@required {org_name: any, org: any}
-@returns(200)
+@desc Returns a list of organizations the requesting user has access to
+@required {org_name: any # The organization's name, org: any # The data for the org}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/orgs/{org_name}
-@required {org_name: any}
-@returns(204)
+@desc Deletes a single organization
+@required {org_name: any # The organization's name}
+@returns(204) Success
 
 @endpoint POST /v0.1/orgs
-@required {organization: any}
-@returns(201)
+@desc Creates a new organization and returns it to the caller
+@required {organization: any # The organization data}
+@returns(201) Created
 
 @endpoint GET /v0.1/orgs
-@returns(200)
+@desc Returns a list of organizations the requesting user has access to
+@returns(200) Success
 
 @endpoint GET /v0.1/invitations/sent
-@returns(200)
+@desc Returns all invitations sent by the caller
+@returns(200) Success
 
 @endpoint GET /v0.1/azure_subscriptions
-@returns(200)
+@desc Returns a list of azure subscriptions for the user
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/webhooks
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Get web hooks configured for a particular app
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/versions
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Gets a list of application versions.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/users/{user_email}
-@required {owner_name: any, app_name: any, user_email: any}
-@returns(204)
+@desc Removes the user from the app
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, user_email: any # The user email of the user to delete}
+@returns(204) Success
 
 @endpoint PATCH /v0.1/apps/{owner_name}/{app_name}/users/{user_email}
-@required {owner_name: any, app_name: any, user_email: any, user_app_permissions_data: any}
-@returns(204)
+@desc Update user permission for the app
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, user_email: any # The user email of the user to patch, user_app_permissions_data: any # The value to update the user permission for the app.}
+@returns(204) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/users
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Returns the users associated with the app specified with the given app name which belongs to the given owner.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/uploads/releases/{upload_id}
-@required {upload_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {400, 404}
+@desc Get the current status of the release upload.
+@required {upload_id: any # The ID of the release upload, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {400: The request contained invalid properties., 404: Error codes: - `not_found` - The app or upload doesn't exist.}
 
 @endpoint PATCH /v0.1/apps/{owner_name}/{app_name}/uploads/releases/{upload_id}
-@required {upload_id: any, body: any, owner_name: any, app_name: any}
-@optional {extract: any}
-@returns(200)
-@errors {400, 404}
+@desc Update the current status of the release upload.
+@required {upload_id: any # The ID of the release upload, body: any # The release upload status information., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {extract: any # A flag that indicates to extract release or not, true by default}
+@returns(200) Success
+@errors {400: The request contained invalid properties., 404: Error codes: - `not_found` - The app or upload doesn't exist.}
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/uploads/releases
-@required {owner_name: any, app_name: any}
-@optional {body: any}
-@returns(201)
-@errors {400, 404}
+@desc Initiate a new release upload. This API is part of multi-step upload process.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {body: any # Optional parameters to create releases with user defined metadata}
+@returns(201) Created
+@errors {400: The request contained invalid properties., 404: Error codes: - `not_found` - The app doesn't exist.}
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/transfer_to_org
-@required {owner_name: any, app_name: any}
-@optional {empty_body: map}
-@returns(200)
+@desc Transfers ownership of an app to a new organization
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {empty_body: map # allow empty body for custom http-client lib}
+@returns(200) Success
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/transfer/{destination_owner_name}
-@required {owner_name: any, app_name: any, destination_owner_name: any}
-@optional {empty_body: map}
-@returns(200)
+@desc Transfers ownership of an app to a different user or organization
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, destination_owner_name: any # The name of the owner (user or organization) to which the app is being transferred}
+@optional {empty_body: map # allow empty body for custom http-client lib}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/testers/{tester_id}
-@required {tester_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {404}
+@desc Delete the given tester from the all releases
+@required {tester_id: any # The id of the tester, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {404: Tester can't be found}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/testers
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Returns the testers associated with the app specified with the given app name which belongs to the given owner.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/teams
-@required {app_name: any, owner_name: any}
-@returns(200)
+@desc Returns the details of all teams that have access to the app.
+@required {app_name: any # The name of the application, owner_name: any # The name of the owner}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/symbols/{symbol_id}/status
-@required {symbol_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {403, 404, 500}
+@desc Returns a particular symbol by id (uuid) for the provided application
+@required {symbol_id: any # The ID of the symbol (uuid of the symbol), owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {403: Unauthorized, 404: Not found, 500: Internal error}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/symbols/{symbol_id}/location
-@required {symbol_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {403, 404, 500}
+@desc Gets the URL to download the symbol
+@required {symbol_id: any # The ID of the symbol (uuid of the symbol), owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {403: Unauthorized, 404: Not found, 500: Internal error}
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/symbols/{symbol_id}/ignore
-@required {symbol_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {403, 404, 500}
+@desc Marks a symbol by id (uuid) as ignored
+@required {symbol_id: any # The ID of the symbol (uuid of the symbol), owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {403: Unauthorized, 404: Not found, 500: Internal error}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/symbols/{symbol_id}
-@required {symbol_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {403, 404, 500}
+@desc Returns a particular symbol by id (uuid) for the provided application
+@required {symbol_id: any # The ID of the symbol (uuid of the symbol), owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {403: Unauthorized, 404: Not found, 500: Internal error}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/symbols
-@required {owner_name: any, app_name: any}
-@returns(200)
-@errors {403, 500}
+@desc Returns the list of all symbols for the provided application
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {403: Unauthorized, 500: Internal error}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/symbol_uploads/{symbol_upload_id}/location
-@required {symbol_upload_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {403, 404, 500}
+@desc Gets the URL to download the symbol upload
+@required {symbol_upload_id: any # The ID of the symbol upload, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {403: Unauthorized, 404: Not found, 500: Internal error}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/symbol_uploads/{symbol_upload_id}
-@required {symbol_upload_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {403, 404, 500}
+@desc Gets a symbol upload by id for the specified application
+@required {symbol_upload_id: any # The ID of the symbol upload, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {403: Unauthorized, 404: Not found, 500: Internal error}
 
 @endpoint PATCH /v0.1/apps/{owner_name}/{app_name}/symbol_uploads/{symbol_upload_id}
-@required {symbol_upload_id: any, body: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc Commits or aborts the symbol upload process for a new set of symbols for the specified application
+@required {symbol_upload_id: any # The ID of the symbol upload, body: any # The symbol information, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {400: Bad request, 403: Unauthorized, 500: Internal error}
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/symbol_uploads/{symbol_upload_id}
-@required {symbol_upload_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {403, 404, 500}
+@desc Deletes a symbol upload by id for the specified application
+@required {symbol_upload_id: any # The ID of the symbol upload, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {403: Unauthorized, 404: Not found, 500: Internal error}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/symbol_uploads
-@required {owner_name: any, app_name: any}
-@optional {top: any, status: any, symbol_type: any}
-@returns(200)
-@errors {403, 500}
+@desc Gets a list of all uploads for the specified application
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {top: any # The maximum number of results to return., status: any # Filter results by the current status of a symbol upload: * all: all states in the symbol upload process. Includes created, aborted, committed, processing, indexed and failed states * uploaded: all states after package is uploaded. Includes committed, processing, indexed and failed states * processed: symbol upload processing is completed. Includes indexed and failed states., symbol_type: any # The type of symbols}
+@returns(200) Success
+@errors {403: Unauthorized, 500: Internal error}
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/symbol_uploads
-@required {body: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {400, 403, 500}
+@desc Begins the symbol upload process for a new set of symbols for the specified application
+@required {body: any # The symbol information, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {400: Bad request, 403: Unauthorized, 500: Internal error}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/store_service_status
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Application specific store service status
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success. Availability for store service status is stored in response schema.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/update_devices/{resign_id}
-@required {release_id: any, resign_id: any, owner_name: any, app_name: any}
-@optional {include_provisioning_profile: any}
-@returns(200)
-@errors {400, 404}
+@desc Returns the resign status to the caller
+@required {release_id: any # The ID of the release., resign_id: any # The ID of the resign operation., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {include_provisioning_profile: any # A boolean value that indicates if the provisioning profile should be return in addition to the status. When set to true, the provisioning profile will be returned only when status is 'complete' or 'preparing_for_testers'.}
+@returns(200) Success
+@errors {400: Error, 404:<b>not_found</b>: A distribution group can't be found.}
 
 @endpoint PUT /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/testers/{tester_id}
-@required {release_id: any, tester_id: any, owner_name: any, app_name: any}
+@desc Update details about the specified tester associated with the release
+@required {release_id: any # The ID of the release, tester_id: any # The id of the tester, owner_name: any # The name of the owner, app_name: any # The name of the application}
 @optional {destination_tester_update_details: map}
-@returns(200)
-@errors {404}
+@returns(200) Success
+@errors {404: A destination can't be found.}
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/testers/{tester_id}
-@required {release_id: any, tester_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {404}
+@desc Delete the given tester from the release
+@required {release_id: any # The ID of the release, tester_id: any # The id of the tester, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {404: Tester can't be found}
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/testers
-@required {release_id: any, body: map, owner_name: any, app_name: any}
-@returns(201)
-@errors {400, 404}
+@desc Distributes a release to a user
+@required {release_id: any # The ID of the release, body: map # The release information., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(201) Created
+@errors {400: Failure, 404: Release not found}
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/stores/{store_id}
-@required {release_id: any, store_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {404}
+@desc Delete the given distribution store from the release
+@required {release_id: any # The ID of the release, store_id: any # The id of the distribution store, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {404: Distribution store destination can't be found.}
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/stores
-@required {release_id: any, body: map, owner_name: any, app_name: any}
-@returns(201)
-@errors {400, 404}
+@desc Distributes a release to a store
+@required {release_id: any # The ID of the release, body: map # The release information., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(201) Created
+@errors {400: Failure, 404: Release not found}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/provisioning_profile
-@required {release_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {400}
+@desc Return information about the provisioning profile. Only available for iOS.
+@required {release_id: any # The release_id, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {400: The app's OS is not iOS.}
 
 @endpoint PUT /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/groups/{group_id}
-@required {release_id: any, group_id: any, owner_name: any, app_name: any}
+@desc Update details about the specified distribution group associated with the release
+@required {release_id: any # The ID of the release, group_id: any # The id of the releases destination, owner_name: any # The name of the owner, app_name: any # The name of the application}
 @optional {destination_group_update_details: map}
-@returns(200)
-@errors {404}
+@returns(200) Success
+@errors {404: A destination can't be found.}
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/groups/{group_id}
-@required {release_id: any, group_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {404}
+@desc Delete the given distribution group from the release
+@required {release_id: any # The ID of the release, group_id: any # The id of the distribution group, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {404: Distribution group destination can't be found.}
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}/groups
-@required {release_id: any, body: map, owner_name: any, app_name: any}
-@returns(201)
-@errors {400, 404}
+@desc Distributes a release to a group
+@required {release_id: any # The ID of the release, body: map # The release information., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(201) Created
+@errors {400: Failure, 404: Release not found}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}
-@required {release_id: any, owner_name: any, app_name: any}
-@optional {udid: any, is_install_page: any}
-@returns(200)
-@errors {400, 404}
+@desc Get a release with id `release_id`. If `release_id` is `latest`, return the latest release that was distributed to the current user (from all the distribution groups).
+@required {release_id: any # The ID of the release, or `latest` to get the latest release from all the distribution groups assigned to the current user., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {udid: any # when supplied, this call will also check if the given UDID is provisioned. Will be ignored for non-iOS platforms. The value will be returned in the property is_udid_provisioned., is_install_page: any # The check if the request is from Install page}
+@returns(200) Success
+@errors {400: `release_id` is not an integer or the string `latest`., 404: Error codes: - `not_found` - A release or an app can't be found. - `no_releases_for_user` - No releases available for that user (will only be returned when `release_id` is `latest`)}
 
 @endpoint PUT /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}
-@required {release_id: any, body: map, owner_name: any, app_name: any}
-@returns(200)
-@errors {400, 404}
+@desc Update details of a release.
+@required {release_id: any # The ID of the release, body: map # The release information., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {400: Failure, 404: Release not found}
 
 @endpoint PATCH /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}
-@required {release_id: any, body: map, owner_name: any, app_name: any}
-@returns(200)
-@errors {400, 404}
+@desc Updates a release.
+@required {release_id: any # The ID of the release, body: map # The release information., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {400: Failure, 404: Release not found}
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/releases/{release_id}
-@required {release_id: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {404, 500}
+@desc Deletes a release.
+@required {release_id: any # The ID of the release, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {404: An app or a release couldn't be found, 500: An internal error. if delete has partially failed **partially_deleted** error_code will be returned. - `partially_deleted`: Release was removed from all distribution groups, but couldn't be deleted from App Center.}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/releases/filter_by_tester
-@required {owner_name: any, app_name: any}
-@optional {published_only: any}
-@returns(200)
+@desc Return detailed information about releases avaiable to a tester.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {published_only: any # when *true*, filters out releases that were uploaded but were never distributed. Releases that under deleted distribution groups will not be filtered out.}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/releases
-@required {owner_name: any, app_name: any}
-@optional {published_only: any, scope: any, top: any, releaseId: any}
-@returns(200)
+@desc Return basic information about releases.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {published_only: any # When *true*, filters out releases that were uploaded but were never distributed. Releases that under deleted distribution groups will not be filtered out., scope: any # When the scope is 'tester', only includes releases that have been distributed to groups that the user belongs to., top: any # The number of releases to return, releaseId: any # The id of a release}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/recent_releases
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Get the latest release from every distribution group associated with an application.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/notifications/emailSettings
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Get Email notification settings of user for a particular app
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/invitations/{user_email}
-@required {owner_name: any, app_name: any, user_email: any}
-@optional {role: any}
-@returns(204)
+@desc Invites a new or existing user to an app
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, user_email: any # The email of the user to invite}
+@optional {role: any # The role of the user to be added}
+@returns(204) Success
 
 @endpoint PATCH /v0.1/apps/{owner_name}/{app_name}/invitations/{user_email}
-@required {owner_name: any, app_name: any, user_email: any, user_invitation_permissions_data: any}
-@returns(204)
+@desc Update pending invitation permission
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, user_email: any # The email of the user to invite, user_invitation_permissions_data: any # The value to update the user permission in the invite.}
+@returns(204) Success
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/invitations/{user_email}
-@required {owner_name: any, app_name: any, user_email: any}
-@returns(204)
+@desc Removes a user's invitation to an app
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, user_email: any # The email of the user to invite}
+@returns(204) Success
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/invitations
-@required {owner_name: any, app_name: any}
-@optional {user_email: any}
-@returns(204)
+@desc Invites a new or existing user to an app
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {user_email: any # The email of the user to invite}
+@returns(204) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/invitations
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Gets the pending invitations for the app
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks/{export_configuration_id}/enable
-@required {export_configuration_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Enable export configuration.
+@required {export_configuration_id: any # The id of the export configuration., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Export configuration was successfully enabled.
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks/{export_configuration_id}/disable
-@required {export_configuration_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Disable export configuration.
+@required {export_configuration_id: any # The id of the export configuration., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Export configuration was successfully disabled.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks/{export_configuration_id}
-@required {export_configuration_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Get export configuration.
+@required {export_configuration_id: any # The id of the export configuration., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Get export configuration.
 
 @endpoint PATCH /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks/{export_configuration_id}
-@required {export_configuration_id: any, properties: map, owner_name: any, app_name: any}
-@returns(200)
+@desc Partially update export configuration.
+@required {export_configuration_id: any # The id of the export configuration., properties: map # Export configurations., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Export configuration updated successfully.
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks/{export_configuration_id}
-@required {export_configuration_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Delete export configuration.
+@required {export_configuration_id: any # The id of the export configuration., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Export configuration was successfully deleted.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc List export configurations.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) List export configurations.
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/export_configurations_aks
-@required {properties: map, owner_name: any, app_name: any}
-@returns(202)
+@desc Create new export configuration
+@required {properties: map # Export configurations., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(202) Create export configuration request successfully received.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/{errorId}/sessionLogs
-@required {errorId: any, owner_name: any, app_name: any}
-@optional {date: any}
-@returns(200)
+@desc Get session logs by error ID
+@required {errorId: any # The id of the error, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {date: any # Date of data requested}
+@returns(200) Session logs of specific error
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/{errorId}/attachments/{attachmentId}/text
-@required {errorId: any, attachmentId: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Error attachment text.
+@required {errorId: any # The id of the error, attachmentId: any # Error attachment id., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Error attachment text.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/{errorId}/attachments/{attachmentId}/location
-@required {errorId: any, attachmentId: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Error attachment location.
+@required {errorId: any # The id of the error, attachmentId: any # Error attachment id., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Error attachment location.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/{errorId}/attachments
-@required {errorId: any, owner_name: any, app_name: any}
-@returns(200)
+@desc List error attachments.
+@required {errorId: any # The id of the error, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) List of error attachments.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/search
-@required {owner_name: any, app_name: any}
-@optional {filter: any, q: any, order: any, sort: any, $top: any, $skip: any}
-@returns(200)
+@desc Errors list based on search parameters
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {filter: any # A filter as specified in OData notation, q: any # A query string, order: any # It controls the order of sorting, sort: any # It controls the sort based on specified field, $top: any # The maximum number of results to return, $skip: any # The offset (starting at 0) of the first result to return. This parameter along with limit is used to perform pagination.}
+@returns(200) List of errors
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/retention_settings
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc gets the retention settings in days
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorfreeDevicePercentages
-@required {start: any, owner_name: any, app_name: any}
-@optional {end: any, versions: any, app_build: any, errorType: any}
-@returns(200)
+@desc Percentage of error-free devices by day in the time range based on the selected versions. If SingleErrorTypeParameter is not provided, defaults to handlederror. API will return -1 if crash devices is greater than active devices
+@required {start: any # Start date time in data in ISO 8601 date time format, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format, versions: any, app_build: any # app build, errorType: any # Type of error (handled vs unhandled), excluding All}
+@returns(200) Percentage of error-free devices by day in the time range and overall percentage of the entire time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/stacktrace
-@required {errorGroupId: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Gets the stack trace for the error group.
+@required {errorGroupId: any # The id of the error group, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Gets the stack trace for the error group.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/operatingSystems
-@required {errorGroupId: any, owner_name: any, app_name: any}
-@optional {$top: any}
-@returns(200)
+@desc Top OSes of the selected error group.
+@required {errorGroupId: any # The id of the error group, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {$top: any # The maximum number of results to return. (0 will fetch all results till the max number.)}
+@returns(200) Top OSes with percentage in descending order
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/models
-@required {errorGroupId: any, owner_name: any, app_name: any}
-@optional {$top: any}
-@returns(200)
+@desc Top models of the selected error group.
+@required {errorGroupId: any # The id of the error group, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {$top: any # The maximum number of results to return. (0 will fetch all results till the max number.)}
+@returns(200) Top Models with percentage in descending order
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors/{errorId}/stacktrace
-@required {errorGroupId: any, errorId: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Error Stacktrace details.
+@required {errorGroupId: any # The id of the error group, errorId: any # The id of the error, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Error stacktrace details.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors/{errorId}/location
-@required {errorGroupId: any, errorId: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Error location.
+@required {errorGroupId: any # The id of the error group, errorId: any # The id of the error, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Error location.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors/{errorId}/download
-@required {errorGroupId: any, errorId: any, owner_name: any, app_name: any}
-@optional {format: any}
-@returns(200)
+@desc Download details for a specific error.
+@required {errorGroupId: any # The id of the error group, errorId: any # The id of the error, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {format: any # the format of the crash log}
+@returns(200) Error details.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors/{errorId}
-@required {errorGroupId: any, errorId: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Error details.
+@required {errorGroupId: any # The id of the error group, errorId: any # The id of the error, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Error details.
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors/{errorId}
-@required {errorGroupId: any, errorId: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Delete a specific error and related attachments and blobs for an app. Searchable data will not be deleted immediately and may take up to 30 days.
+@required {errorGroupId: any # The id of the error group, errorId: any # The id of the error, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors/latest
-@required {errorGroupId: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Latest error details.
+@required {errorGroupId: any # The id of the error group, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Latest error details.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errors
-@required {errorGroupId: any, start: any, owner_name: any, app_name: any}
-@optional {end: any, $top: any, model: any, os: any}
-@returns(200)
+@desc Get all errors for group
+@required {errorGroupId: any # The id of the error group, start: any # Start date time in data in ISO 8601 date time format, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format, $top: any # The maximum number of results to return. (0 will fetch all results till the max number.), model: any, os: any}
+@returns(200) Get all errors for group
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errorfreeDevicePercentages
-@required {errorGroupId: any, start: any, owner_name: any, app_name: any}
-@optional {end: any}
-@returns(200)
+@desc Percentage of error-free devices by day in the time range. Api will return -1 if crash devices is greater than active devices
+@required {errorGroupId: any # The id of the error group, start: any # Start date time in data in ISO 8601 date time format, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format}
+@returns(200) Percentage of error-free devices by day in the time range and overall percentage of the time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}/errorCountsPerDay
-@required {errorGroupId: any, start: any, owner_name: any, app_name: any}
-@optional {version: any, end: any}
-@returns(200)
+@desc Count of errors by day in the time range of the selected error group with selected version
+@required {errorGroupId: any # The id of the error group, start: any # Start date time in data in ISO 8601 date time format, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {version: any, end: any # Last date time in data in ISO 8601 date time format}
+@returns(200) Count of errors by day in the time range and total errors over the time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}
-@required {errorGroupId: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Error group details
+@required {errorGroupId: any # The id of the error group, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Error group details
 
 @endpoint PATCH /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/{errorGroupId}
-@required {errorGroupId: any, errorGroupState: map, owner_name: any, app_name: any}
-@returns(200)
+@desc Update error group state
+@required {errorGroupId: any # The id of the error group, errorGroupState: map # The state of the error group, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Error group details
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups/search
-@required {owner_name: any, app_name: any}
-@optional {filter: any, q: any, order: any, sort: any, $top: any, $skip: any}
-@returns(200)
+@desc Error groups list based on search parameters
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {filter: any # A filter as specified in OData notation, q: any # A query string, order: any # It controls the order of sorting, sort: any # It controls the sort based on specified field, $top: any # The maximum number of results to return, $skip: any # The offset (starting at 0) of the first result to return. This parameter along with limit is used to perform pagination.}
+@returns(200) List of error groups
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorGroups
-@required {start: any, owner_name: any, app_name: any}
-@optional {version: any, app_build: any, groupState: any, end: any, $orderby: any, $top: any, errorType: any}
-@returns(200)
+@desc List of error groups
+@required {start: any # Start date time in data in ISO 8601 date time format, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {version: any, app_build: any # app build, groupState: any, end: any # Last date time in data in ISO 8601 date time format, $orderby: any # controls the sorting order and sorting based on which column, $top: any # The maximum number of results to return. (0 will fetch all results till the max number.), errorType: any # Type of error (handled vs unhandled), including All}
+@returns(200) List of error groups
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/errorCountsPerDay
-@required {start: any, owner_name: any, app_name: any}
-@optional {version: any, end: any, app_build: any, errorType: any}
-@returns(200)
+@desc Count of crashes or errors by day in the time range based the selected versions. If SingleErrorTypeParameter is not provided, defaults to handlederror.
+@required {start: any # Start date time in data in ISO 8601 date time format, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {version: any, end: any # Last date time in data in ISO 8601 date time format, app_build: any # app build, errorType: any # Type of error (handled vs unhandled), excluding All}
+@returns(200) Count of crashes or errors by day in the time range, and total over the entire time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/available_versions
-@required {start: any, owner_name: any, app_name: any}
-@optional {end: any, $top: any, $skip: any, $filter: any, $inlinecount: any, errorType: any}
-@returns(200)
+@desc Get all available versions in the time range.
+@required {start: any # Start date time in data in ISO 8601 date time format, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format, $top: any # The maximum number of results to return. (0 will fetch all results till the max number.), $skip: any # The offset (starting at 0) of the first result to return. This parameter along with limit is used to perform pagination., $filter: any # A filter as specified in https://github.com/Microsoft/api-guidelines/blob/master/Guidelines.md#97-filtering., $inlinecount: any # Controls whether or not to include a count of all the items across all pages., errorType: any # Type of error (handled vs unhandled), including All}
+@returns(200) A list of available versions in the time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/errors/availableAppBuilds
-@required {version: any, start: any, owner_name: any, app_name: any}
-@optional {end: any, $top: any, errorType: any}
-@returns(200)
+@desc List of app builds
+@required {version: any, start: any # Start date time in data in ISO 8601 date time format, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format, $top: any # The maximum number of results to return. (0 will fetch all results till the max number.), errorType: any # Type of error (handled vs unhandled), including All}
+@returns(200) List of App builds
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/releases/{release_id}/realtimestatus
-@required {store_name: any, release_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Return the Real time Status publishing of release from store.
+@required {store_name: any # The name of the store, release_id: any # The id of the release, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/releases/{release_id}/publish_logs
-@required {store_name: any, release_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Returns publish logs for a particular release published to a particular store
+@required {store_name: any # The name of the store, release_id: any # The ID of the realease, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/releases/{release_id}/publish_error_details
-@required {store_name: any, release_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Return the Error Details of release which failed in publishing.
+@required {store_name: any # The name of the store, release_id: any # The id of the release, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/releases/{release_id}
-@required {store_name: any, release_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Return releases published in a store for releaseId and storeId
+@required {store_name: any # The name of the store, release_id: any # The name of the store, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/releases/{release_id}
-@required {store_name: any, release_id: any, owner_name: any, app_name: any}
+@desc delete the release with release Id
+@required {store_name: any # The name of the store, release_id: any # The id of the release, owner_name: any # The name of the owner, app_name: any # The name of the application}
 @optional {body: str}
-@returns(204)
+@returns(204) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/releases
-@required {store_name: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Return all releases published  in a store
+@required {store_name: any # The name of the store, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}/latest_release
-@required {store_name: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Returns the latest release published in a store.
+@required {store_name: any # The name of the store, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}
-@required {store_name: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Return the store details for specified store name.
+@required {store_name: any # The name of the store, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint PATCH /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}
-@required {store_name: any, body: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Update the store.
+@required {store_name: any # The name of the store, body: any # Store update request, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/distribution_stores/{store_name}
-@required {store_name: any, owner_name: any, app_name: any}
+@desc delete the store based on specific store name.
+@required {store_name: any # The name of the store, owner_name: any # The name of the owner, app_name: any # The name of the application}
 @optional {body: str}
-@returns(204)
+@returns(204) Success
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/distribution_stores
-@required {body: any, owner_name: any, app_name: any}
-@returns(201)
+@desc Create a new external store for the specified application.
+@required {body: any # The store request, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(201) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_stores
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Get all the store details from Storage store table for a particular application.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/resend_invite
-@required {owner_name: any, app_name: any, distribution_group_name: any, members: any}
-@returns(204)
+@desc Resend distribution group app invite notification to previously invited testers
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, distribution_group_name: any # The name of the distribution group, members: any # The list of members to add}
+@returns(204) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/releases/{release_id}
-@required {owner_name: any, app_name: any, distribution_group_name: any, release_id: any}
-@optional {is_install_page: any}
-@returns(200)
-@errors {404, 501}
+@desc Return detailed information about a distributed release in a given distribution group.
+@required {owner_name: any # The name of the app owner, app_name: any # The name of the app, distribution_group_name: any # The name of the distribution group., release_id: any # Also supports the constant `latest`, which will return the latest release in the distribution group.}
+@optional {is_install_page: any # The check if the request is from Install page}
+@returns(200) Success
+@errors {404: Error Codes: - `not_found` - Distribution group or the app doesn't exist - `no_releases_for_app` - App has no releases., 501: Requesting a specific release_id is not supported.}
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/releases/{release_id}
-@required {owner_name: any, app_name: any, distribution_group_name: any, release_id: any}
-@returns(200)
-@errors {404}
+@desc Deletes a release with id 'release_id' in a given distribution group.
+@required {owner_name: any # The name of the app owner, app_name: any # The name of the app, distribution_group_name: any # The name of the distribution group., release_id: any # The ID identifying the unique release.}
+@returns(200) Success
+@errors {404: Error codes: - `distribution_group_not_found` - Distribution group or the app doesn't exist. - `not_found` - release isn't found.}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/releases
-@required {distribution_group_name: any, owner_name: any, app_name: any}
-@returns(200)
-@errors {404}
+@desc Return basic information about distributed releases in a given distribution group.
+@required {distribution_group_name: any # The name of the distribution group., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {404: A distribution group can't be found.}
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/members/bulk_delete
-@required {owner_name: any, app_name: any, distribution_group_name: any, members: any}
-@returns(200)
+@desc Remove the users from the distribution group
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, distribution_group_name: any # The name of the distribution group, members: any # The list of members to add}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/members
-@required {owner_name: any, app_name: any, distribution_group_name: any}
-@optional {exclude_pending_invitations: any}
-@returns(200)
+@desc Returns a list of member details in the distribution group specified
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, distribution_group_name: any # The name of the distribution group}
+@optional {exclude_pending_invitations: any # Whether to exclude pending invitations in the response}
+@returns(200) Success
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/members
-@required {owner_name: any, app_name: any, distribution_group_name: any, members: any}
-@returns(200)
+@desc Adds the members to the specified distribution group
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, distribution_group_name: any # The name of the distribution group, members: any # The list of members to add}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/devices/download_devices_list
-@required {distribution_group_name: any, owner_name: any, app_name: any}
-@optional {unprovisioned_only: any, udids: any}
-@returns(200)
-@errors {400, 404, 500}
+@desc Returns all devices associated with the given distribution group.
+@required {distribution_group_name: any # The name of the distribution group., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {unprovisioned_only: any # when true, filters out provisioned devices, udids: any # multiple UDIDs which should be part of the resulting CSV.}
+@returns(200) Success
+@errors {400:<b>bad_request</b>: Devices information can only be requested for iOS apps., 404:<b>not_found</b>: A distribution group can't be found., 500: An internal error.}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}/devices
-@required {distribution_group_name: any, owner_name: any, app_name: any}
-@optional {release_id: any}
-@returns(200)
-@errors {400, 404}
+@desc Returns all devices associated with the given distribution group
+@required {distribution_group_name: any # The name of the distribution group., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {release_id: any # when provided, gets the provisioning state of the devices owned by users of this distribution group when compared to the provided release.}
+@returns(200) Success
+@errors {400:<b>bad_request</b>: Devices information can only be requested for iOS apps., 404:<b>not_found</b>: A distribution group can't be found.}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}
-@required {owner_name: any, app_name: any, distribution_group_name: any}
-@returns(200)
+@desc Returns a single distribution group for a given distribution group name
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, distribution_group_name: any # The name of the distribution group}
+@returns(200) Success
 
 @endpoint PATCH /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}
-@required {owner_name: any, app_name: any, distribution_group_name: any, distribution_group: any}
-@returns(200)
+@desc Updates the attributes of distribution group
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, distribution_group_name: any # The name of the distribution group, distribution_group: any # The attributes to update for the distribution group}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/distribution_groups/{distribution_group_name}
-@required {app_name: any, owner_name: any, distribution_group_name: any}
-@returns(204)
+@desc Deletes a distribution group
+@required {app_name: any # The name of the application, owner_name: any # The name of the owner, distribution_group_name: any # The name of the distribution group}
+@returns(204) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/distribution_groups
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Returns a list of distribution groups in the app specified
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/distribution_groups
-@required {owner_name: any, app_name: any, distribution_group: any}
-@returns(201)
+@desc Creates a new distribution group and returns it to the caller
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, distribution_group: any # The attributes to update for the distribution group}
+@returns(201) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/diagnostics/symbol_groups_info
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Gets application level statistics for all missing symbol groups
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/diagnostics/symbol_groups/{symbol_group_id}
-@required {symbol_group_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Gets missing symbol crash group by its id
+@required {symbol_group_id: any # missing symbol crash group id, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/diagnostics/symbol_groups
-@required {top: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Gets top N (ordered by crash count) of crash groups by missing symbol
+@required {top: any # top N elements, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint PUT /v0.1/apps/{owner_name}/{app_name}/devices/block_logs/{install_id}
-@required {install_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc **Warning, this operation is not reversible.**
+@required {install_id: any # The id of the device, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Operation successful
 
 @endpoint PUT /v0.1/apps/{owner_name}/{app_name}/devices/block_logs
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc **Warning, this operation is not reversible.**
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Operation successful
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crashes_info
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Gets whether the application has any crashes.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crashes/{crash_id}/session_logs
-@required {crash_id: any, owner_name: any, app_name: any}
-@optional {date: any}
-@returns(200)
+@desc Get session logs by crash ID
+@required {crash_id: any # The id of the a crash, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {date: any # Date of data requested}
+@returns(200) Session logs of specific crash
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crashes/{crash_id}/attachments/{attachment_id}/text
-@required {crash_id: any, attachment_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Gets content of the text attachment.
+@required {crash_id: any # id of a specific crash, attachment_id: any # attachment id, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crashes/{crash_id}/attachments/{attachment_id}/location
-@required {crash_id: any, attachment_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Gets the URI location to download crash attachment.
+@required {crash_id: any # id of a specific crash, attachment_id: any # attachment id, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crashes/{crash_id}/attachments
-@required {crash_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Gets all attachments for a specific crash.
+@required {crash_id: any # id of a specific crash, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/stacktrace
-@required {crash_group_id: any, owner_name: any, app_name: any}
-@optional {grouping_only: any}
-@returns(200)
+@desc Gets a stacktrace for a specific crash.
+@required {crash_group_id: any # id of a specific group, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {grouping_only: any # true if the stacktrace should be only the relevant thread / exception. Default is false}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes/{crash_id}/stacktrace
-@required {crash_group_id: any, crash_id: any, owner_name: any, app_name: any}
-@optional {grouping_only: any}
-@returns(200)
+@desc Gets a stacktrace for a specific crash.
+@required {crash_group_id: any # id of a specific group, crash_id: any # id of a specific crash, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {grouping_only: any # true if the stacktrace should be only the relevant thread / exception. Default is false}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes/{crash_id}/raw/location
-@required {crash_group_id: any, crash_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Gets the URI location to download json of a specific crash.
+@required {crash_group_id: any # id of a specific group, crash_id: any # id of a specific crash, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes/{crash_id}/native/download
-@required {crash_group_id: any, crash_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Gets the native log of a specific crash as a text attachment.
+@required {crash_group_id: any # id of a specific group, crash_id: any # id of a specific crash, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes/{crash_id}/native
-@required {crash_group_id: any, crash_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Gets the native log of a specific crash.
+@required {crash_group_id: any # id of a specific group, crash_id: any # id of a specific crash, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes/{crash_id}
-@required {crash_group_id: any, crash_id: any, owner_name: any, app_name: any}
-@optional {include_report: any, include_log: any, include_details: any, include_stacktrace: any, grouping_only: any}
-@returns(201)
+@desc Gets a specific crash for an app.
+@required {crash_group_id: any # id of a specific group, crash_id: any # id of a specific crash, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {include_report: any # true if the crash should include the raw crash report. Default is false, include_log: any # true if the crash should include the custom log report. Default is false, include_details: any # true if the crash should include in depth crash details, include_stacktrace: any # true if the crash should include the stacktrace information, grouping_only: any # true if the stacktrace should be only the relevant thread / exception. Default is false}
+@returns(201) Created
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes/{crash_id}
-@required {crash_group_id: any, crash_id: any, owner_name: any, app_name: any}
-@optional {retention_delete: any}
-@returns(200)
+@desc Delete a specific crash and related attachments and blobs for an app.
+@required {crash_group_id: any # id of a specific group, crash_id: any # id of a specific crash, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {retention_delete: any # true in that case if the method should skip update counts}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}/crashes
-@required {crash_group_id: any, owner_name: any, app_name: any}
-@optional {include_report: any, include_log: any, date_from: any, date_to: any, app_version: any, error_type: any}
-@returns(200)
+@desc Gets all crashes of a group.
+@required {crash_group_id: any # id of a specific group, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {include_report: any # true if the crash should include the raw crash report. Default is false, include_log: any # true if the crash should include the custom log report. Default is false, date_from: any, date_to: any, app_version: any # version, error_type: any}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}
-@required {crash_group_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Gets a specific group.
+@required {crash_group_id: any # id of a specific group, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint PATCH /v0.1/apps/{owner_name}/{app_name}/crash_groups/{crash_group_id}
-@required {crash_group_id: any, group: map, owner_name: any, app_name: any}
-@returns(200)
+@desc Updates a group.
+@required {crash_group_id: any # id of a specific group, group: map # Group change object. All fields are optional and only provided fields will get updated., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/crash_groups
-@required {owner_name: any, app_name: any}
-@optional {last_occurrence_from: any, last_occurrence_to: any, app_version: any, group_type: any, group_status: any, group_text_search: any, $orderby: any, continuation_token: any}
-@returns(200)
+@desc Gets a list of crash groups and whether the list contains all available groups.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {last_occurrence_from: any # Earliest date when the last time a crash occured in a crash group, last_occurrence_to: any # Latest date when the last time a crash occured in a crash group, app_version: any # version, group_type: any, group_status: any, group_text_search: any # A freetext search that matches in crash, crash types, crash stack_traces and crash user, $orderby: any # the OData-like $orderby argument, continuation_token: any # Cassandra request continuation token. The token is used for pagination.}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/bugtracker/crashGroup/{crash_group_id}
-@required {crash_group_id: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Get project issue related to a crash group
+@required {crash_group_id: any # CrashGroup Id, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/bugtracker
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Get bug tracker settings for a particular app
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/azure_subscriptions/{azure_subscription_id}
-@required {azure_subscription_id: any, owner_name: any, app_name: any}
-@returns(204)
+@desc Delete the azure subscriptions for the app
+@required {azure_subscription_id: any # The unique ID (UUID) of the azure subscription, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(204) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/azure_subscriptions
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Returns a list of azure subscriptions for the app
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/azure_subscriptions
-@required {owner_name: any, app_name: any, azure_subscription_to_app_data: any}
-@returns(204)
+@desc Link azure subscription to an app
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, azure_subscription_to_app_data: any # The azure subscription data needed to be link to the app.}
+@returns(204) Success
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/avatar
-@required {owner_name: any, app_name: any}
-@optional {avatar: any}
-@returns(200)
+@desc Sets the app avatar
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {avatar: any # The image for an app avatar to upload.}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/avatar
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Deletes the uploaded app avatar
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/apple_test_flight_groups
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Fetch all apple test flight groups
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/apple_mapping
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Get mapping of apple app to an existing app in apple store.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/apple_mapping
-@required {owner_name: any, app_name: any}
+@desc Delete mapping of apple app to an existing app in apple store.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
 @optional {body: str}
-@returns(200)
+@returns(200) Success
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/apple_mapping
-@required {body: any, owner_name: any, app_name: any}
-@returns(201)
+@desc Create a mapping for an existing app in apple store for the specified application.
+@required {body: any # The apple app mapping object, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(201) Success
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/api_tokens/{api_token_id}
-@required {owner_name: any, app_name: any, api_token_id: any}
-@returns(204)
-@errors {400, 401, 404}
+@desc Delete the App Api Token object with the specific ID
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application, api_token_id: any # The unique ID (UUID) of the api token}
+@returns(204) Success
+@errors {400: Error, 401: Unauthorized, 404: NotFound}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/api_tokens
-@required {owner_name: any, app_name: any}
-@returns(200)
-@errors {400, 401}
+@desc Returns App API tokens for the app
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
+@errors {400: Error, 401: Unauthorized}
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/api_tokens
-@required {owner_name: any, app_name: any}
-@optional {description: any}
-@returns(201)
-@errors {400, 401}
+@desc Creates a new App API token
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {description: any # Description of the token}
+@returns(201) Success
+@errors {400: Error, 401: Unauthorized}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/versions
-@required {start: any, owner_name: any, app_name: any}
-@optional {end: any, $top: any, versions: any}
-@returns(200)
+@desc Count of active versions in the time range ordered by version.
+@required {start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., $top: any # The maximum number of results to return. (0 will fetch all results), versions: any # To select specific application versions}
+@returns(200) Count of active versions in the time range ordered by version.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/sessions_per_device
-@required {start: any, owner_name: any, app_name: any}
-@optional {end: any, versions: any}
-@returns(200)
+@desc Count of sessions per device in the time range.
+@required {start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., versions: any # To select specific application versions}
+@returns(200) Count of sessions per device in the time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/session_durations_distribution
-@required {start: any, owner_name: any, app_name: any}
-@optional {end: any, versions: any}
-@returns(200)
+@desc Gets session duration.
+@required {start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., versions: any # To select specific application versions}
+@returns(200) List of  session durations for requested time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/session_counts
-@required {start: any, owner_name: any, app_name: any}
-@optional {end: any, versions: any}
-@returns(200)
+@desc Count of sessions in the time range.
+@required {start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., versions: any # To select specific application versions}
+@returns(200) Count of sessions in the time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/places
-@required {start: any, owner_name: any, app_name: any}
-@optional {end: any, $top: any, versions: any}
-@returns(200)
+@desc Places in the time range.
+@required {start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., $top: any # The maximum number of results to return. (0 will fetch all results), versions: any # To select specific application versions}
+@returns(200) Places with count during the time range in descending order.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/oses
-@required {start: any, owner_name: any, app_name: any}
-@optional {end: any, $top: any, versions: any}
-@returns(200)
+@desc OSes in the time range.
+@required {start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., $top: any # The maximum number of results to return. (0 will fetch all results), versions: any # To select specific application versions}
+@returns(200) OSes with count during the time range in descending order.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/models
-@required {start: any, owner_name: any, app_name: any}
-@optional {end: any, $top: any, versions: any}
-@returns(200)
+@desc Models in the time range.
+@required {start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., $top: any # The maximum number of results to return. (0 will fetch all results), versions: any # To select specific application versions}
+@returns(200) Models with count during the time range in descending order.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/log_flow
-@required {owner_name: any, app_name: any}
-@optional {start: any}
-@returns(200)
+@desc Logs received between the specified start time and the current time. The API will return a maximum of 100 logs per call.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {start: any # Start date time in data in ISO 8601 date time format. It must be within the current day in the UTC timezone. The default value is the start time of the current day in UTC timezone.}
+@returns(200) List of logs for the requested time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/languages
-@required {start: any, owner_name: any, app_name: any}
-@optional {end: any, $top: any, versions: any}
-@returns(200)
+@desc Languages in the time range.
+@required {start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., $top: any # The maximum number of results to return. (0 will fetch all results), versions: any # To select specific application versions}
+@returns(200) Languages with count during the time range in descending order.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/generic_log_flow
-@required {owner_name: any, app_name: any}
-@optional {start: any}
-@returns(200)
+@desc Logs received between the specified start time and the current time. The API will return a maximum of 100 logs per call.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {start: any # Start date time in data in ISO 8601 date time format. It must be within the current day in the UTC timezone. The default value is the start time of the current day in UTC timezone.}
+@returns(200) List of logs for the requested time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}/properties/{event_property_name}/counts
-@required {event_name: any, event_property_name: any, start: any, owner_name: any, app_name: any}
-@optional {end: any, versions: any, $top: any}
-@returns(200)
+@desc Event properties value counts during the time range in descending order.
+@required {event_name: any # The id of the event., event_property_name: any # The id of the event property., start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., versions: any # To select specific application versions, $top: any # The number of property values to return. Set to 0 in order to fetch all results available.}
+@returns(200) Event properties value counts during the time range in descending order.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}/properties
-@required {event_name: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Event properties.
+@required {event_name: any # The id of the event., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Event properties.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}/event_count
-@required {event_name: any, start: any, owner_name: any, app_name: any}
-@optional {end: any, versions: any}
-@returns(200)
+@desc Count of events by interval in the time range.
+@required {event_name: any # The id of the event., start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., versions: any # To select specific application versions}
+@returns(200) Count of events by interval in the time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}/device_count
-@required {event_name: any, start: any, owner_name: any, app_name: any}
-@optional {end: any, versions: any}
-@returns(200)
+@desc Count of devices for an event by interval in the time range.
+@required {event_name: any # The id of the event., start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., versions: any # To select specific application versions}
+@returns(200) Count of devices for an event by interval in the time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}/count_per_session
-@required {event_name: any, start: any, owner_name: any, app_name: any}
-@optional {end: any, versions: any}
-@returns(200)
+@desc Count of events per session by interval in the time range.
+@required {event_name: any # The id of the event., start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., versions: any # To select specific application versions}
+@returns(200) Count of events per session by interval in the time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}/count_per_device
-@required {event_name: any, start: any, owner_name: any, app_name: any}
-@optional {end: any, versions: any}
-@returns(200)
+@desc Count of events per device by interval in the time range.
+@required {event_name: any # The id of the event., start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., versions: any # To select specific application versions}
+@returns(200) Count of events per device by interval in the time range.
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/analytics/events/{event_name}
-@required {event_name: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Delete the set of Events with the specified event names.
+@required {event_name: any # The id of the event., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Event successfully deleted.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/events
-@required {start: any, owner_name: any, app_name: any}
-@optional {end: any, versions: any, event_name: any, $top: any, $skip: any, $inlinecount: any, $orderby: any}
-@returns(200)
+@desc Count of active events in the time range ordered by event.
+@required {start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., versions: any # To select specific application versions, event_name: any # To select the specific events., $top: any # The maximum number of results to return. (0 will fetch all results), $skip: any # The offset (starting at 0) of the first result to return. This parameter along with limit is used to perform pagination., $inlinecount: any # Controls whether or not to include a count of all the items across all pages., $orderby: any # controls the sorting order and sorting based on which column}
+@returns(200) Count of active events in the time range ordered by event.
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/analytics/event_logs/{event_name}
-@required {event_name: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Delete the set of Events with the specified event names.
+@required {event_name: any # The id of the event., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Event successfully deleted.
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/analytics/distribution/release_counts
-@required {releases: map, owner_name: any, app_name: any}
-@returns(200)
+@desc Count of total downloads for the provided distribution releases.
+@required {releases: map # The releases to retrieve., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Count of total downloads for the provided distribution release(s).
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/crashfree_device_percentages
-@required {start: any, version: any, owner_name: any, app_name: any}
-@optional {end: any}
-@returns(200)
+@desc Percentage of crash-free device by day in the time range based on the selected versions. Api will return -1 if crash devices is greater than active devices.
+@required {start: any # Start date time in data in ISO 8601 date time format., version: any, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format.}
+@returns(200) Percentage of crash-free devices by day in the time range and overall percentage of the time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/crash_groups/{crash_group_id}/overall
-@required {crash_group_id: any, version: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Available for UWP apps only.
+@required {crash_group_id: any # The id of the crash group., version: any, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Overall crashes and affected users count.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/crash_groups/{crash_group_id}/operating_systems
-@required {crash_group_id: any, version: any, owner_name: any, app_name: any}
-@optional {$top: any}
-@returns(200)
+@desc Available for UWP apps only.
+@required {crash_group_id: any # The id of the crash group., version: any, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {$top: any # The maximum number of results to return. (0 will fetch all results)}
+@returns(200) Top OSes with percentage in descending order.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/crash_groups/{crash_group_id}/models
-@required {crash_group_id: any, version: any, owner_name: any, app_name: any}
-@optional {$top: any}
-@returns(200)
+@desc Available for UWP apps only.
+@required {crash_group_id: any # The id of the crash group., version: any, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {$top: any # The maximum number of results to return. (0 will fetch all results)}
+@returns(200) Top models with percentage in descending order.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/crash_groups/{crash_group_id}/crash_counts
-@required {crash_group_id: any, version: any, start: any, owner_name: any, app_name: any}
-@optional {end: any}
-@returns(200)
+@desc Available for UWP apps only.
+@required {crash_group_id: any # The id of the crash group., version: any, start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format.}
+@returns(200) Count of crashes by day in the time range and total crashes over the time range.
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/analytics/crash_groups
-@required {crash_groups: map, owner_name: any, app_name: any}
-@returns(200)
+@desc Overall crashes and affected users count of the selected crash groups with selected versions.
+@required {crash_groups: map, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Overall crashes and affected users count for all selected crash groups.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/crash_counts
-@required {start: any, owner_name: any, app_name: any}
-@optional {end: any, versions: any}
-@returns(200)
+@desc Available for UWP apps only.
+@required {start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., versions: any # To select specific application versions}
+@returns(200) Count of crashes by day in the time range and total crashes over the time range.
 
 @endpoint HEAD /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/{audience_name}
-@required {audience_name: any, owner_name: any, app_name: any}
-@returns(204)
-@errors {404}
+@desc Returns whether audience definition exists.
+@required {audience_name: any # The name of the audience, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(204) Audiences exists.
+@errors {404: Audiences does not exist.}
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/{audience_name}
-@required {audience_name: any, owner_name: any, app_name: any}
-@returns(204)
-@errors {404}
+@desc Deletes audience definition.
+@required {audience_name: any # The name of the audience, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(204) Audiences exists.
+@errors {404: Audiences does not exist.}
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/{audience_name}
-@required {audience_name: any, owner_name: any, app_name: any}
-@returns(200)
+@desc Gets audience definition.
+@required {audience_name: any # The name of the audience, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Audiences definition.
 
 @endpoint PUT /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/{audience_name}
-@required {audience_name: any, audience: map, owner_name: any, app_name: any}
-@returns(200)
+@desc Creates or updates audience definition.
+@required {audience_name: any # The name of the audience, audience: map # Audience definition, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Updated audiences definition.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/metadata/device_properties/{property_name}/values
-@required {property_name: any, owner_name: any, app_name: any}
-@optional {contains: any}
-@returns(200)
+@desc Get list of device property values.
+@required {property_name: any # Device property, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {contains: any # Contains string}
+@returns(200) List of supported device property values.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/metadata/device_properties
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Get list of device properties.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) List of device properties.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/metadata/custom_properties
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Get list of custom properties.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) List of device properties.
 
 @endpoint POST /v0.1/apps/{owner_name}/{app_name}/analytics/audiences/definition/test
-@required {audience: map, owner_name: any, app_name: any}
-@returns(200)
+@desc Tests audience definition.
+@required {audience: map # Audience definition, owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Tests audience definition.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/audiences
-@required {owner_name: any, app_name: any}
-@optional {include_disabled: any}
-@returns(200)
+@desc Get list of audiences.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {include_disabled: any # Include disabled audience definitions}
+@returns(200) List of audiences.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}/analytics/active_device_counts
-@required {start: any, owner_name: any, app_name: any}
-@optional {end: any, versions: any, app_build: any}
-@returns(200)
+@desc Count of active devices by interval in the time range.
+@required {start: any # Start date time in data in ISO 8601 date time format., owner_name: any # The name of the owner, app_name: any # The name of the application}
+@optional {end: any # Last date time in data in ISO 8601 date time format., versions: any # To select specific application versions, app_build: any # Application build number. If build number is specified than multiple versions are not allowed.}
+@returns(200) Count of active devices by interval in the time range.
 
 @endpoint GET /v0.1/apps/{owner_name}/{app_name}
-@required {owner_name: any, app_name: any}
-@returns(200)
+@desc Return a specific app with the given app name which belongs to the given owner.
+@required {owner_name: any # The name of the owner, app_name: any # The name of the application}
+@returns(200) Success
 
 @endpoint PATCH /v0.1/apps/{owner_name}/{app_name}
-@required {app_name: any, owner_name: any}
-@optional {app: any}
-@returns(200)
+@desc Partially updates a single app
+@required {app_name: any # The name of the application, owner_name: any # The name of the owner}
+@optional {app: any # The partial data for the app}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/apps/{owner_name}/{app_name}
-@required {app_name: any, owner_name: any}
-@returns(204)
+@desc Delete an app
+@required {app_name: any # The name of the application, owner_name: any # The name of the owner}
+@returns(204) Success
 
 @endpoint POST /v0.1/apps
-@required {app: any}
-@returns(201)
+@desc Creates a new app and returns it to the caller
+@required {app: any # The data for the app}
+@returns(201) Success
 
 @endpoint GET /v0.1/apps
-@optional {$orderBy: any}
-@returns(200)
+@desc Returns a list of apps
+@optional {$orderBy: any # The name of the attribute by which to order the response by. By default, apps are in order of creation. All results are ordered in ascending order.}
+@returns(200) Success
 
 @endpoint DELETE /v0.1/api_tokens/{api_token_id}
-@required {api_token_id: any}
-@returns(204)
-@errors {400, 401, 404}
+@desc Delete the user api_token object with the specific id
+@required {api_token_id: any # The unique ID (UUID) of the api token}
+@returns(204) Success
+@errors {400: Error, 401: Unauthorized, 404: NotFound}
 
 @endpoint GET /v0.1/api_tokens
-@returns(200)
-@errors {400, 401}
+@desc Returns api tokens for the authenticated user
+@returns(200) Success
+@errors {400: Error, 401: Unauthorized}
 
 @endpoint POST /v0.1/api_tokens
-@optional {description: any}
-@returns(201)
-@errors {400, 401}
+@desc Creates a new User API token
+@optional {description: any # Description of the token}
+@returns(201) Success
+@errors {400: Error, 401: Unauthorized}
 
 @endpoint GET /v0.1/administeredOrgs
-@returns(200)
+@desc Returns a list organizations in which the requesting user is an admin
+@returns(200) Success
 
 @end

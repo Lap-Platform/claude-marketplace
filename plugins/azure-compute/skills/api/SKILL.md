@@ -140,90 +140,119 @@ https://management.azure.com
 | POST | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/start | The operation to start a virtual machine. |
 | GET | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/vmSizes | Lists all available virtual machine sizes to which the specified virtual machine can be resized. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What operations does the Azure Compute provider support?" -> GET /providers/Microsoft.Compute/operations
-- "List all virtual machines in my subscription" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/virtualMachines
-- "Show me VMs in a specific resource group" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines
-- "Get details for a specific VM" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}
-- "How do I create or update a virtual machine?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}
-- "Stop a VM without deallocating it" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/powerOff
-- "Deallocate a VM to stop billing for compute" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/deallocate
-- "What VM sizes are available in a region?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/vmSizes
-- "List all scale sets in my subscription" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/virtualMachineScaleSets
-- "How do I scale down a VMSS by removing specific instances?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/delete
-- "What VM images are available from a publisher?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/publishers/{publisherName}/artifacttypes/vmimage/offers
-- "Check my compute resource usage in a region" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/usages
-- "Get the throttled request log for my subscription" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/logAnalytics/apiAccess/getThrottledRequests
-- "How do I capture a VM to create a custom image?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/capture
-- "What extensions are installed on my VM?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/extensions
-
-## Response Tips
-
-- **List endpoints** (VMs, VMSS, images, availability sets): Responses use `value` array with `nextLink` for pagination; always follow `nextLink` until null to get all results.
-- **Single resource GETs**: Return the full resource object; use `$expand=instanceView` where supported to include runtime status inline.
-- **Async operations** (POST actions returning 202): Response includes `Azure-AsyncOperation` or `Location` header; poll the URL until `provisioningState` is `Succeeded`, `Failed`, or `Canceled`.
-- **PUT/PATCH create-or-update**: 200 means updated, 201 means created; the response body contains the full resource with `provisioningState` indicating progress.
-- **DELETE operations**: 200 means completed, 202 means accepted (still in progress), 204 means resource already gone; no response body on 204.
-- **Log analytics POSTs**: Return a `LogAnalyticsOperationResult` with a SAS URI to download the CSV report; 202 means the report is still generating.
-- **Marketplace browsing** (publishers, offers, skus, versions): Hierarchical drill-down; each level returns a flat array, not paginated.
-
-## Anomaly Flags
-
-- **202 without completion polling**: When any power action, delete, or image operation returns 202, surface the async operation URL and remind the user to poll for completion status.
-- **Throttling detected**: If `getThrottledRequests` returns non-empty results, proactively warn about API rate limit pressure and suggest spacing out calls or requesting quota increases.
-- **Usage near limits**: When `usages` endpoint shows `currentValue` approaching `limit` for any resource type (cores, VMs, availability sets), flag it before the user hits a hard cap.
-- **provisioningState not Succeeded**: On any PUT/PATCH/POST response where `provisioningState` is `Failed` or `Canceled`, immediately surface the error details from `error.code` and `error.message`.
-- **skipShutdown usage**: When a user powers off a VM or VMSS instance with `skipShutdown=true`, warn that this is a hard stop equivalent to pulling the power cord and risks data loss.
-- **Delete with 204 response**: Surface that the resource was already deleted or never existed, so the operation was a no-op.
-- **API version mismatch**: This spec uses `2019-03-01`; if the user references features from newer API versions (spot VMs, ephemeral OS disks, capacity reservations), flag that they need a newer `api-version` parameter.
-
-## Playbook
-
-### 1. Provision a New Virtual Machine
-
-1. List available VM sizes in the target region: GET `.../locations/{location}/vmSizes`
-2. Browse marketplace images: GET `.../locations/{location}/publishers` then drill into offers, skus, and versions
-3. Create or ensure a resource group exists (use Resource Management API, outside this spec)
-4. Create the VM: PUT `.../resourceGroups/{rg}/providers/Microsoft.Compute/virtualMachines/{vmName}` with `parameters` body including `hardwareProfile`, `storageProfile`, `osProfile`, and `networkProfile`
-5. Poll the `Azure-AsyncOperation` URL from the response header until `provisioningState` is `Succeeded`
-6. Verify the VM is running: GET `.../virtualMachines/{vmName}?$expand=instanceView` and check `instanceView.statuses` for `PowerState/running`
-
-### 2. Stop and Deallocate VMs to Save Costs
-
-1. List VMs in the resource group: GET `.../resourceGroups/{rg}/providers/Microsoft.Compute/virtualMachines`
-2. For each target VM, deallocate (stops billing): POST `.../virtualMachines/{vmName}/deallocate`
-3. If you get 202, poll the async operation URL until complete
-4. Confirm status: GET `.../virtualMachines/{vmName}/instanceView` and verify `PowerState/deallocated`
-5. To resume later: POST `.../virtualMachines/{vmName}/start` and poll until running
-
-### 3. Scale Out a VM Scale Set and Manage Instances
-
-1. Get current VMSS config: GET `.../virtualMachineScaleSets/{vmScaleSetName}`
-2. Update capacity by PATCHing the VMSS with new `sku.capacity` value: PATCH `.../virtualMachineScaleSets/{vmScaleSetName}`
-3. List instances in the scale set: GET `.../virtualMachineScaleSets/{vmScaleSetName}/virtualMachines`
-4. Check individual instance health: GET `.../virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}/instanceView`
-5. To remove specific unhealthy instances: POST `.../virtualMachineScaleSets/{vmScaleSetName}/delete` with `vmInstanceIDs` body containing the instance IDs to remove
-
-### 4. Install and Manage VM Extensions
-
-1. List existing extensions on the VM: GET `.../virtualMachines/{vmName}/extensions`
-2. Install a new extension: PUT `.../virtualMachines/{vmName}/extensions/{vmExtensionName}` with `extensionParameters` specifying `publisher`, `type`, `typeHandlerVersion`, and `settings`
-3. Poll the async operation if you receive 202; check for 201 (created) or 200 (updated)
-4. Verify extension status: GET `.../virtualMachines/{vmName}/extensions/{vmExtensionName}?$expand=instanceView`
-5. To update settings: PATCH `.../virtualMachines/{vmName}/extensions/{vmExtensionName}` with modified `extensionParameters`
-6. To remove: DELETE `.../virtualMachines/{vmName}/extensions/{vmExtensionName}` and poll until complete
-
-### 5. Capture a VM as a Custom Image for Reuse
-
-1. Stop and deallocate the source VM: POST `.../virtualMachines/{vmName}/deallocate` and wait for completion
-2. Generalize the VM (marks it as sysprepped): POST `.../virtualMachines/{vmName}/generalize`
-3. Capture the VM: POST `.../virtualMachines/{vmName}/capture` with `parameters` specifying `vhdPrefix` and `destinationContainerName`
-4. Poll the async operation; the result contains the VHD template URI
-5. Optionally, create a managed image resource: PUT `.../images/{imageName}` pointing to the captured VHD
-6. The original VM is no longer usable after generalization; delete it or create new VMs from the captured image
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all operations?" -> GET /providers/Microsoft.Compute/operations
+- "List all availabilitySets?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/availabilitySets
+- "List all hostGroups?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/hostGroups
+- "List all images?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/images
+- "Create a getRequestRateByInterval?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/logAnalytics/apiAccess/getRequestRateByInterval
+- "Create a getThrottledRequest?" -> POST /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/logAnalytics/apiAccess/getThrottledRequests
+- "List all publishers?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/publishers
+- "List all types?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/publishers/{publisherName}/artifacttypes/vmextension/types
+- "List all versions?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/publishers/{publisherName}/artifacttypes/vmextension/types/{type}/versions
+- "Get version details?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/publishers/{publisherName}/artifacttypes/vmextension/types/{type}/versions/{version}
+- "List all offers?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/publishers/{publisherName}/artifacttypes/vmimage/offers
+- "List all skus?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/publishers/{publisherName}/artifacttypes/vmimage/offers/{offer}/skus
+- "List all versions?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/publishers/{publisherName}/artifacttypes/vmimage/offers/{offer}/skus/{skus}/versions
+- "Get version details?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/publishers/{publisherName}/artifacttypes/vmimage/offers/{offer}/skus/{skus}/versions/{version}
+- "List all usages?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/usages
+- "List all virtualMachines?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/virtualMachines
+- "List all vmSizes?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/{location}/vmSizes
+- "List all proximityPlacementGroups?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/proximityPlacementGroups
+- "List all virtualMachineScaleSets?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/virtualMachineScaleSets
+- "List all virtualMachines?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Compute/virtualMachines
+- "List all availabilitySets?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/availabilitySets
+- "Delete a availabilitySet?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/availabilitySets/{availabilitySetName}
+- "Get availabilitySet details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/availabilitySets/{availabilitySetName}
+- "Partially update a availabilitySet?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/availabilitySets/{availabilitySetName}
+- "Update a availabilitySet?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/availabilitySets/{availabilitySetName}
+- "List all vmSizes?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/availabilitySets/{availabilitySetName}/vmSizes
+- "List all hostGroups?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/hostGroups
+- "Delete a hostGroup?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/hostGroups/{hostGroupName}
+- "Get hostGroup details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/hostGroups/{hostGroupName}
+- "Partially update a hostGroup?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/hostGroups/{hostGroupName}
+- "Update a hostGroup?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/hostGroups/{hostGroupName}
+- "List all hosts?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/hostGroups/{hostGroupName}/hosts
+- "Delete a host?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/hostGroups/{hostGroupName}/hosts/{hostName}
+- "Get host details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/hostGroups/{hostGroupName}/hosts/{hostName}
+- "Partially update a host?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/hostGroups/{hostGroupName}/hosts/{hostName}
+- "Update a host?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/hostGroups/{hostGroupName}/hosts/{hostName}
+- "List all images?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/images
+- "Delete a image?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/images/{imageName}
+- "Get image details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/images/{imageName}
+- "Partially update a image?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/images/{imageName}
+- "Update a image?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/images/{imageName}
+- "List all proximityPlacementGroups?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/proximityPlacementGroups
+- "Delete a proximityPlacementGroup?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/proximityPlacementGroups/{proximityPlacementGroupName}
+- "Get proximityPlacementGroup details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/proximityPlacementGroups/{proximityPlacementGroupName}
+- "Partially update a proximityPlacementGroup?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/proximityPlacementGroups/{proximityPlacementGroupName}
+- "Update a proximityPlacementGroup?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/proximityPlacementGroups/{proximityPlacementGroupName}
+- "List all virtualMachineScaleSets?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets
+- "List all virtualMachines?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{virtualMachineScaleSetName}/virtualMachines
+- "Delete a virtualMachineScaleSet?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}
+- "Get virtualMachineScaleSet details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}
+- "Partially update a virtualMachineScaleSet?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}
+- "Update a virtualMachineScaleSet?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}
+- "Create a convertToSinglePlacementGroup?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/convertToSinglePlacementGroup
+- "Create a deallocate?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/deallocate
+- "Create a delete?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/delete
+- "Create a extensionRollingUpgrade?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/extensionRollingUpgrade
+- "List all extensions?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/extensions
+- "Delete a extension?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/extensions/{vmssExtensionName}
+- "Get extension details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/extensions/{vmssExtensionName}
+- "Update a extension?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/extensions/{vmssExtensionName}
+- "Create a forceRecoveryServiceFabricPlatformUpdateDomainWalk?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/forceRecoveryServiceFabricPlatformUpdateDomainWalk
+- "List all instanceView?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/instanceView
+- "Create a manualupgrade?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/manualupgrade
+- "Create a osRollingUpgrade?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/osRollingUpgrade
+- "List all osUpgradeHistory?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/osUpgradeHistory
+- "Create a performMaintenance?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/performMaintenance
+- "Create a poweroff?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/poweroff
+- "Create a redeploy?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/redeploy
+- "Create a reimage?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/reimage
+- "Create a reimageall?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/reimageall
+- "Create a restart?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/restart
+- "Create a cancel?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/rollingUpgrades/cancel
+- "List all latest?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/rollingUpgrades/latest
+- "List all skus?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/skus
+- "Create a start?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/start
+- "Delete a virtualmachine?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}
+- "Get virtualmachine details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}
+- "Update a virtualmachine?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}
+- "Create a deallocate?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}/deallocate
+- "List all instanceView?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}/instanceView
+- "Create a performMaintenance?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}/performMaintenance
+- "Create a poweroff?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}/poweroff
+- "Create a redeploy?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}/redeploy
+- "Create a reimage?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}/reimage
+- "Create a reimageall?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}/reimageall
+- "Create a restart?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}/restart
+- "Create a start?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachineScaleSets/{vmScaleSetName}/virtualmachines/{instanceId}/start
+- "List all virtualMachines?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines
+- "Delete a virtualMachine?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}
+- "Get virtualMachine details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}
+- "Partially update a virtualMachine?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}
+- "Update a virtualMachine?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}
+- "Create a capture?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/capture
+- "Create a convertToManagedDisk?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/convertToManagedDisks
+- "Create a deallocate?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/deallocate
+- "List all extensions?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/extensions
+- "Delete a extension?" -> DELETE /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/extensions/{vmExtensionName}
+- "Get extension details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/extensions/{vmExtensionName}
+- "Partially update a extension?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/extensions/{vmExtensionName}
+- "Update a extension?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/extensions/{vmExtensionName}
+- "Create a generalize?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/generalize
+- "List all instanceView?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/instanceView
+- "Create a performMaintenance?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/performMaintenance
+- "Create a powerOff?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/powerOff
+- "Create a redeploy?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/redeploy
+- "Create a reimage?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/reimage
+- "Create a restart?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/restart
+- "Create a start?" -> POST /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/start
+- "List all vmSizes?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Compute/virtualMachines/{vmName}/vmSizes
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

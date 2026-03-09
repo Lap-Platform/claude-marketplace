@@ -48,75 +48,19 @@ Not specified.
 |--------|------|-------------|
 | POST | /v1/speech | Synthesizes UTF-8 input, plain text or SSML, to a stream of bytes. SSML input must be valid, well-formed SSML. Some alphabets might not be available with all the voices (for example, Cyrillic might not be read at all by English voices) unless phoneme mapping is used. For more information, see How it Works. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What voices are available for text-to-speech?" -> GET /v1/voices
-- "Which voices support neural engine?" -> GET /v1/voices (filter Engine=neural)
-- "List voices for a specific language like French?" -> GET /v1/voices (filter LanguageCode=fr-FR)
-- "Convert this text to speech audio?" -> POST /v1/speech
-- "Generate speech using SSML markup?" -> POST /v1/speech (TextType=ssml)
-- "Start a long-form speech synthesis job?" -> POST /v1/synthesisTasks
-- "What is the status of my synthesis task?" -> GET /v1/synthesisTasks/{TaskId}
-- "List all my running synthesis tasks?" -> GET /v1/synthesisTasks (Status=inProgress)
-- "What pronunciation lexicons do I have?" -> GET /v1/lexicons
-- "Get the contents of a specific lexicon?" -> GET /v1/lexicons/{LexiconName}
-- "Upload a custom pronunciation lexicon?" -> PUT /v1/lexicons/{LexiconName}
-- "Delete a lexicon I no longer need?" -> DELETE /v1/lexicons/{LexiconName}
-- "How many characters did my last synthesis use?" -> GET /v1/synthesisTasks/{TaskId} (check RequestCharacters)
-- "Where is the output file for my synthesis task?" -> GET /v1/synthesisTasks/{TaskId} (check OutputUri)
-- "Synthesize speech with a custom lexicon applied?" -> POST /v1/speech (include LexiconNames)
-
-## Response Tips
-
-- **Voices**: Paginated via `NextToken`; always check for it and loop until absent. Each `Voice` object varies by engine support.
-- **Speech**: Returns raw `AudioStream` bytes with `ContentType` header indicating format (e.g., `audio/mpeg`); `RequestCharacters` tracks billing usage.
-- **Synthesis Tasks**: `TaskStatus` cycles through `scheduled` -> `inProgress` -> `completed` or `failed`; check `TaskStatusReason` on failure. List endpoint supports `MaxResults` for page size.
-- **Lexicons**: `LexiconAttributes` nests metadata separately from `Content`; `LexemesCount` and `Size` help gauge lexicon complexity. List is paginated via `NextToken`.
-
-## Anomaly Flags
-
-- **Task failure**: Surface immediately when `TaskStatus` is `failed` -- include `TaskStatusReason` for diagnosis.
-- **Character consumption spikes**: Flag when `RequestCharacters` on a synthesis task is unusually high relative to prior tasks, as Polly bills per character.
-- **Empty voice list**: If GET /v1/voices returns no results for a given engine/language combo, warn that the combination may be unsupported rather than silently proceeding.
-- **Stale tasks**: Flag synthesis tasks stuck in `scheduled` or `inProgress` for an extended period (compare `CreationTime` to now).
-- **Lexicon size limits**: Surface when `LexemesCount` or `Size` in lexicon attributes approaches AWS service limits (max 4,000 lexemes, 100 KB).
-- **Pagination truncation**: Warn if a `NextToken` is present but the caller did not request subsequent pages -- results are incomplete.
-- **Deprecated engine usage**: If the caller uses `standard` engine where `neural` or `generative` is available for that voice, suggest upgrading for better quality.
-
-## Playbook
-
-### 1. Convert Text to Speech (Quick Synthesis)
-
-1. Call GET /v1/voices with desired `LanguageCode` and `Engine` to find a suitable `VoiceId`.
-2. Call POST /v1/speech with `OutputFormat` (e.g., `mp3`), `Text`, and the chosen `VoiceId`.
-3. Read the `AudioStream` bytes from the response and save to a file.
-4. Check `RequestCharacters` to track usage against billing.
-
-### 2. Run a Long-Form Synthesis Job
-
-1. Call POST /v1/synthesisTasks with `Text`, `VoiceId`, `OutputFormat`, and `OutputS3BucketName` (plus optional `OutputS3KeyPrefix`).
-2. Note the `TaskId` from the response.
-3. Poll GET /v1/synthesisTasks/{TaskId} until `TaskStatus` is `completed` or `failed`.
-4. On completion, retrieve the audio file from the S3 location in `OutputUri`.
-5. On failure, read `TaskStatusReason` and adjust parameters before retrying.
-
-### 3. Manage Custom Pronunciation Lexicons
-
-1. Author a PLS (Pronunciation Lexicon Specification) XML document with custom pronunciations.
-2. Call PUT /v1/lexicons/{LexiconName} with `Content` set to the PLS XML.
-3. Verify upload by calling GET /v1/lexicons/{LexiconName} and inspecting `LexiconAttributes`.
-4. Use the lexicon in synthesis by passing its name in `LexiconNames` on POST /v1/speech or POST /v1/synthesisTasks.
-5. Clean up unused lexicons with DELETE /v1/lexicons/{LexiconName}.
-
-### 4. Audit and Monitor All Synthesis Tasks
-
-1. Call GET /v1/synthesisTasks with `MaxResults` set to your desired page size.
-2. Loop using `NextToken` until all tasks are retrieved.
-3. Filter by `Status` (e.g., `failed`) to find tasks needing attention.
-4. For each failed task, call GET /v1/synthesisTasks/{TaskId} to get full details and `TaskStatusReason`.
-5. Sum `RequestCharacters` across tasks to estimate billing for the period.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Delete a lexicon?" -> DELETE /v1/lexicons/{LexiconName}
+- "List all voices?" -> GET /v1/voices
+- "Get lexicon details?" -> GET /v1/lexicons/{LexiconName}
+- "Get synthesisTask details?" -> GET /v1/synthesisTasks/{TaskId}
+- "List all lexicons?" -> GET /v1/lexicons
+- "List all synthesisTasks?" -> GET /v1/synthesisTasks
+- "Update a lexicon?" -> PUT /v1/lexicons/{LexiconName}
+- "Create a synthesisTask?" -> POST /v1/synthesisTasks
+- "Create a speech?" -> POST /v1/speech
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

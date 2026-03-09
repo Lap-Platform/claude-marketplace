@@ -6,13 +6,13 @@ generator: lapsh
 ---
 
 # Metadata API
-API version: v1.12.0
+API version: v1.12.1
 
 ## Auth
 OAuth2
 
 ## Base URL
-https://api.ebay.com{basePath}
+https://api.ebay.com/sell/metadata/v1
 
 ## Setup
 1. Configure auth: OAuth2
@@ -66,83 +66,37 @@ https://api.ebay.com{basePath}
 |--------|------|-------------|
 | GET | /country/{countryCode}/sales_tax_jurisdiction | This method retrieves all sales-tax jurisdictions for the country specified in the <b>countryCode</b> path parameter. Countries with valid sales-tax jurisdictions are Canada and the US.<br><br>The response from this call tells you the jurisdictions for which a seller can configure tax tables. Although setting up tax tables is optional, you can use the <b>createOrReplaceSalesTax</b> method in the <b>Account API</b> call to configure the tax tables for the jurisdictions into which you sell.<br><br><span class="tablenote"><b>Note:</b> Sales-tax tables are only available for the US (EBAY_US) and Canada (EBAY_CA) marketplaces.</span><br><br><div class="msgbox_important"><p class="msgbox_importantInDiv" data-mc-autonum="&lt;b&gt;&lt;span style=&quot;color: #dd1e31;&quot; class=&quot;mcFormatColor&quot;&gt;Important! &lt;/span&gt;&lt;/b&gt;"><span class="autonumber"><span><b><span style="color: #dd1e31;" class="mcFormatColor">Important!</span></b></span></span> In the US, eBay now calculates, collects, and remits sales tax to the proper taxing authorities in all 50 states and Washington, DC. Sellers can no longer specify sales-tax rates for these jurisdictions using a tax table.<br><br>However, sellers may continue to use a sales-tax table to set rates for the following US territories:<ul><li>American Samoa (AS)</li><li>Guam (GU)</li><li>Northern Mariana Islands (MP)</li><li>Palau (PW)</li><li>US Virgin Islands (VI)</li></ul>For additional information, refer to <a href="https://www.ebay.com/help/selling/fees-credits-invoices/taxes-import-charges?id=4121 " target="_blank">Taxes and import charges</a>.</p></div> |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What currencies does the eBay US marketplace use?" -> GET /marketplace/{marketplace_id}/get_currencies
-- "What return policies apply to category 15032 on EBAY_DE?" -> GET /marketplace/{marketplace_id}/get_return_policies
-- "Which shipping carriers are available on EBAY_UK?" -> GET /shipping/marketplace/{marketplace_id}/get_shipping_carriers
-- "What item conditions can I use for listings on EBAY_US?" -> GET /marketplace/{marketplace_id}/get_item_condition_policies
-- "What are the compatible vehicles for a specific auto part?" -> POST /compatibilities/get_compatibilities_by_specification
-- "Which locations can I exclude from shipping on EBAY_AU?" -> GET /shipping/marketplace/{marketplace_id}/get_exclude_shipping_locations
-- "What hazardous material labels exist for EBAY_DE?" -> GET /marketplace/{marketplace_id}/get_hazardous_materials_labels
-- "What listing types (auction, fixed price) are allowed for a category?" -> GET /marketplace/{marketplace_id}/get_listing_type_policies
-- "What are the sales tax jurisdictions for the US?" -> GET /country/{countryCode}/sales_tax_jurisdiction
-- "Can I list motors vehicles on EBAY_MOTORS?" -> GET /marketplace/{marketplace_id}/get_motors_listing_policies
-- "What compatibility property names are available for a parts category?" -> POST /compatibilities/get_compatibility_property_names
-- "What values can I use for the 'Year' compatibility property?" -> POST /compatibilities/get_compatibility_property_values
-- "What products are compatible with a given EPID or UPC?" -> POST /compatibilities/get_product_compatibilities
-- "What extended producer responsibility rules apply on EBAY_FR?" -> GET /marketplace/{marketplace_id}/get_extended_producer_responsibility_policies
-- "What shipping services and handling times does EBAY_US support?" -> GET /shipping/marketplace/{marketplace_id}/get_shipping_services + GET /shipping/marketplace/{marketplace_id}/get_handling_times
-
-## Response Tips
-
-- **Marketplace policies**: All return arrays of policy maps plus a `warnings` array; always check warnings for deprecated categories or upcoming policy changes. A 204 means the marketplace has no data for that policy type -- do not treat as an error.
-- **Compatibilities (POST)**: Responses include `pagination` with `count`, `limit`, `offset`, `total`; iterate using offset increments equal to limit until offset + count >= total.
-- **Shipping**: Responses are flat arrays (no pagination); the full dataset is returned in one call. No warnings field -- errors jump straight to 400/500.
-- **Country**: Returns `salesTaxJurisdictions` as a flat array keyed by jurisdiction ID; no pagination or warnings.
-- **Errors**: All endpoints share the same error codes (400, 404, 500). 400 typically means invalid marketplace_id or malformed filter; 404 means the marketplace_id is not recognized; 500 is transient -- retry with backoff.
-
-## Anomaly Flags
-
-- **204 No Content**: Surface when any policy endpoint returns 204 -- this means the marketplace genuinely has no policies of that type, which may indicate the seller picked the wrong marketplace_id.
-- **Non-empty warnings array**: Always surface `warnings` from marketplace policy responses; these flag deprecated categories, upcoming rule changes, or partial data.
-- **Pagination underflow**: If a compatibilities response returns `pagination.total` much larger than `pagination.count`, alert the user that they are only seeing a subset and need to paginate.
-- **Auth failures (401)**: Only compatibilities endpoints require OAuth2 authentication; surface 401 errors with a reminder to check token scopes (`api_scope:sell.metadata`).
-- **Unknown marketplace_id**: If multiple calls return 404, proactively suggest valid marketplace IDs (EBAY_US, EBAY_GB, EBAY_DE, EBAY_AU, EBAY_FR, etc.).
-- **Filter parameter misuse**: If a 400 error follows a call with a `filter` parameter, flag that filters use the format `categoryId:{id}` and suggest the correct syntax.
-
-## Playbook
-
-### 1. Prepare a New Listing for a Specific Category
-
-1. Call `GET /marketplace/{marketplace_id}/get_item_condition_policies` with `filter=categoryId:{id}` to find allowed conditions.
-2. Call `GET /marketplace/{marketplace_id}/get_listing_type_policies` with the same filter to determine auction vs fixed-price availability.
-3. Call `GET /marketplace/{marketplace_id}/get_listing_structure_policies` with the same filter to check variation/multi-SKU support.
-4. Call `GET /marketplace/{marketplace_id}/get_return_policies` with the same filter to understand mandatory return windows.
-5. Call `GET /marketplace/{marketplace_id}/get_regulatory_policies` with the same filter to check for required compliance disclosures.
-6. Review `warnings` in each response for category-specific restrictions.
-
-### 2. Configure Shipping for an International Listing
-
-1. Call `GET /shipping/marketplace/{marketplace_id}/get_shipping_services` to list available domestic and international services.
-2. Call `GET /shipping/marketplace/{marketplace_id}/get_shipping_carriers` to identify supported carriers.
-3. Call `GET /shipping/marketplace/{marketplace_id}/get_handling_times` to find valid dispatch windows.
-4. Call `GET /shipping/marketplace/{marketplace_id}/get_shipping_locations` to see all regions you can ship to.
-5. Call `GET /shipping/marketplace/{marketplace_id}/get_exclude_shipping_locations` to identify locations you can block (e.g., PO boxes, APO).
-
-### 3. Build a Vehicle Compatibility List for an Auto Part
-
-1. Call `POST /compatibilities/get_compatibility_property_names` with the parts `categoryId` to discover properties (Make, Model, Year, Trim, Engine).
-2. Call `POST /compatibilities/get_compatibility_property_values` for each property in sequence, passing prior selections as `propertyFilters` to narrow results (e.g., get Years for Make=Toyota, Model=Camry).
-3. Call `POST /compatibilities/get_compatibilities_by_specification` with full specifications to validate the combination and retrieve compatibility details.
-4. Paginate through results using `paginationInput.offset` increments until all matches are retrieved.
-
-### 4. Check Product Compatibility by Identifier
-
-1. Call `POST /compatibilities/get_product_compatibilities` with a `productIdentifier` (EPID, UPC, EAN, or ISBN) to find all compatible applications.
-2. Use `datasetPropertyName` to limit which fields are returned per result.
-3. Page through results using `paginationInput` -- check `pagination.total` to know how many pages remain.
-4. Optionally apply `disabledProductFilter` to exclude products disabled for eBay selling or reviews.
-
-### 5. Audit Marketplace Compliance Requirements
-
-1. Call `GET /marketplace/{marketplace_id}/get_extended_producer_responsibility_policies` to check EPR obligations (common in EU marketplaces).
-2. Call `GET /marketplace/{marketplace_id}/get_hazardous_materials_labels` to retrieve required GHS signal words, statements, and pictograms.
-3. Call `GET /marketplace/{marketplace_id}/get_product_safety_labels` to find mandatory product safety pictograms and statements.
-4. Call `GET /marketplace/{marketplace_id}/get_regulatory_policies` with category filter to see per-category regulatory requirements.
-5. Cross-reference all results against the listing's product attributes to ensure full compliance before publishing.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all get_automotive_parts_compatibility_policies?" -> GET /marketplace/{marketplace_id}/get_automotive_parts_compatibility_policies
+- "List all get_category_policies?" -> GET /marketplace/{marketplace_id}/get_category_policies
+- "List all get_classified_ad_policies?" -> GET /marketplace/{marketplace_id}/get_classified_ad_policies
+- "List all get_currencies?" -> GET /marketplace/{marketplace_id}/get_currencies
+- "List all get_extended_producer_responsibility_policies?" -> GET /marketplace/{marketplace_id}/get_extended_producer_responsibility_policies
+- "List all get_hazardous_materials_labels?" -> GET /marketplace/{marketplace_id}/get_hazardous_materials_labels
+- "List all get_item_condition_policies?" -> GET /marketplace/{marketplace_id}/get_item_condition_policies
+- "List all get_listing_structure_policies?" -> GET /marketplace/{marketplace_id}/get_listing_structure_policies
+- "List all get_listing_type_policies?" -> GET /marketplace/{marketplace_id}/get_listing_type_policies
+- "List all get_motors_listing_policies?" -> GET /marketplace/{marketplace_id}/get_motors_listing_policies
+- "List all get_negotiated_price_policies?" -> GET /marketplace/{marketplace_id}/get_negotiated_price_policies
+- "List all get_product_safety_labels?" -> GET /marketplace/{marketplace_id}/get_product_safety_labels
+- "List all get_regulatory_policies?" -> GET /marketplace/{marketplace_id}/get_regulatory_policies
+- "List all get_return_policies?" -> GET /marketplace/{marketplace_id}/get_return_policies
+- "List all get_shipping_policies?" -> GET /marketplace/{marketplace_id}/get_shipping_policies
+- "List all get_site_visibility_policies?" -> GET /marketplace/{marketplace_id}/get_site_visibility_policies
+- "Create a get_compatibilities_by_specification?" -> POST /compatibilities/get_compatibilities_by_specification
+- "Create a get_compatibility_property_name?" -> POST /compatibilities/get_compatibility_property_names
+- "Create a get_compatibility_property_value?" -> POST /compatibilities/get_compatibility_property_values
+- "Create a get_multi_compatibility_property_value?" -> POST /compatibilities/get_multi_compatibility_property_values
+- "Create a get_product_compatibility?" -> POST /compatibilities/get_product_compatibilities
+- "List all get_exclude_shipping_locations?" -> GET /shipping/marketplace/{marketplace_id}/get_exclude_shipping_locations
+- "List all get_handling_times?" -> GET /shipping/marketplace/{marketplace_id}/get_handling_times
+- "List all get_shipping_carriers?" -> GET /shipping/marketplace/{marketplace_id}/get_shipping_carriers
+- "List all get_shipping_locations?" -> GET /shipping/marketplace/{marketplace_id}/get_shipping_locations
+- "List all get_shipping_services?" -> GET /shipping/marketplace/{marketplace_id}/get_shipping_services
+- "List all sales_tax_jurisdiction?" -> GET /country/{countryCode}/sales_tax_jurisdiction
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

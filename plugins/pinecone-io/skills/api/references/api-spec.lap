@@ -9,82 +9,97 @@
 
 @group collections
 @endpoint GET /collections
-@returns(200)
+@desc List collections
+@returns(200) This operation returns a list of all the collections in your current project.
 
 @endpoint POST /collections
-@required {name: str(CollectionName), source: str(IndexName)}
-@returns(201)
-@errors {400, 409, 500}
+@desc Create collection
+@required {name: str(CollectionName) # The unique name of a collection., source: str(IndexName) # The unique name of an index.}
+@returns(201) The collection has been successfully created.
+@errors {400: Quota exceeded, or invalid parameters., 409: A collection with the name provided already exists., 500: Internal error. Can be caused by invalid parameters.}
 
 @endpoint GET /collections/{collectionName}
-@returns(200) {name: str(CollectionName), size: int(int64), status: str(CollectionState)}
-@errors {404, 500}
+@desc Describe collection
+@returns(200) {name: str(CollectionName), size: int(int64), status: str(CollectionState)} # This operation returns a list of all the collections in your current project.
+@errors {404: Collection not found., 500: Internal error. Can be caused by invalid parameters.}
 
 @endpoint DELETE /collections/{collectionName}
-@returns(202)
-@errors {404, 500}
+@desc Delete Collection
+@returns(202) The collection has been successfully deleted.
+@errors {404: Collection not found., 500: Internal error. Can be caused by invalid parameters.}
 
 @endgroup
 
 @group databases
 @endpoint GET /databases
-@returns(200)
+@desc List indexes
+@returns(200) This operation returns a list of all the indexes that you have previously created, and which are associated with the given API key
 
 @endpoint POST /databases
-@required {name: str(IndexName), dimension: int(int32)}
-@optional {metric: str(euclidean/cosine/dotproduct), pods: int(int32)=1, replicas: int(int32)=1, pod_type: str(s1.x1/s1.x2/s1.x4/s1.x8/p1.x1/p1.x2/p1.x4/p1.x8/p2.x1/p2.x2/p2.x4/p2.x8), metadata_config: map{indexed: [str]}, source_collection: str(CollectionName)}
-@returns(201)
-@errors {400, 409, 500}
+@desc Create index
+@required {name: str(IndexName) # The unique name of an index., dimension: int(int32) # The number of dimensions in the vector representation}
+@optional {metric: str(euclidean/cosine/dotproduct) # The vector similarity metric of the index, pods: int(int32)=1 # The number of pods for the index to use,including replicas., replicas: int(int32)=1 # The number of replicas. Replicas duplicate your index. They provide higher availability and throughput., pod_type: str(s1.x1/s1.x2/s1.x4/s1.x8/p1.x1/p1.x2/p1.x4/p1.x8/p2.x1/p2.x2/p2.x4/p2.x8) # The pod type, metadata_config: map{indexed: [str]} # Configuration for the behavior of Pinecone's internal metadata index. By default, all metadata is indexed; when metadata_config is present, only specified metadata fields are indexed., source_collection: str(CollectionName) # The unique name of a collection.}
+@returns(201) The collection has been successfully created.
+@errors {400: Quota exceeded, or invalid parameters., 409: Index of given name already exists., 500: Internal error. Can be caused by invalid parameters.}
 
 @endpoint GET /databases/{indexName}
-@returns(200) {database: map{name: str(IndexName), metric: str, dimension: int(int32), replicas: int(int32), shards: int(int32), pods: int(int32), pod_type: str}, status: map{host: str(Hostname), port: int(int32), state: str(IndexState), ready: bool}}
-@errors {404, 500}
+@desc Describe index
+@returns(200) {database: map{name: str(IndexName), metric: str, dimension: int(int32), replicas: int(int32), shards: int(int32), pods: int(int32), pod_type: str}, status: map{host: str(Hostname), port: int(int32), state: str(IndexState), ready: bool}} # This operation returns a list of all the collections in your current project.
+@errors {404: Index not found., 500: Internal error. Can be caused by invalid parameters.}
 
 @endpoint DELETE /databases/{indexName}
-@returns(202)
-@errors {404, 500}
+@desc Delete Index
+@returns(202) The index has been successfully deleted.
+@errors {404: Index not found., 500: Internal error. Can be caused by invalid parameters.}
 
 @endpoint PATCH /databases/{indexName}
-@optional {replicas: int(int32)=1, pod_type: str(s1.x1/s1.x2/s1.x4/s1.x8/p1.x1/p1.x2/p1.x4/p1.x8/p2.x1/p2.x2/p2.x4/p2.x8)}
-@returns(201)
-@errors {400, 404, 500}
+@desc Configure index
+@optional {replicas: int(int32)=1 # The desired number of replicas for the index., pod_type: str(s1.x1/s1.x2/s1.x4/s1.x8/p1.x1/p1.x2/p1.x4/p1.x8/p2.x1/p2.x2/p2.x4/p2.x8) # The pod type}
+@returns(201) The index has been successfully updated.
+@errors {400: Quota exceeded, or invalid parameters., 404: Index not found., 500: Internal error. Can be caused by invalid parameters.}
 
 @endgroup
 
 @group describe_index_stats
 @endpoint POST /describe_index_stats
-@optional {filter: map}
-@returns(200) {namespaces: map, dimension: int(int32), indexFullness: num(float), totalVectorCount: int(int64)}
+@desc Describe Index Stats
+@optional {filter: map # If this parameter is present, the operation only affects vectors that satisfy the filter. See https://www.pinecone.io/docs/metadata-filtering/.}
+@returns(200) {namespaces: map, dimension: int(int32), indexFullness: num(float), totalVectorCount: int(int64)} # A successful response
 
 @endgroup
 
 @group query
 @endpoint POST /query
-@required {topK: int(int64)=100}
-@optional {namespace: str(NamespaceName), filter: map, includeValues: bool=False, includeMetadata: bool=False, vector: [num(float)], sparseVector: map{indices!: [int(int64)], values!: [num(float)]}, id: str(VectorId)}
-@returns(200) {matches: [map], namespace: str(NamespaceName)}
+@desc Query
+@required {topK: int(int64)=100 # The number of results to return for each query.}
+@optional {namespace: str(NamespaceName) # An index namespace name, filter: map # If this parameter is present, the operation only affects vectors that satisfy the filter. See https://www.pinecone.io/docs/metadata-filtering/., includeValues: bool=False, includeMetadata: bool=False, vector: [num(float)] # Vector dense data. This should be the same length as the dimension of the index being queried., sparseVector: map{indices!: [int(int64)], values!: [num(float)]} # Vector sparse data. Represented as a list of indices and a list of corresponded values, which must be the same length., id: str(VectorId) # The unique ID of a vector}
+@returns(200) {matches: [map], namespace: str(NamespaceName)} # A successful response
 
 @endgroup
 
 @group vectors
 @endpoint POST /vectors/delete
-@optional {ids: [str(VectorId)], deleteAll: bool=False, namespace: str(NamespaceName), filter: map}
-@returns(200)
+@desc Delete
+@optional {ids: [str(VectorId)], deleteAll: bool=False, namespace: str(NamespaceName) # An index namespace name, filter: map # If this parameter is present, the operation only affects vectors that satisfy the filter. See https://www.pinecone.io/docs/metadata-filtering/.}
+@returns(200) A successful response
 
 @endpoint POST /vectors/fetch
+@desc Fetch
 @required {ids: [str(VectorId)]}
-@optional {namespace: str(NamespaceName)}
-@returns(200) {vectors: map, namespace: str(NamespaceName)}
+@optional {namespace: str(NamespaceName) # An index namespace name}
+@returns(200) {vectors: map, namespace: str(NamespaceName)} # A successful response
 
 @endpoint POST /vectors/update
-@required {id: str(VectorId)}
-@optional {values: [num(float)], sparseValues: map{indices!: [int(int64)], values!: [num(float)]}, setMetadata: map, namespace: str(NamespaceName)}
-@returns(200)
+@desc Fetch
+@required {id: str(VectorId) # The vector's unique ID}
+@optional {values: [num(float)] # Vector dense data. This should be the same length as the dimension of the index being queried., sparseValues: map{indices!: [int(int64)], values!: [num(float)]} # Vector sparse data. Represented as a list of indices and a list of corresponded values, which must be the same length., setMetadata: map, namespace: str(NamespaceName) # An index namespace name}
+@returns(200) A successful response
 
 @endpoint POST /vectors/upsert
+@desc Upsert
 @required {vectors: [map{id: str(VectorId), values: [num(float)], sparseValues: map{indices!: [int(int64)], values!: [num(float)]}, metadata: map}]}
-@optional {namespace: str(NamespaceName)}
-@returns(200) {upsertedCount: int(int64)}
+@optional {namespace: str(NamespaceName) # An index namespace name}
+@returns(200) {upsertedCount: int(int64)} # A successful response
 
 @endgroup
 

@@ -55,82 +55,28 @@ Not specified.
 | POST | /tags/{resourceArn} | Adds one or more tags to a specified Amazon QLDB resource. A resource can have up to 50 tags. If you try to create more than 50 tags for a resource, your request fails and returns an error. |
 | DELETE | /tags/{resourceArn} | Removes one or more tags from a specified Amazon QLDB resource. You can specify up to 50 tag keys to remove. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new QLDB ledger?" -> POST /ledgers
-- "How do I delete a ledger?" -> DELETE /ledgers/{name}
-- "What ledgers exist in my account?" -> GET /ledgers
-- "What is the current state of my ledger?" -> GET /ledgers/{name}
-- "How do I enable or disable deletion protection on a ledger?" -> PATCH /ledgers/{name}
-- "How do I change the permissions mode of a ledger?" -> PATCH /ledgers/{name}/permissions-mode
-- "How do I export journal blocks to S3?" -> POST /ledgers/{name}/journal-s3-exports
-- "What is the status of my S3 export?" -> GET /ledgers/{name}/journal-s3-exports/{exportId}
-- "How do I list all journal exports across all ledgers?" -> GET /journal-s3-exports
-- "How do I stream journal data to Kinesis?" -> POST /ledgers/{name}/journal-kinesis-streams
-- "How do I check if a Kinesis stream is active?" -> GET /ledgers/{name}/journal-kinesis-streams/{streamId}
-- "How do I stop streaming to Kinesis?" -> DELETE /ledgers/{name}/journal-kinesis-streams/{streamId}
-- "How do I get the current digest of a ledger for verification?" -> POST /ledgers/{name}/digest
-- "How do I verify a specific document revision is intact?" -> POST /ledgers/{name}/revision
-- "How do I get a specific block and its proof for cryptographic verification?" -> POST /ledgers/{name}/block
-
-## Response Tips
-
-- **Ledger operations**: State field transitions through `CREATING` -> `ACTIVE` -> `DELETING`; poll GET /ledgers/{name} until desired state is reached.
-- **List endpoints** (GET /ledgers, GET /journal-s3-exports, GET /journal-kinesis-streams): Paginated via `NextToken` and `max_results`; loop until `NextToken` is null or absent.
-- **Export/stream descriptions**: Contain nested configuration objects (S3EncryptionConfiguration, KinesisConfiguration); always destructure one level deeper to get actionable fields.
-- **Verification endpoints** (block, revision, digest): Return `ValueHolder` objects with `IonText` strings that must be parsed as Amazon Ion format, not plain JSON.
-- **Tag operations**: POST returns no body on success; DELETE requires `tagKeys` as a query string array, not a body field.
-
-## Anomaly Flags
-
-- **Ledger state is not ACTIVE**: Surface immediately if GET /ledgers/{name} returns State as `CREATING`, `DELETING`, or `DELETED` -- most operations will fail on non-active ledgers.
-- **DeletionProtection is false**: Warn when describing a ledger that has deletion protection disabled, as it is vulnerable to accidental deletion.
-- **KMS key inaccessible**: If `EncryptionDescription.InaccessibleKmsKeyDateTime` is present, the ledger's KMS key has become inaccessible -- this is a critical issue requiring immediate attention.
-- **Kinesis stream in ERROR status**: If a stream's `Status` is `ERROR`, surface the `ErrorCause` field and recommend recreating the stream.
-- **Export status not COMPLETED**: Flag S3 exports stuck in `IN_PROGRESS` for an unusually long time or in `CANCELLED`/`FAILED` status.
-- **Permissions mode is STANDARD without IAM policies**: If `PermissionsMode` is `STANDARD`, remind the user that fine-grained IAM policies must be configured or access will be denied.
-
-## Playbook
-
-### 1. Create a Ledger and Verify It Is Ready
-
-1. POST /ledgers with `Name`, `PermissionsMode` (use `STANDARD` for production), and optionally `DeletionProtection: true`.
-2. Note the returned `Arn` and `State`.
-3. Poll GET /ledgers/{name} until `State` equals `ACTIVE`.
-4. Optionally tag the ledger with POST /tags/{resourceArn} using the ARN from step 2.
-
-### 2. Export Journal Blocks to S3 for Auditing
-
-1. GET /ledgers/{name} to confirm the ledger is `ACTIVE` and note its ARN.
-2. POST /ledgers/{name}/journal-s3-exports with the time range (`InclusiveStartTime`, `ExclusiveEndTime`), `S3ExportConfiguration` (bucket, prefix, encryption), and `RoleArn`.
-3. Save the returned `ExportId`.
-4. Poll GET /ledgers/{name}/journal-s3-exports/{exportId} until `Status` is `COMPLETED`.
-5. Access exported files in the specified S3 bucket and prefix.
-
-### 3. Set Up Real-Time Streaming to Kinesis
-
-1. Confirm the ledger is `ACTIVE` via GET /ledgers/{name}.
-2. POST /ledgers/{name}/journal-kinesis-streams with `StreamName`, `RoleArn`, `InclusiveStartTime`, and `KinesisConfiguration` (including the target Kinesis `StreamArn`).
-3. Save the returned `StreamId`.
-4. Poll GET /ledgers/{name}/journal-kinesis-streams/{streamId} until `Status` is `ACTIVE`.
-5. If `Status` becomes `ERROR`, read `ErrorCause`, fix the issue (usually IAM role permissions), delete the stream, and retry from step 2.
-
-### 4. Cryptographically Verify a Document Revision
-
-1. POST /ledgers/{name}/digest to get the current `Digest` and `DigestTipAddress`.
-2. POST /ledgers/{name}/revision with the `BlockAddress` of the target revision, the `DocumentId`, and the `DigestTipAddress` from step 1.
-3. Parse the returned `Revision.IonText` (Amazon Ion format) to read the document data.
-4. Use the returned `Proof` along with the `Digest` to perform local hash-chain verification.
-
-### 5. Clean Up a Ledger and Its Resources
-
-1. GET /ledgers/{name}/journal-kinesis-streams to list all active streams.
-2. For each stream, DELETE /ledgers/{name}/journal-kinesis-streams/{streamId}.
-3. If `DeletionProtection` is enabled, PATCH /ledgers/{name} with `DeletionProtection: false`.
-4. DELETE /ledgers/{name} to initiate ledger deletion.
-5. Optionally poll GET /ledgers/{name} to confirm the ledger reaches `DELETED` state (or returns 404).
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Delete a journal-kinesis-stream?" -> DELETE /ledgers/{name}/journal-kinesis-streams/{streamId}
+- "Create a ledger?" -> POST /ledgers
+- "Delete a ledger?" -> DELETE /ledgers/{name}
+- "Get journal-kinesis-stream details?" -> GET /ledgers/{name}/journal-kinesis-streams/{streamId}
+- "Get journal-s3-export details?" -> GET /ledgers/{name}/journal-s3-exports/{exportId}
+- "Get ledger details?" -> GET /ledgers/{name}
+- "Create a journal-s3-export?" -> POST /ledgers/{name}/journal-s3-exports
+- "Create a block?" -> POST /ledgers/{name}/block
+- "Create a digest?" -> POST /ledgers/{name}/digest
+- "Create a revision?" -> POST /ledgers/{name}/revision
+- "List all journal-kinesis-streams?" -> GET /ledgers/{name}/journal-kinesis-streams
+- "List all journal-s3-exports?" -> GET /journal-s3-exports
+- "List all journal-s3-exports?" -> GET /ledgers/{name}/journal-s3-exports
+- "List all ledgers?" -> GET /ledgers
+- "Get tag details?" -> GET /tags/{resourceArn}
+- "Create a journal-kinesis-stream?" -> POST /ledgers/{name}/journal-kinesis-streams
+- "Delete a tag?" -> DELETE /tags/{resourceArn}
+- "Partially update a ledger?" -> PATCH /ledgers/{name}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

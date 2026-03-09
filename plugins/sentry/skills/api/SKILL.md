@@ -1,6 +1,6 @@
 ---
 name: api-reference
-description: "API Reference API skill. Use when working with API Reference for api. Covers 214 endpoints."
+description: "API Reference API skill. Use when working with API Reference for api. Covers 215 endpoints."
 version: 1.0.0
 generator: lapsh
 ---
@@ -12,7 +12,7 @@ API version: v0
 Bearer bearer | Bearer DSN
 
 ## Base URL
-https://{region}.sentry.io
+https://us.sentry.io
 
 ## Setup
 1. Set Authorization header with your Bearer token
@@ -21,7 +21,7 @@ https://{region}.sentry.io
 
 ## Endpoints
 
-214 endpoints across 1 groups. See references/api-spec.lap for full details.
+215 endpoints across 1 groups. See references/api-spec.lap for full details.
 
 ### api
 | Method | Path | Description |
@@ -161,6 +161,7 @@ https://{region}.sentry.io
 | GET | /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/monitors/{monitor_id_or_slug}/checkins/ | Retrieve a list of check-ins for a monitor |
 | GET | /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/ownership/ | Returns details on a project's ownership configuration. |
 | PUT | /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/ownership/ | Updates ownership configurations for a project. Note that only the |
+| GET | /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/preprodartifacts/build-distribution/latest/ | Get the latest installable build for a project. |
 | DELETE | /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/replays/{replay_id}/ | Delete a replay. |
 | GET | /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/replays/{replay_id}/clicks/ | Retrieve a collection of RRWeb DOM node-ids and the timestamp they were clicked. |
 | GET | /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/replays/{replay_id}/recording-segments/ | Return a collection of replay recording segments. |
@@ -241,90 +242,210 @@ https://{region}.sentry.io
 | GET | /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/external-issues/ | Retrieve custom integration issue links for the given Sentry issue |
 | GET | /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/tags/{key}/ | Return a list of values associated with this key for an issue. When paginated can return at most 1000 values. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What organizations do I have access to?" -> GET /api/0/organizations/
-- "Show me details about my organization's settings" -> GET /api/0/organizations/{organization_id_or_slug}/
-- "What are the unresolved issues in my project?" -> GET /api/0/organizations/{organization_id_or_slug}/issues/
-- "Can you look up this short issue ID?" -> GET /api/0/organizations/{organization_id_or_slug}/shortids/{issue_id}/
-- "Resolve all issues matching a query in bulk" -> PUT /api/0/organizations/{organization_id_or_slug}/issues/
-- "What alert rules are configured for my org?" -> GET /api/0/organizations/{organization_id_or_slug}/alert-rules/
-- "Create a metric alert for high error rates" -> POST /api/0/organizations/{organization_id_or_slug}/alert-rules/
-- "Show me the latest event for this issue" -> GET /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/events/{event_id}/ (use event_id=latest)
-- "Who are the members of my organization?" -> GET /api/0/organizations/{organization_id_or_slug}/members/
-- "Invite a new user to the organization" -> POST /api/0/organizations/{organization_id_or_slug}/members/
-- "What cron monitors are set up and are any failing?" -> GET /api/0/organizations/{organization_id_or_slug}/monitors/
-- "Show me my project's DSN keys" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/keys/
-- "How many events has my project received this month?" -> GET /api/0/organizations/{organization_id_or_slug}/stats_v2/
-- "Deploy a new release to production" -> POST /api/0/organizations/{organization_id_or_slug}/releases/{version}/deploys/
-- "Run autofix on this issue" -> POST /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/autofix/
-
-## Response Tips
-
-- **List endpoints** (organizations, issues, members, teams, monitors, releases): Paginated via `cursor` query param. Check response headers for `Link` with `rel="next"` to detect more pages. Empty arrays mean end of results.
-- **Issues**: Default query is `is:unresolved`. The `status` field uses string values (`resolved`, `unresolved`, `ignored`, `muted`). `substatus` provides finer state (`archived_until_escalating`, `ongoing`, `regressed`, `new`). `count` is returned as a string, not int.
-- **Events/Discover**: Responses wrap data in `{data: [...], meta: {fields: ...}}`. The `meta.fields` map tells you column types. `dataset` is required and must be one of `logs`, `spans`, `profile_functions`, `uptime_results`.
-- **Stats**: `stats_v2` returns `{intervals: [...], groups: [...]}` where groups contain series data keyed by the `groupBy` values. `stats-summary` flattens to per-project totals.
-- **Alert rules**: `triggers` is an array of threshold objects. `thresholdType` 0 = above, 1 = below. `timeWindow` accepts only specific minute values (1, 5, 10, 15, 30, 60, 120, 240, 1440).
-- **Releases**: `version` is used as a path parameter and must be URL-encoded if it contains slashes or special characters. `shortVersion` is the display-friendly form.
-- **Monitors (Crons)**: Environment status is nested inside `environments` with `activeIncident` present only during failures. `nextCheckIn` and `nextCheckInLatest` define the expected window.
-- **SCIM endpoints**: Follow SCIM 2.0 spec with `schemas`, `totalResults`, `startIndex`, `itemsPerPage`, and `Resources` (capital R). Use `startIndex` and `count` for pagination instead of `cursor`.
-- **Dashboards/Widgets**: Widget `queries` is deeply nested. Each query has `conditions` (Sentry search syntax), `fields`/`aggregates`/`columns`, and `orderby`. `display_type` controls chart rendering.
-- **Mutations (PUT/DELETE)**: 204 means success with no body. 202 means accepted/queued (common for deletes of issues and monitors). 409 on POST means a conflict (duplicate slug or name).
-
-## Anomaly Flags
-
-- **403 on any endpoint**: Token lacks required scopes or the user's org role is insufficient. Surface this immediately -- it won't resolve by retrying. Check if the token has the right permissions for the resource type (project vs org level).
-- **401 responses**: Auth token is invalid or expired. If using DSN auth, note that DSN tokens only work for a subset of endpoints. Surface and prompt for re-authentication.
-- **Issue count anomalies**: If `GET /issues/` returns significantly more results than expected, check the `query` default (`is:unresolved`) -- issues may be accumulating without triage. Flag when unresolved count exceeds typical thresholds.
-- **Monitor `activeIncident` present**: A cron monitor is in a broken state. Proactively surface the `brokenNotice` timestamps and whether the environment has been auto-muted.
-- **Release with zero `newGroups` but high `deployCount`**: May indicate source maps are missing or events aren't being tagged to releases correctly.
-- **`isOnlyOwner: true` on member detail**: Warn before any role change or removal -- this is the sole owner. Removing or demoting them will lock out the organization.
-- **`expired: true` on member invites or saved queries**: Stale invitations or discover queries that need refresh. Surface these during member or query listing operations.
-- **`storeCrashReports` set to -1**: Unlimited crash report storage is enabled, which can consume quota quickly. Flag when reviewing project or org settings.
-- **`isDynamicallySampled: true` with low `targetSampleRate`**: Client-side sampling may be dropping events. Surface when investigating missing event data.
-- **`disableReason` on issue alert rules**: A rule has been auto-disabled (usually due to too many triggers). The `disableDate` tells when it was turned off.
-
-## Playbook
-
-### 1. Triage and resolve a spike of new issues
-
-1. `GET /api/0/organizations/{org}/issues/?query=is:unresolved&sort=date&limit=25` to fetch the latest unresolved issues.
-2. For each critical issue, `GET /api/0/organizations/{org}/issues/{issue_id}/events/latest/` to inspect the most recent event, stack trace, and context.
-3. Check `GET /api/0/organizations/{org}/issues/{issue_id}/tags/environment/values/` to determine affected environments.
-4. Assign the issue: `PUT /api/0/organizations/{org}/issues/{issue_id}/` with `{"assignedTo": "user:email@example.com", "priority": "high"}`.
-5. Once fixed, resolve in bulk: `PUT /api/0/organizations/{org}/issues/` with `{"status": "resolved", "query": "is:unresolved first-release:1.2.3"}`.
-
-### 2. Ship a release with commit tracking and deploy marker
-
-1. Create the release: `POST /api/0/organizations/{org}/releases/` with `{"version": "1.2.3", "projects": ["my-project"], "refs": [{"repository": "org/repo", "commit": "abc123"}]}`.
-2. Upload source maps: `POST /api/0/organizations/{org}/releases/1.2.3/files/` (multipart form with the file).
-3. Mark the deploy: `POST /api/0/organizations/{org}/releases/1.2.3/deploys/` with `{"environment": "production", "dateStarted": "...", "dateFinished": "..."}`.
-4. Verify: `GET /api/0/organizations/{org}/releases/1.2.3/` and confirm `deployCount` incremented and `lastDeploy.environment` is `production`.
-
-### 3. Set up a cron monitor for a scheduled job
-
-1. Create the monitor: `POST /api/0/organizations/{org}/monitors/` with `{"project": "my-project", "name": "nightly-sync", "config": {"schedule_type": "crontab", "schedule": "0 3 * * *", "checkin_margin": 10, "max_runtime": 30, "timezone": "UTC"}, "status": "active"}`.
-2. Integrate check-in calls in your job: send `POST` to the DSN-based check-in URL at job start (`status: in_progress`) and job end (`status: ok` or `status: error`).
-3. Verify it's working: `GET /api/0/organizations/{org}/monitors/nightly-sync/checkins/` to see recent check-in history.
-4. If it breaks, inspect: `GET /api/0/organizations/{org}/monitors/nightly-sync/` and check `environments[].activeIncident` for incident details.
-
-### 4. Onboard a new team member with scoped access
-
-1. Invite the user: `POST /api/0/organizations/{org}/members/` with `{"email": "new@example.com", "orgRole": "member", "teamRoles": [{"teamSlug": "backend", "role": "contributor"}]}`.
-2. Confirm invite sent: check response for `pending: true` and `inviteStatus: "approved"`.
-3. Add them to a project team: `POST /api/0/organizations/{org}/members/{member_id}/teams/backend/`.
-4. Verify access: `GET /api/0/organizations/{org}/members/{member_id}/` and confirm `teams` includes `"backend"` and `teamRoles` shows the correct role.
-
-### 5. Build a custom dashboard for error monitoring
-
-1. Create the dashboard: `POST /api/0/organizations/{org}/dashboards/` with `{"title": "Error Overview", "widgets": []}`.
-2. Add an error count widget: `PUT /api/0/organizations/{org}/dashboards/{id}/` with a widget using `{"display_type": "line", "queries": [{"conditions": "!event.type:transaction", "fields": ["count()"], "orderby": "-count()"}]}`.
-3. Add a top issues table widget: include `{"display_type": "table", "queries": [{"conditions": "is:unresolved", "fields": ["issue", "title", "count()", "users"], "orderby": "-count()"}]}`.
-4. Set time range and filters: update the dashboard with `{"period": "7d", "environment": ["production"], "projects": [project_id]}`.
-5. Verify: `GET /api/0/organizations/{org}/dashboards/{id}/` and confirm all widgets appear with correct `queries` and `display_type`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Search organizations?" -> GET /api/0/organizations/
+- "Get organization details?" -> GET /api/0/organizations/{organization_id_or_slug}/
+- "Update a organization?" -> PUT /api/0/organizations/{organization_id_or_slug}/
+- "List all alert-rules?" -> GET /api/0/organizations/{organization_id_or_slug}/alert-rules/
+- "Create a alert-rule?" -> POST /api/0/organizations/{organization_id_or_slug}/alert-rules/
+- "Get alert-rule details?" -> GET /api/0/organizations/{organization_id_or_slug}/alert-rules/{alert_rule_id}/
+- "Update a alert-rule?" -> PUT /api/0/organizations/{organization_id_or_slug}/alert-rules/{alert_rule_id}/
+- "Delete a alert-rule?" -> DELETE /api/0/organizations/{organization_id_or_slug}/alert-rules/{alert_rule_id}/
+- "List all integrations?" -> GET /api/0/organizations/{organization_id_or_slug}/config/integrations/
+- "List all dashboards?" -> GET /api/0/organizations/{organization_id_or_slug}/dashboards/
+- "Create a dashboard?" -> POST /api/0/organizations/{organization_id_or_slug}/dashboards/
+- "Get dashboard details?" -> GET /api/0/organizations/{organization_id_or_slug}/dashboards/{dashboard_id}/
+- "Update a dashboard?" -> PUT /api/0/organizations/{organization_id_or_slug}/dashboards/{dashboard_id}/
+- "Delete a dashboard?" -> DELETE /api/0/organizations/{organization_id_or_slug}/dashboards/{dashboard_id}/
+- "Search detectors?" -> GET /api/0/organizations/{organization_id_or_slug}/detectors/
+- "Create a detector?" -> POST /api/0/organizations/{organization_id_or_slug}/detectors/
+- "Get detector details?" -> GET /api/0/organizations/{organization_id_or_slug}/detectors/{detector_id}/
+- "Update a detector?" -> PUT /api/0/organizations/{organization_id_or_slug}/detectors/{detector_id}/
+- "Delete a detector?" -> DELETE /api/0/organizations/{organization_id_or_slug}/detectors/{detector_id}/
+- "Search saved?" -> GET /api/0/organizations/{organization_id_or_slug}/discover/saved/
+- "Create a saved?" -> POST /api/0/organizations/{organization_id_or_slug}/discover/saved/
+- "Get saved details?" -> GET /api/0/organizations/{organization_id_or_slug}/discover/saved/{query_id}/
+- "Update a saved?" -> PUT /api/0/organizations/{organization_id_or_slug}/discover/saved/{query_id}/
+- "Delete a saved?" -> DELETE /api/0/organizations/{organization_id_or_slug}/discover/saved/{query_id}/
+- "List all environments?" -> GET /api/0/organizations/{organization_id_or_slug}/environments/
+- "Get eventid details?" -> GET /api/0/organizations/{organization_id_or_slug}/eventids/{event_id}/
+- "Search events?" -> GET /api/0/organizations/{organization_id_or_slug}/events/
+- "Search events-timeseries?" -> GET /api/0/organizations/{organization_id_or_slug}/events-timeseries/
+- "Create a external-user?" -> POST /api/0/organizations/{organization_id_or_slug}/external-users/
+- "Update a external-user?" -> PUT /api/0/organizations/{organization_id_or_slug}/external-users/{external_user_id}/
+- "Delete a external-user?" -> DELETE /api/0/organizations/{organization_id_or_slug}/external-users/{external_user_id}/
+- "List all forwarding?" -> GET /api/0/organizations/{organization_id_or_slug}/forwarding/
+- "Create a forwarding?" -> POST /api/0/organizations/{organization_id_or_slug}/forwarding/
+- "Update a forwarding?" -> PUT /api/0/organizations/{organization_id_or_slug}/forwarding/{data_forwarder_id}/
+- "Delete a forwarding?" -> DELETE /api/0/organizations/{organization_id_or_slug}/forwarding/{data_forwarder_id}/
+- "List all integrations?" -> GET /api/0/organizations/{organization_id_or_slug}/integrations/
+- "Get integration details?" -> GET /api/0/organizations/{organization_id_or_slug}/integrations/{integration_id}/
+- "Delete a integration?" -> DELETE /api/0/organizations/{organization_id_or_slug}/integrations/{integration_id}/
+- "Search issues?" -> GET /api/0/organizations/{organization_id_or_slug}/issues/
+- "List all members?" -> GET /api/0/organizations/{organization_id_or_slug}/members/
+- "Create a member?" -> POST /api/0/organizations/{organization_id_or_slug}/members/
+- "Get member details?" -> GET /api/0/organizations/{organization_id_or_slug}/members/{member_id}/
+- "Update a member?" -> PUT /api/0/organizations/{organization_id_or_slug}/members/{member_id}/
+- "Delete a member?" -> DELETE /api/0/organizations/{organization_id_or_slug}/members/{member_id}/
+- "Update a team?" -> PUT /api/0/organizations/{organization_id_or_slug}/members/{member_id}/teams/{team_id_or_slug}/
+- "Delete a team?" -> DELETE /api/0/organizations/{organization_id_or_slug}/members/{member_id}/teams/{team_id_or_slug}/
+- "List all monitors?" -> GET /api/0/organizations/{organization_id_or_slug}/monitors/
+- "Create a monitor?" -> POST /api/0/organizations/{organization_id_or_slug}/monitors/
+- "Get monitor details?" -> GET /api/0/organizations/{organization_id_or_slug}/monitors/{monitor_id_or_slug}/
+- "Update a monitor?" -> PUT /api/0/organizations/{organization_id_or_slug}/monitors/{monitor_id_or_slug}/
+- "Delete a monitor?" -> DELETE /api/0/organizations/{organization_id_or_slug}/monitors/{monitor_id_or_slug}/
+- "List all checkins?" -> GET /api/0/organizations/{organization_id_or_slug}/monitors/{monitor_id_or_slug}/checkins/
+- "List all actions?" -> GET /api/0/organizations/{organization_id_or_slug}/notifications/actions/
+- "Create a action?" -> POST /api/0/organizations/{organization_id_or_slug}/notifications/actions/
+- "Get action details?" -> GET /api/0/organizations/{organization_id_or_slug}/notifications/actions/{action_id}/
+- "Update a action?" -> PUT /api/0/organizations/{organization_id_or_slug}/notifications/actions/{action_id}/
+- "Delete a action?" -> DELETE /api/0/organizations/{organization_id_or_slug}/notifications/actions/{action_id}/
+- "List all install-details?" -> GET /api/0/organizations/{organization_id_or_slug}/preprodartifacts/{artifact_id}/install-details/
+- "List all size-analysis?" -> GET /api/0/organizations/{organization_id_or_slug}/preprodartifacts/{artifact_id}/size-analysis/
+- "List all repositories?" -> GET /api/0/organizations/{organization_id_or_slug}/prevent/owner/{owner}/repositories/
+- "List all sync?" -> GET /api/0/organizations/{organization_id_or_slug}/prevent/owner/{owner}/repositories/sync/
+- "Create a sync?" -> POST /api/0/organizations/{organization_id_or_slug}/prevent/owner/{owner}/repositories/sync/
+- "List all tokens?" -> GET /api/0/organizations/{organization_id_or_slug}/prevent/owner/{owner}/repositories/tokens/
+- "Get repository details?" -> GET /api/0/organizations/{organization_id_or_slug}/prevent/owner/{owner}/repository/{repository}/
+- "List all branches?" -> GET /api/0/organizations/{organization_id_or_slug}/prevent/owner/{owner}/repository/{repository}/branches/
+- "List all test-results?" -> GET /api/0/organizations/{organization_id_or_slug}/prevent/owner/{owner}/repository/{repository}/test-results/
+- "List all test-results-aggregates?" -> GET /api/0/organizations/{organization_id_or_slug}/prevent/owner/{owner}/repository/{repository}/test-results-aggregates/
+- "List all test-suites?" -> GET /api/0/organizations/{organization_id_or_slug}/prevent/owner/{owner}/repository/{repository}/test-suites/
+- "Create a regenerate?" -> POST /api/0/organizations/{organization_id_or_slug}/prevent/owner/{owner}/repository/{repository}/token/regenerate/
+- "List all project-keys?" -> GET /api/0/organizations/{organization_id_or_slug}/project-keys/
+- "List all projects?" -> GET /api/0/organizations/{organization_id_or_slug}/projects/
+- "List all relay_usage?" -> GET /api/0/organizations/{organization_id_or_slug}/relay_usage/
+- "List all release-threshold-statuses?" -> GET /api/0/organizations/{organization_id_or_slug}/release-threshold-statuses/
+- "Search releases?" -> GET /api/0/organizations/{organization_id_or_slug}/releases/{version}/
+- "Update a release?" -> PUT /api/0/organizations/{organization_id_or_slug}/releases/{version}/
+- "Delete a release?" -> DELETE /api/0/organizations/{organization_id_or_slug}/releases/{version}/
+- "List all deploys?" -> GET /api/0/organizations/{organization_id_or_slug}/releases/{version}/deploys/
+- "Create a deploy?" -> POST /api/0/organizations/{organization_id_or_slug}/releases/{version}/deploys/
+- "Search replay-count?" -> GET /api/0/organizations/{organization_id_or_slug}/replay-count/
+- "Search replay-selectors?" -> GET /api/0/organizations/{organization_id_or_slug}/replay-selectors/
+- "Search replays?" -> GET /api/0/organizations/{organization_id_or_slug}/replays/
+- "Search replays?" -> GET /api/0/organizations/{organization_id_or_slug}/replays/{replay_id}/
+- "List all commits?" -> GET /api/0/organizations/{organization_id_or_slug}/repos/{repo_id}/commits/
+- "List all Groups?" -> GET /api/0/organizations/{organization_id_or_slug}/scim/v2/Groups
+- "Create a Group?" -> POST /api/0/organizations/{organization_id_or_slug}/scim/v2/Groups
+- "Get Group details?" -> GET /api/0/organizations/{organization_id_or_slug}/scim/v2/Groups/{team_id_or_slug}
+- "Partially update a Group?" -> PATCH /api/0/organizations/{organization_id_or_slug}/scim/v2/Groups/{team_id_or_slug}
+- "Delete a Group?" -> DELETE /api/0/organizations/{organization_id_or_slug}/scim/v2/Groups/{team_id_or_slug}
+- "List all Users?" -> GET /api/0/organizations/{organization_id_or_slug}/scim/v2/Users
+- "Create a User?" -> POST /api/0/organizations/{organization_id_or_slug}/scim/v2/Users
+- "Get User details?" -> GET /api/0/organizations/{organization_id_or_slug}/scim/v2/Users/{member_id}
+- "Partially update a User?" -> PATCH /api/0/organizations/{organization_id_or_slug}/scim/v2/Users/{member_id}
+- "Delete a User?" -> DELETE /api/0/organizations/{organization_id_or_slug}/scim/v2/Users/{member_id}
+- "List all sentry-apps?" -> GET /api/0/organizations/{organization_id_or_slug}/sentry-apps/
+- "Search sessions?" -> GET /api/0/organizations/{organization_id_or_slug}/sessions/
+- "Get shortid details?" -> GET /api/0/organizations/{organization_id_or_slug}/shortids/{issue_id}/
+- "List all stats-summary?" -> GET /api/0/organizations/{organization_id_or_slug}/stats-summary/
+- "List all stats_v2?" -> GET /api/0/organizations/{organization_id_or_slug}/stats_v2/
+- "List all teams?" -> GET /api/0/organizations/{organization_id_or_slug}/teams/
+- "Create a team?" -> POST /api/0/organizations/{organization_id_or_slug}/teams/
+- "List all user-teams?" -> GET /api/0/organizations/{organization_id_or_slug}/user-teams/
+- "Search workflows?" -> GET /api/0/organizations/{organization_id_or_slug}/workflows/
+- "Create a workflow?" -> POST /api/0/organizations/{organization_id_or_slug}/workflows/
+- "Get workflow details?" -> GET /api/0/organizations/{organization_id_or_slug}/workflows/{workflow_id}/
+- "Update a workflow?" -> PUT /api/0/organizations/{organization_id_or_slug}/workflows/{workflow_id}/
+- "Delete a workflow?" -> DELETE /api/0/organizations/{organization_id_or_slug}/workflows/{workflow_id}/
+- "Get project details?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/
+- "Update a project?" -> PUT /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/
+- "Delete a project?" -> DELETE /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/
+- "List all environments?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/environments/
+- "Get environment details?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/environments/{environment}/
+- "Update a environment?" -> PUT /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/environments/{environment}/
+- "List all events?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/events/
+- "List all source-map-debug?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/events/{event_id}/source-map-debug/
+- "List all filters?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/filters/
+- "Update a filter?" -> PUT /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/filters/{filter_id}/
+- "List all keys?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/keys/
+- "Create a key?" -> POST /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/keys/
+- "Get key details?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/keys/{key_id}/
+- "Update a key?" -> PUT /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/keys/{key_id}/
+- "Delete a key?" -> DELETE /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/keys/{key_id}/
+- "List all members?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/members/
+- "Get monitor details?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/monitors/{monitor_id_or_slug}/
+- "Update a monitor?" -> PUT /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/monitors/{monitor_id_or_slug}/
+- "Delete a monitor?" -> DELETE /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/monitors/{monitor_id_or_slug}/
+- "List all checkins?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/monitors/{monitor_id_or_slug}/checkins/
+- "List all ownership?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/ownership/
+- "List all latest?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/preprodartifacts/build-distribution/latest/
+- "Delete a replay?" -> DELETE /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/replays/{replay_id}/
+- "Search clicks?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/replays/{replay_id}/clicks/
+- "List all recording-segments?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/replays/{replay_id}/recording-segments/
+- "Get recording-segment details?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/replays/{replay_id}/recording-segments/{segment_id}/
+- "List all viewed-by?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/replays/{replay_id}/viewed-by/
+- "List all rules?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/rules/
+- "Create a rule?" -> POST /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/rules/
+- "Get rule details?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/rules/{rule_id}/
+- "Update a rule?" -> PUT /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/rules/{rule_id}/
+- "Delete a rule?" -> DELETE /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/rules/{rule_id}/
+- "List all symbol-sources?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/symbol-sources/
+- "Create a symbol-source?" -> POST /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/symbol-sources/
+- "List all teams?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/teams/
+- "Delete a team?" -> DELETE /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/teams/{team_id_or_slug}/
+- "List all models?" -> GET /api/0/seer/models/
+- "Get sentry-app details?" -> GET /api/0/sentry-apps/{sentry_app_id_or_slug}/
+- "Update a sentry-app?" -> PUT /api/0/sentry-apps/{sentry_app_id_or_slug}/
+- "Delete a sentry-app?" -> DELETE /api/0/sentry-apps/{sentry_app_id_or_slug}/
+- "Get team details?" -> GET /api/0/teams/{organization_id_or_slug}/{team_id_or_slug}/
+- "Update a team?" -> PUT /api/0/teams/{organization_id_or_slug}/{team_id_or_slug}/
+- "Delete a team?" -> DELETE /api/0/teams/{organization_id_or_slug}/{team_id_or_slug}/
+- "Create a external-team?" -> POST /api/0/teams/{organization_id_or_slug}/{team_id_or_slug}/external-teams/
+- "Update a external-team?" -> PUT /api/0/teams/{organization_id_or_slug}/{team_id_or_slug}/external-teams/{external_team_id}/
+- "Delete a external-team?" -> DELETE /api/0/teams/{organization_id_or_slug}/{team_id_or_slug}/external-teams/{external_team_id}/
+- "List all members?" -> GET /api/0/teams/{organization_id_or_slug}/{team_id_or_slug}/members/
+- "List all projects?" -> GET /api/0/teams/{organization_id_or_slug}/{team_id_or_slug}/projects/
+- "Create a project?" -> POST /api/0/teams/{organization_id_or_slug}/{team_id_or_slug}/projects/
+- "List all repos?" -> GET /api/0/organizations/{organization_id_or_slug}/repos/
+- "List all dsyms?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/files/dsyms/
+- "Create a dsym?" -> POST /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/files/dsyms/
+- "Search users?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/users/
+- "List all values?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/tags/{key}/values/
+- "List all stats?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/stats/
+- "List all user-feedback?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/user-feedback/
+- "Create a user-feedback?" -> POST /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/user-feedback/
+- "List all hooks?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/hooks/
+- "Create a hook?" -> POST /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/hooks/
+- "Get hook details?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/hooks/{hook_id}/
+- "Update a hook?" -> PUT /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/hooks/{hook_id}/
+- "Delete a hook?" -> DELETE /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/hooks/{hook_id}/
+- "Get event details?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/events/{event_id}/
+- "Search issues?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/issues/
+- "List all values?" -> GET /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/tags/{key}/values/
+- "List all hashes?" -> GET /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/hashes/
+- "Get issue details?" -> GET /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/
+- "Update a issue?" -> PUT /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/
+- "Delete a issue?" -> DELETE /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/
+- "Search releases?" -> GET /api/0/organizations/{organization_id_or_slug}/releases/
+- "Create a release?" -> POST /api/0/organizations/{organization_id_or_slug}/releases/
+- "List all files?" -> GET /api/0/organizations/{organization_id_or_slug}/releases/{version}/files/
+- "Create a file?" -> POST /api/0/organizations/{organization_id_or_slug}/releases/{version}/files/
+- "List all files?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/releases/{version}/files/
+- "Create a file?" -> POST /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/releases/{version}/files/
+- "Get file details?" -> GET /api/0/organizations/{organization_id_or_slug}/releases/{version}/files/{file_id}/
+- "Update a file?" -> PUT /api/0/organizations/{organization_id_or_slug}/releases/{version}/files/{file_id}/
+- "Delete a file?" -> DELETE /api/0/organizations/{organization_id_or_slug}/releases/{version}/files/{file_id}/
+- "Get file details?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/releases/{version}/files/{file_id}/
+- "Update a file?" -> PUT /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/releases/{version}/files/{file_id}/
+- "Delete a file?" -> DELETE /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/releases/{version}/files/{file_id}/
+- "List all commits?" -> GET /api/0/organizations/{organization_id_or_slug}/releases/{version}/commits/
+- "List all commits?" -> GET /api/0/projects/{organization_id_or_slug}/{project_id_or_slug}/releases/{version}/commits/
+- "List all commitfiles?" -> GET /api/0/organizations/{organization_id_or_slug}/releases/{version}/commitfiles/
+- "List all sentry-app-installations?" -> GET /api/0/organizations/{organization_id_or_slug}/sentry-app-installations/
+- "Create a external-issue?" -> POST /api/0/sentry-app-installations/{uuid}/external-issues/
+- "Delete a external-issue?" -> DELETE /api/0/sentry-app-installations/{uuid}/external-issues/{external_issue_id}/
+- "Create a spike-protection?" -> POST /api/0/organizations/{organization_id_or_slug}/spike-protections/
+- "List all autofix?" -> GET /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/autofix/
+- "Create a autofix?" -> POST /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/autofix/
+- "Search events?" -> GET /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/events/
+- "Get event details?" -> GET /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/events/{event_id}/
+- "List all external-issues?" -> GET /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/external-issues/
+- "Get tag details?" -> GET /api/0/organizations/{organization_id_or_slug}/issues/{issue_id}/tags/{key}/
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

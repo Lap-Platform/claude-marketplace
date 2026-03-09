@@ -110,90 +110,10 @@ Not specified.
 | POST | / | Updates data for the resource. To have the latest information, it must be preceded by a DescribeResource call. The dataset in the request should be the one expected when performing another DescribeResource call. |
 | POST | / | Updates data for the user. To have the latest information, it must be preceded by a DescribeUser call. The dataset in the request should be the one expected when performing another DescribeUser call. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new user in my WorkMail organization?" -> POST / (CreateUser: OrganizationId, Name, DisplayName)
-- "How do I list all users in an organization?" -> POST / (ListUsers: OrganizationId, with optional Filters and pagination)
-- "How do I get details about a specific user?" -> POST / (DescribeUser: OrganizationId, UserId)
-- "How do I add someone to a group?" -> POST / (AssociateMemberToGroup: OrganizationId, GroupId, MemberId)
-- "How do I check a user's mailbox size and quota?" -> POST / (GetMailboxDetails: OrganizationId, UserId)
-- "How do I export a user's mailbox to S3?" -> POST / (StartMailboxExportJob: ClientToken, OrganizationId, EntityId, RoleArn, KmsKeyArn, S3BucketName, S3Prefix)
-- "How do I check the status of a mailbox export job?" -> POST / (DescribeMailboxExportJob: JobId, OrganizationId)
-- "How do I set up a mail domain for my organization?" -> POST / (RegisterMailDomain: OrganizationId, DomainName)
-- "How do I verify my domain's DNS records?" -> POST / (GetMailDomain: OrganizationId, DomainName)
-- "How do I create an impersonation role and get a token?" -> POST / (CreateImpersonationRole then AssumeImpersonationRole)
-- "How do I block a specific mobile device from accessing email?" -> POST / (PutMobileDeviceAccessOverride: OrganizationId, UserId, DeviceId, Effect=DENY)
-- "How do I see which organizations I have?" -> POST / (ListOrganizations: no required params, paginated)
-- "How do I delete an organization?" -> POST / (DeleteOrganization: OrganizationId, DeleteDirectory, optional ForceDelete)
-- "How do I set up email monitoring?" -> POST / (PutEmailMonitoringConfiguration: OrganizationId, RoleArn, LogGroupArn)
-- "How do I test if my availability configuration works?" -> POST / (TestAvailabilityConfiguration: OrganizationId, optional DomainName and provider)
-
-## Response Tips
-
-- **List endpoints** (ListUsers, ListGroups, ListResources, etc.): All return a `NextToken` field for pagination. Pass it back with `MaxResults` (default varies) to page through results. An absent `NextToken` means you've reached the end.
-- **Describe endpoints** (DescribeUser, DescribeGroup, DescribeOrganization, etc.): Return rich objects with nullable fields (marked `?`). Always check `State` -- entities can be `ENABLED`, `DISABLED`, or `DELETED`. Timestamps are in epoch format.
-- **Create endpoints** (CreateUser, CreateGroup, CreateResource, etc.): Return only the new entity's ID on success. Use the corresponding Describe call to get full details.
-- **Delete endpoints**: Return empty 200 on success. Deleting an organization returns `OrganizationId` and `State` -- the org enters an async teardown; poll DescribeOrganization for completion.
-- **Get*Effect endpoints** (GetAccessControlEffect, GetMobileDeviceAccessEffect): Return `Effect` (ALLOW/DENY) and `MatchedRules` showing which rules fired. Use these to debug access policies before enforcement.
-- **Export jobs** (StartMailboxExportJob, DescribeMailboxExportJob): Job state progresses through RUNNING -> COMPLETED or FAILED. Check `EstimatedProgress` (0-100), `ErrorInfo` on failure.
-
-## Anomaly Flags
-
-- **Organization state not ACTIVE**: Surface when DescribeOrganization returns `State` other than `Active` -- the org may be mid-creation or being deleted.
-- **Domain verification pending**: Flag when GetMailDomain shows `OwnershipVerificationStatus` or `DkimVerificationStatus` is not `VERIFIED` -- email delivery will fail.
-- **Mailbox quota near limit**: Alert when GetMailboxDetails shows `MailboxSize` approaching `MailboxQuota` (e.g., >90%). Users will stop receiving mail at quota.
-- **Export job failure**: Surface immediately when DescribeMailboxExportJob returns `State=FAILED` with `ErrorInfo` -- common causes are bad IAM role or S3 bucket permissions.
-- **DMARC not enforced**: Flag when DescribeInboundDmarcSettings returns `Enforced=false` -- the org is vulnerable to spoofed inbound email.
-- **Impersonation token expiry**: AssumeImpersonationRole returns `ExpiresIn` (seconds). Warn when the token is close to expiring or has expired.
-- **ForceDelete used on organization**: Highlight when DeleteOrganization is called with `ForceDelete=true` -- this skips safety checks and is irreversible.
-- **Access control DENY effect**: When GetAccessControlEffect or GetMobileDeviceAccessEffect returns `Effect=DENY`, surface the `MatchedRules` so the user knows which rule is blocking.
-
-## Playbook
-
-### 1. Onboard a New User with Group Membership
-
-1. Call **CreateUser** with `OrganizationId`, `Name`, `DisplayName`, and optionally `Password`, `Role`, name fields.
-2. Note the returned `UserId`.
-3. Call **RegisterToWorkMail** with `OrganizationId`, `EntityId` (the UserId), and the user's `Email` address to activate their mailbox.
-4. Call **CreateAlias** if the user needs additional email aliases.
-5. Call **AssociateMemberToGroup** with the `GroupId` of each group the user should join.
-6. Call **DescribeUser** to verify `State=ENABLED` and all details are correct.
-
-### 2. Set Up and Verify a Custom Mail Domain
-
-1. Call **RegisterMailDomain** with `OrganizationId` and `DomainName`.
-2. Call **GetMailDomain** to retrieve the required DNS `Records` (MX, TXT, CNAME for DKIM).
-3. Add all returned DNS records to your domain's DNS provider.
-4. Wait for DNS propagation, then call **GetMailDomain** again to check `OwnershipVerificationStatus` and `DkimVerificationStatus`.
-5. Once both show `VERIFIED`, call **UpdateDefaultMailDomain** if this should be the org's primary domain.
-6. Optionally call **CreateAvailabilityConfiguration** to set up free/busy lookup for this domain, then **TestAvailabilityConfiguration** to confirm it works.
-
-### 3. Export a User's Mailbox to S3
-
-1. Call **GetMailboxDetails** with `OrganizationId` and `UserId` to check mailbox size and estimate export time.
-2. Call **StartMailboxExportJob** with `ClientToken` (idempotency key), `OrganizationId`, `EntityId`, IAM `RoleArn`, `KmsKeyArn`, `S3BucketName`, and `S3Prefix`.
-3. Note the returned `JobId`.
-4. Poll **DescribeMailboxExportJob** with the `JobId` until `State` is `COMPLETED` or `FAILED`. Check `EstimatedProgress` for status updates.
-5. If `FAILED`, inspect `ErrorInfo` -- common issues are IAM permissions or KMS key access.
-6. On `COMPLETED`, retrieve the exported `.zip` from the `S3Path` returned in the job description.
-
-### 4. Configure Mobile Device Access Policies
-
-1. Call **ListMobileDeviceAccessRules** to see existing rules for the organization.
-2. Call **CreateMobileDeviceAccessRule** with a `Name`, `Effect` (ALLOW/DENY), and filters (`DeviceTypes`, `DeviceModels`, `DeviceOperatingSystems`).
-3. Test the policy by calling **GetMobileDeviceAccessEffect** with sample device attributes to verify the expected `Effect`.
-4. For per-user exceptions, call **PutMobileDeviceAccessOverride** with the specific `UserId`, `DeviceId`, and desired `Effect`.
-5. Monitor with **GetMobileDeviceAccessOverride** to review active overrides.
-
-### 5. Set Up Impersonation for Service Accounts
-
-1. Call **CreateImpersonationRole** with `OrganizationId`, `Name`, `Type` (FULL_ACCESS or READ_ONLY), and `Rules` defining which users can be impersonated.
-2. Note the returned `ImpersonationRoleId`.
-3. Call **GetImpersonationRoleEffect** with `ImpersonationRoleId` and a `TargetUser` to verify the role grants the expected access.
-4. Call **AssumeImpersonationRole** with the `ImpersonationRoleId` to get a `Token` and its `ExpiresIn` duration.
-5. Use the token for EWS/IMAP impersonated access. Re-assume before expiry.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

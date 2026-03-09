@@ -101,95 +101,10 @@ Not specified.
 | POST | / | This operation applies only to Amazon Rekognition Custom Labels.  Adds or updates one or more entries (images) in a dataset. An entry is a JSON Line which contains the information for a single image, including the image location, assigned labels, and object location bounding boxes. For more information, see Image-Level labels in manifest files and Object localization in manifest files in the Amazon Rekognition Custom Labels Developer Guide.  If the source-ref field in the JSON line references an existing image, the existing image in the dataset is updated. If source-ref field doesn't reference an existing image, the image is added as a new image to the dataset.  You specify the changes that you want to make in the Changes input parameter. There isn't a limit to the number JSON Lines that you can change, but the size of Changes must be less than 5MB.  UpdateDatasetEntries returns immediatly, but the dataset update might take a while to complete. Use DescribeDataset to check the current status. The dataset updated successfully if the value of Status is UPDATE_COMPLETE.  To check if any non-terminal errors occured, call ListDatasetEntries and check for the presence of errors lists in the JSON Lines. Dataset update fails if a terminal error occurs (Status = UPDATE_FAILED). Currently, you can't access the terminal error information from the Amazon Rekognition Custom Labels SDK.  This operation requires permissions to perform the rekognition:UpdateDatasetEntries action. |
 | POST | / | Allows you to update a stream processor. You can change some settings and regions of interest and delete certain parameters. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I detect objects in an image?" -> POST / (DetectLabels: Image, optional MaxLabels/MinConfidence)
-- "Can I compare two faces to see if they match?" -> POST / (CompareFaces: SourceImage, TargetImage, optional SimilarityThreshold)
-- "How do I check an image for inappropriate content?" -> POST / (DetectModerationLabels: Image, optional MinConfidence/ProjectVersion)
-- "How do I find faces in a photo and get their attributes?" -> POST / (DetectFaces: Image, optional Attributes)
-- "How do I add faces to a collection for later searching?" -> POST / (IndexFaces: CollectionId, Image)
-- "Can I search for a matching face in my collection using an image?" -> POST / (SearchFacesByImage: CollectionId, Image)
-- "How do I start analyzing a video for labels?" -> POST / (StartLabelDetection: Video) then POST / (GetLabelDetection: JobId)
-- "How do I verify someone is a real person and not a photo?" -> POST / (CreateFaceLivenessSession) then POST / (GetFaceLivenessSessionResults: SessionId)
-- "How do I recognize celebrities in an image?" -> POST / (RecognizeCelebrities: Image)
-- "How do I read text from an image?" -> POST / (DetectText: Image, optional Filters)
-- "How do I check if workers are wearing protective equipment?" -> POST / (DetectProtectiveEquipment: Image, optional SummarizationAttributes)
-- "How do I create and manage a face collection?" -> POST / (CreateCollection: CollectionId) then POST / (IndexFaces) then POST / (SearchFaces/SearchFacesByImage)
-- "How do I set up a live video stream processor?" -> POST / (CreateStreamProcessor: Input, Output, Name, Settings, RoleArn) then POST / (StartStreamProcessor: Name)
-- "How do I train a custom label model?" -> POST / (CreateProject: ProjectName) then POST / (CreateDataset) then POST / (CreateProjectVersion) then POST / (StartProjectVersion)
-- "How do I associate faces with a user identity?" -> POST / (CreateUser: CollectionId, UserId) then POST / (AssociateFaces: CollectionId, UserId, FaceIds)
-
-## Response Tips
-
-- **Image analysis** (DetectLabels, DetectFaces, DetectText, RecognizeCelebrities): Results are arrays of detections each with `Confidence` scores (0-100); filter client-side by raising `MinConfidence` or use the request parameter to filter server-side.
-- **Face collections** (IndexFaces, SearchFaces, SearchFacesByImage, SearchUsers): Always check `UnindexedFaces` or `UnsearchedFaces` arrays for faces that were skipped due to quality; `FaceModelVersion` indicates which model generated the index.
-- **Video analysis** (Get*Detection/Recognition): All async -- poll `JobStatus` until `SUCCEEDED`; paginate via `NextToken`+`MaxResults`; `VideoMetadata` contains codec, resolution, and duration for context.
-- **Resource management** (Create/Delete/Describe*): Status fields return lifecycle states (`CREATING`, `CREATED`, `DELETING`, `TRAINING_IN_PROGRESS`, etc.); `StatusMessage` provides human-readable failure details.
-- **Moderation** (DetectModerationLabels, GetContentModeration): Labels include a `ParentName` hierarchy (e.g., "Explicit Nudity" > "Nudity"); `HumanLoopActivationOutput` indicates when Amazon A2I escalation triggered.
-- **Liveness** (GetFaceLivenessSessionResults): `Status` is `CREATED`, `IN_PROGRESS`, `SUCCEEDED`, `FAILED`, or `EXPIRED`; `Confidence` is only present on `SUCCEEDED`; `AuditImages` are available for manual review.
-
-## Anomaly Flags
-
-- **Low confidence scores**: Surface when detection confidence drops below 80% -- results may be unreliable and need human review.
-- **UnindexedFaces / UnsuccessfulFaceAssociations**: Non-empty arrays indicate faces were rejected for quality or pose reasons; agent should report count and reasons.
-- **Video job failures**: `JobStatus: FAILED` with `StatusMessage` -- surface immediately rather than continuing to poll.
-- **Throttling (ThrottlingException)**: AWS Rekognition has per-account TPS limits; agent should flag repeated throttling and suggest requesting a quota increase.
-- **Deprecated orientation correction**: `OrientationCorrection` fields on image responses indicate the image EXIF data needed correction -- flag if this appears consistently, as it suggests an upstream image pipeline issue.
-- **Empty result sets**: When DetectLabels, DetectFaces, or DetectText return empty arrays, proactively note the image may be too dark, blurry, or low-resolution (check `ImageProperties.Quality` if available).
-- **Custom model status drift**: `ProjectVersion` status of `TRAINING_FAILED` or `STOPPED` -- surface when a user attempts inference against a non-running model version.
-- **FaceModelVersion mismatch**: If collection operations return different `FaceModelVersion` values across calls, the collection may need rebuilding for consistency.
-- **Large pagination depth**: When video analysis results exceed 5 pages of `NextToken` pagination, flag the total result count to the user so they can apply filters.
-
-## Playbook
-
-### 1. Build a Face Recognition Pipeline
-
-1. Create a face collection: POST / (CreateCollection) with a unique `CollectionId`.
-2. Index faces from reference images: POST / (IndexFaces) with `CollectionId` and `Image` -- save the returned `FaceId` values.
-3. Create user identities: POST / (CreateUser) with `CollectionId` and `UserId` for each person.
-4. Associate indexed faces to users: POST / (AssociateFaces) with `CollectionId`, `UserId`, and `FaceIds`.
-5. Search by image at runtime: POST / (SearchUsersByImage) with `CollectionId` and probe `Image` -- returns `UserMatches` ranked by similarity.
-6. Clean up: POST / (DisassociateFaces) to unlink, POST / (DeleteFaces) to remove, POST / (DeleteUser) and POST / (DeleteCollection) when done.
-
-### 2. Moderate Video Content at Scale
-
-1. Upload the video to S3 and note the bucket/key.
-2. Start moderation analysis: POST / (StartContentModeration) with `Video: {S3Object: {Bucket, Name}}` and optional `NotificationChannel` for SNS alerts.
-3. Save the returned `JobId`.
-4. Poll for completion: POST / (GetContentModeration) with `JobId` -- repeat until `JobStatus` is `SUCCEEDED` or `FAILED`.
-5. Process results: iterate `ModerationLabels` array, filtering by `Timestamp` and `ModerationLabel.Confidence`; use `AggregateBy: SEGMENTS` for summarized output instead of frame-level detail.
-6. For bulk jobs, use POST / (StartMediaAnalysisJob) with `DetectModerationLabels` config and an S3 manifest of multiple videos.
-
-### 3. Deploy a Custom Label Detection Model
-
-1. Create a project: POST / (CreateProject) with `ProjectName` and optional `Feature: CUSTOM_LABELS`.
-2. Create training and test datasets: POST / (CreateDataset) twice with `DatasetType: TRAIN` and `DatasetType: TEST`, pointing to labeled S3 data via `DatasetSource`.
-3. Verify dataset health: POST / (DescribeDataset) -- check `DatasetStats` for sufficient `LabeledEntries` and zero `ErrorEntries`.
-4. Train the model: POST / (CreateProjectVersion) with `ProjectArn`, `VersionName`, and `OutputConfig` for model artifacts.
-5. Monitor training: POST / (DescribeProjectVersions) -- poll until status is `TRAINING_COMPLETED` or `TRAINING_FAILED`.
-6. Start the model: POST / (StartProjectVersion) with `ProjectVersionArn` and `MinInferenceUnits` (minimum 1).
-7. Run inference: POST / (DetectCustomLabels) with `ProjectVersionArn` and `Image`.
-8. Stop when done: POST / (StopProjectVersion) to avoid ongoing charges.
-
-### 4. Real-Time Face Liveness Verification
-
-1. Create a liveness session: POST / (CreateFaceLivenessSession) with optional `Settings` for challenge preferences.
-2. Save the returned `SessionId` and pass it to your client-side SDK (AWS Amplify FaceLivenessDetector).
-3. The user completes the liveness challenge on-device.
-4. Retrieve results: POST / (GetFaceLivenessSessionResults) with `SessionId`.
-5. Check `Status` -- if `SUCCEEDED`, read `Confidence` (0-100); scores above 90 generally indicate a live person.
-6. Optionally review `AuditImages` and `ReferenceImage` for fraud investigation or compliance logging.
-
-### 5. Set Up a Live Video Stream Processor
-
-1. Create a Kinesis Video Stream for input and a Kinesis Data Stream (or S3 bucket) for output.
-2. Create the processor: POST / (CreateStreamProcessor) with `Name`, `Input` (Kinesis Video ARN), `Output` (Kinesis Data or S3), `Settings` (choose `FaceSearch` with a `CollectionId` or `ConnectedHome` with label categories), and `RoleArn`.
-3. Start processing: POST / (StartStreamProcessor) with `Name`.
-4. Monitor: POST / (DescribeStreamProcessor) with `Name` -- check `Status` is `RUNNING`.
-5. Consume detections from the output Kinesis Data Stream or S3 destination.
-6. Stop when done: POST / (StopStreamProcessor) with `Name`; delete with POST / (DeleteStreamProcessor) if no longer needed.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

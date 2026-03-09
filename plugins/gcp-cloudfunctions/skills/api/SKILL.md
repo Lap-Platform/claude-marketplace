@@ -60,83 +60,16 @@ https://cloudfunctions.googleapis.com/
 |--------|------|-------------|
 | POST | /v2/{resource}:testIamPermissions | Returns permissions that a caller has on the specified resource. If the resource does not exist, this will return an empty set of permissions, not a `NOT_FOUND` error. Note: This operation is designed to be used for building permission-aware UIs and command-line tools, not for authorization checking. This operation may "fail open" without warning. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "List all my Cloud Functions in a project and region?" -> GET /v2/{parent}/functions
-- "Get details about a specific Cloud Function?" -> GET /v2/{name}
-- "Create a new Cloud Function?" -> POST /v2/{parent}/functions
-- "Update a Cloud Function's configuration or source code?" -> PATCH /v2/{name}
-- "Delete a Cloud Function?" -> DELETE /v2/{name}
-- "Download the source code of a deployed function?" -> POST /v2/{name}:generateDownloadUrl
-- "Upload new source code for a function deployment?" -> POST /v2/{parent}/functions:generateUploadUrl
-- "What runtimes are available in my project?" -> GET /v2/{parent}/runtimes
-- "Who has access to a specific Cloud Function?" -> GET /v2/{resource}:getIamPolicy
-- "Grant a user or service account permission to invoke a function?" -> POST /v2/{resource}:setIamPolicy
-- "Check if a service account has permission to call a function?" -> POST /v2/{resource}:testIamPermissions
-- "List available locations/regions for Cloud Functions?" -> GET /v2/{name}/locations
-- "Check the status of a long-running deploy or delete operation?" -> GET /v2/{name}/operations
-- "Find all functions with a specific label?" -> GET /v2/{parent}/functions (use `filter` param)
-- "Scale a function to zero minimum instances?" -> PATCH /v2/{name} (set `serviceConfig.minInstanceCount: 0`)
-
-## Response Tips
-
-- **Functions list** (`GET /v2/{parent}/functions`): Paginated via `nextPageToken`; also returns `unreachable` array listing regions that failed to respond -- always check this field for partial results.
-- **Mutating operations** (CREATE/PATCH/DELETE): Return a long-running `Operation` object, not the final resource. Poll `GET /v2/{name}/operations` or the operation `name` until `done: true`, then inspect `response` for success or `error` for failure.
-- **IAM responses**: The `etag` field is opaque and required for safe read-modify-write on policies. Always fetch the current policy before setting a new one.
-- **Locations/Operations lists**: Standard pagination with `nextPageToken` and `pageSize`. Pass `pageToken` from previous response to get the next page.
-- **Runtimes**: Flat list, no pagination. Each entry includes lifecycle stage (e.g., GA, deprecated, decommissioned).
-- **Upload/Download URLs**: Return pre-signed URLs that are time-limited. Use them immediately; do not store for later reuse.
-
-## Anomaly Flags
-
-- **Operation errors**: Surface any operation where `done: true` and `error` is present -- the deploy/delete failed. Show `error.message` and `error.code` prominently.
-- **Function state drift**: Flag functions in `FAILED`, `DEPLOYING`, or `UNKNOWN` state -- these require attention.
-- **Unreachable regions**: When `unreachable` is non-empty in a list response, warn that results are incomplete and name the missing regions.
-- **Deprecated runtimes**: Cross-reference function `buildConfig.runtime` against the runtimes list; flag any function running on a deprecated or decommissioned runtime.
-- **Missing IAM bindings**: If `getIamPolicy` returns an empty `bindings` array, flag that the function has no explicit access grants (may be relying on project-level defaults).
-- **High instance counts**: Flag functions where `maxInstanceCount` exceeds 100 or `minInstanceCount` exceeds 10 as potential cost concerns.
-- **No VPC connector**: For functions accessing private resources, flag when `vpcConnector` is unset.
-
-## Playbook
-
-### Deploy a New Cloud Function from Source
-
-1. Call `POST /v2/{parent}/functions:generateUploadUrl` to get a pre-signed `uploadUrl` and `storageSource`.
-2. Upload your source archive (zip) to the `uploadUrl` via HTTP PUT with `Content-Type: application/zip`.
-3. Call `POST /v2/{parent}/functions` with `buildConfig.source.storageSource` set to the returned `storageSource`, plus your desired `runtime`, `entryPoint`, and `serviceConfig`.
-4. Capture the operation `name` from the response.
-5. Poll `GET /v2/{operationName}` until `done: true`. Check `error` for failures or `response` for the created function.
-
-### Update a Function's Environment Variables
-
-1. Call `GET /v2/{name}` to retrieve the current function configuration.
-2. Modify the `serviceConfig.environmentVariables` map as needed.
-3. Call `PATCH /v2/{name}` with the updated body and `updateMask` set to `serviceConfig.environmentVariables`.
-4. Poll the returned operation until `done: true` to confirm the update succeeded.
-
-### Grant Invoke Permission to a Service Account
-
-1. Call `GET /v2/{resource}:getIamPolicy` to fetch the current IAM policy. Save the `etag`.
-2. Add a new entry to `bindings` with `role: "roles/cloudfunctions.invoker"` and `members: ["serviceAccount:your-sa@project.iam.gserviceaccount.com"]`.
-3. Call `POST /v2/{resource}:setIamPolicy` with the modified `policy` including the original `etag`.
-4. Verify the response contains your new binding.
-
-### Audit All Functions Across Regions
-
-1. Call `GET /v2/{name}/locations` to list all available regions.
-2. For each location, call `GET /v2/{parent}/functions` with `parent` set to `projects/{project}/locations/{location}`.
-3. Page through results using `nextPageToken` until exhausted.
-4. Check the `unreachable` field in each response to identify regions that failed to respond.
-5. Aggregate results and flag any functions in `FAILED` or `UNKNOWN` state, or running deprecated runtimes.
-
-### Download Function Source Code
-
-1. Call `GET /v2/{name}` to confirm the function exists and note its current state.
-2. Call `POST /v2/{name}:generateDownloadUrl` to get a time-limited `downloadUrl`.
-3. Immediately download the source archive from `downloadUrl` via HTTP GET.
-4. Extract the archive to inspect or modify the source locally.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all locations?" -> GET /v2/{name}/locations
+- "List all operations?" -> GET /v2/{name}/operations
+- "List all functions?" -> GET /v2/{parent}/functions
+- "Create a function?" -> POST /v2/{parent}/functions
+- "Create a functions:generateUploadUrl?" -> POST /v2/{parent}/functions:generateUploadUrl
+- "List all runtimes?" -> GET /v2/{parent}/runtimes
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

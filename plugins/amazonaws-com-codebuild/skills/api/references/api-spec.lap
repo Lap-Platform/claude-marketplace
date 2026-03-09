@@ -8,210 +8,260 @@
 @toc root(50)
 
 @endpoint POST /
+@desc Deletes one or more builds.
 @required {ids: [str]}
 @returns(200) {buildsDeleted: [str]?, buildsNotDeleted: [BuildNotDeleted]?}
 
 @endpoint POST /
+@desc Retrieves information about one or more batch builds.
 @required {ids: [str]}
 @returns(200) {buildBatches: [BuildBatch]?, buildBatchesNotFound: [str]?}
 
 @endpoint POST /
+@desc Gets information about one or more builds.
 @required {ids: [str]}
 @returns(200) {builds: [Build]?, buildsNotFound: [str]?}
 
 @endpoint POST /
+@desc Gets information about one or more compute fleets.
 @required {names: [str]}
 @returns(200) {fleets: [Fleet]?, fleetsNotFound: [str]?}
 
 @endpoint POST /
+@desc Gets information about one or more build projects.
 @required {names: [str]}
 @returns(200) {projects: [Project]?, projectsNotFound: [str]?}
 
 @endpoint POST /
+@desc Returns an array of report groups.
 @required {reportGroupArns: [str]}
 @returns(200) {reportGroups: [ReportGroup]?, reportGroupsNotFound: [str]?}
 
 @endpoint POST /
+@desc Returns an array of reports.
 @required {reportArns: [str]}
 @returns(200) {reports: [Report]?, reportsNotFound: [str]?}
 
 @endpoint POST /
+@desc Creates a compute fleet.
 @required {name: str, baseCapacity: int, environmentType: str, computeType: str}
 @optional {scalingConfiguration: ScalingConfigurationInput, overflowBehavior: str, vpcConfig: VpcConfig, imageId: str, fleetServiceRole: str, tags: [Tag]}
 @returns(200) {fleet: Fleet?{arn: str?, name: str?, id: str?, created: str(timestamp)?, lastModified: str(timestamp)?, status: FleetStatus?{statusCode: str?, context: str?, message: str?}, baseCapacity: int?, environmentType: str?, computeType: str?, scalingConfiguration: ScalingConfigurationOutput?{scalingType: str?, targetTrackingScalingConfigs: [TargetTrackingScalingConfiguration]?, maxCapacity: int?, desiredCapacity: int?}, overflowBehavior: str?, vpcConfig: VpcConfig?{vpcId: str?, subnets: [str]?, securityGroupIds: [str]?}, imageId: str?, fleetServiceRole: str?, tags: [Tag]?}}
 
 @endpoint POST /
+@desc Creates a build project.
 @required {name: str, source: ProjectSource, artifacts: ProjectArtifacts, environment: ProjectEnvironment, serviceRole: str}
 @optional {description: str, secondarySources: [ProjectSource], sourceVersion: str, secondarySourceVersions: [ProjectSourceVersion], secondaryArtifacts: [ProjectArtifacts], cache: ProjectCache, timeoutInMinutes: int, queuedTimeoutInMinutes: int, encryptionKey: str, tags: [Tag], vpcConfig: VpcConfig, badgeEnabled: bool, logsConfig: LogsConfig, fileSystemLocations: [ProjectFileSystemLocation], buildBatchConfig: ProjectBuildBatchConfig, concurrentBuildLimit: int}
 @returns(200) {project: Project?{name: str?, arn: str?, description: str?, source: ProjectSource?{type: str, location: str?, gitCloneDepth: int?, gitSubmodulesConfig: GitSubmodulesConfig?{fetchSubmodules: bool}, buildspec: str?, auth: SourceAuth?{type: str, resource: str?}, reportBuildStatus: bool?, buildStatusConfig: BuildStatusConfig?{context: str?, targetUrl: str?}, insecureSsl: bool?, sourceIdentifier: str?}, secondarySources: [ProjectSource]?, sourceVersion: str?, secondarySourceVersions: [ProjectSourceVersion]?, artifacts: ProjectArtifacts?{type: str, location: str?, path: str?, namespaceType: str?, name: str?, packaging: str?, overrideArtifactName: bool?, encryptionDisabled: bool?, artifactIdentifier: str?, bucketOwnerAccess: str?}, secondaryArtifacts: [ProjectArtifacts]?, cache: ProjectCache?{type: str, location: str?, modes: [str]?}, environment: ProjectEnvironment?{type: str, image: str, computeType: str, fleet: ProjectFleet?{fleetArn: str?}, environmentVariables: [EnvironmentVariable]?, privilegedMode: bool?, certificate: str?, registryCredential: RegistryCredential?{credential: str, credentialProvider: str}, imagePullCredentialsType: str?}, serviceRole: str?, timeoutInMinutes: int?, queuedTimeoutInMinutes: int?, encryptionKey: str?, tags: [Tag]?, created: str(timestamp)?, lastModified: str(timestamp)?, webhook: Webhook?{url: str?, payloadUrl: str?, secret: str?, branchFilter: str?, filterGroups: [[WebhookFilter]]?, buildType: str?, manualCreation: bool?, lastModifiedSecret: str(timestamp)?, scopeConfiguration: ScopeConfiguration?{name: str, domain: str?, scope: str}}, vpcConfig: VpcConfig?{vpcId: str?, subnets: [str]?, securityGroupIds: [str]?}, badge: ProjectBadge?{badgeEnabled: bool?, badgeRequestUrl: str?}, logsConfig: LogsConfig?{cloudWatchLogs: CloudWatchLogsConfig?{status: str, groupName: str?, streamName: str?}, s3Logs: S3LogsConfig?{status: str, location: str?, encryptionDisabled: bool?, bucketOwnerAccess: str?}}, fileSystemLocations: [ProjectFileSystemLocation]?, buildBatchConfig: ProjectBuildBatchConfig?{serviceRole: str?, combineArtifacts: bool?, restrictions: BatchRestrictions?{maximumBuildsAllowed: int?, computeTypesAllowed: [str]?}, timeoutInMins: int?, batchReportMode: str?}, concurrentBuildLimit: int?, projectVisibility: str?, publicProjectAlias: str?, resourceAccessRole: str?}}
 
 @endpoint POST /
+@desc Creates a report group. A report group contains a collection of reports.
 @required {name: str, type: str, exportConfig: ReportExportConfig}
 @optional {tags: [Tag]}
 @returns(200) {reportGroup: ReportGroup?{arn: str?, name: str?, type: str?, exportConfig: ReportExportConfig?{exportConfigType: str?, s3Destination: S3ReportExportConfig?{bucket: str?, bucketOwner: str?, path: str?, packaging: str?, encryptionKey: str?, encryptionDisabled: bool?}}, created: str(timestamp)?, lastModified: str(timestamp)?, tags: [Tag]?, status: str?}}
 
 @endpoint POST /
+@desc For an existing CodeBuild build project that has its source code stored in a GitHub or Bitbucket repository, enables CodeBuild to start rebuilding the source code every time a code change is pushed to the repository.  If you enable webhooks for an CodeBuild project, and the project is used as a build step in CodePipeline, then two identical builds are created for each commit. One build is triggered through webhooks, and one through CodePipeline. Because billing is on a per-build basis, you are billed for both builds. Therefore, if you are using CodePipeline, we recommend that you disable webhooks in CodeBuild. In the CodeBuild console, clear the Webhook box. For more information, see step 5 in Change a Build Project's Settings.
 @required {projectName: str}
 @optional {branchFilter: str, filterGroups: [[WebhookFilter]], buildType: str, manualCreation: bool, scopeConfiguration: ScopeConfiguration}
 @returns(200) {webhook: Webhook?{url: str?, payloadUrl: str?, secret: str?, branchFilter: str?, filterGroups: [[WebhookFilter]]?, buildType: str?, manualCreation: bool?, lastModifiedSecret: str(timestamp)?, scopeConfiguration: ScopeConfiguration?{name: str, domain: str?, scope: str}}}
 
 @endpoint POST /
+@desc Deletes a batch build.
 @required {id: str}
 @returns(200) {statusCode: str?, buildsDeleted: [str]?, buildsNotDeleted: [BuildNotDeleted]?}
 
 @endpoint POST /
+@desc Deletes a compute fleet. When you delete a compute fleet, its builds are not deleted.
 @required {arn: str}
 
 @endpoint POST /
+@desc Deletes a build project. When you delete a project, its builds are not deleted.
 @required {name: str}
 
 @endpoint POST /
+@desc Deletes a report.
 @required {arn: str}
 
 @endpoint POST /
+@desc Deletes a report group. Before you delete a report group, you must delete its reports.
 @required {arn: str}
 @optional {deleteReports: bool}
 
 @endpoint POST /
+@desc Deletes a resource policy that is identified by its resource ARN.
 @required {resourceArn: str}
 
 @endpoint POST /
+@desc Deletes a set of GitHub, GitHub Enterprise, or Bitbucket source credentials.
 @required {arn: str}
 @returns(200) {arn: str?}
 
 @endpoint POST /
+@desc For an existing CodeBuild build project that has its source code stored in a GitHub or Bitbucket repository, stops CodeBuild from rebuilding the source code every time a code change is pushed to the repository.
 @required {projectName: str}
 
 @endpoint POST /
+@desc Retrieves one or more code coverage reports.
 @required {reportArn: str}
 @optional {nextToken: str, maxResults: int, sortOrder: str, sortBy: str, minLineCoveragePercentage: num(f64), maxLineCoveragePercentage: num(f64)}
 @returns(200) {nextToken: str?, codeCoverages: [CodeCoverage]?}
 
 @endpoint POST /
+@desc Returns a list of details about test cases for a report.
 @required {reportArn: str}
 @optional {nextToken: str, maxResults: int, filter: TestCaseFilter}
 @returns(200) {nextToken: str?, testCases: [TestCase]?}
 
 @endpoint POST /
+@desc Analyzes and accumulates test report values for the specified test reports.
 @required {reportGroupArn: str, trendField: str}
 @optional {numOfReports: int}
 @returns(200) {stats: ReportGroupTrendStats?{average: str?, max: str?, min: str?}, rawData: [ReportWithRawData]?}
 
 @endpoint POST /
+@desc Gets a resource policy that is identified by its resource ARN.
 @required {resourceArn: str}
 @returns(200) {policy: str?}
 
 @endpoint POST /
+@desc Imports the source repository credentials for an CodeBuild project that has its source code stored in a GitHub, GitHub Enterprise, GitLab, GitLab Self Managed, or Bitbucket repository.
 @required {token: str, serverType: str, authType: str}
 @optional {username: str, shouldOverwrite: bool}
 @returns(200) {arn: str?}
 
 @endpoint POST /
+@desc Resets the cache for a project.
 @required {projectName: str}
 
 @endpoint POST /
+@desc Retrieves the identifiers of your build batches in the current region.
 @optional {filter: BuildBatchFilter, maxResults: int, sortOrder: str, nextToken: str}
 @returns(200) {ids: [str]?, nextToken: str?}
 
 @endpoint POST /
+@desc Retrieves the identifiers of the build batches for a specific project.
 @optional {projectName: str, filter: BuildBatchFilter, maxResults: int, sortOrder: str, nextToken: str}
 @returns(200) {ids: [str]?, nextToken: str?}
 
 @endpoint POST /
+@desc Gets a list of build IDs, with each build ID representing a single build.
 @optional {sortOrder: str, nextToken: str}
 @returns(200) {ids: [str]?, nextToken: str?}
 
 @endpoint POST /
+@desc Gets a list of build identifiers for the specified build project, with each build identifier representing a single build.
 @required {projectName: str}
 @optional {sortOrder: str, nextToken: str}
 @returns(200) {ids: [str]?, nextToken: str?}
 
 @endpoint POST /
+@desc Gets information about Docker images that are managed by CodeBuild.
 @returns(200) {platforms: [EnvironmentPlatform]?}
 
 @endpoint POST /
+@desc Gets a list of compute fleet names with each compute fleet name representing a single compute fleet.
 @optional {nextToken: str, maxResults: int, sortOrder: str, sortBy: str}
 @returns(200) {nextToken: str?, fleets: [str]?}
 
 @endpoint POST /
+@desc Gets a list of build project names, with each build project name representing a single build project.
 @optional {sortBy: str, sortOrder: str, nextToken: str}
 @returns(200) {nextToken: str?, projects: [str]?}
 
 @endpoint POST /
+@desc Gets a list ARNs for the report groups in the current Amazon Web Services account.
 @optional {sortOrder: str, sortBy: str, nextToken: str, maxResults: int}
 @returns(200) {nextToken: str?, reportGroups: [str]?}
 
 @endpoint POST /
+@desc Returns a list of ARNs for the reports in the current Amazon Web Services account.
 @optional {sortOrder: str, nextToken: str, maxResults: int, filter: ReportFilter}
 @returns(200) {nextToken: str?, reports: [str]?}
 
 @endpoint POST /
+@desc Returns a list of ARNs for the reports that belong to a ReportGroup.
 @required {reportGroupArn: str}
 @optional {nextToken: str, sortOrder: str, maxResults: int, filter: ReportFilter}
 @returns(200) {nextToken: str?, reports: [str]?}
 
 @endpoint POST /
+@desc Gets a list of projects that are shared with other Amazon Web Services accounts or users.
 @optional {sortBy: str, sortOrder: str, maxResults: int, nextToken: str}
 @returns(200) {nextToken: str?, projects: [str]?}
 
 @endpoint POST /
+@desc Gets a list of report groups that are shared with other Amazon Web Services accounts or users.
 @optional {sortOrder: str, sortBy: str, nextToken: str, maxResults: int}
 @returns(200) {nextToken: str?, reportGroups: [str]?}
 
 @endpoint POST /
+@desc Returns a list of SourceCredentialsInfo objects.
 @returns(200) {sourceCredentialsInfos: [SourceCredentialsInfo]?}
 
 @endpoint POST /
+@desc Stores a resource policy for the ARN of a Project or ReportGroup object.
 @required {policy: str, resourceArn: str}
 @returns(200) {resourceArn: str?}
 
 @endpoint POST /
+@desc Restarts a build.
 @optional {id: str, idempotencyToken: str}
 @returns(200) {build: Build?{id: str?, arn: str?, buildNumber: int(i64)?, startTime: str(timestamp)?, endTime: str(timestamp)?, currentPhase: str?, buildStatus: str?, sourceVersion: str?, resolvedSourceVersion: str?, projectName: str?, phases: [BuildPhase]?, source: ProjectSource?{type: str, location: str?, gitCloneDepth: int?, gitSubmodulesConfig: GitSubmodulesConfig?{fetchSubmodules: bool}, buildspec: str?, auth: SourceAuth?{type: str, resource: str?}, reportBuildStatus: bool?, buildStatusConfig: BuildStatusConfig?{context: str?, targetUrl: str?}, insecureSsl: bool?, sourceIdentifier: str?}, secondarySources: [ProjectSource]?, secondarySourceVersions: [ProjectSourceVersion]?, artifacts: BuildArtifacts?{location: str?, sha256sum: str?, md5sum: str?, overrideArtifactName: bool?, encryptionDisabled: bool?, artifactIdentifier: str?, bucketOwnerAccess: str?}, secondaryArtifacts: [BuildArtifacts]?, cache: ProjectCache?{type: str, location: str?, modes: [str]?}, environment: ProjectEnvironment?{type: str, image: str, computeType: str, fleet: ProjectFleet?{fleetArn: str?}, environmentVariables: [EnvironmentVariable]?, privilegedMode: bool?, certificate: str?, registryCredential: RegistryCredential?{credential: str, credentialProvider: str}, imagePullCredentialsType: str?}, serviceRole: str?, logs: LogsLocation?{groupName: str?, streamName: str?, deepLink: str?, s3DeepLink: str?, cloudWatchLogsArn: str?, s3LogsArn: str?, cloudWatchLogs: CloudWatchLogsConfig?{status: str, groupName: str?, streamName: str?}, s3Logs: S3LogsConfig?{status: str, location: str?, encryptionDisabled: bool?, bucketOwnerAccess: str?}}, timeoutInMinutes: int?, queuedTimeoutInMinutes: int?, buildComplete: bool?, initiator: str?, vpcConfig: VpcConfig?{vpcId: str?, subnets: [str]?, securityGroupIds: [str]?}, networkInterface: NetworkInterface?{subnetId: str?, networkInterfaceId: str?}, encryptionKey: str?, exportedEnvironmentVariables: [ExportedEnvironmentVariable]?, reportArns: [str]?, fileSystemLocations: [ProjectFileSystemLocation]?, debugSession: DebugSession?{sessionEnabled: bool?, sessionTarget: str?}, buildBatchArn: str?}}
 
 @endpoint POST /
+@desc Restarts a failed batch build. Only batch builds that have failed can be retried.
 @optional {id: str, idempotencyToken: str, retryType: str}
 @returns(200) {buildBatch: BuildBatch?{id: str?, arn: str?, startTime: str(timestamp)?, endTime: str(timestamp)?, currentPhase: str?, buildBatchStatus: str?, sourceVersion: str?, resolvedSourceVersion: str?, projectName: str?, phases: [BuildBatchPhase]?, source: ProjectSource?{type: str, location: str?, gitCloneDepth: int?, gitSubmodulesConfig: GitSubmodulesConfig?{fetchSubmodules: bool}, buildspec: str?, auth: SourceAuth?{type: str, resource: str?}, reportBuildStatus: bool?, buildStatusConfig: BuildStatusConfig?{context: str?, targetUrl: str?}, insecureSsl: bool?, sourceIdentifier: str?}, secondarySources: [ProjectSource]?, secondarySourceVersions: [ProjectSourceVersion]?, artifacts: BuildArtifacts?{location: str?, sha256sum: str?, md5sum: str?, overrideArtifactName: bool?, encryptionDisabled: bool?, artifactIdentifier: str?, bucketOwnerAccess: str?}, secondaryArtifacts: [BuildArtifacts]?, cache: ProjectCache?{type: str, location: str?, modes: [str]?}, environment: ProjectEnvironment?{type: str, image: str, computeType: str, fleet: ProjectFleet?{fleetArn: str?}, environmentVariables: [EnvironmentVariable]?, privilegedMode: bool?, certificate: str?, registryCredential: RegistryCredential?{credential: str, credentialProvider: str}, imagePullCredentialsType: str?}, serviceRole: str?, logConfig: LogsConfig?{cloudWatchLogs: CloudWatchLogsConfig?{status: str, groupName: str?, streamName: str?}, s3Logs: S3LogsConfig?{status: str, location: str?, encryptionDisabled: bool?, bucketOwnerAccess: str?}}, buildTimeoutInMinutes: int?, queuedTimeoutInMinutes: int?, complete: bool?, initiator: str?, vpcConfig: VpcConfig?{vpcId: str?, subnets: [str]?, securityGroupIds: [str]?}, encryptionKey: str?, buildBatchNumber: int(i64)?, fileSystemLocations: [ProjectFileSystemLocation]?, buildBatchConfig: ProjectBuildBatchConfig?{serviceRole: str?, combineArtifacts: bool?, restrictions: BatchRestrictions?{maximumBuildsAllowed: int?, computeTypesAllowed: [str]?}, timeoutInMins: int?, batchReportMode: str?}, buildGroups: [BuildGroup]?, debugSessionEnabled: bool?}}
 
 @endpoint POST /
+@desc Starts running a build with the settings defined in the project. These setting include: how to run a build, where to get the source code, which build environment to use, which build commands to run, and where to store the build output. You can also start a build run by overriding some of the build settings in the project. The overrides only apply for that specific start build request. The settings in the project are unaltered.
 @required {projectName: str}
 @optional {secondarySourcesOverride: [ProjectSource], secondarySourcesVersionOverride: [ProjectSourceVersion], sourceVersion: str, artifactsOverride: ProjectArtifacts, secondaryArtifactsOverride: [ProjectArtifacts], environmentVariablesOverride: [EnvironmentVariable], sourceTypeOverride: str, sourceLocationOverride: str, sourceAuthOverride: SourceAuth, gitCloneDepthOverride: int, gitSubmodulesConfigOverride: GitSubmodulesConfig, buildspecOverride: str, insecureSslOverride: bool, reportBuildStatusOverride: bool, buildStatusConfigOverride: BuildStatusConfig, environmentTypeOverride: str, imageOverride: str, computeTypeOverride: str, certificateOverride: str, cacheOverride: ProjectCache, serviceRoleOverride: str, privilegedModeOverride: bool, timeoutInMinutesOverride: int, queuedTimeoutInMinutesOverride: int, encryptionKeyOverride: str, idempotencyToken: str, logsConfigOverride: LogsConfig, registryCredentialOverride: RegistryCredential, imagePullCredentialsTypeOverride: str, debugSessionEnabled: bool, fleetOverride: ProjectFleet}
 @returns(200) {build: Build?{id: str?, arn: str?, buildNumber: int(i64)?, startTime: str(timestamp)?, endTime: str(timestamp)?, currentPhase: str?, buildStatus: str?, sourceVersion: str?, resolvedSourceVersion: str?, projectName: str?, phases: [BuildPhase]?, source: ProjectSource?{type: str, location: str?, gitCloneDepth: int?, gitSubmodulesConfig: GitSubmodulesConfig?{fetchSubmodules: bool}, buildspec: str?, auth: SourceAuth?{type: str, resource: str?}, reportBuildStatus: bool?, buildStatusConfig: BuildStatusConfig?{context: str?, targetUrl: str?}, insecureSsl: bool?, sourceIdentifier: str?}, secondarySources: [ProjectSource]?, secondarySourceVersions: [ProjectSourceVersion]?, artifacts: BuildArtifacts?{location: str?, sha256sum: str?, md5sum: str?, overrideArtifactName: bool?, encryptionDisabled: bool?, artifactIdentifier: str?, bucketOwnerAccess: str?}, secondaryArtifacts: [BuildArtifacts]?, cache: ProjectCache?{type: str, location: str?, modes: [str]?}, environment: ProjectEnvironment?{type: str, image: str, computeType: str, fleet: ProjectFleet?{fleetArn: str?}, environmentVariables: [EnvironmentVariable]?, privilegedMode: bool?, certificate: str?, registryCredential: RegistryCredential?{credential: str, credentialProvider: str}, imagePullCredentialsType: str?}, serviceRole: str?, logs: LogsLocation?{groupName: str?, streamName: str?, deepLink: str?, s3DeepLink: str?, cloudWatchLogsArn: str?, s3LogsArn: str?, cloudWatchLogs: CloudWatchLogsConfig?{status: str, groupName: str?, streamName: str?}, s3Logs: S3LogsConfig?{status: str, location: str?, encryptionDisabled: bool?, bucketOwnerAccess: str?}}, timeoutInMinutes: int?, queuedTimeoutInMinutes: int?, buildComplete: bool?, initiator: str?, vpcConfig: VpcConfig?{vpcId: str?, subnets: [str]?, securityGroupIds: [str]?}, networkInterface: NetworkInterface?{subnetId: str?, networkInterfaceId: str?}, encryptionKey: str?, exportedEnvironmentVariables: [ExportedEnvironmentVariable]?, reportArns: [str]?, fileSystemLocations: [ProjectFileSystemLocation]?, debugSession: DebugSession?{sessionEnabled: bool?, sessionTarget: str?}, buildBatchArn: str?}}
 
 @endpoint POST /
+@desc Starts a batch build for a project.
 @required {projectName: str}
 @optional {secondarySourcesOverride: [ProjectSource], secondarySourcesVersionOverride: [ProjectSourceVersion], sourceVersion: str, artifactsOverride: ProjectArtifacts, secondaryArtifactsOverride: [ProjectArtifacts], environmentVariablesOverride: [EnvironmentVariable], sourceTypeOverride: str, sourceLocationOverride: str, sourceAuthOverride: SourceAuth, gitCloneDepthOverride: int, gitSubmodulesConfigOverride: GitSubmodulesConfig, buildspecOverride: str, insecureSslOverride: bool, reportBuildBatchStatusOverride: bool, environmentTypeOverride: str, imageOverride: str, computeTypeOverride: str, certificateOverride: str, cacheOverride: ProjectCache, serviceRoleOverride: str, privilegedModeOverride: bool, buildTimeoutInMinutesOverride: int, queuedTimeoutInMinutesOverride: int, encryptionKeyOverride: str, idempotencyToken: str, logsConfigOverride: LogsConfig, registryCredentialOverride: RegistryCredential, imagePullCredentialsTypeOverride: str, buildBatchConfigOverride: ProjectBuildBatchConfig, debugSessionEnabled: bool}
 @returns(200) {buildBatch: BuildBatch?{id: str?, arn: str?, startTime: str(timestamp)?, endTime: str(timestamp)?, currentPhase: str?, buildBatchStatus: str?, sourceVersion: str?, resolvedSourceVersion: str?, projectName: str?, phases: [BuildBatchPhase]?, source: ProjectSource?{type: str, location: str?, gitCloneDepth: int?, gitSubmodulesConfig: GitSubmodulesConfig?{fetchSubmodules: bool}, buildspec: str?, auth: SourceAuth?{type: str, resource: str?}, reportBuildStatus: bool?, buildStatusConfig: BuildStatusConfig?{context: str?, targetUrl: str?}, insecureSsl: bool?, sourceIdentifier: str?}, secondarySources: [ProjectSource]?, secondarySourceVersions: [ProjectSourceVersion]?, artifacts: BuildArtifacts?{location: str?, sha256sum: str?, md5sum: str?, overrideArtifactName: bool?, encryptionDisabled: bool?, artifactIdentifier: str?, bucketOwnerAccess: str?}, secondaryArtifacts: [BuildArtifacts]?, cache: ProjectCache?{type: str, location: str?, modes: [str]?}, environment: ProjectEnvironment?{type: str, image: str, computeType: str, fleet: ProjectFleet?{fleetArn: str?}, environmentVariables: [EnvironmentVariable]?, privilegedMode: bool?, certificate: str?, registryCredential: RegistryCredential?{credential: str, credentialProvider: str}, imagePullCredentialsType: str?}, serviceRole: str?, logConfig: LogsConfig?{cloudWatchLogs: CloudWatchLogsConfig?{status: str, groupName: str?, streamName: str?}, s3Logs: S3LogsConfig?{status: str, location: str?, encryptionDisabled: bool?, bucketOwnerAccess: str?}}, buildTimeoutInMinutes: int?, queuedTimeoutInMinutes: int?, complete: bool?, initiator: str?, vpcConfig: VpcConfig?{vpcId: str?, subnets: [str]?, securityGroupIds: [str]?}, encryptionKey: str?, buildBatchNumber: int(i64)?, fileSystemLocations: [ProjectFileSystemLocation]?, buildBatchConfig: ProjectBuildBatchConfig?{serviceRole: str?, combineArtifacts: bool?, restrictions: BatchRestrictions?{maximumBuildsAllowed: int?, computeTypesAllowed: [str]?}, timeoutInMins: int?, batchReportMode: str?}, buildGroups: [BuildGroup]?, debugSessionEnabled: bool?}}
 
 @endpoint POST /
+@desc Attempts to stop running a build.
 @required {id: str}
 @returns(200) {build: Build?{id: str?, arn: str?, buildNumber: int(i64)?, startTime: str(timestamp)?, endTime: str(timestamp)?, currentPhase: str?, buildStatus: str?, sourceVersion: str?, resolvedSourceVersion: str?, projectName: str?, phases: [BuildPhase]?, source: ProjectSource?{type: str, location: str?, gitCloneDepth: int?, gitSubmodulesConfig: GitSubmodulesConfig?{fetchSubmodules: bool}, buildspec: str?, auth: SourceAuth?{type: str, resource: str?}, reportBuildStatus: bool?, buildStatusConfig: BuildStatusConfig?{context: str?, targetUrl: str?}, insecureSsl: bool?, sourceIdentifier: str?}, secondarySources: [ProjectSource]?, secondarySourceVersions: [ProjectSourceVersion]?, artifacts: BuildArtifacts?{location: str?, sha256sum: str?, md5sum: str?, overrideArtifactName: bool?, encryptionDisabled: bool?, artifactIdentifier: str?, bucketOwnerAccess: str?}, secondaryArtifacts: [BuildArtifacts]?, cache: ProjectCache?{type: str, location: str?, modes: [str]?}, environment: ProjectEnvironment?{type: str, image: str, computeType: str, fleet: ProjectFleet?{fleetArn: str?}, environmentVariables: [EnvironmentVariable]?, privilegedMode: bool?, certificate: str?, registryCredential: RegistryCredential?{credential: str, credentialProvider: str}, imagePullCredentialsType: str?}, serviceRole: str?, logs: LogsLocation?{groupName: str?, streamName: str?, deepLink: str?, s3DeepLink: str?, cloudWatchLogsArn: str?, s3LogsArn: str?, cloudWatchLogs: CloudWatchLogsConfig?{status: str, groupName: str?, streamName: str?}, s3Logs: S3LogsConfig?{status: str, location: str?, encryptionDisabled: bool?, bucketOwnerAccess: str?}}, timeoutInMinutes: int?, queuedTimeoutInMinutes: int?, buildComplete: bool?, initiator: str?, vpcConfig: VpcConfig?{vpcId: str?, subnets: [str]?, securityGroupIds: [str]?}, networkInterface: NetworkInterface?{subnetId: str?, networkInterfaceId: str?}, encryptionKey: str?, exportedEnvironmentVariables: [ExportedEnvironmentVariable]?, reportArns: [str]?, fileSystemLocations: [ProjectFileSystemLocation]?, debugSession: DebugSession?{sessionEnabled: bool?, sessionTarget: str?}, buildBatchArn: str?}}
 
 @endpoint POST /
+@desc Stops a running batch build.
 @required {id: str}
 @returns(200) {buildBatch: BuildBatch?{id: str?, arn: str?, startTime: str(timestamp)?, endTime: str(timestamp)?, currentPhase: str?, buildBatchStatus: str?, sourceVersion: str?, resolvedSourceVersion: str?, projectName: str?, phases: [BuildBatchPhase]?, source: ProjectSource?{type: str, location: str?, gitCloneDepth: int?, gitSubmodulesConfig: GitSubmodulesConfig?{fetchSubmodules: bool}, buildspec: str?, auth: SourceAuth?{type: str, resource: str?}, reportBuildStatus: bool?, buildStatusConfig: BuildStatusConfig?{context: str?, targetUrl: str?}, insecureSsl: bool?, sourceIdentifier: str?}, secondarySources: [ProjectSource]?, secondarySourceVersions: [ProjectSourceVersion]?, artifacts: BuildArtifacts?{location: str?, sha256sum: str?, md5sum: str?, overrideArtifactName: bool?, encryptionDisabled: bool?, artifactIdentifier: str?, bucketOwnerAccess: str?}, secondaryArtifacts: [BuildArtifacts]?, cache: ProjectCache?{type: str, location: str?, modes: [str]?}, environment: ProjectEnvironment?{type: str, image: str, computeType: str, fleet: ProjectFleet?{fleetArn: str?}, environmentVariables: [EnvironmentVariable]?, privilegedMode: bool?, certificate: str?, registryCredential: RegistryCredential?{credential: str, credentialProvider: str}, imagePullCredentialsType: str?}, serviceRole: str?, logConfig: LogsConfig?{cloudWatchLogs: CloudWatchLogsConfig?{status: str, groupName: str?, streamName: str?}, s3Logs: S3LogsConfig?{status: str, location: str?, encryptionDisabled: bool?, bucketOwnerAccess: str?}}, buildTimeoutInMinutes: int?, queuedTimeoutInMinutes: int?, complete: bool?, initiator: str?, vpcConfig: VpcConfig?{vpcId: str?, subnets: [str]?, securityGroupIds: [str]?}, encryptionKey: str?, buildBatchNumber: int(i64)?, fileSystemLocations: [ProjectFileSystemLocation]?, buildBatchConfig: ProjectBuildBatchConfig?{serviceRole: str?, combineArtifacts: bool?, restrictions: BatchRestrictions?{maximumBuildsAllowed: int?, computeTypesAllowed: [str]?}, timeoutInMins: int?, batchReportMode: str?}, buildGroups: [BuildGroup]?, debugSessionEnabled: bool?}}
 
 @endpoint POST /
+@desc Updates a compute fleet.
 @required {arn: str}
 @optional {baseCapacity: int, environmentType: str, computeType: str, scalingConfiguration: ScalingConfigurationInput, overflowBehavior: str, vpcConfig: VpcConfig, imageId: str, fleetServiceRole: str, tags: [Tag]}
 @returns(200) {fleet: Fleet?{arn: str?, name: str?, id: str?, created: str(timestamp)?, lastModified: str(timestamp)?, status: FleetStatus?{statusCode: str?, context: str?, message: str?}, baseCapacity: int?, environmentType: str?, computeType: str?, scalingConfiguration: ScalingConfigurationOutput?{scalingType: str?, targetTrackingScalingConfigs: [TargetTrackingScalingConfiguration]?, maxCapacity: int?, desiredCapacity: int?}, overflowBehavior: str?, vpcConfig: VpcConfig?{vpcId: str?, subnets: [str]?, securityGroupIds: [str]?}, imageId: str?, fleetServiceRole: str?, tags: [Tag]?}}
 
 @endpoint POST /
+@desc Changes the settings of a build project.
 @required {name: str}
 @optional {description: str, source: ProjectSource, secondarySources: [ProjectSource], sourceVersion: str, secondarySourceVersions: [ProjectSourceVersion], artifacts: ProjectArtifacts, secondaryArtifacts: [ProjectArtifacts], cache: ProjectCache, environment: ProjectEnvironment, serviceRole: str, timeoutInMinutes: int, queuedTimeoutInMinutes: int, encryptionKey: str, tags: [Tag], vpcConfig: VpcConfig, badgeEnabled: bool, logsConfig: LogsConfig, fileSystemLocations: [ProjectFileSystemLocation], buildBatchConfig: ProjectBuildBatchConfig, concurrentBuildLimit: int}
 @returns(200) {project: Project?{name: str?, arn: str?, description: str?, source: ProjectSource?{type: str, location: str?, gitCloneDepth: int?, gitSubmodulesConfig: GitSubmodulesConfig?{fetchSubmodules: bool}, buildspec: str?, auth: SourceAuth?{type: str, resource: str?}, reportBuildStatus: bool?, buildStatusConfig: BuildStatusConfig?{context: str?, targetUrl: str?}, insecureSsl: bool?, sourceIdentifier: str?}, secondarySources: [ProjectSource]?, sourceVersion: str?, secondarySourceVersions: [ProjectSourceVersion]?, artifacts: ProjectArtifacts?{type: str, location: str?, path: str?, namespaceType: str?, name: str?, packaging: str?, overrideArtifactName: bool?, encryptionDisabled: bool?, artifactIdentifier: str?, bucketOwnerAccess: str?}, secondaryArtifacts: [ProjectArtifacts]?, cache: ProjectCache?{type: str, location: str?, modes: [str]?}, environment: ProjectEnvironment?{type: str, image: str, computeType: str, fleet: ProjectFleet?{fleetArn: str?}, environmentVariables: [EnvironmentVariable]?, privilegedMode: bool?, certificate: str?, registryCredential: RegistryCredential?{credential: str, credentialProvider: str}, imagePullCredentialsType: str?}, serviceRole: str?, timeoutInMinutes: int?, queuedTimeoutInMinutes: int?, encryptionKey: str?, tags: [Tag]?, created: str(timestamp)?, lastModified: str(timestamp)?, webhook: Webhook?{url: str?, payloadUrl: str?, secret: str?, branchFilter: str?, filterGroups: [[WebhookFilter]]?, buildType: str?, manualCreation: bool?, lastModifiedSecret: str(timestamp)?, scopeConfiguration: ScopeConfiguration?{name: str, domain: str?, scope: str}}, vpcConfig: VpcConfig?{vpcId: str?, subnets: [str]?, securityGroupIds: [str]?}, badge: ProjectBadge?{badgeEnabled: bool?, badgeRequestUrl: str?}, logsConfig: LogsConfig?{cloudWatchLogs: CloudWatchLogsConfig?{status: str, groupName: str?, streamName: str?}, s3Logs: S3LogsConfig?{status: str, location: str?, encryptionDisabled: bool?, bucketOwnerAccess: str?}}, fileSystemLocations: [ProjectFileSystemLocation]?, buildBatchConfig: ProjectBuildBatchConfig?{serviceRole: str?, combineArtifacts: bool?, restrictions: BatchRestrictions?{maximumBuildsAllowed: int?, computeTypesAllowed: [str]?}, timeoutInMins: int?, batchReportMode: str?}, concurrentBuildLimit: int?, projectVisibility: str?, publicProjectAlias: str?, resourceAccessRole: str?}}
 
 @endpoint POST /
+@desc Changes the public visibility for a project. The project's build results, logs, and artifacts are available to the general public. For more information, see Public build projects in the CodeBuild User Guide.  The following should be kept in mind when making your projects public:   All of a project's build results, logs, and artifacts, including builds that were run when the project was private, are available to the general public.   All build logs and artifacts are available to the public. Environment variables, source code, and other sensitive information may have been output to the build logs and artifacts. You must be careful about what information is output to the build logs. Some best practice are:   Do not store sensitive values in environment variables. We recommend that you use an Amazon EC2 Systems Manager Parameter Store or Secrets Manager to store sensitive values.   Follow Best practices for using webhooks in the CodeBuild User Guide to limit which entities can trigger a build, and do not store the buildspec in the project itself, to ensure that your webhooks are as secure as possible.     A malicious user can use public builds to distribute malicious artifacts. We recommend that you review all pull requests to verify that the pull request is a legitimate change. We also recommend that you validate any artifacts with their checksums to make sure that the correct artifacts are being downloaded.
 @required {projectArn: str, projectVisibility: str}
 @optional {resourceAccessRole: str}
 @returns(200) {projectArn: str?, publicProjectAlias: str?, projectVisibility: str?}
 
 @endpoint POST /
+@desc Updates a report group.
 @required {arn: str}
 @optional {exportConfig: ReportExportConfig, tags: [Tag]}
 @returns(200) {reportGroup: ReportGroup?{arn: str?, name: str?, type: str?, exportConfig: ReportExportConfig?{exportConfigType: str?, s3Destination: S3ReportExportConfig?{bucket: str?, bucketOwner: str?, path: str?, packaging: str?, encryptionKey: str?, encryptionDisabled: bool?}}, created: str(timestamp)?, lastModified: str(timestamp)?, tags: [Tag]?, status: str?}}
 
 @endpoint POST /
+@desc Updates the webhook associated with an CodeBuild build project.    If you use Bitbucket for your repository, rotateSecret is ignored.
 @required {projectName: str}
 @optional {branchFilter: str, rotateSecret: bool, filterGroups: [[WebhookFilter]], buildType: str}
 @returns(200) {webhook: Webhook?{url: str?, payloadUrl: str?, secret: str?, branchFilter: str?, filterGroups: [[WebhookFilter]]?, buildType: str?, manualCreation: bool?, lastModifiedSecret: str(timestamp)?, scopeConfiguration: ScopeConfiguration?{name: str, domain: str?, scope: str}}}

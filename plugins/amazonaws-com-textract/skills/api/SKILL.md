@@ -51,88 +51,10 @@ Not specified.
 | POST | / | Removes any tags with the specified keys from the specified resource. |
 | POST | / | Update the configuration for an adapter. FeatureTypes configurations cannot be updated. At least one new parameter must be specified as an argument. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I extract text from a single-page document?" -> POST / (DetectDocumentText: Document)
-- "How do I analyze a document for tables and forms?" -> POST / (AnalyzeDocument: Document + FeatureTypes)
-- "How do I process a receipt or invoice?" -> POST / (AnalyzeExpense: Document)
-- "How do I extract data from an ID card or passport?" -> POST / (AnalyzeID: DocumentPages)
-- "How do I process a large multi-page PDF stored in S3?" -> POST / (StartDocumentAnalysis: DocumentLocation + FeatureTypes)
-- "How do I check if my async document job is done?" -> POST / (GetDocumentAnalysis: JobId)
-- "How do I analyze lending documents like mortgage applications?" -> POST / (StartLendingAnalysis: DocumentLocation)
-- "How do I get a summary of classified lending documents?" -> POST / (GetLendingAnalysisSummary: JobId)
-- "How do I create a custom adapter for specialized documents?" -> POST / (CreateAdapter: AdapterName + FeatureTypes)
-- "How do I train a new version of my adapter?" -> POST / (CreateAdapterVersion: AdapterId + DatasetConfig + OutputConfig)
-- "How do I list all my custom adapters?" -> POST / (ListAdapters)
-- "How do I check the training status of an adapter version?" -> POST / (GetAdapterVersion: AdapterId + AdapterVersion)
-- "How do I tag a Textract resource for cost tracking?" -> POST / (TagResource: ResourceARN + Tags)
-- "How do I paginate through async job results?" -> POST / (GetDocumentAnalysis: JobId + NextToken + MaxResults)
-- "How do I use queries to ask specific questions about a document?" -> POST / (AnalyzeDocument: Document + FeatureTypes + QueriesConfig)
-
-## Response Tips
-
-- **Sync document operations** (AnalyzeDocument, DetectDocumentText, AnalyzeExpense, AnalyzeID): Results return immediately in `Blocks` or `ExpenseDocuments` arrays; `DocumentMetadata.Pages` tells you total page count.
-- **Async job operations** (Get*): Always check `JobStatus` first -- only parse `Blocks`/`Results` when status is `SUCCEEDED`; use `NextToken` to paginate through large result sets.
-- **Start* operations**: Return only a `JobId` string; poll the corresponding Get* endpoint until `JobStatus` leaves `IN_PROGRESS`.
-- **Adapter operations**: `Status` field on adapter versions tracks training progress (`CREATION_IN_PROGRESS`, `CREATION_SUCCESSFUL`, `CREATION_ERROR`); check `EvaluationMetrics` for accuracy data.
-- **List operations**: All support `MaxResults` + `NextToken` pagination and optional timestamp filters (`AfterCreationTime`, `BeforeCreationTime`).
-- **Tag operations**: TagResource and UntagResource return no body on success; ListTagsForResource returns a `Tags` map.
-
-## Anomaly Flags
-
-- **Job stuck in IN_PROGRESS**: Surface if polling GetDocumentAnalysis/GetDocumentTextDetection returns `IN_PROGRESS` for more than 5 minutes on a small document.
-- **Warnings array present**: Any non-empty `Warnings` array in async results indicates pages that could not be processed -- always surface these to the user.
-- **HumanLoopActivationOutput populated**: When AnalyzeDocument triggers a Human Loop (A2I), flag that results require human review before use.
-- **StatusMessage on failure**: When `JobStatus` is `FAILED` or adapter `Status` is `CREATION_ERROR`, surface `StatusMessage` immediately -- it contains the root cause.
-- **Empty Blocks/Results**: A successful response with an empty or missing `Blocks` array likely means the document is blank, encrypted, or unsupported format.
-- **Throttling (429/TooManyRequestsException)**: AWS Textract has per-account TPS limits; surface when hitting rate limits and suggest reducing concurrency or requesting a quota increase.
-- **Adapter AutoUpdate value**: Flag if an adapter has `AutoUpdate` set to a non-default value, as this affects model behavior over time.
-
-## Playbook
-
-### 1. Extract Tables and Forms from a Multi-Page S3 Document
-
-1. Call StartDocumentAnalysis with `DocumentLocation` pointing to your S3 bucket/key and `FeatureTypes: ["TABLES", "FORMS"]`.
-2. Capture the returned `JobId`.
-3. Poll GetDocumentAnalysis with the `JobId` every 5 seconds.
-4. When `JobStatus` is `SUCCEEDED`, collect all `Blocks` from the response.
-5. If `NextToken` is present, continue calling GetDocumentAnalysis with the token until all pages are retrieved.
-6. Check the `Warnings` array for any pages that failed processing.
-
-### 2. Process Invoices and Receipts at Scale
-
-1. Upload receipt/invoice files to an S3 bucket.
-2. Call StartExpenseAnalysis with `DocumentLocation` for each file, optionally setting `NotificationChannel` to an SNS topic for completion callbacks.
-3. When notified (or via polling GetExpenseAnalysis), retrieve `ExpenseDocuments` from the response.
-4. Each `ExpenseDocument` contains structured line items and summary fields -- iterate through them for data extraction.
-5. Paginate with `NextToken` if the document set is large.
-
-### 3. Build and Deploy a Custom Adapter
-
-1. Call CreateAdapter with a descriptive `AdapterName` and the relevant `FeatureTypes` (e.g., `["TABLES"]`).
-2. Note the returned `AdapterId`.
-3. Prepare a labeled dataset manifest in S3.
-4. Call CreateAdapterVersion with the `AdapterId`, `DatasetConfig` pointing to the manifest, and an `OutputConfig` for training artifacts.
-5. Poll GetAdapterVersion until `Status` is `CREATION_SUCCESSFUL`; review `EvaluationMetrics` for accuracy.
-6. Use the adapter by passing `AdaptersConfig` in AnalyzeDocument or StartDocumentAnalysis calls.
-
-### 4. Verify Identity Documents
-
-1. Collect front and back images of the ID document.
-2. Call AnalyzeID with `DocumentPages` containing both images as `Document` objects (S3 or base64 bytes).
-3. Parse the returned `IdentityDocuments` array for extracted fields (name, DOB, document number, expiration).
-4. Cross-reference extracted fields against your application requirements.
-
-### 5. Async Text Detection with SNS Notifications
-
-1. Create an SNS topic and IAM role granting Textract publish permissions.
-2. Call StartDocumentTextDetection with `DocumentLocation`, and set `NotificationChannel` with the SNS topic ARN and role ARN.
-3. Subscribe a Lambda or SQS queue to the SNS topic.
-4. When the notification arrives, extract the `JobId` from the message.
-5. Call GetDocumentTextDetection with the `JobId` to retrieve all detected `Blocks`.
-6. Paginate with `NextToken` and `MaxResults` until all results are consumed.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

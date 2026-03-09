@@ -319,93 +319,196 @@ https://api.render.com/v1
 | GET | /task-runs/{taskRunId} | Retrieve task run |
 | DELETE | /task-runs/{taskRunId} | Cancel task run |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What services do I have running?" -> GET /services
-- "How do I deploy my service?" -> POST /services/{serviceId}/deploys
-- "What's the status of my latest deploy?" -> GET /services/{serviceId}/deploys
-- "How do I roll back to a previous deployment?" -> POST /services/{serviceId}/rollback
-- "Can I see the logs for my service?" -> GET /logs
-- "How do I add an environment variable to my service?" -> PUT /services/{serviceId}/env-vars/{envVarKey}
-- "What databases do I have and what are their connection strings?" -> GET /postgres then GET /postgres/{postgresId}/connection-info
-- "How do I scale my service to more instances?" -> POST /services/{serviceId}/scale
-- "How do I set up autoscaling for my service?" -> PUT /services/{serviceId}/autoscaling
-- "How do I add a custom domain to my service?" -> POST /services/{serviceId}/custom-domains
-- "What's my current CPU and memory usage?" -> GET /metrics/cpu and GET /metrics/memory
-- "How do I suspend a service to stop billing?" -> POST /services/{serviceId}/suspend
-- "How do I restore a Postgres database to a point in time?" -> POST /postgres/{postgresId}/recovery
-- "Who are the members of my team and what roles do they have?" -> GET /owners/{ownerId}/members
-- "How do I create a new Redis instance?" -> POST /redis
-
-## Response Tips
-
-- **List endpoints** (services, postgres, redis, disks, blueprints, projects, env-groups, webhooks, workflows, tasks, task-runs): All use cursor-based pagination with `cursor` and `limit` (default 20). Check for a `cursor` field in the response to fetch the next page; stop when absent.
-- **Service details**: The `serviceDetails` field is polymorphic (`any`) -- its shape depends on `type` (static_site, web_service, private_service, background_worker, cron_job). Inspect the service `type` before parsing.
-- **Deploy responses**: POST to create a deploy may return either 201 (immediate) or 202 (accepted/queued). Poll GET /services/{serviceId}/deploys/{deployId} for final status.
-- **Connection info** (postgres, redis, key-value): Strings marked `(password)` contain secrets. Never log or display these without masking.
-- **Suspend/resume/restart/scale/failover**: Return 202 (accepted), meaning the operation is asynchronous. Poll the resource's GET endpoint to confirm completion.
-- **Delete endpoints**: Always return 204 with no body. A successful delete has no content to parse.
-- **Logs**: Response includes `hasMore`, `nextStartTime`, and `nextEndTime` for time-based pagination, not cursor-based.
-- **Metrics endpoints**: Return time-series data with minimal error codes (400, 500 only). Pass resource filters via query parameters.
-
-## Anomaly Flags
-
-- **429 Too Many Requests**: Nearly every endpoint can return 429. Surface this immediately with retry-after guidance; back off exponentially.
-- **402 Payment Required**: Returned by POST /services, POST /registrycredentials, POST /services/{serviceId}/custom-domains, and PATCH /registrycredentials. Indicates plan limits reached -- alert the user about billing.
-- **410 Gone**: Many endpoints return this. The resource was permanently deleted; stop retrying and inform the user the resource no longer exists.
-- **Service suspended unexpectedly**: If GET /services/{serviceId} returns `suspended: "suspended"`, proactively surface this with the `suspenders` array to explain why.
-- **Postgres expiration approaching**: The `expiresAt` field on free-tier Postgres instances. Alert when expiration is within 7 days.
-- **Pending maintenance**: Redis, key-value, and Postgres responses include `maintenance.pendingMaintenanceBy`. Surface when a maintenance window is imminent.
-- **Deploy failures**: When polling deploys, surface `status` changes to failed states immediately rather than waiting for the user to ask.
-- **Disk usage near capacity**: Compare GET /metrics/disk-usage against GET /metrics/disk-capacity and warn when usage exceeds 85%.
-- **High availability disabled on production Postgres**: Flag when `highAvailabilityEnabled: false` on a non-free plan database.
-- **Autoscaling hitting max**: If instance count from GET /metrics/instance-count equals the `max` from autoscaling config, warn about potential capacity ceiling.
-
-## Playbook
-
-### 1. Deploy a New Web Service from a Git Repo
-
-1. GET /owners to find your `ownerId`
-2. POST /services with `type: "web_service"`, `name`, `ownerId`, `repo`, and `branch`
-3. Note the `deployId` from the response
-4. Poll GET /services/{serviceId}/deploys/{deployId} until `status` is `live` or `failed`
-5. GET /services/{serviceId}/custom-domains to verify the default URL is active
-6. Optionally POST /services/{serviceId}/custom-domains to attach a custom domain
-
-### 2. Set Up a Postgres Database with Environment Variables
-
-1. GET /owners to find your `ownerId`
-2. POST /postgres with `name`, `ownerId`, `plan`, and `version`
-3. GET /postgres/{postgresId}/connection-info to retrieve the connection string
-4. PUT /services/{serviceId}/env-vars/DATABASE_URL with the `internalConnectionString` value
-5. POST /services/{serviceId}/deploys to redeploy the service with the new variable
-6. Verify by polling GET /services/{serviceId}/deploys/{deployId} until status is `live`
-
-### 3. Roll Back a Failed Deployment
-
-1. GET /services/{serviceId}/deploys to list recent deploys and identify the last successful `deployId`
-2. POST /services/{serviceId}/rollback with the target `deployId`
-3. Poll GET /services/{serviceId}/deploys/{deployId} (the new rollback deploy) until `status` is `live`
-4. GET /services/{serviceId} to confirm the service is running the rolled-back version
-5. Check GET /logs with the service's `resource` ID to verify healthy application output
-
-### 4. Configure Autoscaling with Monitoring
-
-1. GET /services/{serviceId} to confirm the service type supports scaling
-2. PUT /services/{serviceId}/autoscaling with `enabled: true`, `min`, `max`, and CPU/memory thresholds
-3. GET /metrics/cpu and GET /metrics/memory to establish baseline usage
-4. GET /metrics/instance-count periodically to verify scaling behavior
-5. Set up a webhook via POST /webhooks with relevant event filters to get notified of scaling events
-
-### 5. Manage Shared Environment Variables Across Services
-
-1. POST /env-groups with `name`, `ownerId`, and `envVars` array containing shared variables
-2. POST /env-groups/{envGroupId}/services/{serviceId} for each service that needs these variables
-3. To update a single variable: PUT /env-groups/{envGroupId}/env-vars/{envVarKey}
-4. Linked services redeploy automatically if `autoDeploy` is enabled; otherwise trigger POST /services/{serviceId}/deploys for each
-5. To remove a service from the group: DELETE /env-groups/{envGroupId}/services/{serviceId}
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all blueprints?" -> GET /blueprints
+- "Create a validate?" -> POST /blueprints/validate
+- "Partially update a member?" -> PATCH /owners/{ownerId}/members/{userId}
+- "Delete a member?" -> DELETE /owners/{ownerId}/members/{userId}
+- "Get blueprint details?" -> GET /blueprints/{blueprintId}
+- "Partially update a blueprint?" -> PATCH /blueprints/{blueprintId}
+- "Delete a blueprint?" -> DELETE /blueprints/{blueprintId}
+- "List all syncs?" -> GET /blueprints/{blueprintId}/syncs
+- "List all disks?" -> GET /disks
+- "Create a disk?" -> POST /disks
+- "Get disk details?" -> GET /disks/{diskId}
+- "Partially update a disk?" -> PATCH /disks/{diskId}
+- "Delete a disk?" -> DELETE /disks/{diskId}
+- "List all snapshots?" -> GET /disks/{diskId}/snapshots
+- "Create a restore?" -> POST /disks/{diskId}/snapshots/restore
+- "List all users?" -> GET /users
+- "List all owners?" -> GET /owners
+- "Get owner details?" -> GET /owners/{ownerId}
+- "List all members?" -> GET /owners/{ownerId}/members
+- "List all audit-logs?" -> GET /owners/{ownerId}/audit-logs
+- "List all audit-logs?" -> GET /organizations/{orgId}/audit-logs
+- "Get owner details?" -> GET /notification-settings/owners/{ownerId}
+- "Partially update a owner?" -> PATCH /notification-settings/owners/{ownerId}
+- "List all overrides?" -> GET /notification-settings/overrides
+- "Get service details?" -> GET /notification-settings/overrides/services/{serviceId}
+- "Partially update a service?" -> PATCH /notification-settings/overrides/services/{serviceId}
+- "List all registrycredentials?" -> GET /registrycredentials
+- "Create a registrycredential?" -> POST /registrycredentials
+- "Get registrycredential details?" -> GET /registrycredentials/{registryCredentialId}
+- "Partially update a registrycredential?" -> PATCH /registrycredentials/{registryCredentialId}
+- "Delete a registrycredential?" -> DELETE /registrycredentials/{registryCredentialId}
+- "List all services?" -> GET /services
+- "Create a service?" -> POST /services
+- "Get service details?" -> GET /services/{serviceId}
+- "Partially update a service?" -> PATCH /services/{serviceId}
+- "Delete a service?" -> DELETE /services/{serviceId}
+- "Create a purge?" -> POST /services/{serviceId}/cache/purge
+- "List all deploys?" -> GET /services/{serviceId}/deploys
+- "Create a deploy?" -> POST /services/{serviceId}/deploys
+- "Get deploy details?" -> GET /services/{serviceId}/deploys/{deployId}
+- "Create a cancel?" -> POST /services/{serviceId}/deploys/{deployId}/cancel
+- "Create a rollback?" -> POST /services/{serviceId}/rollback
+- "List all env-vars?" -> GET /services/{serviceId}/env-vars
+- "Get env-var details?" -> GET /services/{serviceId}/env-vars/{envVarKey}
+- "Update a env-var?" -> PUT /services/{serviceId}/env-vars/{envVarKey}
+- "Delete a env-var?" -> DELETE /services/{serviceId}/env-vars/{envVarKey}
+- "List all secret-files?" -> GET /services/{serviceId}/secret-files
+- "Get secret-file details?" -> GET /services/{serviceId}/secret-files/{secretFileName}
+- "Update a secret-file?" -> PUT /services/{serviceId}/secret-files/{secretFileName}
+- "Delete a secret-file?" -> DELETE /services/{serviceId}/secret-files/{secretFileName}
+- "List all events?" -> GET /services/{serviceId}/events
+- "List all headers?" -> GET /services/{serviceId}/headers
+- "Create a header?" -> POST /services/{serviceId}/headers
+- "Delete a header?" -> DELETE /services/{serviceId}/headers/{headerId}
+- "List all routes?" -> GET /services/{serviceId}/routes
+- "Create a route?" -> POST /services/{serviceId}/routes
+- "Delete a route?" -> DELETE /services/{serviceId}/routes/{routeId}
+- "List all custom-domains?" -> GET /services/{serviceId}/custom-domains
+- "Create a custom-domain?" -> POST /services/{serviceId}/custom-domains
+- "Get custom-domain details?" -> GET /services/{serviceId}/custom-domains/{customDomainIdOrName}
+- "Delete a custom-domain?" -> DELETE /services/{serviceId}/custom-domains/{customDomainIdOrName}
+- "Create a verify?" -> POST /services/{serviceId}/custom-domains/{customDomainIdOrName}/verify
+- "Create a suspend?" -> POST /services/{serviceId}/suspend
+- "Create a resume?" -> POST /services/{serviceId}/resume
+- "Create a restart?" -> POST /services/{serviceId}/restart
+- "Create a scale?" -> POST /services/{serviceId}/scale
+- "Create a preview?" -> POST /services/{serviceId}/preview
+- "List all jobs?" -> GET /services/{serviceId}/jobs
+- "Create a job?" -> POST /services/{serviceId}/jobs
+- "Get job details?" -> GET /services/{serviceId}/jobs/{jobId}
+- "Create a cancel?" -> POST /services/{serviceId}/jobs/{jobId}/cancel
+- "List all instances?" -> GET /services/{serviceId}/instances
+- "Create a run?" -> POST /cron-jobs/{cronJobId}/runs
+- "Get event details?" -> GET /events/{eventId}
+- "List all logs?" -> GET /logs
+- "List all subscribe?" -> GET /logs/subscribe
+- "List all values?" -> GET /logs/values
+- "Get owner details?" -> GET /logs/streams/owner/{ownerId}
+- "Update a owner?" -> PUT /logs/streams/owner/{ownerId}
+- "Delete a owner?" -> DELETE /logs/streams/owner/{ownerId}
+- "List all resource?" -> GET /logs/streams/resource
+- "Get resource details?" -> GET /logs/streams/resource/{resourceId}
+- "Update a resource?" -> PUT /logs/streams/resource/{resourceId}
+- "Delete a resource?" -> DELETE /logs/streams/resource/{resourceId}
+- "Get metrics-stream details?" -> GET /metrics-stream/{ownerId}
+- "Update a metrics-stream?" -> PUT /metrics-stream/{ownerId}
+- "Delete a metrics-stream?" -> DELETE /metrics-stream/{ownerId}
+- "List all cpu?" -> GET /metrics/cpu
+- "List all cpu-limit?" -> GET /metrics/cpu-limit
+- "List all cpu-target?" -> GET /metrics/cpu-target
+- "List all memory?" -> GET /metrics/memory
+- "List all memory-limit?" -> GET /metrics/memory-limit
+- "List all memory-target?" -> GET /metrics/memory-target
+- "List all http-requests?" -> GET /metrics/http-requests
+- "List all http-latency?" -> GET /metrics/http-latency
+- "List all bandwidth?" -> GET /metrics/bandwidth
+- "List all bandwidth-sources?" -> GET /metrics/bandwidth-sources
+- "List all disk-usage?" -> GET /metrics/disk-usage
+- "List all disk-capacity?" -> GET /metrics/disk-capacity
+- "List all instance-count?" -> GET /metrics/instance-count
+- "List all active-connections?" -> GET /metrics/active-connections
+- "List all replication-lag?" -> GET /metrics/replication-lag
+- "List all application?" -> GET /metrics/filters/application
+- "List all http?" -> GET /metrics/filters/http
+- "List all path?" -> GET /metrics/filters/path
+- "List all task-runs-queued?" -> GET /metrics/task-runs-queued
+- "List all task-runs-completed?" -> GET /metrics/task-runs-completed
+- "List all key-value?" -> GET /key-value
+- "Create a key-value?" -> POST /key-value
+- "Get key-value details?" -> GET /key-value/{keyValueId}
+- "Partially update a key-value?" -> PATCH /key-value/{keyValueId}
+- "Delete a key-value?" -> DELETE /key-value/{keyValueId}
+- "List all connection-info?" -> GET /key-value/{keyValueId}/connection-info
+- "Create a suspend?" -> POST /key-value/{keyValueId}/suspend
+- "Create a resume?" -> POST /key-value/{keyValueId}/resume
+- "List all redis?" -> GET /redis
+- "Create a redis?" -> POST /redis
+- "Get redis details?" -> GET /redis/{redisId}
+- "Partially update a redis?" -> PATCH /redis/{redisId}
+- "Delete a redis?" -> DELETE /redis/{redisId}
+- "List all connection-info?" -> GET /redis/{redisId}/connection-info
+- "List all postgres?" -> GET /postgres
+- "Create a postgre?" -> POST /postgres
+- "Get postgre details?" -> GET /postgres/{postgresId}
+- "Partially update a postgre?" -> PATCH /postgres/{postgresId}
+- "Delete a postgre?" -> DELETE /postgres/{postgresId}
+- "List all connection-info?" -> GET /postgres/{postgresId}/connection-info
+- "List all recovery?" -> GET /postgres/{postgresId}/recovery
+- "Create a recovery?" -> POST /postgres/{postgresId}/recovery
+- "Create a suspend?" -> POST /postgres/{postgresId}/suspend
+- "Create a resume?" -> POST /postgres/{postgresId}/resume
+- "Create a restart?" -> POST /postgres/{postgresId}/restart
+- "Create a failover?" -> POST /postgres/{postgresId}/failover
+- "List all export?" -> GET /postgres/{postgresId}/export
+- "Create a export?" -> POST /postgres/{postgresId}/export
+- "List all credentials?" -> GET /postgres/{postgresId}/credentials
+- "Create a credential?" -> POST /postgres/{postgresId}/credentials
+- "Delete a credential?" -> DELETE /postgres/{postgresId}/credentials/{username}
+- "List all projects?" -> GET /projects
+- "Create a project?" -> POST /projects
+- "Get project details?" -> GET /projects/{projectId}
+- "Partially update a project?" -> PATCH /projects/{projectId}
+- "Delete a project?" -> DELETE /projects/{projectId}
+- "Create a environment?" -> POST /environments
+- "List all environments?" -> GET /environments
+- "Get environment details?" -> GET /environments/{environmentId}
+- "Partially update a environment?" -> PATCH /environments/{environmentId}
+- "Delete a environment?" -> DELETE /environments/{environmentId}
+- "Create a resource?" -> POST /environments/{environmentId}/resources
+- "List all env-groups?" -> GET /env-groups
+- "Create a env-group?" -> POST /env-groups
+- "Get env-group details?" -> GET /env-groups/{envGroupId}
+- "Partially update a env-group?" -> PATCH /env-groups/{envGroupId}
+- "Delete a env-group?" -> DELETE /env-groups/{envGroupId}
+- "Delete a service?" -> DELETE /env-groups/{envGroupId}/services/{serviceId}
+- "Get env-var details?" -> GET /env-groups/{envGroupId}/env-vars/{envVarKey}
+- "Update a env-var?" -> PUT /env-groups/{envGroupId}/env-vars/{envVarKey}
+- "Delete a env-var?" -> DELETE /env-groups/{envGroupId}/env-vars/{envVarKey}
+- "Get secret-file details?" -> GET /env-groups/{envGroupId}/secret-files/{secretFileName}
+- "Update a secret-file?" -> PUT /env-groups/{envGroupId}/secret-files/{secretFileName}
+- "Delete a secret-file?" -> DELETE /env-groups/{envGroupId}/secret-files/{secretFileName}
+- "List all maintenance?" -> GET /maintenance
+- "Get maintenance details?" -> GET /maintenance/{maintenanceRunParam}
+- "Partially update a maintenance?" -> PATCH /maintenance/{maintenanceRunParam}
+- "Create a trigger?" -> POST /maintenance/{maintenanceRunParam}/trigger
+- "Create a webhook?" -> POST /webhooks
+- "List all webhooks?" -> GET /webhooks
+- "Get webhook details?" -> GET /webhooks/{webhookId}
+- "Partially update a webhook?" -> PATCH /webhooks/{webhookId}
+- "Delete a webhook?" -> DELETE /webhooks/{webhookId}
+- "List all events?" -> GET /webhooks/{webhookId}/events
+- "List all workflows?" -> GET /workflows
+- "Create a workflow?" -> POST /workflows
+- "Get workflow details?" -> GET /workflows/{workflowId}
+- "Partially update a workflow?" -> PATCH /workflows/{workflowId}
+- "Delete a workflow?" -> DELETE /workflows/{workflowId}
+- "List all workflowversions?" -> GET /workflowversions
+- "Create a workflowversion?" -> POST /workflowversions
+- "Get workflowversion details?" -> GET /workflowversions/{workflowVersionId}
+- "List all tasks?" -> GET /tasks
+- "Get task details?" -> GET /tasks/{taskId}
+- "List all task-runs?" -> GET /task-runs
+- "Create a task-run?" -> POST /task-runs
+- "List all events?" -> GET /task-runs/events
+- "Get task-run details?" -> GET /task-runs/{taskRunId}
+- "Delete a task-run?" -> DELETE /task-runs/{taskRunId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

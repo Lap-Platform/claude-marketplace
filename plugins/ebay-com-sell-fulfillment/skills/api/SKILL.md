@@ -12,7 +12,7 @@ API version: v1.20.7
 OAuth2
 
 ## Base URL
-https://api.ebay.com{basePath}
+https://api.ebay.com/sell/fulfillment/v1
 
 ## Setup
 1. Configure auth: OAuth2
@@ -50,88 +50,25 @@ https://api.ebay.com{basePath}
 |--------|------|-------------|
 | GET | /payment_dispute_summary | Search Payment Dispute by Filters |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What are the details of order 12-345?" -> GET /order/{orderId}
-- "Show me my recent orders" -> GET /order
-- "List orders from the last 7 days" -> GET /order (with filter param)
-- "What is the fulfillment status of order 12-345?" -> GET /order/{orderId} (check orderFulfillmentStatus)
-- "Has the buyer left any checkout notes?" -> GET /order/{orderId} (check buyerCheckoutNotes)
-- "Issue a refund for order 12-345" -> POST /order/{order_id}/issue_refund
-- "Refund a specific line item on an order" -> POST /order/{order_id}/issue_refund (with refundItems)
-- "Mark an order as shipped with tracking" -> POST /order/{orderId}/shipping_fulfillment
-- "What shipments exist for order 12-345?" -> GET /order/{orderId}/shipping_fulfillment
-- "Get tracking info for a specific shipment" -> GET /order/{orderId}/shipping_fulfillment/{fulfillmentId}
-- "Show me all open payment disputes" -> GET /payment_dispute_summary (with payment_dispute_status=OPEN)
-- "What payment disputes were opened this month?" -> GET /payment_dispute_summary (with open_date_from/open_date_to)
-- "Get details on payment dispute PD-789" -> GET /payment_dispute/{payment_dispute_id}
-- "Contest a payment dispute with evidence" -> POST /payment_dispute/{payment_dispute_id}/upload_evidence_file, then POST .../add_evidence, then POST .../contest
-- "Accept a payment dispute and provide a return address" -> POST /payment_dispute/{payment_dispute_id}/accept
-
-## Response Tips
-
-- **Order listing** (`GET /order`): Paginated via `limit`/`offset`; check `next`/`prev` for more pages; `total` gives full count; `warnings` array may flag data quality issues.
-- **Single order** (`GET /order/{orderId}`): Deeply nested -- monetary values are always `{currency, value}` maps with optional `convertedFromCurrency`/`convertedFromValue` for cross-border sales; `lineItems` and `fulfillmentStartInstructions` are arrays of maps requiring iteration.
-- **Refunds** (`POST .../issue_refund`): Returns `refundStatus` which may be `PENDING` rather than immediate; poll the order to confirm completion.
-- **Shipping fulfillment** (`POST .../shipping_fulfillment`): Returns 201 with no body on success -- check for absence of errors rather than parsing a response.
-- **Payment disputes**: `availableChoices` on the dispute object tells you which actions (contest, accept) are currently valid; `respondByDate` is the deadline.
-- **Payment dispute summary**: Same pagination pattern as orders (`limit`/`offset`/`next`/`prev`/`total`).
-- **Evidence endpoints**: `upload_evidence_file` returns a `fileId`; `add_evidence` returns an `evidenceId` -- both are needed to link files to a dispute.
-
-## Anomaly Flags
-
-- **`respondByDate` approaching**: Surface a warning when a payment dispute's response deadline is within 48 hours -- missing it can result in automatic resolution against the seller.
-- **`cancelState` not NONE**: Flag orders where `cancelStatus.cancelState` indicates a cancellation is in progress or completed, especially if fulfillment actions are attempted.
-- **409 Conflict on fulfillment or disputes**: Indicates a state conflict (e.g., duplicate shipment, dispute already resolved) -- surface the current resource state to the user.
-- **`refundStatus: PENDING`**: Alert when a refund has not finalized; the seller should monitor for completion.
-- **`orderFulfillmentStatus` mismatch**: Flag if an order shows `NOT_STARTED` but has existing shipping fulfillments, or `FULFILLED` with missing tracking numbers.
-- **`warnings` array non-empty**: Both order listing and fulfillment listing responses include a `warnings` array -- surface any entries to the user immediately.
-- **`authenticityVerification.status` not passing**: Flag orders in authentication programs where verification has failed or is pending.
-- **`ebayCollectAndRemitTax: true`**: Note to user that eBay handles tax collection for this order -- seller should not charge additional tax.
-
-## Playbook
-
-### 1. Fulfill an Order End-to-End
-
-1. `GET /order/{orderId}` -- retrieve the order, confirm `orderFulfillmentStatus` is `NOT_STARTED` or `IN_PROGRESS`.
-2. Review `fulfillmentStartInstructions` for shipping requirements (e.g., eBay shipping labels, vault fulfillment).
-3. Ship the item and obtain a tracking number.
-4. `POST /order/{orderId}/shipping_fulfillment` -- provide `shippingCarrierCode`, `trackingNumber`, `shippedDate`, and the `lineItems` being shipped.
-5. `GET /order/{orderId}` -- verify `orderFulfillmentStatus` is now `FULFILLED`.
-
-### 2. Issue a Partial Refund for Specific Items
-
-1. `GET /order/{orderId}` -- identify the `lineItemId` values and current `paymentSummary`.
-2. Build the `refundItems` array with each `lineItemId` and the desired `refundAmount` (`{currency, value}`).
-3. `POST /order/{order_id}/issue_refund` -- include `reasonForRefund`, optional `comment`, and the `refundItems`.
-4. Check the response for `refundStatus` -- if `PENDING`, poll `GET /order/{orderId}` until `paymentSummary.refunds` reflects the refund.
-
-### 3. Contest a Payment Dispute with Evidence
-
-1. `GET /payment_dispute/{payment_dispute_id}` -- review `reason`, `respondByDate`, and `availableChoices` to confirm "CONTEST" is an option.
-2. `POST /payment_dispute/{payment_dispute_id}/upload_evidence_file` -- upload supporting documents (receipts, tracking proof); capture the returned `fileId`.
-3. `POST /payment_dispute/{payment_dispute_id}/add_evidence` -- link the `fileId` to the dispute with an `evidenceType` and relevant `lineItems`; capture the `evidenceId`.
-4. Repeat steps 2-3 for additional evidence files if needed.
-5. `POST /payment_dispute/{payment_dispute_id}/contest` -- submit the contest with an optional `note` and the current `revision` number from step 1.
-6. `GET /payment_dispute/{payment_dispute_id}/activity` -- monitor the dispute activity log for eBay's response.
-
-### 4. Monitor and Triage Open Payment Disputes
-
-1. `GET /payment_dispute_summary` with `payment_dispute_status=OPEN` -- get all open disputes.
-2. For each dispute, check `respondByDate` and sort by urgency.
-3. `GET /payment_dispute/{payment_dispute_id}` for the most urgent dispute -- review `reason`, `buyerProvided.note`, and `evidenceRequests`.
-4. Decide action: if `availableChoices` includes "ACCEPT", use the accept flow; if "CONTEST", use the contest flow above.
-5. Repeat for remaining disputes in priority order.
-
-### 5. Bulk Order Review and Export
-
-1. `GET /order` with `filter` for date range and desired status; set `limit=200` for maximum page size.
-2. Iterate using `next` href until all pages are consumed; accumulate `orders` arrays.
-3. For each order, extract `pricingSummary.total`, `orderFulfillmentStatus`, and `lineItems` count.
-4. Flag any orders with `cancelState` not `NONE` or `orderPaymentStatus` indicating issues.
-5. For orders needing fulfillment, follow Playbook 1 for each.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get order details?" -> GET /order/{orderId}
+- "List all order?" -> GET /order
+- "Create a issue_refund?" -> POST /order/{order_id}/issue_refund
+- "List all shipping_fulfillment?" -> GET /order/{orderId}/shipping_fulfillment
+- "Create a shipping_fulfillment?" -> POST /order/{orderId}/shipping_fulfillment
+- "Get shipping_fulfillment details?" -> GET /order/{orderId}/shipping_fulfillment/{fulfillmentId}
+- "Get payment_dispute details?" -> GET /payment_dispute/{payment_dispute_id}
+- "List all fetch_evidence_content?" -> GET /payment_dispute/{payment_dispute_id}/fetch_evidence_content
+- "List all activity?" -> GET /payment_dispute/{payment_dispute_id}/activity
+- "List all payment_dispute_summary?" -> GET /payment_dispute_summary
+- "Create a contest?" -> POST /payment_dispute/{payment_dispute_id}/contest
+- "Create a accept?" -> POST /payment_dispute/{payment_dispute_id}/accept
+- "Create a upload_evidence_file?" -> POST /payment_dispute/{payment_dispute_id}/upload_evidence_file
+- "Create a add_evidence?" -> POST /payment_dispute/{payment_dispute_id}/add_evidence
+- "Create a update_evidence?" -> POST /payment_dispute/{payment_dispute_id}/update_evidence
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

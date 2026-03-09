@@ -914,91 +914,524 @@ https://api.stripe.com/
 | GET | /v1/webhook_endpoints/{webhook_endpoint} | Retrieve a webhook endpoint |
 | POST | /v1/webhook_endpoints/{webhook_endpoint} | Update a webhook endpoint |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What payment methods does this customer have?" -> GET /v1/customers/{customer}/payment_methods
-- "How do I charge a customer?" -> POST /v1/payment_intents
-- "What is my current account balance?" -> GET /v1/balance
-- "Can I refund this payment?" -> POST /v1/refunds
-- "List all invoices for a customer" -> GET /v1/invoices?customer={id}
-- "How do I create a checkout session?" -> POST /v1/checkout/sessions
-- "What subscriptions does this customer have?" -> GET /v1/customers/{customer}/subscriptions
-- "Search for a charge by metadata or amount" -> GET /v1/charges/search
-- "How do I onboard a connected account?" -> POST /v1/account_links
-- "What are the pending requirements for my account?" -> GET /v1/account
-- "How do I issue a credit note against an invoice?" -> POST /v1/credit_notes
-- "What disputes are currently open?" -> GET /v1/disputes
-- "How do I cancel a payment intent?" -> POST /v1/payment_intents/{intent}/cancel
-- "What events happened recently?" -> GET /v1/events
-- "How do I set up a subscription schedule with phases?" -> POST /v1/subscription_schedules
-
-## Response Tips
-
-- **List endpoints** (customers, charges, invoices, etc.): All return `{data: [], has_more: bool, url: str}`. Paginate with `starting_after` (last item ID) or `ending_before`; default limit is 10, max 100.
-- **Search endpoints** (charges/search, customers/search, invoices/search, prices/search, subscriptions/search, products/search): Return `{data: [], has_more: bool, next_page: str?, total_count: int}`. Use `page` param (not `starting_after`) for pagination -- pass the `next_page` token.
-- **Expandable fields**: Many IDs (customer, charge, payment_intent) can be expanded to full objects via `expand: ["customer"]`. Nested expands use dot notation.
-- **Timestamps**: All `created`, `expires_at`, `available_on` etc. are Unix epoch seconds (not milliseconds). Convert before displaying.
-- **Amounts**: Always in the smallest currency unit (cents for USD). Divide by 100 for display. Check `currency` field for zero-decimal currencies (JPY, KRW).
-- **Delete responses**: Return `{deleted: bool, id: str, object: str}` -- not the full object. Confirm `deleted: true`.
-- **Payment intents/charges**: `status` drives the lifecycle. Check `last_payment_error` when status is not `succeeded`.
-
-## Anomaly Flags
-
-- **Account requirements past due**: Surface `requirements.past_due` and `requirements.errors` from GET /v1/account -- these can disable payouts or charges.
-- **Dispute evidence deadlines**: Flag `evidence_details.due_by` on disputes -- missing the deadline means automatic loss.
-- **Invoice finalization errors**: Check `last_finalization_error` on invoices -- a non-null value blocks the invoice from being sent.
-- **Payment intent `requires_action`**: Surface `next_action` details when status is `requires_action` -- the customer must complete authentication.
-- **Payout failures**: Flag `failure_code` and `failure_message` on payouts -- these indicate bank-side rejections that need manual resolution.
-- **Subscription `past_due` or `unpaid` status**: Alert when a subscription moves out of `active` -- revenue is at risk.
-- **Checkout session expiration**: Sessions expire (check `expires_at`). Alert when sessions are close to or past expiration while still `open`.
-- **Capability status changes**: Flag any capability with status other than `active` in account capabilities -- it may block specific payment methods.
-- **Refund `pending` or `failed` status**: Surface `failure_reason` and `pending_reason` on refunds -- these may require follow-up with the customer.
-- **Test vs live mode mismatch**: Check `livemode` on all objects -- accidentally operating in test mode against production expectations is a common mistake.
-
-## Playbook
-
-### Accept a one-time payment end to end
-
-1. Create a customer: POST /v1/customers with email and metadata
-2. Create a payment intent: POST /v1/payment_intents with `amount`, `currency`, `customer`, and `payment_method_types`
-3. Confirm the payment intent: POST /v1/payment_intents/{intent}/confirm with the `payment_method`
-4. Check status -- if `requires_action`, direct user to `next_action.redirect_to_url`
-5. On success, retrieve the charge: GET /v1/charges/{charge} via the `latest_charge` field
-6. Optionally issue a refund later: POST /v1/refunds with `payment_intent`
-
-### Set up a recurring subscription
-
-1. Create or retrieve the customer: POST /v1/customers or GET /v1/customers/search
-2. Attach a payment method: POST /v1/payment_methods/{pm}/attach with `customer`, then POST /v1/customers/{customer} to set `invoice_settings.default_payment_method`
-3. Create a product and price: POST /v1/products, then POST /v1/prices with `recurring` interval
-4. Create the subscription: POST /v1/subscriptions with `customer`, `items[0].price`, and `default_payment_method`
-5. Monitor status via GET /v1/subscriptions/{id} -- watch for `past_due` or `incomplete`
-
-### Onboard a connected account (Standard or Express)
-
-1. Create a connected account: POST /v1/accounts with `type`, `country`, `capabilities`
-2. Generate an account link: POST /v1/account_links with `account`, `refresh_url`, `return_url`, and `type: "account_onboarding"`
-3. Redirect the user to the returned `url`
-4. On return, check account status: GET /v1/accounts/{account} -- verify `charges_enabled` and `details_submitted`
-5. Monitor `requirements.currently_due` and `requirements.errors` for any outstanding items
-
-### Handle a dispute
-
-1. List open disputes: GET /v1/disputes?limit=10
-2. Retrieve dispute details: GET /v1/disputes/{dispute} -- check `reason`, `amount`, and `evidence_details.due_by`
-3. Upload supporting evidence files: POST /v1/files with `purpose: "dispute_evidence"`
-4. Submit evidence: POST /v1/disputes/{dispute} with evidence fields (receipts, shipping tracking, customer communication)
-5. If you accept the dispute, close it: POST /v1/disputes/{dispute}/close
-
-### Issue a partial credit note on a paid invoice
-
-1. Retrieve the invoice: GET /v1/invoices/{invoice} -- confirm `status` is `paid`
-2. Preview the credit note: GET /v1/credit_notes/preview with `invoice`, `lines` specifying amounts or invoice line items
-3. Create the credit note: POST /v1/credit_notes with `invoice`, `lines`, `reason`, and optional `memo`
-4. The credit note automatically adjusts the customer balance or triggers a refund depending on `out_of_band_amount` vs `credit_amount` vs `refund_amount`
-5. Verify: GET /v1/credit_notes/{id} -- confirm `status` is `issued`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all account?" -> GET /v1/account
+- "Create a account_link?" -> POST /v1/account_links
+- "Create a account_session?" -> POST /v1/account_sessions
+- "List all accounts?" -> GET /v1/accounts
+- "Create a account?" -> POST /v1/accounts
+- "Delete a account?" -> DELETE /v1/accounts/{account}
+- "Get account details?" -> GET /v1/accounts/{account}
+- "Create a bank_account?" -> POST /v1/accounts/{account}/bank_accounts
+- "Delete a bank_account?" -> DELETE /v1/accounts/{account}/bank_accounts/{id}
+- "Get bank_account details?" -> GET /v1/accounts/{account}/bank_accounts/{id}
+- "List all capabilities?" -> GET /v1/accounts/{account}/capabilities
+- "Get capability details?" -> GET /v1/accounts/{account}/capabilities/{capability}
+- "List all external_accounts?" -> GET /v1/accounts/{account}/external_accounts
+- "Create a external_account?" -> POST /v1/accounts/{account}/external_accounts
+- "Delete a external_account?" -> DELETE /v1/accounts/{account}/external_accounts/{id}
+- "Get external_account details?" -> GET /v1/accounts/{account}/external_accounts/{id}
+- "Create a login_link?" -> POST /v1/accounts/{account}/login_links
+- "List all people?" -> GET /v1/accounts/{account}/people
+- "Create a people?" -> POST /v1/accounts/{account}/people
+- "Delete a people?" -> DELETE /v1/accounts/{account}/people/{person}
+- "Get people details?" -> GET /v1/accounts/{account}/people/{person}
+- "List all persons?" -> GET /v1/accounts/{account}/persons
+- "Create a person?" -> POST /v1/accounts/{account}/persons
+- "Delete a person?" -> DELETE /v1/accounts/{account}/persons/{person}
+- "Get person details?" -> GET /v1/accounts/{account}/persons/{person}
+- "Create a reject?" -> POST /v1/accounts/{account}/reject
+- "List all domains?" -> GET /v1/apple_pay/domains
+- "Create a domain?" -> POST /v1/apple_pay/domains
+- "Delete a domain?" -> DELETE /v1/apple_pay/domains/{domain}
+- "Get domain details?" -> GET /v1/apple_pay/domains/{domain}
+- "List all application_fees?" -> GET /v1/application_fees
+- "Get refund details?" -> GET /v1/application_fees/{fee}/refunds/{id}
+- "Get application_fee details?" -> GET /v1/application_fees/{id}
+- "Create a refund?" -> POST /v1/application_fees/{id}/refund
+- "List all refunds?" -> GET /v1/application_fees/{id}/refunds
+- "Create a refund?" -> POST /v1/application_fees/{id}/refunds
+- "List all secrets?" -> GET /v1/apps/secrets
+- "Create a secret?" -> POST /v1/apps/secrets
+- "Create a delete?" -> POST /v1/apps/secrets/delete
+- "List all find?" -> GET /v1/apps/secrets/find
+- "List all balance?" -> GET /v1/balance
+- "List all history?" -> GET /v1/balance/history
+- "Get history details?" -> GET /v1/balance/history/{id}
+- "List all balance_settings?" -> GET /v1/balance_settings
+- "Create a balance_setting?" -> POST /v1/balance_settings
+- "List all balance_transactions?" -> GET /v1/balance_transactions
+- "Get balance_transaction details?" -> GET /v1/balance_transactions/{id}
+- "List all alerts?" -> GET /v1/billing/alerts
+- "Create a alert?" -> POST /v1/billing/alerts
+- "Get alert details?" -> GET /v1/billing/alerts/{id}
+- "Create a activate?" -> POST /v1/billing/alerts/{id}/activate
+- "Create a archive?" -> POST /v1/billing/alerts/{id}/archive
+- "Create a deactivate?" -> POST /v1/billing/alerts/{id}/deactivate
+- "List all credit_balance_summary?" -> GET /v1/billing/credit_balance_summary
+- "List all credit_balance_transactions?" -> GET /v1/billing/credit_balance_transactions
+- "Get credit_balance_transaction details?" -> GET /v1/billing/credit_balance_transactions/{id}
+- "List all credit_grants?" -> GET /v1/billing/credit_grants
+- "Create a credit_grant?" -> POST /v1/billing/credit_grants
+- "Get credit_grant details?" -> GET /v1/billing/credit_grants/{id}
+- "Create a expire?" -> POST /v1/billing/credit_grants/{id}/expire
+- "Create a void?" -> POST /v1/billing/credit_grants/{id}/void
+- "Create a meter_event_adjustment?" -> POST /v1/billing/meter_event_adjustments
+- "Create a meter_event?" -> POST /v1/billing/meter_events
+- "List all meters?" -> GET /v1/billing/meters
+- "Create a meter?" -> POST /v1/billing/meters
+- "Get meter details?" -> GET /v1/billing/meters/{id}
+- "Create a deactivate?" -> POST /v1/billing/meters/{id}/deactivate
+- "List all event_summaries?" -> GET /v1/billing/meters/{id}/event_summaries
+- "Create a reactivate?" -> POST /v1/billing/meters/{id}/reactivate
+- "List all configurations?" -> GET /v1/billing_portal/configurations
+- "Create a configuration?" -> POST /v1/billing_portal/configurations
+- "Get configuration details?" -> GET /v1/billing_portal/configurations/{configuration}
+- "Create a session?" -> POST /v1/billing_portal/sessions
+- "List all charges?" -> GET /v1/charges
+- "Create a charge?" -> POST /v1/charges
+- "Search search?" -> GET /v1/charges/search
+- "Get charge details?" -> GET /v1/charges/{charge}
+- "Create a capture?" -> POST /v1/charges/{charge}/capture
+- "List all dispute?" -> GET /v1/charges/{charge}/dispute
+- "Create a dispute?" -> POST /v1/charges/{charge}/dispute
+- "Create a close?" -> POST /v1/charges/{charge}/dispute/close
+- "Create a refund?" -> POST /v1/charges/{charge}/refund
+- "List all refunds?" -> GET /v1/charges/{charge}/refunds
+- "Create a refund?" -> POST /v1/charges/{charge}/refunds
+- "Get refund details?" -> GET /v1/charges/{charge}/refunds/{refund}
+- "List all sessions?" -> GET /v1/checkout/sessions
+- "Create a session?" -> POST /v1/checkout/sessions
+- "Get session details?" -> GET /v1/checkout/sessions/{session}
+- "Create a expire?" -> POST /v1/checkout/sessions/{session}/expire
+- "List all line_items?" -> GET /v1/checkout/sessions/{session}/line_items
+- "List all orders?" -> GET /v1/climate/orders
+- "Create a order?" -> POST /v1/climate/orders
+- "Get order details?" -> GET /v1/climate/orders/{order}
+- "Create a cancel?" -> POST /v1/climate/orders/{order}/cancel
+- "List all products?" -> GET /v1/climate/products
+- "Get product details?" -> GET /v1/climate/products/{product}
+- "List all suppliers?" -> GET /v1/climate/suppliers
+- "Get supplier details?" -> GET /v1/climate/suppliers/{supplier}
+- "Get confirmation_token details?" -> GET /v1/confirmation_tokens/{confirmation_token}
+- "List all country_specs?" -> GET /v1/country_specs
+- "Get country_spec details?" -> GET /v1/country_specs/{country}
+- "List all coupons?" -> GET /v1/coupons
+- "Create a coupon?" -> POST /v1/coupons
+- "Delete a coupon?" -> DELETE /v1/coupons/{coupon}
+- "Get coupon details?" -> GET /v1/coupons/{coupon}
+- "List all credit_notes?" -> GET /v1/credit_notes
+- "Create a credit_note?" -> POST /v1/credit_notes
+- "List all preview?" -> GET /v1/credit_notes/preview
+- "List all lines?" -> GET /v1/credit_notes/preview/lines
+- "List all lines?" -> GET /v1/credit_notes/{credit_note}/lines
+- "Get credit_note details?" -> GET /v1/credit_notes/{id}
+- "Create a void?" -> POST /v1/credit_notes/{id}/void
+- "Create a customer_session?" -> POST /v1/customer_sessions
+- "List all customers?" -> GET /v1/customers
+- "Create a customer?" -> POST /v1/customers
+- "Search search?" -> GET /v1/customers/search
+- "Delete a customer?" -> DELETE /v1/customers/{customer}
+- "Get customer details?" -> GET /v1/customers/{customer}
+- "List all balance_transactions?" -> GET /v1/customers/{customer}/balance_transactions
+- "Create a balance_transaction?" -> POST /v1/customers/{customer}/balance_transactions
+- "Get balance_transaction details?" -> GET /v1/customers/{customer}/balance_transactions/{transaction}
+- "List all bank_accounts?" -> GET /v1/customers/{customer}/bank_accounts
+- "Create a bank_account?" -> POST /v1/customers/{customer}/bank_accounts
+- "Delete a bank_account?" -> DELETE /v1/customers/{customer}/bank_accounts/{id}
+- "Get bank_account details?" -> GET /v1/customers/{customer}/bank_accounts/{id}
+- "Create a verify?" -> POST /v1/customers/{customer}/bank_accounts/{id}/verify
+- "List all cards?" -> GET /v1/customers/{customer}/cards
+- "Create a card?" -> POST /v1/customers/{customer}/cards
+- "Delete a card?" -> DELETE /v1/customers/{customer}/cards/{id}
+- "Get card details?" -> GET /v1/customers/{customer}/cards/{id}
+- "List all cash_balance?" -> GET /v1/customers/{customer}/cash_balance
+- "Create a cash_balance?" -> POST /v1/customers/{customer}/cash_balance
+- "List all cash_balance_transactions?" -> GET /v1/customers/{customer}/cash_balance_transactions
+- "Get cash_balance_transaction details?" -> GET /v1/customers/{customer}/cash_balance_transactions/{transaction}
+- "List all discount?" -> GET /v1/customers/{customer}/discount
+- "Create a funding_instruction?" -> POST /v1/customers/{customer}/funding_instructions
+- "List all payment_methods?" -> GET /v1/customers/{customer}/payment_methods
+- "Get payment_method details?" -> GET /v1/customers/{customer}/payment_methods/{payment_method}
+- "List all sources?" -> GET /v1/customers/{customer}/sources
+- "Create a source?" -> POST /v1/customers/{customer}/sources
+- "Delete a source?" -> DELETE /v1/customers/{customer}/sources/{id}
+- "Get source details?" -> GET /v1/customers/{customer}/sources/{id}
+- "Create a verify?" -> POST /v1/customers/{customer}/sources/{id}/verify
+- "List all subscriptions?" -> GET /v1/customers/{customer}/subscriptions
+- "Create a subscription?" -> POST /v1/customers/{customer}/subscriptions
+- "Delete a subscription?" -> DELETE /v1/customers/{customer}/subscriptions/{subscription_exposed_id}
+- "Get subscription details?" -> GET /v1/customers/{customer}/subscriptions/{subscription_exposed_id}
+- "List all discount?" -> GET /v1/customers/{customer}/subscriptions/{subscription_exposed_id}/discount
+- "List all tax_ids?" -> GET /v1/customers/{customer}/tax_ids
+- "Create a tax_id?" -> POST /v1/customers/{customer}/tax_ids
+- "Delete a tax_id?" -> DELETE /v1/customers/{customer}/tax_ids/{id}
+- "Get tax_id details?" -> GET /v1/customers/{customer}/tax_ids/{id}
+- "List all disputes?" -> GET /v1/disputes
+- "Get dispute details?" -> GET /v1/disputes/{dispute}
+- "Create a close?" -> POST /v1/disputes/{dispute}/close
+- "List all active_entitlements?" -> GET /v1/entitlements/active_entitlements
+- "Get active_entitlement details?" -> GET /v1/entitlements/active_entitlements/{id}
+- "List all features?" -> GET /v1/entitlements/features
+- "Create a feature?" -> POST /v1/entitlements/features
+- "Get feature details?" -> GET /v1/entitlements/features/{id}
+- "Create a ephemeral_key?" -> POST /v1/ephemeral_keys
+- "Delete a ephemeral_key?" -> DELETE /v1/ephemeral_keys/{key}
+- "List all events?" -> GET /v1/events
+- "Get event details?" -> GET /v1/events/{id}
+- "List all exchange_rates?" -> GET /v1/exchange_rates
+- "Get exchange_rate details?" -> GET /v1/exchange_rates/{rate_id}
+- "List all file_links?" -> GET /v1/file_links
+- "Create a file_link?" -> POST /v1/file_links
+- "Get file_link details?" -> GET /v1/file_links/{link}
+- "List all files?" -> GET /v1/files
+- "Create a file?" -> POST /v1/files
+- "Get file details?" -> GET /v1/files/{file}
+- "List all accounts?" -> GET /v1/financial_connections/accounts
+- "Get account details?" -> GET /v1/financial_connections/accounts/{account}
+- "Create a disconnect?" -> POST /v1/financial_connections/accounts/{account}/disconnect
+- "List all owners?" -> GET /v1/financial_connections/accounts/{account}/owners
+- "Create a refresh?" -> POST /v1/financial_connections/accounts/{account}/refresh
+- "Create a subscribe?" -> POST /v1/financial_connections/accounts/{account}/subscribe
+- "Create a unsubscribe?" -> POST /v1/financial_connections/accounts/{account}/unsubscribe
+- "Create a session?" -> POST /v1/financial_connections/sessions
+- "Get session details?" -> GET /v1/financial_connections/sessions/{session}
+- "List all transactions?" -> GET /v1/financial_connections/transactions
+- "Get transaction details?" -> GET /v1/financial_connections/transactions/{transaction}
+- "List all requests?" -> GET /v1/forwarding/requests
+- "Create a request?" -> POST /v1/forwarding/requests
+- "Get request details?" -> GET /v1/forwarding/requests/{id}
+- "List all verification_reports?" -> GET /v1/identity/verification_reports
+- "Get verification_report details?" -> GET /v1/identity/verification_reports/{report}
+- "List all verification_sessions?" -> GET /v1/identity/verification_sessions
+- "Create a verification_session?" -> POST /v1/identity/verification_sessions
+- "Get verification_session details?" -> GET /v1/identity/verification_sessions/{session}
+- "Create a cancel?" -> POST /v1/identity/verification_sessions/{session}/cancel
+- "Create a redact?" -> POST /v1/identity/verification_sessions/{session}/redact
+- "List all invoice_payments?" -> GET /v1/invoice_payments
+- "Get invoice_payment details?" -> GET /v1/invoice_payments/{invoice_payment}
+- "List all invoice_rendering_templates?" -> GET /v1/invoice_rendering_templates
+- "Get invoice_rendering_template details?" -> GET /v1/invoice_rendering_templates/{template}
+- "Create a archive?" -> POST /v1/invoice_rendering_templates/{template}/archive
+- "Create a unarchive?" -> POST /v1/invoice_rendering_templates/{template}/unarchive
+- "List all invoiceitems?" -> GET /v1/invoiceitems
+- "Create a invoiceitem?" -> POST /v1/invoiceitems
+- "Delete a invoiceitem?" -> DELETE /v1/invoiceitems/{invoiceitem}
+- "Get invoiceitem details?" -> GET /v1/invoiceitems/{invoiceitem}
+- "List all invoices?" -> GET /v1/invoices
+- "Create a invoice?" -> POST /v1/invoices
+- "Create a create_preview?" -> POST /v1/invoices/create_preview
+- "Search search?" -> GET /v1/invoices/search
+- "Delete a invoice?" -> DELETE /v1/invoices/{invoice}
+- "Get invoice details?" -> GET /v1/invoices/{invoice}
+- "Create a add_line?" -> POST /v1/invoices/{invoice}/add_lines
+- "Create a attach_payment?" -> POST /v1/invoices/{invoice}/attach_payment
+- "Create a finalize?" -> POST /v1/invoices/{invoice}/finalize
+- "List all lines?" -> GET /v1/invoices/{invoice}/lines
+- "Create a mark_uncollectible?" -> POST /v1/invoices/{invoice}/mark_uncollectible
+- "Create a pay?" -> POST /v1/invoices/{invoice}/pay
+- "Create a remove_line?" -> POST /v1/invoices/{invoice}/remove_lines
+- "Create a send?" -> POST /v1/invoices/{invoice}/send
+- "Create a update_line?" -> POST /v1/invoices/{invoice}/update_lines
+- "Create a void?" -> POST /v1/invoices/{invoice}/void
+- "List all authorizations?" -> GET /v1/issuing/authorizations
+- "Get authorization details?" -> GET /v1/issuing/authorizations/{authorization}
+- "Create a approve?" -> POST /v1/issuing/authorizations/{authorization}/approve
+- "Create a decline?" -> POST /v1/issuing/authorizations/{authorization}/decline
+- "List all cardholders?" -> GET /v1/issuing/cardholders
+- "Create a cardholder?" -> POST /v1/issuing/cardholders
+- "Get cardholder details?" -> GET /v1/issuing/cardholders/{cardholder}
+- "List all cards?" -> GET /v1/issuing/cards
+- "Create a card?" -> POST /v1/issuing/cards
+- "Get card details?" -> GET /v1/issuing/cards/{card}
+- "List all disputes?" -> GET /v1/issuing/disputes
+- "Create a dispute?" -> POST /v1/issuing/disputes
+- "Get dispute details?" -> GET /v1/issuing/disputes/{dispute}
+- "Create a submit?" -> POST /v1/issuing/disputes/{dispute}/submit
+- "List all personalization_designs?" -> GET /v1/issuing/personalization_designs
+- "Create a personalization_design?" -> POST /v1/issuing/personalization_designs
+- "Get personalization_design details?" -> GET /v1/issuing/personalization_designs/{personalization_design}
+- "List all physical_bundles?" -> GET /v1/issuing/physical_bundles
+- "Get physical_bundle details?" -> GET /v1/issuing/physical_bundles/{physical_bundle}
+- "Get settlement details?" -> GET /v1/issuing/settlements/{settlement}
+- "List all tokens?" -> GET /v1/issuing/tokens
+- "Get token details?" -> GET /v1/issuing/tokens/{token}
+- "List all transactions?" -> GET /v1/issuing/transactions
+- "Get transaction details?" -> GET /v1/issuing/transactions/{transaction}
+- "Create a link_account_session?" -> POST /v1/link_account_sessions
+- "Get link_account_session details?" -> GET /v1/link_account_sessions/{session}
+- "List all linked_accounts?" -> GET /v1/linked_accounts
+- "Get linked_account details?" -> GET /v1/linked_accounts/{account}
+- "Create a disconnect?" -> POST /v1/linked_accounts/{account}/disconnect
+- "List all owners?" -> GET /v1/linked_accounts/{account}/owners
+- "Create a refresh?" -> POST /v1/linked_accounts/{account}/refresh
+- "Get mandate details?" -> GET /v1/mandates/{mandate}
+- "List all payment_attempt_records?" -> GET /v1/payment_attempt_records
+- "Get payment_attempt_record details?" -> GET /v1/payment_attempt_records/{id}
+- "List all payment_intents?" -> GET /v1/payment_intents
+- "Create a payment_intent?" -> POST /v1/payment_intents
+- "Search search?" -> GET /v1/payment_intents/search
+- "Get payment_intent details?" -> GET /v1/payment_intents/{intent}
+- "List all amount_details_line_items?" -> GET /v1/payment_intents/{intent}/amount_details_line_items
+- "Create a apply_customer_balance?" -> POST /v1/payment_intents/{intent}/apply_customer_balance
+- "Create a cancel?" -> POST /v1/payment_intents/{intent}/cancel
+- "Create a capture?" -> POST /v1/payment_intents/{intent}/capture
+- "Create a confirm?" -> POST /v1/payment_intents/{intent}/confirm
+- "Create a increment_authorization?" -> POST /v1/payment_intents/{intent}/increment_authorization
+- "Create a verify_microdeposit?" -> POST /v1/payment_intents/{intent}/verify_microdeposits
+- "List all payment_links?" -> GET /v1/payment_links
+- "Create a payment_link?" -> POST /v1/payment_links
+- "Get payment_link details?" -> GET /v1/payment_links/{payment_link}
+- "List all line_items?" -> GET /v1/payment_links/{payment_link}/line_items
+- "List all payment_method_configurations?" -> GET /v1/payment_method_configurations
+- "Create a payment_method_configuration?" -> POST /v1/payment_method_configurations
+- "Get payment_method_configuration details?" -> GET /v1/payment_method_configurations/{configuration}
+- "List all payment_method_domains?" -> GET /v1/payment_method_domains
+- "Create a payment_method_domain?" -> POST /v1/payment_method_domains
+- "Get payment_method_domain details?" -> GET /v1/payment_method_domains/{payment_method_domain}
+- "Create a validate?" -> POST /v1/payment_method_domains/{payment_method_domain}/validate
+- "List all payment_methods?" -> GET /v1/payment_methods
+- "Create a payment_method?" -> POST /v1/payment_methods
+- "Get payment_method details?" -> GET /v1/payment_methods/{payment_method}
+- "Create a attach?" -> POST /v1/payment_methods/{payment_method}/attach
+- "Create a detach?" -> POST /v1/payment_methods/{payment_method}/detach
+- "Create a report_payment?" -> POST /v1/payment_records/report_payment
+- "Get payment_record details?" -> GET /v1/payment_records/{id}
+- "Create a report_payment_attempt?" -> POST /v1/payment_records/{id}/report_payment_attempt
+- "Create a report_payment_attempt_canceled?" -> POST /v1/payment_records/{id}/report_payment_attempt_canceled
+- "Create a report_payment_attempt_failed?" -> POST /v1/payment_records/{id}/report_payment_attempt_failed
+- "Create a report_payment_attempt_guaranteed?" -> POST /v1/payment_records/{id}/report_payment_attempt_guaranteed
+- "Create a report_payment_attempt_informational?" -> POST /v1/payment_records/{id}/report_payment_attempt_informational
+- "Create a report_refund?" -> POST /v1/payment_records/{id}/report_refund
+- "List all payouts?" -> GET /v1/payouts
+- "Create a payout?" -> POST /v1/payouts
+- "Get payout details?" -> GET /v1/payouts/{payout}
+- "Create a cancel?" -> POST /v1/payouts/{payout}/cancel
+- "Create a reverse?" -> POST /v1/payouts/{payout}/reverse
+- "List all plans?" -> GET /v1/plans
+- "Create a plan?" -> POST /v1/plans
+- "Delete a plan?" -> DELETE /v1/plans/{plan}
+- "Get plan details?" -> GET /v1/plans/{plan}
+- "List all prices?" -> GET /v1/prices
+- "Create a price?" -> POST /v1/prices
+- "Search search?" -> GET /v1/prices/search
+- "Get price details?" -> GET /v1/prices/{price}
+- "List all products?" -> GET /v1/products
+- "Create a product?" -> POST /v1/products
+- "Search search?" -> GET /v1/products/search
+- "Delete a product?" -> DELETE /v1/products/{id}
+- "Get product details?" -> GET /v1/products/{id}
+- "List all features?" -> GET /v1/products/{product}/features
+- "Create a feature?" -> POST /v1/products/{product}/features
+- "Delete a feature?" -> DELETE /v1/products/{product}/features/{id}
+- "Get feature details?" -> GET /v1/products/{product}/features/{id}
+- "List all promotion_codes?" -> GET /v1/promotion_codes
+- "Create a promotion_code?" -> POST /v1/promotion_codes
+- "Get promotion_code details?" -> GET /v1/promotion_codes/{promotion_code}
+- "List all quotes?" -> GET /v1/quotes
+- "Create a quote?" -> POST /v1/quotes
+- "Get quote details?" -> GET /v1/quotes/{quote}
+- "Create a accept?" -> POST /v1/quotes/{quote}/accept
+- "Create a cancel?" -> POST /v1/quotes/{quote}/cancel
+- "List all computed_upfront_line_items?" -> GET /v1/quotes/{quote}/computed_upfront_line_items
+- "Create a finalize?" -> POST /v1/quotes/{quote}/finalize
+- "List all line_items?" -> GET /v1/quotes/{quote}/line_items
+- "List all pdf?" -> GET /v1/quotes/{quote}/pdf
+- "List all early_fraud_warnings?" -> GET /v1/radar/early_fraud_warnings
+- "Get early_fraud_warning details?" -> GET /v1/radar/early_fraud_warnings/{early_fraud_warning}
+- "Create a payment_evaluation?" -> POST /v1/radar/payment_evaluations
+- "List all value_list_items?" -> GET /v1/radar/value_list_items
+- "Create a value_list_item?" -> POST /v1/radar/value_list_items
+- "Delete a value_list_item?" -> DELETE /v1/radar/value_list_items/{item}
+- "Get value_list_item details?" -> GET /v1/radar/value_list_items/{item}
+- "List all value_lists?" -> GET /v1/radar/value_lists
+- "Create a value_list?" -> POST /v1/radar/value_lists
+- "Delete a value_list?" -> DELETE /v1/radar/value_lists/{value_list}
+- "Get value_list details?" -> GET /v1/radar/value_lists/{value_list}
+- "List all refunds?" -> GET /v1/refunds
+- "Create a refund?" -> POST /v1/refunds
+- "Get refund details?" -> GET /v1/refunds/{refund}
+- "Create a cancel?" -> POST /v1/refunds/{refund}/cancel
+- "List all report_runs?" -> GET /v1/reporting/report_runs
+- "Create a report_run?" -> POST /v1/reporting/report_runs
+- "Get report_run details?" -> GET /v1/reporting/report_runs/{report_run}
+- "List all report_types?" -> GET /v1/reporting/report_types
+- "Get report_type details?" -> GET /v1/reporting/report_types/{report_type}
+- "List all reviews?" -> GET /v1/reviews
+- "Get review details?" -> GET /v1/reviews/{review}
+- "Create a approve?" -> POST /v1/reviews/{review}/approve
+- "List all setup_attempts?" -> GET /v1/setup_attempts
+- "List all setup_intents?" -> GET /v1/setup_intents
+- "Create a setup_intent?" -> POST /v1/setup_intents
+- "Get setup_intent details?" -> GET /v1/setup_intents/{intent}
+- "Create a cancel?" -> POST /v1/setup_intents/{intent}/cancel
+- "Create a confirm?" -> POST /v1/setup_intents/{intent}/confirm
+- "Create a verify_microdeposit?" -> POST /v1/setup_intents/{intent}/verify_microdeposits
+- "List all shipping_rates?" -> GET /v1/shipping_rates
+- "Create a shipping_rate?" -> POST /v1/shipping_rates
+- "Get shipping_rate details?" -> GET /v1/shipping_rates/{shipping_rate_token}
+- "List all scheduled_query_runs?" -> GET /v1/sigma/scheduled_query_runs
+- "Get scheduled_query_run details?" -> GET /v1/sigma/scheduled_query_runs/{scheduled_query_run}
+- "Create a source?" -> POST /v1/sources
+- "Get source details?" -> GET /v1/sources/{source}
+- "Get mandate_notification details?" -> GET /v1/sources/{source}/mandate_notifications/{mandate_notification}
+- "List all source_transactions?" -> GET /v1/sources/{source}/source_transactions
+- "Get source_transaction details?" -> GET /v1/sources/{source}/source_transactions/{source_transaction}
+- "Create a verify?" -> POST /v1/sources/{source}/verify
+- "List all subscription_items?" -> GET /v1/subscription_items
+- "Create a subscription_item?" -> POST /v1/subscription_items
+- "Delete a subscription_item?" -> DELETE /v1/subscription_items/{item}
+- "Get subscription_item details?" -> GET /v1/subscription_items/{item}
+- "List all subscription_schedules?" -> GET /v1/subscription_schedules
+- "Create a subscription_schedule?" -> POST /v1/subscription_schedules
+- "Get subscription_schedule details?" -> GET /v1/subscription_schedules/{schedule}
+- "Create a cancel?" -> POST /v1/subscription_schedules/{schedule}/cancel
+- "Create a release?" -> POST /v1/subscription_schedules/{schedule}/release
+- "List all subscriptions?" -> GET /v1/subscriptions
+- "Create a subscription?" -> POST /v1/subscriptions
+- "Search search?" -> GET /v1/subscriptions/search
+- "Delete a subscription?" -> DELETE /v1/subscriptions/{subscription_exposed_id}
+- "Get subscription details?" -> GET /v1/subscriptions/{subscription_exposed_id}
+- "Create a migrate?" -> POST /v1/subscriptions/{subscription}/migrate
+- "Create a resume?" -> POST /v1/subscriptions/{subscription}/resume
+- "List all find?" -> GET /v1/tax/associations/find
+- "Create a calculation?" -> POST /v1/tax/calculations
+- "Get calculation details?" -> GET /v1/tax/calculations/{calculation}
+- "List all line_items?" -> GET /v1/tax/calculations/{calculation}/line_items
+- "List all registrations?" -> GET /v1/tax/registrations
+- "Create a registration?" -> POST /v1/tax/registrations
+- "Get registration details?" -> GET /v1/tax/registrations/{id}
+- "List all settings?" -> GET /v1/tax/settings
+- "Create a setting?" -> POST /v1/tax/settings
+- "Create a create_from_calculation?" -> POST /v1/tax/transactions/create_from_calculation
+- "Create a create_reversal?" -> POST /v1/tax/transactions/create_reversal
+- "Get transaction details?" -> GET /v1/tax/transactions/{transaction}
+- "List all line_items?" -> GET /v1/tax/transactions/{transaction}/line_items
+- "List all tax_codes?" -> GET /v1/tax_codes
+- "Get tax_code details?" -> GET /v1/tax_codes/{id}
+- "List all tax_ids?" -> GET /v1/tax_ids
+- "Create a tax_id?" -> POST /v1/tax_ids
+- "Delete a tax_id?" -> DELETE /v1/tax_ids/{id}
+- "Get tax_id details?" -> GET /v1/tax_ids/{id}
+- "List all tax_rates?" -> GET /v1/tax_rates
+- "Create a tax_rate?" -> POST /v1/tax_rates
+- "Get tax_rate details?" -> GET /v1/tax_rates/{tax_rate}
+- "List all configurations?" -> GET /v1/terminal/configurations
+- "Create a configuration?" -> POST /v1/terminal/configurations
+- "Delete a configuration?" -> DELETE /v1/terminal/configurations/{configuration}
+- "Get configuration details?" -> GET /v1/terminal/configurations/{configuration}
+- "Create a connection_token?" -> POST /v1/terminal/connection_tokens
+- "List all locations?" -> GET /v1/terminal/locations
+- "Create a location?" -> POST /v1/terminal/locations
+- "Delete a location?" -> DELETE /v1/terminal/locations/{location}
+- "Get location details?" -> GET /v1/terminal/locations/{location}
+- "Create a onboarding_link?" -> POST /v1/terminal/onboarding_links
+- "List all readers?" -> GET /v1/terminal/readers
+- "Create a reader?" -> POST /v1/terminal/readers
+- "Delete a reader?" -> DELETE /v1/terminal/readers/{reader}
+- "Get reader details?" -> GET /v1/terminal/readers/{reader}
+- "Create a cancel_action?" -> POST /v1/terminal/readers/{reader}/cancel_action
+- "Create a collect_input?" -> POST /v1/terminal/readers/{reader}/collect_inputs
+- "Create a collect_payment_method?" -> POST /v1/terminal/readers/{reader}/collect_payment_method
+- "Create a confirm_payment_intent?" -> POST /v1/terminal/readers/{reader}/confirm_payment_intent
+- "Create a process_payment_intent?" -> POST /v1/terminal/readers/{reader}/process_payment_intent
+- "Create a process_setup_intent?" -> POST /v1/terminal/readers/{reader}/process_setup_intent
+- "Create a refund_payment?" -> POST /v1/terminal/readers/{reader}/refund_payment
+- "Create a set_reader_display?" -> POST /v1/terminal/readers/{reader}/set_reader_display
+- "Create a refund?" -> POST /v1/terminal/refunds
+- "Create a confirmation_token?" -> POST /v1/test_helpers/confirmation_tokens
+- "Create a fund_cash_balance?" -> POST /v1/test_helpers/customers/{customer}/fund_cash_balance
+- "Create a authorization?" -> POST /v1/test_helpers/issuing/authorizations
+- "Create a capture?" -> POST /v1/test_helpers/issuing/authorizations/{authorization}/capture
+- "Create a expire?" -> POST /v1/test_helpers/issuing/authorizations/{authorization}/expire
+- "Create a finalize_amount?" -> POST /v1/test_helpers/issuing/authorizations/{authorization}/finalize_amount
+- "Create a respond?" -> POST /v1/test_helpers/issuing/authorizations/{authorization}/fraud_challenges/respond
+- "Create a increment?" -> POST /v1/test_helpers/issuing/authorizations/{authorization}/increment
+- "Create a reverse?" -> POST /v1/test_helpers/issuing/authorizations/{authorization}/reverse
+- "Create a deliver?" -> POST /v1/test_helpers/issuing/cards/{card}/shipping/deliver
+- "Create a fail?" -> POST /v1/test_helpers/issuing/cards/{card}/shipping/fail
+- "Create a return?" -> POST /v1/test_helpers/issuing/cards/{card}/shipping/return
+- "Create a ship?" -> POST /v1/test_helpers/issuing/cards/{card}/shipping/ship
+- "Create a submit?" -> POST /v1/test_helpers/issuing/cards/{card}/shipping/submit
+- "Create a activate?" -> POST /v1/test_helpers/issuing/personalization_designs/{personalization_design}/activate
+- "Create a deactivate?" -> POST /v1/test_helpers/issuing/personalization_designs/{personalization_design}/deactivate
+- "Create a reject?" -> POST /v1/test_helpers/issuing/personalization_designs/{personalization_design}/reject
+- "Create a settlement?" -> POST /v1/test_helpers/issuing/settlements
+- "Create a complete?" -> POST /v1/test_helpers/issuing/settlements/{settlement}/complete
+- "Create a create_force_capture?" -> POST /v1/test_helpers/issuing/transactions/create_force_capture
+- "Create a create_unlinked_refund?" -> POST /v1/test_helpers/issuing/transactions/create_unlinked_refund
+- "Create a refund?" -> POST /v1/test_helpers/issuing/transactions/{transaction}/refund
+- "Create a expire?" -> POST /v1/test_helpers/refunds/{refund}/expire
+- "Create a present_payment_method?" -> POST /v1/test_helpers/terminal/readers/{reader}/present_payment_method
+- "Create a succeed_input_collection?" -> POST /v1/test_helpers/terminal/readers/{reader}/succeed_input_collection
+- "Create a timeout_input_collection?" -> POST /v1/test_helpers/terminal/readers/{reader}/timeout_input_collection
+- "List all test_clocks?" -> GET /v1/test_helpers/test_clocks
+- "Create a test_clock?" -> POST /v1/test_helpers/test_clocks
+- "Delete a test_clock?" -> DELETE /v1/test_helpers/test_clocks/{test_clock}
+- "Get test_clock details?" -> GET /v1/test_helpers/test_clocks/{test_clock}
+- "Create a advance?" -> POST /v1/test_helpers/test_clocks/{test_clock}/advance
+- "Create a fail?" -> POST /v1/test_helpers/treasury/inbound_transfers/{id}/fail
+- "Create a return?" -> POST /v1/test_helpers/treasury/inbound_transfers/{id}/return
+- "Create a succeed?" -> POST /v1/test_helpers/treasury/inbound_transfers/{id}/succeed
+- "Create a fail?" -> POST /v1/test_helpers/treasury/outbound_payments/{id}/fail
+- "Create a post?" -> POST /v1/test_helpers/treasury/outbound_payments/{id}/post
+- "Create a return?" -> POST /v1/test_helpers/treasury/outbound_payments/{id}/return
+- "Create a fail?" -> POST /v1/test_helpers/treasury/outbound_transfers/{outbound_transfer}/fail
+- "Create a post?" -> POST /v1/test_helpers/treasury/outbound_transfers/{outbound_transfer}/post
+- "Create a return?" -> POST /v1/test_helpers/treasury/outbound_transfers/{outbound_transfer}/return
+- "Create a received_credit?" -> POST /v1/test_helpers/treasury/received_credits
+- "Create a received_debit?" -> POST /v1/test_helpers/treasury/received_debits
+- "Create a token?" -> POST /v1/tokens
+- "Get token details?" -> GET /v1/tokens/{token}
+- "List all topups?" -> GET /v1/topups
+- "Create a topup?" -> POST /v1/topups
+- "Get topup details?" -> GET /v1/topups/{topup}
+- "Create a cancel?" -> POST /v1/topups/{topup}/cancel
+- "List all transfers?" -> GET /v1/transfers
+- "Create a transfer?" -> POST /v1/transfers
+- "List all reversals?" -> GET /v1/transfers/{id}/reversals
+- "Create a reversal?" -> POST /v1/transfers/{id}/reversals
+- "Get transfer details?" -> GET /v1/transfers/{transfer}
+- "Get reversal details?" -> GET /v1/transfers/{transfer}/reversals/{id}
+- "List all credit_reversals?" -> GET /v1/treasury/credit_reversals
+- "Create a credit_reversal?" -> POST /v1/treasury/credit_reversals
+- "Get credit_reversal details?" -> GET /v1/treasury/credit_reversals/{credit_reversal}
+- "List all debit_reversals?" -> GET /v1/treasury/debit_reversals
+- "Create a debit_reversal?" -> POST /v1/treasury/debit_reversals
+- "Get debit_reversal details?" -> GET /v1/treasury/debit_reversals/{debit_reversal}
+- "List all financial_accounts?" -> GET /v1/treasury/financial_accounts
+- "Create a financial_account?" -> POST /v1/treasury/financial_accounts
+- "Get financial_account details?" -> GET /v1/treasury/financial_accounts/{financial_account}
+- "Create a close?" -> POST /v1/treasury/financial_accounts/{financial_account}/close
+- "List all features?" -> GET /v1/treasury/financial_accounts/{financial_account}/features
+- "Create a feature?" -> POST /v1/treasury/financial_accounts/{financial_account}/features
+- "List all inbound_transfers?" -> GET /v1/treasury/inbound_transfers
+- "Create a inbound_transfer?" -> POST /v1/treasury/inbound_transfers
+- "Get inbound_transfer details?" -> GET /v1/treasury/inbound_transfers/{id}
+- "Create a cancel?" -> POST /v1/treasury/inbound_transfers/{inbound_transfer}/cancel
+- "List all outbound_payments?" -> GET /v1/treasury/outbound_payments
+- "Create a outbound_payment?" -> POST /v1/treasury/outbound_payments
+- "Get outbound_payment details?" -> GET /v1/treasury/outbound_payments/{id}
+- "Create a cancel?" -> POST /v1/treasury/outbound_payments/{id}/cancel
+- "List all outbound_transfers?" -> GET /v1/treasury/outbound_transfers
+- "Create a outbound_transfer?" -> POST /v1/treasury/outbound_transfers
+- "Get outbound_transfer details?" -> GET /v1/treasury/outbound_transfers/{outbound_transfer}
+- "Create a cancel?" -> POST /v1/treasury/outbound_transfers/{outbound_transfer}/cancel
+- "List all received_credits?" -> GET /v1/treasury/received_credits
+- "Get received_credit details?" -> GET /v1/treasury/received_credits/{id}
+- "List all received_debits?" -> GET /v1/treasury/received_debits
+- "Get received_debit details?" -> GET /v1/treasury/received_debits/{id}
+- "List all transaction_entries?" -> GET /v1/treasury/transaction_entries
+- "Get transaction_entry details?" -> GET /v1/treasury/transaction_entries/{id}
+- "List all transactions?" -> GET /v1/treasury/transactions
+- "Get transaction details?" -> GET /v1/treasury/transactions/{id}
+- "List all webhook_endpoints?" -> GET /v1/webhook_endpoints
+- "Create a webhook_endpoint?" -> POST /v1/webhook_endpoints
+- "Delete a webhook_endpoint?" -> DELETE /v1/webhook_endpoints/{webhook_endpoint}
+- "Get webhook_endpoint details?" -> GET /v1/webhook_endpoints/{webhook_endpoint}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -170,85 +170,40 @@ Not specified.
 |--------|------|-------------|
 | POST | /updateTimelineEvent | Updates a timeline event. You can update events of type Custom Event. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I start a new incident?" -> POST /startIncident
-- "Show me details of a specific incident" -> GET /getIncidentRecord
-- "List all open incidents" -> POST /listIncidentRecords (with status filter)
-- "What response plans are available?" -> POST /listResponsePlans
-- "Create a new response plan for my team" -> POST /createResponsePlan
-- "What happened during an incident?" -> POST /listTimelineEvents
-- "Add a note to an incident timeline" -> POST /createTimelineEvent
-- "How do I resolve an incident?" -> POST /updateIncidentRecord (set status to RESOLVED)
-- "What regions is my replication set deployed in?" -> GET /getReplicationSet
-- "Attach a related resource to an incident" -> POST /updateRelatedItems
-- "Who triggered this incident and from what source?" -> GET /getIncidentRecord (check incidentRecordSource)
-- "How do I protect my replication set from accidental deletion?" -> POST /updateDeletionProtection
-- "What findings exist for an incident?" -> POST /listIncidentFindings
-- "Tag a response plan for cost tracking" -> POST /tags/{resourceArn}
-- "Remove tags from an incident resource" -> DELETE /tags/{resourceArn}
-
-## Response Tips
-
-- **List endpoints** (listIncidentRecords, listResponsePlans, listTimelineEvents, listReplicationSets): All return `nextToken` -- loop until `nextToken` is null/absent. Use `maxResults` to control page size.
-- **Get endpoints** (getIncidentRecord, getResponsePlan, getReplicationSet, getTimelineEvent): Return deeply nested objects; access the top-level wrapper key first (e.g., `incidentRecord`, `replicationSet`, `event`).
-- **Mutation endpoints** (create, update, delete, start): Most return 200 with an ARN or ID on success, or an empty body for deletes/updates -- treat non-200 as an error.
-- **batchGetIncidentFindings**: Returns both `findings` (successes) and `errors` (partial failures) -- always check both arrays.
-- **getResourcePolicies**: Paginated via POST with `nextToken`; policies are returned in `resourcePolicies` array.
-
-## Anomaly Flags
-
-- **Partial batch failures**: `batchGetIncidentFindings` returns a non-empty `errors` array alongside `findings` -- surface each failed finding ID and error reason.
-- **Replication set status**: If `getReplicationSet` returns a status other than `ACTIVE` (e.g., `CREATING`, `UPDATING`, `DELETING`, `FAILED`), flag it as the set may be unavailable.
-- **Deletion protection disabled**: When `getReplicationSet` shows `deletionProtected: false`, warn that the replication set can be accidentally deleted.
-- **High impact incidents**: When `startIncident` or `updateIncidentRecord` uses impact level 1 (critical), flag for immediate attention.
-- **Stale incidents**: If `listIncidentRecords` returns incidents with status `OPEN` and `creationTime` older than 7 days, flag as potentially stale.
-- **Missing chat channel or engagements**: If `getResponsePlan` returns no `chatChannel` or empty `engagements`, warn that responders may not be notified.
-- **Pagination truncation**: If any list call returns `nextToken` and the caller does not paginate, flag that results are incomplete.
-
-## Playbook
-
-### 1. Respond to a New Incident
-
-1. Call `POST /listResponsePlans` to find the appropriate response plan ARN.
-2. Call `POST /startIncident` with `responsePlanArn`, optional `impact` (1-5), `title`, and any `relatedItems`.
-3. Note the returned `incidentRecordArn`.
-4. Call `GET /getIncidentRecord` with the ARN to confirm the incident was created and review auto-populated fields.
-5. Call `POST /createTimelineEvent` to log the initial triage note with `eventType` and `eventData`.
-
-### 2. Investigate and Resolve an Incident
-
-1. Call `GET /getIncidentRecord` to review current status, impact, and summary.
-2. Call `POST /listTimelineEvents` with `incidentRecordArn` (use `sortBy: "EVENT_TIME"`, `sortOrder: "ASCENDING"`) to review the full timeline.
-3. Call `POST /listRelatedItems` to see linked resources (CloudWatch alarms, runbooks, etc.).
-4. Call `POST /batchGetIncidentFindings` with relevant `findingIds` to review root cause findings.
-5. Call `POST /updateIncidentRecord` with `status: "RESOLVED"` and a final `summary` to close the incident.
-
-### 3. Set Up a Response Plan with Integrations
-
-1. Call `POST /createResponsePlan` with `name`, `incidentTemplate` (including `title`, `impact`, optional `summary` and `notificationTargets`).
-2. Include `chatChannel` (SNS topic ARNs for AWS Chatbot) and `engagements` (SSM Contacts escalation plan ARNs).
-3. Optionally include `actions` (SSM Automation runbooks) and `integrations` (PagerDuty, etc.).
-4. Note the returned `arn`.
-5. Call `POST /tags/{resourceArn}` to tag the plan for organization (e.g., `team`, `environment`).
-
-### 4. Configure Multi-Region Replication
-
-1. Call `POST /createReplicationSet` with a `regions` map specifying each region and its KMS key configuration.
-2. Note the returned `arn`.
-3. Call `GET /getReplicationSet` and poll until `status` becomes `ACTIVE`.
-4. Call `POST /updateDeletionProtection` with `deletionProtected: true` to prevent accidental deletion.
-5. To add or remove regions later, call `POST /updateReplicationSet` with `actions` specifying `addRegionAction` or `deleteRegionAction`.
-
-### 5. Manage Resource Policies for Cross-Account Access
-
-1. Call `POST /getResourcePolicies` with the `resourceArn` of the response plan or replication set. Paginate with `nextToken` if needed.
-2. Review existing policies in the `resourcePolicies` array.
-3. To grant cross-account access, call `POST /putResourcePolicy` with a JSON `policy` string and the `resourceArn`.
-4. Note the returned `policyId`.
-5. To revoke access, call `POST /deleteResourcePolicy` with the `policyId` and `resourceArn`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a batchGetIncidentFinding?" -> POST /batchGetIncidentFindings
+- "Create a createReplicationSet?" -> POST /createReplicationSet
+- "Create a createResponsePlan?" -> POST /createResponsePlan
+- "Create a createTimelineEvent?" -> POST /createTimelineEvent
+- "Create a deleteIncidentRecord?" -> POST /deleteIncidentRecord
+- "Create a deleteReplicationSet?" -> POST /deleteReplicationSet
+- "Create a deleteResourcePolicy?" -> POST /deleteResourcePolicy
+- "Create a deleteResponsePlan?" -> POST /deleteResponsePlan
+- "Create a deleteTimelineEvent?" -> POST /deleteTimelineEvent
+- "List all getIncidentRecord?" -> GET /getIncidentRecord
+- "List all getReplicationSet?" -> GET /getReplicationSet
+- "Create a getResourcePolicy?" -> POST /getResourcePolicies
+- "List all getResponsePlan?" -> GET /getResponsePlan
+- "List all getTimelineEvent?" -> GET /getTimelineEvent
+- "Create a listIncidentFinding?" -> POST /listIncidentFindings
+- "Create a listIncidentRecord?" -> POST /listIncidentRecords
+- "Create a listRelatedItem?" -> POST /listRelatedItems
+- "Create a listReplicationSet?" -> POST /listReplicationSets
+- "Create a listResponsePlan?" -> POST /listResponsePlans
+- "Get tag details?" -> GET /tags/{resourceArn}
+- "Create a listTimelineEvent?" -> POST /listTimelineEvents
+- "Create a putResourcePolicy?" -> POST /putResourcePolicy
+- "Create a startIncident?" -> POST /startIncident
+- "Delete a tag?" -> DELETE /tags/{resourceArn}
+- "Create a updateDeletionProtection?" -> POST /updateDeletionProtection
+- "Create a updateIncidentRecord?" -> POST /updateIncidentRecord
+- "Create a updateRelatedItem?" -> POST /updateRelatedItems
+- "Create a updateReplicationSet?" -> POST /updateReplicationSet
+- "Create a updateResponsePlan?" -> POST /updateResponsePlan
+- "Create a updateTimelineEvent?" -> POST /updateTimelineEvent
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

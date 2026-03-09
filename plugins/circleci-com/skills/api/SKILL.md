@@ -65,84 +65,29 @@ https://circleci.com/api/v1
 |--------|------|-------------|
 | POST | /user/heroku-key | Adds your Heroku API key to CircleCI, takes apikey as form param name. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Who am I logged in as?" -> GET /me
-- "What projects do I have access to?" -> GET /projects
-- "Show me recent builds for a project" -> GET /project/{username}/{project}
-- "What are my recent builds across all projects?" -> GET /recent-builds
-- "Get details for a specific build" -> GET /project/{username}/{project}/{build_num}
-- "What artifacts were produced by this build?" -> GET /project/{username}/{project}/{build_num}/artifacts
-- "Retry a failed build" -> POST /project/{username}/{project}/{build_num}/retry
-- "Cancel a running build" -> POST /project/{username}/{project}/{build_num}/cancel
-- "Did any tests fail in this build?" -> GET /project/{username}/{project}/{build_num}/tests
-- "Trigger a new build on a specific branch" -> POST /project/{username}/{project}/tree/{branch}
-- "What environment variables are set for this project?" -> GET /project/{username}/{project}/envvar
-- "Add an environment variable to a project" -> POST /project/{username}/{project}/envvar
-- "Delete an environment variable from a project" -> DELETE /project/{username}/{project}/envvar/{name}
-- "List checkout keys for a project" -> GET /project/{username}/{project}/checkout-key
-- "Clear the build cache for a project" -> DELETE /project/{username}/{project}/build-cache
-
-## Response Tips
-
-- **me/user**: Flat user object; check `login` and `admin` fields for identity and permissions.
-- **projects**: Returns an array of project objects; each contains `reponame`, `username`, and `vcs_url` -- use `username/reponame` as the path pair for all project endpoints.
-- **builds** (project builds, recent-builds, build detail): Paginated via `limit` and `offset` query params (not link headers). Default limit is typically 30. The `status` field indicates outcome (`success`, `failed`, `running`, `canceled`, etc.).
-- **artifacts**: Returns an array with `url` and `path` per artifact; `url` requires appending `?circle-token=...` to download.
-- **tests**: Nested under a `tests` key; each entry has `classname`, `name`, `result` (`success`/`failure`), and `run_time`.
-- **envvar**: Values are masked in GET responses (only last 4 chars shown) -- you cannot retrieve full secrets after creation.
-- **checkout-key**: Includes `fingerprint`, `type`, and `preferred`; use the fingerprint for GET/DELETE of individual keys.
-- **errors**: Non-200 responses return `{ "message": "..." }` -- always surface the message field to the user.
-
-## Anomaly Flags
-
-- **Rate limiting**: CircleCI v1 does not return explicit rate-limit headers; if you receive HTTP 429 or sudden 503 responses, surface immediately and back off.
-- **Masked secrets**: When listing envvars, warn the user that values are truncated (last 4 chars only) -- they cannot recover full values from the API.
-- **Deprecated API version**: This is the v1 API; CircleCI has moved to v2. Flag to the user that some endpoints may behave unexpectedly or be missing newer features.
-- **Heroku key 403**: POST /user/heroku-key returns 403 when the user lacks permission -- surface this as a permissions issue, not an auth failure.
-- **Build status anomalies**: If a build has status `infrastructure_fail` or `timedout`, proactively flag these as platform-side issues distinct from code failures.
-- **Missing artifacts**: If a build succeeded but the artifacts endpoint returns an empty array, note that artifacts may have expired or the build config may not persist them.
-
-## Playbook
-
-### 1. Investigate a Failed Build
-
-1. GET /projects to find the target project's `username` and `reponame`
-2. GET /project/{username}/{project}?filter=failed&limit=5 to list recent failures
-3. GET /project/{username}/{project}/{build_num} for full detail on the failure
-4. GET /project/{username}/{project}/{build_num}/tests to identify which tests broke
-5. GET /project/{username}/{project}/{build_num}/artifacts to retrieve any logs or output
-
-### 2. Trigger and Monitor a Branch Build
-
-1. POST /project/{username}/{project}/tree/{branch} with optional build parameters in the body
-2. Note the `build_num` from the 201 response
-3. GET /project/{username}/{project}/{build_num} to poll status until `lifecycle` is `finished`
-4. If failed, POST /project/{username}/{project}/{build_num}/retry to re-run
-
-### 3. Manage Project Environment Variables
-
-1. GET /project/{username}/{project}/envvar to list current variables (values are masked)
-2. POST /project/{username}/{project}/envvar with `{ "name": "KEY", "value": "secret" }` to add
-3. GET /project/{username}/{project}/envvar/{name} to confirm creation
-4. DELETE /project/{username}/{project}/envvar/{name} to remove when no longer needed
-
-### 4. Rotate Checkout Keys
-
-1. GET /project/{username}/{project}/checkout-key to list all current keys
-2. POST /project/{username}/{project}/checkout-key with `{ "type": "deploy-key" }` to create a new key
-3. DELETE /project/{username}/{project}/checkout-key/{fingerprint} to remove the old key
-4. Trigger a test build to verify the new key works: POST /project/{username}/{project}/tree/main
-
-### 5. Audit Across All Projects
-
-1. GET /me to confirm your identity and permissions
-2. GET /projects to enumerate all accessible projects
-3. For each project, GET /project/{username}/{project}/envvar to audit secrets
-4. For each project, GET /project/{username}/{project}/checkout-key to review key hygiene
-5. GET /recent-builds?limit=100 for a cross-project health snapshot
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all me?" -> GET /me
+- "List all projects?" -> GET /projects
+- "Get project details?" -> GET /project/{username}/{project}
+- "List all recent-builds?" -> GET /recent-builds
+- "Get project details?" -> GET /project/{username}/{project}/{build_num}
+- "List all artifacts?" -> GET /project/{username}/{project}/{build_num}/artifacts
+- "Create a retry?" -> POST /project/{username}/{project}/{build_num}/retry
+- "Create a cancel?" -> POST /project/{username}/{project}/{build_num}/cancel
+- "List all tests?" -> GET /project/{username}/{project}/{build_num}/tests
+- "Create a ssh-key?" -> POST /project/{username}/{project}/ssh-key
+- "List all checkout-key?" -> GET /project/{username}/{project}/checkout-key
+- "Create a checkout-key?" -> POST /project/{username}/{project}/checkout-key
+- "Get checkout-key details?" -> GET /project/{username}/{project}/checkout-key/{fingerprint}
+- "Delete a checkout-key?" -> DELETE /project/{username}/{project}/checkout-key/{fingerprint}
+- "List all envvar?" -> GET /project/{username}/{project}/envvar
+- "Create a envvar?" -> POST /project/{username}/{project}/envvar
+- "Get envvar details?" -> GET /project/{username}/{project}/envvar/{name}
+- "Delete a envvar?" -> DELETE /project/{username}/{project}/envvar/{name}
+- "Create a heroku-key?" -> POST /user/heroku-key
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

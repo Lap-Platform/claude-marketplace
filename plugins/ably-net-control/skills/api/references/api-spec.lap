@@ -10,124 +10,146 @@
 
 @group accounts
 @endpoint GET /accounts/{account_id}/apps
-@required {account_id: str}
-@returns(200)
-@errors {401, 404, 500}
+@desc Lists account apps
+@required {account_id: str # The account ID for which to retrieve the associated applications.}
+@returns(200) List of apps for the specified account are returned
+@errors {401: Authentication failed, 404: Account not found, 500: Internal server error}
 
 @endpoint POST /accounts/{account_id}/apps
-@required {account_id: str, name: str}
-@optional {status: str, tlsOnly: bool, fcmKey: str, fcmServiceAccount: str, fcmProjectId: str, apnsCertificate: str, apnsPrivateKey: str, apnsUseSandboxEndpoint: bool}
-@returns(201) {accountId: str, id: str, name: str, status: str, tlsOnly: bool?, apnsUseSandboxEndpoint: bool?, _links: map?}
-@errors {400, 401, 404, 422, 500}
+@desc Creates an app
+@required {account_id: str # The account ID of the account in which to create the application., name: str # The name of the application for your reference only.}
+@optional {status: str # The status of the application. Can be `enabled` or `disabled`. Enabled means available to accept inbound connections and all services are available., tlsOnly: bool # Enforce TLS for all connections., fcmKey: str # The Firebase Cloud Messaging key., fcmServiceAccount: str # Used to specify the Firebase Cloud Messaging(FCM) service account credentials used for authentication and enabling communication with FCM to send push notifications to devices., fcmProjectId: str # The unique identifier for the Firebase Cloud Messaging(FCM) project. This ID is used to specify the Firebase project when configuring FCM or other Firebase services., apnsCertificate: str # The Apple Push Notification service certificate., apnsPrivateKey: str # The Apple Push Notification service private key., apnsUseSandboxEndpoint: bool # Use the Apple Push Notification service sandbox endpoint.}
+@returns(201) {accountId: str, id: str, name: str, status: str, tlsOnly: bool?, apnsUseSandboxEndpoint: bool?, _links: map?} # App created
+@errors {400: Bad request, 401: Authentication failed, 404: Account not found, 422: Invalid request, 500: Internal server error}
 
 @endgroup
 
 @group apps
 @endpoint PATCH /apps/{id}
-@required {id: str}
-@optional {name: str, status: str, tlsOnly: bool, fcmKey: str, fcmServiceAccount: str, fcmProjectId: str, apnsCertificate: str, apnsPrivateKey: str, apnsUseSandboxEndpoint: bool}
-@returns(200) {accountId: str, id: str, name: str, status: str, tlsOnly: bool?, apnsUseSandboxEndpoint: bool?, _links: map?}
-@errors {400, 401, 404, 422, 500}
+@desc Updates an app
+@required {id: str # The ID of application to be updated.}
+@optional {name: str # The name of the application for your reference only., status: str # The status of the application. Can be `enabled` or `disabled`. Enabled means available to accept inbound connections and all services are available., tlsOnly: bool # Enforce TLS for all connections., fcmKey: str # The Firebase Cloud Messaging key., fcmServiceAccount: str # Used to specify the Firebase Cloud Messaging(FCM) service account credentials used for authentication and enabling communication with FCM to send push notifications to devices., fcmProjectId: str # The unique identifier for the Firebase Cloud Messaging(FCM) project. This ID is used to specify the Firebase project when configuring FCM or other Firebase services., apnsCertificate: str # The Apple Push Notification service certificate., apnsPrivateKey: str # The Apple Push Notification service private key., apnsUseSandboxEndpoint: bool # Use the Apple Push Notification service sandbox endpoint.}
+@returns(200) {accountId: str, id: str, name: str, status: str, tlsOnly: bool?, apnsUseSandboxEndpoint: bool?, _links: map?} # App updated
+@errors {400: Bad request, 401: Authentication failed, 404: App not found, 422: Invalid resource, 500: Internal server error}
 
 @endpoint DELETE /apps/{id}
-@required {id: str}
-@returns(204)
-@errors {401, 404, 422, 500}
+@desc Deletes an app
+@required {id: str # The ID of the application to be deleted.}
+@returns(204) App deleted
+@errors {401: Authentication failed, 404: App not found, 422: Invalid request, 500: Internal server error}
 
 @endpoint POST /apps/{id}/pkcs12
-@required {id: str}
-@returns(200) {accountId: str, id: str, name: str, status: str, tlsOnly: bool?, apnsUseSandboxEndpoint: bool?, _links: map?}
-@errors {400, 401, 404, 500}
+@desc Updates app's APNs info from a `.p12` file
+@required {id: str # The application ID.}
+@returns(200) {accountId: str, id: str, name: str, status: str, tlsOnly: bool?, apnsUseSandboxEndpoint: bool?, _links: map?} # App updated
+@errors {400: Bad request, 401: Authentication failed, 404: App not found, 500: Internal server error}
 
 @endpoint GET /apps/{app_id}/keys
-@required {app_id: str}
-@returns(200)
-@errors {401, 404, 500, 504}
+@desc Lists app keys
+@required {app_id: str # The application ID.}
+@returns(200) Key list
+@errors {401: Authentication failed, 404: App not found, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint POST /apps/{app_id}/keys
-@required {app_id: str, name: str, capability: map}
-@returns(201) {appId: str, id: str, name: str, status: int, key: str, capability: map, created: int, modified: int}
-@errors {400, 401, 404, 422, 500}
+@desc Creates a key
+@required {app_id: str # The application ID., name: str # The name for your API key. This is a friendly name for your reference., capability: map # These are the capability operations described in the <a href="https://ably.com/docs/auth/capabilities">capabilities docs</a>.}
+@returns(201) {appId: str, id: str, name: str, status: int, key: str, capability: map, created: int, modified: int} # Key created
+@errors {400: Bad request, 401: Authentication failed, 404: App not found, 422: Invalid request, 500: Internal server error}
 
 @endpoint PATCH /apps/{app_id}/keys/{key_id}
-@required {app_id: str, key_id: str}
-@optional {name: str, capability: map}
-@returns(200) {appId: str, id: str, name: str, status: int, key: str, capability: map, created: int, modified: int}
-@errors {400, 401, 404, 422, 500, 504}
+@desc Updates a key
+@required {app_id: str # The application ID., key_id: str # The API key ID.}
+@optional {name: str # The name for your API key. This is a friendly name for your reference., capability: map # These are the capability operations described in the Ably <a href="https://ably.com/docs/auth/capabilities">capabilities docs</a>.}
+@returns(200) {appId: str, id: str, name: str, status: int, key: str, capability: map, created: int, modified: int} # Key updated
+@errors {400: Bad request, 401: Authentication failed, 404: App not found, 422: Invalid request, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint POST /apps/{app_id}/keys/{key_id}/revoke
-@required {app_id: str, key_id: str}
-@returns(200)
-@errors {401, 404, 500, 504}
+@desc Revokes a key
+@required {app_id: str # The application ID., key_id: str # The key ID.}
+@returns(200) Key revoked
+@errors {401: Authentication failed, 404: Not found, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint GET /apps/{app_id}/namespaces
-@required {app_id: str}
-@returns(200)
-@errors {401, 404, 500, 504}
+@desc Lists namespaces
+@required {app_id: str # The application ID.}
+@returns(200) Namespace list
+@errors {401: Authentication failed, 404: App not found, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint POST /apps/{app_id}/namespaces
-@required {app_id: str, id: str}
-@optional {authenticated: bool=False, persisted: bool=False, persistLast: bool=False, pushEnabled: bool=False, batchingEnabled: bool=False, batchingPolicy: str=simple, batchingInterval: int=20, tlsOnly: bool=False, exposeTimeserial: bool=False}
-@returns(201) {authenticated: bool, created: int, modified: int, id: str, persisted: bool, persistLast: bool, pushEnabled: bool, batchingEnabled: bool, batchingPolicy: str, batchingInterval: int, tlsOnly: bool, exposeTimeserial: bool}
-@errors {400, 401, 404, 422, 500}
+@desc Creates a namespace
+@required {app_id: str # The application ID., id: str # The namespace or channel name that the channel rule will apply to. For example, if you specify `namespace` the namespace will be set to `namespace` and will match with channels `namespace:*` and `namespace`.}
+@optional {authenticated: bool=False # If `true`, clients will not be permitted to use (including to attach, publish, or subscribe) any channels within this namespace unless they are identified, that is, authenticated using a client ID. See the documentation for <a href="https://ably.com/docs/auth/identified-clients">identified clients</a> for more details., persisted: bool=False # If `true`, all messages on a channel will be stored for 24 hours. You can access stored messages via the History API. Please note that for each message stored, an additional message is deducted from your monthly allocation., persistLast: bool=False # If `true`, the last message published on a channel will be stored for 365 days. You can access the stored message only by using the channel rewind mechanism and attaching with rewind=1. Please note that for each message stored, an additional message is deducted from your monthly allocation., pushEnabled: bool=False # If `true`, publishing messages with a push payload in the extras field is permitted and can trigger the delivery of a native push notification to registered devices for the channel., batchingEnabled: bool=False # If `true`, channels within this namespace will start batching inbound messages instead of sending them out immediately to subscribers., batchingPolicy: str=simple # If `true`, groups multiple incoming messages into a single batch., batchingInterval: int=20 # If `true`, the batching interval, configurable from 20ms to 1s, temporarily holds and aggregates incoming messages. These messages are then combined and delivered as a single batch once the interval elapses or a size limit is reached (before the interval elapses)., tlsOnly: bool=False # If `true`, only clients that are connected using TLS will be permitted to subscribe to any channels within this namespace., exposeTimeserial: bool=False # If `true`, messages received on a channel will contain a unique `timeserial` that can be referenced by later messages for use with message interactions.}
+@returns(201) {authenticated: bool, created: int, modified: int, id: str, persisted: bool, persistLast: bool, pushEnabled: bool, batchingEnabled: bool, batchingPolicy: str, batchingInterval: int, tlsOnly: bool, exposeTimeserial: bool} # Namespace created
+@errors {400: Bad request, 401: Authentication failed, 404: App not found, 422: Invalid request, 500: Internal server error}
 
 @endpoint PATCH /apps/{app_id}/namespaces/{namespace_id}
-@required {app_id: str, namespace_id: str}
-@optional {authenticated: bool=False, persisted: bool=False, persistLast: bool=False, pushEnabled: bool=False, batchingEnabled: bool=False, batchingPolicy: str=simple, batchingInterval: int=20, tlsOnly: bool=False, exposeTimeserial: bool}
-@returns(200) {authenticated: bool, created: int, modified: int, id: str, persisted: bool, persistLast: bool, pushEnabled: bool, batchingEnabled: bool, batchingPolicy: str, batchingInterval: int, tlsOnly: bool, exposeTimeserial: bool}
-@errors {400, 401, 404, 500, 504}
+@desc Updates a namespace
+@required {app_id: str # The application ID., namespace_id: str # The namespace ID.}
+@optional {authenticated: bool=False # If `true`, clients will not be permitted to use (including to attach, publish, or subscribe) any channels within this namespace unless they are identified, that is, authenticated using a client ID. See the documentation for <a href="https://ably.com/docs/auth/identified-clients">identified clients</a> for more details., persisted: bool=False # If `true`, all messages on a channel will be stored for 24 hours. You can access stored messages via the History API. Please note that for each message stored, an additional message is deducted from your monthly allocation., persistLast: bool=False # If `true`, the last message published on a channel will be stored for 365 days. You can access the stored message only by using the channel rewind mechanism and attaching with rewind=1. Please note that for each message stored, an additional message is deducted from your monthly allocation., pushEnabled: bool=False # If `true`, publishing messages with a push payload in the extras field is permitted and can trigger the delivery of a native push notification to registered devices for the channel., batchingEnabled: bool=False # If `true`, channels within this namespace will start batching inbound messages instead of sending them out immediately to subscribers., batchingPolicy: str=simple # If `true`, groups multiple incoming messages into a single batch., batchingInterval: int=20 # If `true`, the batching interval, configurable from 20ms to 1s, temporarily holds and aggregates incoming messages. These messages are then combined and delivered as a single batch once the interval elapses or a size limit is reached (before the interval elapses)., tlsOnly: bool=False # If `true`, only clients that are connected using TLS will be permitted to subscribe to any channels within this namespace., exposeTimeserial: bool # If `true`, messages received on a channel will contain a unique `timeserial` that can be referenced by later messages for use with message interactions.}
+@returns(200) {authenticated: bool, created: int, modified: int, id: str, persisted: bool, persistLast: bool, pushEnabled: bool, batchingEnabled: bool, batchingPolicy: str, batchingInterval: int, tlsOnly: bool, exposeTimeserial: bool} # Namespace updated
+@errors {400: Bad request, 401: Authentication failed, 404: Not found, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint DELETE /apps/{app_id}/namespaces/{namespace_id}
-@required {app_id: str, namespace_id: str}
-@returns(204)
-@errors {401, 404, 500, 504}
+@desc Deletes a namespace
+@required {app_id: str # The application ID., namespace_id: str # The namespace ID.}
+@returns(204) Namespace deleted
+@errors {401: Authentication failed, 404: Not found, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint GET /apps/{app_id}/queues
-@required {app_id: str}
-@returns(200)
-@errors {401, 404, 500, 503, 504}
+@desc Lists queues
+@required {app_id: str # The application ID.}
+@returns(200) Queue list
+@errors {401: Authentication failed, 404: App not found, 500: Internal server error, 503: 503 Service unavailable, 504: Gateway timeout}
 
 @endpoint POST /apps/{app_id}/queues
-@required {app_id: str, name: str, ttl: int, maxLength: int, region: str}
-@returns(201) {id: str, appId: str, name: str, region: str, amqp: map{uri: str, queueName: str}, stomp: map{uri: str, host: str, destination: str}, state: str, messages: map{ready: int?, unacknowledged: int?, total: int?}, stats: map{publishRate: num?, deliveryRate: num?, acknowledgementRate: num?}, ttl: int, maxLength: int, deadletter: bool, deadletterId: str?}
-@errors {400, 401, 404, 422, 500}
+@desc Creates a queue
+@required {app_id: str # The application ID., name: str # A friendly name for your queue., ttl: int # TTL in minutes., maxLength: int # Message limit in number of messages., region: str # The data center region. US East (Virginia) or EU West (Ireland). Values are `us-east-1-a` or `eu-west-1-a`.}
+@returns(201) {id: str, appId: str, name: str, region: str, amqp: map{uri: str, queueName: str}, stomp: map{uri: str, host: str, destination: str}, state: str, messages: map{ready: int?, unacknowledged: int?, total: int?}, stats: map{publishRate: num?, deliveryRate: num?, acknowledgementRate: num?}, ttl: int, maxLength: int, deadletter: bool, deadletterId: str?} # Queue created
+@errors {400: Bad request, 401: Authentication failed, 404: App not found, 422: Invalid request, 500: Internal server error}
 
 @endpoint DELETE /apps/{app_id}/queues/{queue_id}
-@required {app_id: str, queue_id: str}
-@returns(204)
-@errors {400, 401, 404, 500, 503}
+@desc Deletes a queue
+@required {app_id: str # The application ID., queue_id: str # The queue ID.}
+@returns(204) Queue deleted
+@errors {400: Bad request, 401: Authentication failed, 404: App not found, 500: Internal server error, 503: 503 Service unavailable}
 
 @endpoint GET /apps/{app_id}/rules
-@required {app_id: str}
-@returns(200)
-@errors {401, 404, 500, 504}
+@desc Lists rules
+@required {app_id: str # The application ID.}
+@returns(200) Rule list
+@errors {401: Authentication failed, 404: App not found, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint POST /apps/{app_id}/rules
-@required {app_id: str}
-@returns(201)
-@errors {400, 401, 404, 422, 500, 504}
+@desc Creates a rule
+@required {app_id: str # The application ID.}
+@returns(201) Rule created
+@errors {400: Bad request, 401: Authentication failed, 404: App not found, 422: Invalid request, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint GET /apps/{app_id}/rules/{rule_id}
-@required {app_id: str, rule_id: str}
-@returns(200)
-@errors {401, 404, 500, 504}
+@desc Gets a rule using a rule ID
+@required {app_id: str # The application ID., rule_id: str # The rule ID.}
+@returns(200) Rule
+@errors {401: Authentication failed, 404: Not found, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint PATCH /apps/{app_id}/rules/{rule_id}
-@required {app_id: str, rule_id: str}
-@returns(200)
-@errors {400, 401, 404, 422, 500, 504}
+@desc Updates a Rule
+@required {app_id: str # The application ID., rule_id: str # The rule ID.}
+@returns(200) Rule updated
+@errors {400: Bad request, 401: Authentication failed, 404: App not found, 422: Invalid request, 500: Internal server error, 504: Gateway timeout}
 
 @endpoint DELETE /apps/{app_id}/rules/{rule_id}
-@required {app_id: str, rule_id: str}
-@returns(204)
-@errors {401, 404, 500, 504}
+@desc Deletes a rule
+@required {app_id: str # The application ID., rule_id: str # The rule ID.}
+@returns(204) Rule deleted
+@errors {401: Authentication failed, 404: App not found, 500: Internal server error, 504: Gateway timeout}
 
 @endgroup
 
 @group me
 @endpoint GET /me
-@returns(200) {token: map{id: int, name: str, capabilities: [str]}, user: map{id: int, email: str}, account: map{id: str, name: str}}
-@errors {401, 500}
+@desc Get token details
+@returns(200) {token: map{id: int, name: str, capabilities: [str]}, user: map{id: int, email: str}, account: map{id: str, name: str}} # Token details
+@errors {401: Authentication failed, 500: Internal server error}
 
 @endgroup
 

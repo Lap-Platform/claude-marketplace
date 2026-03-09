@@ -126,86 +126,54 @@ http://example.com/v1
 | POST | /certificates/webhooks/ca | Upload Webhook CA Certificate |
 | DELETE | /certificates/webhooks/ca | Delete Webhook CA Certificate |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I authenticate with the WhatsApp API?" -> POST /users/login
-- "How do I create a new admin user?" -> POST /users
-- "How do I send a text message to a phone number?" -> POST /messages
-- "How do I send an image or document to someone?" -> POST /messages
-- "How do I mark a message as read?" -> PUT /messages/{MessageID}
-- "How do I check if the WhatsApp service is running?" -> GET /health
-- "How do I update my business profile info?" -> POST /settings/business/profile
-- "How do I create a new group and add members?" -> POST /groups
-- "How do I remove someone from a group?" -> DELETE /groups/{GroupId}/participants
-- "How do I register my phone number with WhatsApp?" -> POST /account
-- "How do I upload media for sending?" -> POST /media
-- "How do I back up my application settings?" -> POST /settings/backup
-- "How do I enable two-step verification?" -> POST /settings/account/two-step
-- "How do I check contacts for WhatsApp availability?" -> POST /contacts
-- "How do I view app or database statistics?" -> GET /stats/app
-
-## Response Tips
-
-- **users**: Login returns a bearer token for subsequent requests; store it for the session.
-- **messages**: Responses confirm acceptance, not delivery; track message status via webhooks for delivery/read receipts.
-- **settings**: GET returns nested maps (`settings.profile.about.text`); PATCH returns `meta` with API version and `errors` array -- check `errors` even on 200.
-- **account**: Registration may return 201 (complete) or 202 (pending verification) -- branch on status code.
-- **contacts**: Use `blocking: "wait"` for synchronous results; `"no_wait"` returns immediately and delivers results via webhook.
-- **groups**: All group endpoints require the `GroupId` path parameter; list groups first with GET /groups to discover IDs.
-- **media**: GET /media/{MediaId} returns binary content, not JSON; handle the response as a file download.
-- **stats/metrics**: Accept an optional `format` query param; default format may vary -- specify explicitly for consistency.
-- **certificates**: Responses are typically raw certificate data; handle as PEM/DER content rather than JSON.
-
-## Anomaly Flags
-
-- **Dual status codes on registration**: POST /account can return 201 or 202 -- surface which path was taken and whether verification (POST /account/verify) is still needed.
-- **Webhook misconfiguration**: If `webhooks.url` in application settings is empty or unreachable, message delivery receipts and async contact results will be silently lost.
-- **Unhealthy heartbeat intervals**: Flag if `unhealthy_interval` or `heartbeat_interval` in application settings are set to unusually low values (can cause false health alerts) or unusually high values (delayed failure detection).
-- **Two-step verification state**: Surface when two-step verification is disabled (DELETE /settings/account/two-step was called) as this reduces account security.
-- **Shard count changes**: POST /account/shards accepts powers of 2 (1-32); changing shards is disruptive -- flag if a shard change request is detected.
-- **Auto-download media settings**: Warn if `media.auto_download` includes large media types that could consume storage rapidly.
-- **Callback persist disabled**: If `callback_persist` is set to false, undelivered callbacks will be lost on restart -- flag this configuration risk.
-
-## Playbook
-
-### 1. Send a Text Message to a New Contact
-
-1. Authenticate: POST /users/login with your credentials to obtain a bearer token.
-2. Check contact availability: POST /contacts with `{"contacts": ["+1234567890"], "blocking": "wait"}`.
-3. Send the message: POST /messages with `{"to": "1234567890", "type": "text", "text": {"body": "Hello!"}}`.
-4. Monitor delivery: Listen on your configured webhook URL for status callbacks, or mark as read when replied to via PUT /messages/{MessageID}.
-
-### 2. Set Up a New WhatsApp Business Account
-
-1. Register phone number: POST /account with `{"cc": "1", "phone_number": "5551234567", "method": "sms", "cert": "<your_cert>"}`.
-2. If 202 returned, verify: POST /account/verify with the SMS code received `{"code": "123456"}`.
-3. Enable two-step verification: POST /settings/account/two-step with `{"pin": "123456"}`.
-4. Set business profile: POST /settings/business/profile with address, description, email, vertical, and websites.
-5. Set profile about text: PATCH /settings/profile/about with `{"text": "Your business tagline"}`.
-6. Configure webhooks: PATCH /settings/application with `{"webhooks": {"url": "https://your-server.com/webhook"}}`.
-
-### 3. Create and Manage a Group
-
-1. Create group: POST /groups with `{"subject": "Team Chat"}` -- note the returned GroupId.
-2. Get invite link: GET /groups/{GroupId}/invite to share with new members.
-3. Set group icon: POST /groups/{GroupId}/icon with the image payload.
-4. Promote admins: PATCH /groups/{GroupId}/admins with `{"wa_ids": ["member_wa_id"]}`.
-5. To remove a member later: DELETE /groups/{GroupId}/participants with `{"wa_ids": ["member_wa_id"]}`.
-
-### 4. Back Up and Restore Settings
-
-1. Create backup: POST /settings/backup with `{"password": "secure_passphrase"}` -- save the returned `settings.data` string securely.
-2. To restore: POST /settings/restore with `{"password": "secure_passphrase", "data": "<backup_data_string>"}`.
-3. Verify restoration: GET /settings/application and GET /settings/business/profile to confirm settings are correct.
-
-### 5. Upload and Send Media
-
-1. Upload media file: POST /media with the file as multipart form data -- note the returned MediaId.
-2. Send media message: POST /messages with `{"to": "1234567890", "type": "image", "image": {"id": "<MediaId>"}}` (substitute `type` and the corresponding field for document, video, or audio).
-3. To retrieve media later: GET /media/{MediaId} to download the binary content.
-4. Clean up: DELETE /media/{MediaId} when the media is no longer needed.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a login?" -> POST /users/login
+- "Create a user?" -> POST /users
+- "Get user details?" -> GET /users/{UserUsername}
+- "Update a user?" -> PUT /users/{UserUsername}
+- "Delete a user?" -> DELETE /users/{UserUsername}
+- "Create a logout?" -> POST /users/logout
+- "List all application?" -> GET /settings/application
+- "Create a shard?" -> POST /account/shards
+- "List all providers?" -> GET /settings/application/media/providers
+- "Create a provider?" -> POST /settings/application/media/providers
+- "Delete a provider?" -> DELETE /settings/application/media/providers/{ProviderName}
+- "Create a backup?" -> POST /settings/backup
+- "Create a restore?" -> POST /settings/restore
+- "List all profile?" -> GET /settings/business/profile
+- "Create a profile?" -> POST /settings/business/profile
+- "List all about?" -> GET /settings/profile/about
+- "Create a two-step?" -> POST /settings/account/two-step
+- "Create a verify?" -> POST /account/verify
+- "Create a contact?" -> POST /contacts
+- "Create a message?" -> POST /messages
+- "Update a message?" -> PUT /messages/{MessageID}
+- "List all groups?" -> GET /groups
+- "Create a group?" -> POST /groups
+- "Get group details?" -> GET /groups/{GroupId}
+- "Update a group?" -> PUT /groups/{GroupId}
+- "List all invite?" -> GET /groups/{GroupId}/invite
+- "Create a leave?" -> POST /groups/{GroupId}/leave
+- "List all icon?" -> GET /groups/{GroupId}/icon
+- "Create a icon?" -> POST /groups/{GroupId}/icon
+- "List all health?" -> GET /health
+- "List all photo?" -> GET /settings/profile/photo
+- "Create a photo?" -> POST /settings/profile/photo
+- "Create a account?" -> POST /account
+- "Create a media?" -> POST /media
+- "Get media details?" -> GET /media/{MediaId}
+- "Delete a media?" -> DELETE /media/{MediaId}
+- "List all app?" -> GET /stats/app
+- "List all db?" -> GET /stats/db
+- "List all metrics?" -> GET /metrics
+- "List all support?" -> GET /support
+- "List all ca?" -> GET /certificates/external/ca
+- "Create a external?" -> POST /certificates/external
+- "List all ca?" -> GET /certificates/webhooks/ca
+- "Create a ca?" -> POST /certificates/webhooks/ca
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

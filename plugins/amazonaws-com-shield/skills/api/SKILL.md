@@ -62,89 +62,10 @@ Not specified.
 | POST | / | Updates an existing protection group. A protection group is a grouping of protected resources so they can be handled as a collective. This resource grouping improves the accuracy of detection and reduces false positives. |
 | POST | / | Updates the details of an existing subscription. Only enter values for parameters you want to change. Empty parameters are not updated.  For accounts that are members of an Organizations organization, Shield Advanced subscriptions are billed against the organization's payer account, regardless of whether the payer account itself is subscribed. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I protect a new AWS resource with Shield Advanced?" -> POST / (CreateProtection: Name, ResourceArn)
-- "How do I set up a protection group for multiple resources?" -> POST / (CreateProtectionGroup: ProtectionGroupId, Aggregation, Pattern)
-- "What are the details of a specific DDoS attack?" -> POST / (DescribeAttack: AttackId)
-- "What attacks have happened in a given time range?" -> POST / (ListAttacks: StartTime, EndTime, ResourceArns)
-- "What protections are currently active on my account?" -> POST / (ListProtections: InclusionFilters, NextToken, MaxResults)
-- "How do I associate a Route 53 health check with a protection?" -> POST / (AssociateHealthCheck: ProtectionId, HealthCheckArn)
-- "What is my current Shield Advanced subscription status?" -> POST / (DescribeSubscription) or POST / (GetSubscriptionState)
-- "How do I grant the DDoS Response Team access to my logs?" -> POST / (AssociateDRTLogBucket: LogBucket) + POST / (AssociateDRTRole: RoleArn)
-- "How do I enable automatic application-layer DDoS mitigation?" -> POST / (EnableApplicationLayerAutomaticResponse: ResourceArn, Action)
-- "Who are my emergency contacts for DDoS events?" -> POST / (DescribeEmergencyContactSettings)
-- "How do I tag a Shield resource for cost tracking?" -> POST / (TagResource: ResourceARN, Tags)
-- "What resources belong to a specific protection group?" -> POST / (ListResourcesInProtectionGroup: ProtectionGroupId)
-- "How do I turn on proactive engagement with the DDoS Response Team?" -> POST / (EnableProactiveEngagement)
-- "How do I remove a protection I no longer need?" -> POST / (DeleteProtection: ProtectionId)
-- "What are the overall DDoS attack statistics for my account?" -> POST / (DescribeAttackStatistics)
-
-## Response Tips
-
-- **Describe/Get calls**: Return a single nested object (Attack, Protection, Subscription); always check for `null` -- the top-level field is optional (`?`) when the resource may not exist.
-- **List calls**: All return `NextToken` for pagination -- keep calling with the returned token until it is absent or empty; respect `MaxResults` (default varies by endpoint).
-- **Mutating calls** (Create/Update/Delete/Associate/Disassociate): Return empty 200 on success except `CreateProtection` which returns `ProtectionId`; treat any non-200 as a failure.
-- **DescribeAttack**: The `AttackDetail` response nests deeply -- `SubResources`, `AttackCounters`, `AttackProperties`, and `Mitigations` are all optional arrays; iterate defensively.
-- **DescribeSubscription**: Contains nested `SubscriptionLimits` with sub-objects for protection and group limits; parse two levels deep to extract quota information.
-- **Timestamps**: All time fields use `str(timestamp)` format; convert before comparison or display.
-
-## Anomaly Flags
-
-- **Subscription not active**: If `GetSubscriptionState` returns anything other than `ACTIVE`, surface immediately -- protections may not be enforced.
-- **ProactiveEngagementStatus is DISABLED or PENDING**: Warn that the DDoS Response Team cannot proactively reach out during attacks until engagement is fully enabled.
-- **AutoRenew set to NO**: Flag that the Shield Advanced subscription will expire and not auto-renew, risking a gap in protection.
-- **Empty HealthCheckIds on a Protection**: The protection exists but has no associated health check, meaning Shield cannot use health-based detection -- recommend associating one.
-- **Protection or ProtectionGroup limits approaching**: Compare current counts from `ListProtections`/`ListProtectionGroups` against limits in `DescribeSubscription.SubscriptionLimits` and warn at 80%+ usage.
-- **Attack with no Mitigations**: If `DescribeAttack` returns an attack where `Mitigations` is empty or null, flag it -- this may indicate an unmitigated or ongoing event.
-- **ApplicationLayerAutomaticResponse status is DISABLED**: If a protection has this field with `Status: DISABLED`, surface as a recommendation to enable for Layer 7 coverage.
-- **DRT access not configured**: If `DescribeDRTAccess` returns empty `RoleArn` and `LogBucketList`, warn that the DDoS Response Team cannot assist during incidents.
-
-## Playbook
-
-### 1. Onboard a New Resource to Shield Advanced
-
-1. Ensure you have an active subscription: call `GetSubscriptionState` and verify `SubscriptionState` is `ACTIVE`. If not, call `CreateSubscription`.
-2. Create a protection: call `CreateProtection` with `Name` and `ResourceArn` of the resource (ALB, CloudFront, EIP, etc.). Save the returned `ProtectionId`.
-3. Associate a Route 53 health check: call `AssociateHealthCheck` with the `ProtectionId` and your `HealthCheckArn` for health-based detection.
-4. Enable automatic L7 mitigation (if applicable): call `EnableApplicationLayerAutomaticResponse` with `ResourceArn` and `Action` set to `{Count: {}}` (observe mode) or `{Block: {}}`.
-5. Tag the protection for tracking: call `TagResource` with the protection ARN and relevant tags.
-
-### 2. Set Up DDoS Response Team (DRT) Access
-
-1. Create an IAM role granting DRT access and note the `RoleArn`.
-2. Call `AssociateDRTRole` with the `RoleArn` to authorize the team.
-3. For each relevant S3 log bucket, call `AssociateDRTLogBucket` with the `LogBucket` name.
-4. Set emergency contacts: call `AssociateProactiveEngagementDetails` (or `UpdateEmergencyContactSettings`) with your `EmergencyContactList`.
-5. Enable proactive engagement: call `EnableProactiveEngagement` so the DRT can contact you during detected events.
-6. Verify setup: call `DescribeDRTAccess` and confirm both `RoleArn` and `LogBucketList` are populated.
-
-### 3. Investigate a DDoS Attack
-
-1. List recent attacks: call `ListAttacks` with a `StartTime` and `EndTime` range. Paginate with `NextToken` if needed.
-2. Identify the target: review `AttackSummaries` for the affected `ResourceArn` and note the `AttackId`.
-3. Get full details: call `DescribeAttack` with the `AttackId`.
-4. Analyze vectors: inspect `SubResources` and `AttackCounters` to understand the attack type and volume.
-5. Review mitigations: check the `Mitigations` array to confirm Shield took action. If empty, escalate.
-6. Check broader trends: call `DescribeAttackStatistics` to see if this is part of a pattern.
-
-### 4. Organize Resources into Protection Groups
-
-1. Decide on a grouping strategy: by resource type (`ResourceType`), by explicit list (`Members`), or all resources (`ALL`).
-2. Create the group: call `CreateProtectionGroup` with `ProtectionGroupId`, `Aggregation` (SUM, MEAN, or MAX), and `Pattern` (ALL, ARBITRARY, or BY_RESOURCE_TYPE).
-3. If using `ARBITRARY` pattern, provide the `Members` list of resource ARNs. If using `BY_RESOURCE_TYPE`, set `ResourceType`.
-4. Verify membership: call `ListResourcesInProtectionGroup` with the group ID and confirm the expected resources appear.
-5. To modify later: call `UpdateProtectionGroup` with the same required fields plus any changes.
-
-### 5. Manage Subscription Lifecycle
-
-1. Check current state: call `GetSubscriptionState` for a quick status, or `DescribeSubscription` for full details including limits and renewal.
-2. Review quotas: parse `SubscriptionLimits.ProtectionLimits` and `ProtectionGroupLimits` to understand your ceilings.
-3. Toggle auto-renew: call `UpdateSubscription` with `AutoRenew` set to `ENABLED` or `DISABLED`.
-4. Audit usage: call `ListProtections` and `ListProtectionGroups` and compare counts against your subscription limits.
-5. If decommissioning: remove all protections and groups first, then call `DeleteSubscription` (note: Shield Advanced has a 1-year commitment).
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

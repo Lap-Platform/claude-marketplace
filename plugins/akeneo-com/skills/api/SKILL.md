@@ -164,85 +164,127 @@ http://demo.akeneo.com
 | POST | /api/oauth/v1/token | Get authentication token |
 | GET | /api/rest/v1/system-information | Get system information |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all products in the catalog?" -> GET /api/rest/v1/products
-- "How do I find a product by its UUID?" -> GET /api/rest/v1/products-uuid/{uuid}
-- "How do I create a new product?" -> POST /api/rest/v1/products
-- "How do I update multiple products at once?" -> PATCH /api/rest/v1/products
-- "How do I search products with filters?" -> POST /api/rest/v1/products-uuid/search
-- "What families are defined in the PIM?" -> GET /api/rest/v1/families
-- "How do I get the attribute options for a select attribute?" -> GET /api/rest/v1/attributes/{attribute_code}/options
-- "How do I upload a media file for a product?" -> POST /api/rest/v1/media-files
-- "How do I download an asset image?" -> GET /api/rest/v1/asset-media-files/{code}
-- "How do I trigger a product export job?" -> POST /api/rest/v1/jobs/export/{code}
-- "How do I import a CSV file into the PIM?" -> POST /api/rest/v1/jobs/import/{code}
-- "How do I authenticate and get an access token?" -> POST /api/oauth/v1/token
-- "How do I submit a product draft for approval?" -> POST /api/rest/v1/products/{code}/proposal
-- "What reference entities exist and how do I browse their records?" -> GET /api/rest/v1/reference-entities then GET /api/rest/v1/reference-entities/{reference_entity_code}/records
-- "How do I check which version of Akeneo PIM is running?" -> GET /api/rest/v1/system-information
-
-## Response Tips
-
-- **Products & Product Models**: Paginated lists; use `pagination_type=search_after` for large catalogs (avoids offset limits). Quality scores and completenesses are optional nested objects -- request them explicitly via query params.
-- **Families & Attributes**: Standard page-based pagination (`page`, `limit`, `with_count`). Family variants are nested under `/families/{code}/variants`.
-- **Reference Entities & Assets (new system)**: Use cursor-based pagination only (`search_after`). No `page` param. Records and assets are scoped under their parent entity/family.
-- **Assets (legacy)**: Support both `page` and `search_after` pagination. Reference files and variation files are locale- and channel-specific sub-resources.
-- **Media Files**: `POST` returns `Location` header with the new media code -- there is no code in the response body. Download endpoints return raw binary.
-- **Batch PATCH (collections)**: Returns a streaming JSON response with per-line status for each item -- parse line by line, not as a single JSON object.
-- **OAuth Token**: Returns `access_token` and `refresh_token`. Token format and expiry are in the response body. 422 typically means malformed grant type.
-- **Error responses**: 401 = expired/missing token, 403 = insufficient permissions, 406 = missing `Accept: application/json` header, 422 = validation failure with field-level details, 415 = wrong `Content-Type`.
-
-## Anomaly Flags
-
-- **429 on attribute options**: The attribute options PATCH endpoints (both collection and single) can return 429. Surface rate-limit headers proactively and suggest backing off before retrying batch option updates.
-- **201 vs 204 ambiguity**: Single-resource PATCH endpoints return 201 (created) or 204 (updated). Flag when a PATCH unexpectedly creates a new resource -- the caller may have misspelled a code.
-- **413 on batch operations**: Collection-level PATCH endpoints return 413 when the payload is too large. Surface this early if the request body exceeds ~100 items and recommend splitting into smaller batches.
-- **406 errors on every GET**: Almost all GET endpoints error on 406, meaning the `Accept` header is wrong or missing. If a user gets repeated 406s, proactively suggest adding `Accept: application/json`.
-- **422 with field details**: Validation errors include per-field messages. Surface the specific failing fields rather than just the status code.
-- **Legacy vs new asset system**: The API has both `/assets` (legacy PAM) and `/asset-families/{code}/assets` (new Asset Manager). Flag if a user is mixing calls between the two systems, as they are incompatible.
-- **Missing auth on write operations**: All POST/PATCH/DELETE require auth. If a 401 appears on a write, remind the user to obtain a fresh token via `/api/oauth/v1/token`.
-
-## Playbook
-
-### 1. Initial Setup and Authentication
-
-1. Call `POST /api/oauth/v1/token` with your client credentials (Base64-encoded `client_id:secret` in the `Authorization` header, grant type in the body).
-2. Extract `access_token` from the response.
-3. Use `Authorization: Bearer {access_token}` on all subsequent requests.
-4. Verify connectivity by calling `GET /api/rest/v1` (API root) or `GET /api/rest/v1/system-information`.
-
-### 2. Bulk Product Export and Sync
-
-1. Call `GET /api/rest/v1/products` with `pagination_type=search_after` and `limit=100`.
-2. For each page, extract the `search_after` cursor from `_links.next`.
-3. Repeat until no `next` link is present.
-4. Optionally include `with_quality_scores=true` and `with_completenesses=true` to get enrichment status per product.
-5. For large catalogs (>50k products), prefer UUID-based endpoints (`/products-uuid`) for stable identifiers.
-
-### 3. Creating a Product with Media
-
-1. Upload the image via `POST /api/rest/v1/media-files` with `Content-Type: multipart/form-data`. Capture the media code from the `Location` response header.
-2. Create the product via `POST /api/rest/v1/products` with the media code assigned to the relevant image attribute in the body.
-3. Verify by calling `GET /api/rest/v1/products/{code}` and confirming the attribute value contains the media code.
-
-### 4. Setting Up a Product Family with Variants
-
-1. Create the family via `POST /api/rest/v1/families` with the attribute set and attribute requirements.
-2. Add a family variant via `POST /api/rest/v1/families/{family_code}/variants` defining the variant axes (e.g., size, color).
-3. Create a product model via `POST /api/rest/v1/product-models` referencing the family and variant level.
-4. Create variant products via `POST /api/rest/v1/products` with a `parent` field pointing to the product model code.
-5. Verify the hierarchy by fetching `GET /api/rest/v1/product-models/{code}` and checking its associations.
-
-### 5. Managing Reference Entity Records
-
-1. List available reference entities via `GET /api/rest/v1/reference-entities` (cursor-paginated).
-2. Inspect the entity structure via `GET /api/rest/v1/reference-entities/{code}` to understand its attributes.
-3. List attribute definitions via `GET /api/rest/v1/reference-entities/{code}/attributes`.
-4. Upsert records in bulk via `PATCH /api/rest/v1/reference-entities/{code}/records` with an array of record objects. Parse the streaming response line by line for per-record status.
-5. Verify individual records via `GET /api/rest/v1/reference-entities/{code}/records/{record_code}`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Search products-uuid?" -> GET /api/rest/v1/products-uuid
+- "Create a products-uuid?" -> POST /api/rest/v1/products-uuid
+- "Create a search?" -> POST /api/rest/v1/products-uuid/search
+- "Get products-uuid details?" -> GET /api/rest/v1/products-uuid/{uuid}
+- "Partially update a products-uuid?" -> PATCH /api/rest/v1/products-uuid/{uuid}
+- "Delete a products-uuid?" -> DELETE /api/rest/v1/products-uuid/{uuid}
+- "Create a proposal?" -> POST /api/rest/v1/products-uuid/{uuid}/proposal
+- "List all draft?" -> GET /api/rest/v1/products-uuid/{uuid}/draft
+- "Search products?" -> GET /api/rest/v1/products
+- "Create a product?" -> POST /api/rest/v1/products
+- "Get product details?" -> GET /api/rest/v1/products/{code}
+- "Partially update a product?" -> PATCH /api/rest/v1/products/{code}
+- "Delete a product?" -> DELETE /api/rest/v1/products/{code}
+- "Create a proposal?" -> POST /api/rest/v1/products/{code}/proposal
+- "List all draft?" -> GET /api/rest/v1/products/{code}/draft
+- "Search product-models?" -> GET /api/rest/v1/product-models
+- "Create a product-model?" -> POST /api/rest/v1/product-models
+- "Get product-model details?" -> GET /api/rest/v1/product-models/{code}
+- "Partially update a product-model?" -> PATCH /api/rest/v1/product-models/{code}
+- "Delete a product-model?" -> DELETE /api/rest/v1/product-models/{code}
+- "Create a proposal?" -> POST /api/rest/v1/product-models/{code}/proposal
+- "List all draft?" -> GET /api/rest/v1/product-models/{code}/draft
+- "Search published-products?" -> GET /api/rest/v1/published-products
+- "Get published-product details?" -> GET /api/rest/v1/published-products/{code}
+- "List all media-files?" -> GET /api/rest/v1/media-files
+- "Create a media-file?" -> POST /api/rest/v1/media-files
+- "Get media-file details?" -> GET /api/rest/v1/media-files/{code}
+- "List all download?" -> GET /api/rest/v1/media-files/{code}/download
+- "Search families?" -> GET /api/rest/v1/families
+- "Create a family?" -> POST /api/rest/v1/families
+- "Get family details?" -> GET /api/rest/v1/families/{code}
+- "Partially update a family?" -> PATCH /api/rest/v1/families/{code}
+- "Delete a family?" -> DELETE /api/rest/v1/families/{code}
+- "List all variants?" -> GET /api/rest/v1/families/{family_code}/variants
+- "Create a variant?" -> POST /api/rest/v1/families/{family_code}/variants
+- "Get variant details?" -> GET /api/rest/v1/families/{family_code}/variants/{code}
+- "Partially update a variant?" -> PATCH /api/rest/v1/families/{family_code}/variants/{code}
+- "Search attributes?" -> GET /api/rest/v1/attributes
+- "Create a attribute?" -> POST /api/rest/v1/attributes
+- "Get attribute details?" -> GET /api/rest/v1/attributes/{code}
+- "Partially update a attribute?" -> PATCH /api/rest/v1/attributes/{code}
+- "List all options?" -> GET /api/rest/v1/attributes/{attribute_code}/options
+- "Create a option?" -> POST /api/rest/v1/attributes/{attribute_code}/options
+- "Get option details?" -> GET /api/rest/v1/attributes/{attribute_code}/options/{code}
+- "Partially update a option?" -> PATCH /api/rest/v1/attributes/{attribute_code}/options/{code}
+- "Search attribute-groups?" -> GET /api/rest/v1/attribute-groups
+- "Create a attribute-group?" -> POST /api/rest/v1/attribute-groups
+- "Get attribute-group details?" -> GET /api/rest/v1/attribute-groups/{code}
+- "Partially update a attribute-group?" -> PATCH /api/rest/v1/attribute-groups/{code}
+- "List all association-types?" -> GET /api/rest/v1/association-types
+- "Create a association-type?" -> POST /api/rest/v1/association-types
+- "Get association-type details?" -> GET /api/rest/v1/association-types/{code}
+- "Partially update a association-type?" -> PATCH /api/rest/v1/association-types/{code}
+- "List all channels?" -> GET /api/rest/v1/channels
+- "Create a channel?" -> POST /api/rest/v1/channels
+- "Get channel details?" -> GET /api/rest/v1/channels/{code}
+- "Partially update a channel?" -> PATCH /api/rest/v1/channels/{code}
+- "Search locales?" -> GET /api/rest/v1/locales
+- "Get locale details?" -> GET /api/rest/v1/locales/{code}
+- "Search categories?" -> GET /api/rest/v1/categories
+- "Create a category?" -> POST /api/rest/v1/categories
+- "Get category details?" -> GET /api/rest/v1/categories/{code}
+- "Partially update a category?" -> PATCH /api/rest/v1/categories/{code}
+- "Create a category-media-file?" -> POST /api/rest/v1/category-media-files
+- "List all download?" -> GET /api/rest/v1/category-media-files/{file_path}/download
+- "Search currencies?" -> GET /api/rest/v1/currencies
+- "Get currency details?" -> GET /api/rest/v1/currencies/{code}
+- "List all measure-families?" -> GET /api/rest/v1/measure-families
+- "Get measure-family details?" -> GET /api/rest/v1/measure-families/{code}
+- "List all measurement-families?" -> GET /api/rest/v1/measurement-families
+- "List all reference-entities?" -> GET /api/rest/v1/reference-entities
+- "Get reference-entity details?" -> GET /api/rest/v1/reference-entities/{code}
+- "Partially update a reference-entity?" -> PATCH /api/rest/v1/reference-entities/{code}
+- "List all attributes?" -> GET /api/rest/v1/reference-entities/{reference_entity_code}/attributes
+- "Get attribute details?" -> GET /api/rest/v1/reference-entities/{reference_entity_code}/attributes/{code}
+- "Partially update a attribute?" -> PATCH /api/rest/v1/reference-entities/{reference_entity_code}/attributes/{code}
+- "List all options?" -> GET /api/rest/v1/reference-entities/{reference_entity_code}/attributes/{attribute_code}/options
+- "Get option details?" -> GET /api/rest/v1/reference-entities/{reference_entity_code}/attributes/{attribute_code}/options/{code}
+- "Partially update a option?" -> PATCH /api/rest/v1/reference-entities/{reference_entity_code}/attributes/{attribute_code}/options/{code}
+- "Search records?" -> GET /api/rest/v1/reference-entities/{reference_entity_code}/records
+- "Get record details?" -> GET /api/rest/v1/reference-entities/{reference_entity_code}/records/{code}
+- "Partially update a record?" -> PATCH /api/rest/v1/reference-entities/{reference_entity_code}/records/{code}
+- "Create a reference-entities-media-file?" -> POST /api/rest/v1/reference-entities-media-files
+- "Get reference-entities-media-file details?" -> GET /api/rest/v1/reference-entities-media-files/{code}
+- "List all asset-families?" -> GET /api/rest/v1/asset-families
+- "Get asset-family details?" -> GET /api/rest/v1/asset-families/{code}
+- "Partially update a asset-family?" -> PATCH /api/rest/v1/asset-families/{code}
+- "List all attributes?" -> GET /api/rest/v1/asset-families/{asset_family_code}/attributes
+- "Get attribute details?" -> GET /api/rest/v1/asset-families/{asset_family_code}/attributes/{code}
+- "Partially update a attribute?" -> PATCH /api/rest/v1/asset-families/{asset_family_code}/attributes/{code}
+- "List all options?" -> GET /api/rest/v1/asset-families/{asset_family_code}/attributes/{attribute_code}/options
+- "Get option details?" -> GET /api/rest/v1/asset-families/{asset_family_code}/attributes/{attribute_code}/options/{code}
+- "Partially update a option?" -> PATCH /api/rest/v1/asset-families/{asset_family_code}/attributes/{attribute_code}/options/{code}
+- "Create a asset-media-file?" -> POST /api/rest/v1/asset-media-files
+- "Get asset-media-file details?" -> GET /api/rest/v1/asset-media-files/{code}
+- "Search assets?" -> GET /api/rest/v1/asset-families/{asset_family_code}/assets
+- "Get asset details?" -> GET /api/rest/v1/asset-families/{asset_family_code}/assets/{code}
+- "Partially update a asset?" -> PATCH /api/rest/v1/asset-families/{asset_family_code}/assets/{code}
+- "Delete a asset?" -> DELETE /api/rest/v1/asset-families/{asset_family_code}/assets/{code}
+- "List all assets?" -> GET /api/rest/v1/assets
+- "Create a asset?" -> POST /api/rest/v1/assets
+- "Get asset details?" -> GET /api/rest/v1/assets/{code}
+- "Partially update a asset?" -> PATCH /api/rest/v1/assets/{code}
+- "Get reference-file details?" -> GET /api/rest/v1/assets/{asset_code}/reference-files/{locale_code}
+- "List all download?" -> GET /api/rest/v1/assets/{asset_code}/reference-files/{locale_code}/download
+- "Get variation-file details?" -> GET /api/rest/v1/assets/{asset_code}/variation-files/{channel_code}/{locale_code}
+- "List all download?" -> GET /api/rest/v1/assets/{asset_code}/variation-files/{channel_code}/{locale_code}/download
+- "List all asset-categories?" -> GET /api/rest/v1/asset-categories
+- "Create a asset-category?" -> POST /api/rest/v1/asset-categories
+- "Get asset-category details?" -> GET /api/rest/v1/asset-categories/{code}
+- "Partially update a asset-category?" -> PATCH /api/rest/v1/asset-categories/{code}
+- "List all asset-tags?" -> GET /api/rest/v1/asset-tags
+- "Get asset-tag details?" -> GET /api/rest/v1/asset-tags/{code}
+- "Partially update a asset-tag?" -> PATCH /api/rest/v1/asset-tags/{code}
+- "List all rest?" -> GET /api/rest/v1
+- "Create a token?" -> POST /api/oauth/v1/token
+- "List all system-information?" -> GET /api/rest/v1/system-information
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

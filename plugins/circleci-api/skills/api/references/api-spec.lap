@@ -1,0 +1,705 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api CircleCI API
+@base https://circleci.com/api/v2
+@version v2
+@auth ApiKey Circle-Token in header | Basic | ApiKey circle-token in query
+@endpoints 111
+@hint download_for_search
+@toc insights(10), jobs(1), me(2), organization(7), pipeline(6), project(24), schedule(3), user(1), webhook(5), workflow(5), org(6), owner(9), context(10), organizations(6), projects(11), deploy(5)
+
+@group insights
+@endpoint GET /insights/pages/{project-slug}/summary
+@desc Get summary metrics and trends for a project across it's workflows and branches
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@optional {reporting-window: str(last-7-days/last-90-days/last-24-hours/last-30-days/last-60-days) # The time window used to calculate summary metrics. If not provided, defaults to last-90-days, branches: map # The names of VCS branches to include in branch-level workflow metrics., workflow-names: map # The names of workflows to include in workflow-level metrics.}
+@returns(200) {org_id: any, project_id: any, project_data: map{metrics: map{total_runs: int(int64), total_duration_secs: int(int64), total_credits_used: int(int64), success_rate: num(float), throughput: num(float)}, trends: map{total_runs: num(float), total_duration_secs: num(float), total_credits_used: num(float), success_rate: num(float), throughput: num(float)}}, project_workflow_data: [map], project_workflow_branch_data: [map], all_branches: [str], all_workflows: [str]} # Aggregated summary metrics and trends by workflow and branches
+
+@endpoint GET /insights/time-series/{project-slug}/workflows/{workflow-name}/jobs
+@desc Job timeseries data
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings)., workflow-name: str # The name of the workflow.}
+@optional {branch: str # The name of a vcs branch. If not passed we will scope the API call to the default branch., granularity: str(daily/hourly) # The granularity for which to query timeseries data., start-date: str(date-time) # Include only executions that started at or after this date. This must be specified if an end-date is provided., end-date: str(date-time) # Include only executions that started before this date. This date can be at most 90 days after the start-date.}
+@returns(200) {next_page_token: str, items: [map]} # An array of timeseries data, one entry per job.
+
+@endpoint GET /insights/{org-slug}/summary
+@desc Get summary metrics with trends for the entire org, and for each project.
+@required {org-slug: str # Org slug in the form `vcs-slug/org-name`. The `/` characters may be URL-escaped.}
+@optional {reporting-window: str(last-7-days/last-90-days/last-24-hours/last-30-days/last-60-days) # The time window used to calculate summary metrics. If not provided, defaults to last-90-days, project-names: map # List of project names.}
+@returns(200) {org_data: map{metrics: map{total_runs: int(int64), total_duration_secs: int(int64), total_credits_used: int(int64), success_rate: num(float), throughput: num(float)}, trends: map{total_runs: num(float), total_duration_secs: num(float), total_credits_used: num(float), success_rate: num(float), throughput: num(float)}}, org_project_data: [map], all_projects: [str]} # summary metrics with trends for an entire org and it's projects.
+
+@endpoint GET /insights/{project-slug}/branches
+@desc Get all branches for a project
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@optional {workflow-name: str # The name of a workflow. If not passed we will scope the API call to the project.}
+@returns(200) {org_id: any, project_id: any, branches: [str]} # A list of branches for a project
+
+@endpoint GET /insights/{project-slug}/flaky-tests
+@desc Get flaky tests for a project
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@returns(200) {flaky-tests: [map], total-flaky-tests: num(double)} # A list of flaky tests for a project
+
+@endpoint GET /insights/{project-slug}/workflows
+@desc Get summary metrics for a project's workflows
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@optional {page-token: str # A token to retrieve the next page of results., all-branches: bool # Whether to retrieve data for all branches combined. Use either this parameter OR the branch name parameter., branch: str # The name of a vcs branch. If not passed we will scope the API call to the default branch., reporting-window: str(last-7-days/last-90-days/last-24-hours/last-30-days/last-60-days) # The time window used to calculate summary metrics. If not provided, defaults to last-90-days}
+@returns(200) {items: [map], next_page_token: str} # A paginated list of summary metrics by workflow
+
+@endpoint GET /insights/{project-slug}/workflows/{workflow-name}
+@desc Get recent runs of a workflow
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings)., workflow-name: str # The name of the workflow.}
+@optional {all-branches: bool # Whether to retrieve data for all branches combined. Use either this parameter OR the branch name parameter., branch: str # The name of a vcs branch. If not passed we will scope the API call to the default branch., page-token: str # A token to retrieve the next page of results., start-date: str(date-time) # Include only executions that started at or after this date. This must be specified if an end-date is provided., end-date: str(date-time) # Include only executions that started before this date. This date can be at most 90 days after the start-date.}
+@returns(200) {items: [map], next_page_token: str} # A paginated list of recent workflow runs
+
+@endpoint GET /insights/{project-slug}/workflows/{workflow-name}/jobs
+@desc Get summary metrics for a project workflow's jobs.
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings)., workflow-name: str # The name of the workflow.}
+@optional {page-token: str # A token to retrieve the next page of results., all-branches: bool # Whether to retrieve data for all branches combined. Use either this parameter OR the branch name parameter., branch: str # The name of a vcs branch. If not passed we will scope the API call to the default branch., reporting-window: str(last-7-days/last-90-days/last-24-hours/last-30-days/last-60-days) # The time window used to calculate summary metrics. If not provided, defaults to last-90-days, job-name: str # The name of the jobs you would like to filter from your workflow. If not specified, all workflow jobs will be returned. The job name can either be the full job name or just a substring of the job name.}
+@returns(200) {items: [map], next_page_token: str} # A paginated list of summary metrics by workflow job.
+
+@endpoint GET /insights/{project-slug}/workflows/{workflow-name}/summary
+@desc Get metrics and trends for workflows
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings)., workflow-name: str # The name of the workflow.}
+@optional {all-branches: bool # Whether to retrieve data for all branches combined. Use either this parameter OR the branch name parameter., branch: str # The name of a vcs branch. If not passed we will scope the API call to the default branch.}
+@returns(200) {metrics: map{total_runs: int(int64), successful_runs: int(int64), mttr: int(int64), total_credits_used: int(int64), failed_runs: int(int64), success_rate: num(float), completed_runs: int(int64), window_start: str(date-time), duration_metrics: map{min: int(int64), mean: int(int64), median: int(int64), p95: int(int64), max: int(int64), standard_deviation: num(float)}, window_end: str(date-time), throughput: num(float)}, trends: map{total_runs: num(float), failed_runs: num(float), success_rate: num(float), p95_duration_secs: num(float), median_duration_secs: num(float), total_credits_used: num(float), mttr: num(float), throughput: num(float)}, workflow_names: [str]} # Metrics and trends for a workflow
+
+@endpoint GET /insights/{project-slug}/workflows/{workflow-name}/test-metrics
+@desc Get test metrics for a project's workflows
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings)., workflow-name: str # The name of the workflow.}
+@optional {branch: str # The name of a vcs branch. If not passed we will scope the API call to the default branch., all-branches: bool # Whether to retrieve data for all branches combined. Use either this parameter OR the branch name parameter.}
+@returns(200) {average_test_count: int(int64), most_failed_tests: [map], most_failed_tests_extra: int(int64), slowest_tests: [map], slowest_tests_extra: int(int64), total_test_runs: int(int64), test_runs: [map]} # A list of test metrics by workflow
+
+@endgroup
+
+@group jobs
+@endpoint POST /jobs/{job-id}/cancel
+@desc Cancel job by job ID
+@required {job-id: str(uuid) # The unique ID of the job.}
+@returns(200) {message: str} # Job cancelled successfully.
+@errors {400: Bad request error., 401: Unauthorized error., 403: Forbidden error., 404: Job not found error.}
+
+@endgroup
+
+@group me
+@endpoint GET /me
+@desc User Information
+@returns(200) {avatar_url: str, id: str(uuid), login: str, name: str} # User login information.
+
+@endpoint GET /me/collaborations
+@desc Collaborations
+@returns(200) Collaborations
+
+@endgroup
+
+@group organization
+@endpoint POST /organization
+@desc Create a new organization
+@required {name: str # The name of the organization., vcs_type: str(github/bitbucket/circleci) # The version control system type for the organization.}
+@returns(201) {id: str, name: str, slug: str, vcs_type: str} # The newly created organization
+
+@endpoint DELETE /organization/{org-slug-or-id}
+@desc Delete an organization
+@required {org-slug-or-id: str # Org UUID or slug in the form `vcs-slug/org-name`. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug` and replace the `org-name` with the organization ID (found in Organization Settings).}
+@returns(202) {message: str} # A confirmation message.
+
+@endpoint GET /organization/{org-slug-or-id}
+@desc Get an organization
+@required {org-slug-or-id: str # Org UUID or slug in the form `vcs-slug/org-name`. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug` and replace the `org-name` with the organization ID (found in Organization Settings).}
+@returns(200) {id: str, name: str, slug: str, vcs_type: str} # An organization object
+
+@endpoint POST /organization/{org-slug-or-id}/project
+@desc Create a new project
+@required {org-slug-or-id: str # Org UUID or slug in the form `vcs-slug/org-name`. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug` and replace the `org-name` with the organization ID (found in Organization Settings)., name: str # The name of the project}
+@returns(200) {slug: str, name: str, id: str(uuid), organization_name: str, organization_slug: str, organization_id: str(uuid), vcs_info: map{vcs_url: str, provider: str, default_branch: str}} # The new project
+
+@endpoint POST /organization/{org-slug-or-id}/url-orb-allow-list
+@desc Create a new URL Orb allow-list entry
+@required {org-slug-or-id: str # Org UUID or slug in the form `vcs-slug/org-name`. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug` and replace the `org-name` with the organization ID (found in Organization Settings)., name: str # Name of the URL orb allow-list entry., prefix: any # URL prefix. URL orb references that start with this prefix will be allowed by this allow-list entry., auth: str(github-oauth/none/bitbucket-oauth/github-app) # An authentication method to use for fetching URL orb references that match this allow-list entry's prefix. Allowed values are "bitbucket-oauth", "github-oauth", "github-app", or "none".}
+@returns(200) {id: str, message: str} # The ID of the new URL Orb allow-list entry
+
+@endpoint GET /organization/{org-slug-or-id}/url-orb-allow-list
+@desc List the entries in the org's URL Orb allow-list
+@required {org-slug-or-id: str # Org UUID or slug in the form `vcs-slug/org-name`. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug` and replace the `org-name` with the organization ID (found in Organization Settings).}
+@returns(200) {items: [map]} # URL Orb allow-list entries
+
+@endpoint DELETE /organization/{org-slug-or-id}/url-orb-allow-list/{allow-list-entry-id}
+@desc Remove an entry from the org's URL orb allow-list
+@required {org-slug-or-id: str # Org UUID or slug in the form `vcs-slug/org-name`. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug` and replace the `org-name` with the organization ID (found in Organization Settings)., allow-list-entry-id: str # URL orb allow-list entry UUID.}
+@returns(200) {id: str, message: str} # The ID of the removed URL Orb allow-list entry
+
+@endgroup
+
+@group pipeline
+@endpoint GET /pipeline
+@desc Get a list of pipelines
+@optional {org-slug: str # Org slug in the form `vcs-slug/org-name`. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug` and replace the `org-name` with the organization ID (found in Organization Settings)., page-token: str # A token to retrieve the next page of results., mine: bool # Only include entries created by your user.}
+@returns(200) {items: [map], next_page_token: str} # A sequence of pipelines.
+
+@endpoint POST /pipeline/continue
+@desc Continue a pipeline
+@required {continuation-key: str # A pipeline continuation key., configuration: str # A configuration string for the pipeline.}
+@optional {parameters: map # An object containing pipeline parameters and their values. Pipeline parameters have the following size limits: 100 max entries, 128 maximum key length, 512 maximum value length.}
+@returns(200) {message: str} # A confirmation message.
+
+@endpoint GET /pipeline/{pipeline-id}
+@desc Get a pipeline by ID
+@required {pipeline-id: str(uuid) # The unique ID of the pipeline.}
+@returns(200) {id: str(uuid), errors: [map], project_slug: str, updated_at: str(date-time), number: int(int64), trigger_parameters: map, state: str, created_at: str(date-time), trigger: map{type: str, received_at: str(date-time), actor: map{login: str, avatar_url: str}}, vcs: map{provider_name: str, target_repository_url: str, branch: str, review_id: str, review_url: str, revision: str, tag: str, commit: map{subject: str, body: str}, origin_repository_url: str}} # A pipeline object.
+
+@endpoint GET /pipeline/{pipeline-id}/config
+@desc Get a pipeline's configuration
+@required {pipeline-id: str(uuid) # The unique ID of the pipeline.}
+@returns(200) {source: str, compiled: str, setup-config: str, compiled-setup-config: str} # The configuration strings for the pipeline.
+
+@endpoint GET /pipeline/{pipeline-id}/values
+@desc Get pipeline values for a pipeline
+@required {pipeline-id: str(uuid) # The unique ID of the pipeline.}
+@returns(200) A JSON object of pipeline values
+
+@endpoint GET /pipeline/{pipeline-id}/workflow
+@desc Get a pipeline's workflows
+@required {pipeline-id: str(uuid) # The unique ID of the pipeline.}
+@optional {page-token: str # A token to retrieve the next page of results.}
+@returns(200) {items: [map], next_page_token: str} # A paginated list of workflow objects.
+
+@endgroup
+
+@group project
+@endpoint DELETE /project/{project-slug}
+@desc Delete a project
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@returns(200) {message: str} # A confirmation message.
+
+@endpoint GET /project/{project-slug}
+@desc Get a project
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@returns(200) {slug: str, name: str, id: str(uuid), organization_name: str, organization_slug: str, organization_id: str(uuid), vcs_info: map{vcs_url: str, provider: str, default_branch: str}} # A project object
+
+@endpoint POST /project/{project-slug}/checkout-key
+@desc Create a new checkout key
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings)., type: str(user-key/deploy-key) # The type of checkout key to create. This may be either `deploy-key` or `user-key`.}
+@returns(201) {public-key: str, type: str, fingerprint: str, preferred: bool, created-at: str(date-time)} # The checkout key.
+
+@endpoint GET /project/{project-slug}/checkout-key
+@desc Get all checkout keys
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@optional {digest: str(sha256/md5) # The fingerprint digest type to return. This may be either `md5` or `sha256`. If not passed, defaults to `md5`.}
+@returns(200) {items: [map], next_page_token: str} # A sequence of checkout keys.
+
+@endpoint DELETE /project/{project-slug}/checkout-key/{fingerprint}
+@desc Delete a checkout key
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings)., fingerprint: str # An SSH key fingerprint.}
+@returns(200) {message: str} # A confirmation message.
+
+@endpoint GET /project/{project-slug}/checkout-key/{fingerprint}
+@desc Get a checkout key
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings)., fingerprint: str # An SSH key fingerprint.}
+@returns(200) {public-key: str, type: str, fingerprint: str, preferred: bool, created-at: str(date-time)} # The checkout key.
+
+@endpoint POST /project/{project-slug}/envvar
+@desc Create an environment variable
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings)., name: str # The name of the environment variable., value: str # The value of the environment variable.}
+@returns(201) {name: str, value: str, created-at: any} # The environment variable.
+
+@endpoint GET /project/{project-slug}/envvar
+@desc List all environment variables
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@returns(200) {items: [map], next_page_token: str} # A sequence of environment variables.
+
+@endpoint DELETE /project/{project-slug}/envvar/{name}
+@desc Delete an environment variable
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings)., name: str # The name of the environment variable.}
+@returns(200) {message: str} # A confirmation message.
+
+@endpoint GET /project/{project-slug}/envvar/{name}
+@desc Get a masked environment variable
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings)., name: str # The name of the environment variable.}
+@returns(200) {name: str, value: str, created-at: any} # The environment variable.
+
+@endpoint GET /project/{project-slug}/job/{job-number}
+@desc Get job details
+@required {job-number: any # The number of the job., project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@returns(200) {web_url: str, project: map{id: str(uuid), slug: str, name: str, external_url: str}, parallel_runs: [map], started_at: str(date-time), latest_workflow: map{id: str(uuid), name: str}, name: str, executor: map{resource_class: str, type: str}, parallelism: int(int64), status: str, number: int(int64), pipeline: map{id: str(uuid)}, duration: int(int64), created_at: str(date-time), messages: [map], contexts: [map], organization: map{name: str}, queued_at: str(date-time), stopped_at: str(date-time)} # Job details.
+
+@endpoint POST /project/{project-slug}/job/{job-number}/cancel
+@desc Cancel job by job number
+@required {job-number: any # The number of the job., project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@returns(200) {message: str}
+
+@endpoint GET /project/{project-slug}/pipeline
+@desc Get all pipelines
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@optional {branch: str # The name of a vcs branch., page-token: str # A token to retrieve the next page of results.}
+@returns(200) {items: [map], next_page_token: str} # A sequence of pipelines.
+
+@endpoint POST /project/{project-slug}/pipeline
+@desc Trigger a new pipeline
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@optional {branch: str # The branch where the pipeline ran. The HEAD commit on this branch was used for the pipeline. Note that `branch` and `tag` are mutually exclusive. To trigger a pipeline for a PR by number use `pull//head` for the PR ref or `pull//merge` for the merge ref (GitHub only)., tag: str # The tag used by the pipeline. The commit that this tag points to was used for the pipeline. Note that `branch` and `tag` are mutually exclusive., parameters: map # An object containing pipeline parameters and their values. Pipeline parameters have the following size limits: 100 max entries, 128 maximum key length, 512 maximum value length.}
+@returns(201) {id: str(uuid), state: str, number: int(int64), created_at: str(date-time)} # The created pipeline.
+
+@endpoint GET /project/{project-slug}/pipeline/mine
+@desc Get your pipelines
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@optional {page-token: str # A token to retrieve the next page of results.}
+@returns(200) {items: [map], next_page_token: str} # A sequence of pipelines.
+
+@endpoint GET /project/{project-slug}/pipeline/{pipeline-number}
+@desc Get a pipeline by pipeline number
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings)., pipeline-number: any # The number of the pipeline.}
+@returns(200) {id: str(uuid), errors: [map], project_slug: str, updated_at: str(date-time), number: int(int64), trigger_parameters: map, state: str, created_at: str(date-time), trigger: map{type: str, received_at: str(date-time), actor: map{login: str, avatar_url: str}}, vcs: map{provider_name: str, target_repository_url: str, branch: str, review_id: str, review_url: str, revision: str, tag: str, commit: map{subject: str, body: str}, origin_repository_url: str}} # A pipeline object.
+
+@endpoint POST /project/{project-slug}/schedule
+@desc Create a schedule
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings)., name: str # Name of the schedule., timetable: any # Timetable that specifies when a schedule triggers., attribution-actor: str(current/system) # The attribution-actor of the scheduled pipeline., parameters: map # Pipeline parameters represented as key-value pairs. Must contain branch or tag.}
+@optional {description: str # Description of the schedule.}
+@returns(201) {id: str(uuid), timetable: any, updated-at: str(date-time), name: str, created-at: str(date-time), project-slug: str, parameters: map, actor: map{avatar_url: str, id: str(uuid), login: str, name: str}, description: str} # A schedule object.
+
+@endpoint GET /project/{project-slug}/schedule
+@desc List schedule triggers
+@required {project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@optional {page-token: str # A token to retrieve the next page of results.}
+@returns(200) {items: [map], next_page_token: str} # A sequence of schedules.
+
+@endpoint GET /project/{project-slug}/{job-number}/artifacts
+@desc Get a job's artifacts
+@required {job-number: any # The number of the job., project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@returns(200) {items: [map], next_page_token: str} # A paginated list of the job's artifacts.
+
+@endpoint GET /project/{project-slug}/{job-number}/tests
+@desc Get test metadata
+@required {job-number: any # The number of the job., project-slug: str # Project slug in the form `vcs-slug/org-name/repo-name`. The `/` characters may be URL-escaped. For projects that use GitLab or GitHub App, use `circleci` as the `vcs-slug`, replace `org-name` with the organization ID (found in Organization Settings), and replace `repo-name` with the project ID (found in Project Settings).}
+@returns(200) {items: [map], next_page_token: str} # A paginated list of test results.
+
+@endgroup
+
+@group schedule
+@endpoint PATCH /schedule/{schedule-id}
+@desc Update a schedule
+@required {schedule-id: str(uuid) # The unique ID of the schedule.}
+@optional {description: str # Description of the schedule., name: str # Name of the schedule., timetable: map{per-hour: int(integer), hours-of-day: [int(integer)], days-of-week: [str], days-of-month: [int(integer)], months: [str]} # Timetable that specifies when a schedule triggers., attribution-actor: str(current/system) # The attribution-actor of the scheduled pipeline., parameters: map # Pipeline parameters represented as key-value pairs. Must contain branch or tag.}
+@returns(200) {id: str(uuid), timetable: any, updated-at: str(date-time), name: str, created-at: str(date-time), project-slug: str, parameters: map, actor: map{avatar_url: str, id: str(uuid), login: str, name: str}, description: str} # A schedule object.
+
+@endpoint GET /schedule/{schedule-id}
+@desc Get a schedule by ID. Available only on schedules associated with GitHub OAuth or Bitbucket Cloud pipeline definitions.
+@required {schedule-id: str(uuid) # The unique ID of the schedule.}
+@returns(200) {id: str(uuid), timetable: any, updated-at: str(date-time), name: str, created-at: str(date-time), project-slug: str, parameters: map, actor: map{avatar_url: str, id: str(uuid), login: str, name: str}, description: str} # A schedule object.
+
+@endpoint DELETE /schedule/{schedule-id}
+@desc Delete a schedule
+@required {schedule-id: str(uuid) # The unique ID of the schedule.}
+@returns(200) {message: str} # A confirmation message.
+
+@endgroup
+
+@group user
+@endpoint GET /user/{id}
+@desc User Information
+@required {id: str(uuid) # The unique ID of the user.}
+@returns(200) {avatar_url: str, id: str(uuid), login: str, name: str} # User login information.
+
+@endgroup
+
+@group webhook
+@endpoint POST /webhook
+@desc Create an outbound webhook
+@required {name: str # Name of the webhook, events: [str] # Events that will trigger the webhook, url: str # URL to deliver the webhook to. Note: protocol must be included as well (only https is supported), verify-tls: bool # Whether to enforce TLS certificate verification when delivering the webhook, signing-secret: str # Secret used to build an HMAC hash of the payload and passed as a header in the webhook request, scope: map{id!: str(uuid), type!: str} # The scope in which the relevant events that will trigger webhooks}
+@returns(201) {url: str, verify-tls: bool, id: str(uuid), signing-secret: str, updated-at: str(date-time), name: str, created-at: str(date-time), scope: map{id: str(uuid), type: str}, events: [str]} # A webhook
+
+@endpoint GET /webhook
+@desc List webhooks
+@required {scope-id: str(uuid) # ID of the scope being used (at the moment, only project ID is supported), scope-type: str # Type of the scope being used}
+@returns(200) {items: [map], next_page_token: str} # A list of webhooks
+
+@endpoint PUT /webhook/{webhook-id}
+@desc Update an outbound webhook
+@required {webhook-id: str(uuid) # ID of the webhook (UUID)}
+@optional {name: str # Name of the webhook, events: [str] # Events that will trigger the webhook, url: str # URL to deliver the webhook to. Note: protocol must be included as well (only https is supported), signing-secret: str # Secret used to build an HMAC hash of the payload and passed as a header in the webhook request, verify-tls: bool # Whether to enforce TLS certificate verification when delivering the webhook}
+@returns(200) {url: str, verify-tls: bool, id: str(uuid), signing-secret: str, updated-at: str(date-time), name: str, created-at: str(date-time), scope: map{id: str(uuid), type: str}, events: [str]} # A webhook
+
+@endpoint GET /webhook/{webhook-id}
+@desc Get a webhook
+@required {webhook-id: str(uuid) # ID of the webhook (UUID)}
+@returns(200) {url: str, verify-tls: bool, id: str(uuid), signing-secret: str, updated-at: str(date-time), name: str, created-at: str(date-time), scope: map{id: str(uuid), type: str}, events: [str]} # A webhook
+
+@endpoint DELETE /webhook/{webhook-id}
+@desc Delete an outbound webhook
+@required {webhook-id: str(uuid) # ID of the webhook (UUID)}
+@returns(200) {message: str} # A confirmation message
+
+@endgroup
+
+@group workflow
+@endpoint GET /workflow/{id}
+@desc Get a workflow
+@required {id: str(uuid) # The unique ID of the workflow.}
+@returns(200) {pipeline_id: str(uuid), canceled_by: str(uuid), id: str(uuid), auto_rerun_number: int(int64), name: str, project_slug: str, errored_by: str(uuid), tag: str, status: str, started_by: str(uuid), max_auto_reruns: int(int64), pipeline_number: int(int64), created_at: str(date-time), stopped_at: str(date-time)} # A workflow object.
+
+@endpoint POST /workflow/{id}/approve/{approval_request_id}
+@desc Approve a job
+@required {approval_request_id: str(uuid) # The ID of the job being approved., id: str(uuid) # The unique ID of the workflow.}
+@returns(202) {message: str} # A confirmation message.
+
+@endpoint POST /workflow/{id}/cancel
+@desc Cancel a workflow
+@required {id: str(uuid) # The unique ID of the workflow.}
+@returns(202) {message: str} # A confirmation message.
+
+@endpoint GET /workflow/{id}/job
+@desc Get a workflow's jobs
+@required {id: str(uuid) # The unique ID of the workflow.}
+@returns(200) {items: [map], next_page_token: str} # A paginated sequence of jobs.
+
+@endpoint POST /workflow/{id}/rerun
+@desc Rerun a workflow
+@required {id: str(uuid) # The unique ID of the workflow.}
+@optional {enable_ssh: bool # Whether to enable SSH access for the triggering user on the newly-rerun job. Requires the jobs parameter to be used and so is mutually exclusive with the from_failed parameter., from_failed: bool # Whether to rerun the workflow from the failed job. Mutually exclusive with the jobs parameter., jobs: [str(uuid)] # A list of job IDs to rerun., sparse_tree: bool # Completes rerun using sparse trees logic, an optimization for workflows that have disconnected subgraphs. Requires jobs parameter and so is mutually exclusive with the from_failed parameter.}
+@returns(202) {workflow_id: str(uuid)} # A confirmation message.
+
+@endgroup
+
+@group org
+@endpoint DELETE /org/{orgID}/oidc-custom-claims
+@desc Delete org-level claims
+@required {orgID: str(uuid), claims: str # comma separated list of claims to delete. Valid values are "audience" and "ttl".}
+@returns(200) {audience: [str], audience_updated_at: str(date-time), org_id: str(uuid), project_id: str(uuid), ttl: str, ttl_updated_at: str(date-time)} # Claims successfully deleted.
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 403: The user is forbidden from making this request, 500: Something unexpected happened on the server.}
+
+@endpoint GET /org/{orgID}/oidc-custom-claims
+@desc Get org-level claims
+@required {orgID: str(uuid)}
+@returns(200) {audience: [str], audience_updated_at: str(date-time), org_id: str(uuid), project_id: str(uuid), ttl: str, ttl_updated_at: str(date-time)} # Claims successfully fetched.
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 403: The user is forbidden from making this request, 500: Something unexpected happened on the server.}
+
+@endpoint PATCH /org/{orgID}/oidc-custom-claims
+@desc Patch org-level claims
+@required {orgID: str(uuid)}
+@optional {audience: [str], ttl: str}
+@returns(200) {audience: [str], audience_updated_at: str(date-time), org_id: str(uuid), project_id: str(uuid), ttl: str, ttl_updated_at: str(date-time)} # Claims successfully patched.
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 403: The user is forbidden from making this request, 500: Something unexpected happened on the server.}
+
+@endpoint DELETE /org/{orgID}/project/{projectID}/oidc-custom-claims
+@desc Delete project-level claims
+@required {orgID: str(uuid), projectID: str(uuid), claims: str # comma separated list of claims to delete. Valid values are "audience" and "ttl".}
+@returns(200) {audience: [str], audience_updated_at: str(date-time), org_id: str(uuid), project_id: str(uuid), ttl: str, ttl_updated_at: str(date-time)} # Claims successfully deleted.
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 403: The user is forbidden from making this request, 500: Something unexpected happened on the server.}
+
+@endpoint GET /org/{orgID}/project/{projectID}/oidc-custom-claims
+@desc Get project-level claims
+@required {orgID: str(uuid), projectID: str(uuid)}
+@returns(200) {audience: [str], audience_updated_at: str(date-time), org_id: str(uuid), project_id: str(uuid), ttl: str, ttl_updated_at: str(date-time)} # Claims successfully fetched.
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 403: The user is forbidden from making this request, 500: Something unexpected happened on the server.}
+
+@endpoint PATCH /org/{orgID}/project/{projectID}/oidc-custom-claims
+@desc Patch project-level claims
+@required {orgID: str(uuid), projectID: str(uuid)}
+@optional {audience: [str], ttl: str}
+@returns(200) {audience: [str], audience_updated_at: str(date-time), org_id: str(uuid), project_id: str(uuid), ttl: str, ttl_updated_at: str(date-time)} # Claims successfully patched.
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 403: The user is forbidden from making this request, 500: Something unexpected happened on the server.}
+
+@endgroup
+
+@group owner
+@endpoint GET /owner/{ownerID}/context/{context}/decision
+@desc Retrieves the owner's decision audit logs.
+@required {ownerID: str, context: str}
+@optional {status: str # Return decisions matching this decision status., after: str(date-time) # Return decisions made after this date., before: str(date-time) # Return decisions made before this date., branch: str # Return decisions made on this branch., project_id: str # Return decisions made for this project., build_number: str # Return decisions made for this build number., offset: int # Sets the offset when retrieving the decisions, for paging.}
+@returns(200) Decision logs successfully retrieved.
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 401: The request is unauthorized, 403: The user is forbidden from making this request, 500: Something unexpected happened on the server.}
+
+@endpoint POST /owner/{ownerID}/context/{context}/decision
+@desc Makes a decision
+@required {ownerID: str, context: str, input: str}
+@optional {metadata: map}
+@returns(200) {enabled_rules: [str], hard_failures: [map], reason: str, soft_failures: [map], status: str} # Decision rendered by applying the policy against the provided data. Response will be modeled by the data and rego processed.
+@errors {400: The request is malformed, 401: The request is unauthorized, 500: Something unexpected happened on the server.}
+
+@endpoint GET /owner/{ownerID}/context/{context}/decision/settings
+@desc Get the decision settings
+@required {ownerID: str, context: str}
+@returns(200) {enabled: bool} # Decision settings successfully retrieved.
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 401: The request is unauthorized, 403: The user is forbidden from making this request, 500: Something unexpected happened on the server.}
+
+@endpoint PATCH /owner/{ownerID}/context/{context}/decision/settings
+@desc Set the decision settings
+@required {ownerID: str, context: str}
+@optional {enabled: bool}
+@returns(200) {enabled: bool} # Decision settings successfully set.
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 401: The request is unauthorized, 403: The user is forbidden from making this request, 500: Something unexpected happened on the server.}
+
+@endpoint GET /owner/{ownerID}/context/{context}/decision/{decisionID}
+@desc Retrieves the owner's decision audit log by given decisionID
+@required {ownerID: str, context: str, decisionID: str}
+@returns(200) {created_at: str(date-time), decision: map{enabled_rules: [str], hard_failures: [map], reason: str, soft_failures: [map], status: str}, id: str(uuid), metadata: map{build_number: int, project_id: str(uuid), ssh_rerun: bool, vcs: map{branch: str, origin_repository_url: str, release_tag: str, target_repository_url: str}}, policies: map, time_taken_ms: int} # Decision log successfully retrieved.
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 401: The request is unauthorized, 403: The user is forbidden from making this request, 404: There was no decision log found for given decision_id, and owner_id., 500: Something unexpected happened on the server.}
+
+@endpoint GET /owner/{ownerID}/context/{context}/decision/{decisionID}/policy-bundle
+@desc Retrieves Policy Bundle for a given decision log ID
+@required {ownerID: str, context: str, decisionID: str}
+@returns(200) Policy-Bundle retrieved successfully for given decision log ID
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 401: The request is unauthorized, 403: The user is forbidden from making this request, 404: There was no decision log found for given decision_id, and owner_id., 500: Something unexpected happened on the server.}
+
+@endpoint GET /owner/{ownerID}/context/{context}/policy-bundle
+@desc Retrieves Policy Bundle
+@required {ownerID: str, context: str}
+@returns(200) Policy-Bundle retrieved successfully.
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 401: The request is unauthorized, 403: The user is forbidden from making this request, 500: Something unexpected happened on the server.}
+
+@endpoint POST /owner/{ownerID}/context/{context}/policy-bundle
+@desc Creates policy bundle for the context
+@required {ownerID: str, context: str}
+@optional {dry: bool, policies: map}
+@returns(200) {created: [str], deleted: [str], modified: [str]} # Policy-Bundle diff successfully returned.
+@returns(201) {created: [str], deleted: [str], modified: [str]} # Policy-Bundle successfully created.
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 401: The request is unauthorized, 403: The user is forbidden from making this request, 413: The request exceeds the maximum payload size for policy bundles ~2.5Mib, 500: Something unexpected happened on the server.}
+
+@endpoint GET /owner/{ownerID}/context/{context}/policy-bundle/{policyName}
+@desc Retrieves a policy document
+@returns(200) {content: str, created_at: str(date-time), created_by: str, name: str} # Policy retrieved successfully.
+@errors {400: The request is malformed (e.g, a given path parameter is invalid), 401: The request is unauthorized, 403: The user is forbidden from making this request, 404: There was no policy that was found with the given owner_id and policy name., 500: Something unexpected happened on the server.}
+
+@endgroup
+
+@group context
+@endpoint POST /context
+@desc Create a new context
+@required {name: str # The user defined name of the context., owner: any}
+@returns(200) {id: str(uuid), name: str, created_at: str(date-time)} # The new context
+@errors {401: Credentials provided are invalid., 404: Entity not found., 429: API rate limits exceeded., 500: Internal server error.}
+
+@endpoint GET /context
+@desc List contexts
+@optional {owner-id: str(uuid) # The unique ID of the owner of the context. This is the organization ID. Specify either owner/organization ID or the owner/organization slug. Find the organization ID and slug in the CircleCI web app (Organization Settings > Overview). Owner/organization slug is not supported for CircleCI server., owner-slug: str # A string that represents an organization. This is the organization slug. Specify either this or organization/owner ID. Find the organization ID and slug in the CircleCI web app (Organization Settings > Overview). Owner/organization slug is not supported for CircleCI server., owner-type: str(account/organization) # The type of the owner. Defaults to "organization". Use "account" if you are using CircleCI server., page-token: str # A token to specify which page of results to fetch.}
+@returns(200) {items: [map], next_page_token: str?} # A paginated list of contexts
+@errors {401: Credentials provided are invalid., 404: Entity not found., 429: API rate limits exceeded., 500: Internal server error.}
+
+@endpoint GET /context/{context_id}
+@desc Get a context
+@required {context_id: str(uuid) # An opaque identifier of a context.}
+@returns(200) {id: str(uuid), name: str, created_at: str(date-time)} # The context
+@errors {401: Credentials provided are invalid., 404: Entity not found., 429: API rate limits exceeded., 500: Internal server error.}
+
+@endpoint DELETE /context/{context_id}
+@desc Delete a context
+@required {context_id: str(uuid) # An opaque identifier of a context.}
+@returns(200) {message: str} # A confirmation message
+@errors {401: Credentials provided are invalid., 404: Entity not found., 429: API rate limits exceeded., 500: Internal server error.}
+
+@endpoint GET /context/{context_id}/environment-variable
+@desc List environment variables
+@required {context_id: str(uuid) # An opaque identifier of a context.}
+@optional {page-token: str # A token to specify which page of results to fetch.}
+@returns(200) {items: [map], next_page_token: str?} # A paginated list of environment variables
+@errors {401: Credentials provided are invalid., 404: Entity not found., 429: API rate limits exceeded., 500: Internal server error.}
+
+@endpoint PUT /context/{context_id}/environment-variable/{env_var_name}
+@desc Add or update an environment variable
+@required {context_id: str(uuid) # An opaque identifier of a context., env_var_name: str # The name of the environment variable., value: str # The value of the environment variable}
+@returns(200) The new environment variable
+@errors {401: Credentials provided are invalid., 404: Entity not found., 429: API rate limits exceeded., 500: Internal server error.}
+
+@endpoint DELETE /context/{context_id}/environment-variable/{env_var_name}
+@desc Remove an environment variable
+@required {context_id: str(uuid) # An opaque identifier of a context., env_var_name: str # The name of the environment variable.}
+@returns(200) {message: str} # A confirmation message
+@errors {401: Credentials provided are invalid., 404: Entity not found., 429: API rate limits exceeded., 500: Internal server error.}
+
+@endpoint GET /context/{context_id}/restrictions
+@desc Get context restrictions
+@returns(200) {items: [any], next_page_token: str?} # Successful response.
+@errors {400: Context ID provided is invalid., 401: Credentials provided are invalid., 404: Entity not found., 429: API rate limits exceeded., 500: Internal server error.}
+
+@endpoint POST /context/{context_id}/restrictions
+@desc Create context restriction
+@optional {restriction_type: str(project/expression/group) # Type of the restriction., restriction_value: str # Value used to evaluate the restriction. If the `restriction_type` is `project`, this will be the project UUID. If the `restriction_type` is `expression`, this will be the expression rule.}
+@returns(201) {id: str(uuid), project_id: str(uuid), name: str, restriction_type: str, restriction_value: str} # Successful response.
+@errors {400: Bad request., 401: Credentials provided are invalid., 404: Entity not found., 409: Request conflict., 429: API rate limits exceeded., 500: Internal server error.}
+@example_request {"restriction_type":"project","restriction_value":"405d8375-3514-403b-8c43-83ae74cfe0e9"}
+
+@endpoint DELETE /context/{context_id}/restrictions/{restriction_id}
+@desc Delete context restriction
+@returns(200) {message: str} # Successful response.
+@errors {400: Context restriction ID provided is invalid., 401: Credentials provided are invalid., 404: Entity not found., 429: API rate limits exceeded., 500: Internal server error.}
+
+@endgroup
+
+@group project
+@endpoint POST /project/{provider}/{organization}/{project}
+@desc ⚠️ Create a project
+@returns(201) {advanced: map{autocancel_builds: bool, build_fork_prs: bool, build_prs_only: bool, disable_ssh: bool, forks_receive_secret_env_vars: bool, oss: bool, set_github_status: bool, setup_workflows: bool, write_settings_requires_admin: bool, pr_only_branch_overrides: [str]}} # Successful response.
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 403: None or insufficient credentials provided., 404: Either a branch or a project were not found., 405: Create projects using the API is currently supported for classic Github OAuth and Bitbucket projects only., 429: API rate limits exceeded., 500: Internal server error.}
+
+@endpoint GET /project/{provider}/{organization}/{project}/settings
+@desc Get project settings
+@returns(200) {advanced: map{autocancel_builds: bool, build_fork_prs: bool, build_prs_only: bool, disable_ssh: bool, forks_receive_secret_env_vars: bool, oss: bool, set_github_status: bool, setup_workflows: bool, write_settings_requires_admin: bool, pr_only_branch_overrides: [str]}} # Successful response.
+@errors {401: Credentials provided are invalid., 403: None or insufficient credentials provided., 404: Insufficient credentials for a private project, OR the organization, project, or repository does not exist., 429: API rate limits exceeded., 500: Internal server error.}
+
+@endpoint PATCH /project/{provider}/{organization}/{project}/settings
+@desc Update project settings
+@optional {advanced: map{autocancel_builds: bool, build_fork_prs: bool, build_prs_only: bool, disable_ssh: bool, forks_receive_secret_env_vars: bool, oss: bool, set_github_status: bool, setup_workflows: bool, write_settings_requires_admin: bool, pr_only_branch_overrides: [str]}}
+@returns(200) {advanced: map{autocancel_builds: bool, build_fork_prs: bool, build_prs_only: bool, disable_ssh: bool, forks_receive_secret_env_vars: bool, oss: bool, set_github_status: bool, setup_workflows: bool, write_settings_requires_admin: bool, pr_only_branch_overrides: [str]}} # Successful response. Always includes the full advanced settings object. Returned even when the provided updates match the existing settings, but can also be returned when `oss: true` fails to set.
+@errors {400: Request is malformed, e.g. with improperly encoded JSON, 401: Credentials provided are invalid., 403: None or insufficient credentials provided., 404: Insufficient credentials for a private project, OR the organization, project, or repository does not exist., 429: API rate limits exceeded., 500: Internal server error.}
+@example_request {"advanced":{"autocancel_builds":false,"build_prs_only":true,"pr_only_branch_overrides":["main"]}}
+
+@endgroup
+
+@group organizations
+@endpoint GET /organizations/{org_id}/groups
+@desc Groups in an organization
+@optional {limit: int # The number of results per page., page-token: str # A token to specify which page of results to fetch.}
+@returns(200) {items: [map], next_page_token: str?, total_count: int} # Successfully get all the groups in an organization. Results are paginated.
+@errors {403: None or insufficient credentials provided., 404: Entity not found., 500: Internal server error.}
+
+@endpoint POST /organizations/{org_id}/groups
+@desc Create Groups
+@required {name: str # Name of the group}
+@optional {description: str # Description to describe the group}
+@returns(201) {id: str(uuid), name: str, description: str} # Successful creation of a group.
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 403: None or insufficient credentials provided., 404: Entity not found., 409: A conflict has occurred while attempting to create the resource., 500: Internal server error.}
+@example_request {"name":"Project A Editors","description":"Users in this group have edit access to Project A"}
+
+@endpoint GET /organizations/{org_id}/groups/{group_id}
+@desc A group in an organization
+@returns(200) {id: str(uuid), name: str, description: str} # Successfully gets a group. Members not included.
+@errors {403: None or insufficient credentials provided., 404: Entity not found., 500: Internal server error.}
+
+@endpoint DELETE /organizations/{org_id}/groups/{group_id}
+@desc Delete a group
+@returns(200) {message: str} # Successful deletion of a group.
+@errors {401: Credentials provided are invalid., 403: None or insufficient credentials provided., 404: Entity not found., 500: Internal server error.}
+
+@endpoint POST /organizations/{org_id}/usage_export_job
+@desc Create a usage export
+@required {start: str(date-time) # The start date & time (inclusive) of the range from which data will be pulled. Must be no more than one year ago., end: str(date-time) # The end date & time (inclusive) of the range from which data will be pulled. Must be no more than 31 days after `start`.}
+@optional {shared_org_ids: [str(uuid)]}
+@returns(201) {usage_export_job_id: str(uuid), state: str, start: str(date-time), end: str(date-time), download_urls: [str(uri)]} # Usage export created successfully
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 404: Entity not found., 429: API rate limits exceeded., 500: Internal server error.}
+
+@endpoint GET /organizations/{org_id}/usage_export_job/{usage_export_job_id}
+@desc Get a usage export
+@returns(200) {usage_export_job_id: str(uuid), state: str, download_urls: [str(uri)], error_reason: str} # Usage export fetched successfully
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 404: Entity not found., 429: API rate limits exceeded., 500: Internal server error.}
+
+@endgroup
+
+@group project
+@endpoint POST /project/{provider}/{organization}/{project}/pipeline/run
+@desc [Recommended] Trigger a new pipeline
+@required {provider: str(github/gh/bitbucket/bb/circleci) # The first segment of the slash-separated project slug, as shown in Project Settings > Overview., organization: str # The second segment of the slash-separated project slug, as shown in Project Settings > Overview. Depending on the organization type, this may be the org name (e.g. `my-org`) or an ID (e.g. `43G3lM5RtfFE7v5sa4nWAU`)., project: str # The third segment of the slash-separated project slug, as shown in Project Settings > Overview. Depending on the organization type, this may be the project name (e.g. `my-project`) or an ID (e.g. `44n9wujWcTnVZ2b5S8Fnat`).}
+@optional {definition_id: str(uuid) # The unique id for the pipeline definition. This can be found in the page Project Settings > Pipelines., config: map{branch: str, tag: str}, checkout: map{branch: str, tag: str}, parameters: map # An object containing pipeline parameters and their values. Pipeline parameters have the following size limits: 100 max entries, 128 maximum key length, 512 maximum value length.}
+@returns(200) {message: str} # Successful response with no created pipeline.
+@returns(201) {state: str, created_at: str(date-time), number: int, id: str(uuid)} # Successful response.
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 404: Entity not found.}
+
+@endgroup
+
+@group projects
+@endpoint GET /projects/{project_id}/pipeline-definitions
+@desc List pipeline definitions
+@required {project_id: str # An opaque identifier of a project.}
+@returns(200) {items: [map]} # Successful response.
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 404: Entity not found., 500: Internal server error.}
+
+@endpoint POST /projects/{project_id}/pipeline-definitions
+@desc Create pipeline definition
+@required {project_id: str # An opaque identifier of a project., name: str # The name of the pipeline definition., config_source: any, checkout_source: map{provider!: str, repo!: map{external_id!: str}} # The resource to be used when running the `checkout` command.}
+@optional {description: str # The description of the pipeline definition.}
+@returns(200) {id: str(uuid), name: str, description: str, created_at: str(date-time), config_source: map{provider: str, repo: map{full_name: str, external_id: str}, file_path: str}, checkout_source: map{provider: str, repo: map{full_name: str, external_id: str}}} # Successful response.
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 404: Entity not found., 500: Internal server error.}
+
+@endpoint GET /projects/{project_id}/pipeline-definitions/{pipeline_definition_id}
+@desc Get pipeline definition
+@required {project_id: str # An opaque identifier of a project., pipeline_definition_id: str # An opaque identifier of a pipeline definition.}
+@returns(200) {id: str(uuid), name: str, description: str, created_at: str(date-time), config_source: map{provider: str, repo: map{full_name: str, external_id: str}, file_path: str}, checkout_source: map{provider: str, repo: map{full_name: str, external_id: str}}} # Successful response.
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 404: Entity not found., 500: Internal server error.}
+
+@endpoint PATCH /projects/{project_id}/pipeline-definitions/{pipeline_definition_id}
+@desc Update pipeline definition
+@required {project_id: str # An opaque identifier of a project., pipeline_definition_id: str # An opaque identifier of a pipeline definition.}
+@optional {name: str # The name of the pipeline definition., description: str # The description of the pipeline definition., config_source: map{file_path: str} # The resource that stores the CircleCI config YAML used for this pipeline definition., checkout_source: map{provider: str, repo: map{external_id: str}} # The resource to be used when running the `checkout` command.}
+@returns(200) {id: str(uuid), name: str, description: str, created_at: str(date-time), config_source: map{provider: str, repo: map{full_name: str, external_id: str}, file_path: str}, checkout_source: map{provider: str, repo: map{full_name: str, external_id: str}}} # Successful response.
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 404: Entity not found., 500: Internal server error.}
+
+@endpoint DELETE /projects/{project_id}/pipeline-definitions/{pipeline_definition_id}
+@desc Delete pipeline definition
+@required {project_id: str # An opaque identifier of a project., pipeline_definition_id: str # An opaque identifier of a pipeline definition.}
+@returns(200) {message: str} # Successful response.
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 404: Entity not found., 500: Internal server error.}
+
+@endpoint GET /projects/{project_id}/pipeline-definitions/{pipeline_definition_id}/triggers
+@desc List pipeline definition triggers
+@required {project_id: str # An opaque identifier of a project., pipeline_definition_id: str # An opaque identifier of a pipeline definition.}
+@returns(200) {items: [map]} # Successful response.
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 404: Entity not found., 500: Internal server error.}
+
+@endpoint POST /projects/{project_id}/pipeline-definitions/{pipeline_definition_id}/triggers
+@desc Create trigger
+@required {project_id: str # An opaque identifier of a project., pipeline_definition_id: str # An opaque identifier of a pipeline definition., event_source: map{provider!: str, repo: map{external_id!: str}, webhook: map{sender: str}} # The source of events to use for this trigger. The `repo` object must be specified when `provider` is `github_app` or `github_oauth`, and the `webhook` object may only be specified when `provider` is `webhook`.}
+@optional {event_preset: str(all-pushes/only-tags/default-branch-pushes/only-build-prs/only-open-prs/only-labeled-prs/only-merged-prs/only-ready-for-review-prs/only-branch-delete/only-build-pushes-to-non-draft-prs/only-merged-or-closed-prs/pr-comment-equals-run-ci/non-draft-pr-opened/pushes-to-merge-queues) # The name of the event preset to use when filtering events for this trigger. Only applicable when `event_source.provider` is `github_app`., checkout_ref: str # The ref to use when checking out code for pipeline runs created from this trigger. Always required when `event_source.provider` is `webhook`. When `event_source.provider` is `github_app`, only expected if the event source repository (identified by `event_source.provider.repo.external_id`) is different to the checkout source repository of the associated Pipeline Definition. Otherwise, must be omitted., config_ref: str # The ref to use when fetching config for pipeline runs created from this trigger. Always required when `event_source.provider` is `webhook`. When `event_source.provider` is `github_app`, only expected if the event source repository (identified by `event_source.provider.repo.external_id`) is different to the config source repository of the associated Pipeline Definition. Otherwise, must be omitted., event_name: str # The name of the triggering event. This should only be set for triggers where `provider` is `webhook`., disabled: bool # Whether the trigger should be disabled upon creation. Not supported for pipeline definitions where `config_source.provider` is `github_oauth`.}
+@returns(200) {id: str(uuid), event_name: str, created_at: str(date-time), event_source: map{provider: str, repo: map{full_name: str, external_id: str}, webhook: map{url: str, sender: str}}, event_preset: str, checkout_ref: str, config_ref: str, disabled: bool} # Successful response.
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 404: Entity not found., 500: Internal server error.}
+
+@endpoint GET /projects/{project_id}/triggers/{trigger_id}
+@desc Get trigger
+@required {project_id: str # An opaque identifier of a project., trigger_id: str # An opaque identifier of a trigger.}
+@returns(200) {id: str(uuid), event_name: str, created_at: str(date-time), event_source: map{provider: str, repo: map{full_name: str, external_id: str}, webhook: map{url: str, sender: str}}, event_preset: str, checkout_ref: str, config_ref: str, disabled: bool} # Successful response.
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 404: Entity not found., 500: Internal server error.}
+
+@endpoint PATCH /projects/{project_id}/triggers/{trigger_id}
+@desc Update trigger
+@required {project_id: str # An opaque identifier of a project., trigger_id: str # An opaque identifier of a trigger.}
+@optional {event_preset: str(all-pushes/only-tags/default-branch-pushes/only-build-prs/only-open-prs/only-labeled-prs/only-merged-prs/only-ready-for-review-prs/only-branch-delete/only-build-pushes-to-non-draft-prs/only-merged-or-closed-prs/pr-comment-equals-run-ci/non-draft-pr-opened/pushes-to-merge-queues) # The name of the event preset to use when filtering events for this trigger. Only applicable when `event_source.provider` is `github_app`., checkout_ref: str # The ref to use when checking out code for pipeline runs created from this trigger., config_ref: str # The ref to use when fetching config for pipeline runs created from this trigger., event_name: str # The name of the triggering event. This can only be set for triggers where `provider` is `webhook`., disabled: bool # A flag indicating whether the trigger is disabled or not. This can only be set for triggers where `provider` is `github_oauth`, `github_app`, or `webhook`., event_source: map{webhook: map{sender: str}}}
+@returns(200) {id: str(uuid), event_name: str, created_at: str(date-time), event_source: map{provider: str, repo: map{full_name: str, external_id: str}, webhook: map{url: str, sender: str}}, event_preset: str, checkout_ref: str, config_ref: str, disabled: bool} # Successful response.
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 404: Entity not found., 500: Internal server error.}
+
+@endpoint DELETE /projects/{project_id}/triggers/{trigger_id}
+@desc Delete trigger
+@required {project_id: str # An opaque identifier of a project., trigger_id: str # An opaque identifier of a trigger.}
+@returns(200) {message: str} # Successful response.
+@errors {400: Unexpected request body provided., 401: Credentials provided are invalid., 404: Entity not found., 500: Internal server error.}
+
+@endpoint POST /projects/{project_id}/rollback
+@desc Rollback a project
+@required {project_id: str # An opaque identifier of a project., component_name: str # The component name, current_version: str # The current version, environment_name: str # The environment name, target_version: str # The target version}
+@optional {namespace: str # The namespace, parameters: map # The extra parameters for the rollback pipeline, reason: str # The reason for the rollback}
+@returns(202) {id: str(uuid), rollback_type: str} # Rollback request accepted.
+@errors {400: Unexpected request body provided., 404: Entity not found., 409: A conflict has occurred while attempting to create the resource., 500: Internal server error.}
+
+@endgroup
+
+@group deploy
+@endpoint GET /deploy/environments
+@desc List Environments
+@required {org-id: str(uuid) # An opaque identifier of an organization used in query parameters., page-size: int # The number of results per page.}
+@optional {page-token: str # A token to specify which page of results to fetch.}
+@returns(200) {items: [map], next_page_token: str?} # Paginated environments list
+@errors {400: Unexpected request body provided., 404: Entity not found., 500: Internal server error.}
+
+@endpoint GET /deploy/environments/{environment_id}
+@desc Get Environment
+@required {environment_id: str(uuid) # An opaque identifier of an environment.}
+@returns(200) {created_at: str(date-time), description: str, id: str(uuid), labels: [map], name: str, updated_at: str(date-time)} # Environment
+@errors {400: Unexpected request body provided., 404: Entity not found., 500: Internal server error.}
+
+@endpoint GET /deploy/components
+@desc List Components
+@required {org-id: str(uuid) # An opaque identifier of an organization used in query parameters., page-size: int # The number of results per page.}
+@optional {project-id: str(uuid) # An opaque identifier of an project used in query parameters., page-token: str # A token to specify which page of results to fetch.}
+@returns(200) {items: [map], next_page_token: str?} # Paginated components list
+@errors {400: Unexpected request body provided., 404: Entity not found., 500: Internal server error.}
+
+@endpoint GET /deploy/components/{component_id}
+@desc Get Component
+@required {component_id: str # An opaque identifier of a component.}
+@returns(200) {id: str(uuid), name: str, project_id: str(uuid), labels: [map], release_count: int, created_at: str(date-time), updated_at: str(date-time)} # Successful response.
+@errors {400: Unexpected request body provided., 404: Entity not found., 500: Internal server error.}
+
+@endpoint GET /deploy/components/{component_id}/versions
+@desc List Component Versions
+@required {component_id: str # An opaque identifier of a component.}
+@optional {environment-id: str(uuid) # An opaque identifier of an environment used in query parameters.}
+@returns(200) {items: [map], next_page_token: str?} # Paginated component versions list
+@errors {400: Unexpected request body provided., 404: Entity not found., 500: Internal server error.}
+
+@endgroup
+
+@end

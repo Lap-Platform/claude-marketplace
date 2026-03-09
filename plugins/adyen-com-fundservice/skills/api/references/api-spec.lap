@@ -9,79 +9,95 @@
 
 @group accountHolderBalance
 @endpoint POST /accountHolderBalance
-@required {accountHolderCode: str}
-@returns(200) {balancePerAccount: [map], invalidFields: [map], pspReference: str, resultCode: str, totalBalance: map{balance: [map], onHoldBalance: [map], pendingBalance: [map]}}
-@returns(202) {balancePerAccount: [map], invalidFields: [map], pspReference: str, resultCode: str, totalBalance: map{balance: [map], onHoldBalance: [map], pendingBalance: [map]}}
-@errors {400, 401, 403, 422, 500}
+@desc Get the balances of an account holder
+@required {accountHolderCode: str # The code of the Account Holder of which to retrieve the balance.}
+@returns(200) {balancePerAccount: [map], invalidFields: [map], pspReference: str, resultCode: str, totalBalance: map{balance: [map], onHoldBalance: [map], pendingBalance: [map]}} # OK - the request has succeeded.
+@returns(202) {balancePerAccount: [map], invalidFields: [map], pspReference: str, resultCode: str, totalBalance: map{balance: [map], onHoldBalance: [map], pendingBalance: [map]}} # Accepted - the request has been accepted for processing, but the processing has not been completed.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"accountHolderCode":"CODE_OF_ACCOUNT_HOLDER"}
 
 @endgroup
 
 @group accountHolderTransactionList
 @endpoint POST /accountHolderTransactionList
-@required {accountHolderCode: str}
-@optional {transactionListsPerAccount: [map{accountCode!: str, page!: int(int32)}], transactionStatuses: [str]}
-@returns(200) {accountTransactionLists: [map], invalidFields: [map], pspReference: str, resultCode: str}
-@returns(202) {accountTransactionLists: [map], invalidFields: [map], pspReference: str, resultCode: str}
-@errors {400, 401, 403, 422, 500}
+@desc Get a list of transactions
+@required {accountHolderCode: str # The code of the account holder that owns the account(s) of which retrieve the transaction list.}
+@optional {transactionListsPerAccount: [map{accountCode!: str, page!: int(int32)}] # A list of accounts to include in the transaction list. If left blank, the last fifty (50) transactions for all accounts of the account holder will be included., transactionStatuses: [str] # A list of statuses to include in the transaction list. If left blank, all transactions will be included. >Permitted values: >* `PendingCredit` - a pending balance credit. >* `CreditFailed` - a pending credit failure; the balance will not be credited. >* `Credited` - a credited balance. >* `PendingDebit` - a pending balance debit (e.g., a refund). >* `CreditClosed` - a pending credit closed; the balance will not be credited. >* `CreditSuspended` - a pending credit closed; the balance will not be credited. >* `DebitFailed` - a pending debit failure; the balance will not be debited. >* `Debited` - a debited balance (e.g., a refund). >* `DebitReversedReceived` - a pending refund reversal. >* `DebitedReversed` - a reversed refund. >* `ChargebackReceived` - a received chargeback request. >* `Chargeback` - a processed chargeback. >* `ChargebackReversedReceived` - a pending chargeback reversal. >* `ChargebackReversed` - a reversed chargeback. >* `Converted` - converted. >* `ManualCorrected` - manual booking/adjustment by Adyen. >* `Payout` - a payout. >* `PayoutReversed` - a reversed payout. >* `PendingFundTransfer` - a pending transfer of funds from one account to another. >* `FundTransfer` - a transfer of funds from one account to another.}
+@returns(200) {accountTransactionLists: [map], invalidFields: [map], pspReference: str, resultCode: str} # OK - the request has succeeded.
+@returns(202) {accountTransactionLists: [map], invalidFields: [map], pspReference: str, resultCode: str} # Accepted - the request has been accepted for processing, but the processing has not been completed.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"accountHolderCode":"CODE_OF_ACCOUNT_HOLDER","transactionListsPerAccount":[{"accountCode":"195752115","page":1}]}
 
 @endgroup
 
 @group debitAccountHolder
 @endpoint POST /debitAccountHolder
-@required {accountHolderCode: str, amount: map{currency!: str, value!: int(int64)}, bankAccountUUID: str, merchantAccount: str, splits: [map{account: str, amount: map, description: str, reference: str, type!: str}]}
-@optional {description: str}
-@returns(200) {accountHolderCode: str, bankAccountUUID: str, invalidFields: [map], merchantReferences: [str], pspReference: str, resultCode: str}
-@returns(202) {accountHolderCode: str, bankAccountUUID: str, invalidFields: [map], merchantReferences: [str], pspReference: str, resultCode: str}
-@errors {400, 401, 403, 422, 500}
+@desc Send a direct debit request
+@required {accountHolderCode: str # The code of the account holder., amount: map{currency!: str, value!: int(int64)}, bankAccountUUID: str # The Adyen-generated unique alphanumeric identifier (UUID) of the account holder's bank account., merchantAccount: str # Your merchant account., splits: [map{account: str, amount: map, description: str, reference: str, type!: str}] # Contains instructions on how to split the funds between the accounts in your platform. The request must have at least one split item.}
+@optional {description: str # A description of the direct debit. Maximum length: 35 characters.  Allowed characters: **a-z**, **A-Z**, **0-9**, and special characters **/?:().,'+ ";**.}
+@returns(200) {accountHolderCode: str, bankAccountUUID: str, invalidFields: [map], merchantReferences: [str], pspReference: str, resultCode: str} # OK - the request has succeeded.
+@returns(202) {accountHolderCode: str, bankAccountUUID: str, invalidFields: [map], merchantReferences: [str], pspReference: str, resultCode: str} # Accepted - the request has been accepted for processing, but the processing has not been completed.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"accountHolderCode":"ACCOUNT_HOLDER_CODE","description":"YOUR_DESCRIPTION","bankAccountUUID":"000b81aa-ae7e-4492-aa7e-72b2129dce0c","amount":{"value":6200,"currency":"USD"},"merchantAccount":"YOUR_MERCHANT_ACCOUNT","splits":[{"amount":{"value":6000},"type":"MarketPlace","account":"8535516988037431","reference":"YOUR_SPLIT_REFERENCE_1"},{"amount":{"value":200},"type":"Commission","reference":"YOUR_SPLIT_REFERENCE_2"}]}
 
 @endgroup
 
 @group payoutAccountHolder
 @endpoint POST /payoutAccountHolder
-@required {accountCode: str, accountHolderCode: str}
-@optional {amount: map{currency!: str, value!: int(int64)}, bankAccountUUID: str, description: str, merchantReference: str, payoutMethodCode: str, payoutSpeed: str(INSTANT/SAME_DAY/STANDARD)=STANDARD}
-@returns(200) {bankAccountUUID: str, invalidFields: [map], merchantReference: str, payoutSpeed: str, pspReference: str, resultCode: str}
-@returns(202) {bankAccountUUID: str, invalidFields: [map], merchantReference: str, payoutSpeed: str, pspReference: str, resultCode: str}
-@errors {400, 401, 403, 422, 500}
+@desc Pay out from an account to the account holder
+@required {accountCode: str # The code of the account from which the payout is to be made., accountHolderCode: str # The code of the Account Holder who owns the account from which the payout is to be made. The Account Holder is the party to which the payout will be made.}
+@optional {amount: map{currency!: str, value!: int(int64)}, bankAccountUUID: str # The unique ID of the Bank Account held by the Account Holder to which the payout is to be made. If left blank, a bank account is automatically selected., description: str # A description of the payout. Maximum 200 characters. Allowed: **abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/?:().,'+ ";**, merchantReference: str # A value that can be supplied at the discretion of the executing user in order to link multiple transactions to one another., payoutMethodCode: str # The unique ID of the payout method held by the Account Holder to which the payout is to be made. If left blank, a payout instrument is automatically selected., payoutSpeed: str(INSTANT/SAME_DAY/STANDARD)=STANDARD # Speed with which payouts for this account are processed. Permitted values: `STANDARD`, `SAME_DAY`.}
+@returns(200) {bankAccountUUID: str, invalidFields: [map], merchantReference: str, payoutSpeed: str, pspReference: str, resultCode: str} # OK - the request has succeeded.
+@returns(202) {bankAccountUUID: str, invalidFields: [map], merchantReference: str, payoutSpeed: str, pspReference: str, resultCode: str} # Accepted - the request has been accepted for processing, but the processing has not been completed.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"accountCode":"118731451","amount":{"currency":"EUR","value":99792},"accountHolderCode":"CODE_OF_ACCOUNT_HOLDER","description":"12345 – Test","bankAccountUUID":"000b81aa-ae7e-4492-aa7e-72b2129dce0c"}
 
 @endgroup
 
 @group refundFundsTransfer
 @endpoint POST /refundFundsTransfer
-@required {amount: map{currency!: str, value!: int(int64)}, originalReference: str}
-@optional {merchantReference: str}
-@returns(200) {invalidFields: [map], merchantReference: str, message: str, originalReference: str, pspReference: str, resultCode: str}
-@returns(202) {invalidFields: [map], merchantReference: str, message: str, originalReference: str, pspReference: str, resultCode: str}
-@errors {400, 401, 403, 422, 500}
+@desc Refund a funds transfer
+@required {amount: map{currency!: str, value!: int(int64)}, originalReference: str # A PSP reference of the original fund transfer.}
+@optional {merchantReference: str # A value that can be supplied at the discretion of the executing user in order to link multiple transactions to one another.}
+@returns(200) {invalidFields: [map], merchantReference: str, message: str, originalReference: str, pspReference: str, resultCode: str} # OK - the request has succeeded.
+@returns(202) {invalidFields: [map], merchantReference: str, message: str, originalReference: str, pspReference: str, resultCode: str} # Accepted - the request has been accepted for processing, but the processing has not been completed.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"originalReference":"PSP_REFERENCE_OF_TRANSFER_TO_REFUND","amount":{"currency":"EUR","value":1000},"merchantReference":"YOUR_REFERENCE_ID"}
 
 @endgroup
 
 @group refundNotPaidOutTransfers
 @endpoint POST /refundNotPaidOutTransfers
-@required {accountCode: str, accountHolderCode: str}
-@returns(200) {invalidFields: [map], pspReference: str, resultCode: str}
-@returns(202) {invalidFields: [map], pspReference: str, resultCode: str}
-@errors {400, 401, 403, 422, 500}
+@desc Refund all transactions of an account since the most recent payout
+@required {accountCode: str # The code of the account from which to perform the refund(s)., accountHolderCode: str # The code of the Account Holder which owns the account from which to perform the refund(s).}
+@returns(200) {invalidFields: [map], pspReference: str, resultCode: str} # OK - the request has succeeded.
+@returns(202) {invalidFields: [map], pspReference: str, resultCode: str} # Accepted - the request has been accepted for processing, but the processing has not been completed.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"accountHolderCode":"CODE_OF_ACCOUNT_HOLDER","accountCode":"189184578"}
 
 @endgroup
 
 @group setupBeneficiary
 @endpoint POST /setupBeneficiary
-@required {destinationAccountCode: str, sourceAccountCode: str}
-@optional {merchantReference: str}
-@returns(200) {invalidFields: [map], pspReference: str, resultCode: str}
-@returns(202) {invalidFields: [map], pspReference: str, resultCode: str}
-@errors {400, 401, 403, 422, 500}
+@desc Designate a beneficiary account and transfer the benefactor's current balance
+@required {destinationAccountCode: str # The destination account code., sourceAccountCode: str # The benefactor account.}
+@optional {merchantReference: str # A value that can be supplied at the discretion of the executing user.}
+@returns(200) {invalidFields: [map], pspReference: str, resultCode: str} # OK - the request has succeeded.
+@returns(202) {invalidFields: [map], pspReference: str, resultCode: str} # Accepted - the request has been accepted for processing, but the processing has not been completed.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"destinationAccountCode":"128952522","merchantReference":"YOUR_REFERENCE_ID","sourceAccountCode":"134498192"}
 
 @endgroup
 
 @group transferFunds
 @endpoint POST /transferFunds
-@required {amount: map{currency!: str, value!: int(int64)}, destinationAccountCode: str, sourceAccountCode: str, transferCode: str}
-@optional {merchantReference: str}
-@returns(200) {invalidFields: [map], merchantReference: str, pspReference: str, resultCode: str}
-@returns(202) {invalidFields: [map], merchantReference: str, pspReference: str, resultCode: str}
-@errors {400, 401, 403, 422, 500}
+@desc Transfer funds between platform accounts
+@required {amount: map{currency!: str, value!: int(int64)}, destinationAccountCode: str # The code of the account to which the funds are to be credited. >The state of the Account Holder of this account must be Active., sourceAccountCode: str # The code of the account from which the funds are to be debited. >The state of the Account Holder of this account must be Active and allow payouts., transferCode: str # The code related to the type of transfer being performed. >The permitted codes differ for each platform account and are defined in their service level agreement.}
+@optional {merchantReference: str # A value that can be supplied at the discretion of the executing user in order to link multiple transactions to one another.}
+@returns(200) {invalidFields: [map], merchantReference: str, pspReference: str, resultCode: str} # OK - the request has succeeded.
+@returns(202) {invalidFields: [map], merchantReference: str, pspReference: str, resultCode: str} # Accepted - the request has been accepted for processing, but the processing has not been completed.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"sourceAccountCode":"100000000","destinationAccountCode":"190324759","amount":{"currency":"EUR","value":2000},"transferCode":"TransferCode_1"}
 
 @endgroup
 

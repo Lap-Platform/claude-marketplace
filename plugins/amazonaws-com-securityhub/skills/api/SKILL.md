@@ -186,86 +186,80 @@ Not specified.
 | POST | /tags/{ResourceArn} | Adds one or more tags to a resource. |
 | DELETE | /tags/{ResourceArn} | Removes one or more tags from a resource. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I get a list of all findings in my account?" -> POST /findings
-- "How do I update the severity or workflow state of a finding?" -> PATCH /findings/batchupdate
-- "How do I import findings from a third-party tool?" -> POST /findings/import
-- "What security standards are available and which am I subscribed to?" -> GET /standards
-- "How do I enable or disable a specific security standard?" -> POST /standards/register / POST /standards/deregister
-- "How do I create an automation rule to auto-resolve low-severity findings?" -> POST /automationrules/create
-- "How do I list all members in my Security Hub organization?" -> GET /members
-- "How do I invite another AWS account to join my Security Hub?" -> POST /members/invite
-- "How do I check the history of changes on a specific finding?" -> POST /findingHistory/get
-- "How do I set up cross-region finding aggregation?" -> POST /findingAggregator/create
-- "How do I create a custom insight to track findings grouped by resource type?" -> POST /insights
-- "How do I get the definition and remediation URL for a specific control?" -> GET /securityControl/definition
-- "How do I associate a configuration policy with an organizational unit?" -> POST /configurationPolicyAssociation/associate
-- "How do I tag a Security Hub resource?" -> POST /tags/{ResourceArn}
-- "Who is the delegated administrator for my organization?" -> GET /organization/admin
-
-## Response Tips
-
-- **Findings & History**: Paginated via `NextToken`/`MaxResults`. Always check `NextToken` in response to retrieve all pages. Findings are deeply nested `AwsSecurityFinding` objects -- drill into `Resources`, `Compliance`, and `Workflow` sub-objects.
-- **Batch operations** (batchupdate, batchGet, import): Always inspect both success and failure arrays. `UnprocessedFindings`/`UnprocessedIds`/`FailedFindings` contain per-item error details -- a 200 status does NOT mean all items succeeded.
-- **Standards & Controls**: `StandardsSubscriptions` include subscription status (`READY`, `INCOMPLETE`, `FAILED`, `DELETING`). Controls have `ControlStatus` of `ENABLED` or `DISABLED` with an optional `DisabledReason`.
-- **Configuration Policies**: Responses nest `Policy > SecurityHub > SecurityControlsConfiguration`. Check both `EnabledSecurityControlIdentifiers` and `DisabledSecurityControlIdentifiers` to understand the full posture.
-- **Automation Rules**: `UnprocessedAutomationRules` in create/update/delete responses indicate partial failures with per-rule error codes.
-- **Tags**: `GET /tags/{ResourceArn}` returns a flat `map<str,str>`. Empty map means no tags, not an error.
-
-## Anomaly Flags
-
-- **Partial batch failures**: Surface whenever `UnprocessedAccounts`, `UnprocessedFindings`, `UnprocessedIds`, `UnprocessedAutomationRules`, or `FailedFindings` arrays are non-empty -- the caller likely expects all items to succeed.
-- **Member account limit reached**: Flag when `GET /organization/configuration` returns `MemberAccountLimitReached: true` -- new invitations will fail silently.
-- **Standards subscription stuck**: Alert when `StandardsSubscription.StandardsStatus` is `INCOMPLETE` or `FAILED` for more than a few minutes -- manual intervention may be needed.
-- **Aggregator region mismatch**: If `FindingAggregationRegion` in the response differs from the caller's expected region, surface it -- findings may be routing to the wrong aggregation hub.
-- **Organization configuration drift**: Flag when `OrganizationConfiguration.Status` is not `ENABLED` or when `StatusMessage` is non-empty -- indicates the org-level setup is degraded.
-- **High import failure rate**: When `POST /findings/import` returns `FailedCount` greater than zero, proactively show the `FailedFindings` error codes -- common causes are malformed ASFF or duplicate IDs.
-- **Deprecated master endpoints**: `GET /master` and `POST /master/disassociate` are legacy -- recommend using the `administrator` equivalents instead.
-
-## Playbook
-
-### 1. Enable Security Hub and Subscribe to Standards
-
-1. Call `POST /accounts` with `EnableDefaultStandards: true` to enable Security Hub.
-2. Call `GET /standards` to list all available standards (paginate with `NextToken`).
-3. For each desired standard, call `POST /standards/register` with its `StandardsArn`.
-4. Call `POST /standards/get` to verify subscription status is `READY`.
-5. Optionally call `PATCH /accounts` to set `AutoEnableControls: true`.
-
-### 2. Triage and Remediate Findings
-
-1. Call `POST /findings` with `Filters` narrowing by severity, resource type, or compliance status. Paginate fully.
-2. Review the returned `AwsSecurityFinding` objects -- check `Compliance.Status` and `Workflow.Status`.
-3. For findings to suppress, call `PATCH /findings/batchupdate` with `Workflow: {Status: "SUPPRESSED"}` and a `Note`.
-4. For findings to escalate, call `PATCH /findings/batchupdate` with `Workflow: {Status: "NOTIFIED"}` or `VerificationState: "TRUE_POSITIVE"`.
-5. Check `UnprocessedFindings` in the response and retry any failures.
-
-### 3. Set Up Cross-Region Aggregation
-
-1. From the aggregation region, call `POST /findingAggregator/create` with `RegionLinkingMode: "ALL_REGIONS"` (or `"SPECIFIED_REGIONS"` with a `Regions` list).
-2. Confirm the response `FindingAggregationRegion` matches your intended hub.
-3. Verify with `GET /findingAggregator/list` that the aggregator appears.
-4. Query `POST /findings` from the aggregation region to confirm cross-region findings are flowing in.
-
-### 4. Create and Manage Automation Rules
-
-1. Call `GET /automationrules/list` to see existing rules and determine the next `RuleOrder`.
-2. Call `POST /automationrules/create` with `RuleName`, `RuleOrder`, `Description`, `Criteria` (filters matching target findings), and `Actions` (e.g., update workflow status, add a note).
-3. Verify creation by calling `POST /automationrules/get` with the returned `RuleArn`.
-4. To adjust, call `PATCH /automationrules/update` with the modified fields.
-5. To disable or remove, call `POST /automationrules/delete` with the rule ARN. Check `UnprocessedAutomationRules` for failures.
-
-### 5. Onboard Member Accounts in an Organization
-
-1. Call `POST /organization/admin/enable` with `AdminAccountId` to designate the delegated admin.
-2. Call `POST /organization/configuration` with `AutoEnable: true` and `AutoEnableStandards: "DEFAULT"`.
-3. For accounts not auto-enrolled, call `POST /members` with `AccountDetails` to create member records.
-4. Call `POST /members/invite` with the target `AccountIds`.
-5. Monitor with `GET /members` (filter `OnlyAssociated: false`) -- check each member's status.
-6. If an invitation is rejected, call `POST /invitations/delete` to clean up, then re-invite.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a administrator?" -> POST /administrator
+- "Create a master?" -> POST /master
+- "Create a delete?" -> POST /automationrules/delete
+- "Create a deregister?" -> POST /standards/deregister
+- "Create a register?" -> POST /standards/register
+- "Create a get?" -> POST /automationrules/get
+- "Create a batchget?" -> POST /configurationPolicyAssociation/batchget
+- "Create a batchGet?" -> POST /securityControls/batchGet
+- "Create a batchGet?" -> POST /associations/batchGet
+- "Create a import?" -> POST /findings/import
+- "Create a actionTarget?" -> POST /actionTargets
+- "Create a create?" -> POST /automationrules/create
+- "Create a create?" -> POST /configurationPolicy/create
+- "Create a create?" -> POST /findingAggregator/create
+- "Create a insight?" -> POST /insights
+- "Create a member?" -> POST /members
+- "Create a decline?" -> POST /invitations/decline
+- "Delete a actionTarget?" -> DELETE /actionTargets/{ActionTargetArn+}
+- "Delete a configurationPolicy?" -> DELETE /configurationPolicy/{Identifier}
+- "Delete a delete?" -> DELETE /findingAggregator/delete/{FindingAggregatorArn+}
+- "Delete a insight?" -> DELETE /insights/{InsightArn+}
+- "Create a delete?" -> POST /invitations/delete
+- "Create a delete?" -> POST /members/delete
+- "Create a get?" -> POST /actionTargets/get
+- "List all accounts?" -> GET /accounts
+- "List all configuration?" -> GET /organization/configuration
+- "List all products?" -> GET /products
+- "List all standards?" -> GET /standards
+- "Get control details?" -> GET /standards/controls/{StandardsSubscriptionArn+}
+- "Delete a productSubscription?" -> DELETE /productSubscriptions/{ProductSubscriptionArn+}
+- "Create a disable?" -> POST /organization/admin/disable
+- "Create a disassociate?" -> POST /administrator/disassociate
+- "Create a disassociate?" -> POST /master/disassociate
+- "Create a disassociate?" -> POST /members/disassociate
+- "Create a productSubscription?" -> POST /productSubscriptions
+- "Create a enable?" -> POST /organization/admin/enable
+- "Create a account?" -> POST /accounts
+- "List all administrator?" -> GET /administrator
+- "Get get details?" -> GET /configurationPolicy/get/{Identifier}
+- "Create a get?" -> POST /configurationPolicyAssociation/get
+- "Create a get?" -> POST /standards/get
+- "Get get details?" -> GET /findingAggregator/get/{FindingAggregatorArn+}
+- "Create a get?" -> POST /findingHistory/get
+- "Create a finding?" -> POST /findings
+- "Get result details?" -> GET /insights/results/{InsightArn+}
+- "Create a get?" -> POST /insights/get
+- "List all count?" -> GET /invitations/count
+- "List all master?" -> GET /master
+- "Create a get?" -> POST /members/get
+- "List all definition?" -> GET /securityControl/definition
+- "Create a invite?" -> POST /members/invite
+- "List all list?" -> GET /automationrules/list
+- "List all list?" -> GET /configurationPolicy/list
+- "Create a list?" -> POST /configurationPolicyAssociation/list
+- "List all productSubscriptions?" -> GET /productSubscriptions
+- "List all list?" -> GET /findingAggregator/list
+- "List all invitations?" -> GET /invitations
+- "List all members?" -> GET /members
+- "List all admin?" -> GET /organization/admin
+- "List all definitions?" -> GET /securityControls/definitions
+- "List all associations?" -> GET /associations
+- "Get tag details?" -> GET /tags/{ResourceArn}
+- "Create a associate?" -> POST /configurationPolicyAssociation/associate
+- "Create a disassociate?" -> POST /configurationPolicyAssociation/disassociate
+- "Delete a tag?" -> DELETE /tags/{ResourceArn}
+- "Partially update a actionTarget?" -> PATCH /actionTargets/{ActionTargetArn+}
+- "Partially update a configurationPolicy?" -> PATCH /configurationPolicy/{Identifier}
+- "Partially update a insight?" -> PATCH /insights/{InsightArn+}
+- "Create a configuration?" -> POST /organization/configuration
+- "Partially update a control?" -> PATCH /standards/control/{StandardsControlArn+}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

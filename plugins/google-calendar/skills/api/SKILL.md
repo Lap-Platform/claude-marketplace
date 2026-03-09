@@ -80,85 +80,47 @@ https://www.googleapis.com/calendar/v3
 | POST | /users/me/settings/watch | Watch for changes to Settings resources. |
 | GET | /users/me/settings/{setting} | Returns a single user setting. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new calendar?" -> POST /calendars
-- "What events do I have this week?" -> GET /calendars/{calendarId}/events (with timeMin/timeMax)
-- "Add a meeting with someone tomorrow at 3pm" -> POST /calendars/{calendarId}/events/quickAdd
-- "Delete an event from my calendar" -> DELETE /calendars/{calendarId}/events/{eventId}
-- "Who has access to my calendar?" -> GET /calendars/{calendarId}/acl
-- "Share my calendar with a coworker" -> POST /calendars/{calendarId}/acl
-- "When is someone free for a meeting?" -> POST /freeBusy
-- "What calendars am I subscribed to?" -> GET /users/me/calendarList
-- "Move an event to a different calendar" -> POST /calendars/{calendarId}/events/{eventId}/move
-- "Get all instances of a recurring event" -> GET /calendars/{calendarId}/events/{eventId}/instances
-- "Change the color of a calendar in my list" -> PATCH /users/me/calendarList/{calendarId}
-- "What color options are available?" -> GET /colors
-- "Remove a calendar from my list" -> DELETE /users/me/calendarList/{calendarId}
-- "Get notified when events change" -> POST /calendars/{calendarId}/events/watch
-- "What are my calendar settings?" -> GET /users/me/settings
-
-## Response Tips
-
-- **Event lists** (`GET /events`, `/instances`): Paginated via `nextPageToken`; use `nextSyncToken` for incremental sync after the final page. Items are in the `items` array; `accessRole` indicates your permission level on that calendar.
-- **ACL lists** (`GET /acl`): Paginated; each item has a `scope` object (type + value) and a `role` string. Supports `syncToken` for change tracking.
-- **Calendar list** (`GET /calendarList`): Paginated; `primary: true` marks the user's main calendar. Colors come as `colorId` or direct `backgroundColor`/`foregroundColor` RGB values.
-- **FreeBusy** (`POST /freeBusy`): Response nests busy intervals under `calendars.{id}.busy` array and errors under `calendars.{id}.errors`. Group expansion results appear in `groups`.
-- **Watch channels** (all `/watch` endpoints): Return a channel object with `resourceId` and `expiration` -- store both for later stop via `POST /channels/stop`.
-- **Mutations** (POST/PUT/PATCH events): Return the full event object on success. `conferenceData` is only populated when `conferenceDataVersion=1` is set on the request.
-- **Delete endpoints**: Return empty 200 responses with no body.
-
-## Anomaly Flags
-
-- **Watch channel expiration approaching**: Surface when a channel's `expiration` timestamp is within 24 hours -- the agent should proactively renew it.
-- **syncToken invalidation (410 Gone)**: When a sync request returns 410, the token is stale; the agent must discard it and perform a full sync.
-- **Partial attendee lists**: If `attendeesOmitted: true` appears in an event response, the full attendee list was truncated -- re-fetch with a higher `maxAttendees` value.
-- **conferenceData.createRequest status**: When `statusCode` is not `success` (e.g., `pending`), the Google Meet link is not yet ready -- surface this and suggest retrying.
-- **Pagination loops**: If `nextPageToken` keeps returning on successive pages with no progress (same token), flag a possible API issue.
-- **ACL role downgrades**: When an ACL PATCH/PUT response shows a `role` different from what was requested, surface the discrepancy -- the API may have clamped permissions.
-- **Event `status: "cancelled"`**: Events with cancelled status appearing in lists (when `showDeleted: true`) should be flagged rather than silently displayed.
-- **Rate limit errors (403/429)**: Surface immediately with the retry-after interval; Google Calendar enforces per-user and per-calendar quotas.
-
-## Playbook
-
-### 1. Schedule a Meeting with Attendees and Google Meet
-
-1. `POST /calendars/{calendarId}/events` with `summary`, `start`, `end`, `attendees` array, and `conferenceData.createRequest` (set `conferenceDataVersion=1`)
-2. Check the response's `conferenceData.createRequest.status.statusCode` -- if `pending`, wait and re-fetch with `GET /calendars/{calendarId}/events/{eventId}`
-3. Extract `hangoutLink` or `conferenceData.entryPoints` for the meeting URL
-4. Optionally set `sendUpdates: "all"` to notify attendees via email
-
-### 2. Set Up Incremental Event Sync
-
-1. `GET /calendars/{calendarId}/events` -- page through all results using `nextPageToken` until exhausted
-2. Store the final `nextSyncToken` from the last page
-3. On subsequent syncs, call `GET /calendars/{calendarId}/events?syncToken={token}` to get only changes
-4. If the API returns 410 Gone, discard the sync token and repeat from step 1
-5. For push notifications instead of polling, call `POST /calendars/{calendarId}/events/watch` and handle webhooks at your `address`
-
-### 3. Find a Free Slot and Book It
-
-1. `POST /freeBusy` with `items` listing all participant calendar IDs, plus `timeMin`/`timeMax` for the search window
-2. Parse `calendars.{id}.busy` arrays to find overlapping free windows across all participants
-3. `POST /calendars/{calendarId}/events` with the chosen slot's `start`/`end` and all participants in `attendees`
-4. Set `sendUpdates: "all"` so participants receive invitations
-
-### 4. Share a Calendar with Specific Permissions
-
-1. `GET /calendars/{calendarId}/acl` to review current access rules
-2. `POST /calendars/{calendarId}/acl` with `scope: {type: "user", value: "email@example.com"}` and `role` set to one of: `freeBusyReader`, `reader`, `writer`, `owner`
-3. Set `sendNotifications: true` to email the user about the share
-4. To modify later, use `PATCH /calendars/{calendarId}/acl/{ruleId}` with the updated `role`
-5. To revoke, `DELETE /calendars/{calendarId}/acl/{ruleId}`
-
-### 5. Move an Event Between Calendars
-
-1. `GET /calendars/{sourceCalendarId}/events/{eventId}` to confirm the event exists and capture its current state
-2. `POST /calendars/{sourceCalendarId}/events/{eventId}/move?destination={targetCalendarId}` to transfer it
-3. The response contains the event with its new calendar context -- verify `organizer` and `htmlLink` updated correctly
-4. Set `sendUpdates: "all"` if attendees should be notified of the calendar change
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a calendar?" -> POST /calendars
+- "Delete a calendar?" -> DELETE /calendars/{calendarId}
+- "Get calendar details?" -> GET /calendars/{calendarId}
+- "Partially update a calendar?" -> PATCH /calendars/{calendarId}
+- "Update a calendar?" -> PUT /calendars/{calendarId}
+- "List all acl?" -> GET /calendars/{calendarId}/acl
+- "Create a acl?" -> POST /calendars/{calendarId}/acl
+- "Create a watch?" -> POST /calendars/{calendarId}/acl/watch
+- "Delete a acl?" -> DELETE /calendars/{calendarId}/acl/{ruleId}
+- "Get acl details?" -> GET /calendars/{calendarId}/acl/{ruleId}
+- "Partially update a acl?" -> PATCH /calendars/{calendarId}/acl/{ruleId}
+- "Update a acl?" -> PUT /calendars/{calendarId}/acl/{ruleId}
+- "Create a clear?" -> POST /calendars/{calendarId}/clear
+- "Search events?" -> GET /calendars/{calendarId}/events
+- "Create a event?" -> POST /calendars/{calendarId}/events
+- "Create a import?" -> POST /calendars/{calendarId}/events/import
+- "Create a quickAdd?" -> POST /calendars/{calendarId}/events/quickAdd
+- "Create a watch?" -> POST /calendars/{calendarId}/events/watch
+- "Delete a event?" -> DELETE /calendars/{calendarId}/events/{eventId}
+- "Get event details?" -> GET /calendars/{calendarId}/events/{eventId}
+- "Partially update a event?" -> PATCH /calendars/{calendarId}/events/{eventId}
+- "Update a event?" -> PUT /calendars/{calendarId}/events/{eventId}
+- "List all instances?" -> GET /calendars/{calendarId}/events/{eventId}/instances
+- "Create a move?" -> POST /calendars/{calendarId}/events/{eventId}/move
+- "Create a stop?" -> POST /channels/stop
+- "List all colors?" -> GET /colors
+- "Create a freeBusy?" -> POST /freeBusy
+- "List all calendarList?" -> GET /users/me/calendarList
+- "Create a calendarList?" -> POST /users/me/calendarList
+- "Create a watch?" -> POST /users/me/calendarList/watch
+- "Delete a calendarList?" -> DELETE /users/me/calendarList/{calendarId}
+- "Get calendarList details?" -> GET /users/me/calendarList/{calendarId}
+- "Partially update a calendarList?" -> PATCH /users/me/calendarList/{calendarId}
+- "Update a calendarList?" -> PUT /users/me/calendarList/{calendarId}
+- "List all settings?" -> GET /users/me/settings
+- "Create a watch?" -> POST /users/me/settings/watch
+- "Get setting details?" -> GET /users/me/settings/{setting}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

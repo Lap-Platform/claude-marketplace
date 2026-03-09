@@ -154,94 +154,71 @@ https://api.fire.com/business
 |--------|------|-------------|
 | GET | /v2/services | Get service Fees and info |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I authenticate with the Fire API?" -> POST /v1/apps/accesstokens
-- "What accounts do I have?" -> GET /v1/accounts
-- "What is the balance of account 12345?" -> GET /v2/accounts/{ican}
-- "Show me recent transactions for an account" -> GET /v3/accounts/{ican}/transactions
-- "How do I create a payment request?" -> POST /v1/paymentrequests
-- "What is the status of payment request ABC123?" -> GET /v1/paymentrequests/{paymentRequestCode}
-- "What is the current EUR/GBP exchange rate?" -> GET /v2/fx/rate
-- "List all my payees" -> GET /v1/payees
-- "How do I send a batch of bank transfers?" -> POST /v1/batches then POST /v1/batches/{batchUuid}/banktransfers
-- "Block a lost card immediately" -> POST /v1/me/cards/{cardId}/block
-- "What direct debits are active on a mandate?" -> GET /v1/directdebits
-- "Cancel a direct debit mandate" -> POST /v1/mandates/{mandateUuid}/cancel
-- "What banks are available for open banking payments?" -> GET /v1/aspsps
-- "Who are the users on my business account?" -> GET /v1/users
-- "What are my current spending limits?" -> GET /v2/limits
-
-## Response Tips
-
-- **Accounts/Payees/Batches**: List endpoints return `{total, items/accounts/fundingSources}` -- always check `total` for pagination; use `offset`+`limit` params where available.
-- **Transactions**: `/v3/accounts/{ican}/transactions` uses cursor-based pagination via `startAfter` and returns `{links, content}` -- follow `links` for next page rather than computing offsets.
-- **Payment Requests**: Responses include detailed analytics counters (`countTimesViewed*`, `countTimesConsented`, `totalAmountPaid`) -- these track the full payment funnel.
-- **Payments**: Payment objects nest `currency`, `to.account.account`, and `bank` as deep maps -- destructure carefully, especially `to` which is triple-nested.
-- **Batches**: Batch detail returns separate succeeded/failed/submitted counts and values -- compare `numberOfItemsSubmitted` vs `numberOfItemsSucceeded` + `numberOfItemsFailed` to detect in-progress items.
-- **204 responses**: PUT/POST actions (rename account, block card, cancel mandate, reject direct debit) return empty 204 -- success means no body, do not attempt to parse.
-- **Errors**: All endpoints share the same error set (400/401/403) -- 401 means expired token (re-authenticate via `/v1/apps/accesstokens`), 403 means insufficient permissions.
-
-## Anomaly Flags
-
-- **Token expiry approaching**: The access token response includes an `expiry` datetime -- surface a warning when it is within 5 minutes of expiring and prompt re-authentication.
-- **Batch partial failures**: When `numberOfItemsFailed > 0` on a batch, proactively alert the user with the failure count and value rather than silently reporting success.
-- **Payment request underpayment**: If `totalAmountPaid < amount` on a payment request that has `countTimesPaid > 0`, flag that partial payment was received.
-- **Direct debit rejection codes**: When `schemeRejectReason` or `schemeRejectReasonCode` is populated on a direct debit, surface the reason immediately -- these indicate bank-level failures.
-- **Mandate cancellation by scheme**: If a mandate has `schemeCancelReason` populated but was not user-cancelled, alert that the mandate was terminated externally.
-- **FX rate staleness**: The `/v2/fx/rate` response has no timestamp -- warn the user that rates are indicative and may change between quote and execution.
-- **Account status changes**: If an account's `status` is anything other than active, flag it when listing accounts so the user does not attempt operations on a frozen or closed account.
-- **403 on write operations**: May indicate the API app lacks required permissions -- suggest checking `/v1/apps/{applicationId}/permissions` to diagnose.
-
-## Playbook
-
-### 1. Authenticate and List Accounts
-
-1. Call `POST /v1/apps/accesstokens` with your `clientId`, `clientSecret`, and `refreshToken` (grant type `AccessToken`).
-2. Store the returned `accessToken` and note the `expiry` timestamp.
-3. Set the `Authorization: Bearer {accessToken}` header for all subsequent requests.
-4. Call `GET /v2/accounts` to retrieve all accounts with full details.
-5. For any specific account, call `GET /v2/accounts/{ican}` to get balance, IBAN, and account details.
-
-### 2. Create and Track a Payment Request
-
-1. Call `POST /v1/paymentrequests` with `currency`, `type`, `icanTo`, `amount`, `myRef`, and `description`.
-2. Store the returned `code` -- this is the payment request identifier.
-3. Share the payment link with the payer or redirect them using `returnUrl`.
-4. Poll `GET /v1/paymentrequests/{code}` to monitor `status`, `countTimesPaid`, and `totalAmountPaid`.
-5. Once fully paid, call `GET /v2/paymentrequests/{code}/payments` for detailed payment records.
-6. Optionally close the request with `PUT /v2/paymentrequests/{code}/status` setting status to closed.
-
-### 3. Execute a Batch Payment Run
-
-1. Call `POST /v1/batches` with `type` (e.g., `BANK_TRANSFER`), `currency`, and `batchName`.
-2. Store the returned `batchUuid`.
-3. Add items: call `POST /v1/batches/{batchUuid}/banktransfers` (or `internaltransfers`/`internationaltransfers`) for each payment.
-4. Review the batch with `GET /v1/batches/{batchUuid}` -- verify `numberOfItemsSubmitted` matches expectations.
-5. Submit the batch for approval with `PUT /v1/batches/{batchUuid}`.
-6. Check approval status via `GET /v1/batches/{batchUuid}/approvals`.
-7. Monitor completion: poll `GET /v1/batches/{batchUuid}` until `numberOfItemsSucceeded + numberOfItemsFailed == numberOfItemsSubmitted`.
-
-### 4. Manage Direct Debit Mandates
-
-1. Call `GET /v1/mandates` to list all mandates and their statuses.
-2. For a specific mandate, call `GET /v1/mandates/{mandateUuid}` to see collection history and amounts.
-3. To rename a mandate for internal tracking, call `PUT /v1/mandates/{mandateUuid}` with a new `alias`.
-4. To activate a pending mandate, call `POST /v1/mandates/{mandateUuid}/activate`.
-5. To view collections under a mandate, call `GET /v1/directdebits` with `mandateUuid`.
-6. To reject a specific collection, call `POST /v1/directdebits/{directDebitUuid}/reject`.
-7. To cancel the mandate entirely, call `POST /v1/mandates/{mandateUuid}/cancel`.
-
-### 5. Issue and Manage Cards
-
-1. Call `GET /v1/users` to find the `userId` for the cardholder.
-2. Call `POST /v1/cards` with `userId`, `cardPin`, linked `eurIcan`/`gbpIcan`, and `addressType`.
-3. Store the returned `cardId` and `maskedPan`.
-4. View card transactions with `GET /v1/me/cards/{cardId}/transactions` (supports `limit`/`offset` pagination).
-5. If a card is lost or compromised, immediately call `POST /v1/me/cards/{cardId}/block`.
-6. Once resolved, reactivate with `POST /v1/me/cards/{cardId}/unblock`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a accesstoken?" -> POST /v1/apps/accesstokens
+- "List all accounts?" -> GET /v1/accounts
+- "Create a account?" -> POST /v1/accounts
+- "List all accounts?" -> GET /v2/accounts
+- "Get account details?" -> GET /v2/accounts/{ican}
+- "Update a account?" -> PUT /v2/accounts/{ican}
+- "List all activities?" -> GET /v2/activities
+- "Get account details?" -> GET /v1/accounts/{ican}
+- "List all transactions?" -> GET /v3/accounts/{ican}/transactions
+- "List all cards?" -> GET /v1/cards
+- "Create a card?" -> POST /v1/cards
+- "List all transactions?" -> GET /v1/me/cards/{cardId}/transactions
+- "Create a block?" -> POST /v1/me/cards/{cardId}/block
+- "Create a unblock?" -> POST /v1/me/cards/{cardId}/unblock
+- "Create a paymentrequest?" -> POST /v1/paymentrequests
+- "Get paymentrequest details?" -> GET /v1/paymentrequests/{paymentRequestCode}
+- "List all payments?" -> GET /v2/paymentrequests/{paymentRequestCode}/payments
+- "List all reports?" -> GET /v2/paymentrequests/{paymentRequestCode}/reports
+- "List all sent?" -> GET /v2/paymentrequests/sent
+- "List all public?" -> GET /v2/paymentrequests/{paymentRequestCode}/public
+- "List all rate?" -> GET /v2/fx/rate
+- "List all limits?" -> GET /v2/limits
+- "List all test?" -> GET /v2/webhooks/{webhookId}/events/{event}/test
+- "List all webhooks?" -> GET /v2/webhooks
+- "List all newpayees?" -> GET /v2/batches/{batchUuid}/newpayees
+- "Get payment details?" -> GET /v2/payments/{paymentUuid}
+- "List all aspsps?" -> GET /v1/aspsps
+- "List all users?" -> GET /v1/users
+- "Get user details?" -> GET /v1/users/{userId}
+- "List all apps?" -> GET /v1/apps
+- "Create a app?" -> POST /v1/apps
+- "List all permissions?" -> GET /v1/apps/{applicationId}/permissions
+- "List all permissions?" -> GET /v1/apps/permissions
+- "List all payees?" -> GET /v1/payees
+- "Get payee details?" -> GET /v1/payees/{payeeId}
+- "List all transactions?" -> GET /v1/payees/{payeeId}/transactions
+- "List all directdebits?" -> GET /v1/directdebits
+- "Get directdebit details?" -> GET /v1/directdebits/{directDebitUuid}
+- "Create a reject?" -> POST /v1/directdebits/{directDebitUuid}/reject
+- "List all mandates?" -> GET /v1/mandates
+- "Get mandate details?" -> GET /v1/mandates/{mandateUuid}
+- "Update a mandate?" -> PUT /v1/mandates/{mandateUuid}
+- "Create a cancel?" -> POST /v1/mandates/{mandateUuid}/cancel
+- "Create a activate?" -> POST /v1/mandates/{mandateUuid}/activate
+- "Create a batche?" -> POST /v1/batches
+- "List all batches?" -> GET /v1/batches
+- "Create a internaltransfer?" -> POST /v1/batches/{batchUuid}/internaltransfers
+- "List all internaltransfers?" -> GET /v1/batches/{batchUuid}/internaltransfers
+- "Create a banktransfer?" -> POST /v1/batches/{batchUuid}/banktransfers
+- "List all banktransfers?" -> GET /v1/batches/{batchUuid}/banktransfers
+- "Create a internationaltransfer?" -> POST /v2/batches/{batchUuid}/internationaltransfers
+- "List all internationaltransfers?" -> GET /v2/batches/{batchUuid}/internationaltransfers
+- "Delete a internaltransfer?" -> DELETE /v1/batches/{batchUuid}/internaltransfers/{itemUuid}
+- "Delete a banktransfer?" -> DELETE /v1/batches/{batchUuid}/banktransfers/{itemUuid}
+- "Delete a internationaltransfer?" -> DELETE /v2/batches/{batchUuid}/internationaltransfers/{itemUuid}
+- "Delete a batche?" -> DELETE /v1/batches/{batchUuid}
+- "Get batche details?" -> GET /v1/batches/{batchUuid}
+- "Update a batche?" -> PUT /v1/batches/{batchUuid}
+- "List all approvals?" -> GET /v1/batches/{batchUuid}/approvals
+- "List all address?" -> GET /v2/users/{userId}/address
+- "List all services?" -> GET /v2/services
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

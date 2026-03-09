@@ -150,87 +150,127 @@ https://management.azure.com
 |--------|------|-------------|
 | GET | /subscriptions/{subscriptionId}/providers/Microsoft.Billing/billingProperty/default | Get the billing properties for a subscription. This operation is not supported for billing accounts with agreement type Enterprise Agreement. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What billing accounts do I have access to?" -> GET /providers/Microsoft.Billing/billingAccounts
-- "Show me the details of a specific billing account" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}
-- "What invoices were generated this quarter?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/invoices
-- "What is my available balance for a billing profile?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/availableBalance/default
-- "List all subscriptions under a billing account" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingSubscriptions
-- "What products does a specific customer have?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/customers/{customerName}/products
-- "Download invoices in bulk for a billing account" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/downloadDocuments
-- "Transfer a subscription to a different invoice section" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/billingSubscriptions/{billingSubscriptionName}/transfer
-- "Can this subscription be transferred?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/billingSubscriptions/{billingSubscriptionName}/validateTransferEligibility
-- "Who has billing permissions on this account?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingPermissions
-- "What role definitions exist for this billing profile?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/billingRoleDefinitions
-- "Assign a billing role to a user at the account level" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/createBillingRoleAssignment
-- "What transactions occurred for a customer in the last month?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/customers/{customerName}/transactions
-- "Validate a billing address before updating a profile" -> POST /providers/Microsoft.Billing/validateAddress
-- "What agreements are associated with my billing account?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/agreements
-
-## Response Tips
-
-- **List endpoints** (billingAccounts, billingProfiles, invoiceSections, customers, products): Responses return `value` arrays with `nextLink` for pagination; follow `nextLink` until null. Use `$skiptoken` from the URL when present, and `$filter` for server-side narrowing.
-- **Single resource GETs** (billingAccount by name, invoice by name, customer by name): Return a flat object with `id`, `name`, `type`, and a `properties` nested object containing all domain fields -- always drill into `properties` for useful data.
-- **PUT/PATCH mutations** (billingProfiles, invoiceSections, instructions): Return 200 for synchronous completion or 202 with a `Location` header for long-running operations -- poll the Location URL until the operation completes.
-- **Document downloads** (downloadDocuments, pricesheet download): Return 202 with an async operation; the final 200 contains a `url` field with a time-limited SAS link to the actual file.
-- **Transfer operations** (initiateTransfer, acceptTransfer, declineTransfer): Return a transfer object with `transferStatus` -- check for `Completed`, `InProgress`, `Failed`, or `CompletedWithErrors`.
-- **Validation endpoints** (validateAddress, validateTransferEligibility): Return a `status` of `Valid` or `Invalid` with a `validationMessage` array describing each issue.
-- **Role assignments/definitions**: Scoped hierarchically (account > profile > invoiceSection > department > enrollmentAccount) -- ensure you query at the correct scope level or you will get empty results.
-
-## Anomaly Flags
-
-- **202 Accepted without polling**: If a PUT/PATCH/POST returns 202, the agent should surface the `Location` or `Retry-After` header and remind the user the operation is still in progress -- do not treat 202 as a completed success.
-- **Preview API version**: This API uses `2019-10-01-preview` -- surface a warning that this is a preview version; behavior and schemas may change without notice, and production reliance carries risk.
-- **Empty `value` arrays on list endpoints**: If a list returns 200 with an empty `value` array, flag that the caller may lack permissions at the queried scope rather than there being no resources.
-- **Transfer eligibility failures**: When `validateTransferEligibility` returns issues, proactively surface the specific `errorCode` and `message` from each validation result before attempting the actual transfer.
-- **Role assignment deletions**: Deleting a billingRoleAssignment is irreversible -- flag this before executing, especially at the account level where blast radius is highest.
-- **Missing `$expand` on profile/account GETs**: Several endpoints support `$expand` (e.g., for invoice sections, billing profiles) -- if the user asks about nested entities and gets sparse results, suggest re-fetching with `$expand`.
-- **Date range required on invoices/transactions**: These endpoints require `periodStartDate` and `periodEndDate` -- if the user does not specify, the agent should ask rather than guess, since overly broad ranges can return very large datasets.
-
-## Playbook
-
-### 1. Audit billing permissions across all scopes
-
-1. GET `/providers/Microsoft.Billing/billingAccounts` to list all accessible accounts
-2. For each account, GET `.../billingPermissions` to see account-level permissions
-3. GET `.../billingProfiles` for each account, then GET `.../billingProfiles/{name}/billingPermissions` per profile
-4. GET `.../invoiceSections` per profile, then GET `.../invoiceSections/{name}/billingPermissions` per section
-5. Compile results into a scope-to-permission matrix for the caller
-
-### 2. Transfer a subscription between invoice sections
-
-1. GET `.../billingSubscriptions/{name}` to confirm the subscription exists and note its current invoice section
-2. POST `.../invoiceSections/{sourceSectionName}/billingSubscriptions/{name}/validateTransferEligibility` with the target invoice section in the body
-3. Review validation response -- if `status` is not `Valid`, stop and surface issues
-4. POST `.../invoiceSections/{sourceSectionName}/billingSubscriptions/{name}/transfer` with the destination details
-5. If 202 returned, poll the `Location` header until the transfer completes; surface `transferStatus` to the user
-
-### 3. Download invoices for a date range
-
-1. GET `.../billingAccounts/{name}/invoices?periodStartDate=YYYY-MM-DD&periodEndDate=YYYY-MM-DD` to list invoices
-2. Collect the `downloadUrl` values from each invoice in the response
-3. POST `.../billingAccounts/{name}/downloadDocuments` with the `downloadUrls` array
-4. Poll the 202 operation until 200 is returned with the final SAS download link
-5. Present the download URL to the user (note: link is time-limited)
-
-### 4. Set up a new billing profile with invoice section and role assignment
-
-1. PUT `.../billingProfiles/{newProfileName}` with display name, bill-to address, and payment method -- handle 202 by polling
-2. Once the profile is created, PUT `.../billingProfiles/{newProfileName}/invoiceSections/{newSectionName}` with the section display name
-3. POST `.../billingProfiles/{newProfileName}/createBillingRoleAssignment` to grant a user the appropriate billing role
-4. GET `.../billingProfiles/{newProfileName}/policies/default` to review default policies
-5. PUT `.../billingProfiles/{newProfileName}/policies/default` to adjust policies (e.g., marketplace purchases, reservation purchases) as needed
-
-### 5. Investigate a customer's billing activity
-
-1. GET `.../customers/{customerName}` with `$expand` to load full customer details
-2. GET `.../customers/{customerName}/billingSubscriptions` to list all subscriptions
-3. GET `.../customers/{customerName}/products` to list purchased products
-4. GET `.../customers/{customerName}/transactions?periodStartDate=...&periodEndDate=...` for transaction history in the target window
-5. Cross-reference subscription and product IDs with transactions to identify billing anomalies or unexpected charges
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all billingAccounts?" -> GET /providers/Microsoft.Billing/billingAccounts
+- "Get billingAccount details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}
+- "Partially update a billingAccount?" -> PATCH /providers/Microsoft.Billing/billingAccounts/{billingAccountName}
+- "Create a listInvoiceSectionsWithCreateSubscriptionPermission?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/listInvoiceSectionsWithCreateSubscriptionPermission
+- "List all paymentMethods?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/paymentMethods
+- "Create a validateAddress?" -> POST /providers/Microsoft.Billing/validateAddress
+- "List all default?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/availableBalance/default
+- "List all instructions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/instructions
+- "Get instruction details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/instructions/{instructionName}
+- "Update a instruction?" -> PUT /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/instructions/{instructionName}
+- "List all paymentMethods?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/paymentMethods
+- "List all validateDetachPaymentMethodEligibility?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/validateDetachPaymentMethodEligibility
+- "List all billingProfiles?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles
+- "Get billingProfile details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}
+- "Update a billingProfile?" -> PUT /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}
+- "Partially update a billingProfile?" -> PATCH /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}
+- "List all customers?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/customers
+- "List all invoiceSections?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections
+- "Get invoiceSection details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}
+- "Update a invoiceSection?" -> PUT /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}
+- "Partially update a invoiceSection?" -> PATCH /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}
+- "List all customers?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/customers
+- "Get customer details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/customers/{customerName}
+- "List all billingPermissions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/customers/{customerName}/billingPermissions
+- "List all billingSubscriptions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/customers/{customerName}/billingSubscriptions
+- "Get billingSubscription details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/customers/{customerName}/billingSubscriptions/{billingSubscriptionName}
+- "List all products?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/customers/{customerName}/products
+- "Get product details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/customers/{customerName}/products/{productName}
+- "List all transactions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/customers/{customerName}/transactions
+- "List all departments?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/departments
+- "Get department details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/departments/{departmentName}
+- "List all enrollmentAccounts?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/enrollmentAccounts
+- "Get enrollmentAccount details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/enrollmentAccounts/{enrollmentAccountName}
+- "List all invoices?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/invoices
+- "Create a downloadDocument?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/downloadDocuments
+- "Get invoice details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/invoices/{invoiceName}
+- "Create a downloadDocument?" -> POST /providers/Microsoft.Billing/billingAccounts/default/billingSubscriptions/{subscriptionId}/downloadDocuments
+- "Create a download?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoices/{invoiceName}/pricesheet/default/download
+- "Create a download?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/pricesheet/default/download
+- "List all invoices?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoices
+- "Create a downloadDocument?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/downloadDocuments
+- "Get invoice details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoices/{invoiceName}
+- "List all billingSubscriptions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingSubscriptions
+- "List all invoices?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingSubscriptions/{billingSubscriptionName}/invoices
+- "Get invoice details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingSubscriptions/{billingSubscriptionName}/invoices/{invoiceName}
+- "List all billingSubscriptions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/billingSubscriptions
+- "List all billingSubscriptions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/billingSubscriptions
+- "Get billingSubscription details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/billingSubscriptions/{billingSubscriptionName}
+- "Create a transfer?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/billingSubscriptions/{billingSubscriptionName}/transfer
+- "Create a validateTransferEligibility?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/billingSubscriptions/{billingSubscriptionName}/validateTransferEligibility
+- "List all products?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/products
+- "List all products?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/products
+- "Get product details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/products/{productName}
+- "Create a transfer?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/products/{productName}/transfer
+- "Create a validateTransferEligibility?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/products/{productName}/validateTransferEligibility
+- "List all transactions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/transactions
+- "List all transactions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/transactions
+- "List all transactions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/transactions
+- "List all transactions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoices/{invoiceName}/transactions
+- "Get transaction details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/transactions/{transactionName}
+- "List all default?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/policies/default
+- "List all default?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/customers/{customerName}/policies/default
+- "List all default?" -> GET /subscriptions/{subscriptionId}/providers/Microsoft.Billing/billingProperty/default
+- "Create a updateAutoRenew?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/products/{productName}/updateAutoRenew
+- "Create a elevate?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/elevate
+- "Create a initiateTransfer?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/initiateTransfer
+- "Get transfer details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/transfers/{transferName}
+- "Delete a transfer?" -> DELETE /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/transfers/{transferName}
+- "List all transfers?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/transfers
+- "Create a initiateTransfer?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/customers/{customerName}/initiateTransfer
+- "Get transfer details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/customers/{customerName}/transfers/{transferName}
+- "Delete a transfer?" -> DELETE /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/customers/{customerName}/transfers/{transferName}
+- "List all transfers?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/customers/{customerName}/transfers
+- "Create a acceptTransfer?" -> POST /providers/Microsoft.Billing/transfers/{transferName}/acceptTransfer
+- "Create a validateTransfer?" -> POST /providers/Microsoft.Billing/transfers/{transferName}/validateTransfer
+- "Create a declineTransfer?" -> POST /providers/Microsoft.Billing/transfers/{transferName}/declineTransfer
+- "Get transfer details?" -> GET /providers/Microsoft.Billing/transfers/{transferName}
+- "List all transfers?" -> GET /providers/Microsoft.Billing/transfers
+- "List all operations?" -> GET /providers/Microsoft.Billing/operations
+- "List all billingPermissions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingPermissions
+- "List all billingPermissions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/billingPermissions
+- "List all billingPermissions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/billingPermissions
+- "List all billingPermissions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/departments/{departmentName}/billingPermissions
+- "List all billingPermissions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/enrollmentAccounts/{enrollmentAccountName}/billingPermissions
+- "Get billingRoleDefinition details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingRoleDefinitions/{billingRoleDefinitionName}
+- "Get billingRoleDefinition details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/billingRoleDefinitions/{billingRoleDefinitionName}
+- "Get billingRoleDefinition details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/billingRoleDefinitions/{billingRoleDefinitionName}
+- "Get billingRoleDefinition details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/departments/{departmentName}/billingRoleDefinitions/{billingRoleDefinitionName}
+- "Get billingRoleDefinition details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/enrollmentAccounts/{enrollmentAccountName}/billingRoleDefinitions/{billingRoleDefinitionName}
+- "List all billingRoleDefinitions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingRoleDefinitions
+- "List all billingRoleDefinitions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/billingRoleDefinitions
+- "List all billingRoleDefinitions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/billingRoleDefinitions
+- "List all billingRoleDefinitions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/departments/{departmentName}/billingRoleDefinitions
+- "List all billingRoleDefinitions?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/enrollmentAccounts/{enrollmentAccountName}/billingRoleDefinitions
+- "Get billingRoleAssignment details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingRoleAssignments/{billingRoleAssignmentName}
+- "Delete a billingRoleAssignment?" -> DELETE /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingRoleAssignments/{billingRoleAssignmentName}
+- "Update a billingRoleAssignment?" -> PUT /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingRoleAssignments/{billingRoleAssignmentName}
+- "Get billingRoleAssignment details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/billingRoleAssignments/{billingRoleAssignmentName}
+- "Delete a billingRoleAssignment?" -> DELETE /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/billingRoleAssignments/{billingRoleAssignmentName}
+- "Get billingRoleAssignment details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/billingRoleAssignments/{billingRoleAssignmentName}
+- "Delete a billingRoleAssignment?" -> DELETE /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/billingRoleAssignments/{billingRoleAssignmentName}
+- "Get billingRoleAssignment details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/departments/{departmentName}/billingRoleAssignments/{billingRoleAssignmentName}
+- "Delete a billingRoleAssignment?" -> DELETE /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/departments/{departmentName}/billingRoleAssignments/{billingRoleAssignmentName}
+- "Update a billingRoleAssignment?" -> PUT /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/departments/{departmentName}/billingRoleAssignments/{billingRoleAssignmentName}
+- "Get billingRoleAssignment details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/enrollmentAccounts/{enrollmentAccountName}/billingRoleAssignments/{billingRoleAssignmentName}
+- "Delete a billingRoleAssignment?" -> DELETE /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/enrollmentAccounts/{enrollmentAccountName}/billingRoleAssignments/{billingRoleAssignmentName}
+- "Update a billingRoleAssignment?" -> PUT /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/enrollmentAccounts/{enrollmentAccountName}/billingRoleAssignments/{billingRoleAssignmentName}
+- "List all billingRoleAssignments?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingRoleAssignments
+- "Create a createBillingRoleAssignment?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/createBillingRoleAssignment
+- "List all billingRoleAssignments?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/billingRoleAssignments
+- "Create a createBillingRoleAssignment?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/invoiceSections/{invoiceSectionName}/createBillingRoleAssignment
+- "List all billingRoleAssignments?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/billingRoleAssignments
+- "Create a createBillingRoleAssignment?" -> POST /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/billingProfiles/{billingProfileName}/createBillingRoleAssignment
+- "List all billingRoleAssignments?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/departments/{departmentName}/billingRoleAssignments
+- "List all billingRoleAssignments?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/enrollmentAccounts/{enrollmentAccountName}/billingRoleAssignments
+- "List all agreements?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/agreements
+- "Get agreement details?" -> GET /providers/Microsoft.Billing/billingAccounts/{billingAccountName}/agreements/{agreementName}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -115,86 +115,46 @@ https://openrouter.ai/api/v1
 | POST | /auth/keys | Exchange authorization code for API key |
 | POST | /auth/keys/code | Create authorization code |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I send a chat completion request?" -> POST /chat/completions
-- "How much credit do I have left?" -> GET /credits
-- "What models are available on OpenRouter?" -> GET /models
-- "How do I generate embeddings for text?" -> POST /embeddings
-- "What happened with a specific generation?" -> GET /generation?id={id}
-- "How do I create a new API key?" -> POST /keys
-- "How do I set a spending limit on a key?" -> PATCH /keys/{hash}
-- "How do I delete an API key?" -> DELETE /keys/{hash}
-- "What is my current key's usage and rate limit?" -> GET /key
-- "How do I restrict which models a team member can use?" -> POST /guardrails then POST /guardrails/{id}/assignments/members
-- "Which providers support zero data retention?" -> GET /endpoints/zdr
-- "How do I top up credits with crypto?" -> POST /credits/coinbase
-- "What models does a specific author offer?" -> GET /models/{author}/{slug}/endpoints
-- "How do I authenticate a third-party app via OAuth PKCE?" -> POST /auth/keys/code then POST /auth/keys
-- "What is my API usage for a specific date?" -> GET /activity?date={date}
-
-## Response Tips
-
-- **Chat/Responses/Messages**: Response body includes `usage` with token breakdowns (prompt, completion, cached, reasoning) -- always check `usage.total_tokens` and `total_cost` from generation details for billing accuracy.
-- **Models**: `data` is a flat array of all models -- filter client-side by `category` param or post-hoc; no pagination, expect large payloads.
-- **Keys/Guardrails**: List endpoints return `data` arrays with `offset`-based pagination; check `total_count` on guardrails to know if more pages exist.
-- **Credits**: Nested under `data` map -- access as `response.data.total_credits` and `response.data.total_usage`, not top-level.
-- **Generation**: Single-object response with nullable fields (e.g., `upstream_id`, `cache_discount`, `native_tokens_reasoning`) -- check for null before using.
-- **Errors**: All endpoints share a common error pattern; 402 means insufficient credits, 429 means rate limited, 529 means the upstream provider is overloaded.
-
-## Anomaly Flags
-
-- **Rate limit approaching**: Surface when `GET /key` shows `rate_limit.requests` is high relative to `rate_limit.interval`, or when 429 errors start appearing.
-- **Credits running low**: Alert when `GET /credits` shows `total_usage` approaching `total_credits` (< 10% remaining).
-- **Key expiring soon**: Flag when `GET /keys/{hash}` returns an `expires_at` within 48 hours.
-- **Spending limit nearly exhausted**: Warn when `limit_remaining` on a key is below 10% of `limit`.
-- **Deprecated or unusual status codes**: Surface 524 (upstream timeout) and 529 (upstream overload) distinctly -- these are not standard HTTP codes and indicate provider-side issues, not client errors.
-- **Free tier restrictions**: Flag when `GET /key` returns `is_free_tier: true`, as this limits available models and throughput.
-- **Zero data retention failures**: If `provider.zdr: true` was requested but the generation response shows a non-ZDR provider, alert the user to a potential data policy mismatch.
-
-## Playbook
-
-### 1. Send a Chat Completion and Track Cost
-
-1. `POST /chat/completions` with `model`, `messages`, and desired parameters.
-2. Extract `id` from the response (the generation ID).
-3. `GET /generation?id={id}` to retrieve `total_cost`, `tokens_prompt`, `tokens_completion`, and `provider_name`.
-4. Optionally check `GET /credits` to confirm remaining balance.
-
-### 2. Create and Budget-Cap an API Key
-
-1. `POST /keys` with `name`, `limit` (USD cap), and `limit_reset` (e.g., `monthly`).
-2. Save the returned `key` value -- it is only shown once.
-3. Optionally `POST /guardrails` to create a guardrail restricting models or providers.
-4. `POST /guardrails/{id}/assignments/keys` with the key hash to attach the guardrail.
-5. Verify with `GET /keys/{hash}` to confirm `limit`, `limit_remaining`, and guardrail assignment.
-
-### 3. Set Up OAuth PKCE App Authentication
-
-1. Generate a `code_verifier` and derive a `code_challenge` (SHA-256, base64url).
-2. `POST /auth/keys/code` with `callback_url`, `code_challenge`, and `code_challenge_method: "S256"`.
-3. Redirect the user to OpenRouter's auth page with the returned `id`.
-4. On callback, extract the `code` parameter from the redirect URL.
-5. `POST /auth/keys` with `code` and `code_verifier` to receive the API key.
-
-### 4. Compare Models Before Choosing One
-
-1. `GET /models` to list all available models (optionally filter by `category`).
-2. Identify candidate models and note their IDs (format: `{author}/{slug}`).
-3. `GET /models/{author}/{slug}/endpoints` for each candidate to see provider endpoints, pricing, and context lengths.
-4. `GET /endpoints/zdr` if zero data retention is required -- cross-reference with candidate endpoints.
-5. Use the chosen model in `POST /chat/completions` with `provider.only` to pin a specific provider if needed.
-
-### 5. Enforce Team Guardrails
-
-1. `POST /guardrails` with `name`, `limit_usd`, `reset_interval`, and optionally `allowed_models` or `enforce_zdr`.
-2. List team member keys with `GET /keys`.
-3. `POST /guardrails/{id}/assignments/keys` with the relevant `key_hashes` array.
-4. Or assign by member: `POST /guardrails/{id}/assignments/members` with `member_user_ids`.
-5. Verify assignments with `GET /guardrails/{id}/assignments/keys` or `GET /guardrails/{id}/assignments/members`.
-6. To revoke, use `POST /guardrails/{id}/assignments/keys/remove` or `POST /guardrails/{id}/assignments/members/remove`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a response?" -> POST /responses
+- "Create a message?" -> POST /messages
+- "List all activity?" -> GET /activity
+- "Create a completion?" -> POST /chat/completions
+- "List all credits?" -> GET /credits
+- "Create a coinbase?" -> POST /credits/coinbase
+- "Create a embedding?" -> POST /embeddings
+- "List all models?" -> GET /embeddings/models
+- "List all generation?" -> GET /generation
+- "List all count?" -> GET /models/count
+- "List all models?" -> GET /models
+- "List all user?" -> GET /models/user
+- "List all endpoints?" -> GET /models/{author}/{slug}/endpoints
+- "List all zdr?" -> GET /endpoints/zdr
+- "List all providers?" -> GET /providers
+- "List all keys?" -> GET /keys
+- "Create a key?" -> POST /keys
+- "Partially update a key?" -> PATCH /keys/{hash}
+- "Delete a key?" -> DELETE /keys/{hash}
+- "Get key details?" -> GET /keys/{hash}
+- "List all guardrails?" -> GET /guardrails
+- "Create a guardrail?" -> POST /guardrails
+- "Get guardrail details?" -> GET /guardrails/{id}
+- "Partially update a guardrail?" -> PATCH /guardrails/{id}
+- "Delete a guardrail?" -> DELETE /guardrails/{id}
+- "List all keys?" -> GET /guardrails/assignments/keys
+- "List all members?" -> GET /guardrails/assignments/members
+- "List all keys?" -> GET /guardrails/{id}/assignments/keys
+- "Create a key?" -> POST /guardrails/{id}/assignments/keys
+- "List all members?" -> GET /guardrails/{id}/assignments/members
+- "Create a member?" -> POST /guardrails/{id}/assignments/members
+- "Create a remove?" -> POST /guardrails/{id}/assignments/keys/remove
+- "Create a remove?" -> POST /guardrails/{id}/assignments/members/remove
+- "List all key?" -> GET /key
+- "Create a key?" -> POST /auth/keys
+- "Create a code?" -> POST /auth/keys/code
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

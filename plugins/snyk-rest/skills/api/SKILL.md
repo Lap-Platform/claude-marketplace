@@ -301,90 +301,246 @@ https://api.snyk.io/rest
 | GET | /tenants/{tenant_id}/roles/{role_id} | Return a specific role by its id and its tenant id. (Early Access) |
 | PATCH | /tenants/{tenant_id}/roles/{role_id} | Update a specific tenant role by its id and its tenant id. (Early Access) |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Who am I authenticated as?" -> GET /self
-- "List all my organizations" -> GET /orgs
-- "What issues does this org have?" -> GET /orgs/{org_id}/issues
-- "Show me the audit log for my group" -> GET /groups/{group_id}/audit_logs/search
-- "What projects are in this organization?" -> GET /orgs/{org_id}/projects
-- "Get the SBOM for a project" -> GET /orgs/{org_id}/projects/{project_id}/sbom
-- "What custom base images are configured?" -> GET /custom_base_images
-- "List members of a group" -> GET /groups/{group_id}/memberships
-- "Search inventory assets at the tenant level" -> POST /tenants/{tenant_id}/inventory/assets/searches
-- "Create a service account for an org" -> POST /orgs/{org_id}/service_accounts
-- "Export all org data for compliance" -> POST /orgs/{org_id}/export
-- "Check the status of an export job" -> GET /orgs/{org_id}/export/{export_id}
-- "What cloud environments are configured?" -> GET /orgs/{org_id}/cloud/environments
-- "Look up a specific package's vulnerabilities" -> GET /orgs/{org_id}/packages/{purl}/issues
-- "Run a test against an SBOM" -> POST /orgs/{org_id}/sbom_tests
-
-## Response Tips
-
-- **Paginated lists** (orgs, projects, issues, memberships, assets): Use cursor-based pagination via `starting_after` and `ending_before` fields; default `limit` is 10 (audit logs default to 100). Follow the next cursor until no more results.
-- **Issues endpoints**: Filter by `effective_severity_level`, `status`, `ignored`, and date ranges (`created_before/after`, `updated_before/after`); note the 403 error message says "Unauthorized" not "Forbidden" -- handle both.
-- **Export endpoints**: POST returns 202 (accepted); poll GET `/export/{export_id}` until the job completes. Watch for 429 rate limiting on export creation.
-- **Inventory assets**: Support advanced filtering via `filter` query string, field selection via `fields` map, and `meta_count` for totals without full results (`with` or `only`).
-- **SBOM responses**: Specify `format` explicitly (CycloneDX 1.4-1.6 JSON/XML, or SPDX 2.3 JSON); defaults may vary.
-- **Broker endpoints** (tenants): Deeply nested paths with 4-5 UUID path params -- validate all IDs before calling to avoid ambiguous 404s.
-- **Cloud scans/environments**: `status` field uses `queued|in_progress|success|error|null` -- null means not yet started.
-
-## Anomaly Flags
-
-- **429 on export endpoints**: Rate limit hit on `/export` -- surface immediately and suggest waiting before retry. This is the only endpoint that explicitly declares 429.
-- **409 Conflict**: Returned on creates/updates across groups, orgs, tenants, and apps -- indicates duplicate or stale state. Surface the conflict details to the user.
-- **Mixed 403 messages**: Some issue endpoints return `403: Unauthorized` instead of `403: Forbidden` -- flag if access-denied errors appear with inconsistent messaging.
-- **202 Accepted on tests/exports/AI BOMs**: These are async jobs. Proactively remind the user to poll the corresponding GET endpoint for completion status.
-- **303 See Other on test jobs and asset searches**: Redirects indicate the result is ready at another URL -- follow the redirect automatically or surface the location.
-- **503 on AI BOM endpoints**: Service may be temporarily unavailable -- flag and suggest retry with backoff.
-- **Deeply nested broker paths**: 5+ path parameters required -- proactively validate UUID format on all IDs before making the call to avoid opaque errors.
-- **Inventory search two-step pattern**: POST to `/searches` returns 302 with a `search_id`, then GET `/searches/{search_id}/results` for actual data -- surface this flow to avoid confusion.
-
-## Playbook
-
-### 1. Audit an Organization's Security Posture
-
-1. GET /self to confirm authentication and retrieve your user context
-2. GET /orgs to list accessible organizations, note the target `org_id`
-3. GET /orgs/{org_id}/projects to enumerate all monitored projects
-4. GET /orgs/{org_id}/issues with `effective_severity_level=["critical","high"]` to find high-priority vulnerabilities
-5. GET /orgs/{org_id}/issues/{issue_id} for detailed remediation guidance on each critical issue
-6. GET /orgs/{org_id}/projects/{project_id}/sbom with `format=cyclonedx1.6+json` to export the dependency tree for further analysis
-
-### 2. Export Organization Data for Compliance
-
-1. GET /orgs/{org_id} to confirm the organization exists and you have access
-2. POST /orgs/{org_id}/export to initiate the export job (returns 202 with `export_id`)
-3. Poll GET /orgs/{org_id}/export/{export_id} until the job status indicates completion
-4. If 429 is returned on the POST, wait and retry -- only one export can run at a time
-5. Download the completed export payload from the final GET response
-
-### 3. Manage Group Memberships and Access
-
-1. GET /groups to list all groups you can access
-2. GET /groups/{group_id}/memberships with `sort_by=role_name` to review current members and roles
-3. POST /groups/{group_id}/memberships to invite a new user (provide role in request body)
-4. PATCH /groups/{group_id}/memberships/{membership_id} to change a member's role
-5. DELETE /groups/{group_id}/memberships/{membership_id} with `cascade=true` to remove a member and their downstream org memberships
-
-### 4. Set Up Broker Connections for a Tenant
-
-1. GET /tenants/{tenant_id} to verify the tenant and retrieve current config
-2. GET /tenants/{tenant_id}/brokers/deployments to list existing broker deployments
-3. POST /tenants/{tenant_id}/brokers/installs/{install_id}/deployments to create a new deployment
-4. POST /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/connections to add a connection to the deployment
-5. POST /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/credentials to configure credentials
-6. POST /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/contexts to set up the routing context
-
-### 5. Investigate Inventory Assets Across Scopes
-
-1. Decide scope: use `/orgs/{org_id}/inventory/assets`, `/groups/{group_id}/inventory/assets`, or `/tenants/{tenant_id}/inventory/assets`
-2. GET `.../inventory/assets/filters` to discover available filter dimensions
-3. GET `.../inventory/assets/filters/{filter_id}/values` with `q=search_term` to find specific filter values
-4. POST `.../inventory/assets/searches` with your filter criteria (returns 302 with `search_id`)
-5. GET `.../inventory/assets/searches/{search_id}/results` to retrieve matching assets, paginating with `starting_after`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all custom_base_images?" -> GET /custom_base_images
+- "Create a custom_base_image?" -> POST /custom_base_images
+- "Delete a custom_base_image?" -> DELETE /custom_base_images/{custombaseimage_id}
+- "Get custom_base_image details?" -> GET /custom_base_images/{custombaseimage_id}
+- "Partially update a custom_base_image?" -> PATCH /custom_base_images/{custombaseimage_id}
+- "List all groups?" -> GET /groups
+- "Get group details?" -> GET /groups/{group_id}
+- "List all installs?" -> GET /groups/{group_id}/apps/installs
+- "Create a install?" -> POST /groups/{group_id}/apps/installs
+- "Delete a install?" -> DELETE /groups/{group_id}/apps/installs/{install_id}
+- "Create a secret?" -> POST /groups/{group_id}/apps/installs/{install_id}/secrets
+- "Create a search?" -> POST /groups/{group_id}/assets/search
+- "Get asset details?" -> GET /groups/{group_id}/assets/{asset_id}
+- "Partially update a asset?" -> PATCH /groups/{group_id}/assets/{asset_id}
+- "List all assets?" -> GET /groups/{group_id}/assets/{asset_id}/relationships/assets
+- "List all projects?" -> GET /groups/{group_id}/assets/{asset_id}/relationships/projects
+- "List all search?" -> GET /groups/{group_id}/audit_logs/search
+- "Create a export?" -> POST /groups/{group_id}/export
+- "Get export details?" -> GET /groups/{group_id}/export/{export_id}
+- "List all assets?" -> GET /groups/{group_id}/inventory/assets
+- "List all filters?" -> GET /groups/{group_id}/inventory/assets/filters
+- "Search values?" -> GET /groups/{group_id}/inventory/assets/filters/{filter_id}/values
+- "List all groups?" -> GET /groups/{group_id}/inventory/assets/groups
+- "List all values?" -> GET /groups/{group_id}/inventory/assets/groups/{group_field}/values
+- "Create a searche?" -> POST /groups/{group_id}/inventory/assets/searches
+- "List all results?" -> GET /groups/{group_id}/inventory/assets/searches/{search_id}/results
+- "Get asset details?" -> GET /groups/{group_id}/inventory/assets/{asset_id}
+- "Partially update a asset?" -> PATCH /groups/{group_id}/inventory/assets/{asset_id}
+- "List all projects?" -> GET /groups/{group_id}/inventory/assets/{asset_id}/relationships/projects
+- "List all targets?" -> GET /groups/{group_id}/inventory/assets/{asset_id}/relationships/targets
+- "List all issues?" -> GET /groups/{group_id}/issues
+- "Get issue details?" -> GET /groups/{group_id}/issues/{issue_id}
+- "Get export details?" -> GET /groups/{group_id}/jobs/export/{export_id}
+- "List all memberships?" -> GET /groups/{group_id}/memberships
+- "Create a membership?" -> POST /groups/{group_id}/memberships
+- "Delete a membership?" -> DELETE /groups/{group_id}/memberships/{membership_id}
+- "Partially update a membership?" -> PATCH /groups/{group_id}/memberships/{membership_id}
+- "List all org_memberships?" -> GET /groups/{group_id}/org_memberships
+- "List all orgs?" -> GET /groups/{group_id}/orgs
+- "List all policies?" -> GET /groups/{group_id}/policies
+- "Create a policy?" -> POST /groups/{group_id}/policies
+- "Delete a policy?" -> DELETE /groups/{group_id}/policies/{policy_id}
+- "Partially update a policy?" -> PATCH /groups/{group_id}/policies/{policy_id}
+- "List all service_accounts?" -> GET /groups/{group_id}/service_accounts
+- "Create a service_account?" -> POST /groups/{group_id}/service_accounts
+- "Delete a service_account?" -> DELETE /groups/{group_id}/service_accounts/{serviceaccount_id}
+- "Get service_account details?" -> GET /groups/{group_id}/service_accounts/{serviceaccount_id}
+- "Partially update a service_account?" -> PATCH /groups/{group_id}/service_accounts/{serviceaccount_id}
+- "Create a secret?" -> POST /groups/{group_id}/service_accounts/{serviceaccount_id}/secrets
+- "List all iac?" -> GET /groups/{group_id}/settings/iac
+- "List all pull_request_template?" -> GET /groups/{group_id}/settings/pull_request_template
+- "Create a pull_request_template?" -> POST /groups/{group_id}/settings/pull_request_template
+- "List all sso_connections?" -> GET /groups/{group_id}/sso_connections
+- "List all users?" -> GET /groups/{group_id}/sso_connections/{sso_id}/users
+- "Delete a user?" -> DELETE /groups/{group_id}/sso_connections/{sso_id}/users/{user_id}
+- "Partially update a user?" -> PATCH /groups/{group_id}/users/{id}
+- "List all catalog?" -> GET /learn/catalog
+- "List all openapi?" -> GET /openapi
+- "Get openapi details?" -> GET /openapi/{version}
+- "List all orgs?" -> GET /orgs
+- "Get org details?" -> GET /orgs/{org_id}
+- "Partially update a org?" -> PATCH /orgs/{org_id}
+- "Get ai_bom_job details?" -> GET /orgs/{org_id}/ai_bom_jobs/{job_id}
+- "Create a ai_bom?" -> POST /orgs/{org_id}/ai_boms
+- "Create a upload?" -> POST /orgs/{org_id}/ai_boms/upload
+- "Get ai_bom details?" -> GET /orgs/{org_id}/ai_boms/{ai_bom_id}
+- "List all app_bots?" -> GET /orgs/{org_id}/app_bots
+- "Delete a app_bot?" -> DELETE /orgs/{org_id}/app_bots/{bot_id}
+- "List all apps?" -> GET /orgs/{org_id}/apps
+- "Create a app?" -> POST /orgs/{org_id}/apps
+- "List all creations?" -> GET /orgs/{org_id}/apps/creations
+- "Create a creation?" -> POST /orgs/{org_id}/apps/creations
+- "Delete a creation?" -> DELETE /orgs/{org_id}/apps/creations/{app_id}
+- "Get creation details?" -> GET /orgs/{org_id}/apps/creations/{app_id}
+- "Partially update a creation?" -> PATCH /orgs/{org_id}/apps/creations/{app_id}
+- "Create a secret?" -> POST /orgs/{org_id}/apps/creations/{app_id}/secrets
+- "List all installs?" -> GET /orgs/{org_id}/apps/installs
+- "Create a install?" -> POST /orgs/{org_id}/apps/installs
+- "Delete a install?" -> DELETE /orgs/{org_id}/apps/installs/{install_id}
+- "Create a secret?" -> POST /orgs/{org_id}/apps/installs/{install_id}/secrets
+- "Delete a app?" -> DELETE /orgs/{org_id}/apps/{client_id}
+- "Get app details?" -> GET /orgs/{org_id}/apps/{client_id}
+- "Partially update a app?" -> PATCH /orgs/{org_id}/apps/{client_id}
+- "Create a secret?" -> POST /orgs/{org_id}/apps/{client_id}/secrets
+- "List all search?" -> GET /orgs/{org_id}/audit_logs/search
+- "List all connections?" -> GET /orgs/{org_id}/brokers/connections
+- "List all environments?" -> GET /orgs/{org_id}/cloud/environments
+- "Create a environment?" -> POST /orgs/{org_id}/cloud/environments
+- "Delete a environment?" -> DELETE /orgs/{org_id}/cloud/environments/{environment_id}
+- "Partially update a environment?" -> PATCH /orgs/{org_id}/cloud/environments/{environment_id}
+- "Create a permission?" -> POST /orgs/{org_id}/cloud/permissions
+- "List all resources?" -> GET /orgs/{org_id}/cloud/resources
+- "List all scans?" -> GET /orgs/{org_id}/cloud/scans
+- "Create a scan?" -> POST /orgs/{org_id}/cloud/scans
+- "Get scan details?" -> GET /orgs/{org_id}/cloud/scans/{scan_id}
+- "List all collections?" -> GET /orgs/{org_id}/collections
+- "Create a collection?" -> POST /orgs/{org_id}/collections
+- "Delete a collection?" -> DELETE /orgs/{org_id}/collections/{collection_id}
+- "Get collection details?" -> GET /orgs/{org_id}/collections/{collection_id}
+- "Partially update a collection?" -> PATCH /orgs/{org_id}/collections/{collection_id}
+- "List all projects?" -> GET /orgs/{org_id}/collections/{collection_id}/relationships/projects
+- "Create a project?" -> POST /orgs/{org_id}/collections/{collection_id}/relationships/projects
+- "List all container_images?" -> GET /orgs/{org_id}/container_images
+- "Get container_image details?" -> GET /orgs/{org_id}/container_images/{image_id}
+- "List all image_target_refs?" -> GET /orgs/{org_id}/container_images/{image_id}/relationships/image_target_refs
+- "Create a dry_run?" -> POST /orgs/{org_id}/container_import/{integration_id}/policy/dry_run
+- "Get dry_run details?" -> GET /orgs/{org_id}/container_import/{integration_id}/policy/dry_run/{job_id}
+- "Get package details?" -> GET /orgs/{org_id}/ecosystems/{ecosystem}/packages/{package_name}
+- "Get version details?" -> GET /orgs/{org_id}/ecosystems/{ecosystem}/packages/{package_name}/versions/{package_version}
+- "Create a export?" -> POST /orgs/{org_id}/export
+- "Get export details?" -> GET /orgs/{org_id}/export/{export_id}
+- "List all assets?" -> GET /orgs/{org_id}/inventory/assets
+- "List all filters?" -> GET /orgs/{org_id}/inventory/assets/filters
+- "Search values?" -> GET /orgs/{org_id}/inventory/assets/filters/{filter_id}/values
+- "List all groups?" -> GET /orgs/{org_id}/inventory/assets/groups
+- "List all values?" -> GET /orgs/{org_id}/inventory/assets/groups/{group_field}/values
+- "Create a searche?" -> POST /orgs/{org_id}/inventory/assets/searches
+- "List all results?" -> GET /orgs/{org_id}/inventory/assets/searches/{search_id}/results
+- "Get asset details?" -> GET /orgs/{org_id}/inventory/assets/{asset_id}
+- "Partially update a asset?" -> PATCH /orgs/{org_id}/inventory/assets/{asset_id}
+- "List all projects?" -> GET /orgs/{org_id}/inventory/assets/{asset_id}/relationships/projects
+- "List all targets?" -> GET /orgs/{org_id}/inventory/assets/{asset_id}/relationships/targets
+- "List all invites?" -> GET /orgs/{org_id}/invites
+- "Create a invite?" -> POST /orgs/{org_id}/invites
+- "Delete a invite?" -> DELETE /orgs/{org_id}/invites/{invite_id}
+- "List all issues?" -> GET /orgs/{org_id}/issues
+- "Get issue details?" -> GET /orgs/{org_id}/issues/{issue_id}
+- "Get export details?" -> GET /orgs/{org_id}/jobs/export/{export_id}
+- "List all assignments?" -> GET /orgs/{org_id}/learn/assignments
+- "Create a assignment?" -> POST /orgs/{org_id}/learn/assignments
+- "Create a bulk_delete?" -> POST /orgs/{org_id}/learn/assignments/bulk_delete
+- "List all catalog?" -> GET /orgs/{org_id}/learn/progress/catalog
+- "List all users?" -> GET /orgs/{org_id}/learn/progress/users
+- "List all memberships?" -> GET /orgs/{org_id}/memberships
+- "Create a membership?" -> POST /orgs/{org_id}/memberships
+- "Delete a membership?" -> DELETE /orgs/{org_id}/memberships/{membership_id}
+- "Partially update a membership?" -> PATCH /orgs/{org_id}/memberships/{membership_id}
+- "Create a issue?" -> POST /orgs/{org_id}/packages/issues
+- "List all issues?" -> GET /orgs/{org_id}/packages/{purl}/issues
+- "Search policies?" -> GET /orgs/{org_id}/policies
+- "Create a policy?" -> POST /orgs/{org_id}/policies
+- "Delete a policy?" -> DELETE /orgs/{org_id}/policies/{policy_id}
+- "Get policy details?" -> GET /orgs/{org_id}/policies/{policy_id}
+- "Partially update a policy?" -> PATCH /orgs/{org_id}/policies/{policy_id}
+- "List all events?" -> GET /orgs/{org_id}/policies/{policy_id}/events
+- "List all projects?" -> GET /orgs/{org_id}/projects
+- "Delete a project?" -> DELETE /orgs/{org_id}/projects/{project_id}
+- "Get project details?" -> GET /orgs/{org_id}/projects/{project_id}
+- "Partially update a project?" -> PATCH /orgs/{org_id}/projects/{project_id}
+- "List all sbom?" -> GET /orgs/{org_id}/projects/{project_id}/sbom
+- "Create a sbom_test?" -> POST /orgs/{org_id}/sbom_tests
+- "Get sbom_test details?" -> GET /orgs/{org_id}/sbom_tests/{job_id}
+- "List all results?" -> GET /orgs/{org_id}/sbom_tests/{job_id}/results
+- "List all service_accounts?" -> GET /orgs/{org_id}/service_accounts
+- "Create a service_account?" -> POST /orgs/{org_id}/service_accounts
+- "Delete a service_account?" -> DELETE /orgs/{org_id}/service_accounts/{serviceaccount_id}
+- "Get service_account details?" -> GET /orgs/{org_id}/service_accounts/{serviceaccount_id}
+- "Partially update a service_account?" -> PATCH /orgs/{org_id}/service_accounts/{serviceaccount_id}
+- "Create a secret?" -> POST /orgs/{org_id}/service_accounts/{serviceaccount_id}/secrets
+- "List all iac?" -> GET /orgs/{org_id}/settings/iac
+- "List all opensource?" -> GET /orgs/{org_id}/settings/opensource
+- "List all sast?" -> GET /orgs/{org_id}/settings/sast
+- "Delete a slack_app?" -> DELETE /orgs/{org_id}/slack_app/{bot_id}
+- "Get slack_app details?" -> GET /orgs/{org_id}/slack_app/{bot_id}
+- "List all projects?" -> GET /orgs/{org_id}/slack_app/{bot_id}/projects
+- "Delete a project?" -> DELETE /orgs/{org_id}/slack_app/{bot_id}/projects/{project_id}
+- "Partially update a project?" -> PATCH /orgs/{org_id}/slack_app/{bot_id}/projects/{project_id}
+- "List all channels?" -> GET /orgs/{org_id}/slack_app/{tenant_id}/channels
+- "Get channel details?" -> GET /orgs/{org_id}/slack_app/{tenant_id}/channels/{channel_id}
+- "List all targets?" -> GET /orgs/{org_id}/targets
+- "Delete a target?" -> DELETE /orgs/{org_id}/targets/{target_id}
+- "Get target details?" -> GET /orgs/{org_id}/targets/{target_id}
+- "Get test_job details?" -> GET /orgs/{org_id}/test_jobs/{job_id}
+- "Create a test?" -> POST /orgs/{org_id}/tests
+- "Get test details?" -> GET /orgs/{org_id}/tests/{test_id}
+- "List all findings?" -> GET /orgs/{org_id}/tests/{test_id}/findings
+- "Get user details?" -> GET /orgs/{org_id}/users/{id}
+- "List all self?" -> GET /self
+- "List all access_requests?" -> GET /self/access_requests
+- "List all apps?" -> GET /self/apps
+- "List all installs?" -> GET /self/apps/installs
+- "Delete a install?" -> DELETE /self/apps/installs/{install_id}
+- "Delete a app?" -> DELETE /self/apps/{app_id}
+- "List all sessions?" -> GET /self/apps/{app_id}/sessions
+- "Delete a session?" -> DELETE /self/apps/{app_id}/sessions/{session_id}
+- "List all personal_access_tokens?" -> GET /self/personal_access_tokens
+- "Delete a personal_access_token?" -> DELETE /self/personal_access_tokens/{personal_access_token_id}
+- "List all tenants?" -> GET /tenants
+- "Get tenant details?" -> GET /tenants/{tenant_id}
+- "Partially update a tenant?" -> PATCH /tenants/{tenant_id}
+- "List all integrations?" -> GET /tenants/{tenant_id}/brokers/connections/{connection_id}/integrations
+- "Create a integration?" -> POST /tenants/{tenant_id}/brokers/connections/{connection_id}/orgs/{org_id}/integration
+- "Delete a integration?" -> DELETE /tenants/{tenant_id}/brokers/connections/{connection_id}/orgs/{org_id}/integrations/{integration_id}
+- "List all deployments?" -> GET /tenants/{tenant_id}/brokers/deployments
+- "List all contexts?" -> GET /tenants/{tenant_id}/brokers/installs/{install_id}/connections/{connection_id}/contexts
+- "Delete a context?" -> DELETE /tenants/{tenant_id}/brokers/installs/{install_id}/contexts/{context_id}
+- "Get context details?" -> GET /tenants/{tenant_id}/brokers/installs/{install_id}/contexts/{context_id}
+- "Partially update a context?" -> PATCH /tenants/{tenant_id}/brokers/installs/{install_id}/contexts/{context_id}
+- "Delete a integration?" -> DELETE /tenants/{tenant_id}/brokers/installs/{install_id}/contexts/{context_id}/integrations/{integration_id}
+- "List all deployments?" -> GET /tenants/{tenant_id}/brokers/installs/{install_id}/deployments
+- "Create a deployment?" -> POST /tenants/{tenant_id}/brokers/installs/{install_id}/deployments
+- "Delete a deployment?" -> DELETE /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}
+- "Partially update a deployment?" -> PATCH /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}
+- "List all connections?" -> GET /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/connections
+- "Create a connection?" -> POST /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/connections
+- "Delete a connection?" -> DELETE /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/connections/{connection_id}
+- "Get connection details?" -> GET /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/connections/{connection_id}
+- "Partially update a connection?" -> PATCH /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/connections/{connection_id}
+- "List all bulk_migration?" -> GET /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/connections/{connection_id}/bulk_migration
+- "Create a bulk_migration?" -> POST /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/connections/{connection_id}/bulk_migration
+- "List all contexts?" -> GET /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/contexts
+- "Create a context?" -> POST /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/contexts
+- "List all credentials?" -> GET /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/credentials
+- "Create a credential?" -> POST /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/credentials
+- "Delete a credential?" -> DELETE /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/credentials/{credential_id}
+- "Get credential details?" -> GET /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/credentials/{credential_id}
+- "Partially update a credential?" -> PATCH /tenants/{tenant_id}/brokers/installs/{install_id}/deployments/{deployment_id}/credentials/{credential_id}
+- "List all assets?" -> GET /tenants/{tenant_id}/inventory/assets
+- "List all filters?" -> GET /tenants/{tenant_id}/inventory/assets/filters
+- "Search values?" -> GET /tenants/{tenant_id}/inventory/assets/filters/{filter_id}/values
+- "List all groups?" -> GET /tenants/{tenant_id}/inventory/assets/groups
+- "List all values?" -> GET /tenants/{tenant_id}/inventory/assets/groups/{group_field}/values
+- "Create a searche?" -> POST /tenants/{tenant_id}/inventory/assets/searches
+- "List all results?" -> GET /tenants/{tenant_id}/inventory/assets/searches/{search_id}/results
+- "Get asset details?" -> GET /tenants/{tenant_id}/inventory/assets/{asset_id}
+- "Partially update a asset?" -> PATCH /tenants/{tenant_id}/inventory/assets/{asset_id}
+- "List all projects?" -> GET /tenants/{tenant_id}/inventory/assets/{asset_id}/relationships/projects
+- "List all targets?" -> GET /tenants/{tenant_id}/inventory/assets/{asset_id}/relationships/targets
+- "List all memberships?" -> GET /tenants/{tenant_id}/memberships
+- "Delete a membership?" -> DELETE /tenants/{tenant_id}/memberships/{membership_id}
+- "Partially update a membership?" -> PATCH /tenants/{tenant_id}/memberships/{membership_id}
+- "List all roles?" -> GET /tenants/{tenant_id}/roles
+- "Create a role?" -> POST /tenants/{tenant_id}/roles
+- "Delete a role?" -> DELETE /tenants/{tenant_id}/roles/{role_id}
+- "Get role details?" -> GET /tenants/{tenant_id}/roles/{role_id}
+- "Partially update a role?" -> PATCH /tenants/{tenant_id}/roles/{role_id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

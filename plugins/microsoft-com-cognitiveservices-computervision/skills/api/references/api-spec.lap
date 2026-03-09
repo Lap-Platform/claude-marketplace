@@ -9,66 +9,75 @@
 
 @group analyze
 @endpoint POST /analyze
-@required {ImageUrl: map}
-@optional {visualFeatures: any, details: any, language: any, descriptionExclude: any}
-@returns(200)
+@desc This operation extracts a rich set of visual features based on the image content.
+@required {ImageUrl: map # A JSON document with a URL pointing to the image that is to be analyzed.}
+@optional {visualFeatures: any # A string indicating what visual feature types to return. Multiple values should be comma-separated. Valid visual feature types include: Categories - categorizes image content according to a taxonomy defined in documentation. Tags - tags the image with a detailed list of words related to the image content. Description - describes the image content with a complete English sentence. Faces - detects if faces are present. If present, generate coordinates, gender and age. ImageType - detects if image is clipart or a line drawing. Color - determines the accent color, dominant color, and whether an image is black&white. Adult - detects if the image is pornographic in nature (depicts nudity or a sex act), or is gory (depicts extreme violence or blood). Sexually suggestive content (aka racy content) is also detected. Objects - detects various objects within an image, including the approximate location. The Objects argument is only available in English. Brands - detects various brands within an image, including the approximate location. The Brands argument is only available in English., details: any # A string indicating which domain-specific details to return. Multiple values should be comma-separated. Valid visual feature types include: Celebrities - identifies celebrities if detected in the image, Landmarks - identifies notable landmarks in the image., language: any # The desired language for output generation. If this parameter is not specified, the default value is &quot;en&quot;.Supported languages:en - English, Default. es - Spanish, ja - Japanese, pt - Portuguese, zh - Simplified Chinese., descriptionExclude: any # Turn off specified domain models when generating the description.}
+@returns(200) The response include the extracted features in JSON format. Here is the definitions for enumeration types:
 
 @endgroup
 
 @group describe
 @endpoint POST /describe
-@required {ImageUrl: map}
-@optional {maxCandidates: any, language: any, descriptionExclude: any}
-@returns(200)
+@desc This operation generates a description of an image in human readable language with complete sentences. The description is based on a collection of content tags, which are also returned by the operation. More than one description can be generated for each image. Descriptions are ordered by their confidence score. Descriptions may include results from celebrity and landmark domain models, if applicable.
+@required {ImageUrl: map # A JSON document with a URL pointing to the image that is to be analyzed.}
+@optional {maxCandidates: any # Maximum number of candidate descriptions to be returned.  The default is 1., language: any # The desired language for output generation. If this parameter is not specified, the default value is &quot;en&quot;.Supported languages:en - English, Default. es - Spanish, ja - Japanese, pt - Portuguese, zh - Simplified Chinese., descriptionExclude: any # Turn off specified domain models when generating the description.}
+@returns(200) Image description object.
 
 @endgroup
 
 @group detect
 @endpoint POST /detect
-@required {ImageUrl: map}
-@returns(200)
+@desc Performs object detection on the specified image.
+@required {ImageUrl: map # A JSON document with a URL pointing to the image that is to be analyzed.}
+@returns(200) The response include the detected objects in JSON format.
 
 @endgroup
 
 @group models
 @endpoint GET /models
-@returns(200)
+@desc This operation returns the list of domain-specific models that are supported by the Computer Vision API. Currently, the API supports following domain-specific models: celebrity recognizer, landmark recognizer.
+@returns(200) List of available domain models.
 
 @endpoint POST /models/{model}/analyze
-@required {model: any, ImageUrl: map}
-@optional {language: any}
-@returns(200)
+@desc This operation recognizes content within an image by applying a domain-specific model. The list of domain-specific models that are supported by the Computer Vision API can be retrieved using the /models GET request. Currently, the API provides following domain-specific models: celebrities, landmarks.
+@required {model: any # The domain-specific content to recognize., ImageUrl: map # A JSON document with a URL pointing to the image that is to be analyzed.}
+@optional {language: any # The desired language for output generation. If this parameter is not specified, the default value is &quot;en&quot;.Supported languages:en - English, Default. es - Spanish, ja - Japanese, pt - Portuguese, zh - Simplified Chinese.}
+@returns(200) Analysis result based on the domain model.
 
 @endgroup
 
 @group ocr
 @endpoint POST /ocr
-@required {detectOrientation: any, ImageUrl: map}
-@optional {language: any}
-@returns(200)
+@desc Optical Character Recognition (OCR) detects text in an image and extracts the recognized characters into a machine-usable character stream.
+@required {detectOrientation: any # Whether detect the text orientation in the image. With detectOrientation=true the OCR service tries to detect the image orientation and correct it before further processing (e.g. if it's upside-down)., ImageUrl: map # A JSON document with a URL pointing to the image that is to be analyzed.}
+@optional {language: any # The BCP-47 language code of the text to be detected in the image. The default value is 'unk'.}
+@returns(200) The OCR results in the hierarchy of region/line/word. The results include text, bounding box for regions, lines and words. The angle, in radians, of the detected text with respect to the closest horizontal or vertical direction. After rotating the input image clockwise by this angle, the recognized text lines become horizontal or vertical. In combination with the orientation property it can be used to overlay recognition results correctly on the original image, by rotating either the original image or recognition results by a suitable angle around the center of the original image. If the angle cannot be confidently detected, this property is not present. If the image contains text at different angles, only part of the text will be recognized correctly.
 
 @endgroup
 
 @group tag
 @endpoint POST /tag
-@required {ImageUrl: map}
-@optional {language: any}
-@returns(200)
+@desc This operation generates a list of words, or tags, that are relevant to the content of the supplied image. The Computer Vision API can return tags based on objects, living beings, scenery or actions found in images. Unlike categories, tags are not organized according to a hierarchical classification system, but correspond to image content. Tags may contain hints to avoid ambiguity or provide context, for example the tag "ascomycete" may be accompanied by the hint "fungus".
+@required {ImageUrl: map # A JSON document with a URL pointing to the image that is to be analyzed.}
+@optional {language: any # The desired language for output generation. If this parameter is not specified, the default value is &quot;en&quot;.Supported languages:en - English, Default. es - Spanish, ja - Japanese, pt - Portuguese, zh - Simplified Chinese.}
+@returns(200) Image tags object.
 
 @endgroup
 
 @group generateThumbnail
 @endpoint POST /generateThumbnail
-@required {width: any, height: any, ImageUrl: map}
-@optional {smartCropping: any}
-@returns(200)
+@desc This operation generates a thumbnail image with the user-specified width and height. By default, the service analyzes the image, identifies the region of interest (ROI), and generates smart cropping coordinates based on the ROI. Smart cropping helps when you specify an aspect ratio that differs from that of the input image.
+@required {width: any # Width of the thumbnail, in pixels. It must be between 1 and 1024. Recommended minimum of 50., height: any # Height of the thumbnail, in pixels. It must be between 1 and 1024. Recommended minimum of 50., ImageUrl: map # A JSON document with a URL pointing to the image that is to be analyzed.}
+@optional {smartCropping: any # Boolean flag for enabling smart cropping.}
+@returns(200) The generated thumbnail in binary format.
 
 @endgroup
 
 @group areaOfInterest
 @endpoint POST /areaOfInterest
-@required {ImageUrl: map}
-@returns(200)
+@desc This operation returns a bounding box around the most important area of the image.
+@required {ImageUrl: map # A JSON document with a URL pointing to the image that is to be analyzed.}
+@returns(200) The response includes the extracted area of interest in JSON format.
 
 @endgroup
 

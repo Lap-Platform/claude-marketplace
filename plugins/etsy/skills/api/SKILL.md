@@ -130,93 +130,110 @@ https://openapi.etsy.com
 | GET | /v3/application/users/{user_id} | <div class="wt-display-flex-xs wt-align-items-center wt-mt-xs-2 wt-mb-xs-3"><span class="wt-badge wt-badge--notificationPrimary wt-bg-slime-tint wt-mr-xs-2">General Release</span><a class="wt-text-link" href="https://github.com/etsy/open-api/discussions" target="_blank" rel="noopener noreferrer">Report bug</a></div><div class="wt-display-flex-xs wt-align-items-center wt-mt-xs-2 wt-mb-xs-3"><p class="wt-text-body-01 banner-text">This endpoint is ready for production use.</p></div> |
 | GET | /v3/application/users/me | <div class="wt-display-flex-xs wt-align-items-center wt-mt-xs-2 wt-mb-xs-3"><span class="wt-badge wt-badge--notificationPrimary wt-bg-slime-tint wt-mr-xs-2">General Release</span><a class="wt-text-link" href="https://github.com/etsy/open-api/discussions" target="_blank" rel="noopener noreferrer">Report bug</a></div><div class="wt-display-flex-xs wt-align-items-center wt-mt-xs-2 wt-mb-xs-3"><p class="wt-text-body-01 banner-text">This endpoint is ready for production use.</p></div> |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I search for active listings on Etsy?" -> GET /v3/application/listings/active
-- "What are the categories/taxonomy nodes for buyers?" -> GET /v3/application/buyer-taxonomy/nodes
-- "How do I create a new listing in my shop?" -> POST /v3/application/shops/{shop_id}/listings
-- "How do I update an existing listing?" -> PATCH /v3/application/shops/{shop_id}/listings/{listing_id}
-- "How do I check my shop's recent orders?" -> GET /v3/application/shops/{shop_id}/receipts
-- "How do I add tracking info to an order?" -> POST /v3/application/shops/{shop_id}/receipts/{receipt_id}/tracking
-- "How do I upload images to a listing?" -> POST /v3/application/shops/{shop_id}/listings/{listing_id}/images
-- "How do I manage inventory and product variations?" -> PUT /v3/application/listings/{listing_id}/inventory
-- "What reviews does my shop have?" -> GET /v3/application/shops/{shop_id}/reviews
-- "How do I find a shop by name?" -> GET /v3/application/shops
-- "How do I look up my own user info and shop?" -> GET /v3/application/users/me
-- "How do I set up shipping profiles for my shop?" -> POST /v3/application/shops/{shop_id}/shipping-profiles
-- "How do I fetch multiple listings at once?" -> GET /v3/application/listings/batch
-- "How do I add personalization options to a listing?" -> POST /v3/application/shops/{shop_id}/listings/{listing_id}/personalization
-- "How do I view my shop's ledger entries for accounting?" -> GET /v3/application/shops/{shop_id}/payment-account/ledger-entries
-
-## Response Tips
-
-- **List endpoints** (listings, receipts, reviews, sections): All return `{count, results}`. Use `count` for total available, `results` for the current page. Paginate with `limit` (default 25) and `offset`. The `count` value reflects the total matching set, not the page size.
-- **Single-resource GETs** (listing, shop, receipt, transaction): Return the full object directly. Nullable fields (marked `?`) may be absent or null -- always check before accessing nested properties like `price`, `shipping_profile`, or `personalization_instructions`.
-- **DELETE endpoints**: Return 204 with no body. A 409 typically means a conflict (e.g., listing has active transactions). A 404 means the resource was already removed or never existed.
-- **Inventory endpoints**: Return `products` array with nested `offerings` and `property_values` -- these are deeply nested structures. The sibling arrays `price_on_property`, `quantity_on_property`, and `sku_on_property` indicate which property IDs drive price/quantity/SKU variation.
-- **Price and cost fields**: Returned as `any` type -- typically an object with `amount` and `divisor` or `currency_code`. Never assume it is a simple number.
-- **Receipts**: Contain nested `shipments`, `transactions`, and `refunds` arrays. Use these to determine fulfillment state rather than relying solely on `is_shipped`/`is_paid` booleans.
-- **Timestamps**: All `*_timestamp` fields are Unix epoch integers (seconds). Fields named `create_date`/`update_date` are legacy equivalents.
-
-## Anomaly Flags
-
-- **409 Conflict on DELETE**: Surface when deleting a listing, file, or return policy returns 409 -- usually means dependent resources (active transactions, linked policies) must be resolved first.
-- **503 on taxonomy or sections**: The seller taxonomy and shop sections endpoints can return 503 (Service Unavailable). Flag this as a transient Etsy platform issue and suggest retry with backoff.
-- **422 on inventory update**: A 422 (Unprocessable Entity) from `GET /v3/application/listings/{listing_id}/inventory` indicates data integrity issues -- flag for manual review in Etsy Seller dashboard.
-- **Empty price object**: When `price` comes back as null or an unexpected shape, warn the user since this usually indicates a draft listing or a data sync lag.
-- **`is_vacation` is true on shop**: Proactively surface when a shop has vacation mode enabled, as it affects listing visibility and buyer expectations.
-- **`state` is not "active"**: When fetching listings, flag any that return as `draft`, `expired`, `sold_out`, or `inactive` if the user expected active inventory.
-- **`should_auto_renew` is false**: Flag listings where auto-renew is off since they will expire after 4 months and disappear from search.
-- **Missing `shipping_profile_id`**: A listing without a shipping profile cannot be activated. Surface this when creating or reviewing listings.
-- **`readiness_state_id` inconsistencies**: If a listing references a readiness state that does not exist in the shop's definitions, flag it as a configuration mismatch.
-
-## Playbook
-
-### 1. Create and Publish a New Listing
-
-1. `GET /v3/application/users/me` to get your `shop_id`.
-2. `GET /v3/application/seller-taxonomy/nodes` to find the correct `taxonomy_id` for your product category.
-3. `GET /v3/application/seller-taxonomy/nodes/{taxonomy_id}/properties` to discover required listing properties for that category.
-4. `GET /v3/application/shops/{shop_id}/shipping-profiles` to pick an existing shipping profile (or create one with POST).
-5. `GET /v3/application/shops/{shop_id}/policies/return` to pick a return policy.
-6. `POST /v3/application/shops/{shop_id}/listings` with title, description, quantity, price, `who_made`, `when_made`, `is_supply`, `taxonomy_id`, `shipping_profile_id`, and `return_policy_id`.
-7. `POST /v3/application/shops/{shop_id}/listings/{listing_id}/images` to upload at least one product image.
-8. `PUT /v3/application/listings/{listing_id}/inventory` to set inventory, pricing, and variations.
-9. `PATCH /v3/application/shops/{shop_id}/listings/{listing_id}` with `state: "active"` to publish.
-
-### 2. Fulfill an Order with Tracking
-
-1. `GET /v3/application/shops/{shop_id}/receipts?was_paid=true&was_shipped=false` to find paid but unshipped orders.
-2. `GET /v3/application/shops/{shop_id}/receipts/{receipt_id}` to review order details, items, and shipping address.
-3. `GET /v3/application/shops/{shop_id}/receipts/{receipt_id}/transactions` to see individual line items and quantities.
-4. `POST /v3/application/shops/{shop_id}/receipts/{receipt_id}/tracking` with carrier name and tracking number.
-5. Verify with `GET /v3/application/shops/{shop_id}/receipts/{receipt_id}` and confirm `is_shipped` is now true.
-
-### 3. Manage Inventory and Variations
-
-1. `GET /v3/application/listings/{listing_id}/inventory` to see current products, offerings, and variation properties.
-2. Review `price_on_property` and `quantity_on_property` to understand which properties drive price/stock.
-3. `PUT /v3/application/listings/{listing_id}/inventory` with updated `products` array -- each product contains `property_values` (e.g., color, size) and `offerings` (price, quantity, enabled state).
-4. `GET /v3/application/listings/{listing_id}/inventory` again to confirm changes took effect.
-5. Optionally, `POST /v3/application/shops/{shop_id}/listings/{listing_id}/variation-images` to map specific images to each variation.
-
-### 4. Set Up Shipping for International Sales
-
-1. `GET /v3/application/shipping-carriers?origin_country_iso=US` (or your country) to find supported carriers and mail classes.
-2. `POST /v3/application/shops/{shop_id}/shipping-profiles` with `title`, `origin_country_iso`, handling fees, and `profile_type`.
-3. `POST /v3/application/shops/{shop_id}/shipping-profiles/{shipping_profile_id}/destinations` for each destination region (domestic, specific countries, "everywhere else") with primary and secondary costs.
-4. Optionally, `POST /v3/application/shops/{shop_id}/shipping-profiles/{shipping_profile_id}/upgrades` to offer expedited shipping options.
-5. `PATCH /v3/application/shops/{shop_id}/listings/{listing_id}` with the new `shipping_profile_id` to apply the profile to listings.
-
-### 5. Monitor Shop Performance and Reviews
-
-1. `GET /v3/application/shops/{shop_id}` to check `review_count`, `review_average`, `transaction_sold_count`, `listing_active_count`, and vacation mode status.
-2. `GET /v3/application/shops/{shop_id}/reviews?limit=25&sort_order=desc` to read recent reviews.
-3. `GET /v3/application/shops/{shop_id}/payment-account/ledger-entries?min_created={start}&max_created={end}` to pull financial transactions for a date range.
-4. `GET /v3/application/shops/{shop_id}/payment-account/ledger-entries/payments` with specific `ledger_entry_ids` to drill into payment details.
-5. `GET /v3/application/shops/{shop_id}/transactions?limit=25` to review recent sales transactions and identify top-selling products.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all nodes?" -> GET /v3/application/buyer-taxonomy/nodes
+- "List all properties?" -> GET /v3/application/buyer-taxonomy/nodes/{taxonomy_id}/properties
+- "Create a listing?" -> POST /v3/application/shops/{shop_id}/listings
+- "List all listings?" -> GET /v3/application/shops/{shop_id}/listings
+- "Delete a listing?" -> DELETE /v3/application/listings/{listing_id}
+- "Get listing details?" -> GET /v3/application/listings/{listing_id}
+- "Delete a file?" -> DELETE /v3/application/shops/{shop_id}/listings/{listing_id}/files/{listing_file_id}
+- "Get file details?" -> GET /v3/application/shops/{shop_id}/listings/{listing_id}/files/{listing_file_id}
+- "List all files?" -> GET /v3/application/shops/{shop_id}/listings/{listing_id}/files
+- "Create a file?" -> POST /v3/application/shops/{shop_id}/listings/{listing_id}/files
+- "List all active?" -> GET /v3/application/listings/active
+- "List all active?" -> GET /v3/application/shops/{shop_id}/listings/active
+- "Delete a image?" -> DELETE /v3/application/shops/{shop_id}/listings/{listing_id}/images/{listing_image_id}
+- "Get image details?" -> GET /v3/application/listings/{listing_id}/images/{listing_image_id}
+- "List all images?" -> GET /v3/application/listings/{listing_id}/images
+- "Create a image?" -> POST /v3/application/shops/{shop_id}/listings/{listing_id}/images
+- "List all inventory?" -> GET /v3/application/listings/{listing_id}/inventory
+- "Get product details?" -> GET /v3/application/listings/{listing_id}/inventory/products/{product_id}
+- "Get offering details?" -> GET /v3/application/listings/{listing_id}/products/{product_id}/offerings/{product_offering_id}
+- "List all batch?" -> GET /v3/application/listings/batch
+- "List all featured?" -> GET /v3/application/shops/{shop_id}/listings/featured
+- "Create a personalization?" -> POST /v3/application/shops/{shop_id}/listings/{listing_id}/personalization
+- "List all personalization?" -> GET /v3/application/listings/{listing_id}/personalization
+- "Delete a property?" -> DELETE /v3/application/shops/{shop_id}/listings/{listing_id}/properties/{property_id}
+- "Update a property?" -> PUT /v3/application/shops/{shop_id}/listings/{listing_id}/properties/{property_id}
+- "Get property details?" -> GET /v3/application/listings/{listing_id}/properties/{property_id}
+- "List all properties?" -> GET /v3/application/shops/{shop_id}/listings/{listing_id}/properties
+- "List all transactions?" -> GET /v3/application/shops/{shop_id}/listings/{listing_id}/transactions
+- "Get translation details?" -> GET /v3/application/shops/{shop_id}/listings/{listing_id}/translations/{language}
+- "Update a translation?" -> PUT /v3/application/shops/{shop_id}/listings/{listing_id}/translations/{language}
+- "Partially update a listing?" -> PATCH /v3/application/shops/{shop_id}/listings/{listing_id}
+- "List all variation-images?" -> GET /v3/application/shops/{shop_id}/listings/{listing_id}/variation-images
+- "Create a variation-image?" -> POST /v3/application/shops/{shop_id}/listings/{listing_id}/variation-images
+- "Delete a video?" -> DELETE /v3/application/shops/{shop_id}/listings/{listing_id}/videos/{video_id}
+- "Get video details?" -> GET /v3/application/listings/{listing_id}/videos/{video_id}
+- "List all videos?" -> GET /v3/application/listings/{listing_id}/videos
+- "Create a video?" -> POST /v3/application/shops/{shop_id}/listings/{listing_id}/videos
+- "Get ledger-entry details?" -> GET /v3/application/shops/{shop_id}/payment-account/ledger-entries/{ledger_entry_id}
+- "List all ledger-entries?" -> GET /v3/application/shops/{shop_id}/payment-account/ledger-entries
+- "List all payments?" -> GET /v3/application/shops/{shop_id}/payment-account/ledger-entries/payments
+- "List all payments?" -> GET /v3/application/shops/{shop_id}/receipts/{receipt_id}/payments
+- "List all payments?" -> GET /v3/application/shops/{shop_id}/payments
+- "List all openapi-ping?" -> GET /v3/application/openapi-ping
+- "Get receipt details?" -> GET /v3/application/shops/{shop_id}/receipts/{receipt_id}
+- "Update a receipt?" -> PUT /v3/application/shops/{shop_id}/receipts/{receipt_id}
+- "List all receipts?" -> GET /v3/application/shops/{shop_id}/receipts
+- "List all listings?" -> GET /v3/application/shops/{shop_id}/receipts/{receipt_id}/listings
+- "Create a tracking?" -> POST /v3/application/shops/{shop_id}/receipts/{receipt_id}/tracking
+- "List all transactions?" -> GET /v3/application/shops/{shop_id}/receipts/{receipt_id}/transactions
+- "List all reviews?" -> GET /v3/application/listings/{listing_id}/reviews
+- "List all reviews?" -> GET /v3/application/shops/{shop_id}/reviews
+- "List all nodes?" -> GET /v3/application/seller-taxonomy/nodes
+- "List all properties?" -> GET /v3/application/seller-taxonomy/nodes/{taxonomy_id}/properties
+- "List all shipping-carriers?" -> GET /v3/application/shipping-carriers
+- "Get shop details?" -> GET /v3/application/shops/{shop_id}
+- "Update a shop?" -> PUT /v3/application/shops/{shop_id}
+- "List all shops?" -> GET /v3/application/users/{user_id}/shops
+- "List all holiday-preferences?" -> GET /v3/application/shops/{shop_id}/holiday-preferences
+- "Update a holiday-preference?" -> PUT /v3/application/shops/{shop_id}/holiday-preferences/{holiday_id}
+- "List all shops?" -> GET /v3/application/shops
+- "Create a consolidate?" -> POST /v3/application/shops/{shop_id}/policies/return/consolidate
+- "Create a return?" -> POST /v3/application/shops/{shop_id}/policies/return
+- "List all return?" -> GET /v3/application/shops/{shop_id}/policies/return
+- "Delete a return?" -> DELETE /v3/application/shops/{shop_id}/policies/return/{return_policy_id}
+- "Get return details?" -> GET /v3/application/shops/{shop_id}/policies/return/{return_policy_id}
+- "Update a return?" -> PUT /v3/application/shops/{shop_id}/policies/return/{return_policy_id}
+- "List all listings?" -> GET /v3/application/shops/{shop_id}/policies/return/{return_policy_id}/listings
+- "List all production-partners?" -> GET /v3/application/shops/{shop_id}/production-partners
+- "Create a readiness-state-definition?" -> POST /v3/application/shops/{shop_id}/readiness-state-definitions
+- "List all readiness-state-definitions?" -> GET /v3/application/shops/{shop_id}/readiness-state-definitions
+- "Delete a readiness-state-definition?" -> DELETE /v3/application/shops/{shop_id}/readiness-state-definitions/{readiness_state_definition_id}
+- "Get readiness-state-definition details?" -> GET /v3/application/shops/{shop_id}/readiness-state-definitions/{readiness_state_definition_id}
+- "Update a readiness-state-definition?" -> PUT /v3/application/shops/{shop_id}/readiness-state-definitions/{readiness_state_definition_id}
+- "Create a section?" -> POST /v3/application/shops/{shop_id}/sections
+- "List all sections?" -> GET /v3/application/shops/{shop_id}/sections
+- "Delete a section?" -> DELETE /v3/application/shops/{shop_id}/sections/{shop_section_id}
+- "Get section details?" -> GET /v3/application/shops/{shop_id}/sections/{shop_section_id}
+- "Update a section?" -> PUT /v3/application/shops/{shop_id}/sections/{shop_section_id}
+- "List all listings?" -> GET /v3/application/shops/{shop_id}/shop-sections/listings
+- "Create a shipping-profile?" -> POST /v3/application/shops/{shop_id}/shipping-profiles
+- "List all shipping-profiles?" -> GET /v3/application/shops/{shop_id}/shipping-profiles
+- "Delete a shipping-profile?" -> DELETE /v3/application/shops/{shop_id}/shipping-profiles/{shipping_profile_id}
+- "Get shipping-profile details?" -> GET /v3/application/shops/{shop_id}/shipping-profiles/{shipping_profile_id}
+- "Update a shipping-profile?" -> PUT /v3/application/shops/{shop_id}/shipping-profiles/{shipping_profile_id}
+- "Create a destination?" -> POST /v3/application/shops/{shop_id}/shipping-profiles/{shipping_profile_id}/destinations
+- "List all destinations?" -> GET /v3/application/shops/{shop_id}/shipping-profiles/{shipping_profile_id}/destinations
+- "Delete a destination?" -> DELETE /v3/application/shops/{shop_id}/shipping-profiles/{shipping_profile_id}/destinations/{shipping_profile_destination_id}
+- "Update a destination?" -> PUT /v3/application/shops/{shop_id}/shipping-profiles/{shipping_profile_id}/destinations/{shipping_profile_destination_id}
+- "Create a upgrade?" -> POST /v3/application/shops/{shop_id}/shipping-profiles/{shipping_profile_id}/upgrades
+- "List all upgrades?" -> GET /v3/application/shops/{shop_id}/shipping-profiles/{shipping_profile_id}/upgrades
+- "Delete a upgrade?" -> DELETE /v3/application/shops/{shop_id}/shipping-profiles/{shipping_profile_id}/upgrades/{upgrade_id}
+- "Update a upgrade?" -> PUT /v3/application/shops/{shop_id}/shipping-profiles/{shipping_profile_id}/upgrades/{upgrade_id}
+- "Create a scope?" -> POST /v3/application/scopes
+- "Get transaction details?" -> GET /v3/application/shops/{shop_id}/transactions/{transaction_id}
+- "List all transactions?" -> GET /v3/application/shops/{shop_id}/transactions
+- "Delete a address?" -> DELETE /v3/application/user/addresses/{user_address_id}
+- "Get address details?" -> GET /v3/application/user/addresses/{user_address_id}
+- "List all addresses?" -> GET /v3/application/user/addresses
+- "Get user details?" -> GET /v3/application/users/{user_id}
+- "List all me?" -> GET /v3/application/users/me
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -161,85 +161,128 @@ Not specified.
 | GET | /api/venues |  |
 | POST | /api/venues/{id}/reports |  |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What Vocaloid songs match a keyword?" -> GET /api/songs
-- "Show me details for a specific album" -> GET /api/albums/{id}
-- "Who is this artist and what are their popular songs?" -> GET /api/artists/{id} (with `relations` and `fields` params)
-- "Find songs by a specific artist" -> GET /api/songs (with `artistId[]` filter)
-- "What are the top-rated songs right now?" -> GET /api/songs/top-rated
-- "Look up a song by its YouTube or Niconico video ID" -> GET /api/songs/byPv
-- "What albums were released at a specific event?" -> GET /api/releaseEvents/{eventId}/albums
-- "Show me a user's album collection" -> GET /api/users/{id}/albums
-- "What songs has a user rated?" -> GET /api/users/{id}/ratedSongs
-- "Get the lyrics for a song" -> GET /api/songs/lyrics/{lyricsId}
-- "What artists am I following?" -> GET /api/users/{id}/followedArtists
-- "Find events happening between two dates" -> GET /api/releaseEvents (with `afterDate`/`beforeDate`)
-- "What are the most popular tags for a category?" -> GET /api/tags/top
-- "Search across all entry types at once" -> GET /api/entries
-- "Show me recent edits and activity on the database" -> GET /api/activityEntries
-
-## Response Tips
-
-- **List endpoints** (songs, albums, artists, tags, events, users, songLists, venues): All return `{items, term, totalCount}`. Set `getTotalCount=True` to get the total; default is `False` so `totalCount` may be 0. Paginate with `start` and `maxResults` (defaults vary: 10 for most, 50 for activity/comments, 25 for top-rated).
-- **Detail endpoints** (single song/album/artist/tag/event): Deeply nested objects with optional expansions controlled by `fields` param (comma-separated). Omitting `fields` returns a minimal response; always request the fields you need.
-- **Comment endpoints**: Comments across all entry types share the same structure (`author`, `message`, `created`, `entry`). The `entry` sub-object is polymorphic and includes fields for all entry types (many will be empty strings or defaults).
-- **Delete endpoints**: Return bare 200 with no body. Some support `hardDelete` (events, tags, songLists, venues); albums, artists, and songs only soft-delete.
-- **Name autocomplete** (`/names` variants): Return flat arrays of strings, not the standard `{items, totalCount}` wrapper.
-
-## Anomaly Flags
-
-- **Deleted or merged entries**: Surface `deleted: true` or non-zero `mergedTo` fields immediately -- the user is likely looking at stale data and should follow the merge target.
-- **Empty `releaseDate`**: When `releaseDate.isEmpty` is `true` on an album, flag that release date is unknown rather than silently omitting it.
-- **High `maxResults` requests**: Default page sizes are intentionally small (10-25). If a workflow requires iterating many pages, warn about potential slowness and suggest narrowing filters.
-- **Missing PV services**: When `pvServices` is empty on a song, the entry has no linked videos -- flag this as the song may be incomplete or the videos may have been taken down.
-- **Status values**: Entries with status `Draft` or `Locked` indicate incomplete or restricted items. Surface the status when it is not `Approved`/`Finished`.
-- **Language parameter inconsistency**: Some endpoints use `lang`, others use `languagePreference`. If a user sets one and gets untranslated names, suggest the alternate parameter.
-- **Comment lock state**: Check `GET /api/comments/{entryType}-comments/{entryId}/locked` before attempting to post a comment -- locked entries will reject new comments silently or with an unhelpful error.
-
-## Playbook
-
-### 1. Research a Vocaloid producer's discography
-
-1. Search for the artist: `GET /api/artists?query=ProducerName&artistTypes=Producer&fields=MainPicture,Tags`
-2. Pick the matching artist and note their `id`
-3. Fetch full profile with relations: `GET /api/artists/{id}?fields=Description,Tags,WebLinks&relations=PopularSongs,PopularAlbums,LatestSongs,LatestAlbums`
-4. For each album of interest, get track listings: `GET /api/albums/{id}/tracks?fields=ThumbUrl,Artists`
-5. Optionally get comments and community discussion: `GET /api/artists/{id}/comments`
-
-### 2. Build a playlist from a tag
-
-1. Find the tag: `GET /api/tags?query=electronic&fields=Description`
-2. Note the tag `id` from results
-3. Search songs with that tag: `GET /api/songs?tagId[]=123&sort=RatingScore&maxResults=50&getTotalCount=True&fields=ThumbUrl,PVs`
-4. For each song, extract PV URLs from the `pvs` array (filter by `service` for YouTube/NicoNico)
-5. Optionally create a song list: `POST /api/songLists` with the song IDs linked via `songLinks`
-
-### 3. Track new album releases
-
-1. Query recent albums: `GET /api/albums/new?fields=MainPicture,ReleaseDate,Tags`
-2. For deeper filtering, use: `GET /api/albums?releaseDateAfter=2026-01-01T00:00:00Z&sort=ReleaseDate&getTotalCount=True&fields=ReleaseDate,Artists,Tags`
-3. For each album, check its event: inspect `releaseEvent` or `releaseEvents` in the response
-4. Get full event details if relevant: `GET /api/releaseEvents/{id}?fields=Artists,MainPicture,Venue`
-5. Check the event's other albums: `GET /api/releaseEvents/{eventId}/albums`
-
-### 4. Manage your collection and ratings
-
-1. Get current user profile: `GET /api/users/current?fields=MainPicture,KnownLanguages`
-2. Check collection status for an album: `GET /api/users/current/album-collection-statuses/{albumId}`
-3. Add an album to your collection: `POST /api/users/current/albums/{albumId}` with `collectionStatus`, `mediaType`, and `rating`
-4. Rate a song: `POST /api/songs/{id}/ratings` with `rating` set to `Like`, `Favorite`, or `Nothing`
-5. Review rated songs: `GET /api/users/{id}/ratedSongs?sort=RatingDate&groupByRating=True&getTotalCount=True`
-
-### 5. Moderate content and handle reports
-
-1. Review recent activity: `GET /api/activityEntries?editEvent=Created&maxResults=50&getTotalCount=True`
-2. Check if comments are locked on an entry: `GET /api/comments/{entryType}-comments/{entryId}/locked`
-3. Lock comments if needed: `POST /api/comments/{entryType}-comments/{entryId}/locked`
-4. Report problematic entries: `POST /api/tags/{tagId}/reports`, `POST /api/releaseEvents/{eventId}/reports`, `POST /api/venues/{id}/reports`, or `POST /api/users/{id}/reports` with `reportType` and `notes`
-5. Soft-delete content: `DELETE /api/songs/{id}` (or albums/artists) with `notes` explaining the reason
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all activityEntries?" -> GET /api/activityEntries
+- "Delete a album?" -> DELETE /api/albums/{id}
+- "Get album details?" -> GET /api/albums/{id}
+- "Delete a comment?" -> DELETE /api/albums/comments/{commentId}
+- "List all comments?" -> GET /api/albums/{id}/comments
+- "Create a comment?" -> POST /api/albums/{id}/comments
+- "Search albums?" -> GET /api/albums
+- "Search names?" -> GET /api/albums/names
+- "List all new?" -> GET /api/albums/new
+- "List all reviews?" -> GET /api/albums/{id}/reviews
+- "Create a review?" -> POST /api/albums/{id}/reviews
+- "List all user-collections?" -> GET /api/albums/{id}/user-collections
+- "Delete a review?" -> DELETE /api/albums/{id}/reviews/{reviewId}
+- "List all top?" -> GET /api/albums/top
+- "List all tracks?" -> GET /api/albums/{id}/tracks
+- "List all fields?" -> GET /api/albums/{id}/tracks/fields
+- "List all related?" -> GET /api/albums/{id}/related
+- "Delete a artist?" -> DELETE /api/artists/{id}
+- "Get artist details?" -> GET /api/artists/{id}
+- "Delete a comment?" -> DELETE /api/artists/comments/{commentId}
+- "List all comments?" -> GET /api/artists/{id}/comments
+- "Create a comment?" -> POST /api/artists/{id}/comments
+- "Search artists?" -> GET /api/artists
+- "Search names?" -> GET /api/artists/names
+- "Delete a comment?" -> DELETE /api/comments/{entryType}-comments/{commentId}
+- "Get comment details?" -> GET /api/comments/{entryType}-comments
+- "List all locked?" -> GET /api/comments/{entryType}-comments/{entryId}/locked
+- "Create a locked?" -> POST /api/comments/{entryType}-comments/{entryId}/locked
+- "List all comments?" -> GET /api/comments
+- "Delete a comment?" -> DELETE /api/discussions/comments/{commentId}
+- "Delete a topic?" -> DELETE /api/discussions/topics/{topicId}
+- "Get topic details?" -> GET /api/discussions/topics/{topicId}
+- "List all folders?" -> GET /api/discussions/folders
+- "Create a folder?" -> POST /api/discussions/folders
+- "List all topics?" -> GET /api/discussions/topics
+- "List all topics?" -> GET /api/discussions/folders/{folderId}/topics
+- "Create a topic?" -> POST /api/discussions/folders/{folderId}/topics
+- "Create a comment?" -> POST /api/discussions/topics/{topicId}/comments
+- "Search entries?" -> GET /api/entries
+- "List all random?" -> GET /api/entries/random
+- "Search names?" -> GET /api/entries/names
+- "List all tag?" -> GET /api/entry-types/{entryType}/{subType}/tag
+- "List all for-songs?" -> GET /api/pvs/for-songs
+- "List all thumbnail?" -> GET /api/pvs/thumbnail
+- "Delete a releaseEvent?" -> DELETE /api/releaseEvents/{id}
+- "Get releaseEvent details?" -> GET /api/releaseEvents/{id}
+- "List all albums?" -> GET /api/releaseEvents/{eventId}/albums
+- "List all published-songs?" -> GET /api/releaseEvents/{eventId}/published-songs
+- "Search releaseEvents?" -> GET /api/releaseEvents
+- "Search names?" -> GET /api/releaseEvents/names
+- "Create a report?" -> POST /api/releaseEvents/{eventId}/reports
+- "Delete a releaseEventSery?" -> DELETE /api/releaseEventSeries/{id}
+- "Get releaseEventSery details?" -> GET /api/releaseEventSeries/{id}
+- "Search releaseEventSeries?" -> GET /api/releaseEventSeries
+- "List all for-edit?" -> GET /api/releaseEventSeries/{id}/for-edit
+- "Get resource details?" -> GET /api/resources/{cultureCode}
+- "Delete a comment?" -> DELETE /api/songs/comments/{commentId}
+- "Delete a song?" -> DELETE /api/songs/{id}
+- "Get song details?" -> GET /api/songs/{id}
+- "List all comments?" -> GET /api/songs/{id}/comments
+- "Create a comment?" -> POST /api/songs/{id}/comments
+- "List all derived?" -> GET /api/songs/{id}/derived
+- "List all highlighted?" -> GET /api/songs/highlighted
+- "List all ratings?" -> GET /api/songs/{id}/ratings
+- "Create a rating?" -> POST /api/songs/{id}/ratings
+- "List all related?" -> GET /api/songs/{id}/related
+- "Search songs?" -> GET /api/songs
+- "Get lyric details?" -> GET /api/songs/lyrics/{lyricsId}
+- "Search names?" -> GET /api/songs/names
+- "List all byPv?" -> GET /api/songs/byPv
+- "List all top-rated?" -> GET /api/songs/top-rated
+- "Delete a songList?" -> DELETE /api/songLists/{id}
+- "Delete a comment?" -> DELETE /api/songLists/comments/{commentId}
+- "List all comments?" -> GET /api/songLists/{listId}/comments
+- "Create a comment?" -> POST /api/songLists/{listId}/comments
+- "Search featured?" -> GET /api/songLists/featured
+- "Search names?" -> GET /api/songLists/featured/names
+- "Search songs?" -> GET /api/songLists/{listId}/songs
+- "Create a songList?" -> POST /api/songLists
+- "Delete a tag?" -> DELETE /api/tags/{id}
+- "Get tag details?" -> GET /api/tags/{id}
+- "Delete a comment?" -> DELETE /api/tags/comments/{commentId}
+- "Get byName details?" -> GET /api/tags/byName/{name}
+- "Search categoryNames?" -> GET /api/tags/categoryNames
+- "List all children?" -> GET /api/tags/{tagId}/children
+- "List all comments?" -> GET /api/tags/{tagId}/comments
+- "Create a comment?" -> POST /api/tags/{tagId}/comments
+- "Search tags?" -> GET /api/tags
+- "Create a tag?" -> POST /api/tags
+- "Search names?" -> GET /api/tags/names
+- "List all top?" -> GET /api/tags/top
+- "Create a report?" -> POST /api/tags/{tagId}/reports
+- "Delete a followedTag?" -> DELETE /api/users/current/followedTags/{tagId}
+- "Delete a profileComment?" -> DELETE /api/users/profileComments/{commentId}
+- "Search albums?" -> GET /api/users/{id}/albums
+- "List all current?" -> GET /api/users/current
+- "List all events?" -> GET /api/users/{id}/events
+- "Search followedArtists?" -> GET /api/users/{id}/followedArtists
+- "Search users?" -> GET /api/users
+- "Get user details?" -> GET /api/users/{id}
+- "Get message details?" -> GET /api/users/messages/{messageId}
+- "List all messages?" -> GET /api/users/{id}/messages
+- "Create a message?" -> POST /api/users/{id}/messages
+- "Search names?" -> GET /api/users/names
+- "List all profileComments?" -> GET /api/users/{id}/profileComments
+- "Create a profileComment?" -> POST /api/users/{id}/profileComments
+- "Search ratedSongs?" -> GET /api/users/{id}/ratedSongs
+- "Search songLists?" -> GET /api/users/{id}/songLists
+- "Get ratedSong details?" -> GET /api/users/{id}/ratedSongs/{songId}
+- "Get ratedSong details?" -> GET /api/users/current/ratedSongs/{songId}
+- "Create a refreshEntryEdit?" -> POST /api/users/current/refreshEntryEdit
+- "Create a report?" -> POST /api/users/{id}/reports
+- "Get followedArtist details?" -> GET /api/users/{id}/followedArtists/{artistId}
+- "Get followedArtist details?" -> GET /api/users/current/followedArtists/{artistId}
+- "Get album-collection-statuse details?" -> GET /api/users/{id}/album-collection-statuses/{albumId}
+- "Get album-collection-statuse details?" -> GET /api/users/current/album-collection-statuses/{albumId}
+- "Delete a venue?" -> DELETE /api/venues/{id}
+- "Search venues?" -> GET /api/venues
+- "Create a report?" -> POST /api/venues/{id}/reports
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -212,96 +212,158 @@ Not specified.
 | POST | /resources/{ResourceArn}/tags | Assigns one or more tags (key-value pairs) to the specified Amazon QuickSight resource.  Tags can help you organize and categorize your resources. You can also use them to scope user permissions, by granting a user permission to access or change only resources with certain tag values. You can use the TagResource operation with a resource that already has tags. If you specify a new tag key for the resource, this tag is appended to the list of tags associated with the resource. If you specify a tag key that is already associated with the resource, the new tag value that you specify replaces the previous value for that tag. You can associate as many as 50 tags with a resource. Amazon QuickSight supports tagging on data set, data source, dashboard, template, topic, and user.  Tagging for Amazon QuickSight works in a similar way to tagging for other Amazon Web Services services, except for the following:   Tags are used to track costs for users in Amazon QuickSight. You can't tag other resources that Amazon QuickSight costs are based on, such as storage capacoty (SPICE), session usage, alert consumption, or reporting units.   Amazon QuickSight doesn't currently support the tag editor for Resource Groups. |
 | DELETE | /resources/{ResourceArn}/tags | Removes a tag or tags from a resource. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all dashboards in my account?" -> GET /accounts/{AwsAccountId}/dashboards
-- "What data sets are available?" -> GET /accounts/{AwsAccountId}/data-sets
-- "How do I create a new dashboard?" -> POST /accounts/{AwsAccountId}/dashboards/{DashboardId}
-- "Who has access to this analysis?" -> GET /accounts/{AwsAccountId}/analyses/{AnalysisId}/permissions
-- "How do I embed a dashboard for an anonymous user?" -> POST /accounts/{AwsAccountId}/embed-url/anonymous-user
-- "How do I trigger a data set refresh?" -> PUT /accounts/{AwsAccountId}/data-sets/{DataSetId}/ingestions/{IngestionId}
-- "What's the status of my data ingestion?" -> GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/ingestions/{IngestionId}
-- "How do I export assets as a bundle?" -> POST /accounts/{AwsAccountId}/asset-bundle-export-jobs/export
-- "How do I search for dashboards by filter?" -> POST /accounts/{AwsAccountId}/search/dashboards
-- "How do I add a user to a group?" -> PUT /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}/members/{MemberName}
-- "How do I set IP restrictions on my account?" -> POST /accounts/{AwsAccountId}/ip-restriction
-- "How do I delete a template version?" -> DELETE /accounts/{AwsAccountId}/templates/{TemplateId} (with `version-number` query param)
-- "How do I restore a deleted analysis?" -> POST /accounts/{AwsAccountId}/restore/analyses/{AnalysisId}
-- "How do I get a snapshot of a dashboard as PDF?" -> POST /accounts/{AwsAccountId}/dashboards/{DashboardId}/snapshot-jobs then GET .../snapshot-jobs/{SnapshotJobId}/result
-- "How do I register a user in QuickSight?" -> POST /accounts/{AwsAccountId}/namespaces/{Namespace}/users
-
-## Response Tips
-
-- **List endpoints** (analyses, dashboards, data-sets, templates, themes, topics, folders, users, groups): Paginated via `next-token`/`max-results` query params; response includes `NextToken` -- loop until `NextToken` is null. Summary arrays are nullable, default to empty.
-- **Create/Update endpoints**: Return a `CreationStatus` or `UpdateStatus` field (values: `CREATION_IN_PROGRESS`, `CREATION_SUCCESSFUL`, `CREATION_FAILED`, `UPDATE_IN_PROGRESS`, etc.) -- poll the corresponding GET endpoint until terminal status.
-- **Describe endpoints** (single-resource GETs): Primary object is nested one level deep (e.g., `Dashboard.Version.Sheets`, `DataSource.DataSourceParameters.RedshiftParameters`). Always null-check the wrapper object before accessing inner fields.
-- **Permission endpoints**: Return `[ResourcePermission]` arrays where each entry has `Principal` (ARN) and `Actions` (list of IAM-style action strings). Grant/Revoke operations are idempotent.
-- **Search endpoints** (POST /search/*): Accept `Filters` array in body (not query params) and return the same paginated summary lists as their GET counterparts.
-- **Delete endpoints**: Some support soft-delete with `recovery-window-in-days` (analyses) or version-specific deletion (`version-number` for dashboards/templates/themes). Response fields like `DeletionTime` confirm scheduling.
-- **Error responses**: All endpoints return `RequestId` and `Status` (HTTP status code echoed in body). Errors surface as nested objects (e.g., `Errors: [AnalysisError]`, `ErrorInfo.Type`, `ErrorInfo.Message`).
-- **Embed URLs**: The `EmbedUrl` is single-use and time-limited by `SessionLifetimeInMinutes`. Treat it as sensitive -- do not log or cache.
-- **Asset bundles**: Export/import are async jobs -- POST starts the job, GET with the job ID polls status. Check `JobStatus` and `Errors`/`Warnings` arrays.
-
-## Anomaly Flags
-
-- **Ingestion failures**: Surface when `IngestionStatus` is `FAILED` or `CANCELLED`, and display `ErrorInfo.Type` + `ErrorInfo.Message` along with `RowInfo.RowsDropped` counts.
-- **Resource creation stuck**: Flag when `CreationStatus` remains `CREATION_IN_PROGRESS` or `UPDATE_IN_PROGRESS` for more than 10 minutes on dashboards, analyses, or templates.
-- **SPICE capacity**: Alert when `ConsumedSpiceCapacityInBytes` on a data set is growing rapidly or nearing account limits; recommend reviewing `PUT /spice-capacity-configuration`.
-- **Namespace errors**: Proactively surface `NamespaceError.Type` and `NamespaceError.Message` when describing a namespace -- creation failures silently persist.
-- **Data source connection errors**: Flag `DataSource.ErrorInfo` when Type is non-null (common: `TIMEOUT`, `ENGINE_VERSION_NOT_SUPPORTED`, `ACCESS_DENIED`).
-- **Asset bundle warnings**: Surface the `Warnings` array from export/import job results -- these indicate partial success scenarios that may go unnoticed.
-- **VPC connection degraded**: Flag when `VPCConnection.AvailabilityStatus` is anything other than `AVAILABLE` (e.g., `PARTIALLY_AVAILABLE`) or `Status` is `UPDATING`/`DELETING`.
-- **Deleted analysis recovery window**: Warn when deleting an analysis without specifying `recovery-window-in-days` (defaults may vary) and when the `force-delete-without-recovery` flag is set.
-- **Deprecated embed endpoint**: `GET /accounts/{AwsAccountId}/dashboards/{DashboardId}/embed-url` is the legacy embed method -- recommend migrating to `POST /embed-url/registered-user` or `POST /embed-url/anonymous-user`.
-- **Termination protection**: Surface when `AccountSettings.TerminationProtectionEnabled` is false on production accounts.
-
-## Playbook
-
-### 1. Create and Publish a Dashboard from Scratch
-
-1. Create a data source: `POST /accounts/{AwsAccountId}/data-sources` with connection parameters for your database type.
-2. Verify the data source status: `GET /accounts/{AwsAccountId}/data-sources/{DataSourceId}` -- wait for `Status: CREATION_SUCCESSFUL`.
-3. Create a data set referencing the source: `POST /accounts/{AwsAccountId}/data-sets` with `PhysicalTableMap` and `ImportMode` (`SPICE` or `DIRECT_QUERY`).
-4. If using SPICE, trigger ingestion: `PUT /accounts/{AwsAccountId}/data-sets/{DataSetId}/ingestions/{IngestionId}` and poll `GET .../ingestions/{IngestionId}` until `IngestionStatus` is `COMPLETED`.
-5. Create the dashboard: `POST /accounts/{AwsAccountId}/dashboards/{DashboardId}` with `Definition` or `SourceEntity` (template reference).
-6. Set permissions: `PUT /accounts/{AwsAccountId}/dashboards/{DashboardId}/permissions` to grant viewer/owner access.
-7. Publish a specific version: `PUT /accounts/{AwsAccountId}/dashboards/{DashboardId}/versions/{VersionNumber}`.
-
-### 2. Export and Import Assets Across Accounts
-
-1. Start an export job: `POST /accounts/{AwsAccountId}/asset-bundle-export-jobs/export` with the `ResourceArns` of dashboards/analyses to export and `ExportFormat` (`CLOUDFORMATION_JSON` or `QUICKSIGHT_JSON`). Set `IncludeAllDependencies: true` to capture data sets, data sources, and themes.
-2. Poll export status: `GET /accounts/{AwsAccountId}/asset-bundle-export-jobs/{AssetBundleExportJobId}` until `JobStatus` is `SUCCESSFUL`. Download the bundle from `DownloadUrl`.
-3. Start an import job in the target account: `POST /accounts/{TargetAwsAccountId}/asset-bundle-import-jobs/import` with the bundle as `AssetBundleImportSource`. Use `OverrideParameters` to remap data source connection details.
-4. Poll import status: `GET /accounts/{TargetAwsAccountId}/asset-bundle-import-jobs/{AssetBundleImportJobId}` until `JobStatus` is `SUCCESSFUL`. Review `Errors` and `Warnings` arrays for issues.
-5. Verify imported resources: `GET /accounts/{TargetAwsAccountId}/dashboards` and spot-check individual dashboards.
-
-### 3. Set Up Embedded Analytics for External Users
-
-1. Register a QuickSight namespace (if not existing): `POST /accounts/{AwsAccountId}` with `Namespace` and `IdentityStore`.
-2. Generate an anonymous embed URL: `POST /accounts/{AwsAccountId}/embed-url/anonymous-user` with `AuthorizedResourceArns` (dashboard ARNs), `ExperienceConfiguration`, and `AllowedDomains` (your app's origin).
-3. For authenticated users, register them first: `POST /accounts/{AwsAccountId}/namespaces/{Namespace}/users` with `IdentityType`, `Email`, and `UserRole`.
-4. Generate a registered-user embed URL: `POST /accounts/{AwsAccountId}/embed-url/registered-user` with `UserArn` and `ExperienceConfiguration`.
-5. Embed the returned `EmbedUrl` in an iframe on your frontend. The URL is single-use -- generate a fresh one per session.
-
-### 4. Manage User Access and Groups
-
-1. List existing groups: `GET /accounts/{AwsAccountId}/namespaces/{Namespace}/groups`.
-2. Create a new group: `POST /accounts/{AwsAccountId}/namespaces/{Namespace}/groups` with `GroupName` and optional `Description`.
-3. Add a user to the group: `PUT /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}/members/{MemberName}`.
-4. Create an IAM policy assignment for the group: `POST /accounts/{AwsAccountId}/namespaces/{Namespace}/iam-policy-assignments/` with `AssignmentName`, `AssignmentStatus: ENABLED`, `PolicyArn`, and `Identities` mapping.
-5. Verify the user's assignments: `GET /accounts/{AwsAccountId}/namespaces/{Namespace}/users/{UserName}/iam-policy-assignments`.
-6. To restrict access further, set custom role permissions: `PUT /accounts/{AwsAccountId}/namespaces/{Namespace}/roles/{Role}/custom-permission` with `CustomPermissionsName`.
-
-### 5. Schedule and Monitor Data Refreshes
-
-1. List existing refresh schedules for a data set: `GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-schedules`.
-2. Create a new schedule: `POST /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-schedules` with a `RefreshSchedule` object specifying `ScheduleFrequency` (interval, day, time, timezone) and `RefreshType` (`FULL_REFRESH` or `INCREMENTAL_REFRESH`).
-3. For incremental refresh, configure the lookback window: `PUT /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-properties` with `DataSetRefreshProperties` containing the `LookbackWindow` definition.
-4. Monitor ingestion history: `GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/ingestions` -- paginate through results and check `IngestionStatus` for any `FAILED` entries.
-5. Inspect a specific failed ingestion: `GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/ingestions/{IngestionId}` -- examine `ErrorInfo.Type`, `ErrorInfo.Message`, and `RowInfo.RowsDropped`.
-6. Update or delete a schedule as needed: `PUT /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-schedules` to modify, or `DELETE .../refresh-schedules/{ScheduleId}` to remove.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a batch-create-reviewed-answer?" -> POST /accounts/{AwsAccountId}/topics/{TopicId}/batch-create-reviewed-answers
+- "Create a batch-delete-reviewed-answer?" -> POST /accounts/{AwsAccountId}/topics/{TopicId}/batch-delete-reviewed-answers
+- "Delete a ingestion?" -> DELETE /accounts/{AwsAccountId}/data-sets/{DataSetId}/ingestions/{IngestionId}
+- "Create a customization?" -> POST /accounts/{AwsAccountId}/customizations
+- "Create a data-set?" -> POST /accounts/{AwsAccountId}/data-sets
+- "Create a data-source?" -> POST /accounts/{AwsAccountId}/data-sources
+- "Update a member?" -> PUT /accounts/{AwsAccountId}/folders/{FolderId}/members/{MemberType}/{MemberId}
+- "Create a group?" -> POST /accounts/{AwsAccountId}/namespaces/{Namespace}/groups
+- "Update a member?" -> PUT /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}/members/{MemberName}
+- "Create a iam-policy-assignment?" -> POST /accounts/{AwsAccountId}/namespaces/{Namespace}/iam-policy-assignments/
+- "Update a ingestion?" -> PUT /accounts/{AwsAccountId}/data-sets/{DataSetId}/ingestions/{IngestionId}
+- "Create a refresh-schedule?" -> POST /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-schedules
+- "Create a topic?" -> POST /accounts/{AwsAccountId}/topics
+- "Create a schedule?" -> POST /accounts/{AwsAccountId}/topics/{TopicId}/schedules
+- "Create a vpc-connection?" -> POST /accounts/{AwsAccountId}/vpc-connections
+- "Delete a account?" -> DELETE /account/{AwsAccountId}
+- "Delete a analysis?" -> DELETE /accounts/{AwsAccountId}/analyses/{AnalysisId}
+- "Delete a dashboard?" -> DELETE /accounts/{AwsAccountId}/dashboards/{DashboardId}
+- "Delete a data-set?" -> DELETE /accounts/{AwsAccountId}/data-sets/{DataSetId}
+- "Delete a data-source?" -> DELETE /accounts/{AwsAccountId}/data-sources/{DataSourceId}
+- "Delete a folder?" -> DELETE /accounts/{AwsAccountId}/folders/{FolderId}
+- "Delete a member?" -> DELETE /accounts/{AwsAccountId}/folders/{FolderId}/members/{MemberType}/{MemberId}
+- "Delete a group?" -> DELETE /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}
+- "Delete a member?" -> DELETE /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}/members/{MemberName}
+- "Delete a iam-policy-assignment?" -> DELETE /accounts/{AwsAccountId}/namespace/{Namespace}/iam-policy-assignments/{AssignmentName}
+- "Delete a identity-propagation-config?" -> DELETE /accounts/{AwsAccountId}/identity-propagation-config/{Service}
+- "Delete a namespace?" -> DELETE /accounts/{AwsAccountId}/namespaces/{Namespace}
+- "Delete a refresh-schedule?" -> DELETE /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-schedules/{ScheduleId}
+- "Delete a member?" -> DELETE /accounts/{AwsAccountId}/namespaces/{Namespace}/roles/{Role}/members/{MemberName}
+- "Delete a template?" -> DELETE /accounts/{AwsAccountId}/templates/{TemplateId}
+- "Delete a aliase?" -> DELETE /accounts/{AwsAccountId}/templates/{TemplateId}/aliases/{AliasName}
+- "Delete a theme?" -> DELETE /accounts/{AwsAccountId}/themes/{ThemeId}
+- "Delete a aliase?" -> DELETE /accounts/{AwsAccountId}/themes/{ThemeId}/aliases/{AliasName}
+- "Delete a topic?" -> DELETE /accounts/{AwsAccountId}/topics/{TopicId}
+- "Delete a schedule?" -> DELETE /accounts/{AwsAccountId}/topics/{TopicId}/schedules/{DatasetId}
+- "Delete a user?" -> DELETE /accounts/{AwsAccountId}/namespaces/{Namespace}/users/{UserName}
+- "Delete a user-principal?" -> DELETE /accounts/{AwsAccountId}/namespaces/{Namespace}/user-principals/{PrincipalId}
+- "Delete a vpc-connection?" -> DELETE /accounts/{AwsAccountId}/vpc-connections/{VPCConnectionId}
+- "List all customizations?" -> GET /accounts/{AwsAccountId}/customizations
+- "List all settings?" -> GET /accounts/{AwsAccountId}/settings
+- "Get account details?" -> GET /account/{AwsAccountId}
+- "Get analysis details?" -> GET /accounts/{AwsAccountId}/analyses/{AnalysisId}
+- "List all definition?" -> GET /accounts/{AwsAccountId}/analyses/{AnalysisId}/definition
+- "List all permissions?" -> GET /accounts/{AwsAccountId}/analyses/{AnalysisId}/permissions
+- "Get asset-bundle-export-job details?" -> GET /accounts/{AwsAccountId}/asset-bundle-export-jobs/{AssetBundleExportJobId}
+- "Get asset-bundle-import-job details?" -> GET /accounts/{AwsAccountId}/asset-bundle-import-jobs/{AssetBundleImportJobId}
+- "Get dashboard details?" -> GET /accounts/{AwsAccountId}/dashboards/{DashboardId}
+- "List all definition?" -> GET /accounts/{AwsAccountId}/dashboards/{DashboardId}/definition
+- "List all permissions?" -> GET /accounts/{AwsAccountId}/dashboards/{DashboardId}/permissions
+- "Get snapshot-job details?" -> GET /accounts/{AwsAccountId}/dashboards/{DashboardId}/snapshot-jobs/{SnapshotJobId}
+- "List all result?" -> GET /accounts/{AwsAccountId}/dashboards/{DashboardId}/snapshot-jobs/{SnapshotJobId}/result
+- "Get data-set details?" -> GET /accounts/{AwsAccountId}/data-sets/{DataSetId}
+- "List all permissions?" -> GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/permissions
+- "List all refresh-properties?" -> GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-properties
+- "Get data-source details?" -> GET /accounts/{AwsAccountId}/data-sources/{DataSourceId}
+- "List all permissions?" -> GET /accounts/{AwsAccountId}/data-sources/{DataSourceId}/permissions
+- "Get folder details?" -> GET /accounts/{AwsAccountId}/folders/{FolderId}
+- "List all permissions?" -> GET /accounts/{AwsAccountId}/folders/{FolderId}/permissions
+- "List all resolved-permissions?" -> GET /accounts/{AwsAccountId}/folders/{FolderId}/resolved-permissions
+- "Get group details?" -> GET /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}
+- "Get member details?" -> GET /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}/members/{MemberName}
+- "Get iam-policy-assignment details?" -> GET /accounts/{AwsAccountId}/namespaces/{Namespace}/iam-policy-assignments/{AssignmentName}
+- "Get ingestion details?" -> GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/ingestions/{IngestionId}
+- "List all ip-restriction?" -> GET /accounts/{AwsAccountId}/ip-restriction
+- "List all key-registration?" -> GET /accounts/{AwsAccountId}/key-registration
+- "Get namespace details?" -> GET /accounts/{AwsAccountId}/namespaces/{Namespace}
+- "Get refresh-schedule details?" -> GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-schedules/{ScheduleId}
+- "List all custom-permission?" -> GET /accounts/{AwsAccountId}/namespaces/{Namespace}/roles/{Role}/custom-permission
+- "Get template details?" -> GET /accounts/{AwsAccountId}/templates/{TemplateId}
+- "Get aliase details?" -> GET /accounts/{AwsAccountId}/templates/{TemplateId}/aliases/{AliasName}
+- "List all definition?" -> GET /accounts/{AwsAccountId}/templates/{TemplateId}/definition
+- "List all permissions?" -> GET /accounts/{AwsAccountId}/templates/{TemplateId}/permissions
+- "Get theme details?" -> GET /accounts/{AwsAccountId}/themes/{ThemeId}
+- "Get aliase details?" -> GET /accounts/{AwsAccountId}/themes/{ThemeId}/aliases/{AliasName}
+- "List all permissions?" -> GET /accounts/{AwsAccountId}/themes/{ThemeId}/permissions
+- "Get topic details?" -> GET /accounts/{AwsAccountId}/topics/{TopicId}
+- "List all permissions?" -> GET /accounts/{AwsAccountId}/topics/{TopicId}/permissions
+- "Get refresh details?" -> GET /accounts/{AwsAccountId}/topics/{TopicId}/refresh/{RefreshId}
+- "Get schedule details?" -> GET /accounts/{AwsAccountId}/topics/{TopicId}/schedules/{DatasetId}
+- "Get user details?" -> GET /accounts/{AwsAccountId}/namespaces/{Namespace}/users/{UserName}
+- "Get vpc-connection details?" -> GET /accounts/{AwsAccountId}/vpc-connections/{VPCConnectionId}
+- "Create a anonymous-user?" -> POST /accounts/{AwsAccountId}/embed-url/anonymous-user
+- "Create a registered-user?" -> POST /accounts/{AwsAccountId}/embed-url/registered-user
+- "List all embed-url?" -> GET /accounts/{AwsAccountId}/dashboards/{DashboardId}/embed-url
+- "List all session-embed-url?" -> GET /accounts/{AwsAccountId}/session-embed-url
+- "List all analyses?" -> GET /accounts/{AwsAccountId}/analyses
+- "List all asset-bundle-export-jobs?" -> GET /accounts/{AwsAccountId}/asset-bundle-export-jobs
+- "List all asset-bundle-import-jobs?" -> GET /accounts/{AwsAccountId}/asset-bundle-import-jobs
+- "List all versions?" -> GET /accounts/{AwsAccountId}/dashboards/{DashboardId}/versions
+- "List all dashboards?" -> GET /accounts/{AwsAccountId}/dashboards
+- "List all data-sets?" -> GET /accounts/{AwsAccountId}/data-sets
+- "List all data-sources?" -> GET /accounts/{AwsAccountId}/data-sources
+- "List all members?" -> GET /accounts/{AwsAccountId}/folders/{FolderId}/members
+- "List all folders?" -> GET /accounts/{AwsAccountId}/folders
+- "List all members?" -> GET /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}/members
+- "List all groups?" -> GET /accounts/{AwsAccountId}/namespaces/{Namespace}/groups
+- "List all iam-policy-assignments?" -> GET /accounts/{AwsAccountId}/namespaces/{Namespace}/v2/iam-policy-assignments
+- "List all iam-policy-assignments?" -> GET /accounts/{AwsAccountId}/namespaces/{Namespace}/users/{UserName}/iam-policy-assignments
+- "List all identity-propagation-config?" -> GET /accounts/{AwsAccountId}/identity-propagation-config
+- "List all ingestions?" -> GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/ingestions
+- "List all namespaces?" -> GET /accounts/{AwsAccountId}/namespaces
+- "List all refresh-schedules?" -> GET /accounts/{AwsAccountId}/data-sets/{DataSetId}/refresh-schedules
+- "List all members?" -> GET /accounts/{AwsAccountId}/namespaces/{Namespace}/roles/{Role}/members
+- "List all tags?" -> GET /resources/{ResourceArn}/tags
+- "List all aliases?" -> GET /accounts/{AwsAccountId}/templates/{TemplateId}/aliases
+- "List all versions?" -> GET /accounts/{AwsAccountId}/templates/{TemplateId}/versions
+- "List all templates?" -> GET /accounts/{AwsAccountId}/templates
+- "List all aliases?" -> GET /accounts/{AwsAccountId}/themes/{ThemeId}/aliases
+- "List all versions?" -> GET /accounts/{AwsAccountId}/themes/{ThemeId}/versions
+- "List all themes?" -> GET /accounts/{AwsAccountId}/themes
+- "List all schedules?" -> GET /accounts/{AwsAccountId}/topics/{TopicId}/schedules
+- "List all reviewed-answers?" -> GET /accounts/{AwsAccountId}/topics/{TopicId}/reviewed-answers
+- "List all topics?" -> GET /accounts/{AwsAccountId}/topics
+- "List all groups?" -> GET /accounts/{AwsAccountId}/namespaces/{Namespace}/users/{UserName}/groups
+- "List all users?" -> GET /accounts/{AwsAccountId}/namespaces/{Namespace}/users
+- "List all vpc-connections?" -> GET /accounts/{AwsAccountId}/vpc-connections
+- "Create a user?" -> POST /accounts/{AwsAccountId}/namespaces/{Namespace}/users
+- "Create a analysis?" -> POST /accounts/{AwsAccountId}/search/analyses
+- "Create a dashboard?" -> POST /accounts/{AwsAccountId}/search/dashboards
+- "Create a data-set?" -> POST /accounts/{AwsAccountId}/search/data-sets
+- "Create a data-source?" -> POST /accounts/{AwsAccountId}/search/data-sources
+- "Create a folder?" -> POST /accounts/{AwsAccountId}/search/folders
+- "Create a groups-search?" -> POST /accounts/{AwsAccountId}/namespaces/{Namespace}/groups-search
+- "Create a export?" -> POST /accounts/{AwsAccountId}/asset-bundle-export-jobs/export
+- "Create a import?" -> POST /accounts/{AwsAccountId}/asset-bundle-import-jobs/import
+- "Create a snapshot-job?" -> POST /accounts/{AwsAccountId}/dashboards/{DashboardId}/snapshot-jobs
+- "Create a tag?" -> POST /resources/{ResourceArn}/tags
+- "Update a analysis?" -> PUT /accounts/{AwsAccountId}/analyses/{AnalysisId}
+- "Update a dashboard?" -> PUT /accounts/{AwsAccountId}/dashboards/{DashboardId}
+- "Update a version?" -> PUT /accounts/{AwsAccountId}/dashboards/{DashboardId}/versions/{VersionNumber}
+- "Update a data-set?" -> PUT /accounts/{AwsAccountId}/data-sets/{DataSetId}
+- "Create a permission?" -> POST /accounts/{AwsAccountId}/data-sets/{DataSetId}/permissions
+- "Update a data-source?" -> PUT /accounts/{AwsAccountId}/data-sources/{DataSourceId}
+- "Create a permission?" -> POST /accounts/{AwsAccountId}/data-sources/{DataSourceId}/permissions
+- "Update a folder?" -> PUT /accounts/{AwsAccountId}/folders/{FolderId}
+- "Update a group?" -> PUT /accounts/{AwsAccountId}/namespaces/{Namespace}/groups/{GroupName}
+- "Update a iam-policy-assignment?" -> PUT /accounts/{AwsAccountId}/namespaces/{Namespace}/iam-policy-assignments/{AssignmentName}
+- "Create a ip-restriction?" -> POST /accounts/{AwsAccountId}/ip-restriction
+- "Create a key-registration?" -> POST /accounts/{AwsAccountId}/key-registration
+- "Create a spice-capacity-configuration?" -> POST /accounts/{AwsAccountId}/spice-capacity-configuration
+- "Update a template?" -> PUT /accounts/{AwsAccountId}/templates/{TemplateId}
+- "Update a aliase?" -> PUT /accounts/{AwsAccountId}/templates/{TemplateId}/aliases/{AliasName}
+- "Update a theme?" -> PUT /accounts/{AwsAccountId}/themes/{ThemeId}
+- "Update a aliase?" -> PUT /accounts/{AwsAccountId}/themes/{ThemeId}/aliases/{AliasName}
+- "Update a topic?" -> PUT /accounts/{AwsAccountId}/topics/{TopicId}
+- "Update a schedule?" -> PUT /accounts/{AwsAccountId}/topics/{TopicId}/schedules/{DatasetId}
+- "Update a user?" -> PUT /accounts/{AwsAccountId}/namespaces/{Namespace}/users/{UserName}
+- "Update a vpc-connection?" -> PUT /accounts/{AwsAccountId}/vpc-connections/{VPCConnectionId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

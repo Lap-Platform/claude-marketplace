@@ -97,89 +97,72 @@ Not specified.
 | POST | /2013-04-01/trafficpolicy/{Id}/{Version} | Updates the comment for a specified traffic policy version. |
 | POST | /2013-04-01/trafficpolicyinstance/{Id} | After you submit a UpdateTrafficPolicyInstance request, there's a brief delay while Route 53 creates the resource record sets that are specified in the traffic policy definition. Use GetTrafficPolicyInstance with the id of updated traffic policy instance confirm that the UpdateTrafficPolicyInstance request completed successfully. For more information, see the State response element.  Updates the resource record sets in a specified hosted zone that were created based on the settings in a specified traffic policy version. When you update a traffic policy instance, Amazon Route 53 continues to respond to DNS queries for the root resource record set name (such as example.com) while it replaces one group of resource record sets with another. Route 53 performs the following operations:   Route 53 creates a new group of resource record sets based on the specified traffic policy. This is true regardless of how significant the differences are between the existing resource record sets and the new resource record sets.    When all of the new resource record sets have been created, Route 53 starts to respond to DNS queries for the root resource record set name (such as example.com) by using the new resource record sets.   Route 53 deletes the old group of resource record sets that are associated with the root resource record set name. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new hosted zone for my domain?" -> POST /2013-04-01/hostedzone
-- "How do I add or update DNS records in my hosted zone?" -> POST /2013-04-01/hostedzone/{Id}/rrset/
-- "What are the nameservers for my hosted zone?" -> GET /2013-04-01/hostedzone/{Id}
-- "How do I check if my DNS change has propagated?" -> GET /2013-04-01/change/{Id}
-- "How do I create a health check for my endpoint?" -> POST /2013-04-01/healthcheck
-- "Is my health check passing or failing right now?" -> GET /2013-04-01/healthcheck/{HealthCheckId}/status
-- "Why is my health check failing?" -> GET /2013-04-01/healthcheck/{HealthCheckId}/lastfailurereason
-- "How many hosted zones do I have in my account?" -> GET /2013-04-01/hostedzonecount
-- "How do I list all DNS records in a hosted zone?" -> GET /2013-04-01/hostedzone/{Id}/rrset
-- "How do I associate a VPC with a private hosted zone?" -> POST /2013-04-01/hostedzone/{Id}/associatevpc
-- "How do I enable DNSSEC signing on my hosted zone?" -> POST /2013-04-01/hostedzone/{Id}/enable-dnssec
-- "How do I test what Route 53 returns for a DNS query?" -> GET /2013-04-01/testdnsanswer
-- "What are my account limits for hosted zones or health checks?" -> GET /2013-04-01/accountlimit/{Type}
-- "How do I set up traffic routing with a traffic policy?" -> POST /2013-04-01/trafficpolicy then POST /2013-04-01/trafficpolicyinstance
-- "How do I tag my hosted zones or health checks?" -> POST /2013-04-01/tags/{ResourceType}/{ResourceId}
-
-## Response Tips
-
-- **Change operations** (record changes, VPC associations, DNSSEC, KSK): Always return `ChangeInfo` with a `Status` field -- poll `GET /change/{Id}` until Status is `INSYNC` (not `PENDING`).
-- **List endpoints** (hosted zones, health checks, records, traffic policies): Use `IsTruncated` boolean to detect pagination; follow `NextMarker`/`NextRecordName`/`NextToken` fields for the next page. `MaxItems` is a string, not an integer.
-- **Resource creation** (hosted zones, health checks, traffic policies): Returns a `Location` header with the resource URL -- use this to fetch the created resource directly.
-- **Count endpoints** (hostedzonecount, healthcheckcount, trafficpolicyinstancecount): Return a single integer value -- useful for dashboard monitoring without listing all resources.
-- **Limit endpoints** (accountlimit, hostedzonelimit, delegationsetlimit): Return both `Limit.Value` (max allowed) and `Count` (current usage) -- compare these to detect approaching limits.
-- **Health check status**: Returns an array of `HealthCheckObservation` objects, one per Route 53 checker region -- aggregate these to determine overall health.
-- **CIDR collections**: Use `nexttoken`/`maxresults` query params (lowercase) for pagination, unlike most other endpoints that use `marker`/`maxitems`.
-
-## Anomaly Flags
-
-- **Change stuck in PENDING**: If `GET /change/{Id}` returns `Status: PENDING` for more than 60 seconds, surface a warning -- propagation typically completes in under 60s.
-- **Account limits approaching**: When `Count` exceeds 80% of `Limit.Value` on any `accountlimit` call, alert the user to request a limit increase before hitting a hard cap.
-- **Health check failure**: When `GET /healthcheck/{Id}/status` shows failures across multiple regions, proactively flag the endpoint as potentially down.
-- **IsTruncated missed**: If a list response has `IsTruncated: true` and the caller does not paginate, warn that results are incomplete.
-- **DNSSEC status issues**: If `GET /hostedzone/{Id}/dnssec` returns a `StatusMessage` that is non-empty, surface it -- this often indicates KSK rotation problems or signing errors.
-- **CallerReference reuse**: If a create call fails with `409`, the `CallerReference` was already used -- surface this with guidance to use a unique idempotency token.
-- **Health check version mismatch**: When updating a health check, if the `HealthCheckVersion` in the response does not match expectations, flag a possible concurrent modification.
-- **Deprecated or unusual record types**: If `testdnsanswer` returns an unexpected `ResponseCode` (anything other than `NOERROR`), proactively explain what the code means (NXDOMAIN, SERVFAIL, etc.).
-
-## Playbook
-
-### 1. Create a Hosted Zone and Add DNS Records
-
-1. Call `POST /2013-04-01/hostedzone` with `Name` (your domain, e.g. `example.com`) and a unique `CallerReference`.
-2. Note the `NameServers` from the `DelegationSet` in the response -- update these at your domain registrar.
-3. Note the hosted zone `Id` from the response.
-4. Call `POST /2013-04-01/hostedzone/{Id}/rrset/` with a `ChangeBatch` containing your DNS records (A, CNAME, MX, etc.) using action `CREATE`.
-5. Take the `ChangeInfo.Id` from the response and poll `GET /2013-04-01/change/{Id}` until `Status` is `INSYNC`.
-
-### 2. Set Up a Health Check with Failover
-
-1. Call `POST /2013-04-01/healthcheck` with `HealthCheckConfig` specifying `Type` (HTTP, HTTPS, or TCP), `IPAddress` or `FullyQualifiedDomainName`, `Port`, and `ResourcePath`.
-2. Note the `HealthCheck.Id` from the response.
-3. Verify the health check is working by calling `GET /2013-04-01/healthcheck/{Id}/status` and checking observations across regions.
-4. Create a failover record set in your hosted zone via `POST /2013-04-01/hostedzone/{Id}/rrset/` with `Failover: PRIMARY` and `HealthCheckId` set to the health check ID.
-5. Create a secondary failover record pointing to your backup resource with `Failover: SECONDARY`.
-
-### 3. Enable DNSSEC on a Hosted Zone
-
-1. Create a KMS key in the `us-east-1` region with the required key policy for Route 53 DNSSEC.
-2. Call `POST /2013-04-01/keysigningkey` with `HostedZoneId`, `KeyManagementServiceArn`, `Name`, and `Status` set to `ACTIVE`.
-3. Call `POST /2013-04-01/hostedzone/{Id}/enable-dnssec` to enable signing.
-4. Poll `GET /2013-04-01/change/{Id}` with the returned `ChangeInfo.Id` until `Status` is `INSYNC`.
-5. Verify by calling `GET /2013-04-01/hostedzone/{Id}/dnssec` and confirming `ServeSignature` is `SIGNING`.
-6. Add the DS record to your parent zone (at your registrar) using the `DSRecord` value from the KSK response.
-
-### 4. Associate a VPC with a Private Hosted Zone (Cross-Account)
-
-1. In the hosted zone owner account, call `POST /2013-04-01/hostedzone/{Id}/authorizevpcassociation` with the target `VPC` (VPCId and VPCRegion).
-2. In the VPC owner account, call `POST /2013-04-01/hostedzone/{Id}/associatevpc` with the same VPC details and an optional `Comment`.
-3. Poll `GET /2013-04-01/change/{Id}` until `Status` is `INSYNC`.
-4. Verify by calling `GET /2013-04-01/hostedzone/{Id}` and checking that the VPC appears in the `VPCs` array.
-5. Optionally revoke the authorization by calling `POST /2013-04-01/hostedzone/{Id}/deauthorizevpcassociation`.
-
-### 5. Audit Account Usage and Limits
-
-1. Call `GET /2013-04-01/hostedzonecount` and `GET /2013-04-01/healthcheckcount` to get current resource counts.
-2. Call `GET /2013-04-01/accountlimit/{Type}` for each limit type (`MAX_HOSTED_ZONES_BY_OWNER`, `MAX_HEALTH_CHECKS_BY_OWNER`, etc.) to get current limits and usage.
-3. For each hosted zone, call `GET /2013-04-01/hostedzonelimit/{Id}/{Type}` with type `MAX_RRSETS_BY_ZONE` to check record count against the zone limit.
-4. Compare `Count` vs `Limit.Value` -- flag any resource where usage exceeds 80%.
-5. Call `GET /2013-04-01/tags/{ResourceType}/{ResourceId}` for hosted zones and health checks to verify tagging compliance.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a activate?" -> POST /2013-04-01/keysigningkey/{HostedZoneId}/{Name}/activate
+- "Create a associatevpc?" -> POST /2013-04-01/hostedzone/{Id}/associatevpc
+- "Create a rrset?" -> POST /2013-04-01/hostedzone/{Id}/rrset/
+- "Create a cidrcollection?" -> POST /2013-04-01/cidrcollection
+- "Create a healthcheck?" -> POST /2013-04-01/healthcheck
+- "Create a hostedzone?" -> POST /2013-04-01/hostedzone
+- "Create a keysigningkey?" -> POST /2013-04-01/keysigningkey
+- "Create a queryloggingconfig?" -> POST /2013-04-01/queryloggingconfig
+- "Create a delegationset?" -> POST /2013-04-01/delegationset
+- "Create a trafficpolicy?" -> POST /2013-04-01/trafficpolicy
+- "Create a trafficpolicyinstance?" -> POST /2013-04-01/trafficpolicyinstance
+- "Create a authorizevpcassociation?" -> POST /2013-04-01/hostedzone/{Id}/authorizevpcassociation
+- "Create a deactivate?" -> POST /2013-04-01/keysigningkey/{HostedZoneId}/{Name}/deactivate
+- "Delete a cidrcollection?" -> DELETE /2013-04-01/cidrcollection/{CidrCollectionId}
+- "Delete a healthcheck?" -> DELETE /2013-04-01/healthcheck/{HealthCheckId}
+- "Delete a hostedzone?" -> DELETE /2013-04-01/hostedzone/{Id}
+- "Delete a keysigningkey?" -> DELETE /2013-04-01/keysigningkey/{HostedZoneId}/{Name}
+- "Delete a queryloggingconfig?" -> DELETE /2013-04-01/queryloggingconfig/{Id}
+- "Delete a delegationset?" -> DELETE /2013-04-01/delegationset/{Id}
+- "Delete a trafficpolicy?" -> DELETE /2013-04-01/trafficpolicy/{Id}/{Version}
+- "Delete a trafficpolicyinstance?" -> DELETE /2013-04-01/trafficpolicyinstance/{Id}
+- "Create a deauthorizevpcassociation?" -> POST /2013-04-01/hostedzone/{Id}/deauthorizevpcassociation
+- "Create a disable-dnssec?" -> POST /2013-04-01/hostedzone/{Id}/disable-dnssec
+- "Create a disassociatevpc?" -> POST /2013-04-01/hostedzone/{Id}/disassociatevpc
+- "Create a enable-dnssec?" -> POST /2013-04-01/hostedzone/{Id}/enable-dnssec
+- "Get accountlimit details?" -> GET /2013-04-01/accountlimit/{Type}
+- "Get change details?" -> GET /2013-04-01/change/{Id}
+- "List all checkeripranges?" -> GET /2013-04-01/checkeripranges
+- "List all dnssec?" -> GET /2013-04-01/hostedzone/{Id}/dnssec
+- "List all geolocation?" -> GET /2013-04-01/geolocation
+- "Get healthcheck details?" -> GET /2013-04-01/healthcheck/{HealthCheckId}
+- "List all healthcheckcount?" -> GET /2013-04-01/healthcheckcount
+- "List all lastfailurereason?" -> GET /2013-04-01/healthcheck/{HealthCheckId}/lastfailurereason
+- "List all status?" -> GET /2013-04-01/healthcheck/{HealthCheckId}/status
+- "Get hostedzone details?" -> GET /2013-04-01/hostedzone/{Id}
+- "List all hostedzonecount?" -> GET /2013-04-01/hostedzonecount
+- "Get hostedzonelimit details?" -> GET /2013-04-01/hostedzonelimit/{Id}/{Type}
+- "Get queryloggingconfig details?" -> GET /2013-04-01/queryloggingconfig/{Id}
+- "Get delegationset details?" -> GET /2013-04-01/delegationset/{Id}
+- "Get reusabledelegationsetlimit details?" -> GET /2013-04-01/reusabledelegationsetlimit/{Id}/{Type}
+- "Get trafficpolicy details?" -> GET /2013-04-01/trafficpolicy/{Id}/{Version}
+- "Get trafficpolicyinstance details?" -> GET /2013-04-01/trafficpolicyinstance/{Id}
+- "List all trafficpolicyinstancecount?" -> GET /2013-04-01/trafficpolicyinstancecount
+- "List all cidrblocks?" -> GET /2013-04-01/cidrcollection/{CidrCollectionId}/cidrblocks
+- "List all cidrcollection?" -> GET /2013-04-01/cidrcollection
+- "Get cidrcollection details?" -> GET /2013-04-01/cidrcollection/{CidrCollectionId}
+- "List all geolocations?" -> GET /2013-04-01/geolocations
+- "List all healthcheck?" -> GET /2013-04-01/healthcheck
+- "List all hostedzone?" -> GET /2013-04-01/hostedzone
+- "List all hostedzonesbyname?" -> GET /2013-04-01/hostedzonesbyname
+- "List all hostedzonesbyvpc?" -> GET /2013-04-01/hostedzonesbyvpc
+- "List all queryloggingconfig?" -> GET /2013-04-01/queryloggingconfig
+- "List all rrset?" -> GET /2013-04-01/hostedzone/{Id}/rrset
+- "List all delegationset?" -> GET /2013-04-01/delegationset
+- "Get tag details?" -> GET /2013-04-01/tags/{ResourceType}/{ResourceId}
+- "List all trafficpolicies?" -> GET /2013-04-01/trafficpolicies
+- "List all trafficpolicyinstances?" -> GET /2013-04-01/trafficpolicyinstances
+- "List all hostedzone?" -> GET /2013-04-01/trafficpolicyinstances/hostedzone
+- "List all trafficpolicy?" -> GET /2013-04-01/trafficpolicyinstances/trafficpolicy
+- "List all versions?" -> GET /2013-04-01/trafficpolicies/{Id}/versions
+- "List all authorizevpcassociation?" -> GET /2013-04-01/hostedzone/{Id}/authorizevpcassociation
+- "List all testdnsanswer?" -> GET /2013-04-01/testdnsanswer
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

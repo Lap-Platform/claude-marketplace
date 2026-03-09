@@ -10,393 +10,468 @@
 
 @group accounts
 @endpoint GET /accounts
-@optional {skip: int(int32), take: int(int32), asset_type: str, identifier: str}
-@returns(200)
+@desc Overview of accounts
+@optional {skip: int(int32) # The number of items to skip in the resultset., take: int(int32) # The number of items to return in the resultset. The returned count can be equal or less than this number., asset_type: str # Filters the list, returning only accounts containing the specified asset type., identifier: str # Return only accounts, matching the specified identifier.}
+@returns(200) OK
 
 @endpoint POST /accounts
-@optional {identifier: str, servicepack_id: int(int32), ftp_password: str}
-@returns(202)
-@errors {400}
+@desc Create a new account
+@optional {identifier: str # An identifier for the account.  Should be a domain name for hosting accounts., servicepack_id: int(int32) # The servicepack id that defines the account., ftp_password: str # Ftp password for the account.  Applies only if the servicepack contains hosting.  Passwords have to adhere to following rules: <ul><li>Between 8-20 characters.</li><li>Must be a mix of letters and digits.</li><li>Must contain at least one digit (0-9).</li><li>Must contain at least one letter (a-z).</li><li>Cannot contain spaces.</li><li>Cannot contain characters: * € $ & + } { ' " \ </li></ul>}
+@returns(202) Accepted
+@errors {400: Bad Request}
 
 @endpoint GET /accounts/{accountId}
-@required {account_id: int(int32)}
-@returns(200) {id: int(int32), identifier: str, servicepack: map{id: int(int32), name: str}, addons: [map]}
+@desc Get a specific account
+@required {account_id: int(int32) # The id of the account.}
+@returns(200) {id: int(int32), identifier: str, servicepack: map{id: int(int32), name: str}, addons: [map]} # OK
 
 @endgroup
 
 @group dns
 @endpoint GET /dns/{domainName}/records
-@required {domain_name: str}
-@optional {skip: int(int32), take: int(int32), type: str, record_name: str, service: str}
-@returns(200)
+@desc Get records
+@required {domain_name: str # The domain name.}
+@optional {skip: int(int32) # The number of items to skip in the resultset., take: int(int32) # The number of items to return in the resultset. The returned count can be equal or less than this number., type: str # Filters records matching the type. Most other filters only apply when this filter is specified., record_name: str # Filters records matching the record name. This filter only applies to lookups of A, AAAA, CAA, CNAME, MX, TXT, SRV, ALIAS and TLSA records., service: str # Filters records for the service. This filter only applies to lookups of SRV records.}
+@returns(200) OK
 
 @endpoint POST /dns/{domainName}/records
-@required {domain_name: str}
-@optional {id: str, type: str, record_name: str, ttl: int(int32)=3600, content: str, priority: int(int32)=10, service: str, weight: int(int32)=0, target: str, protocol: str=TCP, port: int(int32)}
-@returns(201)
+@desc Create a record
+@required {domain_name: str # The domain name.}
+@optional {id: str # The id of the record This value is ignored for creation of new records., type: str # The type of the record (A, AAAA, CAA, CNAME, MX, TXT, SRV, ALIAS and TLSA)., record_name: str # The name of the record.  This is the host name, alias defined by the record.  An empty record or '@' is equal to the domain name.  Applies to A, AAAA, MX, CNAME, TXT, CAA, ALIAS and TLSA records.  When type is TLSA the recommended value format is port number, protocol and host: _25._tcp.  Does not apply for SRV records., ttl: int(int32)=3600 # Time to live of the record in seconds.  It defines the time frame that clients can cache the information.  The value MUST be between 60 and 86400. The default value is 3600 (= 1 hour)., content: str # Variable data depending on the record type. <ul><li>A: the IPv4 address.</li><li>AAAA: the IPv6 address.</li><li>CNAME: canonical name of an alias.</li><li>MX: fully qualified domain name of a mail host.</li><li>SRV: does not apply. Data for the SRV records can be found in specific properties.</li><li>TXT: free form text data.</li><li>CAA: format should match specific values for flag, tag and ca: "{flag} {tag} {ca}". <ul><li>The flag. The values 128 (critical) or 0 (non-critical) are expected, with 0 as the default.</li><li>The tag. A tag specifies which actions an authorized CA can take in terms of issuing SSL/TLS certificates. <ul><li>The value "issue": explicitly authorizes a single certificate authority to issue a certificate (any type) for the hostname.</li><li>The value "issuewild": explicitly authorizes a single certificate authority to issue a wildcard certificate (and only wildcard) for the hostname.</li><li>The value "iodef": specifies a URL to which a certificate authority may report policy violations.</li></ul></li><li>The ca. This is the domain of the CA (Certification Authority) that has the authority to issue certificates for the domain in question. If the value is a semicolon (;), it means that no CA has the authority to issue a certificate for that domain.</li></ul></li><li>ALIAS: canonical name of an alias.</li><li>TLSA: format should match specific values for usage, selector, matching type and data: "{usage} {selector} {matching_type} {data}" <ul><li>The usage. The first field after the TLSA text in the DNS RR, specifies how to verify the certificate. <ul><li>A value of 0 is for what is commonly called CA constraint (and PKIX-TA). The certificate provided when establishing TLS must be issued by the listed root-CA or one of its intermediate CAs, with a valid certification path to a root-CA already trusted by the application doing the verification.</li><li>A value of 1 is for what is commonly called Service certificate constraint (and PKIX-EE). The certificate used must match the TLSA record exactly, and it must also pass PKIX certification path validation to a trusted root-CA.</li><li>A value of 2 is for what is commonly called Trust Anchor Assertion (and DANE-TA). The certificate used has a valid certification path pointing back to the certificate mention in this record, but there is no need for it to pass the PKIX certification path validation to a trusted root-CA.</li><li>A value of 3 is for what is commonly called Domain issued certificate (and DANE-EE). The services uses a self-signed certificate. It is not signed by anyone else, and is exactly this record.</li></ul></li><li>The selector. When connecting to the service and a certificate is received, the selector field specifies which parts of it should be checked. <ul><li>A value of 0 means to select the entire certificate for matching.</li><li>A value of 1 means to select just the public key for certificate matching. Matching the public key is often sufficient, as this is likely to be unique.</li></ul></li><li>The matching type. <ul><li>A type of 0 means the entire information selected is present in the certificate association data.</li><li>A type of 1 means to do a SHA-256 hash of the selected data.</li><li>A type of 2 means to do a SHA-512 hash of the selected data.</li></ul></li><li>The actual data to be matched given the settings of the other fields. This is a long text string of hexadecimal data.</li></ul></li></ul>, priority: int(int32)=10 # The priority for MX or SRV records.  A lower value means more preferred.  The value MUST be a positive integer less or equal to 9999., service: str # The symbolic name of the desired service for SRV records.  Editing the value is not possible. You should add a new SRV record and can delete the existing record., weight: int(int32)=0 # The weight for SRV records with the same priority.  A higher value means more preferred., target: str # The canonical hostname of the machine providing the service for SRV records.  Editing the value is not possible. You should add a new SRV record and delete the existing record., protocol: str=TCP # Used for the creation of SRV records. Possible options: TCP, UDP, ...  Editing the value is not possible. You should add a new SRV record and delete the existing record., port: int(int32) # The port for SRV records.  The value MUST be a positive integer.  Editing the value is not possible. You should add a new SRV record and delete the existing record.}
+@returns(201) Created
 
 @endpoint GET /dns/{domainName}/records/{recordId}
-@required {domain_name: str, record_id: str}
-@returns(200) {id: str, type: str, record_name: str, ttl: int(int32), content: str, priority: int(int32), service: str, weight: int(int32), target: str, protocol: str, port: int(int32)}
+@desc Get specific record
+@required {domain_name: str # The domain name., record_id: str # The id of the record.}
+@returns(200) {id: str, type: str, record_name: str, ttl: int(int32), content: str, priority: int(int32), service: str, weight: int(int32), target: str, protocol: str, port: int(int32)} # OK
 
 @endpoint PUT /dns/{domainName}/records/{recordId}
-@required {domain_name: str, record_id: str}
-@optional {id: str, type: str, record_name: str, ttl: int(int32)=3600, content: str, priority: int(int32)=10, service: str, weight: int(int32)=0, target: str, protocol: str=TCP, port: int(int32)}
-@returns(200)
+@desc Edit a record
+@required {domain_name: str # The domain name., record_id: str # The id of the record.}
+@optional {id: str # The id of the record This value is ignored for creation of new records., type: str # The type of the record (A, AAAA, CAA, CNAME, MX, TXT, SRV, ALIAS and TLSA)., record_name: str # The name of the record.  This is the host name, alias defined by the record.  An empty record or '@' is equal to the domain name.  Applies to A, AAAA, MX, CNAME, TXT, CAA, ALIAS and TLSA records.  When type is TLSA the recommended value format is port number, protocol and host: _25._tcp.  Does not apply for SRV records., ttl: int(int32)=3600 # Time to live of the record in seconds.  It defines the time frame that clients can cache the information.  The value MUST be between 60 and 86400. The default value is 3600 (= 1 hour)., content: str # Variable data depending on the record type. <ul><li>A: the IPv4 address.</li><li>AAAA: the IPv6 address.</li><li>CNAME: canonical name of an alias.</li><li>MX: fully qualified domain name of a mail host.</li><li>SRV: does not apply. Data for the SRV records can be found in specific properties.</li><li>TXT: free form text data.</li><li>CAA: format should match specific values for flag, tag and ca: "{flag} {tag} {ca}". <ul><li>The flag. The values 128 (critical) or 0 (non-critical) are expected, with 0 as the default.</li><li>The tag. A tag specifies which actions an authorized CA can take in terms of issuing SSL/TLS certificates. <ul><li>The value "issue": explicitly authorizes a single certificate authority to issue a certificate (any type) for the hostname.</li><li>The value "issuewild": explicitly authorizes a single certificate authority to issue a wildcard certificate (and only wildcard) for the hostname.</li><li>The value "iodef": specifies a URL to which a certificate authority may report policy violations.</li></ul></li><li>The ca. This is the domain of the CA (Certification Authority) that has the authority to issue certificates for the domain in question. If the value is a semicolon (;), it means that no CA has the authority to issue a certificate for that domain.</li></ul></li><li>ALIAS: canonical name of an alias.</li><li>TLSA: format should match specific values for usage, selector, matching type and data: "{usage} {selector} {matching_type} {data}" <ul><li>The usage. The first field after the TLSA text in the DNS RR, specifies how to verify the certificate. <ul><li>A value of 0 is for what is commonly called CA constraint (and PKIX-TA). The certificate provided when establishing TLS must be issued by the listed root-CA or one of its intermediate CAs, with a valid certification path to a root-CA already trusted by the application doing the verification.</li><li>A value of 1 is for what is commonly called Service certificate constraint (and PKIX-EE). The certificate used must match the TLSA record exactly, and it must also pass PKIX certification path validation to a trusted root-CA.</li><li>A value of 2 is for what is commonly called Trust Anchor Assertion (and DANE-TA). The certificate used has a valid certification path pointing back to the certificate mention in this record, but there is no need for it to pass the PKIX certification path validation to a trusted root-CA.</li><li>A value of 3 is for what is commonly called Domain issued certificate (and DANE-EE). The services uses a self-signed certificate. It is not signed by anyone else, and is exactly this record.</li></ul></li><li>The selector. When connecting to the service and a certificate is received, the selector field specifies which parts of it should be checked. <ul><li>A value of 0 means to select the entire certificate for matching.</li><li>A value of 1 means to select just the public key for certificate matching. Matching the public key is often sufficient, as this is likely to be unique.</li></ul></li><li>The matching type. <ul><li>A type of 0 means the entire information selected is present in the certificate association data.</li><li>A type of 1 means to do a SHA-256 hash of the selected data.</li><li>A type of 2 means to do a SHA-512 hash of the selected data.</li></ul></li><li>The actual data to be matched given the settings of the other fields. This is a long text string of hexadecimal data.</li></ul></li></ul>, priority: int(int32)=10 # The priority for MX or SRV records.  A lower value means more preferred.  The value MUST be a positive integer less or equal to 9999., service: str # The symbolic name of the desired service for SRV records.  Editing the value is not possible. You should add a new SRV record and can delete the existing record., weight: int(int32)=0 # The weight for SRV records with the same priority.  A higher value means more preferred., target: str # The canonical hostname of the machine providing the service for SRV records.  Editing the value is not possible. You should add a new SRV record and delete the existing record., protocol: str=TCP # Used for the creation of SRV records. Possible options: TCP, UDP, ...  Editing the value is not possible. You should add a new SRV record and delete the existing record., port: int(int32) # The port for SRV records.  The value MUST be a positive integer.  Editing the value is not possible. You should add a new SRV record and delete the existing record.}
+@returns(200) OK
 
 @endpoint DELETE /dns/{domainName}/records/{recordId}
-@required {domain_name: str, record_id: str}
-@returns(204)
+@desc Delete a record
+@required {domain_name: str # The domain name., record_id: str # The id of the record.}
+@returns(204) No Content
 
 @endgroup
 
 @group domains
 @endpoint GET /domains
-@optional {skip: int(int32), take: int(int32)}
-@returns(200)
+@desc Overviews of domains
+@optional {skip: int(int32) # The number of items to skip in the resultset., take: int(int32) # The number of items to return in the resultset. The returned count can be equal or less than this number.}
+@returns(200) OK
 
 @endpoint GET /domains/{domainName}
-@required {domain_name: str}
-@returns(200) {domain_name: str, expiration_date: str(date-time), will_renew: bool, name_servers: [map], registrant: map{first_name: str, last_name: str, address: str, postal_code: str, city: str, country_code: str, email: str, fax: str, phone: str, language_code: str, company_name: str, enterprise_number: str}, can_toggle_renew: bool}
+@desc Details of a domain
+@required {domain_name: str # The domain name}
+@returns(200) {domain_name: str, expiration_date: str(date-time), will_renew: bool, name_servers: [map], registrant: map{first_name: str, last_name: str, address: str, postal_code: str, city: str, country_code: str, email: str, fax: str, phone: str, language_code: str, company_name: str, enterprise_number: str}, can_toggle_renew: bool} # OK
 
 @endpoint POST /domains/registrations
-@optional {domain_name: str, name_servers: [str], registrant: map{first_name: str, last_name: str, address: str, postal_code: str, city: str, country_code: str, email: str, fax: str, phone: str, language_code: str, company_name: str, enterprise_number: str, extra_fields: [map{name: str, value: str}]}}
-@returns(202)
+@desc Register a domain
+@optional {domain_name: str # The domain name to register.  Only pass the domain part and the tld. <i>For abc.com, abc is the domain part, com is the tld.</i>, name_servers: [str] # List of name servers. When empty, the registation will be done on default name servers., registrant: map{first_name: str, last_name: str, address: str, postal_code: str, city: str, country_code: str, email: str, fax: str, phone: str, language_code: str, company_name: str, enterprise_number: str, extra_fields: [map{name: str, value: str}]}}
+@returns(202) Accepted
 
 @endpoint POST /domains/transfers
-@optional {domain_name: str, auth_code: str, name_servers: [str], registrant: map{first_name: str, last_name: str, address: str, postal_code: str, city: str, country_code: str, email: str, fax: str, phone: str, language_code: str, company_name: str, enterprise_number: str, extra_fields: [map{name: str, value: str}]}}
-@returns(202)
+@desc Transfer a domain
+@optional {domain_name: str # The domain name to transfer.  Only pass the domain part and the tld. <i>For abc.com, abc is the domain part, com is the tld.</i>, auth_code: str # Authorization code which allows the transfer to execute., name_servers: [str] # List of name servers. When empty, the transfer will be done on default name servers., registrant: map{first_name: str, last_name: str, address: str, postal_code: str, city: str, country_code: str, email: str, fax: str, phone: str, language_code: str, company_name: str, enterprise_number: str, extra_fields: [map{name: str, value: str}]}}
+@returns(202) Accepted
 
 @endpoint PUT /domains/{domainName}/nameservers
-@required {domain_name: str}
-@optional {domain_name: str, name_servers: [str]}
-@returns(204)
+@desc Edit domain name servers
+@required {domain_name: str # The domain name}
+@optional {domain_name: str # The domain name to register., name_servers: [str] # List of name servers.}
+@returns(204) No Content
 
 @endpoint PUT /domains/{domainName}/renew
-@required {domain_name: str}
-@optional {will_renew: bool}
-@returns(204)
+@desc Edit domain name renew state
+@required {domain_name: str # The domain name}
+@optional {will_renew: bool # Indication of renewal.}
+@returns(204) No Content
 
 @endgroup
 
 @group linuxhostings
 @endpoint GET /linuxhostings
-@optional {skip: int(int32), take: int(int32)}
-@returns(200)
+@desc Overview of linux hostings
+@optional {skip: int(int32) # The number of items to skip in the resultset., take: int(int32) # The number of items to return in the resultset. The returned count can be equal or less than this number.}
+@returns(200) OK
 
 @endpoint GET /linuxhostings/{domainName}
-@required {domain_name: str}
-@returns(200) {domain_name: str, servicepack_id: int(int32), max_webspace_size: int(int32), max_size: int(int32), webspace_usage: int(int32), actual_size: int(int32), ip: str, ip_type: str, ftp_enabled: bool, ftp_username: str, ssh_host: str, ssh_username: str, php_version: str, sites: [map], mysql_database_names: [str]}
+@desc Linux hosting detail
+@required {domain_name: str # The Linux hosting domain name.}
+@returns(200) {domain_name: str, servicepack_id: int(int32), max_webspace_size: int(int32), max_size: int(int32), webspace_usage: int(int32), actual_size: int(int32), ip: str, ip_type: str, ftp_enabled: bool, ftp_username: str, ssh_host: str, ssh_username: str, php_version: str, sites: [map], mysql_database_names: [str]} # OK
 
 @endpoint GET /linuxhostings/{domainName}/phpsettings/availableversions
-@required {domain_name: str}
-@returns(200)
+@desc Get the available PHP versions.
+@required {domain_name: str # Linux hosting domain name.}
+@returns(200) OK
 
 @endpoint PUT /linuxhostings/{domainName}/phpsettings/version
-@required {domain_name: str}
-@optional {version: str}
-@returns(204)
+@desc Change the Linux hosting PHP version.
+@required {domain_name: str # Linux hosting domain name.}
+@optional {version: str # Php version}
+@returns(204) No Content
 
 @endpoint PUT /linuxhostings/{domainName}/settings/gzipcompression
-@required {domain_name: str}
-@optional {enabled: bool}
-@returns(204)
+@desc Enable/disable GZIP compression
+@required {domain_name: str # Linux hosting domain name}
+@optional {enabled: bool # Enabled}
+@returns(204) No Content
 
 @endpoint POST /linuxhostings/{domainName}/subsites
-@required {domain_name: str}
-@optional {domain_name: str, path: str}
-@returns(201)
+@desc Create a subsite
+@required {domain_name: str # Linux hosting domain name.}
+@optional {domain_name: str # Subsite domain name (e.g. alias.be or subsite.site.be)., path: str # Folder location for the subsite (when empty we use /subsites/site (e.g. /subsites/subsite.site.be)  The path MUST pre-exist on the server. It WILL NOT be created automatically.}
+@returns(201) Created
 
 @endpoint DELETE /linuxhostings/{domainName}/subsites/{siteName}
-@required {domain_name: str, site_name: str}
-@returns(204)
-@errors {400}
+@desc Delete a subsite
+@required {domain_name: str # Linux hosting domain name., site_name: str # Name of the site on the linux hosting.}
+@returns(204) No Content
+@errors {400: Bad Request}
 
 @endpoint POST /linuxhostings/{domainName}/sites/{siteName}/hostheaders
-@required {domain_name: str, site_name: str}
-@optional {domain_name: str}
-@returns(201)
+@desc Create a host header
+@required {domain_name: str # Linux hosting domain name., site_name: str # Name of the site on the linux hosting.}
+@optional {domain_name: str # Host header domain name (e.g. alias.be or alias.site.be).}
+@returns(201) Created
 
 @endpoint PUT /linuxhostings/{domainName}/sites/{siteName}/http2/configuration
-@required {domain_name: str, site_name: str}
-@optional {enabled: bool}
-@returns(204)
-@errors {400}
+@desc Configure HTTP/2
+@required {domain_name: str # Linux hosting domain name., site_name: str # Site name where HTTP/2 should be configured.  For HTTP/2 to work correctly, the site must have ssl enabled.}
+@optional {enabled: bool # Enable or disable HTTP/2.}
+@returns(204) No Content
+@errors {400: Bad Request}
 
 @endpoint PUT /linuxhostings/{domainName}/ftp/configuration
-@required {domain_name: str}
-@optional {enabled: bool}
-@returns(204)
-@errors {400}
+@desc Configure FTP
+@required {domain_name: str # Linux hosting domain name.}
+@optional {enabled: bool # Enable or disable FTP.}
+@returns(204) No Content
+@errors {400: Bad Request}
 
 @endpoint PUT /linuxhostings/{domainName}/sslsettings/{hostname}/letsencrypt
-@required {domain_name: str, hostname: str}
-@optional {enabled: bool}
-@returns(204)
+@desc Configure let's encrypt
+@required {domain_name: str # Linux hosting domain name., hostname: str # Specific hostname.}
+@optional {enabled: bool # Enabled}
+@returns(204) No Content
 
 @endpoint PUT /linuxhostings/{domainName}/sslsettings/{hostname}/autoredirect
-@required {domain_name: str, hostname: str}
-@optional {enabled: bool}
-@returns(204)
+@desc Configure auto redirect
+@required {domain_name: str # Linux hosting domain name., hostname: str # Specific hostname.}
+@optional {enabled: bool # Enabled}
+@returns(204) No Content
 
 @endpoint PUT /linuxhostings/{domainName}/phpsettings/memorylimit
-@required {domain_name: str}
-@optional {memory_limit: int(int32)}
-@returns(204)
+@desc Configure PHP memory limit
+@required {domain_name: str # Linux hosting domain name.}
+@optional {memory_limit: int(int32) # The php memory limit}
+@returns(204) No Content
 
 @endpoint PUT /linuxhostings/{domainName}/phpsettings/apcu
-@required {domain_name: str}
-@optional {apcu_size: int(int32), enabled: bool}
-@returns(204)
+@desc Configure PHP APCu setting
+@required {domain_name: str # Linux hosting domain name}
+@optional {apcu_size: int(int32) # The APcu size., enabled: bool # Enables or disables APC.}
+@returns(204) No Content
 
 @endpoint GET /linuxhostings/{domainName}/scheduledtasks
-@required {domain_name: str}
-@returns(200)
+@desc Overview of scheduled tasks
+@required {domain_name: str # Linux hosting domain name.}
+@returns(200) OK
 
 @endpoint POST /linuxhostings/{domainName}/scheduledtasks
-@required {domain_name: str}
-@optional {id: str, enabled: bool, cron_expression: str, script_location: str}
-@returns(201)
+@desc Add a scheduled task
+@required {domain_name: str # Linux hosting domain name.}
+@optional {id: str # The id of the scheduled task.  This value is ignored for creation of new scheduled tasks., enabled: bool # Enabled., cron_expression: str # Cron expression of scheduled task.  5-digit expressions (*/5 * * * *) are required in the following sequence: <ul><li>Minute (0 - 59, also */5, */10, */15 and */30 as every 5 minutes, every 10 minutes, every quarter or every half-hour are allowed)</li><li>Hour (0 - 23, also * as every hour is allowed)</li><li>Day of the month (1 - 31, also * as every day is allowed)</li><li>Month (1 - 12 as January to December, also * as every month is allowed)</li><li>Day of the week (1 - 7 as Monday to Sunday, also * as every day is allowed)</li></ul>, script_location: str # Absolute path from this linux hosting to execute.}
+@returns(201) Created
 
 @endpoint GET /linuxhostings/{domainName}/scheduledtasks/{scheduledTaskId}
-@required {domain_name: str, scheduled_task_id: str}
-@returns(200) {id: str, enabled: bool, cron_expression: str, script_location: str}
+@desc Get scheduled task detail
+@required {domain_name: str # Linux hosting domain name., scheduled_task_id: str # Id of the scheduled task.}
+@returns(200) {id: str, enabled: bool, cron_expression: str, script_location: str} # OK
 
 @endpoint PUT /linuxhostings/{domainName}/scheduledtasks/{scheduledTaskId}
-@required {domain_name: str, scheduled_task_id: str}
-@optional {id: str, enabled: bool, cron_expression: str, script_location: str}
-@returns(204)
-@errors {400}
+@desc Configure a scheduled task
+@required {domain_name: str # Linux hosting domain name., scheduled_task_id: str # Id of the scheduled task.}
+@optional {id: str # The id of the scheduled task.  This value is ignored for creation of new scheduled tasks., enabled: bool # Enabled., cron_expression: str # Cron expression of scheduled task.  5-digit expressions (*/5 * * * *) are required in the following sequence: <ul><li>Minute (0 - 59, also */5, */10, */15 and */30 as every 5 minutes, every 10 minutes, every quarter or every half-hour are allowed)</li><li>Hour (0 - 23, also * as every hour is allowed)</li><li>Day of the month (1 - 31, also * as every day is allowed)</li><li>Month (1 - 12 as January to December, also * as every month is allowed)</li><li>Day of the week (1 - 7 as Monday to Sunday, also * as every day is allowed)</li></ul>, script_location: str # Absolute path from this linux hosting to execute.}
+@returns(204) No Content
+@errors {400: Bad Request}
 
 @endpoint DELETE /linuxhostings/{domainName}/scheduledtasks/{scheduledTaskId}
-@required {domain_name: str, scheduled_task_id: str}
-@returns(204)
-@errors {400}
+@desc Delete a scheduled task
+@required {domain_name: str # Linux hosting domain name., scheduled_task_id: str # Id of the scheduled task.}
+@returns(204) No Content
+@errors {400: Bad Request}
 
 @endpoint GET /linuxhostings/{domainName}/ssh/keys
-@required {domain_name: str}
-@returns(200)
+@desc Overview of SSH keys
+@required {domain_name: str # Linux hosting domain name.}
+@returns(200) OK
 
 @endpoint POST /linuxhostings/{domainName}/ssh/keys
-@required {domain_name: str}
-@optional {public_key: str}
-@returns(201)
+@desc Add a SSH key
+@required {domain_name: str # Linux hosting domain name.}
+@optional {public_key: str # Public key}
+@returns(201) Created
 
 @endpoint PUT /linuxhostings/{domainName}/ssh/configuration
-@required {domain_name: str}
-@optional {enabled: bool}
-@returns(204)
-@errors {400}
+@desc Configure SSH
+@required {domain_name: str # Linux hosting domain name.}
+@optional {enabled: bool # Enable or disable SSH.}
+@returns(204) No Content
+@errors {400: Bad Request}
 
 @endpoint DELETE /linuxhostings/{domainName}/ssh/keys/{fingerprint}
-@required {domain_name: str, fingerprint: str}
-@returns(204)
-@errors {400}
+@desc Delete a SSH key
+@required {domain_name: str # Linux hosting domain name., fingerprint: str # Fingerprint of public key.}
+@returns(204) No Content
+@errors {400: Bad Request}
 
 @endgroup
 
 @group mailboxes
 @endpoint GET /mailboxes
-@optional {domain_name: str}
-@returns(200)
+@desc Gets your mailboxes.
+@optional {domain_name: str # Obligated domain name for getting mailboxes.}
+@returns(200) OK
 
 @endpoint POST /mailboxes
-@optional {email_address: str, account_id: int(int32), password: str}
-@returns(201)
+@desc Create a new mailbox.
+@optional {email_address: str # E-mail address, account_id: int(int32) # Mail zone account id, password: str # The password for the mailbox.  Passwords have to adhere to following rules: <ul><li>Between 8-20 characters.</li><li>Must be a mix of letters and digits.</li><li>Must contain at least one digit (0-9).</li><li>Must contain at least one letter (a-z).</li><li>Cannot contain spaces.</li><li>Cannot contain characters: * € $ & + } { ' " \ </li></ul>}
+@returns(201) Created
 
 @endpoint GET /mailboxes/{mailboxName}
-@required {mailbox_name: str}
-@returns(200) {name: str, login: str, max_size: int(int32), actual_size: int(int32), auto_reply: map{enabled: bool, subject: str, message: str}, auto_forward: map{enabled: bool, email_addresses: [str], copy_to_myself: bool}}
+@desc Get a specific mailbox
+@required {mailbox_name: str # Mailbox name.}
+@returns(200) {name: str, login: str, max_size: int(int32), actual_size: int(int32), auto_reply: map{enabled: bool, subject: str, message: str}, auto_forward: map{enabled: bool, email_addresses: [str], copy_to_myself: bool}} # OK
 
 @endpoint DELETE /mailboxes/{mailboxName}
-@required {mailbox_name: str}
-@returns(204)
-@errors {400}
+@desc Delete a mailbox
+@required {mailbox_name: str # Mailbox name.}
+@returns(204) No Content
+@errors {400: Bad Request}
 
 @endpoint PUT /mailboxes/{mailboxName}/password
-@required {mailbox_name: str}
-@optional {password: str}
-@returns(204)
+@desc Change password for mailbox
+@required {mailbox_name: str # Mailbox name.}
+@optional {password: str # The password for the database user.  Passwords have to adhere to following rules: <ul><li>Between 8-20 characters.</li><li>Must be a mix of letters and digits.</li><li>Must contain at least one digit (0-9).</li><li>Must contain at least one letter (a-z).</li><li>Cannot contain spaces.</li><li>Cannot contain characters: * € $ & + } { ' " \ </li></ul>}
+@returns(204) No Content
 
 @endpoint PUT /mailboxes/{mailboxName}/autoreply
-@required {mailbox_name: str}
-@optional {enabled: bool, subject: str, message: str}
-@returns(204)
+@desc Configure auto-reply for mailbox
+@required {mailbox_name: str # Mailbox name.}
+@optional {enabled: bool # Enabled, subject: str # Subject, message: str # Message}
+@returns(204) No Content
 
 @endpoint PUT /mailboxes/{mailboxName}/autoforward
-@required {mailbox_name: str}
-@optional {enabled: bool, email_addresses: [str], copy_to_myself: bool}
-@returns(204)
+@desc Configure auto-forward for mailbox
+@required {mailbox_name: str # Mailbox name.}
+@optional {enabled: bool # Enabled, email_addresses: [str] # E-mail addresses to which e-mails are forwarded, copy_to_myself: bool # Copy to myself}
+@returns(204) No Content
 
 @endgroup
 
 @group mailzones
 @endpoint GET /mailzones/{domainName}
-@required {domain_name: str}
-@returns(200) {name: str, enabled: bool, available_accounts: [map], aliases: [map], anti_spam: map{type: str, allowed_types: [str]}, catch_all: map{email_addresses: [str]}, smtp_domains: [map]}
+@desc Get the mail zone.
+@required {domain_name: str # Mail zone domain name.}
+@returns(200) {name: str, enabled: bool, available_accounts: [map], aliases: [map], anti_spam: map{type: str, allowed_types: [str]}, catch_all: map{email_addresses: [str]}, smtp_domains: [map]} # OK
 
 @endpoint POST /mailzones/{domainName}/catchall
-@required {domain_name: str}
-@optional {email_address: str}
-@returns(201)
+@desc Create a catch-all on the mail zone
+@required {domain_name: str # Mail zone domain name.}
+@optional {email_address: str # E-mail address to which all e-mails are sent to inexistent mailboxes or aliases}
+@returns(201) Created
 
 @endpoint DELETE /mailzones/{domainName}/catchall/{emailAddress}
-@required {domain_name: str, email_address: str}
-@returns(204)
+@desc Delete a catch-all on the mail zone
+@required {domain_name: str # Mail zone domain name., email_address: str # E-mail address to which all e-mails are sent to inexistent mailboxes or aliases.}
+@returns(204) No Content
 
 @endpoint PUT /mailzones/{domainName}/antispam
-@required {domain_name: str}
-@optional {type: str(none/advanced/basic)}
-@returns(204)
+@desc Configure anti-spam for mail zone
+@required {domain_name: str # Mail zone domain name.}
+@optional {type: str(none/advanced/basic) # Types of anti-spam scanning}
+@returns(204) No Content
 
 @endpoint POST /mailzones/{domainName}/aliases
-@required {domain_name: str}
-@optional {email_address: str, destinations: [str]}
-@returns(201)
-@errors {400}
+@desc Create a new alias
+@required {domain_name: str # Mail zone domain name.}
+@optional {email_address: str # The alias e-mail, destinations: [str] # The alias destination e-mail addresses}
+@returns(201) Created
+@errors {400: Bad Request}
 
 @endpoint PUT /mailzones/{domainName}/aliases/{emailAddress}
-@required {domain_name: str, email_address: str}
-@optional {destinations: [str]}
-@returns(202)
-@errors {400}
+@desc Configure a alias
+@required {domain_name: str # Mail zone domain name., email_address: str # Alias e-mail address.}
+@optional {destinations: [str] # The alias destination e-mail addresses}
+@returns(202) Accepted
+@errors {400: Bad Request}
 
 @endpoint DELETE /mailzones/{domainName}/aliases/{emailAddress}
-@required {domain_name: str, email_address: str}
-@returns(204)
-@errors {400}
+@desc Delete a alias
+@required {domain_name: str # Mail zone domain name., email_address: str # Alias e-mail address.}
+@returns(204) No Content
+@errors {400: Bad Request}
 
 @endpoint POST /mailzones/{domainName}/smtpdomains
-@required {domain_name: str}
-@optional {hostname: str}
-@returns(201)
-@errors {400}
+@desc Create an extra smtp domain
+@required {domain_name: str # Mail zone domain name.}
+@optional {hostname: str # The smtp domain name}
+@returns(201) Created
+@errors {400: Bad Request}
 
 @endpoint PUT /mailzones/{domainName}/smtpdomains/{hostname}
-@required {domain_name: str, hostname: str}
-@optional {enabled: bool}
-@returns(202)
-@errors {400}
+@desc Configure an extra smtp domain
+@required {domain_name: str # Mail zone domain name., hostname: str # Smtp domain name.}
+@optional {enabled: bool # Enabled}
+@returns(202) Accepted
+@errors {400: Bad Request}
 
 @endpoint DELETE /mailzones/{domainName}/smtpdomains/{hostname}
-@required {domain_name: str, hostname: str}
-@returns(204)
-@errors {400}
+@desc Delete an extra smtp domain
+@required {domain_name: str # Mail zone domain name., hostname: str # Smtp domain name.}
+@returns(204) No Content
+@errors {400: Bad Request}
 
 @endgroup
 
 @group mysqldatabases
 @endpoint GET /mysqldatabases
-@optional {skip: int(int32), take: int(int32)}
-@returns(200)
+@desc Overview of mysql databases
+@optional {skip: int(int32) # The number of items to skip in the resultset., take: int(int32) # The number of items to return in the resultset. The returned count can be equal or less than this number.}
+@returns(200) OK
 
 @endpoint POST /mysqldatabases
-@optional {database_name: str, account_id: int(int32), password: str}
-@returns(202)
-@errors {400}
+@desc Create a new mysql database
+@optional {database_name: str # The name for the database. This will be prefixed during provisioning. The provided name during creation will be different from the provisioned database name., account_id: int(int32) # The id of the account on which to create the database., password: str # The password for the database user.  Passwords have to adhere to following rules: <ul><li>Between 8-20 characters.</li><li>Must be a mix of letters and digits.</li><li>Must contain at least one digit (0-9).</li><li>Must contain at least one letter (a-z).</li><li>Cannot contain spaces.</li><li>Cannot contain characters: * € $ & + } { ' " \ </li></ul>}
+@returns(202) Accepted
+@errors {400: Bad Request}
 
 @endpoint GET /mysqldatabases/{databaseName}
+@desc Get a specific database
 @required {database_name: str}
-@returns(200) {name: str, hostname: str, user_count: int(int32), max_size: int(int32), actual_size: int(int32), account_id: int(int32)}
+@returns(200) {name: str, hostname: str, user_count: int(int32), max_size: int(int32), actual_size: int(int32), account_id: int(int32)} # OK
 
 @endpoint DELETE /mysqldatabases/{databaseName}
-@required {database_name: str}
-@returns(204)
-@errors {400}
+@desc Delete a mysql database
+@required {database_name: str # Name of the database.}
+@returns(204) No Content
+@errors {400: Bad Request}
 
 @endpoint GET /mysqldatabases/{databaseName}/users
-@required {database_name: str}
-@returns(200)
+@desc Overview of mysql users
+@required {database_name: str # Name of the database.}
+@returns(200) OK
 
 @endpoint POST /mysqldatabases/{databaseName}/users
-@required {database_name: str}
-@optional {name: str, password: str}
-@returns(202)
-@errors {400}
+@desc Create a new mysql user
+@required {database_name: str # Name of the database.}
+@optional {name: str # User name  User names have to adhere to following rules: <ul><li>Between 2-14 characters.</li><li>Must be a mix of letters and/or digits.</li><li>Must be lower cased.</li><li>Cannot contain spaces.</li></ul>, password: str # The password for the database user.  Passwords have to adhere to following rules: <ul><li>Between 8-20 characters.</li><li>Must be a mix of letters and digits.</li><li>Must contain at least one digit (0-9).</li><li>Must contain at least one letter (a-z).</li><li>Cannot contain spaces.</li><li>Cannot contain characters: * € $ & + } { ' " \ </li></ul>}
+@returns(202) Accepted
+@errors {400: Bad Request}
 
 @endpoint PUT /mysqldatabases/{databaseName}/users/{userName}/status
-@required {database_name: str, user_name: str}
-@optional {enabled: bool}
-@returns(204)
+@desc Enable/disable mysql user
+@required {database_name: str # Name of the database., user_name: str # Name of the user.}
+@optional {enabled: bool # Enabled}
+@returns(204) No Content
 
 @endpoint PUT /mysqldatabases/{databaseName}/users/{userName}/password
-@required {database_name: str, user_name: str}
-@optional {password: str}
-@returns(204)
+@desc Change password for mysql user
+@required {database_name: str # Name of the database., user_name: str # Name of the user.}
+@optional {password: str # The password for the database user.  Passwords have to adhere to following rules: <ul><li>Between 8-20 characters.</li><li>Must be a mix of letters and digits.</li><li>Must contain at least one digit (0-9).</li><li>Must contain at least one letter (a-z).</li><li>Cannot contain spaces.</li><li>Cannot contain characters: * € $ & + } { ' " \ </li></ul>}
+@returns(204) No Content
 
 @endpoint DELETE /mysqldatabases/{databaseName}/users/{userName}
-@required {database_name: str, user_name: str}
-@returns(204)
-@errors {400}
+@desc Delete a mysql user
+@required {database_name: str # Name of the database., user_name: str # Name of the user.}
+@returns(204) No Content
+@errors {400: Bad Request}
 
 @endgroup
 
 @group provisioningjobs
 @endpoint GET /provisioningjobs/{jobId}
+@desc Detail of a provisioning job
 @required {job_id: str(uuid)}
-@returns(200) {id: str, status: str, completion: map{estimate: str(date-time)}}
-@returns(201) {id: str, resource_links: [str]}
+@returns(200) {id: str, status: str, completion: map{estimate: str(date-time)}} # OK
+@returns(201) {id: str, resource_links: [str]} # Created
 
 @endgroup
 
 @group servicepacks
 @endpoint GET /servicepacks
-@returns(200)
+@desc Overview of service packs
+@returns(200) OK
 
 @endgroup
 
 @group ssh
 @endpoint GET /ssh
-@optional {skip: int(int32), take: int(int32)}
-@returns(200)
+@desc Overview of SSH keys
+@optional {skip: int(int32) # The number of items to skip in the resultset., take: int(int32) # The number of items to return in the resultset. The returned count can be equal or less than this number.}
+@returns(200) OK
 
 @endgroup
 
 @group sslcertificaterequests
 @endpoint GET /sslcertificaterequests
-@optional {skip: int(int32), take: int(int32)}
-@returns(200)
+@desc Overview of SSL certificate requests
+@optional {skip: int(int32) # The number of items to skip in the resultset., take: int(int32) # The number of items to return in the resultset. The returned count can be equal or less than this number.}
+@returns(200) OK
 
 @endpoint POST /sslcertificaterequests
-@optional {csr: str, certificate_type: str(standard/multi_domain/wildcard), validation_level: str(domain_validated/organization_validated/extended_validated), additional_validation_attributes: [map{name: str, value: str}]}
-@returns(201)
+@desc Add a SSL certificate request
+@optional {csr: str # The certificate signing request data.  The certificate signing request subject should contain following attributes: <table><tr><th>Name</th><th>Code</th><th>Format</th></tr><tr><td>CommonName</td><td>CN</td><td>Valid domain name, for example site.be, alias.site.be or *.site.be</td></tr><tr><td>Country</td><td>C</td><td>ISO 3166-1 alpha-2 country code</td></tr><tr><td>State</td><td>ST</td><td></td></tr><tr><td>Locality</td><td>L</td><td></td></tr><tr><td>Organization</td><td>O</td><td></td></tr><tr><td>EmailAddress</td><td>E</td><td>Valid email address</td></tr></table> The certificate signing request should also contain all the additional aliases and domains (SAN's) for the certificate., certificate_type: str(standard/multi_domain/wildcard) # The type of the certificate: <ul><li>Standard: Certificate for a single domain.</li><li>Multi domain: Certificate for multiple (sub)domains belonging to the same owner.</li><li>Wildcard: Certificate for all the subdomains.</li></ul>, validation_level: str(domain_validated/organization_validated/extended_validated) # The validation level of the certificate: <ul><li>Domain validated: Basic check of the identity of the owner of the domain name.</li><li>Organization validated: Company details are verified and integrated in the certificate.</li><li>Extended validated: A thorough verification of your domain name and company details.</li></ul>, additional_validation_attributes: [map{name: str, value: str}] # List of additional validation attributes for the certificate when choosing organization or extended validation. <table><tr><th>Name</th><th>Info</th><th>Required</th></tr><tr><td>Firstname</td><td>Firstname of the technical contact</td><td>Yes</td></tr><tr><td>Lastname</td><td>Lastname of the technical contact</td><td>Yes</td></tr><tr><td>Phone</td><td>Phone of the technical contact</td><td>Yes</td></tr><tr><td>EmailAddress</td><td>Email address of the technical contact</td><td>Yes</td></tr><tr><td>Street</td><td>Address street of the organization</td><td>Yes</td></tr><tr><td>Number</td><td>Address house number of the organization</td><td>Yes</td></tr><tr><td>PostalCode</td><td>Address postal code of the organization</td><td>Yes</td></tr><tr><td>VatCountryCode</td><td>VAT country code of the organization, ISO 3166-1 alpha-2 country code</td><td>Yes</td></tr><tr><td>OrganizationNumber</td><td>Business number of the organization</td><td>No</td></tr></table>}
+@returns(201) Created
 
 @endpoint GET /sslcertificaterequests/{id}
-@required {id: int(int32)}
-@returns(200) {id: int(int32), certificate_type: str, validation_level: str, vendor: str, common_name: str, order_code: str, subject_alt_names: [map], validations: [map], provider_portal_url: str}
-@errors {303, 410}
+@desc Detail of a SSL certificate request
+@required {id: int(int32) # The id of the certificate request.}
+@returns(200) {id: int(int32), certificate_type: str, validation_level: str, vendor: str, common_name: str, order_code: str, subject_alt_names: [map], validations: [map], provider_portal_url: str} # OK
+@errors {303: See Other, 410: The resource existed in the past, but is no longer available.}
 
 @endpoint PUT /sslcertificaterequests/{id}
-@required {id: int(int32)}
-@returns(202)
-@errors {303, 410}
+@desc Verify the SSL certificate request domain validations
+@required {id: int(int32) # The id of the certificate request.}
+@returns(202) Accepted
+@errors {303: See Other, 410: The resource existed in the past, but is no longer available.}
 
 @endgroup
 
 @group sslcertificates
 @endpoint GET /sslcertificates
-@optional {skip: int(int32), take: int(int32)}
-@returns(200)
+@desc Overview of SSL certificates
+@optional {skip: int(int32) # The number of items to skip in the resultset., take: int(int32) # The number of items to return in the resultset. The returned count can be equal or less than this number.}
+@returns(200) OK
 
 @endpoint GET /sslcertificates/{sha1Fingerprint}
-@required {sha1_fingerprint: str}
-@returns(200) {sha1_fingerprint: str, common_name: str, expires_after: str(date-time), validation_level: str, type: str, subject_alt_names: [map]}
+@desc Detail of a SSL certificate
+@required {sha1_fingerprint: str # The SHA-1 fingerprint of the certificate.}
+@returns(200) {sha1_fingerprint: str, common_name: str, expires_after: str(date-time), validation_level: str, type: str, subject_alt_names: [map]} # OK
 
 @endpoint GET /sslcertificates/{sha1Fingerprint}/download
-@required {sha1_fingerprint: str, file_format: str, password: str}
-@returns(200)
-@errors {400}
+@desc Download a SSL certificate
+@required {sha1_fingerprint: str # The SHA-1 fingerprint of the certificate., file_format: str # The file format of the returned file stream: <ul><li>PFX: Also known as PKCS #12, is a single, password protected certificate archive that contains the entire certificate chain plus the matching private key.</li></ul>, password: str # The password used to protect the certificate file.}
+@returns(200) OK
+@errors {400: Invalid file_format or invalid password}
 
 @endgroup
 
 @group windowshostings
 @endpoint GET /windowshostings
-@optional {skip: int(int32), take: int(int32)}
-@returns(200)
+@desc Overview of windows hostings
+@optional {skip: int(int32) # The number of items to skip in the resultset., take: int(int32) # The number of items to return in the resultset. The returned count can be equal or less than this number.}
+@returns(200) OK
 
 @endpoint GET /windowshostings/{domainName}
-@required {domain_name: str}
-@returns(200) {domain_name: str, servicepack_id: int(int32), max_size: int(int32), actual_size: int(int32), ip: str, ip_type: str, ftp_username: str, application_pool: map{runtime: str, pipeline_mode: str, installed_net_core_runtimes: [str]}, sites: [map], mssql_database_names: [str]}
+@desc Windows hosting detail
+@required {domain_name: str # The Windows hosting domain name.}
+@returns(200) {domain_name: str, servicepack_id: int(int32), max_size: int(int32), actual_size: int(int32), ip: str, ip_type: str, ftp_username: str, application_pool: map{runtime: str, pipeline_mode: str, installed_net_core_runtimes: [str]}, sites: [map], mssql_database_names: [str]} # OK
 
 @endgroup
 

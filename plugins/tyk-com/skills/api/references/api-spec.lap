@@ -7,80 +7,98 @@
 @toc tyk(18)
 
 @endpoint GET /tyk/keys/
-@required {api_id: any, x-tyk-authorization: any}
-@returns(200)
+@desc Gets a list of *key* IDs (will only work with non-hashed installations)
+@required {api_id: any # Back-end to target, x-tyk-authorization: any # tyk gateway shared secret}
+@returns(200) Successful response
 
 @endpoint POST /tyk/keys/create
-@required {x-tyk-authorization: any}
-@optional {suppress_reset: any, session_object: map}
-@returns(200)
+@desc Create a new *API token* with the *session object* defined in the body
+@required {x-tyk-authorization: any # tyk gateway shared secret}
+@optional {suppress_reset: any # Adding the `suppress_reset` parameter and setting it to `1`, will cause Tyk to not reset the quota limit that is in the current live quota manager. By default Tyk will reset the quota in the live quota manager (initialising it) when ADDing a key. Adding the `suppress_reset` flag to the URL parameters will avoid this behaviour., session_object: map}
+@returns(200) Key Created Response
 
 @endpoint PUT /tyk/keys/{keyId}
-@required {x-tyk-authorization: any, keyId: any, api_id: any}
-@optional {suppress_reset: any, session_object: map}
-@returns(200)
+@desc Update an *API token* with the *session object* defined in the body, this operatin overwrites the existing object
+@required {x-tyk-authorization: any # tyk gateway shared secret, keyId: any # Access Token, api_id: any # Back-end to target}
+@optional {suppress_reset: any # Adding the `suppress_reset` parameter and setting it to `1`, will cause Tyk to not reset the quota limit that is in the current live quota manager. By default Tyk will reset the quota in the live quota manager (initialising it) when ADDing a key. Adding the `suppress_reset` flag to the URL parameters will avoid this behaviour., session_object: map}
+@returns(200) Key Updated Response
 
 @endpoint POST /tyk/keys/{keyId}
-@required {x-tyk-authorization: any, keyId: any}
+@desc Add a pre-specified *API token* with the *session object* defined in the body, this operatin creates a custom token that dsoes not use the gateway naming convention for tokens
+@required {x-tyk-authorization: any # tyk gateway shared secret, keyId: any # Access Token}
 @optional {session_object: map}
-@returns(200)
+@returns(200) Key Added Response
 
 @endpoint DELETE /tyk/keys/{keyId}
-@required {x-tyk-authorization: any, keyId: any, api_id: any}
-@returns(200)
+@desc Remove this *API token* from the gateway, this will completely destroy the token and metadata associated with the token and instantly stop access from being granted
+@required {x-tyk-authorization: any # tyk gateway shared secret, keyId: any # Access Token, api_id: any # Back-end to target}
+@returns(200) Key Deleted Response
 
 @endpoint GET /tyk/apis/
-@required {x-tyk-authorization: any}
-@returns(200)
+@desc Gets a list of *API Definition* objects that are currently live on the gateway
+@required {x-tyk-authorization: any # tyk gateway shared secret}
+@returns(200) Succesful list response
 
 @endpoint POST /tyk/apis/
+@desc Create an *API Definition* object
 @optional {api_definition: map}
-@returns(200)
+@returns(200) Succesful API Deletion
 
 @endpoint GET /tyk/apis/{apiID}
-@required {x-tyk-authorization: any, apiID: any}
-@returns(200)
+@desc Gets an *API Definition* object, if it exists
+@required {x-tyk-authorization: any # tyk gateway shared secret, apiID: any # API ID}
+@returns(200) Succesful API response
 
 @endpoint DELETE /tyk/apis/{apiID}
-@required {x-tyk-authorization: any, apiID: any}
-@returns(200)
+@desc Deletes an *API Definition* object, if it exists
+@required {x-tyk-authorization: any # tyk gateway shared secret, apiID: any # API ID}
+@returns(200) Succesful API Deletion
 
 @endpoint PUT /tyk/apis/{apiID}
-@required {x-tyk-authorization: any, apiID: any}
+@desc Updates an *API Definition* object, if it exists
+@required {x-tyk-authorization: any # tyk gateway shared secret, apiID: any # API ID}
 @optional {api_definition: map}
-@returns(200)
+@returns(200) Succesful API Deletion
 
 @endpoint GET /tyk/health/
-@required {x-tyk-authorization: any, api_id: any}
-@returns(200)
+@desc Gets the health check values for an API if it is being recorded
+@required {x-tyk-authorization: any # tyk gateway shared secret, api_id: any # API ID to query}
+@returns(200) Succesful healthcheck response
 
 @endpoint GET /tyk/reload/
-@required {x-tyk-authorization: any}
-@returns(200)
+@desc Will reload the targetted gateway
+@required {x-tyk-authorization: any # tyk gateway shared secret}
+@returns(200) Succesful reload response
 
 @endpoint GET /tyk/reload/group
-@required {x-tyk-authorization: any}
-@returns(200)
+@desc Will reload the cluster via the targeted gateway
+@required {x-tyk-authorization: any # tyk gateway shared secret}
+@returns(200) Succesful reload response
 
 @endpoint POST /tyk/oauth/clients/create
-@required {x-tyk-authorization: any}
+@desc Create a new OAuth client
+@required {x-tyk-authorization: any # tyk gateway shared secret}
 @optional {oauth_client: map}
-@returns(200)
+@returns(200) Succesful create response
 
 @endpoint DELETE /tyk/oauth/clients/{apiId}/{clientId}
-@required {x-tyk-authorization: any, apiId: any, clientId: any}
-@returns(200)
+@desc Delete the OAuth client
+@required {x-tyk-authorization: any # tyk gateway shared secret, apiId: any # API ID that owns this client (back end), clientId: any # OAuth Client ID to delete}
+@returns(200) Succesful OAuth client deletion
 
 @endpoint GET /tyk/oauth/clients/{apiId}
-@required {x-tyk-authorization: any, apiId: any}
-@returns(200)
+@desc Get a list of OAuth clients bound to this back end
+@required {x-tyk-authorization: any # tyk gateway shared secret, apiId: any # API ID that owns this client (back end)}
+@returns(200) Succesful listy response
 
 @endpoint POST /tyk/oauth/authorize-client/
-@required {x-tyk-authorization: any, response_type: any, client_id: any, redirect_uri: any, key_rules: any}
-@returns(200)
+@desc The final request from an authorising party for a redirect URI during the Tyk OAuth flow
+@required {x-tyk-authorization: any # tyk gateway shared secret, response_type: any # Should be provided by requesting client as part of authorisation request, this should be either `code` or `token` depending on the methods you have specified for the API, client_id: any # Should be provided by requesting client as part of authorisation request. The Client ID that is making the request, redirect_uri: any # Should be provided by requesting client as part of authorisation request. Must match with the record stored with Tyk, key_rules: any # A string representation of a *Session Object (form-encoded)*. This should be provided by your application in order to apply any quotas or rules to the key}
+@returns(200) Succesful token response
 
 @endpoint DELETE /tyk/oauth/refresh/{keyId}
-@required {x-tyk-authorization: any, keyId: any, apiID: any}
-@returns(200)
+@desc Invalidate a refresh token
+@required {x-tyk-authorization: any # tyk gateway shared secret, keyId: any # Access Token, apiID: any # API ID}
+@returns(200) Succesful token revoked
 
 @end

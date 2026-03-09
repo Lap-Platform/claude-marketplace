@@ -300,83 +300,66 @@ Not specified.
 |--------|------|-------------|
 | POST | /updateWorldTemplate | Updates a world template. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I run a simulation in RoboMaker?" -> POST /createSimulationJob
-- "What simulations are currently running?" -> POST /listSimulationJobs
-- "Why did my simulation job fail?" -> POST /describeSimulationJob
-- "How do I deploy my robot application to a fleet?" -> POST /createDeploymentJob
-- "What robots are registered in my fleet?" -> POST /describeFleet
-- "How do I create a new robot application from a Docker image?" -> POST /createRobotApplication
-- "How do I generate simulated worlds from a template?" -> POST /createWorldGenerationJob
-- "What worlds were created by my generation job?" -> POST /describeWorldGenerationJob
-- "How do I export generated worlds to S3?" -> POST /createWorldExportJob
-- "How do I run multiple simulations in parallel?" -> POST /startSimulationJobBatch
-- "What's the status of my simulation batch?" -> POST /describeSimulationJobBatch
-- "How do I add a robot to a fleet?" -> POST /registerRobot
-- "How do I tag my RoboMaker resources?" -> POST /tags/{resourceArn}
-- "How do I cancel a stuck simulation?" -> POST /cancelSimulationJob
-- "How do I clean up worlds I no longer need?" -> POST /batchDeleteWorlds
-
-## Response Tips
-
-- **List endpoints** (`list*`): All return `nextToken` for pagination; pass it back to get the next page. Most accept `filters` (array of `Filter` objects) and `maxResults` to limit page size.
-- **Describe endpoints** (`describe*`): Return the full resource with all nullable fields; always check `status` and `failureCode`/`failureReason` before reading other fields.
-- **Create endpoints** (`create*`): Return the created resource echo; `arn` is the canonical identifier for all subsequent operations. Timestamps are ISO 8601.
-- **Cancel/Delete endpoints**: Return empty 200 on success; no response body. Idempotent -- cancelling an already-cancelled job does not error.
-- **Batch endpoints** (`batchDescribeSimulationJob`, `batchDeleteWorlds`): Always check `unprocessedJobs`/`unprocessedWorlds` for partial failures.
-- **Tags** (`GET /tags/{resourceArn}`): Returns a flat `map<str,str>`; `POST` adds/overwrites, `DELETE` removes by key list.
-
-## Anomaly Flags
-
-- **Job failure codes**: Surface `failureCode` and `failureReason` proactively whenever a describe or create response returns a non-null value -- these indicate infrastructure issues (e.g., `InternalServiceError`, `RobotApplicationCrash`, `SimulationApplicationCrash`).
-- **Partial batch failures**: When `batchDeleteWorlds` returns `unprocessedWorlds` or `batchDescribeSimulationJob` returns `unprocessedJobs`, alert the user immediately with the list of failed items.
-- **Simulation batch mixed results**: After `startSimulationJobBatch`, flag if `failedRequests` is non-empty alongside `createdRequests` -- partial batch success is easy to miss.
-- **World generation shortfalls**: In `describeWorldGenerationJob`, compare `finishedWorldsSummary.succeededWorlds` count against the requested `worldCount` to detect generation failures.
-- **Deployment robot-level failures**: In `describeDeploymentJob`, check `robotDeploymentSummary` for individual robot deployment statuses -- fleet-level status may show success while individual robots failed.
-- **Stale revision IDs**: When `updateRobotApplication` or `updateSimulationApplication` is called with `currentRevisionId` and the operation fails, flag a concurrent modification conflict.
-
-## Playbook
-
-### 1. Run a Simulation End-to-End
-
-1. Create a robot application: `POST /createRobotApplication` with name, `robotSoftwareSuite`, and either `sources` or `environment` (Docker URI).
-2. Create a simulation application: `POST /createSimulationApplication` with name, `simulationSoftwareSuite`, `robotSoftwareSuite`, and optionally `renderingEngine`.
-3. Launch the simulation: `POST /createSimulationJob` with `iamRole`, `maxJobDurationInSeconds`, `robotApplications` (referencing step 1 ARN), and `simulationApplications` (referencing step 2 ARN). Set `outputLocation` for S3 logs.
-4. Monitor status: `POST /describeSimulationJob` with the returned ARN. Poll until `status` is `Completed`, `Failed`, or `Canceled`.
-5. If stuck or no longer needed: `POST /cancelSimulationJob` with the job ARN.
-
-### 2. Deploy a Robot Application to a Fleet
-
-1. Create a fleet: `POST /createFleet` with a name. Note the returned `arn`.
-2. Register robots: `POST /registerRobot` for each robot ARN + fleet ARN pair.
-3. Verify fleet membership: `POST /describeFleet` to confirm all robots appear in `robots`.
-4. Create the deployment: `POST /createDeploymentJob` with `fleet` ARN, `deploymentApplicationConfigs` (app ARN, version, launch config), and optionally `deploymentConfig` for rollout parameters.
-5. Monitor: `POST /describeDeploymentJob` -- check `status` and `robotDeploymentSummary` for per-robot results.
-
-### 3. Generate and Export Simulation Worlds
-
-1. Create a world template: `POST /createWorldTemplate` with `name` and either `templateBody` (inline) or `templateLocation` (S3 reference).
-2. Launch generation: `POST /createWorldGenerationJob` with `template` ARN and `worldCount` (`floorplanCount`, `interiorCountPerFloorplan`).
-3. Monitor generation: `POST /describeWorldGenerationJob` -- check `finishedWorldsSummary` for succeeded/failed counts.
-4. Export to S3: `POST /createWorldExportJob` with the world ARNs from `succeededWorlds`, an `outputLocation`, and `iamRole`.
-5. Verify export: `POST /describeWorldExportJob` until `status` is `Completed`.
-
-### 4. Run a Batch of Simulations with Concurrency Control
-
-1. Prepare simulation job requests as an array of `SimulationJobRequest` objects (each with its own robot/simulation app configs, IAM role, max duration).
-2. Launch the batch: `POST /startSimulationJobBatch` with `createSimulationJobRequests` and `batchPolicy` (`maxConcurrency` to limit parallel runs, `timeoutInSeconds` for the overall batch).
-3. Monitor: `POST /describeSimulationJobBatch` -- review `createdRequests`, `pendingRequests`, and `failedRequests`.
-4. Cancel if needed: `POST /cancelSimulationJobBatch` stops all pending and running jobs in the batch.
-
-### 5. Version and Update a Robot Application
-
-1. Describe the current application: `POST /describeRobotApplication` to get the current `revisionId` and configuration.
-2. Update the application: `POST /updateRobotApplication` with the new `sources` or `environment`, passing `currentRevisionId` to prevent conflicts.
-3. Pin a version: `POST /createRobotApplicationVersion` with the `application` ARN to snapshot the current state as an immutable version.
-4. Use the versioned ARN in `createSimulationJob` or `createDeploymentJob` to ensure reproducible runs.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a batchDeleteWorld?" -> POST /batchDeleteWorlds
+- "Create a batchDescribeSimulationJob?" -> POST /batchDescribeSimulationJob
+- "Create a cancelDeploymentJob?" -> POST /cancelDeploymentJob
+- "Create a cancelSimulationJob?" -> POST /cancelSimulationJob
+- "Create a cancelSimulationJobBatch?" -> POST /cancelSimulationJobBatch
+- "Create a cancelWorldExportJob?" -> POST /cancelWorldExportJob
+- "Create a cancelWorldGenerationJob?" -> POST /cancelWorldGenerationJob
+- "Create a createDeploymentJob?" -> POST /createDeploymentJob
+- "Create a createFleet?" -> POST /createFleet
+- "Create a createRobot?" -> POST /createRobot
+- "Create a createRobotApplication?" -> POST /createRobotApplication
+- "Create a createRobotApplicationVersion?" -> POST /createRobotApplicationVersion
+- "Create a createSimulationApplication?" -> POST /createSimulationApplication
+- "Create a createSimulationApplicationVersion?" -> POST /createSimulationApplicationVersion
+- "Create a createSimulationJob?" -> POST /createSimulationJob
+- "Create a createWorldExportJob?" -> POST /createWorldExportJob
+- "Create a createWorldGenerationJob?" -> POST /createWorldGenerationJob
+- "Create a createWorldTemplate?" -> POST /createWorldTemplate
+- "Create a deleteFleet?" -> POST /deleteFleet
+- "Create a deleteRobot?" -> POST /deleteRobot
+- "Create a deleteRobotApplication?" -> POST /deleteRobotApplication
+- "Create a deleteSimulationApplication?" -> POST /deleteSimulationApplication
+- "Create a deleteWorldTemplate?" -> POST /deleteWorldTemplate
+- "Create a deregisterRobot?" -> POST /deregisterRobot
+- "Create a describeDeploymentJob?" -> POST /describeDeploymentJob
+- "Create a describeFleet?" -> POST /describeFleet
+- "Create a describeRobot?" -> POST /describeRobot
+- "Create a describeRobotApplication?" -> POST /describeRobotApplication
+- "Create a describeSimulationApplication?" -> POST /describeSimulationApplication
+- "Create a describeSimulationJob?" -> POST /describeSimulationJob
+- "Create a describeSimulationJobBatch?" -> POST /describeSimulationJobBatch
+- "Create a describeWorld?" -> POST /describeWorld
+- "Create a describeWorldExportJob?" -> POST /describeWorldExportJob
+- "Create a describeWorldGenerationJob?" -> POST /describeWorldGenerationJob
+- "Create a describeWorldTemplate?" -> POST /describeWorldTemplate
+- "Create a getWorldTemplateBody?" -> POST /getWorldTemplateBody
+- "Create a listDeploymentJob?" -> POST /listDeploymentJobs
+- "Create a listFleet?" -> POST /listFleets
+- "Create a listRobotApplication?" -> POST /listRobotApplications
+- "Create a listRobot?" -> POST /listRobots
+- "Create a listSimulationApplication?" -> POST /listSimulationApplications
+- "Create a listSimulationJobBatche?" -> POST /listSimulationJobBatches
+- "Create a listSimulationJob?" -> POST /listSimulationJobs
+- "Get tag details?" -> GET /tags/{resourceArn}
+- "Create a listWorldExportJob?" -> POST /listWorldExportJobs
+- "Create a listWorldGenerationJob?" -> POST /listWorldGenerationJobs
+- "Create a listWorldTemplate?" -> POST /listWorldTemplates
+- "Create a listWorld?" -> POST /listWorlds
+- "Create a registerRobot?" -> POST /registerRobot
+- "Create a restartSimulationJob?" -> POST /restartSimulationJob
+- "Create a startSimulationJobBatch?" -> POST /startSimulationJobBatch
+- "Create a syncDeploymentJob?" -> POST /syncDeploymentJob
+- "Delete a tag?" -> DELETE /tags/{resourceArn}
+- "Create a updateRobotApplication?" -> POST /updateRobotApplication
+- "Create a updateSimulationApplication?" -> POST /updateSimulationApplication
+- "Create a updateWorldTemplate?" -> POST /updateWorldTemplate
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

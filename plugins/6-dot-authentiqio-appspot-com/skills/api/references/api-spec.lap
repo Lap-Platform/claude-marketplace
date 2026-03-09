@@ -9,84 +9,98 @@
 
 @group key
 @endpoint POST /key
-@required {body: any}
-@returns(201)
-@errors {409}
+@desc Register a new ID `JWT(sub, devtoken)`
+@required {body: any # Authentiq ID to register}
+@returns(201) Successfully registered
+@errors {409: Key already registered `duplicate-key`}
 
 @endpoint DELETE /key
-@required {email: any, phone: any}
-@optional {code: any}
-@returns(200)
-@errors {404, 409, 401}
+@desc Revoke an Authentiq ID using email & phone.
+@required {email: any # primary email associated to Key (ID), phone: any # primary phone number, international representation}
+@optional {code: any # verification code sent by email}
+@returns(200) Successfully deleted
+@errors {404: Unknown key `unknown-key`, 409: Confirm with code sent `confirm-first`, 401: Authentication error `auth-error`}
 
 @endpoint GET /key/{PK}
-@required {PK: any}
-@returns(200)
-@errors {404, 410}
+@desc Get public details of an Authentiq ID.
+@required {PK: any # Public Signing Key - Authentiq ID (43 chars)}
+@returns(200) Successfully retrieved
+@errors {404: Unknown key `unknown-key`, 410: Key is revoked (gone). `revoked-key`}
 
 @endpoint POST /key/{PK}
-@required {PK: any, body: any}
-@returns(200)
-@errors {404}
+@desc update properties of an Authentiq ID.
+@required {PK: any # Public Signing Key - Authentiq ID (43 chars), body: any # Authentiq ID to register}
+@returns(200) Successfully updated
+@errors {404: Unknown key `unknown-key`}
 
 @endpoint HEAD /key/{PK}
-@required {PK: any}
-@returns(200)
-@errors {404, 410}
+@desc HEAD info on Authentiq ID
+@required {PK: any # Public Signing Key - Authentiq ID (43 chars)}
+@returns(200) Key exists
+@errors {404: Unknown key `unknown-key`, 410: Key is revoked `revoked-key`}
 
 @endpoint PUT /key/{PK}
-@required {PK: any, body: any}
-@returns(200)
-@errors {404, 409}
+@desc Update Authentiq ID by replacing the object.
+@required {PK: any # Public Signing Key - Authentiq ID (43 chars), body: any # Authentiq ID to register}
+@returns(200) Successfully updated
+@errors {404: Unknown key `unknown-key`, 409: Already bound to another key `duplicate-hash`}
 
 @endpoint DELETE /key/{PK}
-@required {PK: any, secret: any}
-@returns(200)
-@errors {401, 404}
+@desc Revoke an Identity (Key) with a revocation secret
+@required {PK: any # Public Signing Key - Authentiq ID (43 chars), secret: any # revokation secret}
+@returns(200) Successful response
+@errors {401: Key not found / wrong code `auth-error`, 404: Unknown key `unknown-key`}
 
 @endgroup
 
 @group login
 @endpoint POST /login
-@required {body: any, callback: any}
-@returns(200)
-@errors {401}
+@desc push sign-in request
+@required {body: any # Push Token., callback: any # URI App will connect to}
+@returns(200) Successful response
+@errors {401: Unauthorized for this callback audience `aud-error` or JWT should be self-signed `auth-error`}
 
 @endgroup
 
 @group scope
 @endpoint POST /scope
-@required {body: any}
-@optional {test: any}
-@returns(201)
-@errors {429}
+@desc scope verification request
+@required {body: any # Claims of scope}
+@optional {test: any # test only mode, using test issuer}
+@returns(201) Successful response
+@errors {429: Too Many Requests on same address / number `rate-limit`}
 
 @endpoint POST /scope/{job}
-@required {job: any}
-@returns(202)
-@errors {401, 404, 405}
+@desc this is a scope confirmation
+@required {job: any # Job ID (20 chars)}
+@returns(202) Successfully confirmed
+@errors {401: Confirmation error `auth-error`, 404: Job not found `unknown-job`, 405: JWT POSTed to scope `not-supported`}
 
 @endpoint PUT /scope/{job}
-@required {job: any}
-@returns(200)
-@errors {404, 409}
+@desc authority updates a JWT with its signature
+@required {job: any # Job ID (20 chars)}
+@returns(200) Successfully updated
+@errors {404: Job not found `unknown-job`, 409: Job not confirmed yet `confirm-first`}
 
 @endpoint GET /scope/{job}
-@required {job: any}
-@returns(200)
-@returns(204)
-@errors {404}
+@desc get the status / current content of a verification job
+@required {job: any # Job ID (20 chars)}
+@returns(200) Successful response (JWT)
+@returns(204) Confirmed, waiting for signing
+@errors {404: Job not found `unknown-job`}
 
 @endpoint HEAD /scope/{job}
-@required {job: any}
-@returns(200)
-@returns(204)
-@errors {404}
+@desc HEAD to get the status of a verification job
+@required {job: any # Job ID (20 chars)}
+@returns(200) Confirmed and signed
+@returns(204) Confirmed, waiting for signing
+@errors {404: Job not found `unknown-job`}
 
 @endpoint DELETE /scope/{job}
-@required {job: any}
-@returns(200)
-@errors {404}
+@desc delete a verification job
+@required {job: any # Job ID (20 chars)}
+@returns(200) Successfully deleted
+@errors {404: Job not found `unknown-job`}
 
 @endgroup
 

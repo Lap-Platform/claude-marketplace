@@ -39,86 +39,18 @@ https://apix.ebay.com{basePath}
 |--------|------|-------------|
 | GET | /guest_purchase_order/{purchaseOrderId} | <span class="tablenote"><b>Note:</b> The Order API (v2) currently only supports the guest payment/checkout flow. If you need to support member payment/checkout flow, use the <a href="/api-docs/buy/order_v1/resources/methods">v1_beta version</a> of the Order API.</span><br><div class="msgbox_important"><p class="msgbox_importantInDiv" data-mc-autonum="&lt;b&gt;&lt;span style=&quot;color: #dd1e31;&quot; class=&quot;mcFormatColor&quot;&gt;Important! &lt;/span&gt;&lt;/b&gt;"><span class="autonumber"><span><b><span style="color: #dd1e31;" class="mcFormatColor">Important!</span></b></span></span> <a href="https://developer.ebay.com/api-docs/static/versioning.html#limited" target="_blank"><img src="/cms/img/docs/partners-api.svg" class="legend-icon partners-icon"  alt="Limited Release" title="Limited Release" />(Limited Release)</a> This method is only available to select developers approved by business units.</p></div><br>This method retrieves the details about a specific guest purchase order. It returns the line items, including purchase  order status, dates created and modified, item quantity and listing data, payment and shipping information, and prices, taxes, discounts and credits.<br><br>The <b>purchaseOrderId</b> is passed in as a URI parameter and is required.<br><br><span class="tablenote"><b>Note:</b> The <b>purchaseOrderId</b> value is returned in the call-back URL that is sent through the new eBay pay widget. For more information about eBay managed payments and the new Order API payment flow, see <a href="/api-docs/buy/static/api-order.html">Order API</a> in the Buying Integration Guide.</span><br>You can use this method to not only get the details of a purchase order, but to check the value of the <a href="#response.purchaseOrderPaymentStatus">purchaseOrderPaymentStatus</a> field to determine if the order has been paid for. If the order has been paid for, this field will return <code>PAID</code>.<br><br>For a list of supported sites and other restrictions, see <a href="/api-docs/buy/order/overview.html#API">API Restrictions</a> in the Order API overview. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I start a guest checkout for an eBay item?" -> POST /guest_checkout_session/initiate
-- "How do I check the current state of my checkout session?" -> GET /guest_checkout_session/{checkoutSessionId}
-- "How do I apply a coupon or promo code to my cart?" -> POST /guest_checkout_session/{checkoutSessionId}/apply_coupon
-- "How do I remove a coupon I already applied?" -> POST /guest_checkout_session/{checkoutSessionId}/remove_coupon
-- "How do I change the quantity of an item in my checkout?" -> POST /guest_checkout_session/{checkoutSessionId}/update_quantity
-- "How do I update the shipping address for my order?" -> POST /guest_checkout_session/{checkoutSessionId}/update_shipping_address
-- "How do I pick a different shipping option for a line item?" -> POST /guest_checkout_session/{checkoutSessionId}/update_shipping_option
-- "How do I look up a completed guest purchase order?" -> GET /guest_purchase_order/{purchaseOrderId}
-- "What is the total price including taxes and fees for my checkout?" -> GET /guest_checkout_session/{checkoutSessionId} (read `pricingSummary.total`)
-- "How do I check if import charges apply to my order?" -> GET /guest_checkout_session/{checkoutSessionId} (read `pricingSummary.importCharges`)
-- "What coupons are currently applied to my session?" -> GET /guest_checkout_session/{checkoutSessionId} (read `appliedCoupons`)
-- "What is the payment status of my guest purchase?" -> GET /guest_purchase_order/{purchaseOrderId} (read `purchaseOrderPaymentStatus`)
-- "Has my guest order been refunded?" -> GET /guest_purchase_order/{purchaseOrderId} (read `refundedAmount`)
-- "How do I swap a coupon (replace one with another)?" -> POST remove_coupon then POST apply_coupon (two-step)
-
-## Response Tips
-
-- **Checkout session endpoints**: All 7 endpoints return the same full session object. After any mutation (apply coupon, update address, etc.), the entire updated session is returned -- no need to GET again to see changes.
-- **Pricing summary**: `pricingSummary` is deeply nested. Monetary values are always `{currency, value}` pairs where `value` is a string (not a number). Parse accordingly.
-- **Warnings array**: Every checkout and order response includes a `warnings` array. Always surface these to the user -- they contain item-level issues like stock limits or shipping restrictions.
-- **Purchase order**: The order response adds `purchaseOrderStatus`, `purchaseOrderPaymentStatus`, `purchaseOrderCreationDate`, and `refundedAmount` fields not present in checkout sessions. `deliveryDiscount` also appears only here.
-- **Errors**: 409 (Conflict) is common on checkout mutations -- it typically means a concurrent modification or invalid session state. 403 usually indicates the session has expired or the marketplace header is wrong.
-
-## Anomaly Flags
-
-- **Warnings present**: Surface any entries in the `warnings` array immediately -- these indicate actionable problems (e.g., item out of stock, address undeliverable, quantity adjusted).
-- **409 Conflict on mutations**: Flag when a session update returns 409. The session may have been modified concurrently or already completed. Re-fetch with GET before retrying.
-- **Import charges or import tax populated**: Alert the user when `pricingSummary.importCharges` or `pricingSummary.importTax` contains a non-zero value -- this means cross-border fees apply.
-- **Refunded amount on purchase order**: If `refundedAmount.value` is non-zero, proactively inform the user that a partial or full refund has been issued.
-- **Missing marketplace header**: If a 400 or 403 error occurs, check whether `X-EBAY-C-MARKETPLACE-ID` was included. This common field is easy to forget and required for correct pricing/availability.
-- **Price changes between calls**: Compare `pricingSummary.total` across sequential responses. If the total changes unexpectedly after an address or shipping update, surface the delta to the user.
-- **Empty lineItems**: If the session returns an empty `lineItems` array, flag it -- the item may have been removed or is no longer available.
-
-## Playbook
-
-### 1. Complete a Guest Checkout (End to End)
-
-1. Call `POST /guest_checkout_session/initiate` with `lineItemInputs` (itemId + quantity), `contactEmail`, and `shippingAddress`.
-2. Save the returned `checkoutSessionId` for all subsequent calls.
-3. Optionally apply a coupon via `POST /guest_checkout_session/{id}/apply_coupon` with the `redemptionCode`.
-4. Review `pricingSummary` in the response to confirm totals, taxes, and delivery cost.
-5. If shipping options are available in `lineItems`, select one via `POST /guest_checkout_session/{id}/update_shipping_option`.
-6. Complete payment through eBay's payment flow (outside this API).
-7. Retrieve the final order with `GET /guest_purchase_order/{purchaseOrderId}`.
-
-### 2. Apply, Verify, and Swap a Coupon
-
-1. Call `POST /guest_checkout_session/{id}/apply_coupon` with the `redemptionCode`.
-2. Check `appliedCoupons` in the response to confirm it was accepted.
-3. Compare `pricingSummary.priceDiscount` and `pricingSummary.total` to see the savings.
-4. To swap for a different coupon, first call `POST /guest_checkout_session/{id}/remove_coupon` with the old code.
-5. Then call `POST /guest_checkout_session/{id}/apply_coupon` with the new code.
-6. Verify `appliedCoupons` again to confirm the swap.
-
-### 3. Update Shipping Details After Session Creation
-
-1. Call `GET /guest_checkout_session/{id}` to review current shipping address and options.
-2. Call `POST /guest_checkout_session/{id}/update_shipping_address` with the corrected address fields.
-3. Check the response for `warnings` -- address changes can trigger delivery restriction warnings.
-4. Review updated `pricingSummary.deliveryCost` and `pricingSummary.total` since shipping cost may change.
-5. If new shipping options become available, select one via `POST /guest_checkout_session/{id}/update_shipping_option`.
-
-### 4. Modify Item Quantity in Cart
-
-1. Call `GET /guest_checkout_session/{id}` and locate the target item's `lineItemId` in the `lineItems` array.
-2. Call `POST /guest_checkout_session/{id}/update_quantity` with the `lineItemId` and new `quantity`.
-3. Check `warnings` for stock-related issues (e.g., quantity exceeds available inventory).
-4. Review `pricingSummary.priceSubtotal` and `pricingSummary.total` to confirm the updated pricing.
-
-### 5. Track a Guest Purchase Order
-
-1. After checkout completion, save the `purchaseOrderId`.
-2. Call `GET /guest_purchase_order/{purchaseOrderId}` to retrieve order details.
-3. Check `purchaseOrderStatus` for fulfillment state and `purchaseOrderPaymentStatus` for payment state.
-4. If `refundedAmount.value` is non-zero, a refund has been processed -- check `warnings` for details.
-5. Review `lineItems` for per-item shipping tracking and delivery estimates.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a apply_coupon?" -> POST /guest_checkout_session/{checkoutSessionId}/apply_coupon
+- "Get guest_checkout_session details?" -> GET /guest_checkout_session/{checkoutSessionId}
+- "Create a initiate?" -> POST /guest_checkout_session/initiate
+- "Create a remove_coupon?" -> POST /guest_checkout_session/{checkoutSessionId}/remove_coupon
+- "Create a update_quantity?" -> POST /guest_checkout_session/{checkoutSessionId}/update_quantity
+- "Create a update_shipping_address?" -> POST /guest_checkout_session/{checkoutSessionId}/update_shipping_address
+- "Create a update_shipping_option?" -> POST /guest_checkout_session/{checkoutSessionId}/update_shipping_option
+- "Get guest_purchase_order details?" -> GET /guest_purchase_order/{purchaseOrderId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

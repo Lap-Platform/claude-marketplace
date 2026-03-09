@@ -159,91 +159,125 @@ https://api.eu.svix.com/
 | PATCH | /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/transformation | Patch Ingest Endpoint Transformation |
 | POST | /ingest/api/v1/source/{source_id}/token/rotate | Rotate Ingest Token |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all my applications?" -> GET /api/v1/app
-- "How do I send a webhook message to an app?" -> POST /api/v1/app/{app_id}/msg
-- "How do I check if any endpoint is listening for a specific event type?" -> POST /api/v1/app/{app_id}/msg/precheck/active
-- "How do I see failed delivery attempts for an endpoint?" -> GET /api/v1/app/{app_id}/attempt/endpoint/{endpoint_id}
-- "How do I retry a failed message to a specific endpoint?" -> POST /api/v1/app/{app_id}/msg/{msg_id}/endpoint/{endpoint_id}/resend
-- "How do I replay all failed messages from a date range?" -> POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/bulk-replay
-- "How do I rotate an endpoint's signing secret?" -> POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/secret/rotate
-- "How do I create an app portal session for my customer?" -> POST /api/v1/auth/app-portal-access/{app_id}
-- "How do I set up an ingest source to receive external webhooks?" -> POST /ingest/api/v1/source
-- "How do I define a new event type with a JSON schema?" -> POST /api/v1/event-type
-- "How do I add a transformation to an endpoint?" -> PATCH /api/v1/app/{app_id}/endpoint/{endpoint_id}/transformation
-- "How do I check the delivery stats for an endpoint?" -> GET /api/v1/app/{app_id}/endpoint/{endpoint_id}/stats
-- "How do I export my environment config (event types, connectors)?" -> POST /api/v1/environment/export
-- "How do I poll for events from a stream sink?" -> GET /api/v1/app/{app_id}/poller/{sink_id}
-- "How do I monitor background tasks like bulk replays?" -> GET /api/v1/background-task/{task_id}
-
-## Response Tips
-
-- **List endpoints** (apps, endpoints, event-types, streams, sinks, sources): All return `{data, done, iterator, prevIterator}`. Paginate by passing the returned `iterator` value in the next request. Stop when `done: true`. Use `prevIterator` to page backwards.
-- **Create/Update endpoints**: POST returns 201 (created) or 200 (already exists when `get_if_exists` is set). PUT returns 200 (updated) or 201 (created). Check the status code to know which happened.
-- **Async operations** (bulk-replay, recover, replay-missing, expunge, usage stats): Return 202 with a `{id, status, task}` object. Poll GET /api/v1/background-task/{task_id} to track completion.
-- **Delete endpoints**: Return 204 with no body. Any non-204 indicates failure.
-- **Error responses**: All endpoints share the same error set (400/401/403/404/409/422/429). 409 signals a conflict (duplicate uid or concurrent update). 422 means valid JSON but failed business validation.
-- **Attempt details**: The `msg` field in attempt responses is a fully nested message object with its own `payload`, `eventType`, and `timestamp` - not just an ID reference.
-
-## Anomaly Flags
-
-- **429 responses**: Rate limit hit. Surface immediately with the `Retry-After` header value. The app-level `rateLimit` and `throttleRate` fields control per-app throttling - suggest adjusting if 429s are frequent.
-- **Endpoint `disabled: true`**: An endpoint has been disabled, meaning no deliveries will be made. Flag when listing endpoints so the user does not wonder why messages are not arriving.
-- **Sink `status: "disabled"` or non-null `failureReason`**: A stream sink has stopped consuming. Surface the `failureReason` and `nextRetryAt` fields so the user can intervene.
-- **Event type `deprecated: true` or `archived: true`**: The user is working with event types that are deprecated or archived. Warn before sending messages with these types.
-- **High `fail` count in endpoint stats**: When GET .../stats returns a `fail` count significantly exceeding `success`, proactively suggest investigating delivery attempts or running a recover/replay.
-- **Background task stuck**: If a polled background task stays in a non-terminal `status` for an extended period, flag it as potentially stalled.
-- **Missing `uid` on apps/endpoints**: When `uid` is null, resources can only be referenced by Svix-generated IDs. Recommend setting `uid` for idempotent creates and easier external system mapping.
-- **`expunge` flag on event type delete**: Deleting with `expunge=false` (default) only soft-deletes. Surface this distinction so the user understands the event type name remains reserved.
-
-## Playbook
-
-### 1. Set up a new webhook consumer end-to-end
-
-1. Create an application: POST /api/v1/app with `name` and optional `uid`
-2. Create an endpoint under that app: POST /api/v1/app/{app_id}/endpoint with the consumer's `url`
-3. Optionally filter by event types: include `filterTypes` in the endpoint creation
-4. Retrieve the signing secret: GET /api/v1/app/{app_id}/endpoint/{endpoint_id}/secret
-5. Share the `key` with the consumer so they can verify webhook signatures
-6. Send a test event: POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/send-example with an `eventType`
-7. Verify delivery: GET /api/v1/app/{app_id}/attempt/endpoint/{endpoint_id} and confirm a 200 status attempt
-
-### 2. Investigate and recover failed deliveries
-
-1. Check endpoint stats: GET /api/v1/app/{app_id}/endpoint/{endpoint_id}/stats to see fail/success counts
-2. List failed attempts: GET /api/v1/app/{app_id}/attempt/endpoint/{endpoint_id} with `status_code_class=400` or `status_code_class=500`
-3. Inspect a specific attempt: GET /api/v1/app/{app_id}/msg/{msg_id}/attempt/{attempt_id} to see the `response`, `responseStatusCode`, and `responseDurationMs`
-4. Fix the consumer issue (URL, auth headers, server bug)
-5. Recover all missed messages: POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/recover with `since` set to when failures started
-6. Monitor the background task: GET /api/v1/background-task/{task_id} until `status` is complete
-
-### 3. Set up an ingest source for receiving external webhooks
-
-1. Create an ingest source: POST /ingest/api/v1/source with a `name`
-2. Note the `ingestUrl` from the response - this is the URL to give the external provider
-3. Create an ingest endpoint to forward received events: POST /ingest/api/v1/source/{source_id}/endpoint with your internal handler `url`
-4. Optionally add a transformation: PATCH /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/transformation with `code` and `enabled: true`
-5. Optionally set custom headers: PUT /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/headers
-6. Configure the external provider to send webhooks to the `ingestUrl`
-
-### 4. Give customers a self-service app portal
-
-1. Ensure the application exists: POST /api/v1/app with `get_if_exists: true` and the customer's `uid`
-2. Generate a portal session: POST /api/v1/auth/app-portal-access/{app_id} with desired `expiry` and optional `readOnly` flag
-3. Return the `url` from the response to your frontend - this is a pre-authenticated portal URL
-4. The customer can now manage their own endpoints, view delivery attempts, and replay failed messages
-5. To revoke access: POST /api/v1/auth/app/{app_id}/expire-all to invalidate all active sessions
-
-### 5. Export environment config and import to another org
-
-1. Export the current environment: POST /api/v1/environment/export
-2. Save the response containing `eventTypes`, `connectors`, and `settings`
-3. Switch authentication to the target organization's Bearer token
-4. Import the config: POST /api/v1/environment/import with the exported `eventTypes`, `connectors`, and `settings` arrays
-5. Verify by listing event types: GET /api/v1/event-type and connectors: GET /api/v1/connector in the target org
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all app?" -> GET /api/v1/app
+- "Create a app?" -> POST /api/v1/app
+- "Get app details?" -> GET /api/v1/app/{app_id}
+- "Update a app?" -> PUT /api/v1/app/{app_id}
+- "Delete a app?" -> DELETE /api/v1/app/{app_id}
+- "Partially update a app?" -> PATCH /api/v1/app/{app_id}
+- "Get endpoint details?" -> GET /api/v1/app/{app_id}/attempt/endpoint/{endpoint_id}
+- "Get msg details?" -> GET /api/v1/app/{app_id}/attempt/msg/{msg_id}
+- "List all endpoint?" -> GET /api/v1/app/{app_id}/endpoint
+- "Create a endpoint?" -> POST /api/v1/app/{app_id}/endpoint
+- "Get endpoint details?" -> GET /api/v1/app/{app_id}/endpoint/{endpoint_id}
+- "Update a endpoint?" -> PUT /api/v1/app/{app_id}/endpoint/{endpoint_id}
+- "Delete a endpoint?" -> DELETE /api/v1/app/{app_id}/endpoint/{endpoint_id}
+- "Partially update a endpoint?" -> PATCH /api/v1/app/{app_id}/endpoint/{endpoint_id}
+- "Create a bulk-replay?" -> POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/bulk-replay
+- "List all headers?" -> GET /api/v1/app/{app_id}/endpoint/{endpoint_id}/headers
+- "List all msg?" -> GET /api/v1/app/{app_id}/endpoint/{endpoint_id}/msg
+- "Create a recover?" -> POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/recover
+- "Create a replay-missing?" -> POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/replay-missing
+- "List all secret?" -> GET /api/v1/app/{app_id}/endpoint/{endpoint_id}/secret
+- "Create a rotate?" -> POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/secret/rotate
+- "Create a send-example?" -> POST /api/v1/app/{app_id}/endpoint/{endpoint_id}/send-example
+- "List all stats?" -> GET /api/v1/app/{app_id}/endpoint/{endpoint_id}/stats
+- "List all transformation?" -> GET /api/v1/app/{app_id}/endpoint/{endpoint_id}/transformation
+- "List all integration?" -> GET /api/v1/app/{app_id}/integration
+- "Create a integration?" -> POST /api/v1/app/{app_id}/integration
+- "Get integration details?" -> GET /api/v1/app/{app_id}/integration/{integ_id}
+- "Update a integration?" -> PUT /api/v1/app/{app_id}/integration/{integ_id}
+- "Delete a integration?" -> DELETE /api/v1/app/{app_id}/integration/{integ_id}
+- "List all key?" -> GET /api/v1/app/{app_id}/integration/{integ_id}/key
+- "Create a rotate?" -> POST /api/v1/app/{app_id}/integration/{integ_id}/key/rotate
+- "List all msg?" -> GET /api/v1/app/{app_id}/msg
+- "Create a msg?" -> POST /api/v1/app/{app_id}/msg
+- "Create a expunge-all-content?" -> POST /api/v1/app/{app_id}/msg/expunge-all-contents
+- "Create a active?" -> POST /api/v1/app/{app_id}/msg/precheck/active
+- "Get msg details?" -> GET /api/v1/app/{app_id}/msg/{msg_id}
+- "Get attempt details?" -> GET /api/v1/app/{app_id}/msg/{msg_id}/attempt/{attempt_id}
+- "List all endpoint?" -> GET /api/v1/app/{app_id}/msg/{msg_id}/endpoint
+- "Create a resend?" -> POST /api/v1/app/{app_id}/msg/{msg_id}/endpoint/{endpoint_id}/resend
+- "Get poller details?" -> GET /api/v1/app/{app_id}/poller/{sink_id}
+- "Get consumer details?" -> GET /api/v1/app/{app_id}/poller/{sink_id}/consumer/{consumer_id}
+- "Create a seek?" -> POST /api/v1/app/{app_id}/poller/{sink_id}/consumer/{consumer_id}/seek
+- "Create a expire-all?" -> POST /api/v1/auth/app/{app_id}/expire-all
+- "Create a logout?" -> POST /api/v1/auth/logout
+- "Create a stream-logout?" -> POST /api/v1/auth/stream-logout
+- "Create a expire-all?" -> POST /api/v1/auth/stream/{stream_id}/expire-all
+- "List all token?" -> GET /api/v1/auth/stream/{stream_id}/sink/{sink_id}/poller/token
+- "Create a rotate?" -> POST /api/v1/auth/stream/{stream_id}/sink/{sink_id}/poller/token/rotate
+- "List all background-task?" -> GET /api/v1/background-task
+- "Get background-task details?" -> GET /api/v1/background-task/{task_id}
+- "List all connector?" -> GET /api/v1/connector
+- "Create a connector?" -> POST /api/v1/connector
+- "Get connector details?" -> GET /api/v1/connector/{connector_id}
+- "Update a connector?" -> PUT /api/v1/connector/{connector_id}
+- "Delete a connector?" -> DELETE /api/v1/connector/{connector_id}
+- "Partially update a connector?" -> PATCH /api/v1/connector/{connector_id}
+- "Create a export?" -> POST /api/v1/environment/export
+- "Create a import?" -> POST /api/v1/environment/import
+- "List all event-type?" -> GET /api/v1/event-type
+- "Create a event-type?" -> POST /api/v1/event-type
+- "Create a openapi?" -> POST /api/v1/event-type/import/openapi
+- "Get event-type details?" -> GET /api/v1/event-type/{event_type_name}
+- "Update a event-type?" -> PUT /api/v1/event-type/{event_type_name}
+- "Delete a event-type?" -> DELETE /api/v1/event-type/{event_type_name}
+- "Partially update a event-type?" -> PATCH /api/v1/event-type/{event_type_name}
+- "List all health?" -> GET /api/v1/health
+- "List all endpoint?" -> GET /api/v1/operational-webhook/endpoint
+- "Create a endpoint?" -> POST /api/v1/operational-webhook/endpoint
+- "Get endpoint details?" -> GET /api/v1/operational-webhook/endpoint/{endpoint_id}
+- "Update a endpoint?" -> PUT /api/v1/operational-webhook/endpoint/{endpoint_id}
+- "Delete a endpoint?" -> DELETE /api/v1/operational-webhook/endpoint/{endpoint_id}
+- "List all headers?" -> GET /api/v1/operational-webhook/endpoint/{endpoint_id}/headers
+- "List all secret?" -> GET /api/v1/operational-webhook/endpoint/{endpoint_id}/secret
+- "Create a rotate?" -> POST /api/v1/operational-webhook/endpoint/{endpoint_id}/secret/rotate
+- "Create a app?" -> POST /api/v1/stats/usage/app
+- "List all stream?" -> GET /api/v1/stream
+- "Create a stream?" -> POST /api/v1/stream
+- "List all event-type?" -> GET /api/v1/stream/event-type
+- "Create a event-type?" -> POST /api/v1/stream/event-type
+- "Get event-type details?" -> GET /api/v1/stream/event-type/{name}
+- "Update a event-type?" -> PUT /api/v1/stream/event-type/{name}
+- "Delete a event-type?" -> DELETE /api/v1/stream/event-type/{name}
+- "Partially update a event-type?" -> PATCH /api/v1/stream/event-type/{name}
+- "Get stream details?" -> GET /api/v1/stream/{stream_id}
+- "Update a stream?" -> PUT /api/v1/stream/{stream_id}
+- "Delete a stream?" -> DELETE /api/v1/stream/{stream_id}
+- "Partially update a stream?" -> PATCH /api/v1/stream/{stream_id}
+- "Create a event?" -> POST /api/v1/stream/{stream_id}/events
+- "List all sink?" -> GET /api/v1/stream/{stream_id}/sink
+- "Create a sink?" -> POST /api/v1/stream/{stream_id}/sink
+- "Get sink details?" -> GET /api/v1/stream/{stream_id}/sink/{sink_id}
+- "Update a sink?" -> PUT /api/v1/stream/{stream_id}/sink/{sink_id}
+- "Delete a sink?" -> DELETE /api/v1/stream/{stream_id}/sink/{sink_id}
+- "Partially update a sink?" -> PATCH /api/v1/stream/{stream_id}/sink/{sink_id}
+- "List all events?" -> GET /api/v1/stream/{stream_id}/sink/{sink_id}/events
+- "List all headers?" -> GET /api/v1/stream/{stream_id}/sink/{sink_id}/headers
+- "List all secret?" -> GET /api/v1/stream/{stream_id}/sink/{sink_id}/secret
+- "Create a rotate?" -> POST /api/v1/stream/{stream_id}/sink/{sink_id}/secret/rotate
+- "List all transformation?" -> GET /api/v1/stream/{stream_id}/sink/{sink_id}/transformation
+- "List all source?" -> GET /ingest/api/v1/source
+- "Create a source?" -> POST /ingest/api/v1/source
+- "Get source details?" -> GET /ingest/api/v1/source/{source_id}
+- "Update a source?" -> PUT /ingest/api/v1/source/{source_id}
+- "Delete a source?" -> DELETE /ingest/api/v1/source/{source_id}
+- "Create a dashboard?" -> POST /ingest/api/v1/source/{source_id}/dashboard
+- "List all endpoint?" -> GET /ingest/api/v1/source/{source_id}/endpoint
+- "Create a endpoint?" -> POST /ingest/api/v1/source/{source_id}/endpoint
+- "Get endpoint details?" -> GET /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}
+- "Update a endpoint?" -> PUT /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}
+- "Delete a endpoint?" -> DELETE /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}
+- "List all headers?" -> GET /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/headers
+- "List all secret?" -> GET /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret
+- "Create a rotate?" -> POST /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/secret/rotate
+- "List all transformation?" -> GET /ingest/api/v1/source/{source_id}/endpoint/{endpoint_id}/transformation
+- "Create a rotate?" -> POST /ingest/api/v1/source/{source_id}/token/rotate
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

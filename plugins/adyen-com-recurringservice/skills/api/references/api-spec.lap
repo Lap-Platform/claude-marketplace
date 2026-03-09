@@ -4,59 +4,69 @@
 @base https://paltokenization-test.adyen.com/paltokenization/servlet/Recurring/v68
 @version 68
 @auth ApiKey X-API-Key in header | Bearer basic
-@common_fields {merchantAccount: str}
+@common_fields {merchantAccount: str # The merchant account identifier, with which you want to process the transaction.}
 @endpoints 6
 @toc createPermit(1), disable(1), disablePermit(1), listRecurringDetails(1), notifyShopper(1), scheduleAccountUpdater(1)
 
 @group createPermit
 @endpoint POST /createPermit
-@required {permits: [map{partnerId: str, profileReference: str, restriction: map, resultKey: str, validTillDate: str(date-time)}], recurringDetailReference: str, shopperReference: str}
-@returns(200) {permitResultList: [map], pspReference: str}
-@errors {400, 401, 403, 422, 500}
+@desc Create new permits linked to a recurring contract.
+@required {permits: [map{partnerId: str, profileReference: str, restriction: map, resultKey: str, validTillDate: str(date-time)}] # The permits to create for this recurring contract., recurringDetailReference: str # The recurring contract the new permits will use., shopperReference: str # The shopper's reference to uniquely identify this shopper (e.g. user ID or account ID).}
+@returns(200) {permitResultList: [map], pspReference: str} # OK - the request has succeeded.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
 
 @endgroup
 
 @group disable
 @endpoint POST /disable
-@required {shopperReference: str}
-@optional {contract: str, recurringDetailReference: str}
-@returns(200) {response: str}
-@errors {400, 401, 403, 422, 500}
+@desc Disable stored payment details
+@required {shopperReference: str # The ID that uniquely identifies the shopper.  This `shopperReference` must be the same as the `shopperReference` used in the initial payment.}
+@optional {contract: str # Specify the contract if you only want to disable a specific use.  This field can be set to one of the following values, or to their combination (comma-separated): * ONECLICK * RECURRING * PAYOUT, recurringDetailReference: str # The ID that uniquely identifies the recurring detail reference.  If it is not provided, the whole recurring contract of the `shopperReference` will be disabled, which includes all recurring details.}
+@returns(200) {response: str} # OK - the request has succeeded.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"shopperReference":"YOUR_SHOPPER_REFERENCE","recurringDetailReference":"8314442372419167","merchantAccount":"YOUR_MERCHANT_ACCOUNT"}
 
 @endgroup
 
 @group disablePermit
 @endpoint POST /disablePermit
-@required {token: str}
-@returns(200) {pspReference: str, status: str}
-@errors {400, 401, 403, 422, 500}
+@desc Disable an existing permit.
+@required {token: str # The permit token to disable.}
+@returns(200) {pspReference: str, status: str} # OK - the request has succeeded.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
 
 @endgroup
 
 @group listRecurringDetails
 @endpoint POST /listRecurringDetails
-@required {shopperReference: str}
+@desc Get stored payment details
+@required {shopperReference: str # The reference you use to uniquely identify the shopper (e.g. user ID or account ID).}
 @optional {recurring: map{contract: str, recurringDetailName: str, recurringExpiry: str(date-time), recurringFrequency: str, tokenService: str}}
-@returns(200) {creationDate: str(date-time), details: [any], lastKnownShopperEmail: str, shopperReference: str}
-@errors {400, 401, 403, 422, 500}
+@returns(200) {creationDate: str(date-time), details: [any], lastKnownShopperEmail: str, shopperReference: str} # OK - the request has succeeded.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"recurring":{"contract":"RECURRING"},"shopperReference":"YOUR_SHOPPER_REFERENCE","merchantAccount":"YOUR_MERCHANT_ACCOUNT"}
 
 @endgroup
 
 @group notifyShopper
 @endpoint POST /notifyShopper
-@required {amount: map{currency!: str, value!: int(int64)}, reference: str, shopperReference: str}
-@optional {billingDate: str, billingSequenceNumber: str, displayedReference: str, recurringDetailReference: str, storedPaymentMethodId: str}
-@returns(200) {displayedReference: str, message: str, pspReference: str, reference: str, resultCode: str, shopperNotificationReference: str, storedPaymentMethodId: str}
-@errors {400, 401, 403, 422, 500}
+@desc Ask issuer to notify the shopper
+@required {amount: map{currency!: str, value!: int(int64)}, reference: str # Pre-debit notification reference sent by the merchant. This is a mandatory field, shopperReference: str # The ID that uniquely identifies the shopper.  This `shopperReference` must be the same as the `shopperReference` used in the initial payment.}
+@optional {billingDate: str # Date on which the subscription amount will be debited from the shopper. In YYYY-MM-DD format, billingSequenceNumber: str # Sequence of the debit. Depends on Frequency and Billing Attempts Rule., displayedReference: str # Reference of Pre-debit notification that is displayed to the shopper. Optional field. Maps to reference if missing, recurringDetailReference: str # This is the `recurringDetailReference` returned in the response when you created the token., storedPaymentMethodId: str # This is the `recurringDetailReference` returned in the response when you created the token.}
+@returns(200) {displayedReference: str, message: str, pspReference: str, reference: str, resultCode: str, shopperNotificationReference: str, storedPaymentMethodId: str} # OK - the request has succeeded.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"merchantAccount":"YOUR_MERCHANT_ACCOUNT","storedPaymentMethodId":"8415995487234100","shopperReference":"YOUR_SHOPPER_REFERENCE","amount":{"currency":"INR","value":1000},"billingDate":"2021-03-16","reference":"Example reference","displayedReference":"exampleDisplayedReference"}
 
 @endgroup
 
 @group scheduleAccountUpdater
 @endpoint POST /scheduleAccountUpdater
-@required {reference: str}
-@optional {additionalData: map, card: map{cvc: str, expiryMonth: str, expiryYear: str, holderName: str, issueNumber: str, number: str, startMonth: str, startYear: str}, selectedRecurringDetailReference: str, shopperReference: str}
-@returns(200) {pspReference: str, result: str}
-@errors {400, 401, 403, 422, 500}
+@desc Schedule running the Account Updater
+@required {reference: str # A reference that merchants can apply for the call.}
+@optional {additionalData: map # This field contains additional data, which may be required for a particular request., card: map{cvc: str, expiryMonth: str, expiryYear: str, holderName: str, issueNumber: str, number: str, startMonth: str, startYear: str}, selectedRecurringDetailReference: str # The selected detail recurring reference.  Optional if `card` is provided., shopperReference: str # The reference of the shopper that owns the recurring contract.  Optional if `card` is provided.}
+@returns(200) {pspReference: str, result: str} # OK - the request has succeeded.
+@errors {400: Bad Request - a problem reading or understanding the request., 401: Unauthorized - authentication required., 403: Forbidden - insufficient permissions to process the request., 422: Unprocessable Entity - a request validation error., 500: Internal Server Error - the server could not process the request.}
+@example_request {"merchantAccount":"YOUR_MERCHANT_ACCOUNT","reference":"YOUR_REFERENCE","card":{"expiryMonth":"03","expiryYear":"2030","holderName":"Adyen Test","number":"4111111111111111"}}
 
 @endgroup
 

@@ -1585,98 +1585,921 @@ https://api.telnyx.com/v2
 | DELETE | /wireless_blocklists/{id} | Delete a Wireless Blocklist |
 | GET | /wireless_blocklists/{id} | Get a Wireless Blocklist |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I send an SMS message?" -> POST /messages
-- "What phone numbers do I own?" -> GET /phone_numbers
-- "How do I check my account balance?" -> GET /balance
-- "Can I search for available phone numbers to buy?" -> GET /available_phone_numbers
-- "How do I place an outbound call?" -> POST /calls
-- "What is the status of my porting order?" -> GET /porting_orders/{id}
-- "How do I create an AI assistant for voice calls?" -> POST /ai/assistants
-- "How do I register a 10DLC brand?" -> POST /10dlc/brand
-- "How do I look up carrier info for a number?" -> GET /number_lookup/{phone_number}
-- "How do I send a fax?" -> POST /faxes
-- "What are my active call conferences?" -> GET /conferences
-- "How do I manage my SIM cards?" -> GET /sim_cards
-- "How do I set up a messaging profile?" -> POST /messaging_profiles
-- "How do I verify a phone number for 2FA?" -> POST /verifications/sms
-- "How do I check my usage and charges?" -> GET /charges_summary
-
-## Response Tips
-
-- **Paginated lists** (phone_numbers, messages, sim_cards, etc.): All return `meta: {page_number, page_size, total_pages, total_results}` -- always check `total_pages` and loop with `page[number]` or `page` params to get complete results.
-- **Call control actions** (calls/{id}/actions/*): Return `{data: {result: str}}` where result is typically `"ok"` -- a 200 does not mean the action completed, only that it was accepted; listen for webhooks for confirmation.
-- **Async operations** (SIM actions, porting, bulk jobs): Return 202 with a task/job ID -- poll the corresponding GET endpoint or configure a webhook to track completion status.
-- **10DLC endpoints**: Use TCR-style pagination with `page` and `recordsPerPage` (not the standard `page[number]`/`page[size]` pattern used elsewhere).
-- **Error responses**: 422 is the most common error across the API indicating validation failure; 4XX errors on messaging endpoints are generic -- inspect the response body `errors` array for specific codes and messages.
-- **TeXML endpoints**: Follow Twilio-compatible response shapes (e.g., `calls` array, `sid` instead of `id`, `uri` instead of `record_type`) -- do not mix with native v2 endpoint patterns.
-- **AI/Assistants**: Responses contain deeply nested objects (`voice_settings`, `telephony_settings`, `transcription`) -- nullable fields are marked with `?` and should be checked before access.
-
-## Anomaly Flags
-
-- **Balance approaching zero**: After any billable operation, proactively check `GET /balance` and warn if `available_credit` drops below a reasonable threshold for the user's typical usage.
-- **10DLC campaign status not ACTIVE**: Surface `failureReasons` and `submissionStatus` whenever a campaign's `status` is not progressing -- rejected campaigns block messaging on assigned numbers.
-- **Porting order exceptions**: Flag any porting order where `requirements_met` is `false` or `status.details` contains error entries -- these stall port-ins silently.
-- **SIM card actions stuck**: If `actions_in_progress` is `true` on a SIM card for an extended period, or if `status.value` shows an unexpected state, alert the user to check `sim_card_actions`.
-- **Phone number emergency status**: Warn when `emergency_enabled` is `false` on numbers intended for voice service, or when `emergency_status` is not `active` after enabling.
-- **Messaging profile daily spend limit**: Surface when `daily_spend_limit_enabled` is `true` and current spend is approaching the `daily_spend_limit` value.
-- **Webhook delivery failures**: Periodically check `GET /webhook_deliveries` for failed delivery attempts that could indicate missed events.
-- **Credential expiration**: Flag telephony credentials where `expired` is `true` or `expires_at` is approaching.
-- **Number order requirements not met**: Alert when `requirements_met` is `false` on number orders, as these will not complete without regulatory document uploads.
-
-## Playbook
-
-### 1. Purchase and Configure a Phone Number for Messaging
-
-1. Search for available numbers: `GET /available_phone_numbers?filter[country_code]=US&filter[features]=sms`
-2. Create a messaging profile: `POST /messaging_profiles` with `name`, `whitelisted_destinations`, and `webhook_url`
-3. Order the number: `POST /number_orders` with the chosen `phone_number` from step 1
-4. Check order status: `GET /number_orders/{id}` -- wait until `status` is `success`
-5. Assign messaging profile: `PATCH /phone_numbers/{id}/messaging` with `messaging_profile_id` from step 2
-6. For US numbers, register a 10DLC brand (`POST /10dlc/brand`) and campaign (`POST /10dlc/campaignBuilder`), then assign the number (`POST /10dlc/phone_number_campaigns`)
-7. Send a test message: `POST /messages` with `from`, `to`, and `text`
-
-### 2. Set Up an AI Voice Assistant
-
-1. Create the assistant: `POST /ai/assistants` with `name`, `model`, `instructions`, and `voice_settings` (including `voice`)
-2. Create a call control or TeXML application: `POST /call_control_applications` with `webhook_event_url` pointing to your server
-3. Assign a phone number to the application: `PATCH /phone_numbers/{id}` with `connection_id`
-4. Test via chat: `POST /ai/assistants/{assistant_id}/chat` to validate instructions before going live
-5. Optionally create versions: `GET /ai/assistants/{assistant_id}/versions` and use canary deploys (`POST /ai/assistants/{assistant_id}/canary-deploys`) for gradual rollout
-6. Run automated tests: `POST /ai/assistants/tests` with rubric criteria, then `POST /ai/assistants/tests/{test_id}/runs`
-
-### 3. Port Numbers Into Telnyx
-
-1. Check portability: `POST /portability_checks` with the list of `phone_numbers`
-2. Create the porting order: `POST /porting_orders` with `phone_numbers`
-3. Fill in end-user details: `PATCH /porting_orders/{id}` with `end_user` (admin info, location) and `documents` (LOA, invoice)
-4. Upload LOA document: `POST /documents` then reference the document ID in the porting order patch
-5. Check requirements: `GET /porting_orders/{id}/requirements` and fulfill any outstanding items
-6. Confirm the order: `POST /porting_orders/{id}/actions/confirm`
-7. Monitor status via `GET /porting_orders/{id}` or configure `webhook_url` on the order -- watch for FOC date assignment
-8. Activate when ready: `POST /porting_orders/{id}/actions/activate`
-
-### 4. Send Verified SMS with 2FA (Verify API)
-
-1. Create a verify profile: `POST /verify_profiles` with `name` and `sms` settings (code_length, app_name, whitelisted_destinations)
-2. Trigger verification: `POST /verifications/sms` with `phone_number` and `verify_profile_id`
-3. Collect the code from your user's input
-4. Validate the code: `POST /verifications/{verification_id}/actions/verify` with the `code`
-5. Check response: `response_code` of `accepted` means success; `rejected` means wrong code or expired
-
-### 5. Manage IoT SIM Cards
-
-1. Order physical SIMs: `POST /sim_card_orders` with `address_id` and `quantity` (preview cost first with `POST /sim_card_order_preview`)
-2. Register received SIMs: `POST /actions/register/sim_cards` with `registration_codes` from the packaging
-3. Create a SIM group: `POST /sim_card_groups` with `name` and optional `data_limit`
-4. Assign SIMs to the group: `PATCH /sim_cards/{id}` with `sim_card_group_id`
-5. Enable a SIM: `POST /sim_cards/{id}/actions/enable`
-6. Set data usage alerts: `POST /sim_card_data_usage_notifications` with `sim_card_id` and `threshold`
-7. Monitor usage: `GET /sim_cards/{id}` and check `current_billing_period_consumed_data`
-8. For private networking, attach a gateway: `POST /sim_card_groups/{id}/actions/set_private_wireless_gateway`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all oauth-authorization-server?" -> GET /.well-known/oauth-authorization-server
+- "List all oauth-protected-resource?" -> GET /.well-known/oauth-protected-resource
+- "List all brand?" -> GET /10dlc/brand
+- "Create a brand?" -> POST /10dlc/brand
+- "Get feedback details?" -> GET /10dlc/brand/feedback/{brandId}
+- "Get smsOtp details?" -> GET /10dlc/brand/smsOtp/{referenceId}
+- "Delete a brand?" -> DELETE /10dlc/brand/{brandId}
+- "Get brand details?" -> GET /10dlc/brand/{brandId}
+- "Update a brand?" -> PUT /10dlc/brand/{brandId}
+- "Create a 2faEmail?" -> POST /10dlc/brand/{brandId}/2faEmail
+- "List all externalVetting?" -> GET /10dlc/brand/{brandId}/externalVetting
+- "Create a externalVetting?" -> POST /10dlc/brand/{brandId}/externalVetting
+- "List all smsOtp?" -> GET /10dlc/brand/{brandId}/smsOtp
+- "Create a smsOtp?" -> POST /10dlc/brand/{brandId}/smsOtp
+- "List all campaign?" -> GET /10dlc/campaign
+- "List all cost?" -> GET /10dlc/campaign/usecase/cost
+- "Delete a campaign?" -> DELETE /10dlc/campaign/{campaignId}
+- "Get campaign details?" -> GET /10dlc/campaign/{campaignId}
+- "Update a campaign?" -> PUT /10dlc/campaign/{campaignId}
+- "Create a appeal?" -> POST /10dlc/campaign/{campaignId}/appeal
+- "List all mnoMetadata?" -> GET /10dlc/campaign/{campaignId}/mnoMetadata
+- "List all operationStatus?" -> GET /10dlc/campaign/{campaignId}/operationStatus
+- "List all attributes?" -> GET /10dlc/campaign/{campaignId}/osr/attributes
+- "List all sharing?" -> GET /10dlc/campaign/{campaignId}/sharing
+- "Create a campaignBuilder?" -> POST /10dlc/campaignBuilder
+- "Get usecase details?" -> GET /10dlc/campaignBuilder/brand/{brandId}/usecase/{usecase}
+- "Get enum details?" -> GET /10dlc/enum/{endpoint}
+- "List all sharedByMe?" -> GET /10dlc/partnerCampaign/sharedByMe
+- "List all sharing?" -> GET /10dlc/partnerCampaign/{campaignId}/sharing
+- "List all partner_campaigns?" -> GET /10dlc/partner_campaigns
+- "Get partner_campaign details?" -> GET /10dlc/partner_campaigns/{campaignId}
+- "Partially update a partner_campaign?" -> PATCH /10dlc/partner_campaigns/{campaignId}
+- "Create a phoneNumberAssignmentByProfile?" -> POST /10dlc/phoneNumberAssignmentByProfile
+- "Get phoneNumberAssignmentByProfile details?" -> GET /10dlc/phoneNumberAssignmentByProfile/{taskId}
+- "List all phoneNumbers?" -> GET /10dlc/phoneNumberAssignmentByProfile/{taskId}/phoneNumbers
+- "List all phone_number_campaigns?" -> GET /10dlc/phone_number_campaigns
+- "Create a phone_number_campaign?" -> POST /10dlc/phone_number_campaigns
+- "Delete a phone_number_campaign?" -> DELETE /10dlc/phone_number_campaigns/{phoneNumber}
+- "Get phone_number_campaign details?" -> GET /10dlc/phone_number_campaigns/{phoneNumber}
+- "Update a phone_number_campaign?" -> PUT /10dlc/phone_number_campaigns/{phoneNumber}
+- "List all access_ip_address?" -> GET /access_ip_address
+- "Create a access_ip_address?" -> POST /access_ip_address
+- "Delete a access_ip_address?" -> DELETE /access_ip_address/{access_ip_address_id}
+- "Get access_ip_address details?" -> GET /access_ip_address/{access_ip_address_id}
+- "List all access_ip_ranges?" -> GET /access_ip_ranges
+- "Create a access_ip_range?" -> POST /access_ip_ranges
+- "Delete a access_ip_range?" -> DELETE /access_ip_ranges/{access_ip_range_id}
+- "Create a esim?" -> POST /actions/purchase/esims
+- "Create a sim_card?" -> POST /actions/register/sim_cards
+- "List all addresses?" -> GET /addresses
+- "Create a address?" -> POST /addresses
+- "Create a validate?" -> POST /addresses/actions/validate
+- "Delete a address?" -> DELETE /addresses/{id}
+- "Get address details?" -> GET /addresses/{id}
+- "Create a accept_suggestion?" -> POST /addresses/{id}/actions/accept_suggestions
+- "List all advanced_orders?" -> GET /advanced_orders
+- "Create a advanced_order?" -> POST /advanced_orders
+- "Get advanced_order details?" -> GET /advanced_orders/{order_id}
+- "List all assistants?" -> GET /ai/assistants
+- "Create a assistant?" -> POST /ai/assistants
+- "Create a import?" -> POST /ai/assistants/import
+- "List all tests?" -> GET /ai/assistants/tests
+- "Create a test?" -> POST /ai/assistants/tests
+- "List all test-suites?" -> GET /ai/assistants/tests/test-suites
+- "List all runs?" -> GET /ai/assistants/tests/test-suites/{suite_name}/runs
+- "Create a run?" -> POST /ai/assistants/tests/test-suites/{suite_name}/runs
+- "Delete a test?" -> DELETE /ai/assistants/tests/{test_id}
+- "Get test details?" -> GET /ai/assistants/tests/{test_id}
+- "Update a test?" -> PUT /ai/assistants/tests/{test_id}
+- "List all runs?" -> GET /ai/assistants/tests/{test_id}/runs
+- "Create a run?" -> POST /ai/assistants/tests/{test_id}/runs
+- "Get run details?" -> GET /ai/assistants/tests/{test_id}/runs/{run_id}
+- "Delete a assistant?" -> DELETE /ai/assistants/{assistant_id}
+- "Get assistant details?" -> GET /ai/assistants/{assistant_id}
+- "List all canary-deploys?" -> GET /ai/assistants/{assistant_id}/canary-deploys
+- "Create a canary-deploy?" -> POST /ai/assistants/{assistant_id}/canary-deploys
+- "Create a chat?" -> POST /ai/assistants/{assistant_id}/chat
+- "Create a sm?" -> POST /ai/assistants/{assistant_id}/chat/sms
+- "Create a clone?" -> POST /ai/assistants/{assistant_id}/clone
+- "List all scheduled_events?" -> GET /ai/assistants/{assistant_id}/scheduled_events
+- "Create a scheduled_event?" -> POST /ai/assistants/{assistant_id}/scheduled_events
+- "Delete a scheduled_event?" -> DELETE /ai/assistants/{assistant_id}/scheduled_events/{event_id}
+- "Get scheduled_event details?" -> GET /ai/assistants/{assistant_id}/scheduled_events/{event_id}
+- "List all texml?" -> GET /ai/assistants/{assistant_id}/texml
+- "Create a test?" -> POST /ai/assistants/{assistant_id}/tools/{tool_id}/test
+- "List all versions?" -> GET /ai/assistants/{assistant_id}/versions
+- "Delete a version?" -> DELETE /ai/assistants/{assistant_id}/versions/{version_id}
+- "Get version details?" -> GET /ai/assistants/{assistant_id}/versions/{version_id}
+- "Create a promote?" -> POST /ai/assistants/{assistant_id}/versions/{version_id}/promote
+- "Create a transcription?" -> POST /ai/audio/transcriptions
+- "Create a completion?" -> POST /ai/chat/completions
+- "List all clusters?" -> GET /ai/clusters
+- "Create a cluster?" -> POST /ai/clusters
+- "Delete a cluster?" -> DELETE /ai/clusters/{task_id}
+- "Get cluster details?" -> GET /ai/clusters/{task_id}
+- "List all graph?" -> GET /ai/clusters/{task_id}/graph
+- "List all conversations?" -> GET /ai/conversations
+- "Create a conversation?" -> POST /ai/conversations
+- "List all insight-groups?" -> GET /ai/conversations/insight-groups
+- "Create a insight-group?" -> POST /ai/conversations/insight-groups
+- "Delete a insight-group?" -> DELETE /ai/conversations/insight-groups/{group_id}
+- "Get insight-group details?" -> GET /ai/conversations/insight-groups/{group_id}
+- "Update a insight-group?" -> PUT /ai/conversations/insight-groups/{group_id}
+- "Create a assign?" -> POST /ai/conversations/insight-groups/{group_id}/insights/{insight_id}/assign
+- "List all insights?" -> GET /ai/conversations/insights
+- "Create a insight?" -> POST /ai/conversations/insights
+- "Delete a insight?" -> DELETE /ai/conversations/insights/{insight_id}
+- "Get insight details?" -> GET /ai/conversations/insights/{insight_id}
+- "Update a insight?" -> PUT /ai/conversations/insights/{insight_id}
+- "Delete a conversation?" -> DELETE /ai/conversations/{conversation_id}
+- "Get conversation details?" -> GET /ai/conversations/{conversation_id}
+- "Update a conversation?" -> PUT /ai/conversations/{conversation_id}
+- "List all conversations-insights?" -> GET /ai/conversations/{conversation_id}/conversations-insights
+- "Create a message?" -> POST /ai/conversations/{conversation_id}/message
+- "List all messages?" -> GET /ai/conversations/{conversation_id}/messages
+- "List all embeddings?" -> GET /ai/embeddings
+- "Create a embedding?" -> POST /ai/embeddings
+- "List all buckets?" -> GET /ai/embeddings/buckets
+- "Delete a bucket?" -> DELETE /ai/embeddings/buckets/{bucket_name}
+- "Get bucket details?" -> GET /ai/embeddings/buckets/{bucket_name}
+- "Create a similarity-search?" -> POST /ai/embeddings/similarity-search
+- "Create a url?" -> POST /ai/embeddings/url
+- "Get embedding details?" -> GET /ai/embeddings/{task_id}
+- "List all jobs?" -> GET /ai/fine_tuning/jobs
+- "Create a job?" -> POST /ai/fine_tuning/jobs
+- "Get job details?" -> GET /ai/fine_tuning/jobs/{job_id}
+- "Create a cancel?" -> POST /ai/fine_tuning/jobs/{job_id}/cancel
+- "List all integrations?" -> GET /ai/integrations
+- "List all connections?" -> GET /ai/integrations/connections
+- "Delete a connection?" -> DELETE /ai/integrations/connections/{user_connection_id}
+- "Get connection details?" -> GET /ai/integrations/connections/{user_connection_id}
+- "Get integration details?" -> GET /ai/integrations/{integration_id}
+- "List all mcp_servers?" -> GET /ai/mcp_servers
+- "Create a mcp_server?" -> POST /ai/mcp_servers
+- "Delete a mcp_server?" -> DELETE /ai/mcp_servers/{mcp_server_id}
+- "Get mcp_server details?" -> GET /ai/mcp_servers/{mcp_server_id}
+- "Update a mcp_server?" -> PUT /ai/mcp_servers/{mcp_server_id}
+- "List all missions?" -> GET /ai/missions
+- "Create a mission?" -> POST /ai/missions
+- "List all events?" -> GET /ai/missions/events
+- "List all runs?" -> GET /ai/missions/runs
+- "Delete a mission?" -> DELETE /ai/missions/{mission_id}
+- "Get mission details?" -> GET /ai/missions/{mission_id}
+- "Update a mission?" -> PUT /ai/missions/{mission_id}
+- "Create a clone?" -> POST /ai/missions/{mission_id}/clone
+- "List all knowledge-bases?" -> GET /ai/missions/{mission_id}/knowledge-bases
+- "Create a knowledge-base?" -> POST /ai/missions/{mission_id}/knowledge-bases
+- "Delete a knowledge-base?" -> DELETE /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}
+- "Get knowledge-base details?" -> GET /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}
+- "Update a knowledge-base?" -> PUT /ai/missions/{mission_id}/knowledge-bases/{knowledge_base_id}
+- "List all mcp-servers?" -> GET /ai/missions/{mission_id}/mcp-servers
+- "Create a mcp-server?" -> POST /ai/missions/{mission_id}/mcp-servers
+- "Delete a mcp-server?" -> DELETE /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}
+- "Get mcp-server details?" -> GET /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}
+- "Update a mcp-server?" -> PUT /ai/missions/{mission_id}/mcp-servers/{mcp_server_id}
+- "List all runs?" -> GET /ai/missions/{mission_id}/runs
+- "Create a run?" -> POST /ai/missions/{mission_id}/runs
+- "Get run details?" -> GET /ai/missions/{mission_id}/runs/{run_id}
+- "Partially update a run?" -> PATCH /ai/missions/{mission_id}/runs/{run_id}
+- "Create a cancel?" -> POST /ai/missions/{mission_id}/runs/{run_id}/cancel
+- "List all events?" -> GET /ai/missions/{mission_id}/runs/{run_id}/events
+- "Create a event?" -> POST /ai/missions/{mission_id}/runs/{run_id}/events
+- "Get event details?" -> GET /ai/missions/{mission_id}/runs/{run_id}/events/{event_id}
+- "Create a pause?" -> POST /ai/missions/{mission_id}/runs/{run_id}/pause
+- "List all plan?" -> GET /ai/missions/{mission_id}/runs/{run_id}/plan
+- "Create a plan?" -> POST /ai/missions/{mission_id}/runs/{run_id}/plan
+- "Create a step?" -> POST /ai/missions/{mission_id}/runs/{run_id}/plan/steps
+- "Get step details?" -> GET /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}
+- "Partially update a step?" -> PATCH /ai/missions/{mission_id}/runs/{run_id}/plan/steps/{step_id}
+- "Create a resume?" -> POST /ai/missions/{mission_id}/runs/{run_id}/resume
+- "List all telnyx-agents?" -> GET /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents
+- "Create a telnyx-agent?" -> POST /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents
+- "Delete a telnyx-agent?" -> DELETE /ai/missions/{mission_id}/runs/{run_id}/telnyx-agents/{telnyx_agent_id}
+- "List all tools?" -> GET /ai/missions/{mission_id}/tools
+- "Create a tool?" -> POST /ai/missions/{mission_id}/tools
+- "Delete a tool?" -> DELETE /ai/missions/{mission_id}/tools/{tool_id}
+- "Get tool details?" -> GET /ai/missions/{mission_id}/tools/{tool_id}
+- "Update a tool?" -> PUT /ai/missions/{mission_id}/tools/{tool_id}
+- "List all models?" -> GET /ai/models
+- "Create a embedding?" -> POST /ai/openai/embeddings
+- "List all models?" -> GET /ai/openai/embeddings/models
+- "Create a summarize?" -> POST /ai/summarize
+- "List all alphanumeric_sender_ids?" -> GET /alphanumeric_sender_ids
+- "Create a alphanumeric_sender_id?" -> POST /alphanumeric_sender_ids
+- "Delete a alphanumeric_sender_id?" -> DELETE /alphanumeric_sender_ids/{id}
+- "Get alphanumeric_sender_id details?" -> GET /alphanumeric_sender_ids/{id}
+- "List all audit_events?" -> GET /audit_events
+- "List all authentication_providers?" -> GET /authentication_providers
+- "Create a authentication_provider?" -> POST /authentication_providers
+- "Delete a authentication_provider?" -> DELETE /authentication_providers/{id}
+- "Get authentication_provider details?" -> GET /authentication_providers/{id}
+- "Partially update a authentication_provider?" -> PATCH /authentication_providers/{id}
+- "List all available_phone_number_blocks?" -> GET /available_phone_number_blocks
+- "List all available_phone_numbers?" -> GET /available_phone_numbers
+- "List all balance?" -> GET /balance
+- "List all billing_groups?" -> GET /billing_groups
+- "Create a billing_group?" -> POST /billing_groups
+- "Delete a billing_group?" -> DELETE /billing_groups/{id}
+- "Get billing_group details?" -> GET /billing_groups/{id}
+- "Partially update a billing_group?" -> PATCH /billing_groups/{id}
+- "List all bulk_sim_card_actions?" -> GET /bulk_sim_card_actions
+- "Get bulk_sim_card_action details?" -> GET /bulk_sim_card_actions/{id}
+- "List all billing_bundles?" -> GET /bundle_pricing/billing_bundles
+- "Get billing_bundle details?" -> GET /bundle_pricing/billing_bundles/{bundle_id}
+- "List all user_bundles?" -> GET /bundle_pricing/user_bundles
+- "Create a bulk?" -> POST /bundle_pricing/user_bundles/bulk
+- "List all unused?" -> GET /bundle_pricing/user_bundles/unused
+- "Delete a user_bundle?" -> DELETE /bundle_pricing/user_bundles/{user_bundle_id}
+- "Get user_bundle details?" -> GET /bundle_pricing/user_bundles/{user_bundle_id}
+- "List all resources?" -> GET /bundle_pricing/user_bundles/{user_bundle_id}/resources
+- "List all call_control_applications?" -> GET /call_control_applications
+- "Create a call_control_application?" -> POST /call_control_applications
+- "Delete a call_control_application?" -> DELETE /call_control_applications/{id}
+- "Get call_control_application details?" -> GET /call_control_applications/{id}
+- "Partially update a call_control_application?" -> PATCH /call_control_applications/{id}
+- "List all call_events?" -> GET /call_events
+- "Create a call?" -> POST /calls
+- "Get call details?" -> GET /calls/{call_control_id}
+- "Create a ai_assistant_add_message?" -> POST /calls/{call_control_id}/actions/ai_assistant_add_messages
+- "Create a ai_assistant_start?" -> POST /calls/{call_control_id}/actions/ai_assistant_start
+- "Create a ai_assistant_stop?" -> POST /calls/{call_control_id}/actions/ai_assistant_stop
+- "Create a answer?" -> POST /calls/{call_control_id}/actions/answer
+- "Create a bridge?" -> POST /calls/{call_control_id}/actions/bridge
+- "Create a enqueue?" -> POST /calls/{call_control_id}/actions/enqueue
+- "Create a fork_start?" -> POST /calls/{call_control_id}/actions/fork_start
+- "Create a fork_stop?" -> POST /calls/{call_control_id}/actions/fork_stop
+- "Create a gather?" -> POST /calls/{call_control_id}/actions/gather
+- "Create a gather_stop?" -> POST /calls/{call_control_id}/actions/gather_stop
+- "Create a gather_using_ai?" -> POST /calls/{call_control_id}/actions/gather_using_ai
+- "Create a gather_using_audio?" -> POST /calls/{call_control_id}/actions/gather_using_audio
+- "Create a gather_using_speak?" -> POST /calls/{call_control_id}/actions/gather_using_speak
+- "Create a hangup?" -> POST /calls/{call_control_id}/actions/hangup
+- "Create a leave_queue?" -> POST /calls/{call_control_id}/actions/leave_queue
+- "Create a playback_start?" -> POST /calls/{call_control_id}/actions/playback_start
+- "Create a playback_stop?" -> POST /calls/{call_control_id}/actions/playback_stop
+- "Create a record_pause?" -> POST /calls/{call_control_id}/actions/record_pause
+- "Create a record_resume?" -> POST /calls/{call_control_id}/actions/record_resume
+- "Create a record_start?" -> POST /calls/{call_control_id}/actions/record_start
+- "Create a record_stop?" -> POST /calls/{call_control_id}/actions/record_stop
+- "Create a refer?" -> POST /calls/{call_control_id}/actions/refer
+- "Create a reject?" -> POST /calls/{call_control_id}/actions/reject
+- "Create a send_dtmf?" -> POST /calls/{call_control_id}/actions/send_dtmf
+- "Create a send_sip_info?" -> POST /calls/{call_control_id}/actions/send_sip_info
+- "Create a siprec_start?" -> POST /calls/{call_control_id}/actions/siprec_start
+- "Create a siprec_stop?" -> POST /calls/{call_control_id}/actions/siprec_stop
+- "Create a speak?" -> POST /calls/{call_control_id}/actions/speak
+- "Create a streaming_start?" -> POST /calls/{call_control_id}/actions/streaming_start
+- "Create a streaming_stop?" -> POST /calls/{call_control_id}/actions/streaming_stop
+- "Create a suppression_start?" -> POST /calls/{call_control_id}/actions/suppression_start
+- "Create a suppression_stop?" -> POST /calls/{call_control_id}/actions/suppression_stop
+- "Create a switch_supervisor_role?" -> POST /calls/{call_control_id}/actions/switch_supervisor_role
+- "Create a transcription_start?" -> POST /calls/{call_control_id}/actions/transcription_start
+- "Create a transcription_stop?" -> POST /calls/{call_control_id}/actions/transcription_stop
+- "Create a transfer?" -> POST /calls/{call_control_id}/actions/transfer
+- "List all channel_zones?" -> GET /channel_zones
+- "Update a channel_zone?" -> PUT /channel_zones/{channel_zone_id}
+- "List all charges_breakdown?" -> GET /charges_breakdown
+- "List all charges_summary?" -> GET /charges_summary
+- "List all comments?" -> GET /comments
+- "Create a comment?" -> POST /comments
+- "Get comment details?" -> GET /comments/{id}
+- "List all conferences?" -> GET /conferences
+- "Create a conference?" -> POST /conferences
+- "List all participants?" -> GET /conferences/{conference_id}/participants
+- "Get conference details?" -> GET /conferences/{id}
+- "Create a end?" -> POST /conferences/{id}/actions/end
+- "Create a gather_using_audio?" -> POST /conferences/{id}/actions/gather_using_audio
+- "Create a hold?" -> POST /conferences/{id}/actions/hold
+- "Create a join?" -> POST /conferences/{id}/actions/join
+- "Create a leave?" -> POST /conferences/{id}/actions/leave
+- "Create a mute?" -> POST /conferences/{id}/actions/mute
+- "Create a play?" -> POST /conferences/{id}/actions/play
+- "Create a record_pause?" -> POST /conferences/{id}/actions/record_pause
+- "Create a record_resume?" -> POST /conferences/{id}/actions/record_resume
+- "Create a record_start?" -> POST /conferences/{id}/actions/record_start
+- "Create a record_stop?" -> POST /conferences/{id}/actions/record_stop
+- "Create a send_dtmf?" -> POST /conferences/{id}/actions/send_dtmf
+- "Create a speak?" -> POST /conferences/{id}/actions/speak
+- "Create a stop?" -> POST /conferences/{id}/actions/stop
+- "Create a unhold?" -> POST /conferences/{id}/actions/unhold
+- "Create a unmute?" -> POST /conferences/{id}/actions/unmute
+- "Create a update?" -> POST /conferences/{id}/actions/update
+- "Get participant details?" -> GET /conferences/{id}/participants/{participant_id}
+- "Partially update a participant?" -> PATCH /conferences/{id}/participants/{participant_id}
+- "List all connections?" -> GET /connections
+- "List all active_calls?" -> GET /connections/{connection_id}/active_calls
+- "Get connection details?" -> GET /connections/{id}
+- "List all country_coverage?" -> GET /country_coverage
+- "Get country details?" -> GET /country_coverage/countries/{country_code}
+- "List all credential_connections?" -> GET /credential_connections
+- "Create a credential_connection?" -> POST /credential_connections
+- "Delete a credential_connection?" -> DELETE /credential_connections/{id}
+- "Get credential_connection details?" -> GET /credential_connections/{id}
+- "Partially update a credential_connection?" -> PATCH /credential_connections/{id}
+- "Create a check_registration_status?" -> POST /credential_connections/{id}/actions/check_registration_status
+- "Delete a custom_storage_credential?" -> DELETE /custom_storage_credentials/{connection_id}
+- "Get custom_storage_credential details?" -> GET /custom_storage_credentials/{connection_id}
+- "Update a custom_storage_credential?" -> PUT /custom_storage_credentials/{connection_id}
+- "List all customer_service_records?" -> GET /customer_service_records
+- "Create a customer_service_record?" -> POST /customer_service_records
+- "Create a phone_number_coverage?" -> POST /customer_service_records/phone_number_coverages
+- "Get customer_service_record details?" -> GET /customer_service_records/{customer_service_record_id}
+- "List all detail_records?" -> GET /detail_records
+- "Delete a dialogflow_connection?" -> DELETE /dialogflow_connections/{connection_id}
+- "Get dialogflow_connection details?" -> GET /dialogflow_connections/{connection_id}
+- "Update a dialogflow_connection?" -> PUT /dialogflow_connections/{connection_id}
+- "List all document_links?" -> GET /document_links
+- "List all documents?" -> GET /documents
+- "Create a document?" -> POST /documents
+- "Delete a document?" -> DELETE /documents/{id}
+- "Get document details?" -> GET /documents/{id}
+- "Partially update a document?" -> PATCH /documents/{id}
+- "List all download?" -> GET /documents/{id}/download
+- "List all download_link?" -> GET /documents/{id}/download_link
+- "List all dynamic_emergency_addresses?" -> GET /dynamic_emergency_addresses
+- "Create a dynamic_emergency_address?" -> POST /dynamic_emergency_addresses
+- "Delete a dynamic_emergency_address?" -> DELETE /dynamic_emergency_addresses/{id}
+- "Get dynamic_emergency_address details?" -> GET /dynamic_emergency_addresses/{id}
+- "List all dynamic_emergency_endpoints?" -> GET /dynamic_emergency_endpoints
+- "Create a dynamic_emergency_endpoint?" -> POST /dynamic_emergency_endpoints
+- "Delete a dynamic_emergency_endpoint?" -> DELETE /dynamic_emergency_endpoints/{id}
+- "Get dynamic_emergency_endpoint details?" -> GET /dynamic_emergency_endpoints/{id}
+- "List all external_connections?" -> GET /external_connections
+- "Create a external_connection?" -> POST /external_connections
+- "List all log_messages?" -> GET /external_connections/log_messages
+- "Delete a log_message?" -> DELETE /external_connections/log_messages/{id}
+- "Get log_message details?" -> GET /external_connections/log_messages/{id}
+- "Delete a external_connection?" -> DELETE /external_connections/{id}
+- "Get external_connection details?" -> GET /external_connections/{id}
+- "Partially update a external_connection?" -> PATCH /external_connections/{id}
+- "List all civic_addresses?" -> GET /external_connections/{id}/civic_addresses
+- "Get civic_address details?" -> GET /external_connections/{id}/civic_addresses/{address_id}
+- "Partially update a location?" -> PATCH /external_connections/{id}/locations/{location_id}
+- "List all phone_numbers?" -> GET /external_connections/{id}/phone_numbers
+- "Get phone_number details?" -> GET /external_connections/{id}/phone_numbers/{phone_number_id}
+- "Partially update a phone_number?" -> PATCH /external_connections/{id}/phone_numbers/{phone_number_id}
+- "List all releases?" -> GET /external_connections/{id}/releases
+- "Get release details?" -> GET /external_connections/{id}/releases/{release_id}
+- "List all uploads?" -> GET /external_connections/{id}/uploads
+- "Create a upload?" -> POST /external_connections/{id}/uploads
+- "Create a refresh?" -> POST /external_connections/{id}/uploads/refresh
+- "List all status?" -> GET /external_connections/{id}/uploads/status
+- "Get upload details?" -> GET /external_connections/{id}/uploads/{ticket_id}
+- "Create a retry?" -> POST /external_connections/{id}/uploads/{ticket_id}/retry
+- "List all fax_applications?" -> GET /fax_applications
+- "Create a fax_application?" -> POST /fax_applications
+- "Delete a fax_application?" -> DELETE /fax_applications/{id}
+- "Get fax_application details?" -> GET /fax_applications/{id}
+- "Partially update a fax_application?" -> PATCH /fax_applications/{id}
+- "List all faxes?" -> GET /faxes
+- "Create a faxe?" -> POST /faxes
+- "Delete a faxe?" -> DELETE /faxes/{id}
+- "Get faxe details?" -> GET /faxes/{id}
+- "Create a cancel?" -> POST /faxes/{id}/actions/cancel
+- "Create a refresh?" -> POST /faxes/{id}/actions/refresh
+- "List all fqdn_connections?" -> GET /fqdn_connections
+- "Create a fqdn_connection?" -> POST /fqdn_connections
+- "Delete a fqdn_connection?" -> DELETE /fqdn_connections/{id}
+- "Get fqdn_connection details?" -> GET /fqdn_connections/{id}
+- "Partially update a fqdn_connection?" -> PATCH /fqdn_connections/{id}
+- "List all fqdns?" -> GET /fqdns
+- "Create a fqdn?" -> POST /fqdns
+- "Delete a fqdn?" -> DELETE /fqdns/{id}
+- "Get fqdn details?" -> GET /fqdns/{id}
+- "Partially update a fqdn?" -> PATCH /fqdns/{id}
+- "List all global_ip_allowed_ports?" -> GET /global_ip_allowed_ports
+- "List all global_ip_assignment_health?" -> GET /global_ip_assignment_health
+- "List all global_ip_assignments?" -> GET /global_ip_assignments
+- "Create a global_ip_assignment?" -> POST /global_ip_assignments
+- "Delete a global_ip_assignment?" -> DELETE /global_ip_assignments/{id}
+- "Get global_ip_assignment details?" -> GET /global_ip_assignments/{id}
+- "Partially update a global_ip_assignment?" -> PATCH /global_ip_assignments/{id}
+- "List all global_ip_assignments_usage?" -> GET /global_ip_assignments_usage
+- "List all global_ip_health_check_types?" -> GET /global_ip_health_check_types
+- "List all global_ip_health_checks?" -> GET /global_ip_health_checks
+- "Create a global_ip_health_check?" -> POST /global_ip_health_checks
+- "Delete a global_ip_health_check?" -> DELETE /global_ip_health_checks/{id}
+- "Get global_ip_health_check details?" -> GET /global_ip_health_checks/{id}
+- "List all global_ip_latency?" -> GET /global_ip_latency
+- "List all global_ip_protocols?" -> GET /global_ip_protocols
+- "List all global_ip_usage?" -> GET /global_ip_usage
+- "List all global_ips?" -> GET /global_ips
+- "Create a global_ip?" -> POST /global_ips
+- "Delete a global_ip?" -> DELETE /global_ips/{id}
+- "Get global_ip details?" -> GET /global_ips/{id}
+- "List all inbound_channels?" -> GET /inbound_channels
+- "List all inexplicit_number_orders?" -> GET /inexplicit_number_orders
+- "Create a inexplicit_number_order?" -> POST /inexplicit_number_orders
+- "Get inexplicit_number_order details?" -> GET /inexplicit_number_orders/{id}
+- "List all integration_secrets?" -> GET /integration_secrets
+- "Create a integration_secret?" -> POST /integration_secrets
+- "Delete a integration_secret?" -> DELETE /integration_secrets/{id}
+- "List all inventory_coverage?" -> GET /inventory_coverage
+- "List all invoices?" -> GET /invoices
+- "Get invoice details?" -> GET /invoices/{id}
+- "List all ip_connections?" -> GET /ip_connections
+- "Create a ip_connection?" -> POST /ip_connections
+- "Delete a ip_connection?" -> DELETE /ip_connections/{id}
+- "Get ip_connection details?" -> GET /ip_connections/{id}
+- "Partially update a ip_connection?" -> PATCH /ip_connections/{id}
+- "List all ips?" -> GET /ips
+- "Create a ip?" -> POST /ips
+- "Delete a ip?" -> DELETE /ips/{id}
+- "Get ip details?" -> GET /ips/{id}
+- "Partially update a ip?" -> PATCH /ips/{id}
+- "Create a ledger_billing_group_report?" -> POST /ledger_billing_group_reports
+- "Get ledger_billing_group_report details?" -> GET /ledger_billing_group_reports/{id}
+- "List all messaging?" -> GET /legacy/reporting/batch_detail_records/messaging
+- "Create a messaging?" -> POST /legacy/reporting/batch_detail_records/messaging
+- "Delete a messaging?" -> DELETE /legacy/reporting/batch_detail_records/messaging/{id}
+- "Get messaging details?" -> GET /legacy/reporting/batch_detail_records/messaging/{id}
+- "List all speech_to_text?" -> GET /legacy/reporting/batch_detail_records/speech_to_text
+- "Create a speech_to_text?" -> POST /legacy/reporting/batch_detail_records/speech_to_text
+- "Delete a speech_to_text?" -> DELETE /legacy/reporting/batch_detail_records/speech_to_text/{id}
+- "Get speech_to_text details?" -> GET /legacy/reporting/batch_detail_records/speech_to_text/{id}
+- "List all voice?" -> GET /legacy/reporting/batch_detail_records/voice
+- "Create a voice?" -> POST /legacy/reporting/batch_detail_records/voice
+- "List all fields?" -> GET /legacy/reporting/batch_detail_records/voice/fields
+- "Delete a voice?" -> DELETE /legacy/reporting/batch_detail_records/voice/{id}
+- "Get voice details?" -> GET /legacy/reporting/batch_detail_records/voice/{id}
+- "List all messaging?" -> GET /legacy/reporting/usage_reports/messaging
+- "Create a messaging?" -> POST /legacy/reporting/usage_reports/messaging
+- "Delete a messaging?" -> DELETE /legacy/reporting/usage_reports/messaging/{id}
+- "Get messaging details?" -> GET /legacy/reporting/usage_reports/messaging/{id}
+- "List all number_lookup?" -> GET /legacy/reporting/usage_reports/number_lookup
+- "Create a number_lookup?" -> POST /legacy/reporting/usage_reports/number_lookup
+- "Delete a number_lookup?" -> DELETE /legacy/reporting/usage_reports/number_lookup/{id}
+- "Get number_lookup details?" -> GET /legacy/reporting/usage_reports/number_lookup/{id}
+- "List all speech_to_text?" -> GET /legacy/reporting/usage_reports/speech_to_text
+- "List all voice?" -> GET /legacy/reporting/usage_reports/voice
+- "Create a voice?" -> POST /legacy/reporting/usage_reports/voice
+- "Delete a voice?" -> DELETE /legacy/reporting/usage_reports/voice/{id}
+- "Get voice details?" -> GET /legacy/reporting/usage_reports/voice/{id}
+- "List all list?" -> GET /list
+- "Get list details?" -> GET /list/{channel_zone_id}
+- "List all managed_accounts?" -> GET /managed_accounts
+- "Create a managed_account?" -> POST /managed_accounts
+- "List all allocatable_global_outbound_channels?" -> GET /managed_accounts/allocatable_global_outbound_channels
+- "Get managed_account details?" -> GET /managed_accounts/{id}
+- "Partially update a managed_account?" -> PATCH /managed_accounts/{id}
+- "Create a disable?" -> POST /managed_accounts/{id}/actions/disable
+- "Create a enable?" -> POST /managed_accounts/{id}/actions/enable
+- "List all media?" -> GET /media
+- "Create a media?" -> POST /media
+- "Delete a media?" -> DELETE /media/{media_name}
+- "Get media details?" -> GET /media/{media_name}
+- "Update a media?" -> PUT /media/{media_name}
+- "List all download?" -> GET /media/{media_name}/download
+- "Create a message?" -> POST /messages
+- "Create a alphanumeric_sender_id?" -> POST /messages/alphanumeric_sender_id
+- "Get group details?" -> GET /messages/group/{message_id}
+- "Create a group_mm?" -> POST /messages/group_mms
+- "Create a long_code?" -> POST /messages/long_code
+- "Create a number_pool?" -> POST /messages/number_pool
+- "Create a rc?" -> POST /messages/rcs
+- "Get deeplink details?" -> GET /messages/rcs/deeplinks/{agent_id}
+- "Create a schedule?" -> POST /messages/schedule
+- "Create a short_code?" -> POST /messages/short_code
+- "Create a whatsapp?" -> POST /messages/whatsapp
+- "Delete a message?" -> DELETE /messages/{id}
+- "Get message details?" -> GET /messages/{id}
+- "List all agents?" -> GET /messaging/rcs/agents
+- "Get agent details?" -> GET /messaging/rcs/agents/{id}
+- "Partially update a agent?" -> PATCH /messaging/rcs/agents/{id}
+- "Create a bulk_capability?" -> POST /messaging/rcs/bulk_capabilities
+- "Get capability details?" -> GET /messaging/rcs/capabilities/{agent_id}/{phone_number}
+- "Update a test_number_invite?" -> PUT /messaging/rcs/test_number_invite/{id}/{phone_number}
+- "List all messaging_hosted_number_orders?" -> GET /messaging_hosted_number_orders
+- "Create a messaging_hosted_number_order?" -> POST /messaging_hosted_number_orders
+- "Create a eligibility_numbers_check?" -> POST /messaging_hosted_number_orders/eligibility_numbers_check
+- "Delete a messaging_hosted_number_order?" -> DELETE /messaging_hosted_number_orders/{id}
+- "Get messaging_hosted_number_order details?" -> GET /messaging_hosted_number_orders/{id}
+- "Create a file_upload?" -> POST /messaging_hosted_number_orders/{id}/actions/file_upload
+- "Create a validation_code?" -> POST /messaging_hosted_number_orders/{id}/validation_codes
+- "Create a verification_code?" -> POST /messaging_hosted_number_orders/{id}/verification_codes
+- "List all messaging_hosted_numbers?" -> GET /messaging_hosted_numbers
+- "Delete a messaging_hosted_number?" -> DELETE /messaging_hosted_numbers/{id}
+- "Get messaging_hosted_number details?" -> GET /messaging_hosted_numbers/{id}
+- "Partially update a messaging_hosted_number?" -> PATCH /messaging_hosted_numbers/{id}
+- "Create a messaging_numbers_bulk_update?" -> POST /messaging_numbers_bulk_updates
+- "Get messaging_numbers_bulk_update details?" -> GET /messaging_numbers_bulk_updates/{order_id}
+- "List all messaging_optouts?" -> GET /messaging_optouts
+- "List all messaging_profile_metrics?" -> GET /messaging_profile_metrics
+- "List all messaging_profiles?" -> GET /messaging_profiles
+- "Create a messaging_profile?" -> POST /messaging_profiles
+- "Delete a messaging_profile?" -> DELETE /messaging_profiles/{id}
+- "Get messaging_profile details?" -> GET /messaging_profiles/{id}
+- "Partially update a messaging_profile?" -> PATCH /messaging_profiles/{id}
+- "Create a regenerate_secret?" -> POST /messaging_profiles/{id}/actions/regenerate_secret
+- "List all alphanumeric_sender_ids?" -> GET /messaging_profiles/{id}/alphanumeric_sender_ids
+- "List all metrics?" -> GET /messaging_profiles/{id}/metrics
+- "List all phone_numbers?" -> GET /messaging_profiles/{id}/phone_numbers
+- "List all short_codes?" -> GET /messaging_profiles/{id}/short_codes
+- "List all autoresp_configs?" -> GET /messaging_profiles/{profile_id}/autoresp_configs
+- "Create a autoresp_config?" -> POST /messaging_profiles/{profile_id}/autoresp_configs
+- "Delete a autoresp_config?" -> DELETE /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}
+- "Get autoresp_config details?" -> GET /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}
+- "Update a autoresp_config?" -> PUT /messaging_profiles/{profile_id}/autoresp_configs/{autoresp_cfg_id}
+- "List all requests?" -> GET /messaging_tollfree/verification/requests
+- "Create a request?" -> POST /messaging_tollfree/verification/requests
+- "Delete a request?" -> DELETE /messaging_tollfree/verification/requests/{id}
+- "Get request details?" -> GET /messaging_tollfree/verification/requests/{id}
+- "Partially update a request?" -> PATCH /messaging_tollfree/verification/requests/{id}
+- "List all status_history?" -> GET /messaging_tollfree/verification/requests/{id}/status_history
+- "List all messaging_url_domains?" -> GET /messaging_url_domains
+- "List all mobile_network_operators?" -> GET /mobile_network_operators
+- "List all messaging?" -> GET /mobile_phone_numbers/messaging
+- "List all messaging?" -> GET /mobile_phone_numbers/{id}/messaging
+- "List all mobile_push_credentials?" -> GET /mobile_push_credentials
+- "Create a mobile_push_credential?" -> POST /mobile_push_credentials
+- "Delete a mobile_push_credential?" -> DELETE /mobile_push_credentials/{push_credential_id}
+- "Get mobile_push_credential details?" -> GET /mobile_push_credentials/{push_credential_id}
+- "List all network_coverage?" -> GET /network_coverage
+- "List all networks?" -> GET /networks
+- "Create a network?" -> POST /networks
+- "Delete a network?" -> DELETE /networks/{id}
+- "Get network details?" -> GET /networks/{id}
+- "Partially update a network?" -> PATCH /networks/{id}
+- "List all default_gateway?" -> GET /networks/{id}/default_gateway
+- "Create a default_gateway?" -> POST /networks/{id}/default_gateway
+- "List all network_interfaces?" -> GET /networks/{id}/network_interfaces
+- "List all notification_channels?" -> GET /notification_channels
+- "Create a notification_channel?" -> POST /notification_channels
+- "Delete a notification_channel?" -> DELETE /notification_channels/{id}
+- "Get notification_channel details?" -> GET /notification_channels/{id}
+- "Partially update a notification_channel?" -> PATCH /notification_channels/{id}
+- "List all notification_event_conditions?" -> GET /notification_event_conditions
+- "List all notification_events?" -> GET /notification_events
+- "List all notification_profiles?" -> GET /notification_profiles
+- "Create a notification_profile?" -> POST /notification_profiles
+- "Delete a notification_profile?" -> DELETE /notification_profiles/{id}
+- "Get notification_profile details?" -> GET /notification_profiles/{id}
+- "Partially update a notification_profile?" -> PATCH /notification_profiles/{id}
+- "List all notification_settings?" -> GET /notification_settings
+- "Create a notification_setting?" -> POST /notification_settings
+- "Delete a notification_setting?" -> DELETE /notification_settings/{id}
+- "Get notification_setting details?" -> GET /notification_settings/{id}
+- "List all number_block_orders?" -> GET /number_block_orders
+- "Create a number_block_order?" -> POST /number_block_orders
+- "Get number_block_order details?" -> GET /number_block_orders/{number_block_order_id}
+- "Get number_lookup details?" -> GET /number_lookup/{phone_number}
+- "List all number_order_phone_numbers?" -> GET /number_order_phone_numbers
+- "Create a requirement_group?" -> POST /number_order_phone_numbers/{id}/requirement_group
+- "Get number_order_phone_number details?" -> GET /number_order_phone_numbers/{number_order_phone_number_id}
+- "Partially update a number_order_phone_number?" -> PATCH /number_order_phone_numbers/{number_order_phone_number_id}
+- "List all number_orders?" -> GET /number_orders
+- "Create a number_order?" -> POST /number_orders
+- "Get number_order details?" -> GET /number_orders/{number_order_id}
+- "Partially update a number_order?" -> PATCH /number_orders/{number_order_id}
+- "List all number_reservations?" -> GET /number_reservations
+- "Create a number_reservation?" -> POST /number_reservations
+- "Get number_reservation details?" -> GET /number_reservations/{number_reservation_id}
+- "Create a extend?" -> POST /number_reservations/{number_reservation_id}/actions/extend
+- "Create a numbers_feature?" -> POST /numbers_features
+- "List all authorize?" -> GET /oauth/authorize
+- "Get consent details?" -> GET /oauth/consent/{consent_token}
+- "Create a grant?" -> POST /oauth/grants
+- "Create a introspect?" -> POST /oauth/introspect
+- "List all jwks?" -> GET /oauth/jwks
+- "Create a register?" -> POST /oauth/register
+- "Create a token?" -> POST /oauth/token
+- "List all oauth_clients?" -> GET /oauth_clients
+- "Create a oauth_client?" -> POST /oauth_clients
+- "Delete a oauth_client?" -> DELETE /oauth_clients/{id}
+- "Get oauth_client details?" -> GET /oauth_clients/{id}
+- "Update a oauth_client?" -> PUT /oauth_clients/{id}
+- "List all oauth_grants?" -> GET /oauth_grants
+- "Delete a oauth_grant?" -> DELETE /oauth_grants/{id}
+- "Get oauth_grant details?" -> GET /oauth_grants/{id}
+- "Create a refresh?" -> POST /operator_connect/actions/refresh
+- "List all users?" -> GET /organizations/users
+- "List all users_groups_report?" -> GET /organizations/users/users_groups_report
+- "Get user details?" -> GET /organizations/users/{id}
+- "Create a remove?" -> POST /organizations/users/{id}/actions/remove
+- "List all ota_updates?" -> GET /ota_updates
+- "Get ota_update details?" -> GET /ota_updates/{id}
+- "List all outbound_voice_profiles?" -> GET /outbound_voice_profiles
+- "Create a outbound_voice_profile?" -> POST /outbound_voice_profiles
+- "Delete a outbound_voice_profile?" -> DELETE /outbound_voice_profiles/{id}
+- "Get outbound_voice_profile details?" -> GET /outbound_voice_profiles/{id}
+- "Partially update a outbound_voice_profile?" -> PATCH /outbound_voice_profiles/{id}
+- "List all auto_recharge_prefs?" -> GET /payment/auto_recharge_prefs
+- "List all jobs?" -> GET /phone_number_blocks/jobs
+- "Create a delete_phone_number_block?" -> POST /phone_number_blocks/jobs/delete_phone_number_block
+- "Get job details?" -> GET /phone_number_blocks/jobs/{id}
+- "List all phone_numbers?" -> GET /phone_numbers
+- "Create a verify_ownership?" -> POST /phone_numbers/actions/verify_ownership
+- "List all csv_downloads?" -> GET /phone_numbers/csv_downloads
+- "Create a csv_download?" -> POST /phone_numbers/csv_downloads
+- "Get csv_download details?" -> GET /phone_numbers/csv_downloads/{id}
+- "List all jobs?" -> GET /phone_numbers/jobs
+- "Create a delete_phone_number?" -> POST /phone_numbers/jobs/delete_phone_numbers
+- "Create a update_emergency_setting?" -> POST /phone_numbers/jobs/update_emergency_settings
+- "Create a update_phone_number?" -> POST /phone_numbers/jobs/update_phone_numbers
+- "Get job details?" -> GET /phone_numbers/jobs/{id}
+- "List all messaging?" -> GET /phone_numbers/messaging
+- "List all slim?" -> GET /phone_numbers/slim
+- "List all voice?" -> GET /phone_numbers/voice
+- "Delete a phone_number?" -> DELETE /phone_numbers/{id}
+- "Get phone_number details?" -> GET /phone_numbers/{id}
+- "Partially update a phone_number?" -> PATCH /phone_numbers/{id}
+- "Create a enable_emergency?" -> POST /phone_numbers/{id}/actions/enable_emergency
+- "List all messaging?" -> GET /phone_numbers/{id}/messaging
+- "List all voice?" -> GET /phone_numbers/{id}/voice
+- "List all voicemail?" -> GET /phone_numbers/{phone_number_id}/voicemail
+- "Create a voicemail?" -> POST /phone_numbers/{phone_number_id}/voicemail
+- "List all phone_numbers_regulatory_requirements?" -> GET /phone_numbers_regulatory_requirements
+- "Create a portability_check?" -> POST /portability_checks
+- "List all events?" -> GET /porting/events
+- "Get event details?" -> GET /porting/events/{id}
+- "Create a republish?" -> POST /porting/events/{id}/republish
+- "Create a preview?" -> POST /porting/loa_configuration/preview
+- "List all loa_configurations?" -> GET /porting/loa_configurations
+- "Create a loa_configuration?" -> POST /porting/loa_configurations
+- "Delete a loa_configuration?" -> DELETE /porting/loa_configurations/{id}
+- "Get loa_configuration details?" -> GET /porting/loa_configurations/{id}
+- "Partially update a loa_configuration?" -> PATCH /porting/loa_configurations/{id}
+- "List all preview?" -> GET /porting/loa_configurations/{id}/preview
+- "List all reports?" -> GET /porting/reports
+- "Create a report?" -> POST /porting/reports
+- "Get report details?" -> GET /porting/reports/{id}
+- "List all uk_carriers?" -> GET /porting/uk_carriers
+- "List all porting_orders?" -> GET /porting_orders
+- "Create a porting_order?" -> POST /porting_orders
+- "List all exception_types?" -> GET /porting_orders/exception_types
+- "List all phone_number_configurations?" -> GET /porting_orders/phone_number_configurations
+- "Create a phone_number_configuration?" -> POST /porting_orders/phone_number_configurations
+- "Delete a porting_order?" -> DELETE /porting_orders/{id}
+- "Get porting_order details?" -> GET /porting_orders/{id}
+- "Partially update a porting_order?" -> PATCH /porting_orders/{id}
+- "Create a activate?" -> POST /porting_orders/{id}/actions/activate
+- "Create a cancel?" -> POST /porting_orders/{id}/actions/cancel
+- "Create a confirm?" -> POST /porting_orders/{id}/actions/confirm
+- "Create a share?" -> POST /porting_orders/{id}/actions/share
+- "List all activation_jobs?" -> GET /porting_orders/{id}/activation_jobs
+- "Get activation_job details?" -> GET /porting_orders/{id}/activation_jobs/{activationJobId}
+- "Partially update a activation_job?" -> PATCH /porting_orders/{id}/activation_jobs/{activationJobId}
+- "List all additional_documents?" -> GET /porting_orders/{id}/additional_documents
+- "Create a additional_document?" -> POST /porting_orders/{id}/additional_documents
+- "Delete a additional_document?" -> DELETE /porting_orders/{id}/additional_documents/{additional_document_id}
+- "List all allowed_foc_windows?" -> GET /porting_orders/{id}/allowed_foc_windows
+- "List all comments?" -> GET /porting_orders/{id}/comments
+- "Create a comment?" -> POST /porting_orders/{id}/comments
+- "List all loa_template?" -> GET /porting_orders/{id}/loa_template
+- "List all requirements?" -> GET /porting_orders/{id}/requirements
+- "List all sub_request?" -> GET /porting_orders/{id}/sub_request
+- "List all verification_codes?" -> GET /porting_orders/{id}/verification_codes
+- "Create a send?" -> POST /porting_orders/{id}/verification_codes/send
+- "Create a verify?" -> POST /porting_orders/{id}/verification_codes/verify
+- "List all action_requirements?" -> GET /porting_orders/{porting_order_id}/action_requirements
+- "Create a initiate?" -> POST /porting_orders/{porting_order_id}/action_requirements/{id}/initiate
+- "List all associated_phone_numbers?" -> GET /porting_orders/{porting_order_id}/associated_phone_numbers
+- "Create a associated_phone_number?" -> POST /porting_orders/{porting_order_id}/associated_phone_numbers
+- "Delete a associated_phone_number?" -> DELETE /porting_orders/{porting_order_id}/associated_phone_numbers/{id}
+- "List all phone_number_blocks?" -> GET /porting_orders/{porting_order_id}/phone_number_blocks
+- "Create a phone_number_block?" -> POST /porting_orders/{porting_order_id}/phone_number_blocks
+- "Delete a phone_number_block?" -> DELETE /porting_orders/{porting_order_id}/phone_number_blocks/{id}
+- "List all phone_number_extensions?" -> GET /porting_orders/{porting_order_id}/phone_number_extensions
+- "Create a phone_number_extension?" -> POST /porting_orders/{porting_order_id}/phone_number_extensions
+- "Delete a phone_number_extension?" -> DELETE /porting_orders/{porting_order_id}/phone_number_extensions/{id}
+- "List all porting_phone_numbers?" -> GET /porting_phone_numbers
+- "List all portouts?" -> GET /portouts
+- "List all events?" -> GET /portouts/events
+- "Get event details?" -> GET /portouts/events/{id}
+- "Create a republish?" -> POST /portouts/events/{id}/republish
+- "Get rejection details?" -> GET /portouts/rejections/{portout_id}
+- "List all reports?" -> GET /portouts/reports
+- "Create a report?" -> POST /portouts/reports
+- "Get report details?" -> GET /portouts/reports/{id}
+- "Get portout details?" -> GET /portouts/{id}
+- "List all comments?" -> GET /portouts/{id}/comments
+- "Create a comment?" -> POST /portouts/{id}/comments
+- "List all supporting_documents?" -> GET /portouts/{id}/supporting_documents
+- "Create a supporting_document?" -> POST /portouts/{id}/supporting_documents
+- "Partially update a portout?" -> PATCH /portouts/{id}/{status}
+- "List all private_wireless_gateways?" -> GET /private_wireless_gateways
+- "Create a private_wireless_gateway?" -> POST /private_wireless_gateways
+- "Delete a private_wireless_gateway?" -> DELETE /private_wireless_gateways/{id}
+- "Get private_wireless_gateway details?" -> GET /private_wireless_gateways/{id}
+- "List all public_internet_gateways?" -> GET /public_internet_gateways
+- "Create a public_internet_gateway?" -> POST /public_internet_gateways
+- "Delete a public_internet_gateway?" -> DELETE /public_internet_gateways/{id}
+- "Get public_internet_gateway details?" -> GET /public_internet_gateways/{id}
+- "List all queues?" -> GET /queues
+- "Create a queue?" -> POST /queues
+- "Delete a queue?" -> DELETE /queues/{queue_name}
+- "Get queue details?" -> GET /queues/{queue_name}
+- "List all calls?" -> GET /queues/{queue_name}/calls
+- "Delete a call?" -> DELETE /queues/{queue_name}/calls/{call_control_id}
+- "Get call details?" -> GET /queues/{queue_name}/calls/{call_control_id}
+- "Partially update a call?" -> PATCH /queues/{queue_name}/calls/{call_control_id}
+- "List all recording_transcriptions?" -> GET /recording_transcriptions
+- "Delete a recording_transcription?" -> DELETE /recording_transcriptions/{recording_transcription_id}
+- "Get recording_transcription details?" -> GET /recording_transcriptions/{recording_transcription_id}
+- "List all recordings?" -> GET /recordings
+- "Create a delete?" -> POST /recordings/actions/delete
+- "Delete a recording?" -> DELETE /recordings/{recording_id}
+- "Get recording details?" -> GET /recordings/{recording_id}
+- "List all regions?" -> GET /regions
+- "List all regulatory_requirements?" -> GET /regulatory_requirements
+- "List all sync?" -> GET /reports/cdr_usage_reports/sync
+- "List all mdr_usage_reports?" -> GET /reports/mdr_usage_reports
+- "Create a mdr_usage_report?" -> POST /reports/mdr_usage_reports
+- "List all sync?" -> GET /reports/mdr_usage_reports/sync
+- "Delete a mdr_usage_report?" -> DELETE /reports/mdr_usage_reports/{id}
+- "Get mdr_usage_report details?" -> GET /reports/mdr_usage_reports/{id}
+- "List all mdrs?" -> GET /reports/mdrs
+- "List all wdrs?" -> GET /reports/wdrs
+- "List all requirement_groups?" -> GET /requirement_groups
+- "Create a requirement_group?" -> POST /requirement_groups
+- "Delete a requirement_group?" -> DELETE /requirement_groups/{id}
+- "Get requirement_group details?" -> GET /requirement_groups/{id}
+- "Partially update a requirement_group?" -> PATCH /requirement_groups/{id}
+- "Create a submit_for_approval?" -> POST /requirement_groups/{id}/submit_for_approval
+- "List all requirement_types?" -> GET /requirement_types
+- "Get requirement_type details?" -> GET /requirement_types/{id}
+- "List all requirements?" -> GET /requirements
+- "Get requirement details?" -> GET /requirements/{id}
+- "List all room_compositions?" -> GET /room_compositions
+- "Create a room_composition?" -> POST /room_compositions
+- "Delete a room_composition?" -> DELETE /room_compositions/{room_composition_id}
+- "Get room_composition details?" -> GET /room_compositions/{room_composition_id}
+- "List all room_participants?" -> GET /room_participants
+- "Get room_participant details?" -> GET /room_participants/{room_participant_id}
+- "List all room_recordings?" -> GET /room_recordings
+- "Delete a room_recording?" -> DELETE /room_recordings/{room_recording_id}
+- "Get room_recording details?" -> GET /room_recordings/{room_recording_id}
+- "List all room_sessions?" -> GET /room_sessions
+- "Get room_session details?" -> GET /room_sessions/{room_session_id}
+- "Create a end?" -> POST /room_sessions/{room_session_id}/actions/end
+- "Create a kick?" -> POST /room_sessions/{room_session_id}/actions/kick
+- "Create a mute?" -> POST /room_sessions/{room_session_id}/actions/mute
+- "Create a unmute?" -> POST /room_sessions/{room_session_id}/actions/unmute
+- "List all participants?" -> GET /room_sessions/{room_session_id}/participants
+- "List all rooms?" -> GET /rooms
+- "Create a room?" -> POST /rooms
+- "Delete a room?" -> DELETE /rooms/{room_id}
+- "Get room details?" -> GET /rooms/{room_id}
+- "Partially update a room?" -> PATCH /rooms/{room_id}
+- "Create a generate_join_client_token?" -> POST /rooms/{room_id}/actions/generate_join_client_token
+- "Create a refresh_client_token?" -> POST /rooms/{room_id}/actions/refresh_client_token
+- "List all sessions?" -> GET /rooms/{room_id}/sessions
+- "List all black_box_test_results?" -> GET /seti/black_box_test_results
+- "List all short_codes?" -> GET /short_codes
+- "Get short_code details?" -> GET /short_codes/{id}
+- "Partially update a short_code?" -> PATCH /short_codes/{id}
+- "List all sim_card_actions?" -> GET /sim_card_actions
+- "Get sim_card_action details?" -> GET /sim_card_actions/{id}
+- "List all sim_card_data_usage_notifications?" -> GET /sim_card_data_usage_notifications
+- "Create a sim_card_data_usage_notification?" -> POST /sim_card_data_usage_notifications
+- "Delete a sim_card_data_usage_notification?" -> DELETE /sim_card_data_usage_notifications/{id}
+- "Get sim_card_data_usage_notification details?" -> GET /sim_card_data_usage_notifications/{id}
+- "Partially update a sim_card_data_usage_notification?" -> PATCH /sim_card_data_usage_notifications/{id}
+- "List all sim_card_group_actions?" -> GET /sim_card_group_actions
+- "Get sim_card_group_action details?" -> GET /sim_card_group_actions/{id}
+- "List all sim_card_groups?" -> GET /sim_card_groups
+- "Create a sim_card_group?" -> POST /sim_card_groups
+- "Delete a sim_card_group?" -> DELETE /sim_card_groups/{id}
+- "Get sim_card_group details?" -> GET /sim_card_groups/{id}
+- "Partially update a sim_card_group?" -> PATCH /sim_card_groups/{id}
+- "Create a remove_private_wireless_gateway?" -> POST /sim_card_groups/{id}/actions/remove_private_wireless_gateway
+- "Create a remove_wireless_blocklist?" -> POST /sim_card_groups/{id}/actions/remove_wireless_blocklist
+- "Create a set_private_wireless_gateway?" -> POST /sim_card_groups/{id}/actions/set_private_wireless_gateway
+- "Create a set_wireless_blocklist?" -> POST /sim_card_groups/{id}/actions/set_wireless_blocklist
+- "Create a sim_card_order_preview?" -> POST /sim_card_order_preview
+- "List all sim_card_orders?" -> GET /sim_card_orders
+- "Create a sim_card_order?" -> POST /sim_card_orders
+- "Get sim_card_order details?" -> GET /sim_card_orders/{id}
+- "List all sim_cards?" -> GET /sim_cards
+- "Create a bulk_set_public_ip?" -> POST /sim_cards/actions/bulk_set_public_ips
+- "Create a validate_registration_code?" -> POST /sim_cards/actions/validate_registration_codes
+- "Delete a sim_card?" -> DELETE /sim_cards/{id}
+- "Get sim_card details?" -> GET /sim_cards/{id}
+- "Partially update a sim_card?" -> PATCH /sim_cards/{id}
+- "Create a disable?" -> POST /sim_cards/{id}/actions/disable
+- "Create a enable?" -> POST /sim_cards/{id}/actions/enable
+- "Create a remove_public_ip?" -> POST /sim_cards/{id}/actions/remove_public_ip
+- "Create a set_public_ip?" -> POST /sim_cards/{id}/actions/set_public_ip
+- "Create a set_standby?" -> POST /sim_cards/{id}/actions/set_standby
+- "List all activation_code?" -> GET /sim_cards/{id}/activation_code
+- "List all device_details?" -> GET /sim_cards/{id}/device_details
+- "List all public_ip?" -> GET /sim_cards/{id}/public_ip
+- "List all wireless_connectivity_logs?" -> GET /sim_cards/{id}/wireless_connectivity_logs
+- "Create a siprec_connector?" -> POST /siprec_connectors
+- "Delete a siprec_connector?" -> DELETE /siprec_connectors/{connector_name}
+- "Get siprec_connector details?" -> GET /siprec_connectors/{connector_name}
+- "Update a siprec_connector?" -> PUT /siprec_connectors/{connector_name}
+- "List all transcription?" -> GET /speech-to-text/transcription
+- "List all ssl_certificate?" -> GET /storage/buckets/{bucketName}/ssl_certificate
+- "List all api?" -> GET /storage/buckets/{bucketName}/usage/api
+- "List all storage?" -> GET /storage/buckets/{bucketName}/usage/storage
+- "Create a presigned_url?" -> POST /storage/buckets/{bucketName}/{objectName}/presigned_url
+- "List all migration_source_coverage?" -> GET /storage/migration_source_coverage
+- "List all migration_sources?" -> GET /storage/migration_sources
+- "Create a migration_source?" -> POST /storage/migration_sources
+- "Delete a migration_source?" -> DELETE /storage/migration_sources/{id}
+- "Get migration_source details?" -> GET /storage/migration_sources/{id}
+- "List all migrations?" -> GET /storage/migrations
+- "Create a migration?" -> POST /storage/migrations
+- "Get migration details?" -> GET /storage/migrations/{id}
+- "Create a stop?" -> POST /storage/migrations/{id}/actions/stop
+- "List all sub_number_orders?" -> GET /sub_number_orders
+- "Create a requirement_group?" -> POST /sub_number_orders/{id}/requirement_group
+- "Get sub_number_order details?" -> GET /sub_number_orders/{sub_number_order_id}
+- "Partially update a sub_number_order?" -> PATCH /sub_number_orders/{sub_number_order_id}
+- "Create a sub_number_orders_report?" -> POST /sub_number_orders_report
+- "Get sub_number_orders_report details?" -> GET /sub_number_orders_report/{report_id}
+- "List all download?" -> GET /sub_number_orders_report/{report_id}/download
+- "List all telephony_credentials?" -> GET /telephony_credentials
+- "Create a telephony_credential?" -> POST /telephony_credentials
+- "Delete a telephony_credential?" -> DELETE /telephony_credentials/{id}
+- "Get telephony_credential details?" -> GET /telephony_credentials/{id}
+- "Partially update a telephony_credential?" -> PATCH /telephony_credentials/{id}
+- "Create a token?" -> POST /telephony_credentials/{id}/token
+- "List all Calls?" -> GET /texml/Accounts/{account_sid}/Calls
+- "Create a Call?" -> POST /texml/Accounts/{account_sid}/Calls
+- "Get Call details?" -> GET /texml/Accounts/{account_sid}/Calls/{call_sid}
+- "List all Recordings.json?" -> GET /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings.json
+- "Create a Recordings.json?" -> POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Recordings.json
+- "Create a Siprec.json?" -> POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Siprec.json
+- "Create a Streams.json?" -> POST /texml/Accounts/{account_sid}/Calls/{call_sid}/Streams.json
+- "List all Conferences?" -> GET /texml/Accounts/{account_sid}/Conferences
+- "Get Conference details?" -> GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}
+- "List all Participants?" -> GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants
+- "Create a Participant?" -> POST /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants
+- "Delete a Participant?" -> DELETE /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}
+- "Get Participant details?" -> GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Participants/{call_sid_or_participant_label}
+- "List all Recordings?" -> GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings
+- "List all Recordings.json?" -> GET /texml/Accounts/{account_sid}/Conferences/{conference_sid}/Recordings.json
+- "List all Queues?" -> GET /texml/Accounts/{account_sid}/Queues
+- "Create a Queue?" -> POST /texml/Accounts/{account_sid}/Queues
+- "Delete a Queue?" -> DELETE /texml/Accounts/{account_sid}/Queues/{queue_sid}
+- "Get Queue details?" -> GET /texml/Accounts/{account_sid}/Queues/{queue_sid}
+- "List all Recordings.json?" -> GET /texml/Accounts/{account_sid}/Recordings.json
+- "Delete a Recording?" -> DELETE /texml/Accounts/{account_sid}/Recordings/{recording_sid}.json
+- "Get Recording details?" -> GET /texml/Accounts/{account_sid}/Recordings/{recording_sid}.json
+- "List all Transcriptions.json?" -> GET /texml/Accounts/{account_sid}/Transcriptions.json
+- "Delete a Transcription?" -> DELETE /texml/Accounts/{account_sid}/Transcriptions/{recording_transcription_sid}.json
+- "Get Transcription details?" -> GET /texml/Accounts/{account_sid}/Transcriptions/{recording_transcription_sid}.json
+- "Create a secret?" -> POST /texml/secrets
+- "List all texml_applications?" -> GET /texml_applications
+- "Create a texml_application?" -> POST /texml_applications
+- "Delete a texml_application?" -> DELETE /texml_applications/{id}
+- "Get texml_application details?" -> GET /texml_applications/{id}
+- "Partially update a texml_application?" -> PATCH /texml_applications/{id}
+- "List all speech?" -> GET /text-to-speech/speech
+- "Create a speech?" -> POST /text-to-speech/speech
+- "List all voices?" -> GET /text-to-speech/voices
+- "List all usage_reports?" -> GET /usage_reports
+- "List all options?" -> GET /usage_reports/options
+- "List all user_addresses?" -> GET /user_addresses
+- "Create a user_address?" -> POST /user_addresses
+- "Get user_address details?" -> GET /user_addresses/{id}
+- "List all user_tags?" -> GET /user_tags
+- "List all mobile_phone_numbers?" -> GET /v2/mobile_phone_numbers
+- "Get mobile_phone_number details?" -> GET /v2/mobile_phone_numbers/{id}
+- "Partially update a mobile_phone_number?" -> PATCH /v2/mobile_phone_numbers/{id}
+- "List all mobile_voice_connections?" -> GET /v2/mobile_voice_connections
+- "Create a mobile_voice_connection?" -> POST /v2/mobile_voice_connections
+- "Delete a mobile_voice_connection?" -> DELETE /v2/mobile_voice_connections/{id}
+- "Get mobile_voice_connection details?" -> GET /v2/mobile_voice_connections/{id}
+- "Partially update a mobile_voice_connection?" -> PATCH /v2/mobile_voice_connections/{id}
+- "Create a stored_payment_transaction?" -> POST /v2/payment/stored_payment_transactions
+- "Get by_phone_number details?" -> GET /verifications/by_phone_number/{phone_number}
+- "Create a verify?" -> POST /verifications/by_phone_number/{phone_number}/actions/verify
+- "Create a call?" -> POST /verifications/call
+- "Create a flashcall?" -> POST /verifications/flashcall
+- "Create a sm?" -> POST /verifications/sms
+- "Get verification details?" -> GET /verifications/{verification_id}
+- "Create a verify?" -> POST /verifications/{verification_id}/actions/verify
+- "List all verified_numbers?" -> GET /verified_numbers
+- "Create a verified_number?" -> POST /verified_numbers
+- "Delete a verified_number?" -> DELETE /verified_numbers/{phone_number}
+- "Get verified_number details?" -> GET /verified_numbers/{phone_number}
+- "Create a verify?" -> POST /verified_numbers/{phone_number}/actions/verify
+- "List all verify_profiles?" -> GET /verify_profiles
+- "Create a verify_profile?" -> POST /verify_profiles
+- "List all templates?" -> GET /verify_profiles/templates
+- "Create a template?" -> POST /verify_profiles/templates
+- "Partially update a template?" -> PATCH /verify_profiles/templates/{template_id}
+- "Delete a verify_profile?" -> DELETE /verify_profiles/{verify_profile_id}
+- "Get verify_profile details?" -> GET /verify_profiles/{verify_profile_id}
+- "Partially update a verify_profile?" -> PATCH /verify_profiles/{verify_profile_id}
+- "List all virtual_cross_connects?" -> GET /virtual_cross_connects
+- "Create a virtual_cross_connect?" -> POST /virtual_cross_connects
+- "Delete a virtual_cross_connect?" -> DELETE /virtual_cross_connects/{id}
+- "Get virtual_cross_connect details?" -> GET /virtual_cross_connects/{id}
+- "Partially update a virtual_cross_connect?" -> PATCH /virtual_cross_connects/{id}
+- "List all virtual_cross_connects_coverage?" -> GET /virtual_cross_connects_coverage
+- "List all webhook_deliveries?" -> GET /webhook_deliveries
+- "Get webhook_delivery details?" -> GET /webhook_deliveries/{id}
+- "List all wireguard_interfaces?" -> GET /wireguard_interfaces
+- "Create a wireguard_interface?" -> POST /wireguard_interfaces
+- "Delete a wireguard_interface?" -> DELETE /wireguard_interfaces/{id}
+- "Get wireguard_interface details?" -> GET /wireguard_interfaces/{id}
+- "List all wireguard_peers?" -> GET /wireguard_peers
+- "Create a wireguard_peer?" -> POST /wireguard_peers
+- "Delete a wireguard_peer?" -> DELETE /wireguard_peers/{id}
+- "Get wireguard_peer details?" -> GET /wireguard_peers/{id}
+- "Partially update a wireguard_peer?" -> PATCH /wireguard_peers/{id}
+- "List all config?" -> GET /wireguard_peers/{id}/config
+- "List all detail_records_reports?" -> GET /wireless/detail_records_reports
+- "Create a detail_records_report?" -> POST /wireless/detail_records_reports
+- "Delete a detail_records_report?" -> DELETE /wireless/detail_records_reports/{id}
+- "Get detail_records_report details?" -> GET /wireless/detail_records_reports/{id}
+- "List all regions?" -> GET /wireless/regions
+- "List all wireless_blocklist_values?" -> GET /wireless_blocklist_values
+- "List all wireless_blocklists?" -> GET /wireless_blocklists
+- "Create a wireless_blocklist?" -> POST /wireless_blocklists
+- "Delete a wireless_blocklist?" -> DELETE /wireless_blocklists/{id}
+- "Get wireless_blocklist details?" -> GET /wireless_blocklists/{id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

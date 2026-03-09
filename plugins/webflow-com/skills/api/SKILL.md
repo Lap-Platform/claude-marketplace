@@ -224,93 +224,98 @@ https://api.lucidtech.ai/{basePath}
 | OPTIONS | /workflows/{workflowId}/executions/{executionId} |  |
 | PATCH | /workflows/{workflowId}/executions/{executionId} |  |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I upload a document for processing?" -> POST /documents
-- "How do I run a prediction on a document?" -> POST /predictions
-- "What models are available in my organization?" -> GET /models
-- "How do I check the status of a prediction?" -> GET /predictions/{predictionId}
-- "How do I create a workflow and execute it?" -> POST /workflows, then POST /workflows/{workflowId}/executions
-- "What is my organization's current usage and quota?" -> GET /organizations/{organizationId}
-- "How do I train a model on my data?" -> POST /models/{modelId}/dataBundles, then POST /models/{modelId}/trainings
-- "How do I check the logs for a failed workflow execution?" -> GET /logs with workflowId and workflowExecutionId filters
-- "How do I add a user and assign them a role?" -> POST /users with email and roleIds
-- "How do I set up a payment method for my organization?" -> POST /paymentMethods, then PATCH /organizations/{organizationId} with paymentMethodId
-- "What transitions are configured and what type are they?" -> GET /transitions with optional transitionType filter
-- "How do I update ground truth labels on a document?" -> PATCH /documents/{documentId} with groundTruth array
-- "How do I create an app client for OAuth integration?" -> POST /appClients with callbackUrls and loginUrls
-- "How do I check if a training job is still running?" -> GET /models/{modelId}/trainings/{trainingId} and inspect status field
-
-## Response Tips
-
-- **List endpoints** (GET /models, /documents, /workflows, etc.): All return a top-level array field (e.g., `models`, `documents`) plus an optional `nextToken` -- always check `nextToken` and paginate with it in subsequent requests using `maxResults` to control page size.
-- **Resource detail endpoints** (GET by ID): Return flat objects with many optional (`?`) fields; missing fields mean unset, not errors -- do not treat null/absent values as failures.
-- **Predictions**: The `predictions` field in POST /predictions response is typed as `any` -- its structure depends on the model's `fieldConfig`; also check `status` (may be async) and `nextPage` for multi-page documents.
-- **Workflow executions**: Contain nested `transitionExecutions` map and `events` array -- drill into these for per-step status; `completedBy` is an array of `any` so inspect carefully.
-- **Organization responses**: Extremely wide objects with dozens of `monthlyNumberOf*` quota/usage fields -- extract only what you need rather than displaying everything.
-- **Error responses**: All endpoints share the same error code set (400, 403, 404, 415, 500) -- 415 indicates a missing or wrong `Content-Type` header, which is a required field on all POST/PATCH calls.
-
-## Anomaly Flags
-
-- **Quota nearing limits**: When `monthlyNumberOf*Created` approaches `monthlyNumberOf*Allowed` on organization responses (predictions, trainings, workflow executions, transitions, documents, transformations), warn the user before they hit hard limits.
-- **Training stuck or failed**: If GET /models/{modelId}/trainings/{trainingId} shows a `status` other than a completed state for an extended period, surface it -- GPU hours are being consumed (`gpuHours` field).
-- **Prediction errors**: If `error` field is non-null or `status` is not a success state on a prediction response, flag immediately -- the document may need reprocessing or the model may be misconfigured.
-- **Missing Content-Type header**: All write operations require `Content-Type: str` as a required parameter -- omitting it will return 415 errors that can be confusing; proactively remind users.
-- **Workflow in development vs production**: The `status` field on workflows accepts `development` or `production` -- flag if a workflow is being executed while still in `development` status, as behavior may differ.
-- **App client secret exposure**: POST /appClients returns `clientSecret` in the response -- warn the user to store it securely since it may not be retrievable again (the object has `hasSecret` boolean but the secret itself is only in creation/delete responses).
-- **Document retention expiry risk**: Documents and datasets have `retentionInDays` -- flag when documents are approaching their retention window to prevent data loss.
-
-## Playbook
-
-### 1. Process a Document with an Existing Model
-
-1. Upload the document: `POST /documents` with `content` (base64), `contentType` (e.g., `application/pdf`), and optionally assign it to a `datasetId`.
-2. Note the `documentId` from the response.
-3. Run a prediction: `POST /predictions` with `documentId` and `modelId`. Set `async: true` for large documents.
-4. If async, poll `GET /predictions/{predictionId}` until `status` indicates completion.
-5. Read the `predictions` field for extracted field values. If `nextPage` is present, re-run with adjusted `preprocessConfig.startPage`.
-6. Optionally update the document with corrected ground truth: `PATCH /documents/{documentId}` with `groundTruth` array for training feedback.
-
-### 2. Train a Custom Model
-
-1. Create a dataset: `POST /datasets` with a name and PII flag.
-2. Upload labeled documents to the dataset: `POST /documents` with `datasetId`, `content`, and `groundTruth` array containing `label` and `value` pairs.
-3. Create a model with field configuration: `POST /models` with `fieldConfig` defining expected extraction fields.
-4. Create a data bundle linking the dataset: `POST /models/{modelId}/dataBundles` with `datasetIds` array.
-5. Wait for data bundle status to be ready: poll `GET /models/{modelId}/dataBundles/{dataBundleId}`.
-6. Start training: `POST /models/{modelId}/trainings` with `dataBundleIds` and desired `instanceType` (small-gpu, medium-gpu, or large-gpu).
-7. Monitor training: poll `GET /models/{modelId}/trainings/{trainingId}` and check `status` and `evaluation` metrics.
-8. Activate the trained model: `PATCH /models/{modelId}` with `trainingId` set to the completed training.
-
-### 3. Build and Run a Document Processing Workflow
-
-1. Define transitions for each processing step: `POST /transitions` with `transitionType` (docker, manual, or lambda) and configuration `parameters`.
-2. Create secrets for any credentials needed: `POST /secrets` with `data` map containing key-value pairs.
-3. Create the workflow: `POST /workflows` with a `specification` containing the `definition` (state machine connecting transitions), and optionally `errorConfig` for failure notifications.
-4. Set workflow to production: `PATCH /workflows/{workflowId}` with `status: "production"`.
-5. Execute the workflow: `POST /workflows/{workflowId}/executions` with the required `input` map.
-6. Monitor execution: `GET /workflows/{workflowId}/executions/{executionId}` -- inspect `status`, `events`, and `transitionExecutions`.
-7. Debug failures: `GET /logs` filtered by `workflowId` and `workflowExecutionId` to see detailed event logs.
-
-### 4. Set Up Organization Billing and User Access
-
-1. Create a payment method: `POST /paymentMethods` with a name/description.
-2. Use the returned `stripeSetupIntentSecret` and `stripePublishableKey` to complete Stripe payment setup on the client side.
-3. Attach payment to organization: `PATCH /organizations/{organizationId}` with `paymentMethodId`.
-4. Select a plan: browse available plans with `GET /plans`, then `PATCH /organizations/{organizationId}` with `planId`.
-5. Create users: `POST /users` with `email` and `roleIds` for access control.
-6. Optionally create an app client for programmatic access: `POST /appClients` with callback URLs and role assignments.
-
-### 5. Monitor and Debug Transition Executions
-
-1. List all transitions: `GET /transitions` to find the target `transitionId`.
-2. View executions: `GET /transitions/{transitionId}/executions` with optional `status` filter (e.g., filter for failed).
-3. Inspect a specific execution: `GET /transitions/{transitionId}/executions/{executionId}` -- check `input`, `output`, and `status`.
-4. For long-running executions, send heartbeats: `POST /transitions/{transitionId}/executions/{executionId}/heartbeats` to prevent timeout.
-5. Complete or fail the execution: `PATCH /transitions/{transitionId}/executions/{executionId}` with `status` and either `output` (success) or `error` with a `message` (failure).
-6. Review logs: `GET /logs` filtered by `transitionId` and `transitionExecutionId` for detailed event traces.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all appClients?" -> GET /appClients
+- "Create a appClient?" -> POST /appClients
+- "Delete a appClient?" -> DELETE /appClients/{appClientId}
+- "Get appClient details?" -> GET /appClients/{appClientId}
+- "Partially update a appClient?" -> PATCH /appClients/{appClientId}
+- "List all assets?" -> GET /assets
+- "Create a asset?" -> POST /assets
+- "Delete a asset?" -> DELETE /assets/{assetId}
+- "Get asset details?" -> GET /assets/{assetId}
+- "Partially update a asset?" -> PATCH /assets/{assetId}
+- "List all datasets?" -> GET /datasets
+- "Create a dataset?" -> POST /datasets
+- "Delete a dataset?" -> DELETE /datasets/{datasetId}
+- "Get dataset details?" -> GET /datasets/{datasetId}
+- "Partially update a dataset?" -> PATCH /datasets/{datasetId}
+- "List all transformations?" -> GET /datasets/{datasetId}/transformations
+- "Create a transformation?" -> POST /datasets/{datasetId}/transformations
+- "Delete a transformation?" -> DELETE /datasets/{datasetId}/transformations/{transformationId}
+- "List all deploymentEnvironments?" -> GET /deploymentEnvironments
+- "Get deploymentEnvironment details?" -> GET /deploymentEnvironments/{deploymentEnvironmentId}
+- "List all documents?" -> GET /documents
+- "Create a document?" -> POST /documents
+- "Delete a document?" -> DELETE /documents/{documentId}
+- "Get document details?" -> GET /documents/{documentId}
+- "Partially update a document?" -> PATCH /documents/{documentId}
+- "List all logs?" -> GET /logs
+- "Get log details?" -> GET /logs/{logId}
+- "List all models?" -> GET /models
+- "Create a model?" -> POST /models
+- "Delete a model?" -> DELETE /models/{modelId}
+- "Get model details?" -> GET /models/{modelId}
+- "Partially update a model?" -> PATCH /models/{modelId}
+- "List all dataBundles?" -> GET /models/{modelId}/dataBundles
+- "Create a dataBundle?" -> POST /models/{modelId}/dataBundles
+- "Delete a dataBundle?" -> DELETE /models/{modelId}/dataBundles/{dataBundleId}
+- "Get dataBundle details?" -> GET /models/{modelId}/dataBundles/{dataBundleId}
+- "Partially update a dataBundle?" -> PATCH /models/{modelId}/dataBundles/{dataBundleId}
+- "List all trainings?" -> GET /models/{modelId}/trainings
+- "Create a training?" -> POST /models/{modelId}/trainings
+- "Get training details?" -> GET /models/{modelId}/trainings/{trainingId}
+- "Partially update a training?" -> PATCH /models/{modelId}/trainings/{trainingId}
+- "List all organizations?" -> GET /organizations
+- "Create a organization?" -> POST /organizations
+- "Get organization details?" -> GET /organizations/{organizationId}
+- "Partially update a organization?" -> PATCH /organizations/{organizationId}
+- "List all paymentMethods?" -> GET /paymentMethods
+- "Create a paymentMethod?" -> POST /paymentMethods
+- "Delete a paymentMethod?" -> DELETE /paymentMethods/{paymentMethodId}
+- "Get paymentMethod details?" -> GET /paymentMethods/{paymentMethodId}
+- "Partially update a paymentMethod?" -> PATCH /paymentMethods/{paymentMethodId}
+- "List all plans?" -> GET /plans
+- "Get plan details?" -> GET /plans/{planId}
+- "List all predictions?" -> GET /predictions
+- "Create a prediction?" -> POST /predictions
+- "Get prediction details?" -> GET /predictions/{predictionId}
+- "Get profile details?" -> GET /profiles/{profileId}
+- "Partially update a profile?" -> PATCH /profiles/{profileId}
+- "List all roles?" -> GET /roles
+- "Get role details?" -> GET /roles/{roleId}
+- "List all secrets?" -> GET /secrets
+- "Create a secret?" -> POST /secrets
+- "Delete a secret?" -> DELETE /secrets/{secretId}
+- "Partially update a secret?" -> PATCH /secrets/{secretId}
+- "List all transitions?" -> GET /transitions
+- "Create a transition?" -> POST /transitions
+- "Delete a transition?" -> DELETE /transitions/{transitionId}
+- "Get transition details?" -> GET /transitions/{transitionId}
+- "Partially update a transition?" -> PATCH /transitions/{transitionId}
+- "List all executions?" -> GET /transitions/{transitionId}/executions
+- "Create a execution?" -> POST /transitions/{transitionId}/executions
+- "Get execution details?" -> GET /transitions/{transitionId}/executions/{executionId}
+- "Partially update a execution?" -> PATCH /transitions/{transitionId}/executions/{executionId}
+- "Create a heartbeat?" -> POST /transitions/{transitionId}/executions/{executionId}/heartbeats
+- "List all users?" -> GET /users
+- "Create a user?" -> POST /users
+- "Delete a user?" -> DELETE /users/{userId}
+- "Get user details?" -> GET /users/{userId}
+- "Partially update a user?" -> PATCH /users/{userId}
+- "List all workflows?" -> GET /workflows
+- "Create a workflow?" -> POST /workflows
+- "Delete a workflow?" -> DELETE /workflows/{workflowId}
+- "Get workflow details?" -> GET /workflows/{workflowId}
+- "Partially update a workflow?" -> PATCH /workflows/{workflowId}
+- "List all executions?" -> GET /workflows/{workflowId}/executions
+- "Create a execution?" -> POST /workflows/{workflowId}/executions
+- "Delete a execution?" -> DELETE /workflows/{workflowId}/executions/{executionId}
+- "Get execution details?" -> GET /workflows/{workflowId}/executions/{executionId}
+- "Partially update a execution?" -> PATCH /workflows/{workflowId}/executions/{executionId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

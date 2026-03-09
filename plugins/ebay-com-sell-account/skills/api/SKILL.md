@@ -12,7 +12,7 @@ API version: v1.9.3
 OAuth2
 
 ## Base URL
-https://api.ebay.com{basePath}
+https://api.ebay.com/sell/account/v1
 
 ## Setup
 1. Configure auth: OAuth2
@@ -112,89 +112,47 @@ https://api.ebay.com{basePath}
 |--------|------|-------------|
 | GET | /advertising_eligibility | This method allows developers to check the seller eligibility status for eBay advertising programs. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What are my current fulfillment policies?" -> GET /fulfillment_policy
-- "How do I create a new return policy for my eBay store?" -> POST /return_policy
-- "What payment methods does my payment policy accept?" -> GET /payment_policy/{payment_policy_id}
-- "Am I opted into eBay managed payments?" -> GET /payments_program/{marketplace_id}/{payments_program_type}
-- "What are my selling limits and privileges?" -> GET /privilege
-- "How do I set sales tax for a specific state?" -> PUT /sales_tax/{countryCode}/{jurisdictionId}
-- "Can I find a fulfillment policy by its name instead of ID?" -> GET /fulfillment_policy/get_by_policy_name
-- "What programs am I currently opted into?" -> GET /program/get_opted_in_programs
-- "How do I bulk-update sales tax rates across multiple jurisdictions?" -> POST /bulk_create_or_replace_sales_tax
-- "What shipping rate tables do I have for US?" -> GET /rate_table
-- "Am I eligible for eBay advertising programs?" -> GET /advertising_eligibility
-- "What KYC checks are pending on my account?" -> GET /kyc
-- "How do I delete an old return policy I no longer use?" -> DELETE /return_policy/{return_policy_id}
-- "What are my active subscriptions?" -> GET /subscription
-- "How do I update my custom product compliance policy?" -> PUT /custom_policy/{custom_policy_id}
-
-## Response Tips
-
-- **Policy lists** (fulfillment, payment, return, custom): Paginated with `href`, `next`, `prev`, `offset`, `limit`, `total` -- follow `next` link for additional pages.
-- **Single policy GETs**: Return the full policy object directly; check nested maps like `shippingOptions[].shippingServices[]` and `deposit.amount` for deeply embedded values.
-- **DELETE and some PUT endpoints**: Return 204 with no body -- treat empty response as success.
-- **Bulk sales tax**: May return 200 (all succeeded) or 207 (partial success) -- always inspect `updatedSalesTaxEntries` for per-item status.
-- **Program and payments endpoints**: Status fields use enum strings (e.g., `OPTED_IN`, `NOT_OPTED_IN`) -- compare case-sensitively.
-- **Subscription**: Uses `continuation_token` instead of `offset` for pagination -- pass the token from the previous response's `next` link.
-- **Warnings array**: POST and PUT on policies may include a `warnings` array in the response even on success -- always surface these to the user.
-
-## Anomaly Flags
-
-- **207 on bulk sales tax**: Partial failure -- some jurisdictions updated, others failed. Surface the failing entries immediately.
-- **409 Conflict on DELETE**: Policy is in use by active listings. Alert the user and suggest identifying which listings reference this policy before retrying.
-- **409 Conflict on POST custom_policy**: Duplicate policy name. Surface the existing policy name and suggest updating instead of creating.
-- **`warnings` array present in 200/201 responses**: eBay accepted the policy but flagged issues (e.g., unsupported shipping options for the marketplace). Always display warnings to the user.
-- **`wasPreviouslyOptedIn: true` on payments program**: The seller was previously opted in but is no longer -- may indicate an account issue worth investigating.
-- **KYC returns 204**: No checks pending, but if the user expected results, flag that 204 means empty (not an error).
-- **`sellingLimit` values near zero**: Selling privileges may be severely restricted -- proactively warn that listing creation may fail.
-- **`extendedHolidayReturnsOffered` is true but `returnPeriod` is short**: Potential misconfiguration -- holiday returns typically extend the window.
-
-## Playbook
-
-### 1. Set up a new marketplace from scratch
-
-1. GET /privilege -- confirm seller registration is complete and review selling limits.
-2. POST /fulfillment_policy -- create a shipping/fulfillment policy for the target marketplace (set `marketplaceId`, `handlingTime`, `shippingOptions`).
-3. POST /payment_policy -- create a payment policy (set `marketplaceId`, `immediatePay`, `paymentMethods`).
-4. POST /return_policy -- create a return policy (set `marketplaceId`, `returnsAccepted`, `returnPeriod`, `returnShippingCostPayer`).
-5. GET /kyc -- check if any KYC verification steps are required before listing.
-6. GET /advertising_eligibility -- confirm eligibility for advertising programs on the new marketplace.
-
-### 2. Update sales tax configuration across multiple states
-
-1. GET /sales_tax?country_code=US -- retrieve all current sales tax entries to review existing setup.
-2. Prepare a list of jurisdiction updates with `countryCode`, `salesTaxJurisdictionId`, `salesTaxPercentage`, and `shippingAndHandlingTaxed`.
-3. POST /bulk_create_or_replace_sales_tax -- submit the batch update.
-4. Check response code: if 207, inspect each entry in `updatedSalesTaxEntries` and retry or fix any that failed.
-5. GET /sales_tax/{countryCode}/{jurisdictionId} -- spot-check a few jurisdictions to confirm the new rates.
-
-### 3. Migrate fulfillment policy to offer global shipping
-
-1. GET /fulfillment_policy/get_by_policy_name?marketplace_id=EBAY_US&name=StandardShipping -- find the existing policy by name.
-2. Note the `fulfillmentPolicyId` from the response.
-3. PUT /fulfillment_policy/{fulfillmentPolicyId} -- update with `globalShipping: true` and add international `shipToLocations.regionIncluded` entries.
-4. Review the `warnings` array in the response for any marketplace-specific restrictions.
-5. GET /fulfillment_policy/{fulfillmentPolicyId} -- verify the updated policy reflects global shipping settings.
-
-### 4. Opt into and verify an eBay program
-
-1. GET /program/get_opted_in_programs -- check which programs the seller is already enrolled in.
-2. POST /program/opt_in -- submit with `programType` for the desired program (e.g., `SELLING_POLICY_MANAGEMENT`).
-3. If 409 is returned, the seller is already opted in -- no further action needed.
-4. GET /payments_program/{marketplace_id}/{payments_program_type}/onboarding -- if the program requires onboarding, check status and review `steps` for outstanding actions.
-
-### 5. Clean up unused policies
-
-1. GET /fulfillment_policy?marketplace_id=EBAY_US -- list all fulfillment policies.
-2. GET /payment_policy?marketplace_id=EBAY_US -- list all payment policies.
-3. GET /return_policy?marketplace_id=EBAY_US -- list all return policies.
-4. Identify policies not referenced by active listings (cross-reference with listing data).
-5. DELETE /fulfillment_policy/{id}, DELETE /payment_policy/{id}, DELETE /return_policy/{id} -- remove each unused policy.
-6. If 409 is returned, the policy is still in use -- skip it and flag for the user to reassign listings first.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all custom_policy?" -> GET /custom_policy/
+- "Create a custom_policy?" -> POST /custom_policy/
+- "Get custom_policy details?" -> GET /custom_policy/{custom_policy_id}
+- "Update a custom_policy?" -> PUT /custom_policy/{custom_policy_id}
+- "Create a fulfillment_policy?" -> POST /fulfillment_policy/
+- "Get fulfillment_policy details?" -> GET /fulfillment_policy/{fulfillmentPolicyId}
+- "Update a fulfillment_policy?" -> PUT /fulfillment_policy/{fulfillmentPolicyId}
+- "Delete a fulfillment_policy?" -> DELETE /fulfillment_policy/{fulfillmentPolicyId}
+- "List all fulfillment_policy?" -> GET /fulfillment_policy
+- "List all get_by_policy_name?" -> GET /fulfillment_policy/get_by_policy_name
+- "List all payment_policy?" -> GET /payment_policy
+- "Create a payment_policy?" -> POST /payment_policy
+- "Get payment_policy details?" -> GET /payment_policy/{payment_policy_id}
+- "Update a payment_policy?" -> PUT /payment_policy/{payment_policy_id}
+- "Delete a payment_policy?" -> DELETE /payment_policy/{payment_policy_id}
+- "List all get_by_policy_name?" -> GET /payment_policy/get_by_policy_name
+- "Get payments_program details?" -> GET /payments_program/{marketplace_id}/{payments_program_type}
+- "List all onboarding?" -> GET /payments_program/{marketplace_id}/{payments_program_type}/onboarding
+- "List all privilege?" -> GET /privilege
+- "List all get_opted_in_programs?" -> GET /program/get_opted_in_programs
+- "Create a opt_in?" -> POST /program/opt_in
+- "Create a opt_out?" -> POST /program/opt_out
+- "List all rate_table?" -> GET /rate_table
+- "List all return_policy?" -> GET /return_policy
+- "Create a return_policy?" -> POST /return_policy
+- "Get return_policy details?" -> GET /return_policy/{return_policy_id}
+- "Update a return_policy?" -> PUT /return_policy/{return_policy_id}
+- "Delete a return_policy?" -> DELETE /return_policy/{return_policy_id}
+- "List all get_by_policy_name?" -> GET /return_policy/get_by_policy_name
+- "Create a bulk_create_or_replace_sales_tax?" -> POST /bulk_create_or_replace_sales_tax
+- "Get sales_tax details?" -> GET /sales_tax/{countryCode}/{jurisdictionId}
+- "Update a sales_tax?" -> PUT /sales_tax/{countryCode}/{jurisdictionId}
+- "Delete a sales_tax?" -> DELETE /sales_tax/{countryCode}/{jurisdictionId}
+- "List all sales_tax?" -> GET /sales_tax
+- "List all subscription?" -> GET /subscription
+- "List all kyc?" -> GET /kyc
+- "List all advertising_eligibility?" -> GET /advertising_eligibility
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

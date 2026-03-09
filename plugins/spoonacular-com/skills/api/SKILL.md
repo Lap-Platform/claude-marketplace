@@ -138,85 +138,108 @@ https://api.spoonacular.com
 |--------|------|-------------|
 | POST | /users/connect | Connect User |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "Find me a vegan pasta recipe under 500 calories?" -> GET /recipes/complexSearch
-- "What can I cook with chicken, rice, and broccoli?" -> GET /recipes/findByIngredients
-- "Give me a random dessert recipe" -> GET /recipes/random
-- "What are the full details for recipe 716429?" -> GET /recipes/{id}/information
-- "How many calories are in a Big Mac?" -> GET /food/menuItems/search
-- "What wine pairs well with salmon?" -> GET /food/wine/pairing
-- "Can I substitute buttermilk in this recipe?" -> GET /food/ingredients/substitutes
-- "Convert 2 cups of flour to grams" -> GET /recipes/convert
-- "Generate a 2000-calorie meal plan for the week" -> GET /mealplanner/generate
-- "What's the nutrition breakdown of recipe 123?" -> GET /recipes/{id}/nutritionWidget.json
-- "Show me my shopping list" -> GET /mealplanner/{username}/shopping-list
-- "Scan this barcode (UPC 041631000564) for product info" -> GET /food/products/upc/{upc}
-- "Find restaurants near me serving Thai food" -> GET /food/restaurants/search
-- "Extract the recipe from this blog URL" -> GET /recipes/extract
-- "How much iron is in 100g of spinach?" -> GET /food/ingredients/{id}/information
-
-## Response Tips
-
-- **Recipe search** (`complexSearch`, `findByIngredients`, `findByNutrients`): Results are paginated via `offset`/`number`/`totalResults`. Default page size is 10. Set `addRecipeInformation=true` to avoid a follow-up call per recipe.
-- **Recipe detail** (`/recipes/{id}/information`): Returns deeply nested objects -- `extendedIngredients[].measures`, `winePairing.productMatches[]`, and `analyzedInstructions[].steps[]` each contain further maps. Check `diets[]` and boolean flags (`vegan`, `glutenFree`, etc.) for dietary filtering.
-- **Ingredient/product search** (`/food/ingredients/search`, `/food/products/search`): Same pagination pattern (`offset`/`number`/`totalResults`). Ingredient results use `results[]`, products use `products[]` -- field names differ.
-- **Meal planner** endpoints: All user-scoped endpoints require `username` + `hash` (obtained from `POST /users/connect`). Week plans return `days[]` with nested meal slots.
-- **Shopping list**: Returns items grouped by `aisles[]` with a total `cost`. Date range is in epoch seconds, not ISO strings.
-- **Nutrition widgets**: `.json` variants return structured data; bare paths and `.png` variants return rendered HTML or images respectively. Use the `.json` suffix when you need parseable data.
-- **Wine endpoints**: `pairing` takes a food name and returns wines; `dishes` takes a wine name and returns foods -- they are inverses.
-- **Error responses**: All endpoints return 401 (invalid/missing API key), 403 (quota exceeded or plan limitation), 404 (resource not found). Error bodies typically include `status`, `code`, and `message` fields.
-
-## Anomaly Flags
-
-- **403 responses**: Surface immediately -- this almost always means the API quota is exhausted or the user's plan does not cover the endpoint. Recommend checking usage at spoonacular.com/food-api/console.
-- **Empty `results` with `totalResults > 0`**: The offset has overshot the result set. Alert the user and reset pagination.
-- **`confidence` below 0.5** on cuisine classification (`POST /recipes/cuisine`) or image classification (`GET /food/images/classify`): Flag the low-confidence result and suggest the user verify manually.
-- **Missing `analyzedInstructions`**: Some recipes return an empty array -- this means spoonacular could not parse steps. Surface this so the user knows to check `instructions` (raw HTML string) or `sourceUrl` instead.
-- **Nutrition values of zero**: When `calories`, `protein`, `fat`, or `carbs` come back as `"0"` or zero on a real food item, flag it as likely incomplete data rather than a genuinely zero-calorie food.
-- **`guessNutrition` wide confidence ranges**: When `confidenceRange95Percent.max` is more than 3x the `min`, warn the user the estimate is unreliable and suggest using a specific recipe ID lookup instead.
-- **Rate limiting / 429 responses**: Although not explicitly in the spec's `@errors`, spoonacular enforces daily point quotas. If requests start failing, surface the remaining quota context.
-- **Deprecated `limitLicense` parameter**: Present on many endpoints with a default of `true` -- if it starts returning warnings or behaving unexpectedly, flag for review.
-
-## Playbook
-
-### 1. Search and get full recipe details
-
-1. Call `GET /recipes/complexSearch` with your filters (`query`, `diet`, `cuisine`, `maxCalories`, etc.). Set `number=5` for a manageable list.
-2. Review the `results[]` array. Each result has an `id` and `title`.
-3. For the chosen recipe, call `GET /recipes/{id}/information` with `includeNutrition=true` to get ingredients, instructions, nutrition, and wine pairing in one call.
-4. If step-by-step cooking instructions are needed, call `GET /recipes/{id}/analyzedInstructions` with `stepBreakdown=true`.
-
-### 2. Build a weekly meal plan with shopping list
-
-1. Call `POST /users/connect` with user details to get the `username` and `hash` pair (skip if already connected).
-2. Call `GET /mealplanner/generate` with `timeFrame=week`, `targetCalories=2000`, and any `diet`/`exclude` preferences.
-3. For each meal in the response, call `POST /mealplanner/{username}/items` to save it to the user's plan with the correct `date`, `slot`, and `position`.
-4. Once all meals are added, call `POST /mealplanner/{username}/shopping-list/{start-date}/{end-date}` to generate the consolidated shopping list.
-5. Review the shopping list via `GET /mealplanner/{username}/shopping-list` -- items are organized by `aisles[]` with estimated `cost`.
-
-### 3. Identify a food from an image and get nutrition
-
-1. Host or obtain a public URL for the food image.
-2. Call `GET /food/images/classify` with `imageUrl` to identify what the food is. Check `probability` -- if below 0.5, ask the user to confirm.
-3. Call `GET /food/images/analyze` with the same `imageUrl` to get estimated nutrition (calories, fat, protein, carbs) with confidence ranges.
-4. If the analysis suggests matching recipes, use the `recipes[]` array from the response to call `GET /recipes/{id}/information` for full details.
-
-### 4. Find ingredient substitutes and convert units
-
-1. Call `GET /food/ingredients/search` with `query` to find the ingredient and get its `id`.
-2. Call `GET /food/ingredients/{id}/substitutes` to get a list of possible substitutes with context.
-3. If a unit conversion is needed (e.g., cups to grams), call `GET /recipes/convert` with `ingredientName`, `sourceAmount`, `sourceUnit`, and `targetUnit`.
-4. For full nutritional detail on the ingredient, call `GET /food/ingredients/{id}/information` with the desired `amount` and `unit`.
-
-### 5. Scan a product barcode and compare alternatives
-
-1. Call `GET /food/products/upc/{upc}` with the barcode number to get product details, nutrition, and `spoonacularScore`.
-2. Call `GET /food/products/upc/{upc}/comparable` to find alternatives ranked by calories, protein, price, sugar, and score.
-3. For any promising alternative, call `GET /food/products/{id}` to get full details.
-4. Use `GET /food/products/{id}/nutritionWidget.json` (via `Accept: application/json`) to get a structured nutrition comparison between the original and the alternative.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Search complexSearch?" -> GET /recipes/complexSearch
+- "List all findByIngredients?" -> GET /recipes/findByIngredients
+- "List all findByNutrients?" -> GET /recipes/findByNutrients
+- "List all information?" -> GET /recipes/{id}/information
+- "List all informationBulk?" -> GET /recipes/informationBulk
+- "List all similar?" -> GET /recipes/{id}/similar
+- "List all random?" -> GET /recipes/random
+- "Search autocomplete?" -> GET /recipes/autocomplete
+- "List all tasteWidget.json?" -> GET /recipes/{id}/tasteWidget.json
+- "List all tasteWidget.png?" -> GET /recipes/{id}/tasteWidget.png
+- "List all equipmentWidget.json?" -> GET /recipes/{id}/equipmentWidget.json
+- "List all equipmentWidget.png?" -> GET /recipes/{id}/equipmentWidget.png
+- "List all priceBreakdownWidget.json?" -> GET /recipes/{id}/priceBreakdownWidget.json
+- "List all priceBreakdownWidget.png?" -> GET /recipes/{id}/priceBreakdownWidget.png
+- "List all ingredientWidget.json?" -> GET /recipes/{id}/ingredientWidget.json
+- "List all ingredientWidget.png?" -> GET /recipes/{id}/ingredientWidget.png
+- "List all nutritionWidget.json?" -> GET /recipes/{id}/nutritionWidget.json
+- "List all nutritionWidget.png?" -> GET /recipes/{id}/nutritionWidget.png
+- "List all nutritionLabel?" -> GET /recipes/{id}/nutritionLabel
+- "List all nutritionLabel.png?" -> GET /recipes/{id}/nutritionLabel.png
+- "List all analyzedInstructions?" -> GET /recipes/{id}/analyzedInstructions
+- "List all extract?" -> GET /recipes/extract
+- "List all ingredientWidget?" -> GET /recipes/{id}/ingredientWidget
+- "List all tasteWidget?" -> GET /recipes/{id}/tasteWidget
+- "List all equipmentWidget?" -> GET /recipes/{id}/equipmentWidget
+- "List all priceBreakdownWidget?" -> GET /recipes/{id}/priceBreakdownWidget
+- "Create a visualizeTaste?" -> POST /recipes/visualizeTaste
+- "Create a visualizeNutrition?" -> POST /recipes/visualizeNutrition
+- "Create a visualizePriceEstimator?" -> POST /recipes/visualizePriceEstimator
+- "Create a visualizeEquipment?" -> POST /recipes/visualizeEquipment
+- "Create a analyze?" -> POST /recipes/analyze
+- "List all summary?" -> GET /recipes/{id}/summary
+- "List all card?" -> GET /recipes/{id}/card
+- "Create a visualizeRecipe?" -> POST /recipes/visualizeRecipe
+- "Create a analyzeInstruction?" -> POST /recipes/analyzeInstructions
+- "Create a cuisine?" -> POST /recipes/cuisine
+- "Search analyze?" -> GET /recipes/queries/analyze
+- "List all convert?" -> GET /recipes/convert
+- "Create a parseIngredient?" -> POST /recipes/parseIngredients
+- "List all nutritionWidget?" -> GET /recipes/{id}/nutritionWidget
+- "Create a visualizeIngredient?" -> POST /recipes/visualizeIngredients
+- "List all guessNutrition?" -> GET /recipes/guessNutrition
+- "List all information?" -> GET /food/ingredients/{id}/information
+- "List all amount?" -> GET /food/ingredients/{id}/amount
+- "Create a glycemicLoad?" -> POST /food/ingredients/glycemicLoad
+- "Search autocomplete?" -> GET /food/ingredients/autocomplete
+- "Search search?" -> GET /food/ingredients/search
+- "List all substitutes?" -> GET /food/ingredients/substitutes
+- "List all substitutes?" -> GET /food/ingredients/{id}/substitutes
+- "Search search?" -> GET /food/products/search
+- "Get upc details?" -> GET /food/products/upc/{upc}
+- "Search search?" -> GET /food/customFoods/search
+- "Get product details?" -> GET /food/products/{id}
+- "List all comparable?" -> GET /food/products/upc/{upc}/comparable
+- "Search suggest?" -> GET /food/products/suggest
+- "List all nutritionWidget?" -> GET /food/products/{id}/nutritionWidget
+- "List all nutritionWidget.png?" -> GET /food/products/{id}/nutritionWidget.png
+- "List all nutritionLabel?" -> GET /food/products/{id}/nutritionLabel
+- "List all nutritionLabel.png?" -> GET /food/products/{id}/nutritionLabel.png
+- "Create a classify?" -> POST /food/products/classify
+- "Create a classifyBatch?" -> POST /food/products/classifyBatch
+- "Create a map?" -> POST /food/ingredients/map
+- "Search suggest?" -> GET /food/menuItems/suggest
+- "Search search?" -> GET /food/menuItems/search
+- "Get menuItem details?" -> GET /food/menuItems/{id}
+- "List all nutritionWidget?" -> GET /food/menuItems/{id}/nutritionWidget
+- "List all nutritionWidget.png?" -> GET /food/menuItems/{id}/nutritionWidget.png
+- "List all nutritionLabel?" -> GET /food/menuItems/{id}/nutritionLabel
+- "List all nutritionLabel.png?" -> GET /food/menuItems/{id}/nutritionLabel.png
+- "List all generate?" -> GET /mealplanner/generate
+- "Get week details?" -> GET /mealplanner/{username}/week/{start-date}
+- "Delete a day?" -> DELETE /mealplanner/{username}/day/{date}
+- "Create a item?" -> POST /mealplanner/{username}/items
+- "Delete a item?" -> DELETE /mealplanner/{username}/items/{id}
+- "List all templates?" -> GET /mealplanner/{username}/templates
+- "Create a template?" -> POST /mealplanner/{username}/templates
+- "Get template details?" -> GET /mealplanner/{username}/templates/{id}
+- "Delete a template?" -> DELETE /mealplanner/{username}/templates/{id}
+- "List all shopping-list?" -> GET /mealplanner/{username}/shopping-list
+- "Create a connect?" -> POST /users/connect
+- "Create a item?" -> POST /mealplanner/{username}/shopping-list/items
+- "Delete a item?" -> DELETE /mealplanner/{username}/shopping-list/items/{id}
+- "Search search?" -> GET /food/restaurants/search
+- "List all dishes?" -> GET /food/wine/dishes
+- "List all pairing?" -> GET /food/wine/pairing
+- "List all description?" -> GET /food/wine/description
+- "List all recommendation?" -> GET /food/wine/recommendation
+- "List all classify?" -> GET /food/images/classify
+- "List all analyze?" -> GET /food/images/analyze
+- "Search quickAnswer?" -> GET /recipes/quickAnswer
+- "Create a detect?" -> POST /food/detect
+- "Search search?" -> GET /food/site/search
+- "Search search?" -> GET /food/search
+- "Search search?" -> GET /food/videos/search
+- "List all random?" -> GET /food/jokes/random
+- "List all random?" -> GET /food/trivia/random
+- "List all converse?" -> GET /food/converse
+- "Search suggest?" -> GET /food/converse/suggest
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

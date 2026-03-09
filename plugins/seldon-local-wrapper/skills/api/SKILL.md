@@ -12,7 +12,7 @@ API version: 0.1
 No authentication required.
 
 ## Base URL
-http://{host}:{port}
+http://localhost:80
 
 ## Setup
 1. No auth setup needed

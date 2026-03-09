@@ -260,86 +260,71 @@ https://httpbin.org/
 |--------|------|-------------|
 | GET | /xml | Returns a simple XML document. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What is my IP address?" -> GET /ip
-- "What headers am I sending?" -> GET /headers
-- "What is my user agent string?" -> GET /user-agent
-- "Can I echo back a POST request with custom data?" -> POST /anything
-- "How do I test basic auth with a username and password?" -> GET /basic-auth/{user}/{passwd}
-- "How do I test bearer token authentication?" -> GET /bearer
-- "Can I generate a random UUID?" -> GET /uuid
-- "How do I simulate a delayed response of N seconds?" -> GET /delay/{delay}
-- "How do I get a response with a specific HTTP status code?" -> GET /status/{codes}
-- "How do I set and read cookies?" -> GET /cookies/set/{name}/{value} then GET /cookies
-- "Can I decode a base64-encoded string?" -> GET /base64/{value}
-- "How do I test redirect chains of N hops?" -> GET /redirect/{n}
-- "How do I get a gzip-compressed response?" -> GET /gzip
-- "Can I stream N bytes of random data?" -> GET /stream-bytes/{n}
-- "How do I test conditional requests with ETags?" -> GET /etag/{etag}
-
-## Response Tips
-
-- **Request inspection** (`/get`, `/post`, `/anything`, `/headers`, `/ip`, `/user-agent`): Returns a JSON object echoing back `args`, `headers`, `origin`, `url`, and for POST/PUT/PATCH the `data`, `files`, `form`, and `json` fields. Check `origin` for your public IP.
-- **Auth endpoints** (`/basic-auth`, `/bearer`, `/digest-auth`, `/hidden-basic-auth`): Return `{ authenticated: true, user: "..." }` on success. Failures return 401 (or 404 for hidden-basic-auth) with no body -- do not parse the response on error.
-- **Redirect endpoints** (`/redirect`, `/absolute-redirect`, `/relative-redirect`, `/redirect-to`): Never return 200 directly -- expect 302 responses. Disable auto-follow redirects in your HTTP client to inspect each hop.
-- **Data format endpoints** (`/gzip`, `/brotli`, `/deflate`): Return JSON with an `origin`, `headers`, and a boolean field (`gzipped`, `brotli`, `deflated`) confirming the encoding. Your client must support decompression.
-- **Binary/streaming endpoints** (`/bytes`, `/stream-bytes`, `/range`, `/stream`, `/drip`, `/image`): Return raw binary or chunked data, not JSON. Set `Accept` headers for `/image` content negotiation. `/stream/{n}` returns newline-delimited JSON objects, not an array.
-- **Cookie endpoints** (`/cookies`, `/cookies/set`, `/cookies/delete`): Responses reflect current cookie jar state. `/cookies/set` and `/cookies/delete` issue redirects to `/cookies` -- ensure your client follows redirects with cookie persistence.
-- **Status endpoints** (`/status/{codes}`): Can return any HTTP status. Pass comma-separated codes (e.g., `200,300,500`) to get a random one from the set.
-
-## Anomaly Flags
-
-- **Unexpected 403 on any endpoint**: httpbin.org sits behind Cloudflare; a missing `User-Agent` header or bot-like traffic pattern triggers a block. Surface this immediately with a suggestion to add a standard User-Agent.
-- **Timeouts on `/delay` or `/drip`**: If `{delay}` exceeds 10 seconds, the server caps it. Flag when the actual response time does not match the requested delay.
-- **Redirect loops**: `/redirect/{n}` with large N or `/redirect-to` pointing back to itself can create loops. Flag when redirect count exceeds 10.
-- **Binary response where JSON was expected**: Endpoints like `/bytes`, `/stream-bytes`, and `/image` return non-JSON. Flag if the caller is attempting to parse these as JSON.
-- **401 from auth endpoints with correct credentials**: Digest auth with `stale_after` parameter intentionally returns stale nonces. Surface when repeated 401s occur despite valid credentials -- the stale nonce mechanism may be in play.
-- **304 Not Modified on `/cache` or `/etag`**: Not an error -- conditional caching is working. Flag only if the caller expected fresh data but sent `If-None-Match` or `If-Modified-Since` headers unintentionally.
-- **Status code randomization**: When `/status/{codes}` receives multiple comma-separated codes, the response status is random. Flag non-deterministic behavior if the caller seems to expect a consistent result.
-
-## Playbook
-
-### 1. Debug outbound request headers and payload
-
-1. Send your request to `POST /anything` with the same headers, body, and query params you intend to send to the real API.
-2. Inspect the response JSON: `headers` shows what the server received, `data` or `json` shows the parsed body, `args` shows query parameters.
-3. Compare against what you expected. Fix discrepancies in your client configuration.
-4. Repeat with `GET /anything/{anything}` to test path parameter encoding.
-
-### 2. Test authentication flows
-
-1. **Basic auth**: Call `GET /basic-auth/{user}/{passwd}` with an `Authorization: Basic` header. Confirm `{ authenticated: true }`.
-2. **Bearer token**: Call `GET /bearer` with `Authorization: Bearer <token>`. Confirm `{ authenticated: true, token: "<token>" }`.
-3. **Digest auth**: Call `GET /digest-auth/{qop}/{user}/{passwd}` -- the first request returns 401 with a `WWW-Authenticate` challenge. Resend with the computed digest. Confirm 200.
-4. **Negative test**: Omit or corrupt credentials and verify you get 401 (or 404 for `/hidden-basic-auth`).
-
-### 3. Simulate error handling and retries
-
-1. Call `GET /status/500` to trigger a server error. Verify your retry logic activates.
-2. Call `GET /status/429` to simulate rate limiting. Check that your backoff strategy engages.
-3. Call `GET /status/200,500,503` to get random failures. Run multiple times to exercise both success and error paths.
-4. Call `GET /delay/5` to simulate slow responses. Verify your timeout settings fire correctly.
-5. Call `GET /status/204` to test empty-body success handling.
-
-### 4. Validate cookie and session management
-
-1. Call `GET /cookies/set/session_id/abc123` to set a cookie. Your client must follow the redirect.
-2. Call `GET /cookies` to confirm `{ cookies: { session_id: "abc123" } }`.
-3. Call `GET /cookies/set?theme=dark&lang=en` to set multiple cookies via query params.
-4. Call `GET /cookies` again to verify all cookies persist.
-5. Call `GET /cookies/delete?session_id=` to remove the session cookie.
-6. Call `GET /cookies` to confirm deletion.
-
-### 5. Test redirect handling and chain following
-
-1. Call `GET /redirect/3` with auto-redirect disabled. Verify you receive a 302 with a `Location` header.
-2. Follow the chain manually, confirming each hop decrements the counter.
-3. Call `GET /redirect-to?url=https://example.com&status_code=301` to test custom redirect targets and status codes.
-4. Call `GET /absolute-redirect/2` and `GET /relative-redirect/2` to compare absolute vs relative `Location` headers.
-5. Verify your client handles both redirect styles correctly and terminates after the final hop returns 200.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get absolute-redirect details?" -> GET /absolute-redirect/{n}
+- "List all anything?" -> GET /anything
+- "Create a anything?" -> POST /anything
+- "Delete a anything?" -> DELETE /anything/{anything}
+- "Get anything details?" -> GET /anything/{anything}
+- "Partially update a anything?" -> PATCH /anything/{anything}
+- "Update a anything?" -> PUT /anything/{anything}
+- "Get base64 details?" -> GET /base64/{value}
+- "Get basic-auth details?" -> GET /basic-auth/{user}/{passwd}
+- "List all bearer?" -> GET /bearer
+- "List all brotli?" -> GET /brotli
+- "Get byte details?" -> GET /bytes/{n}
+- "List all cache?" -> GET /cache
+- "Get cache details?" -> GET /cache/{value}
+- "List all cookies?" -> GET /cookies
+- "List all delete?" -> GET /cookies/delete
+- "List all set?" -> GET /cookies/set
+- "Get set details?" -> GET /cookies/set/{name}/{value}
+- "List all deflate?" -> GET /deflate
+- "Delete a delay?" -> DELETE /delay/{delay}
+- "Get delay details?" -> GET /delay/{delay}
+- "Partially update a delay?" -> PATCH /delay/{delay}
+- "Update a delay?" -> PUT /delay/{delay}
+- "List all deny?" -> GET /deny
+- "Get digest-auth details?" -> GET /digest-auth/{qop}/{user}/{passwd}
+- "Get digest-auth details?" -> GET /digest-auth/{qop}/{user}/{passwd}/{algorithm}
+- "Get digest-auth details?" -> GET /digest-auth/{qop}/{user}/{passwd}/{algorithm}/{stale_after}
+- "List all drip?" -> GET /drip
+- "List all utf8?" -> GET /encoding/utf8
+- "Get etag details?" -> GET /etag/{etag}
+- "List all get?" -> GET /get
+- "List all gzip?" -> GET /gzip
+- "List all headers?" -> GET /headers
+- "Get hidden-basic-auth details?" -> GET /hidden-basic-auth/{user}/{passwd}
+- "List all html?" -> GET /html
+- "List all image?" -> GET /image
+- "List all jpeg?" -> GET /image/jpeg
+- "List all png?" -> GET /image/png
+- "List all svg?" -> GET /image/svg
+- "List all webp?" -> GET /image/webp
+- "List all ip?" -> GET /ip
+- "List all json?" -> GET /json
+- "Get link details?" -> GET /links/{n}/{offset}
+- "Create a post?" -> POST /post
+- "Get range details?" -> GET /range/{numbytes}
+- "List all redirect-to?" -> GET /redirect-to
+- "Create a redirect-to?" -> POST /redirect-to
+- "Get redirect details?" -> GET /redirect/{n}
+- "Get relative-redirect details?" -> GET /relative-redirect/{n}
+- "List all response-headers?" -> GET /response-headers
+- "Create a response-header?" -> POST /response-headers
+- "List all robots.txt?" -> GET /robots.txt
+- "Delete a status?" -> DELETE /status/{codes}
+- "Get status details?" -> GET /status/{codes}
+- "Partially update a status?" -> PATCH /status/{codes}
+- "Update a status?" -> PUT /status/{codes}
+- "Get stream-byte details?" -> GET /stream-bytes/{n}
+- "Get stream details?" -> GET /stream/{n}
+- "List all user-agent?" -> GET /user-agent
+- "List all uuid?" -> GET /uuid
+- "List all xml?" -> GET /xml
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

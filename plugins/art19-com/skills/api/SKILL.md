@@ -145,89 +145,72 @@ https://art19.com/
 | GET | /series/{id} | Get a specific series |
 | PATCH | /series/{id} | Update a specific series |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "List all episodes for a series?" -> GET /episodes (with `series_id` filter)
-- "How do I search for a podcast by name?" -> GET /series (with `q` parameter)
-- "What feeds does a series have?" -> GET /feeds (with `series_id` filter)
-- "How do I publish a new episode?" -> POST /episodes
-- "How do I add someone as a credit on an episode?" -> POST /credits (with `creditable_id` and `creditable_type`)
-- "What classifications or categories are available?" -> GET /classifications
-- "How do I delete an episode?" -> DELETE /episodes/{id}
-- "What episodes were released this month?" -> GET /episodes (with `year`, `month`, or `released_after`/`released_before`)
-- "How do I update a series description or metadata?" -> PATCH /series/{id}
-- "What is the next episode after this one?" -> GET /episodes/{id}/next_sibling
-- "How do I upload an image for a series or episode?" -> POST /images
-- "How do I set ad insertion marker points on an episode?" -> POST /marker_points
-- "What networks exist and which series belong to them?" -> GET /networks then GET /series (with `network_id`)
-- "How do I create a new season for a series?" -> POST /seasons
-- "How do I assign a classification to an episode?" -> POST /classification_inclusions (with `classified_id`, `classified_type`, `classification_id`)
-
-## Response Tips
-
-- **List endpoints** (episodes, feeds, feed_items, marker_points, marker_point_content_rules): Require `page[number]` for pagination -- always pass page number starting at 1 and follow next-page links in response metadata.
-- **Single-resource GETs**: Return the resource object directly; some support `include` param (episodes, seasons, series) to sideload related resources and reduce round trips.
-- **POST/PATCH**: Expect JSON:API-style request bodies; 422 means validation failure -- check the `errors` array for field-level details. 415 means wrong Content-Type (must be `application/vnd.api+json`).
-- **DELETE**: Returns 204 with no body on success; any other status indicates failure.
-- **Search** (`q` param): Available on episodes, feed_items, classifications, networks, people, seasons, series -- returns matching results sorted by relevance unless `sort` overrides.
-- **Media assets**: Read-only retrieval (no PATCH/DELETE); filter by `attachment_id` and `attachment_type` to find assets linked to a specific resource.
-
-## Anomaly Flags
-
-- **429 Too Many Requests**: Every endpoint can return 429. Surface rate limit headers (`Retry-After`, `X-RateLimit-Remaining`) proactively when approaching limits. Back off before hitting the wall.
-- **507 Insufficient Storage**: Returned by all write operations (POST/PATCH/DELETE). Indicates a storage quota has been exceeded -- alert the user immediately as further writes will fail until resolved.
-- **406 Not Acceptable**: All endpoints return this. Likely means the `Accept` header is missing or wrong -- flag if this appears on a previously-working integration as it suggests a client misconfiguration.
-- **403 Forbidden on reads**: If a GET that previously worked starts returning 403, the API key's permissions may have been revoked or the resource moved to a different network. Surface this change immediately.
-- **Missing pagination**: If a list endpoint returns fewer results than expected without a next-page link, flag that the result set may be truncated or filters may be too restrictive.
-- **Stale episode versions**: If `GET /episode_versions` returns versions with no corresponding feed items, flag orphaned versions that may need cleanup.
-
-## Playbook
-
-### 1. Publish a New Episode to a Feed
-
-1. `GET /series` with `q` to find the target series and note its `id`
-2. `GET /seasons?series_id={series_id}` to find or verify the target season
-3. `POST /episodes` with the episode metadata (title, description, season, series references)
-4. `POST /images` to upload episode artwork, linking it to the new episode
-5. `GET /feeds?series_id={series_id}` to find the target feed
-6. `POST /feed_items` to add the episode to the feed (linking episode and feed)
-7. `POST /episode_versions` to create a version of the episode for the feed item
-8. Verify with `GET /episodes/{id}?include=feed_items` to confirm the episode appears correctly
-
-### 2. Set Up Ad Insertion Marker Points
-
-1. `GET /episodes/{id}` to retrieve the episode and confirm its duration and status
-2. `POST /marker_points` to create pre-roll, mid-roll, and post-roll markers (specifying `episode_id`, `type`, and timestamp)
-3. `POST /marker_point_content_rules` for each marker point to define what ad content fills each slot
-4. `GET /marker_points?episode_id={id}` to verify all markers are correctly placed
-5. `GET /marker_point_content_rules?marker_point_id={id}` to confirm content rules are attached
-
-### 3. Manage Credits and People on an Episode
-
-1. `GET /people?q={name}` to search for existing people records
-2. If the person does not exist, `POST /people` to create them
-3. `POST /credits` with `creditable_id` set to the episode ID, `creditable_type` set to `Episode`, and the person reference
-4. `GET /credits?creditable_id={episode_id}&creditable_type=Episode` to list all credits and verify
-5. To update a role, `PATCH /credits/{id}`; to remove, `DELETE /credits/{id}`
-
-### 4. Organize Episodes by Season and Classification
-
-1. `POST /seasons` to create a new season under the series (if needed)
-2. `PATCH /episodes/{id}` to move episodes into the new season by updating `season_id`
-3. `GET /classifications?type={type}` to find available classification categories (genres, topics, countries)
-4. For each episode, `POST /classification_inclusions` with `classified_id` (episode), `classified_type` ("Episode"), and `classification_id`
-5. Verify with `GET /classification_inclusions?classified_id={episode_id}&classified_type=Episode`
-
-### 5. Audit and Clean Up a Series' Feed
-
-1. `GET /feeds?series_id={series_id}` to list all feeds for the series
-2. `GET /feed_items?feed_id={feed_id}&page[number]=1` and paginate through all items
-3. For each feed item, `GET /episode_versions?feed_item_id={id}` to check version linkage
-4. Identify orphaned or unpublished feed items (`published` filter) and remove with `DELETE /feed_items/{id}`
-5. Remove unused episode versions with `DELETE /episode_versions/{id}`
-6. `GET /feed_items?feed_id={feed_id}&sort=released_at` to verify the feed is clean and ordered correctly
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Search classification_inclusions?" -> GET /classification_inclusions
+- "Get classification_inclusion details?" -> GET /classification_inclusions/{id}
+- "Search classifications?" -> GET /classifications
+- "Get classification details?" -> GET /classifications/{id}
+- "List all credits?" -> GET /credits
+- "Create a credit?" -> POST /credits
+- "Delete a credit?" -> DELETE /credits/{id}
+- "Get credit details?" -> GET /credits/{id}
+- "Partially update a credit?" -> PATCH /credits/{id}
+- "List all episode_versions?" -> GET /episode_versions
+- "Create a episode_version?" -> POST /episode_versions
+- "Delete a episode_version?" -> DELETE /episode_versions/{id}
+- "Get episode_version details?" -> GET /episode_versions/{id}
+- "Partially update a episode_version?" -> PATCH /episode_versions/{id}
+- "Search episodes?" -> GET /episodes
+- "Create a episode?" -> POST /episodes
+- "Delete a episode?" -> DELETE /episodes/{id}
+- "Get episode details?" -> GET /episodes/{id}
+- "Partially update a episode?" -> PATCH /episodes/{id}
+- "List all next_sibling?" -> GET /episodes/{id}/next_sibling
+- "List all previous_sibling?" -> GET /episodes/{id}/previous_sibling
+- "Search feed_items?" -> GET /feed_items
+- "Create a feed_item?" -> POST /feed_items
+- "Delete a feed_item?" -> DELETE /feed_items/{id}
+- "Get feed_item details?" -> GET /feed_items/{id}
+- "Partially update a feed_item?" -> PATCH /feed_items/{id}
+- "List all feeds?" -> GET /feeds
+- "Create a feed?" -> POST /feeds
+- "Delete a feed?" -> DELETE /feeds/{id}
+- "Get feed details?" -> GET /feeds/{id}
+- "Partially update a feed?" -> PATCH /feeds/{id}
+- "List all images?" -> GET /images
+- "Create a image?" -> POST /images
+- "Delete a image?" -> DELETE /images/{id}
+- "Get image details?" -> GET /images/{id}
+- "List all marker_point_content_rules?" -> GET /marker_point_content_rules
+- "Create a marker_point_content_rule?" -> POST /marker_point_content_rules
+- "Delete a marker_point_content_rule?" -> DELETE /marker_point_content_rules/{id}
+- "Get marker_point_content_rule details?" -> GET /marker_point_content_rules/{id}
+- "Partially update a marker_point_content_rule?" -> PATCH /marker_point_content_rules/{id}
+- "List all marker_points?" -> GET /marker_points
+- "Create a marker_point?" -> POST /marker_points
+- "Delete a marker_point?" -> DELETE /marker_points/{id}
+- "Get marker_point details?" -> GET /marker_points/{id}
+- "Partially update a marker_point?" -> PATCH /marker_points/{id}
+- "List all media_assets?" -> GET /media_assets
+- "Get media_asset details?" -> GET /media_assets/{id}
+- "Search networks?" -> GET /networks
+- "Get network details?" -> GET /networks/{id}
+- "Partially update a network?" -> PATCH /networks/{id}
+- "Search people?" -> GET /people
+- "Create a people?" -> POST /people
+- "Get people details?" -> GET /people/{id}
+- "Partially update a people?" -> PATCH /people/{id}
+- "Search seasons?" -> GET /seasons
+- "Create a season?" -> POST /seasons
+- "Delete a season?" -> DELETE /seasons/{id}
+- "Get season details?" -> GET /seasons/{id}
+- "Partially update a season?" -> PATCH /seasons/{id}
+- "Search series?" -> GET /series
+- "Get sery details?" -> GET /series/{id}
+- "Partially update a sery?" -> PATCH /series/{id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

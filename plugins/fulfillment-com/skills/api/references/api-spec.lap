@@ -9,101 +9,116 @@
 
 @group users
 @endpoint GET /users/me
-@returns(200) {id: int, apiKey: str, contactInfo: map{id: int, apiKey: str, contactInfo: any, merchant: map{id: int}, createDate: str(date-time), updatedAt: str(date-time), updatedBy: str(date-time), status: bool, deptLeader: bool, username: str, name: str}, merchant: map{id: int}, createDate: str(date-time), updatedAt: str(date-time), updatedBy: str(date-time), status: bool, deptLeader: bool, username: str, name: str}
+@desc About Me
+@returns(200) {id: int, apiKey: str, contactInfo: map{id: int, apiKey: str, contactInfo: any, merchant: map{id: int}, createDate: str(date-time), updatedAt: str(date-time), updatedBy: str(date-time), status: bool, deptLeader: bool, username: str, name: str}, merchant: map{id: int}, createDate: str(date-time), updatedAt: str(date-time), updatedBy: str(date-time), status: bool, deptLeader: bool, username: str, name: str} # User
 
 @endgroup
 
 @group returns
 @endpoint GET /returns
-@required {fromDate: str, toDate: str}
-@optional {page: int=1, limit: int=80}
-@returns(200) {meta: map{pagination: map{totalPages: int, currentPage: int, count: int, total: int}}, data: [map]}
+@desc List Returns
+@required {fromDate: str # Date-time in ISO 8601 format for selecting orders after, or at, the specified time, toDate: str # Date-time in ISO 8601 format for selecting orders before, or at, the specified time}
+@optional {page: int=1 # A multiplier of the number of items (limit parameter) to skip before returning results, limit: int=80 # The numbers of items to return}
+@returns(200) {meta: map{pagination: map{totalPages: int, currentPage: int, count: int, total: int}}, data: [map]} # Returns
 
 @endpoint PUT /returns
+@desc Inform us of an RMA
 @required {items: [map{sku!: str, quantityExpected!: int}], recipient: any, rmaNumber: str}
 @optional {merchantOrderId: str}
-@returns(201) {items: [map], recipient: map{id: int, updatedBy: any, updatedAt: str(date-time), iso: map{id: int, iso2: str, name: str}, companyName: str, country: str, postalCode: str, addressRegion: str, addressLocality: str, address2: str, address1: str, phone: str, lastName: str, firstName: str, email: str}, merchantOrderId: str, rmaNumber: str}
-@returns(202)
-@errors {404, 409}
+@returns(201) {items: [map], recipient: map{id: int, updatedBy: any, updatedAt: str(date-time), iso: map{id: int, iso2: str, name: str}, companyName: str, country: str, postalCode: str, addressRegion: str, addressLocality: str, address2: str, address1: str, phone: str, lastName: str, firstName: str, email: str}, merchantOrderId: str, rmaNumber: str} # RMA Created
+@returns(202) RMA Updated
+@errors {404: A Component of Your Request Was Not Found, 409: RMA Already Processed}
 
 @endgroup
 
 @group orders
 @endpoint PUT /orders/{id}/status
-@required {id: int(int32), reason: str, status: map{code!: str}}
-@returns(200)
-@errors {404}
+@desc Update Order Status
+@required {id: int(int32) # The FDC order Id, reason: str # Human-readable description, status: map{code!: str}}
+@returns(200) Order Found
+@errors {404: Order not found}
 
 @endpoint PUT /orders/{id}/ship
-@required {id: int(int32), trackingNumber: str}
-@optional {weightOverride: num(float)}
-@returns(200)
-@errors {404}
+@desc Ship an Order
+@required {id: int(int32) # The FDC order Id, trackingNumber: str # Tracking number of package}
+@optional {weightOverride: num(float) # Override predicted weight of package}
+@returns(200) Order Found
+@errors {404: Order not found}
 
 @endpoint GET /orders/{id}
-@required {id: str}
-@optional {merchantId: int, hydrate: [str]}
-@returns(200)
-@errors {404}
+@desc Order Details
+@required {id: str # The FDC order Id}
+@optional {merchantId: int # Providing your `merchantId` indicates the `id` is your `merchantOrderId`. Although it is not necessary to provide this it will speed up your results when using your `merchantOrderId` however it will slow your results when using the FDC provided `id`, hydrate: [str] # Adds additional information to the response, uses a CSV format for multiple values.'}
+@returns(200) Order Found
+@errors {404: Order not found}
 
 @endpoint DELETE /orders/{id}
-@required {id: int(int32)}
-@returns(200)
-@errors {404, 405}
+@desc Cancel an Order
+@required {id: int(int32) # ID of order that needs to be canceled}
+@returns(200) Your order was successfully canceled
+@errors {404: Order not found, 405: Could not cancel your order, perhaps it already shipped}
 
 @endpoint GET /orders
-@required {fromDate: str, toDate: str}
-@optional {merchantIds: [int], warehouseIds: [int], page: int=1, limit: int=80, hydrate: [str]}
-@returns(200)
-@errors {404}
+@desc List of Orders
+@required {fromDate: str # Date-time in ISO 8601 format for selecting orders after, or at, the specified time, toDate: str # Date-time in ISO 8601 format for selecting orders before, or at, the specified time}
+@optional {merchantIds: [int] # A CSV of merchant id, '123' or '1,2,3', warehouseIds: [int] # A CSV of warehouse identifiers., page: int=1 # A multiplier of the number of items (limit parameter) to skip before returning results, limit: int=80 # The numbers of items to return, hydrate: [str] # Adds additional information to the response, uses a CSV format for multiple values.'}
+@returns(200) OK
+@errors {404: No Orders Found}
 
 @endpoint POST /orders
-@required {merchantOrderId: str, shippingMethod: str, recipient: map{companyName: str, country!: str, postalCode: str, addressRegion!: str, addressLocality!: str, address2: str, address1!: str, phone!: str, lastName!: str, firstName!: str, email!: str}, items: [map{quantity!: int, sku!: str, declaredValue!: str(double)}]}
-@optional {merchantId: int, warehouse: map{id: int}, integrator: str(1ShoppingCart/3dCart/AdobeBC/AmazonAU/AmazonEU/AmazonNA/BigCommerce/BrandBoom/BrightPearl/BuyGoods/Celery/ChannelAdvisor/Clickbank/CommerceHub/Custom/Demandware/Ebay/Ecwid/Etsy/FoxyCart/Goodsie/Infusionsoft/Konnektive/LimeLight/Linio/Linnworks/Magento/Netsuite/NewEgg/Nexternal/NuOrder/Opencart/OrderWave/osCommerce1/Overstock/PayPal/PrestaShop/Pricefalls/Quickbooks/Rakuten/Sears/Sellbrite/SellerCloud/Shipstation/Shopify/Skubana/SolidCommerce/SparkPay/SpreeCommerce/spsCommerce/StitchLabs/StoneEdge/TradeGecko/UltraCart/Volusion/VTEX/Walmart/WooCommerce/Yahoo), notes: str}
-@returns(201) {id: int, trackingNumbers: [map], validatedConsignee: any, originalConsignee: map{id: int, updatedBy: any, updatedAt: str(date-time), iso: map{id: int, iso2: str, name: str}, companyName: str, country: str, postalCode: str, addressRegion: str, addressLocality: str, address2: str, address1: str, phone: str, lastName: str, firstName: str, email: str}, currentStatus: map{id: int, createdBy: any, status: map{id: int, isClosed: bool, actionRequiredBy: map{id: int, name: str}, stage: map{name: str, code: str}, state: map{name: str, code: str}, detail: str, reason: str, name: str, detailCode: str, code: str}, reason: str, date: str(date-time)}, warehouse: map{id: int}, merchant: map{id: int, name: str}, departDate: str(date-time), dispatchDate: str(date-time), recordedOn: str(date-time), merchantShippingMethod: str, purchaseOrderNum: str, merchantOrderId: str, parentOrder: map{id: int}}
-@errors {400, 401, 403, 409, 422}
+@desc New Order
+@required {merchantOrderId: str # Unique ID provided by the merchant, shippingMethod: str # Custom for you, it will be mapped to an actual method within the OMS UI, recipient: map{companyName: str, country!: str, postalCode: str, addressRegion!: str, addressLocality!: str, address2: str, address1!: str, phone!: str, lastName!: str, firstName!: str, email!: str}, items: [map{quantity!: int, sku!: str, declaredValue!: str(double)}]}
+@optional {merchantId: int # Necessary if you have a multitenancy account, otherwise we will associate the order with your account, warehouse: map{id: int} # We automatically select a warehouse based on inventory availability, requested carrier and delivery schedule, and carrier cost. You may however override this process. Because this is not recommended please inform your AE prior to using so they may enable this feature., integrator: str(1ShoppingCart/3dCart/AdobeBC/AmazonAU/AmazonEU/AmazonNA/BigCommerce/BrandBoom/BrightPearl/BuyGoods/Celery/ChannelAdvisor/Clickbank/CommerceHub/Custom/Demandware/Ebay/Ecwid/Etsy/FoxyCart/Goodsie/Infusionsoft/Konnektive/LimeLight/Linio/Linnworks/Magento/Netsuite/NewEgg/Nexternal/NuOrder/Opencart/OrderWave/osCommerce1/Overstock/PayPal/PrestaShop/Pricefalls/Quickbooks/Rakuten/Sears/Sellbrite/SellerCloud/Shipstation/Shopify/Skubana/SolidCommerce/SparkPay/SpreeCommerce/spsCommerce/StitchLabs/StoneEdge/TradeGecko/UltraCart/Volusion/VTEX/Walmart/WooCommerce/Yahoo) # Use of this property requires special permission and must be discussed with your account executive; values are restricted while custom values need to be accepted by your AE., notes: str}
+@returns(201) {id: int, trackingNumbers: [map], validatedConsignee: any, originalConsignee: map{id: int, updatedBy: any, updatedAt: str(date-time), iso: map{id: int, iso2: str, name: str}, companyName: str, country: str, postalCode: str, addressRegion: str, addressLocality: str, address2: str, address1: str, phone: str, lastName: str, firstName: str, email: str}, currentStatus: map{id: int, createdBy: any, status: map{id: int, isClosed: bool, actionRequiredBy: map{id: int, name: str}, stage: map{name: str, code: str}, state: map{name: str, code: str}, detail: str, reason: str, name: str, detailCode: str, code: str}, reason: str, date: str(date-time)}, warehouse: map{id: int}, merchant: map{id: int, name: str}, departDate: str(date-time), dispatchDate: str(date-time), recordedOn: str(date-time), merchantShippingMethod: str, purchaseOrderNum: str, merchantOrderId: str, parentOrder: map{id: int}} # Order Created
+@errors {400: Invalid order object, 401: You do not have permission to create orders, 403: Forbidden, 409: Conflict, 422: Validation Failure}
 
 @endpoint GET /orders/simple
-@required {fromDate: str, toDate: str}
-@optional {merchantIds: [int], warehouseIds: [int], page: int=1, limit: int=80}
-@returns(200) {id: int, merchantOrderId: str, parentOrderId: int, warehouseId: int, firstPrintDate: str(date-time), departDate: str(date-time), deliveryDate: str(date-time), carrier: str, trackingNumbers: [str]}
-@errors {404}
+@desc List of Simplified Orders
+@required {fromDate: str # Date-time in ISO 8601 format for selecting orders after, or at, the specified time, toDate: str # Date-time in ISO 8601 format for selecting orders before, or at, the specified time}
+@optional {merchantIds: [int] # A CSV of merchant id, '123' or '1,2,3', warehouseIds: [int] # A CSV of warehouse identifiers., page: int=1 # A multiplier of the number of items (limit parameter) to skip before returning results, limit: int=80 # The numbers of items to return}
+@returns(200) {id: int, merchantOrderId: str, parentOrderId: int, warehouseId: int, firstPrintDate: str(date-time), departDate: str(date-time), deliveryDate: str(date-time), carrier: str, trackingNumbers: [str]} # OK
+@errors {404: No Orders Found}
 
 @endgroup
 
 @group oauth
 @endpoint POST /oauth/access_token
-@returns(200) {refresh_token: str, expires_in: int, token_type: str, access_token: str}
-@errors {401}
+@desc Generate an Access Token
+@returns(200) {refresh_token: str, expires_in: int, token_type: str, access_token: str} # Authorized
+@errors {401: Unauthorized}
 
 @endgroup
 
 @group inventory
 @endpoint GET /inventory
-@optional {page: int=1, limit: int=80, externalSkuNames: [str]}
-@returns(200) {meta: map{pagination: map{totalPages: int, currentPage: int, count: int, total: int}}, data: [map]}
-@errors {400, 401, 403, 404}
+@desc List of Item Inventories
+@optional {page: int=1 # A multiplier of the number of items (limit parameter) to skip before returning results, limit: int=80 # The numbers of items to return, externalSkuNames: [str] # A CSV of sku reference names, 'skuName1' or 'skuName1,skuName2,skuName3'}
+@returns(200) {meta: map{pagination: map{totalPages: int, currentPage: int, count: int, total: int}}, data: [map]} # Found Inventory
+@errors {400: Bad Request, 401: Unauthorized, 403: Access Denied, 404: No Inventory Found}
 
 @endpoint GET /inventory/full
-@optional {externalSkuNames: [str], warehouseIds: [int], page: int=1, limit: int=80}
-@returns(200) {data: [map], meta: map{pagination: map{totalPages: int, currentPage: int, count: int, total: int}}}
-@errors {400, 401, 403, 404}
+@desc List of Inventories
+@optional {externalSkuNames: [str] # A CSV of sku reference names., warehouseIds: [int] # A CSV of warehouse identifiers., page: int=1 # A multiplier of the number of items (limit parameter) to skip before returning results, limit: int=80 # The numbers of items to return}
+@returns(200) {data: [map], meta: map{pagination: map{totalPages: int, currentPage: int, count: int, total: int}}} # Found Inventory
+@errors {400: Bad Request, 401: Unauthorized, 403: Access Denied, 404: No Inventory Found}
 
 @endgroup
 
 @group track
 @endpoint GET /track/{trackingNumber}
-@required {trackingNumber: str}
-@returns(200) {events: [map], deliveryEvent: str(date-time), firstTransitEvent: str(date-time), service: str, carrier: str, status: map{code: str, description: str}, trackingNumber: str}
-@errors {404, 429}
+@desc Tracking
+@required {trackingNumber: str # Tracking number for a shipment that exists within BestOMS.}
+@returns(200) {events: [map], deliveryEvent: str(date-time), firstTransitEvent: str(date-time), service: str, carrier: str, status: map{code: str, description: str}, trackingNumber: str} # OK
+@errors {404: Not Found, 429: Too Many Requests}
 
 @endgroup
 
 @group accounting
 @endpoint GET /accounting
-@required {fromDate: str, toDate: str, hydrate: [str]}
-@optional {page: int=1, limit: int=80, warehouseIds: [int], orderIds: [int]}
-@returns(200) {meta: map{pagination: map{totalPages: int, currentPage: int, count: int, total: int}}, data: [map]}
+@desc List Order Accounting
+@required {fromDate: str # Orders invoice date. Date-time in ISO 8601 format for selecting orders after, or at, the specified time, toDate: str # Orders invoice date. Date-time in ISO 8601 format for selecting orders before, or at, the specified time, hydrate: [str] # Adds additional information to the response, uses a CSV format for multiple values.}
+@optional {page: int=1 # A multiplier of the number of items (limit parameter) to skip before returning results, limit: int=80 # The numbers of items to return, warehouseIds: [int] # A CSV of warehouse id, '123' or '1,2,3', orderIds: [int] # A CSV of FDC order id, '123' or '1,2,3'}
+@returns(200) {meta: map{pagination: map{totalPages: int, currentPage: int, count: int, total: int}}, data: [map]} # Accounting
 
 @endgroup
 

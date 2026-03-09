@@ -9,35 +9,42 @@
 
 @group profilingGroups
 @endpoint POST /profilingGroups/{profilingGroupName}/notificationConfiguration
+@desc Add up to 2 anomaly notifications channels for a profiling group.
 @required {profilingGroupName: str, channels: [Channel]}
 @returns(200) {notificationConfiguration: NotificationConfiguration?{channels: [Channel]?}}
 
 @endpoint POST /profilingGroups/{profilingGroupName}/frames/-/metrics
+@desc Returns the time series of values for a requested list of frame metrics from a time period.
 @required {profilingGroupName: str}
 @optional {endTime: str(timestamp), period: str, startTime: str(timestamp), targetResolution: str, frameMetrics: [FrameMetric]}
 @returns(200) {endTime: str(timestamp), endTimes: [TimestampStructure], frameMetricData: [FrameMetricDatum], resolution: str, startTime: str(timestamp), unprocessedEndTimes: map<str,[TimestampStructure]>}
 
 @endpoint POST /profilingGroups/{profilingGroupName}/configureAgent
+@desc Used by profiler agents to report their current state and to receive remote configuration updates. For example, ConfigureAgent can be used to tell an agent whether to profile or not and for how long to return profiling data.
 @required {profilingGroupName: str}
 @optional {fleetInstanceId: str, metadata: map<str,str>}
-@returns(200) {configuration: AgentConfiguration{agentParameters: map<str,str>?, periodInSeconds: int, shouldProfile: bool}}
+@returns(200) {configuration: AgentConfiguration{agentParameters: map<str, str>?: any, periodInSeconds: int, shouldProfile: bool}}
 
 @endpoint POST /profilingGroups
+@desc Creates a profiling group.
 @required {clientToken: str, profilingGroupName: str}
 @optional {agentOrchestrationConfig: AgentOrchestrationConfig, computePlatform: str, tags: map<str,str>}
-@returns(200) {profilingGroup: ProfilingGroupDescription{agentOrchestrationConfig: AgentOrchestrationConfig?{profilingEnabled: bool}, arn: str?, computePlatform: str?, createdAt: str(timestamp)?, name: str?, profilingStatus: ProfilingStatus?{latestAgentOrchestratedAt: str(timestamp)?, latestAgentProfileReportedAt: str(timestamp)?, latestAggregatedProfile: AggregatedProfileTime?{period: str?, start: str(timestamp)?}}, tags: map<str,str>?, updatedAt: str(timestamp)?}}
+@returns(200) {profilingGroup: ProfilingGroupDescription{agentOrchestrationConfig: AgentOrchestrationConfig?{profilingEnabled: bool}, arn: str?, computePlatform: str?, createdAt: str(timestamp)?, name: str?, profilingStatus: ProfilingStatus?{latestAgentOrchestratedAt: str(timestamp)?, latestAgentProfileReportedAt: str(timestamp)?, latestAggregatedProfile: AggregatedProfileTime?{period: str?, start: str(timestamp)?}}, tags: map<str, str>?: any, updatedAt: str(timestamp)?}}
 
 @endpoint DELETE /profilingGroups/{profilingGroupName}
+@desc Deletes a profiling group.
 @required {profilingGroupName: str}
 
 @endpoint GET /profilingGroups/{profilingGroupName}
+@desc Returns a  ProfilingGroupDescription  object that contains information about the requested profiling group.
 @required {profilingGroupName: str}
-@returns(200) {profilingGroup: ProfilingGroupDescription{agentOrchestrationConfig: AgentOrchestrationConfig?{profilingEnabled: bool}, arn: str?, computePlatform: str?, createdAt: str(timestamp)?, name: str?, profilingStatus: ProfilingStatus?{latestAgentOrchestratedAt: str(timestamp)?, latestAgentProfileReportedAt: str(timestamp)?, latestAggregatedProfile: AggregatedProfileTime?{period: str?, start: str(timestamp)?}}, tags: map<str,str>?, updatedAt: str(timestamp)?}}
+@returns(200) {profilingGroup: ProfilingGroupDescription{agentOrchestrationConfig: AgentOrchestrationConfig?{profilingEnabled: bool}, arn: str?, computePlatform: str?, createdAt: str(timestamp)?, name: str?, profilingStatus: ProfilingStatus?{latestAgentOrchestratedAt: str(timestamp)?, latestAgentProfileReportedAt: str(timestamp)?, latestAggregatedProfile: AggregatedProfileTime?{period: str?, start: str(timestamp)?}}, tags: map<str, str>?: any, updatedAt: str(timestamp)?}}
 
 @endgroup
 
 @group internal
 @endpoint GET /internal/findingsReports
+@desc Returns a list of  FindingsReportSummary  objects that contain analysis results for all profiling groups in your AWS account.
 @optional {dailyReportsOnly: bool, maxResults: int, nextToken: str}
 @returns(200) {nextToken: str?, reportSummaries: [FindingsReportSummary]}
 
@@ -45,14 +52,17 @@
 
 @group profilingGroups
 @endpoint GET /profilingGroups/{profilingGroupName}/notificationConfiguration
+@desc Get the current configuration for anomaly notifications for a profiling group.
 @required {profilingGroupName: str}
 @returns(200) {notificationConfiguration: NotificationConfiguration{channels: [Channel]?}}
 
 @endpoint GET /profilingGroups/{profilingGroupName}/policy
+@desc Returns the JSON-formatted resource-based policy on a profiling group.
 @required {profilingGroupName: str}
 @returns(200) {policy: str, revisionId: str}
 
 @endpoint GET /profilingGroups/{profilingGroupName}/profile
+@desc Gets the aggregated profile of a profiling group for a specified time range. Amazon CodeGuru Profiler collects posted agent profiles for a profiling group into aggregated profiles.   &lt;note&gt; &lt;p&gt; Because aggregated profiles expire over time &lt;code&gt;GetProfile&lt;/code&gt; is not idempotent. &lt;/p&gt; &lt;/note&gt; &lt;p&gt; Specify the time range for the requested aggregated profile using 1 or 2 of the following parameters: &lt;code&gt;startTime&lt;/code&gt;, &lt;code&gt;endTime&lt;/code&gt;, &lt;code&gt;period&lt;/code&gt;. The maximum time range allowed is 7 days. If you specify all 3 parameters, an exception is thrown. If you specify only &lt;code&gt;period&lt;/code&gt;, the latest aggregated profile is returned. &lt;/p&gt; &lt;p&gt; Aggregated profiles are available with aggregation periods of 5 minutes, 1 hour, and 1 day, aligned to UTC. The aggregation period of an aggregated profile determines how long it is retained. For more information, see &lt;a href=&quot;https://docs.aws.amazon.com/codeguru/latest/profiler-api/API_AggregatedProfileTime.html&quot;&gt; &lt;code&gt;AggregatedProfileTime&lt;/code&gt; &lt;/a&gt;. The aggregated profile's aggregation period determines how long it is retained by CodeGuru Profiler. &lt;/p&gt; &lt;ul&gt; &lt;li&gt; &lt;p&gt; If the aggregation period is 5 minutes, the aggregated profile is retained for 15 days. &lt;/p&gt; &lt;/li&gt; &lt;li&gt; &lt;p&gt; If the aggregation period is 1 hour, the aggregated profile is retained for 60 days. &lt;/p&gt; &lt;/li&gt; &lt;li&gt; &lt;p&gt; If the aggregation period is 1 day, the aggregated profile is retained for 3 years. &lt;/p&gt; &lt;/li&gt; &lt;/ul&gt; &lt;p&gt;There are two use cases for calling &lt;code&gt;GetProfile&lt;/code&gt;.&lt;/p&gt; &lt;ol&gt; &lt;li&gt; &lt;p&gt; If you want to return an aggregated profile that already exists, use &lt;a href=&quot;https://docs.aws.amazon.com/codeguru/latest/profiler-api/API_ListProfileTimes.html&quot;&gt; &lt;code&gt;ListProfileTimes&lt;/code&gt; &lt;/a&gt; to view the time ranges of existing aggregated profiles. Use them in a &lt;code&gt;GetProfile&lt;/code&gt; request to return a specific, existing aggregated profile. &lt;/p&gt; &lt;/li&gt; &lt;li&gt; &lt;p&gt; If you want to return an aggregated profile for a time range that doesn't align with an existing aggregated profile, then CodeGuru Profiler makes a best effort to combine existing aggregated profiles from the requested time range and return them as one aggregated profile. &lt;/p&gt; &lt;p&gt; If aggregated profiles do not exist for the full time range requested, then aggregated profiles for a smaller time range are returned. For example, if the requested time range is from 00:00 to 00:20, and the existing aggregated profiles are from 00:15 and 00:25, then the aggregated profiles from 00:15 to 00:20 are returned. &lt;/p&gt; &lt;/li&gt; &lt;/ol&gt;
 @required {profilingGroupName: str}
 @optional {Accept: str, endTime: str(timestamp), maxDepth: int, period: str, startTime: str(timestamp)}
 @returns(200) {contentEncoding: str?, contentType: str, profile: bytes}
@@ -61,11 +71,13 @@
 
 @group internal
 @endpoint GET /internal/profilingGroups/{profilingGroupName}/recommendations
+@desc Returns a list of  Recommendation  objects that contain recommendations for a profiling group for a given time period. A list of  Anomaly  objects that contains details about anomalies detected in the profiling group for the same time period is also returned.
 @required {endTime: str(timestamp), profilingGroupName: str, startTime: str(timestamp)}
 @optional {locale: str}
 @returns(200) {anomalies: [Anomaly], profileEndTime: str(timestamp), profileStartTime: str(timestamp), profilingGroupName: str, recommendations: [Recommendation]}
 
 @endpoint GET /internal/profilingGroups/{profilingGroupName}/findingsReports
+@desc List the available reports for a given profiling group and time range.
 @required {endTime: str(timestamp), profilingGroupName: str, startTime: str(timestamp)}
 @optional {dailyReportsOnly: bool, maxResults: int, nextToken: str}
 @returns(200) {findingsReportSummaries: [FindingsReportSummary], nextToken: str?}
@@ -74,11 +86,13 @@
 
 @group profilingGroups
 @endpoint GET /profilingGroups/{profilingGroupName}/profileTimes
+@desc Lists the start times of the available aggregated profiles of a profiling group for an aggregation period within the specified time range.
 @required {endTime: str(timestamp), period: str, profilingGroupName: str, startTime: str(timestamp)}
 @optional {maxResults: int, nextToken: str, orderBy: str}
 @returns(200) {nextToken: str?, profileTimes: [ProfileTime]}
 
 @endpoint GET /profilingGroups
+@desc Returns a list of profiling groups. The profiling groups are returned as  ProfilingGroupDescription  objects.
 @optional {includeDescription: bool, maxResults: int, nextToken: str}
 @returns(200) {nextToken: str?, profilingGroupNames: [str], profilingGroups: [ProfilingGroupDescription]?}
 
@@ -86,6 +100,7 @@
 
 @group tags
 @endpoint GET /tags/{resourceArn}
+@desc Returns a list of the tags that are assigned to a specified resource.
 @required {resourceArn: str}
 @returns(200) {tags: map<str,str>?}
 
@@ -93,19 +108,23 @@
 
 @group profilingGroups
 @endpoint POST /profilingGroups/{profilingGroupName}/agentProfile
+@desc Submits profiling data to an aggregated profile of a profiling group. To get an aggregated profile that is created with this profiling data, use  GetProfile .
 @required {Content-Type: str, profilingGroupName: str, agentProfile: bytes}
 @optional {profileToken: str}
 
 @endpoint PUT /profilingGroups/{profilingGroupName}/policy/{actionGroup}
+@desc Adds permissions to a profiling group's resource-based policy that are provided using an action group. If a profiling group doesn't have a resource-based policy, one is created for it using the permissions in the action group and the roles and users in the principals parameter.   &lt;p&gt; The one supported action group that can be added is &lt;code&gt;agentPermission&lt;/code&gt; which grants &lt;code&gt;ConfigureAgent&lt;/code&gt; and &lt;code&gt;PostAgent&lt;/code&gt; permissions. For more information, see &lt;a href=&quot;https://docs.aws.amazon.com/codeguru/latest/profiler-ug/resource-based-policies.html&quot;&gt;Resource-based policies in CodeGuru Profiler&lt;/a&gt; in the &lt;i&gt;Amazon CodeGuru Profiler User Guide&lt;/i&gt;, &lt;a href=&quot;https://docs.aws.amazon.com/codeguru/latest/profiler-api/API_ConfigureAgent.html&quot;&gt; &lt;code&gt;ConfigureAgent&lt;/code&gt; &lt;/a&gt;, and &lt;a href=&quot;https://docs.aws.amazon.com/codeguru/latest/profiler-api/API_PostAgentProfile.html&quot;&gt; &lt;code&gt;PostAgentProfile&lt;/code&gt; &lt;/a&gt;. &lt;/p&gt; &lt;p&gt; The first time you call &lt;code&gt;PutPermission&lt;/code&gt; on a profiling group, do not specify a &lt;code&gt;revisionId&lt;/code&gt; because it doesn't have a resource-based policy. Subsequent calls must provide a &lt;code&gt;revisionId&lt;/code&gt; to specify which revision of the resource-based policy to add the permissions to. &lt;/p&gt; &lt;p&gt; The response contains the profiling group's JSON-formatted resource policy. &lt;/p&gt;
 @required {actionGroup: str, profilingGroupName: str, principals: [str]}
 @optional {revisionId: str}
 @returns(200) {policy: str, revisionId: str}
 
 @endpoint DELETE /profilingGroups/{profilingGroupName}/notificationConfiguration/{channelId}
+@desc Remove one anomaly notifications channel for a profiling group.
 @required {channelId: str, profilingGroupName: str}
 @returns(200) {notificationConfiguration: NotificationConfiguration?{channels: [Channel]?}}
 
 @endpoint DELETE /profilingGroups/{profilingGroupName}/policy/{actionGroup}
+@desc Removes permissions from a profiling group's resource-based policy that are provided using an action group. The one supported action group that can be removed is agentPermission which grants ConfigureAgent and PostAgent permissions. For more information, see Resource-based policies in CodeGuru Profiler in the Amazon CodeGuru Profiler User Guide,  ConfigureAgent , and  PostAgentProfile .
 @required {actionGroup: str, profilingGroupName: str, revisionId: str}
 @returns(200) {policy: str, revisionId: str}
 
@@ -113,6 +132,7 @@
 
 @group internal
 @endpoint POST /internal/profilingGroups/{profilingGroupName}/anomalies/{anomalyInstanceId}/feedback
+@desc Sends feedback to CodeGuru Profiler about whether the anomaly detected by the analysis is useful or not.
 @required {anomalyInstanceId: str, profilingGroupName: str, type: str}
 @optional {comment: str}
 
@@ -120,17 +140,20 @@
 
 @group tags
 @endpoint POST /tags/{resourceArn}
+@desc Use to assign one or more tags to a resource.
 @required {resourceArn: str, tags: map<str,str>}
 
 @endpoint DELETE /tags/{resourceArn}
+@desc Use to remove one or more tags from a resource.
 @required {resourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group profilingGroups
 @endpoint PUT /profilingGroups/{profilingGroupName}
+@desc Updates a profiling group.
 @required {profilingGroupName: str, agentOrchestrationConfig: AgentOrchestrationConfig}
-@returns(200) {profilingGroup: ProfilingGroupDescription{agentOrchestrationConfig: AgentOrchestrationConfig?{profilingEnabled: bool}, arn: str?, computePlatform: str?, createdAt: str(timestamp)?, name: str?, profilingStatus: ProfilingStatus?{latestAgentOrchestratedAt: str(timestamp)?, latestAgentProfileReportedAt: str(timestamp)?, latestAggregatedProfile: AggregatedProfileTime?{period: str?, start: str(timestamp)?}}, tags: map<str,str>?, updatedAt: str(timestamp)?}}
+@returns(200) {profilingGroup: ProfilingGroupDescription{agentOrchestrationConfig: AgentOrchestrationConfig?{profilingEnabled: bool}, arn: str?, computePlatform: str?, createdAt: str(timestamp)?, name: str?, profilingStatus: ProfilingStatus?{latestAgentOrchestratedAt: str(timestamp)?, latestAgentProfileReportedAt: str(timestamp)?, latestAggregatedProfile: AggregatedProfileTime?{period: str?, start: str(timestamp)?}}, tags: map<str, str>?: any, updatedAt: str(timestamp)?}}
 
 @endgroup
 

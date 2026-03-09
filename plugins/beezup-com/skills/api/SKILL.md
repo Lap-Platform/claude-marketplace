@@ -284,103 +284,225 @@ https://api.beezup.com
 | POST | /orders/v3//batches/changeOrders/{changeOrderType} | Send a batch of operations to change your marketplace Order information: accept, ship, etc.  (max 100 items per call) |
 | POST | /orders/v3//batches/changeOrders | Send a batch of operations to change your marketplace Order information: accept, ship, etc.  (max 100 items per call) |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I log in to BeezUP?" -> POST /v2/public/security/login
-- "How do I handle two-factor authentication?" -> POST /v2/public/security/login/mfa
-- "How do I create a new BeezUP account?" -> POST /v2/public/security/register
-- "What sales channels are available in my country?" -> GET /v2/public/channels/{countryIsoCode}
-- "How do I list all my stores?" -> GET /v2/user/customer/stores
-- "How do I import a product catalog?" -> POST /v2/user/catalogs/{storeId}/importations/start
-- "How do I check the status of a catalog import?" -> GET /v2/user/catalogs/{storeId}/importations/{executionId}
-- "How do I list my marketplace orders?" -> POST /v2/user/marketplaces/orders/list/full
-- "How do I ship or change an order status?" -> POST /v2/user/marketplaces/orders/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/{changeOrderType}
-- "How do I publish products to a marketplace?" -> POST /v2/user/marketplaces/channelcatalogs/publications/{marketplaceTechnicalCode}/{accountId}/publish
-- "How do I get analytics reports by day?" -> POST /v2/user/analytics/{storeId}/reports/byday
-- "How do I set up auto-import for my catalog?" -> POST /v2/user/catalogs/{storeId}/autoImport/activate
-- "How do I generate an invoice for an order?" -> POST /v2/user/marketplaces/orders/invoices/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderUUID}/generate
-- "How do I configure channel catalog column mappings?" -> PUT /v2/user/channelCatalogs/{channelCatalogId}/columnMappings
-- "How do I harvest latest orders from marketplaces?" -> POST /orders/v3//harvest
-
-## Response Tips
-
-- **Authentication endpoints**: Login returns a session token on 200; MFA may return 202 (accepted, awaiting second factor). Always check for 403 (account locked/disabled).
-- **Public channels/LOV**: Support `If-None-Match` for caching; 304 means data unchanged. Channel lists may be large -- use `Accept-Encoding: gzip`.
-- **Store and account endpoints**: 204 means success with no body. Customer/store objects are nested maps with links. Always check for 404 when using storeId paths.
-- **Catalog importation**: Start returns 202 (async). Poll the executionId endpoint for progress. The technical progression endpoint gives step-by-step status. 409 means another import is already running.
-- **Order list endpoints**: Full and light variants exist. Full requires `Accept-Encoding`. Both use POST with a request body for filtering. Results contain nested order objects with marketplace-specific fields.
-- **Order change operations**: Require `If-Match` (ETag) for optimistic concurrency on single-order changes. 412 means the order was modified since last read. 409 means the transition is not valid for current state.
-- **Analytics reports**: POST-based with request body filters (date ranges, channels). Reports return nested data structures grouped by the requested dimension (day, channel, category, product).
-- **Batch operations**: Return 202 (queued). There is no synchronous result -- check status via order list or history endpoints afterward.
-- **Exportation history**: Paginated via `pageNumber` and `pageSize` query params. Always pass both.
-- **Invoices**: Generate returns 202 (async generation). Preview returns 200 with PDF-like content. 429 means invoice rate limit hit.
-
-## Anomaly Flags
-
-- **429 on email activation or invoice generation**: Rate limit reached. Surface this immediately and advise waiting before retrying. These endpoints explicitly enforce throttling.
-- **409 on catalog importation**: Another import is already in progress. Alert the user and suggest checking the current importation status before retrying.
-- **409 on order change**: The order state does not allow the requested transition. Surface the current order status and valid transitions.
-- **412 on order operations**: ETag mismatch indicates the order was modified by another process. Refetch the order to get the current ETag before retrying.
-- **402 on store creation or channel enable**: Payment required. The user's subscription plan may not cover additional stores or channels. Surface billing info.
-- **503 on marketplace endpoints**: The external marketplace is temporarily unavailable. Flag this as a third-party outage, not a BeezUP issue.
-- **304 on cached resources**: Not an error, but agents should recognize this means the client's cached copy is still valid. Do not treat as a failure.
-- **400 with body on batch order changes**: The batch partially failed. Parse the response body for per-order error details and surface individual failures.
-- **Deprecated `v2/user/legacyTracking` endpoints**: These exist for migration only. Flag any usage and recommend migrating via the `/migrate` endpoint.
-
-## Playbook
-
-### 1. First-Time Setup: Register, Login, and Create a Store
-
-1. POST /v2/public/security/register with email, password, and account details
-2. Check email for activation link, then POST /v2/user/customer/account/activate with the `emailActivationId`
-3. POST /v2/public/security/login with credentials to get a session token
-4. If MFA is enabled, POST /v2/public/security/login/mfa with the verification code
-5. Set the `Ocp-Apim-Subscription-Key` header for all subsequent requests
-6. PUT /v2/user/customer/account/personalInfo and /companyInfo to complete profile
-7. POST /v2/user/customer/stores with store name and country to create your first store
-
-### 2. Import a Product Catalog
-
-1. GET /v2/user/catalogs/{storeId}/inputConfiguration to check current feed settings
-2. POST /v2/user/catalogs/{storeId}/importations/start with the feed URL and configuration
-3. Note the `executionId` from the 202 response
-4. GET /v2/user/catalogs/{storeId}/importations/{executionId}/technicalProgression to monitor progress
-5. GET /v2/user/catalogs/{storeId}/importations/{executionId}/catalogColumns to review detected columns
-6. POST .../catalogColumns/{columnId}/map to map any unmapped columns to BeezUP columns
-7. POST /v2/user/catalogs/{storeId}/importations/{executionId}/commit to finalize the import
-8. Optionally POST /v2/user/catalogs/{storeId}/autoImport/activate then configure scheduling via /scheduling/interval or /scheduling/schedules
-
-### 3. Connect a Channel and Publish Products
-
-1. GET /v2/user/channels/ with your storeId to list available channels
-2. POST /v2/user/channelCatalogs/ with storeId and channelId to create a channel catalog
-3. PUT /v2/user/channelCatalogs/{channelCatalogId}/columnMappings to map product fields to channel fields
-4. POST /v2/user/channelCatalogs/{channelCatalogId}/categories/configure to set category mappings
-5. PUT /v2/user/channelCatalogs/{channelCatalogId}/exclusionFilters to exclude unwanted products
-6. POST /v2/user/channelCatalogs/{channelCatalogId}/enable to activate the channel
-7. POST /v2/user/marketplaces/channelcatalogs/publications/{marketplaceTechnicalCode}/{accountId}/publish to push products live
-8. GET .../publications/{marketplaceTechnicalCode}/{accountId}/history to verify publication status
-
-### 4. Process Marketplace Orders
-
-1. POST /orders/v3//harvest (or /v2/user/marketplaces/orders/harvest) to pull latest orders from all marketplaces
-2. POST /orders/v3//list/full with date range and status filters to retrieve order details
-3. GET /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId} to view a specific order (note the ETag in the response)
-4. POST /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/setMerchantOrderInfo to attach your internal order reference
-5. POST /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/{changeOrderType} with `userName`, the ETag as `If-Match`, and shipping details to ship the order
-6. GET .../history to confirm the status change was applied
-
-### 5. Monitor Performance with Analytics
-
-1. GET /v2/user/analytics/{storeId} to see available analytics dimensions
-2. POST /v2/user/analytics/{storeId}/reports/byday with date range to get daily revenue and click data
-3. POST /v2/user/analytics/{storeId}/reports/bychannel to compare channel performance
-4. POST /v2/user/analytics/{storeId}/reports/byproduct to identify top and underperforming products
-5. GET /v2/user/analytics/{storeId}/rules to review existing optimization rules
-6. POST /v2/user/analytics/{storeId}/rules to create a new rule (e.g., disable products with zero clicks after 30 days)
-7. POST /v2/user/analytics/{storeId}/rules/run to execute all rules immediately
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a login?" -> POST /v2/public/security/login
+- "Create a mfa?" -> POST /v2/public/security/login/mfa
+- "Create a register?" -> POST /v2/public/security/register
+- "Create a lostpassword?" -> POST /v2/public/security/lostpassword
+- "List all channels?" -> GET /v2/public/channels/
+- "Get channel details?" -> GET /v2/public/channels/{countryIsoCode}
+- "List all lov?" -> GET /v2/public/lov/
+- "Get lov details?" -> GET /v2/public/lov/{listName}
+- "List all lov?" -> GET /v2/user/lov/
+- "Get lov details?" -> GET /v2/user/lov/{listName}
+- "List all customer?" -> GET /v2/user/customer/
+- "List all account?" -> GET /v2/user/customer/account
+- "Create a resendEmailActivation?" -> POST /v2/user/customer/account/resendEmailActivation
+- "Create a activate?" -> POST /v2/user/customer/account/activate
+- "List all profilePictureInfo?" -> GET /v2/user/customer/account/profilePictureInfo
+- "List all creditCardInfo?" -> GET /v2/user/customer/account/creditCardInfo
+- "Create a changeEmail?" -> POST /v2/user/customer/account/changeEmail
+- "Create a changePassword?" -> POST /v2/user/customer/account/changePassword
+- "Create a logout?" -> POST /v2/user/customer/security/logout
+- "List all zendeskToken?" -> GET /v2/user/customer/zendeskToken
+- "List all stores?" -> GET /v2/user/customer/stores
+- "Create a store?" -> POST /v2/user/customer/stores
+- "Get store details?" -> GET /v2/user/customer/stores/{storeId}
+- "Partially update a store?" -> PATCH /v2/user/customer/stores/{storeId}
+- "Delete a store?" -> DELETE /v2/user/customer/stores/{storeId}
+- "List all rights?" -> GET /v2/user/customer/stores/{storeId}/rights
+- "List all alerts?" -> GET /v2/user/customer/stores/{storeId}/alerts
+- "Create a alert?" -> POST /v2/user/customer/stores/{storeId}/alerts
+- "List all shares?" -> GET /v2/user/customer/stores/{storeId}/shares
+- "Create a share?" -> POST /v2/user/customer/stores/{storeId}/shares
+- "Delete a share?" -> DELETE /v2/user/customer/stores/{storeId}/shares/{userId}
+- "Get friend details?" -> GET /v2/user/customer/friends/{userId}
+- "List all billingPeriods?" -> GET /v2/user/customer/billingPeriods
+- "List all offers?" -> GET /v2/user/customer/offers
+- "Create a offer?" -> POST /v2/user/customer/offers
+- "List all contracts?" -> GET /v2/user/customer/contracts
+- "Create a contract?" -> POST /v2/user/customer/contracts
+- "Create a disableAutoRenewal?" -> POST /v2/user/customer/contracts/current/disableAutoRenewal
+- "Create a reenableAutoRenewal?" -> POST /v2/user/customer/contracts/current/reenableAutoRenewal
+- "List all invoices?" -> GET /v2/user/customer/invoices
+- "List all catalogs?" -> GET /v2/user/catalogs/
+- "List all beezupColumns?" -> GET /v2/user/catalogs/beezupColumns
+- "Get catalog details?" -> GET /v2/user/catalogs/{storeId}
+- "List all inputConfiguration?" -> GET /v2/user/catalogs/{storeId}/inputConfiguration
+- "List all catalogColumns?" -> GET /v2/user/catalogs/{storeId}/catalogColumns
+- "Create a rename?" -> POST /v2/user/catalogs/{storeId}/catalogColumns/{columnId}/rename
+- "List all customColumns?" -> GET /v2/user/catalogs/{storeId}/customColumns
+- "Update a customColumn?" -> PUT /v2/user/catalogs/{storeId}/customColumns/{columnId}
+- "Delete a customColumn?" -> DELETE /v2/user/catalogs/{storeId}/customColumns/{columnId}
+- "Create a rename?" -> POST /v2/user/catalogs/{storeId}/customColumns/{columnId}/rename
+- "List all expression?" -> GET /v2/user/catalogs/{storeId}/customColumns/{columnId}/expression
+- "Create a computeExpression?" -> POST /v2/user/catalogs/{storeId}/customColumns/computeExpression
+- "List all categories?" -> GET /v2/user/catalogs/{storeId}/categories
+- "Create a list?" -> POST /v2/user/catalogs/{storeId}/products/list
+- "List all random?" -> GET /v2/user/catalogs/{storeId}/products/random
+- "Get product details?" -> GET /v2/user/catalogs/{storeId}/products/{productId}
+- "List all products?" -> GET /v2/user/catalogs/{storeId}/products
+- "List all getReportUrl?" -> GET /v2/user/catalogs/{storeId}/importations/{batchId}/getReportUrl
+- "List all beezUPColumns?" -> GET /v2/user/catalogs/{storeId}/beezUPColumns
+- "Update a beezUPColumn?" -> PUT /v2/user/catalogs/{storeId}/beezUPColumns/{beezUPColumnName}
+- "Delete a beezUPColumn?" -> DELETE /v2/user/catalogs/{storeId}/beezUPColumns/{beezUPColumnName}
+- "List all importations?" -> GET /v2/user/catalogs/importations
+- "List all importations?" -> GET /v2/user/catalogs/{storeId}/importations
+- "Create a start?" -> POST /v2/user/catalogs/{storeId}/importations/start
+- "Get importation details?" -> GET /v2/user/catalogs/{storeId}/importations/{executionId}
+- "Create a cancel?" -> POST /v2/user/catalogs/{storeId}/importations/{executionId}/cancel
+- "List all technicalProgression?" -> GET /v2/user/catalogs/{storeId}/importations/{executionId}/technicalProgression
+- "Create a configureRemainingCatalogColumn?" -> POST /v2/user/catalogs/{storeId}/importations/{executionId}/configureRemainingCatalogColumns
+- "Create a commitColumn?" -> POST /v2/user/catalogs/{storeId}/importations/{executionId}/commitColumns
+- "Create a commit?" -> POST /v2/user/catalogs/{storeId}/importations/{executionId}/commit
+- "Get productSample details?" -> GET /v2/user/catalogs/{storeId}/importations/{executionId}/productSamples/{productSampleIndex}
+- "Get customColumn details?" -> GET /v2/user/catalogs/{storeId}/importations/{executionId}/productSamples/{productSampleIndex}/customColumns/{columnId}
+- "List all catalogColumns?" -> GET /v2/user/catalogs/{storeId}/importations/{executionId}/catalogColumns
+- "Create a ignore?" -> POST /v2/user/catalogs/{storeId}/importations/{executionId}/catalogColumns/{columnId}/ignore
+- "Create a reattend?" -> POST /v2/user/catalogs/{storeId}/importations/{executionId}/catalogColumns/{columnId}/reattend
+- "Create a map?" -> POST /v2/user/catalogs/{storeId}/importations/{executionId}/catalogColumns/{columnId}/map
+- "Create a unmap?" -> POST /v2/user/catalogs/{storeId}/importations/{executionId}/catalogColumns/{columnId}/unmap
+- "List all customColumns?" -> GET /v2/user/catalogs/{storeId}/importations/{executionId}/customColumns
+- "List all expression?" -> GET /v2/user/catalogs/{storeId}/importations/{executionId}/customColumns/{columnId}/expression
+- "Update a customColumn?" -> PUT /v2/user/catalogs/{storeId}/importations/{executionId}/customColumns/{columnId}
+- "Delete a customColumn?" -> DELETE /v2/user/catalogs/{storeId}/importations/{executionId}/customColumns/{columnId}
+- "Create a map?" -> POST /v2/user/catalogs/{storeId}/importations/{executionId}/customColumns/{columnId}/map
+- "Create a unmap?" -> POST /v2/user/catalogs/{storeId}/importations/{executionId}/customColumns/{columnId}/unmap
+- "Create a list?" -> POST /v2/user/catalogs/{storeId}/importations/{executionId}/products/list
+- "List all report?" -> GET /v2/user/catalogs/{storeId}/importations/{executionId}/report
+- "Create a activate?" -> POST /v2/user/catalogs/{storeId}/autoImport/activate
+- "List all autoImport?" -> GET /v2/user/catalogs/{storeId}/autoImport
+- "Create a start?" -> POST /v2/user/catalogs/{storeId}/autoImport/start
+- "Create a pause?" -> POST /v2/user/catalogs/{storeId}/autoImport/pause
+- "Create a resume?" -> POST /v2/user/catalogs/{storeId}/autoImport/resume
+- "Create a interval?" -> POST /v2/user/catalogs/{storeId}/autoImport/scheduling/interval
+- "Create a schedule?" -> POST /v2/user/catalogs/{storeId}/autoImport/scheduling/schedules
+- "List all to?" -> GET /v2/user/catalogs/{storeId}/replication/to
+- "List all from?" -> GET /v2/user/catalogs/{storeId}/replication/from
+- "List all logs?" -> GET /v2/user/catalogs/{storeId}/replication/logs
+- "List all channels?" -> GET /v2/user/channels/
+- "Get channel details?" -> GET /v2/user/channels/{channelId}
+- "List all categories?" -> GET /v2/user/channels/{channelId}/categories
+- "Create a column?" -> POST /v2/user/channels/{channelId}/columns
+- "List all channelCatalogs?" -> GET /v2/user/channelCatalogs/
+- "Create a channelCatalog?" -> POST /v2/user/channelCatalogs/
+- "Get channelCatalog details?" -> GET /v2/user/channelCatalogs/{channelCatalogId}
+- "Delete a channelCatalog?" -> DELETE /v2/user/channelCatalogs/{channelCatalogId}
+- "List all filterOperators?" -> GET /v2/user/channelCatalogs/filterOperators
+- "Create a enable?" -> POST /v2/user/channelCatalogs/{channelCatalogId}/enable
+- "Create a disable?" -> POST /v2/user/channelCatalogs/{channelCatalogId}/disable
+- "List all categories?" -> GET /v2/user/channelCatalogs/{channelCatalogId}/categories
+- "Create a disableMapping?" -> POST /v2/user/channelCatalogs/{channelCatalogId}/categories/disableMapping
+- "Create a reenableMapping?" -> POST /v2/user/channelCatalogs/{channelCatalogId}/categories/reenableMapping
+- "Create a configure?" -> POST /v2/user/channelCatalogs/{channelCatalogId}/categories/configure
+- "List all exclusionFilters?" -> GET /v2/user/channelCatalogs/{channelCatalogId}/exclusionFilters
+- "Create a product?" -> POST /v2/user/channelCatalogs/{channelCatalogId}/products
+- "Create a export?" -> POST /v2/user/channelCatalogs/{channelCatalogId}/products/export
+- "List all counters?" -> GET /v2/user/channelCatalogs/{channelCatalogId}/products/counters
+- "Create a product?" -> POST /v2/user/channelCatalogs/products
+- "Get product details?" -> GET /v2/user/channelCatalogs/{channelCatalogId}/products/{productId}
+- "Delete a override?" -> DELETE /v2/user/channelCatalogs/{channelCatalogId}/products/{productId}/overrides/{channelColumnId}
+- "List all copy?" -> GET /v2/user/channelCatalogs/{channelCatalogId}/products/{productId}/overrides/copy
+- "Create a copy?" -> POST /v2/user/channelCatalogs/{channelCatalogId}/products/{productId}/overrides/copy
+- "Create a disable?" -> POST /v2/user/channelCatalogs/{channelCatalogId}/products/{productId}/disable
+- "Create a reenable?" -> POST /v2/user/channelCatalogs/{channelCatalogId}/products/{productId}/reenable
+- "List all cache?" -> GET /v2/user/channelCatalogs/{channelCatalogId}/exportations/cache
+- "Create a clear?" -> POST /v2/user/channelCatalogs/{channelCatalogId}/exportations/cache/clear
+- "List all history?" -> GET /v2/user/channelCatalogs/{channelCatalogId}/exportations/history
+- "List all attributes?" -> GET /v2/user/channelCatalogs/{channelCatalogId}/attributes
+- "List all counters?" -> GET /v2/user/channelCatalogs/{channelCatalogId}/attributes/counters
+- "List all mapping?" -> GET /v2/user/channelCatalogs/{channelCatalogId}/attributes/{channelAttributeId}/mapping
+- "Create a mapping?" -> POST /v2/user/channelCatalogs/{channelCatalogId}/attributes/{channelAttributeId}/mapping
+- "List all to?" -> GET /v2/user/channelCatalogs/{channelCatalogId}/replication/to
+- "List all from?" -> GET /v2/user/channelCatalogs/{channelCatalogId}/replication/from
+- "List all logs?" -> GET /v2/user/channelCatalogs/{channelCatalogId}/replication/logs
+- "List all channelcatalogs?" -> GET /v2/user/marketplaces/channelcatalogs/
+- "Create a publish?" -> POST /v2/user/marketplaces/channelcatalogs/publications/{marketplaceTechnicalCode}/{accountId}/publish
+- "List all history?" -> GET /v2/user/marketplaces/channelcatalogs/publications/{marketplaceTechnicalCode}/{accountId}/history
+- "List all properties?" -> GET /v2/user/marketplaces/channelcatalogs/{channelCatalogId}/properties
+- "List all settings?" -> GET /v2/user/marketplaces/channelcatalogs/{channelCatalogId}/settings
+- "Create a setting?" -> POST /v2/user/marketplaces/channelcatalogs/{channelCatalogId}/settings
+- "List all orders?" -> GET /v2/user/marketplaces/orders/
+- "List all status?" -> GET /v2/user/marketplaces/orders/status
+- "Create a harvest?" -> POST /v2/user/marketplaces/orders/harvest
+- "List all automaticTransitions?" -> GET /v2/user/marketplaces/orders/automaticTransitions
+- "Create a automaticTransition?" -> POST /v2/user/marketplaces/orders/automaticTransitions
+- "Create a full?" -> POST /v2/user/marketplaces/orders/list/full
+- "Create a light?" -> POST /v2/user/marketplaces/orders/list/light
+- "List all exportations?" -> GET /v2/user/marketplaces/orders/exportations
+- "Create a exportation?" -> POST /v2/user/marketplaces/orders/exportations
+- "Create a setMerchantOrderInfo?" -> POST /v2/user/marketplaces/orders/batches/setMerchantOrderInfos
+- "Create a clearMerchantOrderInfo?" -> POST /v2/user/marketplaces/orders/batches/clearMerchantOrderInfos
+- "Get order details?" -> GET /v2/user/marketplaces/orders/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}
+- "List all history?" -> GET /v2/user/marketplaces/orders/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/history
+- "Create a harvest?" -> POST /v2/user/marketplaces/orders/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/harvest
+- "Create a setMerchantOrderInfo?" -> POST /v2/user/marketplaces/orders/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/setMerchantOrderInfo
+- "Create a clearMerchantOrderInfo?" -> POST /v2/user/marketplaces/orders/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/clearMerchantOrderInfo
+- "List all orderManagementReadyMarketplaceBusinessCode?" -> GET /orders/v3//lov/orderManagementReadyMarketplaceBusinessCode
+- "List all status?" -> GET /orders/v3//status
+- "Create a harvest?" -> POST /orders/v3//harvest
+- "Create a full?" -> POST /orders/v3//list/full
+- "Create a light?" -> POST /orders/v3//list/light
+- "Get order details?" -> GET /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}
+- "Create a closeIncident?" -> POST /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/closeIncident
+- "List all history?" -> GET /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/history
+- "Create a harvest?" -> POST /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/harvest
+- "Create a harvest?" -> POST /orders/v3//{marketplaceTechnicalCode}/{accountId}/harvest
+- "Get history details?" -> GET /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/history/{orderChangeExecutionUUID}
+- "Create a setMerchantOrderInfo?" -> POST /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/setMerchantOrderInfo
+- "Create a clearMerchantOrderInfo?" -> POST /orders/v3//{marketplaceTechnicalCode}/{accountId}/{beezUPOrderId}/clearMerchantOrderInfo
+- "Create a setMerchantOrderInfo?" -> POST /orders/v3//batches/setMerchantOrderInfos
+- "Create a clearMerchantOrderInfo?" -> POST /orders/v3//batches/clearMerchantOrderInfos
+- "Create a changeOrder?" -> POST /orders/v3//batches/changeOrders
+- "List all subscriptions?" -> GET /v2/user/marketplaces/orders/subscriptions/
+- "Get subscription details?" -> GET /v2/user/marketplaces/orders/subscriptions/{id}
+- "Delete a subscription?" -> DELETE /v2/user/marketplaces/orders/subscriptions/{id}
+- "List all reporting?" -> GET /v2/user/marketplaces/orders/subscriptions/{id}/reporting
+- "Create a activate?" -> POST /v2/user/marketplaces/orders/subscriptions/{id}/activate
+- "Create a deactivate?" -> POST /v2/user/marketplaces/orders/subscriptions/{id}/deactivate
+- "Create a retry?" -> POST /v2/user/marketplaces/orders/subscriptions/{id}/retry
+- "List all analytics?" -> GET /v2/user/analytics/
+- "Get analytic details?" -> GET /v2/user/analytics/{storeId}
+- "List all status?" -> GET /v2/user/analytics/tracking/status
+- "List all status?" -> GET /v2/user/analytics/{storeId}/tracking/status
+- "List all clicks?" -> GET /v2/user/analytics/{storeId}/tracking/clicks
+- "List all orders?" -> GET /v2/user/analytics/{storeId}/tracking/orders
+- "List all externalorders?" -> GET /v2/user/analytics/{storeId}/tracking/externalorders
+- "Create a byday?" -> POST /v2/user/analytics/reports/byday
+- "Create a byday?" -> POST /v2/user/analytics/{storeId}/reports/byday
+- "Create a bychannel?" -> POST /v2/user/analytics/{storeId}/reports/bychannel
+- "Create a bycategory?" -> POST /v2/user/analytics/{storeId}/reports/bycategory
+- "Create a byproduct?" -> POST /v2/user/analytics/{storeId}/reports/byproduct
+- "Create a copy?" -> POST /v2/user/analytics/{storeId}/optimisations/copy
+- "List all filters?" -> GET /v2/user/analytics/{storeId}/reports/filters
+- "Get filter details?" -> GET /v2/user/analytics/{storeId}/reports/filters/{reportFilterId}
+- "Update a filter?" -> PUT /v2/user/analytics/{storeId}/reports/filters/{reportFilterId}
+- "Delete a filter?" -> DELETE /v2/user/analytics/{storeId}/reports/filters/{reportFilterId}
+- "List all rules?" -> GET /v2/user/analytics/{storeId}/rules
+- "Create a rule?" -> POST /v2/user/analytics/{storeId}/rules
+- "Get rule details?" -> GET /v2/user/analytics/{storeId}/rules/{ruleId}
+- "Partially update a rule?" -> PATCH /v2/user/analytics/{storeId}/rules/{ruleId}
+- "Delete a rule?" -> DELETE /v2/user/analytics/{storeId}/rules/{ruleId}
+- "Create a moveup?" -> POST /v2/user/analytics/{storeId}/rules/{ruleId}/moveup
+- "Create a movedown?" -> POST /v2/user/analytics/{storeId}/rules/{ruleId}/movedown
+- "Create a enable?" -> POST /v2/user/analytics/{storeId}/rules/{ruleId}/enable
+- "Create a disable?" -> POST /v2/user/analytics/{storeId}/rules/{ruleId}/disable
+- "Create a run?" -> POST /v2/user/analytics/{storeId}/rules/run
+- "Create a run?" -> POST /v2/user/analytics/{storeId}/rules/{ruleId}/run
+- "List all executions?" -> GET /v2/user/analytics/{storeId}/rules/executions
+- "List all channelCatalogs?" -> GET /v2/user/legacyTracking/channelCatalogs/
+- "Get channelCatalog details?" -> GET /v2/user/legacyTracking/channelCatalogs/{channelCatalogId}
+- "Create a migrate?" -> POST /v2/user/legacyTracking/channelCatalogs/{channelCatalogId}/migrate
+- "List all general?" -> GET /v2/user/marketplaces/orders/invoices/settings/general
+- "List all design?" -> GET /v2/user/marketplaces/orders/invoices/settings/design
+- "Create a preview?" -> POST /v2/user/marketplaces/orders/invoices/settings/design/preview
+- "Create a generate?" -> POST /v2/user/marketplaces/orders/invoices/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderUUID}/generate
+- "Create a generate?" -> POST /v2/user/marketplaces/orders/invoices/generate
+- "Create a preview?" -> POST /v2/user/marketplaces/orders/invoices/{marketplaceTechnicalCode}/{accountId}/{beezUPOrderUUID}/preview
+- "Create a getPdfInvoice?" -> POST /v2/user/marketplaces/orders/invoices/getPdfInvoice
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

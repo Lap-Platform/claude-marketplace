@@ -351,87 +351,240 @@ https://api.trello.com/1
 | DELETE | /webhooks/{id} | Delete a Webhook |
 | GET | /webhooks/{id}/{field} | Get a field on a Webhook |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new board?" -> POST /boards/
-- "What cards are on this board?" -> GET /boards/{id}/cards
-- "How do I move a card to a different list?" -> PUT /cards/{id} (set `idList`)
-- "Who are the members of this board?" -> GET /boards/{id}/members
-- "How do I add a comment to a card?" -> POST /cards/{id}/actions/comments
-- "How do I search for cards across all boards?" -> GET /search
-- "What lists does this board have?" -> GET /boards/{id}/lists
-- "How do I create a checklist on a card?" -> POST /cards/{id}/checklists
-- "How do I mark a checklist item as complete?" -> PUT /cards/{id}/checkItem/{idCheckItem} (set `state=complete`)
-- "How do I add a label to a card?" -> POST /cards/{id}/idLabels
-- "How do I assign a member to a card?" -> POST /cards/{id}/idMembers
-- "What are my notifications?" -> GET /members/{id}/notifications
-- "How do I set up a webhook for board changes?" -> POST /webhooks/
-- "How do I archive a list?" -> PUT /lists/{id}/closed (set `value=true`)
-- "How do I get the activity log for a board?" -> GET /boards/{boardId}/actions
-
-## Response Tips
-
-- **Boards/Cards/Lists**: All return flat objects with `id` as the primary key. Nested maps like `prefs`, `badges`, and `limits` contain configuration and status sub-objects -- destructure as needed.
-- **Actions**: Paginated via `page` param (0-indexed) and `limit` (default 50). The `data` map nests `card`, `board`, and `list` references -- always dereference these for context.
-- **Search**: Returns grouped results by model type (`cards`, `boards`, `members`, `organizations`). Each group has its own `_limit` and `_page` params. `partial=true` enables prefix matching.
-- **Members**: The `fields` param defaults to `all` which returns a very large object. Prefer specifying only needed fields (`avatarHash,fullName,initials,username`) to reduce payload.
-- **Webhooks**: Responses include `consecutiveFailures` and `firstConsecutiveFailDate` -- zero failures and null date indicate a healthy webhook.
-- **Enterprise**: Supports cursor-based pagination via `cursor` param on member queries; prefer this over offset pagination for large datasets.
-- **Errors**: 401 means invalid or expired auth credentials. 404 means the resource does not exist or the token lacks access to it -- Trello does not distinguish between "not found" and "forbidden" on most endpoints.
-
-## Anomaly Flags
-
-- **Limits approaching**: Surface `limits.*.status` when it equals `"warn"` on any board, card, or member object. The `disableAt` and `warnAt` thresholds indicate attachment, reaction, or other resource caps.
-- **Webhook failures**: Alert when `consecutiveFailures > 0` on any webhook -- Trello will deactivate webhooks after repeated failures. Check `firstConsecutiveFailDate` to gauge severity.
-- **Closed/archived resources**: Flag when `closed: true` on boards, lists, or cards that the user is trying to interact with -- write operations may silently succeed on archived items.
-- **Missing auth**: Both `key` and `token` query params are required for all requests. Surface immediately if either is absent, as all calls will return 401.
-- **Enterprise deactivation**: Watch for non-empty `idEnterprisesDeactivated` arrays on member objects -- the member may have restricted access.
-- **Due date overdue**: When `due` is in the past and `dueComplete` is `false`, proactively flag the card as overdue.
-- **Rate limiting**: Trello enforces per-token rate limits (typically 100 requests per 10-second window per token, 300 per 10 seconds per key). Surface 429 responses and suggest backing off.
-
-## Playbook
-
-### 1. Create a Board with Lists and Initial Cards
-
-1. `POST /boards/` with `name`, `defaultLists=false`, and desired `prefs_permissionLevel`
-2. Note the returned board `id`
-3. `POST /boards/{id}/lists` for each list (e.g., "To Do", "In Progress", "Done"), setting `pos` to control order
-4. `POST /cards` for each initial card, setting `idList` to the appropriate list `id`
-5. Optionally `POST /boards/{id}/labels` to create project-specific labels
-
-### 2. Set Up a Webhook to Monitor Board Activity
-
-1. `GET /members/me/tokens` to retrieve the current token ID
-2. `POST /webhooks/` with `idModel` set to the board `id` and `callbackURL` pointing to your endpoint
-3. Verify the webhook is active: `GET /webhooks/{id}` and confirm `active: true` and `consecutiveFailures: 0`
-4. To stop monitoring: `DELETE /webhooks/{id}`
-
-### 3. Manage a Card Through Its Lifecycle
-
-1. `POST /cards` with `idList` (backlog list), `name`, `desc`, and optional `idMembers` and `idLabels`
-2. Add a checklist: `POST /cards/{id}/checklists` then `POST /checklists/{id}/checkItems` for each task
-3. Move to active: `PUT /cards/{id}` with `idList` set to the "In Progress" list
-4. Complete checklist items: `PUT /cards/{id}/checkItem/{idCheckItem}` with `state=complete`
-5. Add a comment on completion: `POST /cards/{id}/actions/comments` with summary text
-6. Archive the card: `PUT /cards/{id}` with `closed=true`
-
-### 4. Bulk Search and Triage Across Boards
-
-1. `GET /search` with `query` describing the issue, `modelTypes=cards`, and `cards_limit=25`
-2. For each result card, `GET /cards/{id}` with `members=true` and `checklists=all` to assess status
-3. Reassign or relabel as needed: `PUT /cards/{id}` with updated `idMembers` or `idLabels`
-4. Add triage comments: `POST /cards/{id}/actions/comments`
-5. Use `GET /batch` with comma-separated URLs to fetch multiple cards in a single request when triaging many items
-
-### 5. Invite Members and Configure Board Permissions
-
-1. `PUT /boards/{id}/members` with the member's `email` and desired `type` (admin/normal/observer)
-2. Verify membership: `GET /boards/{id}/memberships` and check the new member appears
-3. Adjust board visibility: `PUT /boards/{id}` with `prefs_permissionLevel` (private/org/public)
-4. To remove a member: `DELETE /boards/{id}/members/{idMember}`
-5. For organization-wide invites: `PUT /organizations/{id}/members` with `email`, `fullName`, and `type`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get action details?" -> GET /actions/{id}
+- "Update a action?" -> PUT /actions/{id}
+- "Delete a action?" -> DELETE /actions/{id}
+- "Get action details?" -> GET /actions/{id}/{field}
+- "List all board?" -> GET /actions/{id}/board
+- "List all card?" -> GET /actions/{id}/card
+- "List all list?" -> GET /actions/{id}/list
+- "List all member?" -> GET /actions/{id}/member
+- "List all memberCreator?" -> GET /actions/{id}/memberCreator
+- "List all organization?" -> GET /actions/{id}/organization
+- "List all reactions?" -> GET /actions/{idAction}/reactions
+- "Create a reaction?" -> POST /actions/{idAction}/reactions
+- "Get reaction details?" -> GET /actions/{idAction}/reactions/{id}
+- "Delete a reaction?" -> DELETE /actions/{idAction}/reactions/{id}
+- "List all reactionsSummary?" -> GET /actions/{idAction}/reactionsSummary
+- "List all compliance?" -> GET /applications/{key}/compliance
+- "List all batch?" -> GET /batch
+- "List all memberships?" -> GET /boards/{id}/memberships
+- "Get board details?" -> GET /boards/{id}
+- "Update a board?" -> PUT /boards/{id}
+- "Delete a board?" -> DELETE /boards/{id}
+- "Get board details?" -> GET /boards/{id}/{field}
+- "List all actions?" -> GET /boards/{boardId}/actions
+- "List all boardStars?" -> GET /boards/{boardId}/boardStars
+- "List all checklists?" -> GET /boards/{id}/checklists
+- "List all cards?" -> GET /boards/{id}/cards
+- "Get card details?" -> GET /boards/{id}/cards/{filter}
+- "List all customFields?" -> GET /boards/{id}/customFields
+- "List all labels?" -> GET /boards/{id}/labels
+- "Create a label?" -> POST /boards/{id}/labels
+- "List all lists?" -> GET /boards/{id}/lists
+- "Create a list?" -> POST /boards/{id}/lists
+- "Get list details?" -> GET /boards/{id}/lists/{filter}
+- "List all members?" -> GET /boards/{id}/members
+- "Update a member?" -> PUT /boards/{id}/members/{idMember}
+- "Delete a member?" -> DELETE /boards/{id}/members/{idMember}
+- "Update a membership?" -> PUT /boards/{id}/memberships/{idMembership}
+- "Create a board?" -> POST /boards/
+- "Create a generate?" -> POST /boards/{id}/calendarKey/generate
+- "Create a generate?" -> POST /boards/{id}/emailKey/generate
+- "Create a idTag?" -> POST /boards/{id}/idTags
+- "Create a markedAsViewed?" -> POST /boards/{id}/markedAsViewed
+- "List all boardPlugins?" -> GET /boards/{id}/boardPlugins
+- "Create a boardPlugin?" -> POST /boards/{id}/boardPlugins
+- "Delete a boardPlugin?" -> DELETE /boards/{id}/boardPlugins/{idPlugin}
+- "List all plugins?" -> GET /boards/{id}/plugins
+- "Create a card?" -> POST /cards
+- "Get card details?" -> GET /cards/{id}
+- "Update a card?" -> PUT /cards/{id}
+- "Delete a card?" -> DELETE /cards/{id}
+- "Get card details?" -> GET /cards/{id}/{field}
+- "List all actions?" -> GET /cards/{id}/actions
+- "List all attachments?" -> GET /cards/{id}/attachments
+- "Create a attachment?" -> POST /cards/{id}/attachments
+- "Get attachment details?" -> GET /cards/{id}/attachments/{idAttachment}
+- "Delete a attachment?" -> DELETE /cards/{id}/attachments/{idAttachment}
+- "List all board?" -> GET /cards/{id}/board
+- "List all checkItemStates?" -> GET /cards/{id}/checkItemStates
+- "List all checklists?" -> GET /cards/{id}/checklists
+- "Create a checklist?" -> POST /cards/{id}/checklists
+- "Get checkItem details?" -> GET /cards/{id}/checkItem/{idCheckItem}
+- "Update a checkItem?" -> PUT /cards/{id}/checkItem/{idCheckItem}
+- "Delete a checkItem?" -> DELETE /cards/{id}/checkItem/{idCheckItem}
+- "List all list?" -> GET /cards/{id}/list
+- "List all members?" -> GET /cards/{id}/members
+- "List all membersVoted?" -> GET /cards/{id}/membersVoted
+- "Create a membersVoted?" -> POST /cards/{id}/membersVoted
+- "List all pluginData?" -> GET /cards/{id}/pluginData
+- "List all stickers?" -> GET /cards/{id}/stickers
+- "Create a sticker?" -> POST /cards/{id}/stickers
+- "Get sticker details?" -> GET /cards/{id}/stickers/{idSticker}
+- "Delete a sticker?" -> DELETE /cards/{id}/stickers/{idSticker}
+- "Update a sticker?" -> PUT /cards/{id}/stickers/{idSticker}
+- "List all customFieldItems?" -> GET /cards/{id}/customFieldItems
+- "Create a comment?" -> POST /cards/{id}/actions/comments
+- "Create a idLabel?" -> POST /cards/{id}/idLabels
+- "Create a idMember?" -> POST /cards/{id}/idMembers
+- "Create a label?" -> POST /cards/{id}/labels
+- "Create a markAssociatedNotificationsRead?" -> POST /cards/{id}/markAssociatedNotificationsRead
+- "Delete a idLabel?" -> DELETE /cards/{id}/idLabels/{idLabel}
+- "Delete a idMember?" -> DELETE /cards/{id}/idMembers/{idMember}
+- "Delete a membersVoted?" -> DELETE /cards/{id}/membersVoted/{idMember}
+- "Update a checkItem?" -> PUT /cards/{idCard}/checklist/{idChecklist}/checkItem/{idCheckItem}
+- "Delete a checklist?" -> DELETE /cards/{id}/checklists/{idChecklist}
+- "Create a checklist?" -> POST /checklists
+- "Get checklist details?" -> GET /checklists/{id}
+- "Update a checklist?" -> PUT /checklists/{id}
+- "Delete a checklist?" -> DELETE /checklists/{id}
+- "Get checklist details?" -> GET /checklists/{id}/{field}
+- "Update a checklist?" -> PUT /checklists/{id}/{field}
+- "List all board?" -> GET /checklists/{id}/board
+- "List all cards?" -> GET /checklists/{id}/cards
+- "List all checkItems?" -> GET /checklists/{id}/checkItems
+- "Create a checkItem?" -> POST /checklists/{id}/checkItems
+- "Get checkItem details?" -> GET /checklists/{id}/checkItems/{idCheckItem}
+- "Delete a checkItem?" -> DELETE /checklists/{id}/checkItems/{idCheckItem}
+- "Create a customField?" -> POST /customFields
+- "Get customField details?" -> GET /customFields/{id}
+- "Update a customField?" -> PUT /customFields/{id}
+- "Delete a customField?" -> DELETE /customFields/{id}
+- "Create a option?" -> POST /customFields/{id}/options
+- "List all options?" -> GET /customFields/{id}/options
+- "Get option details?" -> GET /customFields/{id}/options/{idCustomFieldOption}
+- "Delete a option?" -> DELETE /customFields/{id}/options/{idCustomFieldOption}
+- "List all emoji?" -> GET /emoji
+- "Get enterprise details?" -> GET /enterprises/{id}
+- "List all auditlog?" -> GET /enterprises/{id}/auditlog
+- "List all admins?" -> GET /enterprises/{id}/admins
+- "List all signupUrl?" -> GET /enterprises/{id}/signupUrl
+- "Search query?" -> GET /enterprises/{id}/members/query
+- "List all members?" -> GET /enterprises/{id}/members
+- "Get member details?" -> GET /enterprises/{id}/members/{idMember}
+- "Get organization details?" -> GET /enterprises/{id}/transferrable/organization/{idOrganization}
+- "Get bulk details?" -> GET /enterprises/{id}/transferrable/bulk/{idOrganizations}
+- "List all claimableOrganizations?" -> GET /enterprises/{id}/claimableOrganizations
+- "List all pendingOrganizations?" -> GET /enterprises/{id}/pendingOrganizations
+- "Create a token?" -> POST /enterprises/{id}/tokens
+- "List all organizations?" -> GET /enterprises/{id}/organizations
+- "Update a admin?" -> PUT /enterprises/{id}/admins/{idMember}
+- "Delete a admin?" -> DELETE /enterprises/{id}/admins/{idMember}
+- "Delete a organization?" -> DELETE /enterprises/{id}/organizations/{idOrg}
+- "Get bulk details?" -> GET /enterprises/{id}/organizations/bulk/{idOrganizations}
+- "Get label details?" -> GET /labels/{id}
+- "Update a label?" -> PUT /labels/{id}
+- "Delete a label?" -> DELETE /labels/{id}
+- "Update a label?" -> PUT /labels/{id}/{field}
+- "Create a label?" -> POST /labels
+- "Get list details?" -> GET /lists/{id}
+- "Update a list?" -> PUT /lists/{id}
+- "Create a list?" -> POST /lists
+- "Create a archiveAllCard?" -> POST /lists/{id}/archiveAllCards
+- "Create a moveAllCard?" -> POST /lists/{id}/moveAllCards
+- "Update a list?" -> PUT /lists/{id}/{field}
+- "List all actions?" -> GET /lists/{id}/actions
+- "List all board?" -> GET /lists/{id}/board
+- "List all cards?" -> GET /lists/{id}/cards
+- "Get member details?" -> GET /members/{id}
+- "Update a member?" -> PUT /members/{id}
+- "Get member details?" -> GET /members/{id}/{field}
+- "List all actions?" -> GET /members/{id}/actions
+- "List all boardBackgrounds?" -> GET /members/{id}/boardBackgrounds
+- "Create a boardBackground?" -> POST /members/{id}/boardBackgrounds
+- "Get boardBackground details?" -> GET /members/{id}/boardBackgrounds/{idBackground}
+- "Update a boardBackground?" -> PUT /members/{id}/boardBackgrounds/{idBackground}
+- "Delete a boardBackground?" -> DELETE /members/{id}/boardBackgrounds/{idBackground}
+- "List all boardStars?" -> GET /members/{id}/boardStars
+- "Create a boardStar?" -> POST /members/{id}/boardStars
+- "Get boardStar details?" -> GET /members/{id}/boardStars/{idStar}
+- "Update a boardStar?" -> PUT /members/{id}/boardStars/{idStar}
+- "Delete a boardStar?" -> DELETE /members/{id}/boardStars/{idStar}
+- "List all boards?" -> GET /members/{id}/boards
+- "List all boardsInvited?" -> GET /members/{id}/boardsInvited
+- "List all cards?" -> GET /members/{id}/cards
+- "List all customBoardBackgrounds?" -> GET /members/{id}/customBoardBackgrounds
+- "Create a customBoardBackground?" -> POST /members/{id}/customBoardBackgrounds
+- "Get customBoardBackground details?" -> GET /members/{id}/customBoardBackgrounds/{idBackground}
+- "Update a customBoardBackground?" -> PUT /members/{id}/customBoardBackgrounds/{idBackground}
+- "Delete a customBoardBackground?" -> DELETE /members/{id}/customBoardBackgrounds/{idBackground}
+- "List all customEmoji?" -> GET /members/{id}/customEmoji
+- "Create a customEmoji?" -> POST /members/{id}/customEmoji
+- "Get customEmoji details?" -> GET /members/{id}/customEmoji/{idEmoji}
+- "List all customStickers?" -> GET /members/{id}/customStickers
+- "Create a customSticker?" -> POST /members/{id}/customStickers
+- "Get customSticker details?" -> GET /members/{id}/customStickers/{idSticker}
+- "Delete a customSticker?" -> DELETE /members/{id}/customStickers/{idSticker}
+- "List all notifications?" -> GET /members/{id}/notifications
+- "List all organizations?" -> GET /members/{id}/organizations
+- "List all organizationsInvited?" -> GET /members/{id}/organizationsInvited
+- "List all savedSearches?" -> GET /members/{id}/savedSearches
+- "Create a savedSearche?" -> POST /members/{id}/savedSearches
+- "Get savedSearche details?" -> GET /members/{id}/savedSearches/{idSearch}
+- "Update a savedSearche?" -> PUT /members/{id}/savedSearches/{idSearch}
+- "Delete a savedSearche?" -> DELETE /members/{id}/savedSearches/{idSearch}
+- "List all tokens?" -> GET /members/{id}/tokens
+- "Create a avatar?" -> POST /members/{id}/avatar
+- "Create a oneTimeMessagesDismissed?" -> POST /members/{id}/oneTimeMessagesDismissed
+- "List all notificationsChannelSettings?" -> GET /members/{id}/notificationsChannelSettings
+- "Get notificationsChannelSetting details?" -> GET /members/{id}/notificationsChannelSettings/{channel}
+- "Update a notificationsChannelSetting?" -> PUT /members/{id}/notificationsChannelSettings/{channel}
+- "Update a notificationsChannelSetting?" -> PUT /members/{id}/notificationsChannelSettings/{channel}/{blockedKeys}
+- "Get notification details?" -> GET /notifications/{id}
+- "Update a notification?" -> PUT /notifications/{id}
+- "Get notification details?" -> GET /notifications/{id}/{field}
+- "Create a read?" -> POST /notifications/all/read
+- "List all board?" -> GET /notifications/{id}/board
+- "List all card?" -> GET /notifications/{id}/card
+- "List all list?" -> GET /notifications/{id}/list
+- "List all member?" -> GET /notifications/{id}/member
+- "List all memberCreator?" -> GET /notifications/{id}/memberCreator
+- "List all organization?" -> GET /notifications/{id}/organization
+- "Create a organization?" -> POST /organizations
+- "Get organization details?" -> GET /organizations/{id}
+- "Update a organization?" -> PUT /organizations/{id}
+- "Delete a organization?" -> DELETE /organizations/{id}
+- "Get organization details?" -> GET /organizations/{id}/{field}
+- "List all actions?" -> GET /organizations/{id}/actions
+- "List all boards?" -> GET /organizations/{id}/boards
+- "Create a export?" -> POST /organizations/{id}/exports
+- "List all exports?" -> GET /organizations/{id}/exports
+- "List all members?" -> GET /organizations/{id}/members
+- "List all memberships?" -> GET /organizations/{id}/memberships
+- "Get membership details?" -> GET /organizations/{id}/memberships/{idMembership}
+- "List all pluginData?" -> GET /organizations/{id}/pluginData
+- "List all tags?" -> GET /organizations/{id}/tags
+- "Create a tag?" -> POST /organizations/{id}/tags
+- "Update a member?" -> PUT /organizations/{id}/members/{idMember}
+- "Delete a member?" -> DELETE /organizations/{id}/members/{idMember}
+- "Create a logo?" -> POST /organizations/{id}/logo
+- "Delete a tag?" -> DELETE /organizations/{id}/tags/{idTag}
+- "Get newBillableGuest details?" -> GET /organizations/{id}/newBillableGuests/{idBoard}
+- "Get plugin details?" -> GET /plugins/{id}/
+- "Update a plugin?" -> PUT /plugins/{id}/
+- "Create a listing?" -> POST /plugins/{idPlugin}/listing
+- "List all memberPrivacy?" -> GET /plugins/{id}/compliance/memberPrivacy
+- "Update a listing?" -> PUT /plugins/{idPlugin}/listings/{idListing}
+- "Search search?" -> GET /search
+- "Search members?" -> GET /search/members/
+- "Get token details?" -> GET /tokens/{token}
+- "List all member?" -> GET /tokens/{token}/member
+- "List all webhooks?" -> GET /tokens/{token}/webhooks
+- "Create a webhook?" -> POST /tokens/{token}/webhooks
+- "Get webhook details?" -> GET /tokens/{token}/webhooks/{idWebhook}
+- "Delete a webhook?" -> DELETE /tokens/{token}/webhooks/{idWebhook}
+- "Update a webhook?" -> PUT /tokens/{token}/webhooks/{idWebhook}
+- "Delete a token?" -> DELETE /tokens/{token}/
+- "Create a webhook?" -> POST /webhooks/
+- "Get webhook details?" -> GET /webhooks/{id}
+- "Update a webhook?" -> PUT /webhooks/{id}
+- "Delete a webhook?" -> DELETE /webhooks/{id}
+- "Get webhook details?" -> GET /webhooks/{id}/{field}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

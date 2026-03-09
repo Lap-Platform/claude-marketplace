@@ -12,7 +12,7 @@ API version: 1.0.0
 Bearer basic
 
 ## Base URL
-https://cloud.redhat.com/{basePath}
+https://cloud.redhat.com//api/catalog-inventory/v1.0
 
 ## Setup
 1. Set Authorization header with your Bearer token

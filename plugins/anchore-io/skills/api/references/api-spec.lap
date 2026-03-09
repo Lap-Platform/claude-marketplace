@@ -9,640 +9,745 @@
 
 @group root
 @endpoint GET /
-@returns(200)
+@desc Simple status check
+@returns(200) Version check response, returns the api version prefix (e.g. 'v1')
 
 @endgroup
 
 @group health
 @endpoint GET /health
-@returns(200)
+@desc Health check, returns 200 and no body if service is running
+@returns(200) Empty body on success
 
 @endgroup
 
 @group version
 @endpoint GET /version
-@returns(200)
+@desc Returns the version object for the service, including db schema version info
+@returns(200) Version object describing version state
 
 @endgroup
 
 @group policies
 @endpoint GET /policies
-@optional {detail: any, x-anchore-account: any}
-@returns(200)
+@desc List policies
+@optional {detail: any # Include policy bundle detail in the form of the full bundle content for each entry, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Policy listing
 
 @endpoint POST /policies
+@desc Add a new policy
 @required {bundle: map}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Saved bundle
+@errors {500: Internal Error}
 
 @endpoint GET /policies/{policyId}
+@desc Get specific policy
 @required {policyId: any}
-@optional {detail: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {detail: any # Include policy bundle detail in the form of the full bundle content for each entry, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) A list with a single fetched policy bundle record
+@errors {500: Internal Error}
 
 @endpoint PUT /policies/{policyId}
+@desc Update policy
 @required {bundle: map, policyId: any}
-@optional {active: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {active: any # Mark policy as active, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) A list with a single updated policy bundle record
+@errors {500: Internal Error}
 
 @endpoint DELETE /policies/{policyId}
+@desc Delete policy
 @required {policyId: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {404, 500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Delete success
+@errors {404: Policy not found to delete, 500: Internal Error}
 
 @endgroup
 
 @group subscriptions
 @endpoint GET /subscriptions
-@optional {subscription_key: any, subscription_type: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@desc List all subscriptions
+@optional {subscription_key: any # filter only subscriptions matching key, subscription_type: any # filter only subscriptions matching type, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Subscription listing
+@errors {500: Internal Error}
 
 @endpoint POST /subscriptions
+@desc Add a subscription of a specific type
 @required {subscription: map}
-@optional {x-anchore-account: any}
-@returns(200)
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Subscription add success
 
 @endpoint GET /subscriptions/{subscriptionId}
+@desc Get a specific subscription set
 @required {subscriptionId: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Filtered subscription list by type
+@errors {500: Internal Error}
 
 @endpoint PUT /subscriptions/{subscriptionId}
+@desc Update an existing and specific subscription
 @required {subscriptionId: any, subscription: map}
-@optional {x-anchore-account: any}
-@returns(200)
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Subscription add success
 
 @endpoint DELETE /subscriptions/{subscriptionId}
+@desc Delete subscriptions of a specific type
 @required {subscriptionId: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Delete success
+@errors {500: Internal Error}
 
 @endgroup
 
 @group summaries
 @endpoint GET /summaries/imagetags
-@optional {image_status: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@desc List all visible image digests and tags
+@optional {image_status: any # Filter images in one or more states such as active, deleting. Defaults to active images only if unspecified, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) successful operation
+@errors {500: Internal Error}
 
 @endgroup
 
 @group images
 @endpoint POST /images
+@desc Submit a new image for analysis by the engine
 @required {image: map}
-@optional {force: any, autosubscribe: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {force: any # Override any existing entry in the system, autosubscribe: any # Instruct engine to automatically begin watching the added tag for updates from registry, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Successfully added image to analysis queue
+@errors {500: Internal Error}
 
 @endpoint GET /images
-@optional {history: any, fulltag: any, image_status: any, analysis_status: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@desc List all visible images
+@optional {history: any # Include image history in the response, fulltag: any # Full docker-pull string to filter results by (e.g. docker.io/library/nginx:latest, or myhost.com:5000/testimages:v1.1.1), image_status: any # Filter by image_status value on the record. Default if omitted is 'active'., analysis_status: any # Filter by analysis_status value on the record., x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) successful operation
+@errors {500: Internal Error}
 
 @endpoint DELETE /images
+@desc Bulk mark images for deletion
 @required {imageDigests: any}
-@optional {force: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {force: any, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) successful operation
+@errors {500: Internal Error}
 
 @endgroup
 
 @group import
 @endpoint POST /import/images
-@required {archive_file: any}
-@returns(200)
-@errors {500}
+@desc Import an anchore image tar.gz archive file. This is a deprecated API replaced by the "/imports/images" route
+@required {archive_file: any # anchore image tar archive.}
+@returns(200) Successfully imported image to the engine
+@errors {500: Internal Error}
 
 @endgroup
 
 @group images
 @endpoint GET /images/{imageDigest}
+@desc Get image metadata
 @required {imageDigest: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Image lookup success
+@errors {500: Internal error}
 
 @endpoint DELETE /images/{imageDigest}
+@desc Delete an image analysis
 @required {imageDigest: any}
-@optional {force: any, x-anchore-account: any}
-@returns(200)
+@optional {force: any, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Image deletion success
 
 @endpoint GET /images/by_id/{imageId}
+@desc Lookup image by docker imageId
 @required {imageId: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Image lookup success
+@errors {500: Internal error}
 
 @endpoint DELETE /images/by_id/{imageId}
+@desc Delete image by docker imageId
 @required {imageId: any}
-@optional {force: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {force: any, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Image deletion success
+@errors {500: Internal error}
 
 @endpoint GET /images/{imageDigest}/check
+@desc Check policy evaluation status for image
 @required {imageDigest: any, tag: any}
-@optional {policyId: any, detail: any, history: any, interactive: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {policyId: any, detail: any, history: any, interactive: any, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Policy evaluation success
+@errors {500: Internal Error}
 
 @endpoint GET /images/by_id/{imageId}/check
+@desc Check policy evaluation status for image
 @required {imageId: any, tag: any}
-@optional {policyId: any, detail: any, history: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {policyId: any, detail: any, history: any, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Policy evaluation success
+@errors {500: Internal Error}
 
 @endpoint GET /images/{imageDigest}/vuln
+@desc Get vulnerability types
 @required {imageDigest: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Vulnerability listing for the image
+@errors {500: Internal Error}
 
 @endpoint GET /images/{imageDigest}/vuln/{vtype}
+@desc Get vulnerabilities by type
 @required {imageDigest: any, vtype: any}
-@optional {force_refresh: any, vendor_only: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {force_refresh: any, vendor_only: any # Filter results to include only vulnerabilities that are not marked as invalid by upstream OS vendor data. When set to true, it will filter out all vulnerabilities where `will_not_fix` is False. If false all vulnerabilities are returned regardless of `will_not_fix`, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Vulnerability listing for the image
+@errors {500: Internal Error}
 
 @endpoint GET /images/by_id/{imageId}/vuln
+@desc Get vulnerability types
 @required {imageId: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Vulnerability listing for the image
+@errors {500: Internal Error}
 
 @endpoint GET /images/by_id/{imageId}/vuln/{vtype}
+@desc Get vulnerabilities by type
 @required {imageId: any, vtype: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Vulnerability listing for the image
+@errors {500: Internal Error}
 
 @endpoint GET /images/{imageDigest}/content
+@desc List image content types
 @required {imageDigest: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Content listing for the image
+@errors {500: Internal Error}
 
 @endpoint GET /images/by_id/{imageId}/content
+@desc List image content types
 @required {imageId: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Content of specified type from the image
+@errors {500: Internal error}
 
 @endpoint GET /images/{imageDigest}/content/{ctype}
+@desc Get the content of an image by type
 @required {imageDigest: any, ctype: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Content of specified type from the image
+@errors {500: Internal error}
 
 @endpoint GET /images/{imageDigest}/content/files
+@desc Get the content of an image by type files
 @required {imageDigest: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Content of specified type from the image
+@errors {500: Internal error}
 
 @endpoint GET /images/{imageDigest}/content/java
+@desc Get the content of an image by type java
 @required {imageDigest: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Content of specified type from the image
+@errors {500: Internal error}
 
 @endpoint GET /images/{imageDigest}/content/malware
+@desc Get the content of an image by type malware
 @required {imageDigest: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Content of specified type from the image
+@errors {500: Internal error}
 
 @endpoint GET /images/by_id/{imageId}/content/{ctype}
+@desc Get the content of an image by type
 @required {imageId: any, ctype: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Content of specified type from the image
+@errors {500: Internal error}
 
 @endpoint GET /images/by_id/{imageId}/content/files
+@desc Get the content of an image by type files
 @required {imageId: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Content of specified type from the image
+@errors {500: Internal error}
 
 @endpoint GET /images/by_id/{imageId}/content/java
+@desc Get the content of an image by type java
 @required {imageId: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Content of specified type from the image
+@errors {500: Internal error}
 
 @endpoint GET /images/{imageDigest}/artifacts/retrieved_files
+@desc Return a list of analyzer artifacts of the specified type
 @required {imageDigest: any}
-@returns(200)
-@errors {404}
+@returns(200) List of file metadata objects
+@errors {404: Image not found in this service}
 
 @endpoint GET /images/{imageDigest}/artifacts/file_content_search
+@desc Return a list of analyzer artifacts of the specified type
 @required {imageDigest: any}
-@returns(200)
-@errors {404}
+@returns(200) List of file metadata objects
+@errors {404: Image not found in this service}
 
 @endpoint GET /images/{imageDigest}/artifacts/secret_search
+@desc Return a list of analyzer artifacts of the specified type
 @required {imageDigest: any}
-@returns(200)
-@errors {404}
+@returns(200) List of file metadata objects
+@errors {404: Image not found in this service}
 
 @endpoint GET /images/{imageDigest}/metadata
+@desc List image metadata types
 @required {imageDigest: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Metadata listing for the image
+@errors {500: Internal Error}
 
 @endpoint GET /images/{imageDigest}/sboms/native
+@desc Get image sbom in the native Anchore format
 @required {imageDigest: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Image lookup success
+@errors {500: Internal error}
 
 @endpoint GET /images/{imageDigest}/metadata/{mtype}
+@desc Get the metadata of an image by type
 @required {imageDigest: any, mtype: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Metadata of specified type from the image
+@errors {500: Internal error}
 
 @endgroup
 
 @group repositories
 @endpoint POST /repositories
-@required {repository: any}
-@optional {autosubscribe: any, dryrun: any, x-anchore-account: any}
-@returns(200)
+@desc Add repository to watch
+@required {repository: any # full repository to add e.g. docker.io/library/alpine}
+@optional {autosubscribe: any # flag to enable/disable auto tag_update activation when new images from a repo are added, dryrun: any # flag to return tags in the repository without actually watching the repository, default is false, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Repository and discovered tags added
 
 @endgroup
 
 @group registries
 @endpoint GET /registries
-@optional {x-anchore-account: any}
-@returns(200)
+@desc List configured registries
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Registry listing
 
 @endpoint POST /registries
+@desc Add a new registry
 @required {registrydata: map}
-@optional {validate: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {validate: any # flag to determine whether or not to validate registry/credential at registry add time, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Saved registry configuration
+@errors {500: Internal Error}
 
 @endpoint GET /registries/{registry}
+@desc Get a specific registry configuration
 @required {registry: any}
-@optional {x-anchore-account: any}
-@returns(200)
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Registry configuration
 
 @endpoint PUT /registries/{registry}
+@desc Update/replace a registry configuration
 @required {registry: any, registrydata: map}
-@optional {validate: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {validate: any # flag to determine whether or not to validate registry/credential at registry update time, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Updated registry configuration
+@errors {500: Internal Error}
 
 @endpoint DELETE /registries/{registry}
+@desc Delete a registry configuration
 @required {registry: any}
-@optional {x-anchore-account: any}
-@returns(200)
-@errors {500}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Delete success
+@errors {500: Internal Error}
 
 @endgroup
 
 @group status
 @endpoint GET /status
-@returns(200)
-@errors {500}
+@desc Service status
+@returns(200) Status listing
+@errors {500: Internal error}
 
 @endgroup
 
 @group system
 @endpoint GET /system
-@returns(200)
-@errors {500}
+@desc System status
+@returns(200) Status listing
+@errors {500: Internal error}
 
 @endpoint GET /system/feeds
-@returns(200)
-@errors {500}
+@desc list feeds operations and information
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint POST /system/feeds
-@optional {flush: any, sync: any}
-@returns(200)
-@errors {500}
+@desc trigger feeds operations
+@optional {flush: any # instruct system to flush existing data feeds records from anchore-engine, sync: any # instruct system to re-sync data feeds}
+@returns(200) Feeds operation success
+@errors {500: Internal Error}
 
 @endpoint PUT /system/feeds/{feed}
+@desc Disable the feed so that it does not sync on subsequent sync operations
 @required {feed: any, enabled: any}
-@returns(200)
-@errors {500, 400}
+@returns(200) FeedInfo
+@errors {500: Internal server error processing the request. Retry expected, 400: Bad request, fix and resend}
 
 @endpoint DELETE /system/feeds/{feed}
+@desc Delete the groups and data for the feed and disable the feed itself
 @required {feed: any}
-@returns(200)
-@errors {500, 404}
+@returns(200) Successfully deleted
+@errors {500: Internal server error processing the request. Retry expected, 404: Not found}
 
 @endpoint PUT /system/feeds/{feed}/{group}
+@desc Disable a specific group within a feed to not sync
 @required {feed: any, group: any, enabled: any}
-@returns(200)
-@errors {500, 400}
+@returns(200) FeedInfo listing
+@errors {500: Internal server error processing the request. Retry expected, 400: Bad request, fix and resend}
 
 @endpoint DELETE /system/feeds/{feed}/{group}
+@desc Delete the group data and disable the group itself
 @required {feed: any, group: any}
-@returns(200)
-@errors {500, 404}
+@returns(200) Successfully deleted
+@errors {500: Internal server error processing the request. Retry expected, 404: Not found}
 
 @endpoint GET /system/services
-@returns(200)
-@errors {500}
+@desc List system services
+@returns(200) Service listing
+@errors {500: Internal Error}
 
 @endpoint GET /system/services/{servicename}
+@desc Get a service configuration and state
 @required {servicename: any}
-@returns(200)
-@errors {500}
+@returns(200) Service Info
+@errors {500: Internal Error}
 
 @endpoint GET /system/services/{servicename}/{hostid}
+@desc Get service config for a specific host
 @required {servicename: any, hostid: any}
-@returns(200)
-@errors {500}
+@returns(200) Listing of registered services
+@errors {500: Internal error}
 
 @endpoint DELETE /system/services/{servicename}/{hostid}
+@desc Delete the service config
 @required {servicename: any, hostid: any}
-@returns(200)
-@errors {500}
+@returns(200) Delete success
+@errors {500: Internal error}
 
 @endpoint GET /system/policy_spec
-@returns(200)
+@desc Describe the policy language spec implemented by this service.
+@returns(200) Policy Language Description
 
 @endpoint GET /system/error_codes
-@returns(200)
+@desc Describe anchore engine error codes.
+@returns(200) Error Codes Description
 
 @endgroup
 
 @group event_types
 @endpoint GET /event_types
-@returns(200)
+@desc List Event Types
+@returns(200) List of event types
 
 @endgroup
 
 @group events
 @endpoint GET /events
-@optional {source_servicename: any, source_hostid: any, event_type: any, resource_type: any, resource_id: any, level: any, since: any, before: any, page: any, limit: any, x-anchore-account: any}
-@returns(200)
+@desc List Events
+@optional {source_servicename: any # Filter events by the originating service, source_hostid: any # Filter events by the originating host ID, event_type: any # Filter events by a prefix match on the event type (e.g. "user.image."), resource_type: any # Filter events by the type of resource - tag, imageDigest, repository etc, resource_id: any # Filter events by the id of the resource, level: any # Filter events by the level - INFO or ERROR, since: any # Return events that occurred after the timestamp, before: any # Return events that occurred before the timestamp, page: any # Pagination controls - return the nth page of results. Defaults to first page if left empty, limit: any # Number of events in the result set. Defaults to 100 if left empty, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Paginated list of event records and the next token
 
 @endpoint DELETE /events
-@optional {before: any, since: any, level: any, x-anchore-account: any}
-@returns(200)
-@errors {500}
+@desc Delete Events
+@optional {before: any # Delete events that occurred before the timestamp, since: any # Delete events that occurred after the timestamp, level: any # Delete events that match the level - INFO or ERROR, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) List of deleted event IDs
+@errors {500: Internal Error}
 
 @endpoint GET /events/{eventId}
-@required {eventId: any}
-@optional {x-anchore-account: any}
-@returns(200)
+@desc Get Event
+@required {eventId: any # Event ID of the event for lookup}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Single event record
 
 @endpoint DELETE /events/{eventId}
-@required {eventId: any}
-@optional {x-anchore-account: any}
-@returns(200)
+@desc Delete Event
+@required {eventId: any # Event ID of the event to be deleted}
+@optional {x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Delete success
 
 @endgroup
 
 @group query
 @endpoint GET /query/images/by_vulnerability
-@required {vulnerability_id: any}
-@optional {namespace: any, affected_package: any, severity: any, vendor_only: any, page: any, limit: any, x-anchore-account: any}
-@returns(200)
-@errors {400}
+@desc List images vulnerable to the specific vulnerability ID.
+@required {vulnerability_id: any # The ID of the vulnerability to search for within all images stored in anchore-engine (e.g. CVE-1999-0001)}
+@optional {namespace: any # Filter results to images within the given vulnerability namespace (e.g. debian:8, ubuntu:14.04), affected_package: any # Filter results to images with vulnable packages with the given package name (e.g. libssl), severity: any # Filter results to vulnerable package/vulnerability with the given severity, vendor_only: any # Filter results to include only vulnerabilities that are not marked as invalid by upstream OS vendor data, page: any # The page of results to fetch. Pages start at 1, limit: any # Limit the number of records for the requested page. If omitted or set to 0, return all results in a single page, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Image lookup success
+@errors {400: Invalid filter parameters}
 
 @endpoint GET /query/images/by_package
-@required {name: any}
-@optional {package_type: any, version: any, page: any, limit: any, x-anchore-account: any}
-@returns(200)
-@errors {400}
+@desc List of images containing given package
+@required {name: any # Name of package to search for (e.g. sed)}
+@optional {package_type: any # Type of package to filter on (e.g. dpkg), version: any # Version of named package to filter on (e.g. 4.4-1), page: any # The page of results to fetch. Pages start at 1, limit: any # Limit the number of records for the requested page. If omitted or set to 0, return all results in a single page, x-anchore-account: any # An account name to change the resource scope of the request to that account, if permissions allow (admin only)}
+@returns(200) Image listing
+@errors {400: Bad filter parameters}
 
 @endpoint GET /query/vulnerabilities
-@required {id: any}
-@optional {affected_package: any, affected_package_version: any, page: any, limit: any, namespace: any}
-@returns(200)
-@errors {400}
+@desc Listing information about given vulnerability
+@required {id: any # The ID of the vulnerability (e.g. CVE-1999-0001)}
+@optional {affected_package: any # Filter results by specified package name (e.g. sed), affected_package_version: any # Filter results by specified package version (e.g. 4.4-1), page: any # The page of results to fetch. Pages start at 1, limit: any # Limit the number of records for the requested page. If omitted or set to 0, return all results in a single page, namespace: any # Namespace(s) to filter vulnerability records by}
+@returns(200) Vulnerability listing paginated
+@errors {400: Invalid filter parameters}
 
 @endgroup
 
 @group accounts
 @endpoint GET /accounts
-@optional {state: any}
-@returns(200)
-@errors {500}
+@desc List user summaries. Only available to the system admin user.
+@optional {state: any # Filter accounts by state}
+@returns(200) Accound summary listing
+@errors {500: Internal error}
 
 @endpoint POST /accounts
+@desc Create a new user. Only avaialble to admin user.
 @required {account: map}
-@returns(200)
-@errors {409, 500}
+@returns(200) Account Record
+@errors {409: Conflicting user information. User already exists., 500: Internal error}
 
 @endpoint GET /accounts/{accountname}
+@desc Get info about an user. Only available to admin user. Uses the main user Id, not a username.
 @required {accountname: any}
-@returns(200)
-@errors {500}
+@returns(200) Get user information
+@errors {500: Internal error}
 
 @endpoint DELETE /accounts/{accountname}
+@desc Delete the specified account, only allowed if the account is in the disabled state. All users will be deleted along with the account and all resources will be garbage collected
 @required {accountname: any}
-@returns(204)
-@errors {500}
+@returns(204) Successful deletion
+@errors {500: Internal error}
 
 @endpoint PUT /accounts/{accountname}/state
+@desc Update the state of an account to either enabled or disabled. For deletion use the DELETE route
 @required {accountname: any, desired_state: map}
-@returns(200)
-@errors {400, 500}
+@returns(200) Updated state of the account
+@errors {400: State requested is invalid based on current state of the account, 500: Internal error}
 
 @endpoint GET /accounts/{accountname}/users
+@desc List accounts for the user
 @required {accountname: any}
-@returns(200)
-@errors {500}
+@returns(200) User listing
+@errors {500: Internal error}
 
 @endpoint POST /accounts/{accountname}/users
+@desc Create a new user
 @required {accountname: any, user: map}
-@returns(200)
+@returns(200) Credential summary
 
 @endpoint DELETE /accounts/{accountname}/users/{username}
+@desc Delete a specific user credential by username of the credential. Cannot be the credential used to authenticate the request.
 @required {accountname: any, username: any}
-@returns(204)
-@errors {500}
+@returns(204) Deleted credential
+@errors {500: Internal error}
 
 @endpoint GET /accounts/{accountname}/users/{username}
+@desc Get a specific user in the specified account
 @required {accountname: any, username: any}
-@returns(200)
-@errors {500}
+@returns(200) User record
+@errors {500: Internal error}
 
 @endpoint GET /accounts/{accountname}/users/{username}/credentials
+@desc Get current credential summary
 @required {accountname: any, username: any}
-@returns(200)
-@errors {500}
+@returns(200) User credential listing
+@errors {500: Internal error}
 
 @endpoint POST /accounts/{accountname}/users/{username}/credentials
+@desc add/replace credential
 @required {accountname: any, username: any, credential: map}
-@returns(200)
-@errors {500}
+@returns(200) Add a credential, overwritting if already exists
+@errors {500: Internal error}
 
 @endpoint DELETE /accounts/{accountname}/users/{username}/credentials
+@desc Delete a credential by type
 @required {accountname: any, username: any, credential_type: any}
-@returns(204)
-@errors {400, 500}
+@returns(204) Successful deletion
+@errors {400: Conflict, cannot delete the credential used to authenticate this request, 500: Internal error}
 
 @endgroup
 
 @group account
 @endpoint GET /account
-@returns(200)
-@errors {500}
+@desc List the account for the authenticated user
+@returns(200) User details for caller's user
+@errors {500: Internal error}
 
 @endgroup
 
 @group user
 @endpoint GET /user
-@returns(200)
-@errors {500}
+@desc List authenticated user info
+@returns(200) User details for caller's user
+@errors {500: Internal error}
 
 @endpoint GET /user/credentials
-@returns(200)
-@errors {500}
+@desc Get current credential summary
+@returns(200) User credential listing
+@errors {500: Internal error}
 
 @endpoint POST /user/credentials
+@desc add/replace credential
 @required {credential: map}
-@returns(200)
-@errors {500}
+@returns(200) Add a credential, overwritting if already exists
+@errors {500: Internal error}
 
 @endgroup
 
 @group archives
 @endpoint GET /archives
-@returns(200)
-@errors {500}
+@returns(200) Archive summary listing
+@errors {500: Internal error}
 
 @endpoint GET /archives/rules
-@optional {system_global: any}
-@returns(200)
-@errors {500}
+@optional {system_global: any # If true include system global rules (owned by admin) even for non-admin users. Defaults to true if not set. Can be set to false to exclude globals}
+@returns(200) Archive transition rules
+@errors {500: Internal error}
 
 @endpoint POST /archives/rules
 @required {rule: map}
-@returns(200)
-@errors {500}
+@returns(200) Archive transition rule
+@errors {500: Internal error}
 
 @endpoint GET /archives/rules/{ruleId}
 @required {ruleId: any}
-@returns(200)
-@errors {500}
+@returns(200) Archive transition rule
+@errors {500: Internal error}
 
 @endpoint DELETE /archives/rules/{ruleId}
 @required {ruleId: any}
-@returns(200)
-@errors {500}
+@returns(200) Analysis archive rule succesfuly deleted
+@errors {500: Internal error}
 
 @endpoint GET /archives/images
-@returns(200)
-@errors {500}
+@returns(200) Image analysis archive listing for the requesting account (not the whole system)
+@errors {500: Internal error}
 
 @endpoint POST /archives/images
 @required {imageReferences: [str]}
-@returns(200)
-@errors {500}
+@returns(200) Archive statuses
+@errors {500: Internal error}
 
 @endpoint GET /archives/images/{imageDigest}
-@required {imageDigest: any}
-@returns(200)
-@errors {500}
+@desc Returns the archive metadata record identifying the image and tags for the analysis in the archive.
+@required {imageDigest: any # The image digest to identify the image analysis}
+@returns(200) Archived Image
+@errors {500: Internal error}
 
 @endpoint DELETE /archives/images/{imageDigest}
+@desc Performs a synchronous archive deletion
 @required {imageDigest: any}
 @optional {force: any}
-@returns(200)
-@errors {500}
+@returns(200) ArchivdImageAnalysis successfully deleted
+@errors {500: Internal error}
 
 @endgroup
 
 @group oauth
 @endpoint POST /oauth/token
-@optional {grant_type: any, username: any, password: any, client_id: any}
-@returns(200)
-@errors {500}
+@desc Request a jwt token for subsequent operations, this request is authenticated with normal HTTP auth
+@optional {grant_type: any # OAuth Grant type for token, username: any # User to assign OAuth token to, password: any # Password for corresponding user, client_id: any # The type of client used for the OAuth token}
+@returns(200) Resulting JWT token
+@errors {500: Internal error}
 
 @endgroup
 
 @group system
 @endpoint POST /system/webhooks/{webhook_type}/test
-@required {webhook_type: any}
-@optional {notification_type: any}
-@returns(200)
-@errors {400, 500}
+@desc Adds the capabilities to test a webhook delivery for the given notification type
+@required {webhook_type: any # The Webhook Type that we should test}
+@optional {notification_type: any # What kind of Notification to send}
+@returns(200) The Webhook was sent successfully. Schemas may be found under Models (PolicyEvalNotification, TagUpdateNotification, VulnUpdateNotification, AnalysisUpdateNotification)
+@errors {400: The Webhook failed to send due to misconfiguration, 500: The Webhook failed to send due to an Internal Error}
 
 @endgroup
 
 @group imports
 @endpoint POST /imports/images
-@returns(200)
-@errors {500}
+@desc Begin the import of an image analyzed by Syft into the system
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint GET /imports/images
-@returns(200)
-@errors {500}
+@desc Lists in-progress imports
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint GET /imports/images/{operation_id}
+@desc Get detail on a single import
 @required {operation_id: any}
-@returns(200)
-@errors {500}
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint DELETE /imports/images/{operation_id}
+@desc Invalidate operation ID so it can be garbage collected
 @required {operation_id: any}
-@returns(200)
-@errors {500}
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint GET /imports/images/{operation_id}/packages
+@desc List uploaded package manifests
 @required {operation_id: any}
-@returns(200)
-@errors {500}
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint POST /imports/images/{operation_id}/packages
+@desc Begin the import of an image analyzed by Syft into the system
 @required {operation_id: any, sbom: map}
-@returns(200)
-@errors {500}
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint GET /imports/images/{operation_id}/dockerfile
+@desc List uploaded dockerfiles
 @required {operation_id: any}
-@returns(200)
-@errors {500}
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint POST /imports/images/{operation_id}/dockerfile
+@desc Begin the import of an image analyzed by Syft into the system
 @required {operation_id: any, contents: str}
-@returns(200)
-@errors {500}
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint GET /imports/images/{operation_id}/manifest
+@desc List uploaded image manifests
 @required {operation_id: any}
-@returns(200)
-@errors {500}
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint POST /imports/images/{operation_id}/manifest
+@desc Import a docker or OCI distribution manifest to associate with the image
 @required {operation_id: any, contents: map}
-@returns(200)
-@errors {500}
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint GET /imports/images/{operation_id}/parent_manifest
+@desc List uploaded parent manifests (manifest lists for a tag)
 @required {operation_id: any}
-@returns(200)
-@errors {500}
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint POST /imports/images/{operation_id}/parent_manifest
+@desc Import a docker or OCI distribution manifest list to associate with the image
 @required {operation_id: any, contents: map}
-@returns(200)
-@errors {500}
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint GET /imports/images/{operation_id}/image_config
+@desc List uploaded image configs
 @required {operation_id: any}
-@returns(200)
-@errors {500}
+@returns(200) success
+@errors {500: Internal Error}
 
 @endpoint POST /imports/images/{operation_id}/image_config
+@desc Import a docker or OCI image config to associate with the image
 @required {operation_id: any, contents: map}
-@returns(200)
-@errors {500}
+@returns(200) success
+@errors {500: Internal Error}
 
 @endgroup
 

@@ -540,94 +540,335 @@ https://production.plaid.com
 |--------|------|-------------|
 | POST | /network_insights/report/get | Retrieve network insights for the provided `access_tokens` |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I get a user's bank account balances?" -> POST /accounts/balance/get
-- "How do I pull transaction history for a date range?" -> POST /transactions/get
-- "How do I verify a user's identity against their bank records?" -> POST /identity/match
-- "How do I create a Link token to start the Plaid flow?" -> POST /link/token/create
-- "How do I exchange a public token for an access token?" -> POST /item/public_token/exchange
-- "How do I initiate an ACH transfer to a user?" -> POST /transfer/authorization/create then POST /transfer/create
-- "How do I check if an ACH payment is likely to return?" -> POST /signal/evaluate
-- "How do I screen a user against sanctions watchlists?" -> POST /watchlist_screening/individual/create
-- "How do I generate an asset report for a mortgage application?" -> POST /asset_report/create then POST /asset_report/get
-- "How do I verify someone's employment through payroll?" -> POST /employment/verification/get
-- "How do I look up which institutions support a product?" -> POST /institutions/search
-- "How do I detect recurring subscriptions in a user's transactions?" -> POST /transactions/recurring/get
-- "How do I simulate a webhook in sandbox?" -> POST /sandbox/item/fire_webhook
-- "How do I report fraud on a Beacon user?" -> POST /beacon/report/create
-- "How do I refresh stale transaction data?" -> POST /transactions/refresh (triggers async update, listen for webhook)
-
-## Response Tips
-
-- **Accounts/Balances/Identity**: Responses nest an `item` object with error state and product availability; always check `item.error` before trusting account data.
-- **Transactions**: Uses offset/count pagination (`total_transactions` tells you when to stop) for `/get`; use cursor-based `/sync` for incremental updates (`has_more` + `next_cursor`).
-- **Transfer/Bank Transfer**: Lists use offset-based pagination (default `count=25`, `offset=0`); event endpoints add `has_more` boolean.
-- **Watchlist/Beacon/Dashboard**: All list endpoints use cursor-based pagination; `next_cursor` is `null` when no more pages exist.
-- **Asset Reports**: Creation is async; poll `/asset_report/get` or listen for the webhook before reading the report.
-- **Errors**: Every error response includes `error_type`, `error_code`, `display_message`, and `documentation_url`; use `error_code` for programmatic handling, `display_message` for user-facing text.
-- **Signal/Protect**: Score fields are nullable; a `null` score means insufficient data rather than low risk.
-
-## Anomaly Flags
-
-- **Item errors**: Surface `item.error` immediately when non-null -- it means the connection is broken and requires user re-authentication (LOGIN_REQUIRED, ITEM_LOCKED).
-- **Transfer failures**: Flag `failure_reason.ach_return_code` on any transfer; codes R01 (insufficient funds), R02 (closed account), and R10 (unauthorized) require immediate action.
-- **Signal risk tiers**: Proactively warn when `risk_tier` >= 3 on either `customer_initiated_return_risk` or `bank_initiated_return_risk`.
-- **Stale balances**: Alert when `balance_last_updated` in signal core attributes is more than 24 hours old -- decisions are based on outdated data.
-- **Account frozen**: Flag `is_account_closed` or `is_account_frozen_or_restricted` from signal core attributes before initiating payments.
-- **Identity verification risk**: Surface `risk_check.behavior.bot_detected` or `fraud_ring_detected` values other than "no_data"/"not_detected".
-- **Beacon duplicates**: Alert when a beacon user creation returns matches -- check `/beacon/duplicate/get` for overlap analysis.
-- **Consent expiration**: Flag `consent_expiration_time` on item metadata when it is approaching or past.
-- **Webhook verification**: Remind callers to validate webhook signatures via `/webhook_verification_key/get` before trusting payloads.
-
-## Playbook
-
-### 1. Connect a Bank Account and Fetch Transactions
-
-1. Create a user with `POST /user/create` using a stable `client_user_id`.
-2. Create a Link token with `POST /link/token/create`, including `products: ["transactions"]` and the user's `client_user_id`.
-3. Launch Plaid Link in your frontend with the `link_token`.
-4. Exchange the resulting `public_token` via `POST /item/public_token/exchange` to get an `access_token`.
-5. Call `POST /transactions/sync` with the `access_token` (no cursor on first call) to pull initial transactions.
-6. Store `next_cursor`; on subsequent calls pass it back to get only new/modified/removed transactions.
-7. Continue calling `/transactions/sync` while `has_more` is `true`.
-
-### 2. Authorize and Execute an ACH Transfer
-
-1. Call `POST /transfer/authorization/create` with the `access_token`, `account_id`, transfer `type` (debit/credit), `network`, `amount`, and `user` details.
-2. Check `authorization.decision` -- proceed only if `"approved"`. If `"declined"`, read `decision_rationale` for the reason.
-3. Call `POST /transfer/create` with the `authorization_id` from step 2 and a `description`.
-4. Monitor transfer status via `POST /transfer/event/sync` (pass `after_id: 0` on first call, then last seen event ID).
-5. Report the outcome to Plaid via `POST /signal/decision/report` with `initiated: true` and the decision details.
-6. If the transfer is returned, report it via `POST /signal/return/report` with the `return_code`.
-
-### 3. Run KYC Identity Verification
-
-1. Call `POST /identity_verification/create` with `template_id`, `is_shareable`, and `gave_consent`.
-2. Direct the user to the `shareable_url` returned in the response.
-3. Poll `POST /identity_verification/get` with the `identity_verification_id` until `status` is no longer `"active"`.
-4. Inspect `steps` to see which checks passed/failed (kyc_check, documentary_verification, selfie_check).
-5. If failed, call `POST /identity_verification/retry` with `strategy: "reset"` to allow the user another attempt.
-6. Review `risk_check` scores for synthetic identity, stolen identity, and behavioral signals.
-
-### 4. Generate and Share an Asset Report
-
-1. Call `POST /asset_report/create` with `access_tokens` and `days_requested` (e.g., 60 for mortgage).
-2. Wait for the `PRODUCT_READY` webhook or poll `POST /asset_report/get` until successful.
-3. Retrieve the full report via `POST /asset_report/get` with the `asset_report_token`.
-4. To share with a third party (e.g., lender), call `POST /asset_report/audit_copy/create` to get an `audit_copy_token`.
-5. Provide the `audit_copy_token` to the recipient; they retrieve it via `POST /asset_report/audit_copy/get`.
-6. When no longer needed, remove the audit copy with `POST /asset_report/audit_copy/remove`.
-
-### 5. Screen Individuals Against Watchlists
-
-1. Call `POST /watchlist_screening/individual/create` with `search_terms` containing `watchlist_program_id` and the person's `legal_name`.
-2. Retrieve hits via `POST /watchlist_screening/individual/hit/list` using the screening `id`.
-3. Review each hit; call `POST /watchlist_screening/individual/review/create` with arrays of `confirmed_hits` and `dismissed_hits`.
-4. Update the screening status via `POST /watchlist_screening/individual/update` (set to `cleared` or `rejected`).
-5. For ongoing monitoring, ensure `is_rescanning_enabled` is true on the program (`POST /watchlist_screening/individual/program/get`).
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a create?" -> POST /asset_report/create
+- "Create a get?" -> POST /asset_report/get
+- "Create a get?" -> POST /asset_report/pdf/get
+- "Create a refresh?" -> POST /asset_report/refresh
+- "Create a filter?" -> POST /asset_report/filter
+- "Create a remove?" -> POST /asset_report/remove
+- "Create a create?" -> POST /asset_report/audit_copy/create
+- "Create a get?" -> POST /asset_report/audit_copy/get
+- "Create a get?" -> POST /asset_report/audit_copy/pdf/get
+- "Create a remove?" -> POST /asset_report/audit_copy/remove
+- "Create a subscribe?" -> POST /cra/monitoring_insights/subscribe
+- "Create a unsubscribe?" -> POST /cra/monitoring_insights/unsubscribe
+- "Create a get?" -> POST /cra/monitoring_insights/get
+- "Create a update?" -> POST /credit/audit_copy_token/update
+- "Create a get?" -> POST /cra/partner_insights/get
+- "Create a get?" -> POST /cra/check_report/income_insights/get
+- "Create a get?" -> POST /cra/check_report/base_report/get
+- "Create a get?" -> POST /cra/check_report/pdf/get
+- "Create a create?" -> POST /cra/check_report/create
+- "Create a get?" -> POST /cra/check_report/partner_insights/get
+- "Create a get?" -> POST /cra/check_report/cashflow_insights/get
+- "Create a get?" -> POST /cra/check_report/lend_score/get
+- "Create a get?" -> POST /cra/check_report/network_insights/get
+- "Create a get?" -> POST /cra/check_report/verification/get
+- "Create a get?" -> POST /cra/check_report/verification/pdf/get
+- "Create a register?" -> POST /cra/loans/applications/register
+- "Create a register?" -> POST /cra/loans/register
+- "Create a update?" -> POST /cra/loans/update
+- "Create a unregister?" -> POST /cra/loans/unregister
+- "Create a get?" -> POST /consumer_report/pdf/get
+- "Create a token?" -> POST /oauth/token
+- "Create a introspect?" -> POST /oauth/introspect
+- "Create a revoke?" -> POST /oauth/revoke
+- "Create a list?" -> POST /statements/list
+- "Create a download?" -> POST /statements/download
+- "Create a refresh?" -> POST /statements/refresh
+- "Create a get?" -> POST /consent/events/get
+- "Create a list?" -> POST /item/activity/list
+- "Create a list?" -> POST /item/application/list
+- "Create a unlink?" -> POST /item/application/unlink
+- "Create a update?" -> POST /item/application/scopes/update
+- "Create a get?" -> POST /application/get
+- "Create a get?" -> POST /item/get
+- "Create a get?" -> POST /user_account/session/get
+- "Create a send?" -> POST /user_account/session/event/send
+- "Create a get?" -> POST /profile/network_status/get
+- "Create a get?" -> POST /network/status/get
+- "Create a get?" -> POST /auth/get
+- "Create a verify?" -> POST /auth/verify
+- "Create a get?" -> POST /transactions/get
+- "Create a refresh?" -> POST /transactions/refresh
+- "Create a create?" -> POST /sandbox/transactions/create
+- "Create a refresh?" -> POST /cashflow_report/refresh
+- "Create a get?" -> POST /cashflow_report/get
+- "Create a get?" -> POST /cashflow_report/transactions/get
+- "Create a get?" -> POST /cashflow_report/insights/get
+- "Create a get?" -> POST /transactions/recurring/get
+- "Create a sync?" -> POST /transactions/sync
+- "Create a enrich?" -> POST /transactions/enrich
+- "Create a refresh?" -> POST /user/transactions/refresh
+- "Create a refresh?" -> POST /user/financial_data/refresh
+- "Create a get?" -> POST /institutions/get
+- "Create a search?" -> POST /institutions/search
+- "Create a get_by_id?" -> POST /institutions/get_by_id
+- "Create a remove?" -> POST /item/remove
+- "Create a get?" -> POST /accounts/get
+- "Create a get?" -> POST /categories/get
+- "Create a create?" -> POST /sandbox/processor_token/create
+- "Create a create?" -> POST /sandbox/public_token/create
+- "Create a fire_webhook?" -> POST /sandbox/item/fire_webhook
+- "Create a get?" -> POST /accounts/balance/get
+- "Create a get?" -> POST /identity/get
+- "Create a get?" -> POST /identity/documents/uploads/get
+- "Create a match?" -> POST /identity/match
+- "Create a refresh?" -> POST /identity/refresh
+- "Create a get?" -> POST /dashboard_user/get
+- "Create a list?" -> POST /dashboard_user/list
+- "Create a create?" -> POST /identity_verification/create
+- "Create a get?" -> POST /identity_verification/get
+- "Create a list?" -> POST /identity_verification/list
+- "Create a retry?" -> POST /identity_verification/retry
+- "Create a create?" -> POST /watchlist_screening/entity/create
+- "Create a get?" -> POST /watchlist_screening/entity/get
+- "Create a list?" -> POST /watchlist_screening/entity/history/list
+- "Create a list?" -> POST /watchlist_screening/entity/hit/list
+- "Create a list?" -> POST /watchlist_screening/entity/list
+- "Create a get?" -> POST /watchlist_screening/entity/program/get
+- "Create a list?" -> POST /watchlist_screening/entity/program/list
+- "Create a create?" -> POST /watchlist_screening/entity/review/create
+- "Create a list?" -> POST /watchlist_screening/entity/review/list
+- "Create a update?" -> POST /watchlist_screening/entity/update
+- "Create a create?" -> POST /watchlist_screening/individual/create
+- "Create a get?" -> POST /watchlist_screening/individual/get
+- "Create a list?" -> POST /watchlist_screening/individual/history/list
+- "Create a list?" -> POST /watchlist_screening/individual/hit/list
+- "Create a list?" -> POST /watchlist_screening/individual/list
+- "Create a get?" -> POST /watchlist_screening/individual/program/get
+- "Create a list?" -> POST /watchlist_screening/individual/program/list
+- "Create a create?" -> POST /watchlist_screening/individual/review/create
+- "Create a list?" -> POST /watchlist_screening/individual/review/list
+- "Create a update?" -> POST /watchlist_screening/individual/update
+- "Create a evaluate?" -> POST /beacon/account_risk/v1/evaluate
+- "Create a create?" -> POST /beacon/user/create
+- "Create a get?" -> POST /beacon/user/get
+- "Create a review?" -> POST /beacon/user/review
+- "Create a create?" -> POST /beacon/report/create
+- "Create a list?" -> POST /beacon/report/list
+- "Create a list?" -> POST /beacon/report_syndication/list
+- "Create a get?" -> POST /beacon/report/get
+- "Create a get?" -> POST /beacon/report_syndication/get
+- "Create a update?" -> POST /beacon/user/update
+- "Create a get?" -> POST /beacon/duplicate/get
+- "Create a create?" -> POST /identity_verification/autofill/create
+- "Create a list?" -> POST /beacon/user/history/list
+- "Create a get?" -> POST /beacon/user/account_insights/get
+- "Create a get?" -> POST /protect/user/insights/get
+- "Create a create?" -> POST /protect/report/create
+- "Create a compute?" -> POST /protect/compute
+- "Create a send?" -> POST /protect/event/send
+- "Create a get?" -> POST /protect/event/get
+- "Create a get?" -> POST /business_verification/get
+- "Create a create?" -> POST /business_verification/create
+- "Create a get?" -> POST /processor/auth/get
+- "Create a get?" -> POST /processor/account/get
+- "Create a get?" -> POST /processor/investments/holdings/get
+- "Create a get?" -> POST /processor/investments/transactions/get
+- "Create a get?" -> POST /processor/transactions/get
+- "Create a sync?" -> POST /processor/transactions/sync
+- "Create a refresh?" -> POST /processor/transactions/refresh
+- "Create a get?" -> POST /processor/transactions/recurring/get
+- "Create a evaluate?" -> POST /processor/signal/evaluate
+- "Create a report?" -> POST /processor/signal/decision/report
+- "Create a report?" -> POST /processor/signal/return/report
+- "Create a prepare?" -> POST /processor/signal/prepare
+- "Create a create?" -> POST /processor/bank_transfer/create
+- "Create a get?" -> POST /processor/liabilities/get
+- "Create a get?" -> POST /processor/identity/get
+- "Create a match?" -> POST /processor/identity/match
+- "Create a get?" -> POST /processor/balance/get
+- "Create a update?" -> POST /item/webhook/update
+- "Create a invalidate?" -> POST /item/access_token/invalidate
+- "Create a get?" -> POST /webhook_verification_key/get
+- "Create a get?" -> POST /liabilities/get
+- "Create a create?" -> POST /payment_initiation/recipient/create
+- "Create a reverse?" -> POST /payment_initiation/payment/reverse
+- "Create a get?" -> POST /payment_initiation/recipient/get
+- "Create a list?" -> POST /payment_initiation/recipient/list
+- "Create a create?" -> POST /payment_initiation/payment/create
+- "Create a create?" -> POST /payment_initiation/payment/token/create
+- "Create a create?" -> POST /payment_initiation/consent/create
+- "Create a get?" -> POST /payment_initiation/consent/get
+- "Create a revoke?" -> POST /payment_initiation/consent/revoke
+- "Create a execute?" -> POST /payment_initiation/consent/payment/execute
+- "Create a reset_login?" -> POST /sandbox/item/reset_login
+- "Create a set_verification_status?" -> POST /sandbox/item/set_verification_status
+- "Create a reset_login?" -> POST /sandbox/user/reset_login
+- "Create a exchange?" -> POST /item/public_token/exchange
+- "Create a create?" -> POST /item/public_token/create
+- "Create a create?" -> POST /user/create
+- "Create a get?" -> POST /user/get
+- "Create a remove?" -> POST /user/identity/remove
+- "Create a update?" -> POST /user/update
+- "Create a remove?" -> POST /user/remove
+- "Create a terminate?" -> POST /user/products/terminate
+- "Create a get?" -> POST /user/items/get
+- "Create a associate?" -> POST /user/items/associate
+- "Create a remove?" -> POST /user/items/remove
+- "Create a create?" -> POST /user/third_party_token/create
+- "Create a remove?" -> POST /user/third_party_token/remove
+- "Create a get?" -> POST /credit/sessions/get
+- "Create a get?" -> POST /payment_initiation/payment/get
+- "Create a list?" -> POST /payment_initiation/payment/list
+- "Create a get?" -> POST /investments/holdings/get
+- "Create a get?" -> POST /investments/transactions/get
+- "Create a refresh?" -> POST /investments/refresh
+- "Create a get?" -> POST /investments/auth/get
+- "Create a create?" -> POST /processor/token/create
+- "Create a set?" -> POST /processor/token/permissions/set
+- "Create a get?" -> POST /processor/token/permissions/get
+- "Create a update?" -> POST /processor/token/webhook/update
+- "Create a create?" -> POST /processor/stripe/bank_account_token/create
+- "Create a create?" -> POST /processor/apex/processor_token/create
+- "Create a import?" -> POST /item/import
+- "Create a create?" -> POST /link/token/create
+- "Create a get?" -> POST /link/token/get
+- "Create a exchange?" -> POST /link/oauth/correlation_id/exchange
+- "Create a create?" -> POST /session/token/create
+- "Create a get?" -> POST /transfer/get
+- "Create a get?" -> POST /transfer/recurring/get
+- "Create a get?" -> POST /bank_transfer/get
+- "Create a create?" -> POST /transfer/authorization/create
+- "Create a cancel?" -> POST /transfer/authorization/cancel
+- "Create a get?" -> POST /transfer/balance/get
+- "Create a get?" -> POST /transfer/capabilities/get
+- "Create a get?" -> POST /transfer/configuration/get
+- "Create a get?" -> POST /transfer/ledger/get
+- "Create a distribute?" -> POST /transfer/ledger/distribute
+- "Create a deposit?" -> POST /transfer/ledger/deposit
+- "Create a withdraw?" -> POST /transfer/ledger/withdraw
+- "Create a update?" -> POST /transfer/originator/funding_account/update
+- "Create a create?" -> POST /transfer/originator/funding_account/create
+- "Create a get?" -> POST /transfer/metrics/get
+- "Create a create?" -> POST /transfer/create
+- "Create a create?" -> POST /transfer/recurring/create
+- "Create a create?" -> POST /bank_transfer/create
+- "Create a list?" -> POST /transfer/list
+- "Create a list?" -> POST /transfer/recurring/list
+- "Create a list?" -> POST /bank_transfer/list
+- "Create a cancel?" -> POST /transfer/cancel
+- "Create a cancel?" -> POST /transfer/recurring/cancel
+- "Create a cancel?" -> POST /bank_transfer/cancel
+- "Create a list?" -> POST /transfer/event/list
+- "Create a list?" -> POST /transfer/ledger/event/list
+- "Create a list?" -> POST /bank_transfer/event/list
+- "Create a sync?" -> POST /transfer/event/sync
+- "Create a sync?" -> POST /bank_transfer/event/sync
+- "Create a get?" -> POST /transfer/sweep/get
+- "Create a get?" -> POST /bank_transfer/sweep/get
+- "Create a list?" -> POST /transfer/sweep/list
+- "Create a list?" -> POST /bank_transfer/sweep/list
+- "Create a get?" -> POST /bank_transfer/balance/get
+- "Create a migrate_account?" -> POST /bank_transfer/migrate_account
+- "Create a migrate_account?" -> POST /transfer/migrate_account
+- "Create a create?" -> POST /transfer/intent/create
+- "Create a get?" -> POST /transfer/intent/get
+- "Create a list?" -> POST /transfer/repayment/list
+- "Create a list?" -> POST /transfer/repayment/return/list
+- "Create a submit?" -> POST /transfer/platform/requirement/submit
+- "Create a create?" -> POST /transfer/originator/create
+- "Create a create?" -> POST /transfer/questionnaire/create
+- "Create a submit?" -> POST /transfer/diligence/submit
+- "Create a upload?" -> POST /transfer/diligence/document/upload
+- "Create a get?" -> POST /transfer/originator/get
+- "Create a list?" -> POST /transfer/originator/list
+- "Create a create?" -> POST /transfer/refund/create
+- "Create a get?" -> POST /transfer/refund/get
+- "Create a cancel?" -> POST /transfer/refund/cancel
+- "Create a create?" -> POST /transfer/platform/originator/create
+- "Create a create?" -> POST /transfer/platform/person/create
+- "Create a simulate?" -> POST /sandbox/bank_transfer/simulate
+- "Create a simulate?" -> POST /sandbox/transfer/sweep/simulate
+- "Create a simulate?" -> POST /sandbox/transfer/simulate
+- "Create a simulate?" -> POST /sandbox/transfer/refund/simulate
+- "Create a simulate_available?" -> POST /sandbox/transfer/ledger/simulate_available
+- "Create a simulate?" -> POST /sandbox/transfer/ledger/deposit/simulate
+- "Create a simulate?" -> POST /sandbox/transfer/ledger/withdraw/simulate
+- "Create a simulate?" -> POST /sandbox/transfer/repayment/simulate
+- "Create a fire_webhook?" -> POST /sandbox/transfer/fire_webhook
+- "Create a create?" -> POST /sandbox/transfer/test_clock/create
+- "Create a advance?" -> POST /sandbox/transfer/test_clock/advance
+- "Create a get?" -> POST /sandbox/transfer/test_clock/get
+- "Create a list?" -> POST /sandbox/transfer/test_clock/list
+- "Create a reset_login?" -> POST /sandbox/payment_profile/reset_login
+- "Create a simulate?" -> POST /sandbox/payment/simulate
+- "Create a search?" -> POST /employers/search
+- "Create a create?" -> POST /income/verification/create
+- "Create a get?" -> POST /income/verification/paystubs/get
+- "Create a download?" -> POST /income/verification/documents/download
+- "Create a get?" -> POST /income/verification/taxforms/get
+- "Create a precheck?" -> POST /income/verification/precheck
+- "Create a get?" -> POST /employment/verification/get
+- "Create a create?" -> POST /credit/audit_copy_token/create
+- "Create a remove?" -> POST /credit/audit_copy_token/remove
+- "Create a get?" -> POST /credit/asset_report/freddie_mac/get
+- "Create a get?" -> POST /credit/freddie_mac/reports/get
+- "Create a get?" -> POST /beta/credit/v1/bank_employment/get
+- "Create a get?" -> POST /credit/bank_income/get
+- "Create a get?" -> POST /credit/bank_income/pdf/get
+- "Create a refresh?" -> POST /credit/bank_income/refresh
+- "Create a update?" -> POST /credit/bank_income/webhook/update
+- "Create a update?" -> POST /credit/payroll_income/parsing_config/update
+- "Create a get?" -> POST /credit/bank_statements/uploads/get
+- "Create a get?" -> POST /credit/payroll_income/get
+- "Create a get?" -> POST /credit/payroll_income/risk_signals/get
+- "Create a precheck?" -> POST /credit/payroll_income/precheck
+- "Create a get?" -> POST /credit/employment/get
+- "Create a refresh?" -> POST /credit/payroll_income/refresh
+- "Create a create?" -> POST /credit/relay/create
+- "Create a get?" -> POST /credit/relay/get
+- "Create a get?" -> POST /credit/relay/pdf/get
+- "Create a refresh?" -> POST /credit/relay/refresh
+- "Create a remove?" -> POST /credit/relay/remove
+- "Create a fire_webhook?" -> POST /sandbox/bank_transfer/fire_webhook
+- "Create a fire_webhook?" -> POST /sandbox/income/fire_webhook
+- "Create a fire_webhook?" -> POST /sandbox/bank_income/fire_webhook
+- "Create a update?" -> POST /sandbox/cra/cashflow_updates/update
+- "Create a select_account?" -> POST /sandbox/oauth/select_accounts
+- "Create a evaluate?" -> POST /signal/evaluate
+- "Create a schedule?" -> POST /signal/schedule
+- "Create a report?" -> POST /signal/decision/report
+- "Create a report?" -> POST /signal/return/report
+- "Create a prepare?" -> POST /signal/prepare
+- "Create a create?" -> POST /wallet/create
+- "Create a get?" -> POST /wallet/get
+- "Create a list?" -> POST /wallet/list
+- "Create a execute?" -> POST /wallet/transaction/execute
+- "Create a get?" -> POST /wallet/transaction/get
+- "Create a list?" -> POST /wallet/transaction/list
+- "Create a enhance?" -> POST /beta/transactions/v1/enhance
+- "Create a create?" -> POST /beta/transactions/rules/v1/create
+- "Create a list?" -> POST /beta/transactions/rules/v1/list
+- "Create a remove?" -> POST /beta/transactions/rules/v1/remove
+- "Create a get?" -> POST /beta/transactions/user_insights/v1/get
+- "Create a get?" -> POST /beta/ewa_report/v1/get
+- "Create a search?" -> POST /issues/search
+- "Create a get?" -> POST /issues/get
+- "Create a subscribe?" -> POST /issues/subscribe
+- "Create a create?" -> POST /payment_profile/create
+- "Create a get?" -> POST /payment_profile/get
+- "Create a remove?" -> POST /payment_profile/remove
+- "Create a create?" -> POST /partner/customer/create
+- "Create a get?" -> POST /partner/customer/get
+- "Create a enable?" -> POST /partner/customer/enable
+- "Create a remove?" -> POST /partner/customer/remove
+- "Create a get?" -> POST /partner/customer/oauth_institutions/get
+- "Create a create?" -> POST /beta/partner/customer/v1/create
+- "Create a get?" -> POST /beta/partner/customer/v1/get
+- "Create a update?" -> POST /beta/partner/customer/v1/update
+- "Create a enable?" -> POST /beta/partner/customer/v1/enable
+- "Create a create?" -> POST /link_delivery/create
+- "Create a get?" -> POST /link_delivery/get
+- "Create a notification?" -> POST /fdx/notifications
+- "List all recipients?" -> GET /fdx/recipients
+- "Get recipient details?" -> GET /fdx/recipient/{recipientId}
+- "Create a get?" -> POST /network_insights/report/get
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

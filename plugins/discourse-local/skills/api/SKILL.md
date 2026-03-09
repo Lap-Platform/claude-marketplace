@@ -256,87 +256,88 @@ https://{defaultHost}
 |--------|------|-------------|
 | PUT | /users/password-reset/{token}.json | Change password |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new topic or post?" -> POST /posts.json
-- "How do I search for content on the forum?" -> GET /search.json
-- "How do I list all categories?" -> GET /categories.json
-- "How do I get a user's profile information?" -> GET /u/{username}.json
-- "How do I create a new user account?" -> POST /users.json
-- "How do I suspend or silence a user?" -> PUT /admin/users/{id}/suspend.json or PUT /admin/users/{id}/silence.json
-- "How do I send a private message?" -> POST /posts.json (with `target_recipients` and `archetype: "private_message"`)
-- "How do I invite someone to a topic?" -> POST /t/{id}/invite.json
-- "How do I upload a file or image?" -> POST /uploads.json
-- "How do I list or manage groups?" -> GET /groups.json or GET /groups/{name}.json
-- "How do I create or manage badges?" -> POST /admin/badges.json or PUT /admin/badges/{id}.json
-- "How do I get the latest topics?" -> GET /latest.json
-- "How do I close, pin, or archive a topic?" -> PUT /t/{id}/status.json
-- "How do I get upcoming events?" -> GET /discourse-post-event/events.json
-- "How do I back up the site?" -> POST /admin/backups.json
-
-## Response Tips
-
-- **Topics & Posts**: Responses nest posts inside `post_stream.posts[]`; use `stream[]` for full post ID list, then fetch specific posts with `GET /t/{id}/posts.json?post_ids[]=`. The `topic_list.topics[]` array in listing endpoints uses `per_page` for implicit pagination.
-- **Search**: Results are split across `posts`, `users`, `categories`, `tags`, `groups` arrays. Check `grouped_search_result.more_posts` / `more_users` for pagination; use `page` param to continue.
-- **Users & Admin**: User profiles return deeply nested `user_option` and `user_notification_schedule` maps. Admin user details include `tl3_requirements` with granular trust level metrics. List endpoints return flat arrays -- check for `load_more_*` URLs.
-- **Categories**: Created/updated categories return the full category object with all settings. `category_list.categories[]` in listings may omit subcategories unless `include_subcategories=true`.
-- **Groups**: Member lists return `meta.total`, `meta.limit`, `meta.offset` for pagination. Group details include email/SMTP config fields that are null for non-admin callers.
-- **Uploads**: Standard uploads return `short_url` for embedding in posts. Multipart uploads require a three-step flow (create -> presign parts -> complete). Errors typically return 422 with validation messages.
-
-## Anomaly Flags
-
-- **Rate limiting**: Discourse returns `429 Too Many Requests` with `Retry-After` header. Surface this proactively and pause before retrying.
-- **Trust level restrictions**: Many actions silently fail or return 403 when the API user lacks sufficient trust level. Flag when `can_create_topic`, `can_edit`, or `can_delete` fields are `false`.
-- **Suspended/silenced users**: When fetching user profiles, flag `suspended_by`, `silenced_by`, or `full_suspend_reason` if present -- the user cannot post.
-- **Staged users**: The `staged: true` field on user profiles indicates a placeholder account (created from email). These users have not actually signed up.
-- **Deleted content**: Watch for `deleted_at` being non-null on posts/topics. Also flag `hidden: true` posts, which are suppressed by moderation.
-- **Empty search results with error**: `grouped_search_result.error` may contain a message even on 200 responses. Always check this field.
-- **Backup without uploads**: When `POST /admin/backups.json` is called with `with_uploads: false`, flag that media/attachments will not be included.
-- **Second factor enabled**: When `second_factor_enabled: true` on a user, certain account operations (password change, email change) may require additional verification.
-
-## Playbook
-
-### 1. Create a New Topic with Tags
-
-1. Verify you have a valid API key and admin username set in headers (`Api-Key`, `Api-Username`).
-2. List categories with `GET /categories.json` to find the target `category_id`.
-3. Create the topic with `POST /posts.json` providing `raw` (body text), `title`, and `category` (the category ID).
-4. To add tags, include the tags in the raw content or use the topic update endpoint `PUT /t/-/{id}.json` after creation.
-5. Confirm success by checking for the returned `topic_id` and `post_url`.
-
-### 2. Onboard a New User and Add to a Group
-
-1. Create the user with `POST /users.json` providing `name`, `email`, `password`, `username`. Set `active: true` and `approved: true` to skip email verification.
-2. Note the returned `user_id`.
-3. List available groups with `GET /groups.json` to find the target group `id`.
-4. Add the user to the group with `PUT /groups/{id}/members.json` passing the `usernames` parameter.
-5. Verify membership with `GET /groups/{name}/members.json`.
-
-### 3. Moderate a Problematic User
-
-1. Look up the user with `GET /admin/users/{id}.json` to review their history, flag counts, and trust level.
-2. To suspend: `PUT /admin/users/{id}/suspend.json` with `suspend_until` (ISO date) and `reason`. Optionally include a `message` sent to the user.
-3. To silence instead (user can read but not post): `PUT /admin/users/{id}/silence.json` with `silenced_till` and `reason`.
-4. To anonymize the account (irreversible): `PUT /admin/users/{id}/anonymize.json`.
-5. To force logout: `POST /admin/users/{id}/log_out.json`.
-
-### 4. Bulk Search and Export Content
-
-1. Run `GET /search.json?q=your+query` to find matching posts, users, categories, and tags.
-2. Check `grouped_search_result.more_posts` -- if truthy, increment `page` and repeat.
-3. For each post result, fetch full topic context with `GET /t/{id}.json` to get all replies and metadata.
-4. To get all posts in a large topic, use `post_stream.stream[]` for the full ID list, then batch-fetch with `GET /t/{id}/posts.json?post_ids[]=...`.
-5. Check `grouped_search_result.error` on every response to catch query syntax issues early.
-
-### 5. Set Up Event Tracking via Calendar
-
-1. List upcoming events with `GET /discourse-post-event/events.json` using `after` set to today's date.
-2. Filter by category with `category_id` and optionally `include_subcategories=true`.
-3. To get events for a specific user, pass `attending_user` with their username.
-4. Export to calendar format with `GET /discourse-post-event/events.ics` using the same filters.
-5. Use `order=asc` and `limit` to paginate through large event sets chronologically.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all events.json?" -> GET /discourse-post-event/events.json
+- "List all events.ics?" -> GET /discourse-post-event/events.ics
+- "List all backups.json?" -> GET /admin/backups.json
+- "Create a backups.json?" -> POST /admin/backups.json
+- "Update a backup?" -> PUT /admin/backups/{filename}
+- "Get backup details?" -> GET /admin/backups/{filename}
+- "List all badges.json?" -> GET /admin/badges.json
+- "Create a badges.json?" -> POST /admin/badges.json
+- "Update a badge?" -> PUT /admin/badges/{id}.json
+- "Delete a badge?" -> DELETE /admin/badges/{id}.json
+- "Create a categories.json?" -> POST /categories.json
+- "List all categories.json?" -> GET /categories.json
+- "Update a category?" -> PUT /categories/{id}.json
+- "Get c details?" -> GET /c/{slug}/{id}.json
+- "List all show.json?" -> GET /c/{id}/show.json
+- "Create a groups.json?" -> POST /admin/groups.json
+- "Delete a group?" -> DELETE /admin/groups/{id}.json
+- "Get group details?" -> GET /groups/{name}.json
+- "Update a group?" -> PUT /groups/{id}.json
+- "Get by-id details?" -> GET /groups/by-id/{id}.json
+- "List all members.json?" -> GET /groups/{name}/members.json
+- "List all groups.json?" -> GET /groups.json
+- "Create a invites.json?" -> POST /invites.json
+- "Create a create-multiple.json?" -> POST /invites/create-multiple.json
+- "List all notifications.json?" -> GET /notifications.json
+- "List all posts.json?" -> GET /posts.json
+- "Create a posts.json?" -> POST /posts.json
+- "Get post details?" -> GET /posts/{id}.json
+- "Update a post?" -> PUT /posts/{id}.json
+- "Delete a post?" -> DELETE /posts/{id}.json
+- "List all replies.json?" -> GET /posts/{id}/replies.json
+- "Create a post_actions.json?" -> POST /post_actions.json
+- "Get private-message details?" -> GET /topics/private-messages/{username}.json
+- "Get private-messages-sent details?" -> GET /topics/private-messages-sent/{username}.json
+- "Search search.json?" -> GET /search.json
+- "List all site.json?" -> GET /site.json
+- "List all basic-info.json?" -> GET /site/basic-info.json
+- "List all tag_groups.json?" -> GET /tag_groups.json
+- "Create a tag_groups.json?" -> POST /tag_groups.json
+- "Get tag_group details?" -> GET /tag_groups/{id}.json
+- "Update a tag_group?" -> PUT /tag_groups/{id}.json
+- "List all tags.json?" -> GET /tags.json
+- "Get tag details?" -> GET /tag/{name}.json
+- "List all posts.json?" -> GET /t/{id}/posts.json
+- "Get t details?" -> GET /t/{id}.json
+- "Delete a t?" -> DELETE /t/{id}.json
+- "Update a -?" -> PUT /t/-/{id}.json
+- "Create a invite.json?" -> POST /t/{id}/invite.json
+- "Create a invite-group.json?" -> POST /t/{id}/invite-group.json
+- "List all latest.json?" -> GET /latest.json
+- "List all top.json?" -> GET /top.json
+- "Create a notifications.json?" -> POST /t/{id}/notifications.json
+- "Create a timer.json?" -> POST /t/{id}/timer.json
+- "Get external_id details?" -> GET /t/external_id/{external_id}.json
+- "Create a uploads.json?" -> POST /uploads.json
+- "Create a generate-presigned-put.json?" -> POST /uploads/generate-presigned-put.json
+- "Create a complete-external-upload.json?" -> POST /uploads/complete-external-upload.json
+- "Create a create-multipart.json?" -> POST /uploads/create-multipart.json
+- "Create a batch-presign-multipart-parts.json?" -> POST /uploads/batch-presign-multipart-parts.json
+- "Create a abort-multipart.json?" -> POST /uploads/abort-multipart.json
+- "Create a complete-multipart.json?" -> POST /uploads/complete-multipart.json
+- "Get user-badge details?" -> GET /user-badges/{username}.json
+- "Create a users.json?" -> POST /users.json
+- "Get u details?" -> GET /u/{username}.json
+- "Update a u?" -> PUT /u/{username}.json
+- "Get by-external details?" -> GET /u/by-external/{external_id}.json
+- "Get by-external details?" -> GET /u/by-external/{provider}/{external_id}.json
+- "List all directory_items.json?" -> GET /directory_items.json
+- "Get user details?" -> GET /admin/users/{id}.json
+- "Delete a user?" -> DELETE /admin/users/{id}.json
+- "Create a log_out.json?" -> POST /admin/users/{id}/log_out.json
+- "Create a refresh_gravatar.json?" -> POST /user_avatar/{username}/refresh_gravatar.json
+- "List all users.json?" -> GET /admin/users.json
+- "Get list details?" -> GET /admin/users/list/{flag}.json
+- "List all user_actions.json?" -> GET /user_actions.json
+- "Create a forgot_password.json?" -> POST /session/forgot_password.json
+- "Update a password-reset?" -> PUT /users/password-reset/{token}.json
+- "List all emails.json?" -> GET /u/{username}/emails.json
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

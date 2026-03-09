@@ -10,88 +10,101 @@
 
 @group sites
 @endpoint GET /sites
+@desc **Note:** Environment variable keys and values have moved from `build_settings.env` and `repo.env` to a new endpoint. Please use [getEnvVars](#tag/environmentVariables/operation/getEnvVars) to retrieve site environment variables.
 @optional {name: any, filter: any, page: any, per_page: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /sites
+@desc **Note:** Environment variable keys and values have moved from `build_settings.env` and `repo.env` to a new endpoint. Please use [createEnvVars](#tag/environmentVariables/operation/createEnvVars) to create environment variables for a site.
 @required {site: any}
 @optional {configure_dns: any}
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /sites/{site_id}
+@desc **Note:** Environment variable keys and values have moved from `build_settings.env` and `repo.env` to a new endpoint. Please use [getEnvVars](#tag/environmentVariables/operation/getEnvVars) to retrieve site environment variables.
 @optional {feature_flags: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint PATCH /sites/{site_id}
+@desc **Note:** Environment variable keys and values have moved from `build_settings.env` and `repo.env` to a new endpoint. Please use [updateEnvVar](#tag/environmentVariables/operation/updateEnvVar) to update a site's environment variables.
 @required {site: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /sites/{site_id}
-@returns(204)
+@returns(204) Deleted
 
 @endpoint POST /sites/{site_id}/ssl
+@desc Provisions or updates a TLS certificate for the site.
 @required {site_id: any}
-@optional {certificate: any, key: any, ca_certificates: any}
-@returns(200)
-@errors {422}
+@optional {certificate: any # PEM-encoded certificate. Required when updating an existing certificate., key: any # PEM-encoded private key. Required when updating an existing certificate., ca_certificates: any # PEM-encoded CA certificate chain. Required when updating an existing certificate.}
+@returns(200) OK
+@errors {422: Unprocessable Entity. Returns errors such as: "certificate parameter is required when updating an existing certificate" (when updating without params), "No custom domain configured", or "bad dns for custom domain"}
 
 @endpoint GET /sites/{site_id}/ssl
 @required {site_id: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /sites/{site_id}/ssl/certificates
 @required {site_id: any, domain: any}
-@returns(200)
-@errors {404, 422}
+@returns(200) Array of SNI Certificates
+@errors {404: Not Found, 422: Unprocessable Entity}
 
 @endgroup
 
 @group accounts
 @endpoint GET /accounts/{account_id}/env
-@required {account_id: any}
-@optional {context_name: any, scope: any, site_id: any}
-@returns(200)
+@desc Returns all environment variables for an account or site. An account corresponds to a team in the Netlify UI.
+@required {account_id: any # Scope response to account_id}
+@optional {context_name: any # Filter by deploy context, scope: any # Filter by scope, site_id: any # If specified, only return environment variables set on this site}
+@returns(200) OK
 
 @endpoint POST /accounts/{account_id}/env
-@required {account_id: any}
-@optional {env_vars: [map], site_id: any}
-@returns(201)
+@desc Creates new environment variables. Granular scopes are available on Pro plans and above.
+@required {account_id: any # Scope response to account_id}
+@optional {env_vars: [map], site_id: any # If provided, create an environment variable on the site level, not the account level}
+@returns(201) OK
 
 @endgroup
 
 @group api
 @endpoint GET /api/v1/sites/{site_id}/env
-@required {site_id: any}
-@optional {context_name: any, scope: any}
-@returns(200)
+@desc Returns all environment variables for a site. This convenience method behaves the same as `getEnvVars` but doesn't require an `account_id` as input.
+@required {site_id: any # Scope response to site_id}
+@optional {context_name: any # Filter by deploy context, scope: any # Filter by scope}
+@returns(200) OK
 
 @endgroup
 
 @group accounts
 @endpoint GET /accounts/{account_id}/env/{key}
-@required {account_id: any, key: any}
-@optional {site_id: any}
-@returns(200)
+@desc Returns an individual environment variable.
+@required {account_id: any # Scope response to account_id, key: any # The environment variable key (case-sensitive)}
+@optional {site_id: any # If provided, return the environment variable for a specific site (no merging is performed)}
+@returns(200) OK
 
 @endpoint PUT /accounts/{account_id}/env/{key}
-@required {account_id: any, key: any}
-@optional {env_var: map, site_id: any}
-@returns(200)
+@desc Updates an existing environment variable and all of its values. Existing values will be replaced by values provided.
+@required {account_id: any # Scope response to account_id, key: any # The existing environment variable key name (case-sensitive)}
+@optional {env_var: map, site_id: any # If provided, update an environment variable set on this site}
+@returns(200) OK
 
 @endpoint PATCH /accounts/{account_id}/env/{key}
-@required {account_id: any, key: any}
-@optional {site_id: any, env_var: map}
-@returns(201)
+@desc Updates or creates a new value for an existing environment variable.
+@required {account_id: any # Scope response to account_id, key: any # The existing environment variable key name (case-sensitive)}
+@optional {site_id: any # If provided, update an environment variable set on this site, env_var: map}
+@returns(201) Created (success)
 
 @endpoint DELETE /accounts/{account_id}/env/{key}
-@required {account_id: any, key: any}
-@optional {site_id: any}
-@returns(204)
+@desc Deletes an environment variable
+@required {account_id: any # Scope response to account_id, key: any # The environment variable key (case-sensitive)}
+@optional {site_id: any # If provided, delete the environment variable from this site}
+@returns(204) No Content (success)
 
 @endpoint DELETE /accounts/{account_id}/env/{key}/value/{id}
-@required {account_id: any, id: any, key: any}
-@optional {site_id: any}
-@returns(204)
+@desc Deletes a specific environment variable value.
+@required {account_id: any # Scope response to account_id, id: any # The environment variable value's ID, key: any # The environment variable key name (case-sensitive)}
+@optional {site_id: any # If provided, delete the value from an environment variable on this site}
+@returns(204) No Content (success)
 
 @endgroup
 
@@ -99,245 +112,254 @@
 @endpoint GET /sites/{site_id}/functions
 @required {site_id: any}
 @optional {filter: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /sites/{site_id}/forms
 @required {site_id: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /sites/{site_id}/forms/{form_id}
 @required {site_id: any, form_id: any}
-@returns(204)
+@returns(204) Deleted
 
 @endpoint GET /sites/{site_id}/submissions
 @required {site_id: any}
 @optional {page: any, per_page: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /sites/{site_id}/files
 @required {site_id: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /sites/{site_id}/assets
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /sites/{site_id}/assets
 @required {name: any, size: any, content_type: any}
 @optional {visibility: any}
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /sites/{site_id}/assets/{asset_id}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /sites/{site_id}/assets/{asset_id}
 @required {state: any}
-@returns(200)
+@returns(200) Updated
 
 @endpoint DELETE /sites/{site_id}/assets/{asset_id}
-@returns(204)
+@returns(204) Deleted
 
 @endpoint GET /sites/{site_id}/assets/{asset_id}/public_signature
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /sites/{site_id}/files/{file_path}
 @required {site_id: any, file_path: any}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group purge
 @endpoint POST /purge
+@desc Purges cached content from Netlify's CDN. Supports purging by Cache-Tag.
 @required {payload: map}
-@returns(202)
-@errors {400, 404}
+@returns(202) OK
+@errors {400: Invalid request parameters, 404: Site not found}
 
 @endgroup
 
 @group sites
 @endpoint GET /sites/{site_id}/snippets
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /sites/{site_id}/snippets
 @required {snippet: map}
-@returns(201)
+@returns(201) OK
 
 @endpoint GET /sites/{site_id}/snippets/{snippet_id}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /sites/{site_id}/snippets/{snippet_id}
 @required {snippet: map}
-@returns(204)
+@returns(204) No content
 
 @endpoint DELETE /sites/{site_id}/snippets/{snippet_id}
-@returns(204)
+@returns(204) No content
 
 @endpoint GET /sites/{site_id}/metadata
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /sites/{site_id}/metadata
 @required {metadata: map}
-@returns(204)
+@returns(204) No content
 
 @endpoint GET /sites/{site_id}/build_hooks
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /sites/{site_id}/build_hooks
 @required {buildHook: map}
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /sites/{site_id}/build_hooks/{id}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /sites/{site_id}/build_hooks/{id}
 @required {buildHook: map}
-@returns(204)
+@returns(204) No content
 
 @endpoint DELETE /sites/{site_id}/build_hooks/{id}
-@returns(204)
+@returns(204) No content
 
 @endpoint GET /sites/{site_id}/deploys
 @optional {page: any, per_page: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /sites/{site_id}/deploys
 @required {deploy: map}
 @optional {title: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /sites/{site_id}/deploys/{deploy_id}
 @required {site_id: any, deploy_id: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /sites/{site_id}/deploys/{deploy_id}
 @required {site_id: any, deploy_id: any, deploy: map}
 @optional {commit_ref: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /sites/{site_id}/deploys/{deploy_id}
 @required {deploy_id: any, site_id: any}
-@returns(204)
+@returns(204) No content
 
 @endgroup
 
 @group deploys
 @endpoint POST /deploys/{deploy_id}/cancel
 @required {deploy_id: any}
-@returns(201)
+@returns(201) Cancelled
 
 @endgroup
 
 @group sites
 @endpoint POST /sites/{site_id}/deploys/{deploy_id}/restore
 @required {site_id: any, deploy_id: any}
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /sites/{site_id}/builds
 @optional {page: any, per_page: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /sites/{site_id}/builds
-@optional {branch: any, clear_cache: any, image: any, template_id: any, title: any, zip: any}
-@returns(200)
-@errors {400, 404, 422}
+@desc Runs a build for a site. The build will be scheduled to run at the first opportunity, but it might not start immediately if insufficient account build capacity is available.
+@optional {branch: any # If no branch is specified, it is treated as a production deploy If a branch IS specified and matches the main branch, it is also production If a branch is specified and doesn't match the main branch, it is a branch deploy, clear_cache: any # Whether to clear the build cache before building, image: any # The build image tag to use for the build, template_id: any # The build template to use for the build, title: any # The title of the build, zip: any # A zip file containing the site files to build. Only used with Content-Type 'multipart/form-data'. Alternatively, set Content-Type to 'application/zip' and send the zip as the raw request body (no 'zip' parameter needed).}
+@returns(200) OK
+@errors {400: Bad Request, 404: Not Found, 422: Unprocessable Entity}
 
 @endpoint GET /sites/{site_id}/deployed-branches
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /sites/{site_id}/unlink_repo
-@returns(200)
-@errors {404}
+@desc [Beta] Unlinks the repo from the site.
+@returns(200) OK
+@errors {404: Site not found}
 
 @endpoint PUT /sites/{site_id}/enable
-@returns(204)
-@errors {422}
+@desc Re-enables a site that was previously disabled by the user. Sites that were disabled for usage exceeded or marked as spam cannot be re-enabled via this endpoint.
+@returns(204) No content
+@errors {422: Cannot enable this site}
 
 @endpoint PUT /sites/{site_id}/disable
-@required {reason: any}
-@returns(204)
+@desc Disables a site, preventing it from serving content. The site can be re-enabled later using the enable endpoint.
+@required {reason: any # Reason for disabling the site}
+@returns(204) No content
 
 @endgroup
 
 @group builds
 @endpoint GET /builds/{build_id}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /builds/{build_id}/log
-@returns(204)
+@returns(204) No content
 
 @endpoint POST /builds/{build_id}/start
-@returns(204)
+@returns(204) No content
 
 @endgroup
 
 @group {account_id}
 @endpoint GET /{account_id}/builds/status
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group sites
 @endpoint GET /sites/{site_id}/dns
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /sites/{site_id}/dns
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /sites/{site_id}/rollback
-@returns(204)
+@returns(204) No content
 
 @endgroup
 
 @group deploys
 @endpoint GET /deploys/{deploy_id}
 @required {deploy_id: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /deploys/{deploy_id}
 @required {deploy_id: any}
-@returns(204)
+@returns(204) No content
 
 @endpoint PATCH /deploys/{deploy_id}/validations_report
-@required {deploy_id: any, report: map}
-@returns(200)
+@desc Updates the deploy validations report for a deploy.
+@required {deploy_id: any # The ID of the deploy, report: map}
+@returns(200) OK
 
 @endpoint POST /deploys/{deploy_id}/lock
 @required {deploy_id: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /deploys/{deploy_id}/unlock
 @required {deploy_id: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /deploys/{deploy_id}/files/{path}
 @required {deploy_id: any, path: any, file_body: str(binary)}
 @optional {size: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /deploys/{deploy_id}/functions/{name}
 @required {deploy_id: any, name: any, file_body: str(binary)}
 @optional {runtime: any, invocation_mode: any, timeout: any, size: any, X-Nf-Retry-Count: any}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group sites
 @endpoint PUT /sites/{site_id}/plugins/{package}
+@desc This is an internal-only endpoint.
 @required {site_id: any, package: any}
 @optional {plugin_params: map}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /sites/{site_id}/plugin_runs/latest
+@desc This is an internal-only endpoint.
 @required {site_id: any, packages: any}
 @optional {state: any}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group deploys
 @endpoint POST /deploys/{deploy_id}/plugin_runs
+@desc This is an internal-only endpoint.
 @required {deploy_id: any}
 @optional {plugin_run: map}
-@returns(201)
+@returns(201) CREATED
 
 @endgroup
 
@@ -345,128 +367,130 @@
 @endpoint GET /forms/{form_id}/submissions
 @required {form_id: any}
 @optional {page: any, per_page: any}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group hooks
 @endpoint GET /hooks
 @required {site_id: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /hooks
 @required {site_id: any, hook: map}
-@returns(201)
+@returns(201) OK
 
 @endpoint GET /hooks/{hook_id}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /hooks/{hook_id}
 @required {hook: map}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /hooks/{hook_id}
-@returns(204)
+@returns(204) No content
 
 @endpoint POST /hooks/{hook_id}/enable
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /hooks/types
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group oauth
 @endpoint POST /oauth/tickets
 @required {client_id: any}
-@returns(201)
+@returns(201) ok
 
 @endpoint GET /oauth/tickets/{ticket_id}
 @required {ticket_id: any}
-@returns(200)
+@returns(200) ok
 
 @endpoint POST /oauth/tickets/{ticket_id}/exchange
 @required {ticket_id: any}
-@returns(201)
+@returns(201) ok
 
 @endgroup
 
 @group deploy_keys
 @endpoint GET /deploy_keys
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /deploy_keys
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /deploy_keys/{key_id}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /deploy_keys/{key_id}
-@returns(204)
+@returns(204) Not Content
 
 @endgroup
 
 @group {account_slug}
 @endpoint POST /{account_slug}/sites
+@desc **Note:** Environment variable keys and values have moved from `build_settings.env` and `repo.env` to a new endpoint. Please use [createEnvVars](#tag/environmentVariables/operation/createEnvVars) to create environment variables for a site.
 @required {account_slug: any}
 @optional {site: any, configure_dns: any}
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /{account_slug}/sites
+@desc **Note:** Environment variable keys and values have moved from `build_settings.env` and `repo.env` to a new endpoint. Please use [getEnvVars](#tag/environmentVariables/operation/getEnvVars) to retrieve site environment variables.
 @required {account_slug: any}
 @optional {name: any, page: any, per_page: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /{account_slug}/members
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /{account_slug}/members
 @required {accountAddMemberSetup: map}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /{account_slug}/members/{member_id}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /{account_slug}/members/{member_id}
 @required {accountUpdateMemberSetup: map}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /{account_slug}/members/{member_id}
-@returns(204)
+@returns(204) Not Content
 
 @endgroup
 
 @group billing
 @endpoint GET /billing/payment_methods
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group accounts
 @endpoint GET /accounts/types
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /accounts
 @optional {minimal: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /accounts
 @required {accountSetup: map}
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /accounts/{account_id}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /accounts/{account_id}
 @optional {accountUpdateSetup: map}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /accounts/{account_id}
-@returns(204)
+@returns(204) Not Content
 
 @endpoint GET /accounts/{account_id}/audit
 @optional {query: any, log_type: any, page: any, per_page: any}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
@@ -474,266 +498,278 @@
 @endpoint GET /agent_runners
 @required {account_id: any, site_id: any}
 @optional {page: any, per_page: any, state: any, title: any, branch: any, result_branch: any, from: any, to: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /agent_runners
 @required {site_id: any}
 @optional {deploy_id: any, branch: any, prompt: any, agent: any, model: any, parent_agent_runner_id: any, dev_server_image: any, file_keys: any}
-@returns(200)
-@errors {404, 422}
+@returns(200) OK
+@errors {404: Not Found, 422: Unprocessable Entity}
 
 @endpoint POST /agent_runners/upload_url
 @required {account_id: any, filename: any, content_type: any}
-@returns(200)
-@errors {400, 422}
+@returns(200) OK
+@errors {400: Bad Request, 422: Unprocessable Entity}
 
 @endpoint GET /agent_runners/{agent_runner_id}
-@returns(200)
+@returns(200) OK
 
 @endpoint PATCH /agent_runners/{agent_runner_id}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /agent_runners/{agent_runner_id}
-@returns(202)
+@returns(202) Accepted
 
 @endpoint POST /agent_runners/{agent_runner_id}/archive
-@returns(202)
-@errors {404, 422}
+@returns(202) Accepted
+@errors {404: Not Found, 422: Unprocessable Entity}
 
 @endpoint POST /agent_runners/{agent_runner_id}/pull_request
-@returns(200)
-@errors {400, 409, 422}
+@returns(200) OK
+@errors {400: Bad Request, 409: Conflict, 422: Unprocessable Entity}
 
 @endpoint POST /agent_runners/{agent_runner_id}/commit
 @required {target_branch: any}
-@returns(200)
-@errors {400, 409, 422}
+@returns(200) OK
+@errors {400: Bad Request, 409: Conflict, 422: Unprocessable Entity}
 
 @endpoint GET /agent_runners/{agent_runner_id}/sessions
 @optional {page: any, per_page: any, state: any, from: any, to: any, order_by: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /agent_runners/{agent_runner_id}/sessions
 @optional {prompt: any, agent: any, model: any, file_keys: any}
-@returns(200)
-@errors {404, 422}
+@returns(200) OK
+@errors {404: Not Found, 422: Unprocessable Entity}
 
 @endpoint GET /agent_runners/{agent_runner_id}/sessions/{agent_runner_session_id}
-@returns(200)
+@returns(200) OK
 
 @endpoint PATCH /agent_runners/{agent_runner_id}/sessions/{agent_runner_session_id}
 @optional {is_published: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /agent_runners/{agent_runner_id}/sessions/{agent_runner_session_id}
-@returns(202)
+@returns(202) Accepted
 
 @endgroup
 
 @group submissions
 @endpoint GET /submissions/{submission_id}
 @optional {query: any, page: any, per_page: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /submissions/{submission_id}
-@returns(204)
+@returns(204) Deleted
 
 @endgroup
 
 @group sites
 @endpoint GET /sites/{site_id}/service-instances
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /sites/{site_id}/services/{addon}/instances
 @required {config: map}
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /sites/{site_id}/services/{addon}/instances/{instance_id}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /sites/{site_id}/services/{addon}/instances/{instance_id}
 @required {config: map}
-@returns(204)
+@returns(204) No Content
 
 @endpoint DELETE /sites/{site_id}/services/{addon}/instances/{instance_id}
-@returns(204)
+@returns(204) Deleted
 
 @endgroup
 
 @group services
 @endpoint GET /services/
-@returns(200)
+@returns(200) services
 
 @endpoint GET /services/{addonName}
-@returns(200)
+@returns(200) services
 
 @endpoint GET /services/{addonName}/manifest
-@returns(201)
+@returns(201) retrieving from provider
 
 @endgroup
 
 @group user
 @endpoint GET /user
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group sites
 @endpoint POST /sites/{site_id}/traffic_splits
 @required {branch_tests: map}
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /sites/{site_id}/traffic_splits
-@returns(200)
+@returns(200) split_tests
 
 @endpoint PUT /sites/{site_id}/traffic_splits/{split_test_id}
 @required {branch_tests: map}
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /sites/{site_id}/traffic_splits/{split_test_id}
-@returns(200)
+@returns(200) split_test
 
 @endpoint POST /sites/{site_id}/traffic_splits/{split_test_id}/publish
-@returns(204)
+@returns(204) enable
 
 @endpoint POST /sites/{site_id}/traffic_splits/{split_test_id}/unpublish
-@returns(204)
+@returns(204) disabled
 
 @endgroup
 
 @group dns_zones
 @endpoint POST /dns_zones
 @required {DnsZoneParams: map}
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /dns_zones
 @optional {account_slug: any}
-@returns(200)
+@returns(200) get all DNS zones the user has access to
 
 @endpoint GET /dns_zones/{zone_id}
-@returns(200)
+@returns(200) get a single DNS zone
 
 @endpoint DELETE /dns_zones/{zone_id}
-@returns(204)
+@returns(204) delete a single DNS zone
 
 @endpoint PUT /dns_zones/{zone_id}/transfer
-@returns(200)
+@returns(200) transfer a DNS zone to another account
 
 @endpoint GET /dns_zones/{zone_id}/dns_records
-@returns(200)
+@returns(200) get all DNS records for a single DNS zone
 
 @endpoint POST /dns_zones/{zone_id}/dns_records
 @required {dns_record: map}
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /dns_zones/{zone_id}/dns_records/{dns_record_id}
-@returns(200)
+@returns(200) get a single DNS record
 
 @endpoint DELETE /dns_zones/{zone_id}/dns_records/{dns_record_id}
-@returns(204)
+@returns(204) record deleted
 
 @endgroup
 
 @group sites
 @endpoint GET /sites/{site_id}/dev_servers
 @optional {page: any, per_page: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /sites/{site_id}/dev_servers
 @optional {branch: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /sites/{site_id}/dev_servers
 @optional {branch: any}
-@returns(202)
+@returns(202) OK
 
 @endpoint GET /sites/{site_id}/dev_servers/{dev_server_id}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /sites/{site_id}/dev_servers/{dev_server_id}/activity
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /sites/{site_id}/dev_servers/{dev_server_id}/state
 @required {body: map}
-@returns(200)
-@errors {409}
+@returns(200) OK
+@errors {409: Conflict}
 
 @endpoint GET /sites/{site_id}/dev_server_hooks
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /sites/{site_id}/dev_server_hooks
 @required {devServerHook: map}
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /sites/{site_id}/dev_server_hooks/{id}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /sites/{site_id}/dev_server_hooks/{id}
 @required {devServerHook: map}
-@returns(204)
+@returns(204) No content
 
 @endpoint DELETE /sites/{site_id}/dev_server_hooks/{id}
-@returns(204)
+@returns(204) No content
 
 @endgroup
 
 @group ai-gateway
 @endpoint GET /ai-gateway/providers
-@returns(200)
+@returns(200) The mapping of providers and supported models
 
 @endgroup
 
 @group sites
 @endpoint GET /sites/{site_id}/ai-gateway/token
-@returns(200)
-@errors {404}
+@desc Returns an AI Gateway token for a specific site
+@returns(200) AI Gateway token for the site
+@errors {404: AI Gateway not available for this site}
 
 @endgroup
 
 @group accounts
 @endpoint GET /accounts/{account_id}/ai-gateway/token
-@returns(200)
-@errors {404}
+@desc Returns an AI Gateway token scoped to an account
+@returns(200) AI Gateway token for the account
+@errors {404: AI Gateway not available for this account}
 
 @endgroup
 
 @group sites
 @endpoint POST /sites/{site_id}/database
+@desc Creates a new database for the specified site. If a database already exists, returns the existing connection string. The database region defaults to the site's functions region if not specified.
 @optional {database: map}
-@returns(201)
-@returns(200)
+@returns(201) Created
+@returns(200) Database already exists
 
 @endpoint GET /sites/{site_id}/database
-@returns(200)
+@desc Returns the database connection string for the specified site.
+@returns(200) OK
 
 @endpoint DELETE /sites/{site_id}/database
-@returns(204)
+@desc Deletes the database and all associated branches and snapshots for the specified site.
+@returns(204) Deleted
 
 @endpoint POST /sites/{site_id}/database/branch
+@desc Creates a new database branch for a deploy. If a branch already exists for the specified deploy ID, returns the existing connection string.
 @required {branch: map}
-@returns(201)
-@returns(200)
+@returns(201) Created
+@returns(200) Branch already exists for this deploy
 
 @endpoint GET /sites/{site_id}/database/branch/{deploy_id}
-@returns(200)
-@errors {404}
+@desc Returns the database branch connection string for a specific deploy.
+@returns(200) OK
+@errors {404: Branch not found for this deploy}
 
 @endpoint DELETE /sites/{site_id}/database/branch/{deploy_id}
-@returns(204)
+@desc Deletes a database branch associated with a deploy.
+@returns(204) Deleted
 
 @endpoint POST /sites/{site_id}/database/snapshot
+@desc Creates a point-in-time snapshot of a database branch. Defaults to the production branch if no branch name is specified.
 @optional {snapshot: map}
-@returns(201)
+@returns(201) Created
 
 @endpoint GET /sites/{site_id}/database/snapshots
-@returns(200)
+@desc Returns all snapshots for the site's database.
+@returns(200) OK
 
 @endpoint DELETE /sites/{site_id}/database/snapshot/{snapshot_id}
-@returns(204)
+@desc Deletes a database snapshot.
+@returns(204) Deleted
 
 @endpoint POST /sites/{site_id}/database/snapshot/{snapshot_id}/restore
+@desc Restores a snapshot to a database branch. Defaults to the production branch if no branch_name is specified.
 @optional {restore: map}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 

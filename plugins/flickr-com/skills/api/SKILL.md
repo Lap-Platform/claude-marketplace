@@ -144,86 +144,35 @@ https://api.flickr.com/services
 | GET | /oauth/request_token | Returns an oauth token and oauth token secret |
 | GET | /oauth/access_token | Returns an access token |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What are a user's favorite photos?" -> GET /rest?method=flickr.favorites.getList
-- "Show me photos uploaded by a specific user" -> GET /rest?method=flickr.people.getPhotos
-- "List all photosets (albums) for a user" -> GET /rest?method=flickr.photosets.getList
-- "Search for photos by keyword or tag" -> GET /rest?method=flickr.photos.search
-- "Get detailed info about a specific photo" -> GET /rest?method=flickr.photos.getInfo
-- "What sizes are available for a photo?" -> GET /rest?method=flickr.photos.getSizes
-- "What EXIF data does a photo have?" -> GET /rest?method=flickr.photos.getExif
-- "Get profile info for a Flickr user" -> GET /rest?method=flickr.people.getInfo
-- "Upload a photo to Flickr" -> POST /upload
-- "What photos are in a gallery?" -> GET /rest?method=flickr.galleries.getPhotos
-- "Show photos in a group pool" -> GET /rest?method=flickr.groups.pools.getPhotos
-- "Get info about a Flickr group" -> GET /rest?method=flickr.groups.getInfo
-- "What are the available photo licenses?" -> GET /rest?method=flickr.photos.licenses.getInfo
-- "Find photos taken within a geographic bounding box" -> GET /rest?method=flickr.photos.search (with bbox, lat, lon, radius params)
-- "Is the API working? Test connectivity" -> GET /rest?method=flickr.test.echo
-
-## Response Tips
-
-- **Photo listings** (favorites, people.getPhotos, search, pools, galleries, photosets.getPhotos): Paginated via `page` and `per_page` params; response includes `pages` and `total` fields in the wrapper element. Default `per_page` is typically 100, max 500.
-- **Single photo info** (getInfo, getExif, getSizes): Returns nested objects -- sizes are in `sizes.size[]` array, EXIF in `photo.exif[]` array. Check `stat` attribute for "ok" vs "fail".
-- **Context endpoints** (getContext, pools.getContext, photosets.getContext): Return `prevphoto` and `nextphoto` objects for navigation; either may be `0` when at the boundary.
-- **Group discussion** (topics.getList, topics.getInfo, replies.getInfo): Paginated topic lists; reply info returns a single reply object. Check `message` field on errors.
-- **Upload**: Returns XML with `photoid` on success or `err` element with `code` and `msg` attributes on failure. Requires multipart/form-data encoding.
-- **OAuth**: Returns URL-encoded key-value pairs (not JSON/XML). Parse `oauth_token` and `oauth_token_secret` from the response body.
-
-## Anomaly Flags
-
-- **Rate limiting**: Flickr enforces 3600 calls/hour per API key. Surface a warning when making rapid sequential calls (e.g., paginating through large result sets) and recommend batching with delays.
-- **`stat: "fail"` responses**: All endpoints return HTTP 200 even on errors. Agents must check the `stat` field -- surface `err code` and `err msg` values immediately rather than treating 200 as success.
-- **Empty result sets**: `total: 0` on search or listing calls may indicate an invalid `user_id`, overly restrictive filters, or a private account -- flag this to the user with suggestions.
-- **Deprecated format param**: If `format=json` is used without `nojsoncallback=1`, the response is wrapped in a JSONP function call. Always flag when this param is missing.
-- **Permission errors on EXIF**: `getExif` fails with code 2 ("Permission denied") when the photo owner has disabled EXIF viewing. Surface this as a permissions issue, not a bug.
-- **OAuth token expiry**: If requests suddenly return auth errors after previously working, flag that the OAuth access token may have been revoked or expired.
-- **Upload content_type mismatch**: If `content_type` param (1=photo, 2=screenshot, 3=other) doesn't match the actual file, Flickr may misclassify the upload. Flag when this param is omitted.
-
-## Playbook
-
-### 1. Search and Download Photos by Topic
-
-1. Call GET /rest?method=flickr.photos.search with `text` or `tags` param and `per_page=10`
-2. Parse the response for `photo` array; extract each photo's `id`, `server`, `secret`, and `farm`
-3. For each photo of interest, call GET /rest?method=flickr.photos.getSizes with `photo_id`
-4. Select the desired size from the `sizes.size[]` array and use its `source` URL to download
-5. Check `license` via flickr.photos.getInfo if you need to verify usage rights
-
-### 2. Browse a User's Complete Photo Library
-
-1. Call GET /rest?method=flickr.people.getInfo with `user_id` to confirm the user exists and get their profile
-2. Call GET /rest?method=flickr.photosets.getList with `user_id` and `per_page=500` to get all albums
-3. For each photoset, call GET /rest?method=flickr.photosets.getPhotos with `photoset_id` to list contents
-4. To see non-album photos, call GET /rest?method=flickr.people.getPhotos with `user_id`, paginating with `page` param
-5. Use GET /rest?method=flickr.photos.getInfo on individual photos for full metadata
-
-### 3. Upload a Photo with Metadata
-
-1. Obtain an OAuth access token via GET /oauth/request_token then GET /oauth/access_token (user must authorize in browser between steps)
-2. Call POST /upload with `photo` (binary), `title`, `description`, `tags` (space-separated, quote multi-word tags)
-3. Parse the response XML for `photoid`
-4. Call GET /rest?method=flickr.photos.getInfo with the returned `photo_id` to confirm upload and verify metadata
-5. Optionally call GET /rest?method=flickr.photos.getSizes to confirm available resolutions
-
-### 4. Explore a Group's Pool and Discussions
-
-1. Call GET /rest?method=flickr.groups.getInfo with `group_id` or `group_path_alias` to get group details and member count
-2. Call GET /rest?method=flickr.groups.pools.getPhotos with `group_id` to browse the photo pool
-3. Call GET /rest?method=flickr.groups.discuss.topics.getList with `group_id` to see active discussion threads
-4. For a specific thread, call GET /rest?method=flickr.groups.discuss.topics.getInfo with `topic_id` to read the opening post
-5. Call GET /rest?method=flickr.groups.discuss.replies.getInfo with `topic_id` and `reply_id` for individual replies
-
-### 5. Authenticate via OAuth (Full Flow)
-
-1. Call GET /oauth/request_token with your consumer key, nonce, timestamp, signature method (HMAC-SHA1), version (1.0), signature, and callback URL
-2. Parse `oauth_token` and `oauth_token_secret` from the URL-encoded response
-3. Direct the user to `https://www.flickr.com/services/oauth/authorize?oauth_token={token}` to grant access
-4. After authorization, Flickr redirects to your callback with `oauth_verifier` and `oauth_token`
-5. Call GET /oauth/access_token with the verifier, token, and your consumer credentials to obtain the final access token and secret
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all rest?method=flickr.favorites.getList?" -> GET /rest?method=flickr.favorites.getList
+- "List all rest?method=flickr.people.getPhotos?" -> GET /rest?method=flickr.people.getPhotos
+- "List all rest?method=flickr.photosets.getList?" -> GET /rest?method=flickr.photosets.getList
+- "List all rest?method=flickr.favorites.getContext?" -> GET /rest?method=flickr.favorites.getContext
+- "List all rest?method=flickr.groups.getInfo?" -> GET /rest?method=flickr.groups.getInfo
+- "List all rest?method=flickr.groups.pools.getPhotos?" -> GET /rest?method=flickr.groups.pools.getPhotos
+- "List all rest?method=flickr.groups.discuss.topics.getList?" -> GET /rest?method=flickr.groups.discuss.topics.getList
+- "List all rest?method=flickr.groups.discuss.replies.getInfo?" -> GET /rest?method=flickr.groups.discuss.replies.getInfo
+- "List all rest?method=flickr.groups.discuss.topics.getInfo?" -> GET /rest?method=flickr.groups.discuss.topics.getInfo
+- "List all rest?method=flickr.groups.pools.getContext?" -> GET /rest?method=flickr.groups.pools.getContext
+- "List all rest?method=flickr.photolist.getContext?" -> GET /rest?method=flickr.photolist.getContext
+- "List all rest?method=flickr.photos.getContext?" -> GET /rest?method=flickr.photos.getContext
+- "List all rest?method=flickr.photos.licenses.getInfo?" -> GET /rest?method=flickr.photos.licenses.getInfo
+- "List all rest?method=flickr.people.getInfo?" -> GET /rest?method=flickr.people.getInfo
+- "List all rest?method=flickr.photos.getExif?" -> GET /rest?method=flickr.photos.getExif
+- "List all rest?method=flickr.photos.getInfo?" -> GET /rest?method=flickr.photos.getInfo
+- "List all rest?method=flickr.photos.getSizes?" -> GET /rest?method=flickr.photos.getSizes
+- "List all rest?method=flickr.photosets.getContext?" -> GET /rest?method=flickr.photosets.getContext
+- "List all rest?method=flickr.photosets.getPhotos?" -> GET /rest?method=flickr.photosets.getPhotos
+- "List all rest?method=flickr.galleries.getPhotos?" -> GET /rest?method=flickr.galleries.getPhotos
+- "List all rest?method=flickr.photos.search?" -> GET /rest?method=flickr.photos.search
+- "Create a upload?" -> POST /upload
+- "List all rest?method=flickr.test.echo?" -> GET /rest?method=flickr.test.echo
+- "List all request_token?" -> GET /oauth/request_token
+- "List all access_token?" -> GET /oauth/access_token
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

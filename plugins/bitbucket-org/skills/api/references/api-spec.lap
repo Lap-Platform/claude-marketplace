@@ -10,1491 +10,1826 @@
 
 @group addon
 @endpoint DELETE /addon
-@returns(204)
-@errors {401, 403}
+@desc Delete an app
+@returns(204) Request has succeeded. The application has been deleted for the user.
+@errors {401: No authorization., 403: Improper authentication.}
 
 @endpoint PUT /addon
-@returns(204)
-@errors {400, 401, 403}
+@desc Update an installed app
+@returns(204) Request has succeeded. The installation has been updated to the new descriptor.
+@errors {400: Scopes have increased or decreased to none., 401: No authorization., 403: Improper authentication.}
 
 @endpoint GET /addon/linkers
-@returns(200)
-@errors {401}
+@desc List linkers for an app
+@returns(200) Successful.
+@errors {401: Authentication must use app JWT}
 
 @endpoint GET /addon/linkers/{linker_key}
-@returns(200)
-@errors {401, 404}
+@desc Get a linker for an app
+@returns(200) Successful.
+@errors {401: Authentication must use app JWT, 404: The linker does not exist.}
 
 @endpoint DELETE /addon/linkers/{linker_key}/values
-@returns(204)
-@errors {401, 404}
+@desc Delete all linker values
+@returns(204) Successfully deleted the linker values.
+@errors {401: Authentication must use app JWT, 404: The linker does not exist.}
 
 @endpoint GET /addon/linkers/{linker_key}/values
-@returns(200)
-@errors {401, 404}
+@desc List linker values for a linker
+@returns(200) Successful.
+@errors {401: Authentication must use app JWT, 404: The linker does not exist.}
 
 @endpoint POST /addon/linkers/{linker_key}/values
-@returns(201)
-@errors {401, 404, 409}
+@desc Create a linker value
+@returns(201) Successfully created the linker value.
+@errors {401: Authentication must use app JWT, 404: The linker does not exist., 409: The linker already has the value being added.}
 
 @endpoint PUT /addon/linkers/{linker_key}/values
-@returns(204)
-@errors {400, 401, 404}
+@desc Update a linker value
+@returns(204) Successfully updated the linker values.
+@errors {400: Invalid input., 401: Authentication must use app JWT, 404: The linker does not exist.}
 
 @endpoint DELETE /addon/linkers/{linker_key}/values/{value_id}
-@returns(204)
-@errors {401, 404}
+@desc Delete a linker value
+@returns(204) Successfully deleted the linker value.
+@errors {401: Authentication must use app JWT, 404: The linker value does not exist.}
 
 @endpoint GET /addon/linkers/{linker_key}/values/{value_id}
-@returns(200)
-@errors {401, 404}
+@desc Get a linker value
+@returns(200) Successful.
+@errors {401: Authentication must use app JWT, 404: The linker value does not exist.}
 
 @endgroup
 
 @group hook_events
 @endpoint GET /hook_events
-@returns(200)
+@desc Get a webhook resource
+@returns(200) A mapping of resource/subject types pointing to their individual event types.
 
 @endpoint GET /hook_events/{subject_type}
-@returns(200)
-@errors {404}
+@desc List subscribable webhook types
+@returns(200) A paginated list of webhook types available to subscribe on.
+@errors {404: If an invalid `{subject_type}` value was specified.}
 
 @endgroup
 
 @group repositories
 @endpoint GET /repositories
-@optional {after: any, role: any, q: any, sort: any}
-@returns(200)
+@desc List public repositories
+@optional {after: any # Filter the results to include only repositories created on or after this [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601)  timestamp. Example: `YYYY-MM-DDTHH:mm:ss.sssZ`, role: any # Filters the result based on the authenticated user's role on each repository.  * **member**: returns repositories to which the user has explicit read access * **contributor**: returns repositories to which the user has explicit write access * **admin**: returns repositories to which the user has explicit administrator access * **owner**: returns all repositories owned by the current user, q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering). `role` parameter must also be specified., sort: any # Field by which the results should be sorted as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering).}
+@returns(200) All public repositories.
 
 @endpoint GET /repositories/{workspace}
-@optional {role: any, q: any, sort: any}
-@returns(200)
-@errors {404, 410}
+@desc List repositories in a workspace
+@optional {role: any # Filters the result based on the authenticated user's role on each repository.  * **member**: returns repositories to which the user has explicit read access * **contributor**: returns repositories to which the user has explicit write access * **admin**: returns repositories to which the user has explicit administrator access * **owner**: returns all repositories owned by the current user, q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Field by which the results should be sorted as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering).}
+@returns(200) The repositories owned by the specified account.
+@errors {404: If the specified account does not exist., 410: If the specified account marked as spam.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}
-@optional {redirect_to: any}
-@returns(204)
-@errors {403, 404}
+@desc Delete a repository
+@optional {redirect_to: any # If a repository has been moved to a new location, use this parameter to show users a friendly message in the Bitbucket UI that the repository has moved to a new location. However, a GET to this endpoint will still return a 404.}
+@returns(204) Indicates successful deletion.
+@errors {403: If the caller either does not have admin access to the repository, or the repository is set to read-only., 404: If the repository does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}
-@returns(200)
-@errors {403, 404}
+@desc Get a repository
+@returns(200) The repository object.
+@errors {403: If the repository is private and the authenticated user does not have access to it., 404: If no repository exists at this location.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}
-@optional {_body: any}
-@returns(200)
-@errors {400, 401}
+@desc Create a repository
+@optional {_body: any # The repository that is to be created. Note that most object elements are optional. Elements "owner" and "full_name" are ignored as the URL implies them.}
+@returns(200) The newly created repository.
+@errors {400: If the input document was invalid, or if the caller lacks the privilege to create repositories under the targeted account., 401: If the request was not authenticated.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}
-@optional {_body: any}
-@returns(200)
-@returns(201)
-@errors {400, 401}
+@desc Update a repository
+@optional {_body: any # The repository that is to be updated.  Note that the elements "owner" and "full_name" are ignored since the URL implies them.}
+@returns(200) The existing repository has been updated
+@returns(201) A new repository has been created
+@errors {400: If the input document was invalid, or if the caller lacks the privilege to create repositories under the targeted account., 401: If the request was not authenticated.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/branch-restrictions
-@optional {kind: any, pattern: any}
-@returns(200)
-@errors {401, 403, 404}
+@desc List branch restrictions
+@optional {kind: any # Branch restrictions of this type, pattern: any # Branch restrictions applied to branches of this pattern}
+@returns(200) A paginated list of branch restrictions
+@errors {401: If the request was not authenticated, 403: If the authenticated user does not have admin access to the repository, 404: If the repository does not exist}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/branch-restrictions
-@required {_body: any}
-@returns(201)
-@errors {401, 403, 404}
+@desc Create a branch restriction rule
+@required {_body: any # The new rule}
+@returns(201) A paginated list of branch restrictions
+@errors {401: If the request was not authenticated, 403: If the authenticated user does not have admin access to the repository, 404: If the repository does not exist}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/branch-restrictions/{id}
+@desc Delete a branch restriction rule
 @returns(204)
-@errors {401, 403, 404}
+@errors {401: If the request was not authenticated, 403: If the authenticated user does not have admin access to the repository, 404: If the repository or branch restriction id does not exist}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/branch-restrictions/{id}
-@returns(200)
-@errors {401, 403, 404}
+@desc Get a branch restriction rule
+@returns(200) The branch restriction rule
+@errors {401: If the request was not authenticated, 403: If the authenticated user does not have admin access to the repository, 404: If the repository or branch restriction id does not exist}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/branch-restrictions/{id}
-@required {_body: any}
-@returns(200)
-@errors {401, 403, 404}
+@desc Update a branch restriction rule
+@required {_body: any # The new version of the existing rule}
+@returns(200) The updated branch restriction rule
+@errors {401: If the request was not authenticated, 403: If the authenticated user does not have admin access to the repository, 404: If the repository or branch restriction id does not exist}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/branching-model
-@returns(200)
-@errors {401, 403, 404}
+@desc Get the branching model for a repository
+@returns(200) The branching model object
+@errors {401: If the request was not authenticated, 403: If the authenticated user does not have read access to the repository, 404: If the repository does not exist}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/branching-model/settings
-@returns(200)
-@errors {401, 403, 404}
+@desc Get the branching model config for a repository
+@returns(200) The branching model configuration
+@errors {401: If the request was not authenticated, 403: If the authenticated user does not have admin access to the repository, 404: If the repository does not exist}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/branching-model/settings
-@returns(200)
-@errors {400, 401, 403, 404}
+@desc Update the branching model config for a repository
+@returns(200) The updated branching model configuration
+@errors {400: If the request contains invalid branching model configuration, 401: If the request was not authenticated, 403: If the authenticated user does not have admin access to the repository, 404: If the repository does not exist}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/commit/{commit}
-@returns(200)
-@errors {404}
+@desc Get a commit
+@returns(200) The commit object
+@errors {404: If the specified commit or repository does not exist.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/commit/{commit}/approve
-@returns(204)
-@errors {404}
+@desc Unapprove a commit
+@returns(204) An empty response indicating the authenticated user's approval has been withdrawn.
+@errors {404: If the specified commit, or the repository does not exist.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/commit/{commit}/approve
-@returns(200)
-@errors {404}
+@desc Approve a commit
+@returns(200) The `participant` object recording that the authenticated user approved the commit.
+@errors {404: If the specified commit, or the repository does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/commit/{commit}/comments
-@optional {q: any, sort: any}
-@returns(200)
+@desc List a commit's comments
+@optional {q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Field by which the results should be sorted as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering).}
+@returns(200) A paginated list of commit comments.
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/commit/{commit}/comments
-@required {_body: any}
-@returns(201)
-@errors {400, 404}
+@desc Create comment for a commit
+@required {_body: any # The specified comment.}
+@returns(201) The newly created comment.
+@errors {400: If the comment was detected as spam, or if the parent comment is not attached to the same node as the new comment, 404: If a parent ID was passed in that cannot be found}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/commit/{commit}/comments/{comment_id}
-@returns(204)
-@errors {404}
+@desc Delete a commit comment
+@returns(204) Indicates the comment was deleted by this action or a previous delete.
+@errors {404: If the comment doesn't exist}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/commit/{commit}/comments/{comment_id}
-@returns(200)
+@desc Get a commit comment
+@returns(200) The commit comment.
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/commit/{commit}/comments/{comment_id}
-@required {_body: any}
-@returns(201)
-@errors {400}
+@desc Update a commit comment
+@required {_body: any # The updated comment.}
+@returns(201) The newly updated comment.
+@errors {400: If the comment update was detected as spam}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/commit/{commit}/properties/{app_key}/{property_name}
-@required {workspace: any, repo_slug: any, commit: any, app_key: any, property_name: any, _body: map}
-@returns(204)
+@desc Update a commit application property
+@required {workspace: any # The repository container; either the workspace slug or the UUID in curly braces., repo_slug: any # The repository., commit: any # The commit., app_key: any # The key of the Connect app., property_name: any # The name of the property., _body: map # The application property to create or update.}
+@returns(204) An empty response.
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/commit/{commit}/properties/{app_key}/{property_name}
-@required {workspace: any, repo_slug: any, commit: any, app_key: any, property_name: any}
-@returns(204)
+@desc Delete a commit application property
+@required {workspace: any # The repository container; either the workspace slug or the UUID in curly braces., repo_slug: any # The repository., commit: any # The commit., app_key: any # The key of the Connect app., property_name: any # The name of the property.}
+@returns(204) An empty response.
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/commit/{commit}/properties/{app_key}/{property_name}
-@required {workspace: any, repo_slug: any, commit: any, app_key: any, property_name: any}
-@returns(200)
+@desc Get a commit application property
+@required {workspace: any # The repository container; either the workspace slug or the UUID in curly braces., repo_slug: any # The repository., commit: any # The commit., app_key: any # The key of the Connect app., property_name: any # The name of the property.}
+@returns(200) The value of the property.
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/commit/{commit}/pullrequests
-@required {workspace: any, repo_slug: any, commit: any}
-@optional {page: any, pagelen: any}
-@returns(200)
-@returns(202)
-@errors {404}
+@desc List pull requests that contain a commit
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, repo_slug: any # The repository; either the UUID in curly braces, or the slug, commit: any # The SHA1 of the commit}
+@optional {page: any # Which page to retrieve, pagelen: any # How many pull requests to retrieve per page}
+@returns(200) The paginated list of pull requests.
+@returns(202) The repository's pull requests are still being indexed.
+@errors {404: Either the repository does not exist, or pull request commit links have not yet been indexed.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/commit/{commit}/reports
-@required {workspace: any, repo_slug: any, commit: any}
-@returns(200)
+@desc List reports
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., commit: any # The commit for which to retrieve reports.}
+@returns(200) OK
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}
-@required {workspace: any, repo_slug: any, commit: any, reportId: any, _body: any}
-@returns(200)
-@errors {400}
+@desc Create or update a report
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., commit: any # The commit the report belongs to., reportId: any # Either the uuid or external-id of the report., _body: any # The report to create or update}
+@returns(200) OK
+@errors {400: The provided Report object is malformed or incomplete.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}
-@required {workspace: any, repo_slug: any, commit: any, reportId: any}
-@returns(200)
-@errors {404}
+@desc Get a report
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., commit: any # The commit the report belongs to., reportId: any # Either the uuid or external-id of the report.}
+@returns(200) OK
+@errors {404: The report with the given ID was not found.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}
-@required {workspace: any, repo_slug: any, commit: any, reportId: any}
-@returns(204)
+@desc Delete a report
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., commit: any # The commit the report belongs to., reportId: any # Either the uuid or external-id of the report.}
+@returns(204) No content
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}/annotations
-@required {workspace: any, repo_slug: any, commit: any, reportId: any}
-@returns(200)
+@desc List annotations
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., commit: any # The commit for which to retrieve reports., reportId: any # Uuid or external-if of the report for which to get annotations for.}
+@returns(200) OK
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}/annotations
-@required {workspace: any, repo_slug: any, commit: any, reportId: any, _body: [any]}
-@returns(200)
+@desc Bulk create or update annotations
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., commit: any # The commit for which to retrieve reports., reportId: any # Uuid or external-if of the report for which to get annotations for., _body: [any] # The annotations to create or update}
+@returns(200) OK
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}/annotations/{annotationId}
-@required {workspace: any, repo_slug: any, commit: any, reportId: any, annotationId: any}
-@returns(200)
-@errors {404}
+@desc Get an annotation
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., commit: any # The commit the report belongs to., reportId: any # Either the uuid or external-id of the report., annotationId: any # Either the uuid or external-id of the annotation.}
+@returns(200) OK
+@errors {404: The annotation with the given ID was not found.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}/annotations/{annotationId}
-@required {workspace: any, repo_slug: any, commit: any, reportId: any, annotationId: any, _body: any}
-@returns(200)
-@errors {400}
+@desc Create or update an annotation
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., commit: any # The commit the report belongs to., reportId: any # Either the uuid or external-id of the report., annotationId: any # Either the uuid or external-id of the annotation., _body: any # The annotation to create or update}
+@returns(200) OK
+@errors {400: The provided Annotation object is malformed or incomplete.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}/annotations/{annotationId}
-@required {workspace: any, repo_slug: any, commit: any, reportId: any, annotationId: any}
-@returns(204)
+@desc Delete an annotation
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., commit: any # The commit the annotation belongs to., reportId: any # Either the uuid or external-id of the annotation., annotationId: any # Either the uuid or external-id of the annotation.}
+@returns(204) No content
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/commit/{commit}/statuses
-@optional {refname: any, q: any, sort: any}
-@returns(200)
-@errors {401, 404}
+@desc List commit statuses for a commit
+@optional {refname: any # If specified, only return commit status objects that were either created without a refname, or were created with the specified refname, q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Field by which the results should be sorted as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering). Defaults to `created_on`.}
+@returns(200) A paginated list of all commit statuses for this commit.
+@errors {401: If the repository is private and the request was not authenticated., 404: If the repository or commit does not exist}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/commit/{commit}/statuses/build
-@optional {_body: any}
-@returns(201)
-@errors {401, 404}
+@desc Create a build status for a commit
+@optional {_body: any # The new commit status object.}
+@returns(201) The newly created build status object.
+@errors {401: If the repository is private and the request was not authenticated., 404: If the repository, commit, or build status key does not exist}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/commit/{commit}/statuses/build/{key}
-@returns(200)
-@errors {401, 404}
+@desc Get a build status for a commit
+@returns(200) The build status object with the specified key.
+@errors {401: If the repository is private and the request was not authenticated., 404: If the repository, commit, or build status key does not exist}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/commit/{commit}/statuses/build/{key}
-@optional {_body: any}
-@returns(200)
-@errors {401, 404}
+@desc Update a build status for a commit
+@optional {_body: any # The updated build status object}
+@returns(200) The updated build status object.
+@errors {401: If the repository is private and the request was not authenticated., 404: If the repository or build does not exist}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/commits
-@returns(200)
-@errors {404}
+@desc List commits
+@returns(200) A paginated list of commits
+@errors {404: If the specified repository does not exist.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/commits
-@returns(200)
-@errors {404}
+@desc List commits with include/exclude
+@returns(200) A paginated list of commits
+@errors {404: If the specified repository does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/commits/{revision}
-@returns(200)
-@errors {404}
+@desc List commits for revision
+@returns(200) A paginated list of commits
+@errors {404: If the specified revision does not exist.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/commits/{revision}
-@returns(200)
-@errors {404}
+@desc List commits for revision using include/exclude
+@returns(200) A paginated list of commits
+@errors {404: If the specified revision does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/components
-@returns(200)
-@errors {404}
+@desc List components
+@returns(200) The components that have been defined in the issue tracker.
+@errors {404: The specified repository does not exist or does not have the issue tracker enabled.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/components/{component_id}
-@returns(200)
-@errors {404}
+@desc Get a component for issues
+@returns(200) The specified component object.
+@errors {404: The specified repository or component does not exist or does not have the issue tracker enabled.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/default-reviewers
-@returns(200)
-@errors {403}
+@desc List default reviewers
+@returns(200) The paginated list of default reviewers
+@errors {403: If the authenticated user does not have access to view the default reviewers}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/default-reviewers/{target_username}
-@returns(204)
-@errors {403, 404}
+@desc Remove a user from the default reviewers
+@returns(204) The specified user successfully removed from the default reviewers
+@errors {403: If the authenticated user does not have access modify the default reviewers, 404: If the specified user does not exist}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/default-reviewers/{target_username}
-@returns(200)
-@errors {403, 404}
+@desc Get a default reviewer
+@returns(200) The specified user is a default reviewer
+@errors {403: If the authenticated user does not have access to check if the specified user is a default reviewer, 404: If the specified user does not exist or is not a default reviewer}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/default-reviewers/{target_username}
-@returns(200)
-@errors {400, 403, 404}
+@desc Add a user to the default reviewers
+@returns(200) The specified user was successfully added to the default reviewers
+@errors {400: If the authenticated user tried to add a team, bot user, or user without access to the repository to the default reviewers, 403: If the authenticated user does not have permission to modify the default reviewers, 404: If the specified user does not exist}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/deploy-keys
-@returns(200)
-@errors {403, 404}
+@desc List repository deploy keys
+@returns(200) Deploy keys matching the repository
+@errors {403: If the specified user or repository is not accessible to the current user, 404: If the specified user or repository does not exist}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/deploy-keys
-@returns(200)
-@errors {400, 403, 404}
+@desc Add a repository deploy key
+@returns(200) The deploy key that was created
+@errors {400: Invalid deploy key inputs, 403: If the specified user or repository is not accessible to the current user, 404: If the specified user or repository does not exist}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/deploy-keys/{key_id}
-@returns(204)
-@errors {403, 404}
+@desc Delete a repository deploy key
+@returns(204) The key has been deleted
+@errors {403: If the current user does not have permission to delete a key for the specified user, 404: If the specified user, repository, or deploy key does not exist}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/deploy-keys/{key_id}
-@returns(200)
-@errors {403, 404}
+@desc Get a repository deploy key
+@returns(200) Deploy key matching the key ID
+@errors {403: If the specified user or repository is not accessible to the current user, 404: If the specified user or repository does not exist}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/deploy-keys/{key_id}
-@returns(200)
-@errors {400, 403, 404}
+@desc Update a repository deploy key
+@returns(200) The newly updated deploy key.
+@errors {400: If the submitted key or related value is invalid, 403: If the current user does not have permission to add a key for the specified user, 404: If the specified user, repository, or deploy key does not exist}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/deployments
-@required {workspace: any, repo_slug: any}
-@returns(200)
+@desc List deployments
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository.}
+@returns(200) The matching deployments.
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/deployments/{deployment_uuid}
-@required {workspace: any, repo_slug: any, deployment_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get a deployment
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., deployment_uuid: any # The deployment UUID.}
+@returns(200) The deployment.
+@errors {404: No account, repository or deployment with the UUID provided exists.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/deployments_config/environments/{environment_uuid}/variables
-@required {workspace: any, repo_slug: any, environment_uuid: any}
-@returns(200)
+@desc List variables for an environment
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., environment_uuid: any # The environment.}
+@returns(200) The retrieved deployment variables.
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/deployments_config/environments/{environment_uuid}/variables
-@required {workspace: any, repo_slug: any, environment_uuid: any, _body: any}
-@returns(201)
-@errors {404, 409}
+@desc Create a variable for an environment
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., environment_uuid: any # The environment., _body: any # The variable to create}
+@returns(201) The variable was created.
+@errors {404: The account, repository, environment or variable with the given UUID was not found., 409: A variable with the provided key already exists.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/deployments_config/environments/{environment_uuid}/variables/{variable_uuid}
-@required {workspace: any, repo_slug: any, environment_uuid: any, variable_uuid: any, _body: any}
-@returns(200)
-@errors {404}
+@desc Update a variable for an environment
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., environment_uuid: any # The environment., variable_uuid: any # The UUID of the variable to update., _body: any # The updated deployment variable.}
+@returns(200) The deployment variable was updated.
+@errors {404: The account, repository, environment or variable with the given UUID was not found.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/deployments_config/environments/{environment_uuid}/variables/{variable_uuid}
-@required {workspace: any, repo_slug: any, environment_uuid: any, variable_uuid: any}
-@returns(204)
-@errors {404}
+@desc Delete a variable for an environment
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., environment_uuid: any # The environment., variable_uuid: any # The UUID of the variable to delete.}
+@returns(204) The variable was deleted.
+@errors {404: The account, repository, environment or variable with given UUID was not found.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/diff/{spec}
-@optional {context: any, path: any, ignore_whitespace: any, binary: any, renames: any, merge: any, topic: any}
-@returns(200)
-@errors {555}
+@desc Compare two commits
+@optional {context: any # Generate diffs with <n> lines of context instead of the usual three., path: any # Limit the diff to a particular file (this parameter can be repeated for multiple paths)., ignore_whitespace: any # Generate diffs that ignore whitespace., binary: any # Generate diffs that include binary files, true if omitted., renames: any # Whether to perform rename detection, true if omitted., merge: any # This parameter is deprecated. The 'topic' parameter should be used instead. The 'merge' and 'topic' parameters cannot be both used at the same time.  If true, the source commit is merged into the destination commit, and then a diff from the destination to the merge result is returned. If false, a simple 'two dot' diff between the source and destination is returned. True if omitted., topic: any # If true, returns 2-way 'three-dot' diff. This is a diff between the source commit and the merge base of the source commit and the destination commit. If false, a simple 'two dot' diff between the source and destination is returned.}
+@returns(200) The raw diff
+@errors {555: If the diff was too large and timed out.  Since this endpoint does not employ any form of pagination, but instead returns the diff as a single document, it can run into trouble on very large diffs. If Bitbucket times out in cases like these, a 555 status code is returned.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/diffstat/{spec}
-@returns(200)
-@errors {555}
+@desc Compare two commit diff stats
+@returns(200) The diff stats
+@errors {555: If generating the diffstat timed out.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/downloads
-@returns(200)
-@errors {403}
+@desc List download artifacts
+@returns(200) Returns a paginated list of the downloads associated with the repository.
+@errors {403: User is not authorized to read from the repository.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/downloads
-@returns(201)
-@errors {400, 403, 406}
+@desc Upload a download artifact
+@returns(201) The artifact was uploaded sucessfully.
+@errors {400: Bad Request., 403: User is not authorized to write to the repository., 406: Unsupported Content-Type. Use multiplart/form-data.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/downloads/{filename}
-@returns(204)
-@errors {403, 404}
+@desc Delete a download artifact
+@returns(204) The specified download artifact was deleted.
+@errors {403: User is not authorized to write to the repository., 404: The specified download does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/downloads/{filename}
-@errors {302, 403, 404}
+@desc Get a download artifact link
+@errors {302: Redirects to the url of the specified download artifact., 403: User is not authorized to read from the repository., 404: The specified download artifact does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/effective-branching-model
-@returns(200)
-@errors {401, 403, 404}
+@desc Get the effective, or currently applied, branching model for a repository
+@returns(200) The effective branching model object
+@errors {401: If the request was not authenticated, 403: If the authenticated user does not have read access to the repository, 404: If the repository does not exist}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/effective-default-reviewers
-@returns(200)
-@errors {403}
+@desc List effective default reviewers
+@returns(200) The paginated list of effective default reviewers
+@errors {403: If the authenticated user does not have access to view the default reviewers}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/environments
-@required {workspace: any, repo_slug: any}
-@returns(200)
+@desc List environments
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository.}
+@returns(200) The matching environments.
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/environments
-@required {workspace: any, repo_slug: any, _body: any}
-@returns(201)
-@errors {404, 409}
+@desc Create an environment
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., _body: any # The environment to create.}
+@returns(201) The environment was created.
+@errors {404: The account or repository does not exist., 409: An environment host with the provided name already exists.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/environments/{environment_uuid}
-@required {workspace: any, repo_slug: any, environment_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get an environment
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., environment_uuid: any # The environment UUID.}
+@returns(200) The environment.
+@errors {404: No account, repository or environment with the UUID provided exists.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/environments/{environment_uuid}
-@required {workspace: any, repo_slug: any, environment_uuid: any}
-@returns(204)
-@errors {404}
+@desc Delete an environment
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., environment_uuid: any # The environment UUID.}
+@returns(204) The environment was deleted.
+@errors {404: No account or repository with the UUID provided exists.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/environments/{environment_uuid}/changes
-@required {workspace: any, repo_slug: any, environment_uuid: any}
-@returns(202)
-@errors {404}
+@desc Update an environment
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., environment_uuid: any # The environment UUID.}
+@returns(202) The environment update request was accepted.
+@errors {404: No account, repository or environment with the UUID provided exists.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/filehistory/{commit}/{path}
-@optional {renames: any, q: any, sort: any}
-@returns(200)
-@errors {404}
+@desc List commits that modified a file
+@optional {renames: any # When `true`, Bitbucket will follow the history of the file across renames (this is the default behavior). This can be turned off by specifying `false`., q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Name of a response property sort the result by as per [filtering and sorting](/cloud/bitbucket/rest/intro/#sorting-query-results).}
+@returns(200) A paginated list of commits that modified the specified file
+@errors {404: If the repository does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/forks
-@optional {role: any, q: any, sort: any}
-@returns(200)
+@desc List repository forks
+@optional {role: any # Filters the result based on the authenticated user's role on each repository.  * **member**: returns repositories to which the user has explicit read access * **contributor**: returns repositories to which the user has explicit write access * **admin**: returns repositories to which the user has explicit administrator access * **owner**: returns all repositories owned by the current user, q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Field by which the results should be sorted as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering).}
+@returns(200) All forks.
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/forks
-@optional {_body: any}
-@returns(201)
+@desc Fork a repository
+@optional {_body: any # A repository object. This can be left blank.}
+@returns(201) The newly created fork.
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/hooks
-@returns(200)
-@errors {403, 404}
+@desc List webhooks for a repository
+@returns(200) The paginated list of installed webhooks.
+@errors {403: If the authenticated user does not have permission to access the webhooks., 404: If the repository does not exist.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/hooks
-@returns(201)
-@errors {403, 404}
+@desc Create a webhook for a repository
+@returns(201) If the webhook was registered successfully.
+@errors {403: If the authenticated user does not have permission to install webhooks on the specified repository., 404: If the repository does not exist.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/hooks/{uid}
-@returns(204)
-@errors {403, 404}
+@desc Delete a webhook for a repository
+@returns(204) When the webhook was deleted successfully
+@errors {403: If the authenticated user does not have permission to delete the webhook., 404: If the webhook or repository does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/hooks/{uid}
-@returns(200)
-@errors {404}
+@desc Get a webhook for a repository
+@returns(200) The webhook subscription object.
+@errors {404: If the webhook or repository does not exist.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/hooks/{uid}
-@returns(200)
-@errors {403, 404}
+@desc Update a webhook for a repository
+@returns(200) The webhook subscription object.
+@errors {403: If the authenticated user does not have permission to update the webhook., 404: If the webhook or repository does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/issues
-@returns(200)
-@errors {404}
+@desc List issues
+@returns(200) A paginated list of the issues matching any filter criteria that were provided.
+@errors {404: The specified repository does not exist or does not have the issue tracker enabled.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/issues
-@required {_body: any}
-@returns(201)
-@errors {401, 403, 404}
+@desc Create an issue
+@required {_body: any # The new issue. The only required element is `title`. All other elements can be omitted from the body.}
+@returns(201) The newly created issue.
+@errors {401: When the request wasn't authenticated., 403: When the authenticated user isn't authorized to create the issue., 404: The specified repository does not exist or does not have the issue tracker enabled.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/issues/export
-@optional {_body: map}
-@returns(202)
-@errors {401, 403, 404}
+@desc Export issues
+@optional {_body: map # The options to apply to the export. Available options include `project_key` and `project_name` which, if specified, are used as the project key and name in the exported Jira json format. Option `send_email` specifies whether an email should be sent upon export result. Option `include_attachments` specifies whether attachments are included in the export.}
+@returns(202) The export job has been accepted
+@errors {401: The request wasn't authenticated properly, 403: When the authenticated user does not have admin permission on the repo, 404: The repo does not exist or does not have an issue tracker}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/issues/export/{repo_name}-issues-{task_id}.zip
-@returns(202)
-@errors {401, 403, 404}
+@desc Check issue export status
+@returns(202) Export job accepted
+@errors {401: The request wasn't authenticated properly, 403: When the authenticated user does not have admin permission on the repo, 404: No export job has begun}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/issues/import
-@returns(200)
-@returns(202)
-@errors {401, 403, 404}
+@desc Check issue import status
+@returns(200) Import job complete with either FAILURE or SUCCESS status
+@returns(202) Import job started
+@errors {401: The request wasn't authenticated properly, 403: When the authenticated user does not have admin permission on the repo, 404: No export job has begun}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/issues/import
-@returns(202)
-@errors {401, 403, 404, 409}
+@desc Import issues
+@returns(202) Import job accepted
+@errors {401: The request wasn't authenticated properly, 403: When the authenticated user does not have admin permission on the repo, 404: No export job has begun, 409: Import already running}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/issues/{issue_id}
-@returns(204)
-@errors {403, 404}
+@desc Delete an issue
+@returns(204) Indicates the issue was deleted successfully.
+@errors {403: When the authenticated user isn't authorized to delete the issue., 404: The specified repository or issue does not exist or does not have the issue tracker enabled.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}
-@returns(200)
-@errors {403, 404, 410}
+@desc Get an issue
+@returns(200) The issue object.
+@errors {403: When the authenticated user isn't authorized to access the issue., 404: The specified repository or issue does not exist or does not have the issue tracker enabled., 410: The specified issue is unavailable.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/issues/{issue_id}
-@returns(200)
-@errors {403, 404}
+@desc Update an issue
+@returns(200) The updated issue object.
+@errors {403: When the authenticated user isn't authorized to access the issue., 404: The specified repository or issue does not exist or does not have the issue tracker enabled.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/attachments
-@returns(200)
-@errors {401, 404}
+@desc List attachments for an issue
+@returns(200) A paginated list of all attachments for this issue.
+@errors {401: If the issue tracker is private and the request was not authenticated., 404: The specified repository or issue does not exist or does not have the issue tracker enabled.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/issues/{issue_id}/attachments
-@returns(201)
-@errors {400, 401, 404}
+@desc Upload an attachment to an issue
+@returns(201) An empty response document.
+@errors {400: If no files were uploaded, or if the wrong `Content-Type` was used., 401: If the issue tracker is private and the request was not authenticated., 404: The specified repository or issue does not exist or does not have the issue tracker enabled.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/issues/{issue_id}/attachments/{path}
-@returns(204)
-@errors {401, 404}
+@desc Delete an attachment for an issue
+@returns(204) Indicates that the deletion was successful
+@errors {401: If the issue tracker is private and the request was not authenticated., 404: The specified repository or issue does not exist or does not have the issue tracker enabled.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/attachments/{path}
-@errors {302, 401, 404}
+@desc Get attachment for an issue
+@errors {302: A redirect to the file's contents, 401: If the issue tracker is private and the request was not authenticated., 404: The specified repository or issue does not exist or does not have the issue tracker enabled.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/changes
-@optional {q: any, sort: any}
-@returns(200)
-@errors {404}
+@desc List changes on an issue
+@optional {q: any # Query string to narrow down the response. See [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering) for details., sort: any # Name of a response property to sort results. See [filtering and sorting](/cloud/bitbucket/rest/intro/#sorting-query-results) for details.}
+@returns(200) Returns all the issue changes that were made on the specified issue.
+@errors {404: The specified repository or issue does not exist or does not have the issue tracker enabled.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/issues/{issue_id}/changes
-@required {_body: map}
-@returns(201)
-@errors {401, 403, 404}
+@desc Modify the state of an issue
+@required {_body: map # The new issue state change. The only required elements are `changes.[].new`. All other elements can be omitted from the body.}
+@returns(201) The newly created issue change.
+@errors {401: When the request wasn't authenticated., 403: When the authenticated user isn't authorized to modify the issue., 404: The specified repository or issue does not exist or does not have the issue tracker enabled.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/changes/{change_id}
-@returns(200)
-@errors {404}
+@desc Get issue change object
+@returns(200) The specified issue change object.
+@errors {404: The specified repository or issue change does not exist or does not have the issue tracker enabled.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/comments
-@optional {q: any}
-@returns(200)
+@desc List comments on an issue
+@optional {q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering).}
+@returns(200) A paginated list of issue comments.
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/issues/{issue_id}/comments
-@required {_body: any}
-@returns(201)
-@errors {400}
+@desc Create a comment on an issue
+@required {_body: any # The new issue comment object.}
+@returns(201) The newly created comment.
+@errors {400: If the input was invalid, or if the comment being created is detected as spam}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/issues/{issue_id}/comments/{comment_id}
-@returns(204)
+@desc Delete a comment on an issue
+@returns(204) Indicates successful deletion.
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/comments/{comment_id}
-@returns(200)
+@desc Get a comment on an issue
+@returns(200) The issue comment.
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/issues/{issue_id}/comments/{comment_id}
-@required {_body: any}
-@returns(200)
-@errors {400}
+@desc Update a comment on an issue
+@required {_body: any # The updated comment.}
+@returns(200) The updated issue comment.
+@errors {400: If the input was invalid, or if the update to the comment is detected as spam}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/issues/{issue_id}/vote
+@desc Remove vote for an issue
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/vote
-@returns(204)
-@errors {401, 404}
+@desc Check if current user voted for an issue
+@returns(204) If the authenticated user has not voted for this issue.
+@errors {401: When the request wasn't authenticated., 404: If the authenticated user has not voted for this issue, or when the repo does not exist, or does not have an issue tracker.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/issues/{issue_id}/vote
-@returns(204)
-@errors {401, 404}
+@desc Vote for an issue
+@returns(204) Indicating the authenticated user has cast their vote successfully.
+@errors {401: When the request wasn't authenticated., 404: The specified repository or issue does not exist or does not have the issue tracker enabled.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/issues/{issue_id}/watch
-@returns(204)
-@errors {401, 404}
+@desc Stop watching an issue
+@returns(204) Indicates that the authenticated user successfully stopped watching this issue.
+@errors {401: When the request wasn't authenticated., 404: The specified repository or issue does not exist or does not have the issue tracker enabled.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/watch
-@returns(204)
-@errors {401, 404}
+@desc Check if current user is watching a issue
+@returns(204) If the authenticated user is watching this issue.
+@errors {401: When the request wasn't authenticated., 404: If the authenticated user is not watching this issue, or when the repo does not exist, or does not have an issue tracker.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/issues/{issue_id}/watch
-@returns(204)
-@errors {401, 404}
+@desc Watch an issue
+@returns(204) Indicates that the authenticated user successfully started watching this issue.
+@errors {401: When the request wasn't authenticated., 404: If the authenticated user is not watching this issue, or when the repo does not exist, or does not have an issue tracker.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/merge-base/{revspec}
-@returns(200)
-@errors {401, 403, 404}
+@desc Get the common ancestor between two commits
+@returns(200) The merge base of the provided spec.
+@errors {401: If the request was not authenticated., 403: If the authenticated user does not have access to any of the repositories specified., 404: If the repository or ref in the spec does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/milestones
-@returns(200)
-@errors {404}
+@desc List milestones
+@returns(200) The milestones that have been defined in the issue tracker.
+@errors {404: The specified repository does not exist or does not have the issue tracker enabled.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/milestones/{milestone_id}
-@returns(200)
-@errors {404}
+@desc Get a milestone
+@returns(200) The specified milestone object.
+@errors {404: The specified repository or milestone does not exist or does not have the issue tracker enabled.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/override-settings
-@returns(200)
-@errors {404}
+@desc Retrieve the inheritance state for repository settings
+@returns(200) The repository setting inheritance state
+@errors {404: If no repository exists at this location}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/override-settings
-@returns(204)
-@errors {404}
+@desc Set the inheritance state for repository settings
+@returns(204) The repository setting inheritance state was set and no content returned
+@errors {404: If no repository exists at this location}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/patch/{spec}
-@returns(200)
-@errors {555}
+@desc Get a patch for two commits
+@returns(200) The raw patches
+@errors {555: If the diff was too large and timed out.  Since this endpoint does not employ any form of pagination, but instead returns the diff as a single document, it can run into trouble on very large diffs. If Bitbucket times out in cases like these, a 555 status code is returned.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/permissions-config/groups
-@returns(200)
-@errors {401, 403, 404}
+@desc List explicit group permissions for a repository
+@returns(200) Paginated of explicit group permissions on the repository.
+@errors {401: The user couldn't be authenticated., 403: The requesting user isn't an admin of the repository., 404: One or both of the workspace and repository doesn't exist for the given identifiers.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/permissions-config/groups/{group_slug}
-@returns(204)
-@errors {401, 403, 404}
+@desc Delete an explicit group permission for a repository
+@returns(204) Group permission deleted
+@errors {401: The user couldn't be authenticated., 403: The requesting user isn't an admin of the repository, or the authentication method was not via app password., 404: The workspace does not exist, the repository does not exist, or the group does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/permissions-config/groups/{group_slug}
-@returns(200)
-@errors {401, 403, 404}
+@desc Get an explicit group permission for a repository
+@returns(200) Group permission for group slug and repository
+@errors {401: The user couldn't be authenticated., 403: The requesting user isn't an admin of the repository., 404: The given user, workspace, and/or repository could not be found}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/permissions-config/groups/{group_slug}
-@required {_body: map}
-@returns(200)
-@errors {400, 401, 402, 403, 404}
+@desc Update an explicit group permission for a repository
+@required {_body: map # The permission to grant}
+@returns(200) Group permission updated
+@errors {400: No permission value was provided or the value is invalid(not one of read, write, or admin), 401: The user couldn't be authenticated., 402: You have reached your plan's user limit and must upgrade before giving access to additional users., 403: The requesting user isn't an admin of the repository, or the authentication method was not via app password., 404: The workspace does not exist, the repository does not exist, or the group does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/permissions-config/users
-@returns(200)
-@errors {401, 403, 404}
+@desc List explicit user permissions for a repository
+@returns(200) Paginated of explicit user permissions on the repository.
+@errors {401: The user couldn't be authenticated., 403: The requesting user isn't an admin of the repository., 404: No repository exists for the given repository slug and workspace.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/permissions-config/users/{selected_user_id}
-@returns(204)
-@errors {401, 403, 404}
+@desc Delete an explicit user permission for a repository
+@returns(204) The repository user permission was deleted and no content returned.
+@errors {401: The user couldn't be authenticated., 403: The requesting user isn't an admin of the repository, or the authentication method was not via app password., 404: One or more of the workspace, repository, and user doesn't exist for the given identifiers.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/permissions-config/users/{selected_user_id}
-@returns(200)
-@errors {401, 403, 404}
+@desc Get an explicit user permission for a repository
+@returns(200) Explicit user permission for user and repository
+@errors {401: The user couldn't be authenticated., 403: The requesting user isn't an admin of the repository., 404: One or both of the workspace and repository doesn't exist for the given identifiers.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/permissions-config/users/{selected_user_id}
-@required {_body: map}
-@returns(200)
-@errors {400, 401, 402, 403, 404}
+@desc Update an explicit user permission for a repository
+@required {_body: map # The permission to grant}
+@returns(200) Explicit user permission updated
+@errors {400: No permission value was provided or the value is invalid (not one of read, write, or admin), or the selected user is not a valid user to update., 401: The user couldn't be authenticated., 402: You have reached your plan's user limit and must upgrade before giving access to additional users., 403: The requesting user isn't an admin of the repository, or the authentication method was not via app password., 404: One or more of the workspace, repository, and selected user doesn't exist for the given identifiers.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines
-@required {workspace: any, repo_slug: any}
-@optional {creator.uuid: any, target.ref_type: any, target.ref_name: any, target.branch: any, target.commit.hash: any, target.selector.pattern: any, target.selector.type: any, created_on: any, trigger_type: any, status: any, sort: any, page: any, pagelen: any}
-@returns(200)
+@desc List pipelines
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository.}
+@optional {creator.uuid: any # The UUID of the creator of the pipeline to filter by., target.ref_type: any # The type of the reference to filter by., target.ref_name: any # The reference name to filter by., target.branch: any # The name of the branch to filter by., target.commit.hash: any # The revision to filter by., target.selector.pattern: any # The pipeline pattern to filter by., target.selector.type: any # The type of pipeline to filter by., created_on: any # The creation date to filter by., trigger_type: any # The trigger type to filter by., status: any # The pipeline status to filter by., sort: any # The attribute name to sort on., page: any # The page number of elements to retrieve., pagelen: any # The maximum number of results to return.}
+@returns(200) The matching pipelines.
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pipelines
-@required {workspace: any, repo_slug: any, _body: any}
-@returns(201)
-@errors {400, 404}
+@desc Run a pipeline
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., _body: any # The pipeline to initiate.}
+@returns(201) The initiated pipeline.
+@errors {400: The account or repository is not enabled, the yml file does not exist in the repository for the given revision, or the request body contained invalid properties., 404: The account or repository was not found.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines-config/caches
-@required {workspace: any, repo_slug: any}
-@returns(200)
-@errors {404}
+@desc List caches
+@required {workspace: any # The account., repo_slug: any # The repository.}
+@returns(200) The list of caches for the given repository.
+@errors {404: The account or repository was not found.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/pipelines-config/caches
-@required {workspace: any, repo_slug: any, name: any}
-@returns(204)
-@errors {404}
+@desc Delete caches
+@required {workspace: any # The account., repo_slug: any # The repository., name: any # The cache name.}
+@returns(204) The caches were deleted.
+@errors {404: The workspace, repository or cache name was not found.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/pipelines-config/caches/{cache_uuid}
-@required {workspace: any, repo_slug: any, cache_uuid: any}
-@returns(204)
-@errors {404}
+@desc Delete a cache
+@required {workspace: any # The account., repo_slug: any # The repository., cache_uuid: any # The UUID of the cache to delete.}
+@returns(204) The cache was deleted.
+@errors {404: The workspace, repository or cache_uuid with given UUID was not found.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines-config/caches/{cache_uuid}/content-uri
-@required {workspace: any, repo_slug: any, cache_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get cache content URI
+@required {workspace: any # The account., repo_slug: any # The repository., cache_uuid: any # The UUID of the cache.}
+@returns(200) The cache content uri.
+@errors {404: The workspace, repository or cache_uuid with given UUID was not found.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines-config/runners
-@required {workspace: any, repo_slug: any}
-@returns(200)
+@desc Get repository runners
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository.}
+@returns(200) The repository runners.
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pipelines-config/runners
-@required {workspace: any, repo_slug: any}
-@returns(200)
-@errors {400, 409}
+@desc Create repository runner
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository.}
+@returns(200) The repository runner.
+@errors {400: The request body contained invalid properties or runner limit exceeded., 409: The repository runner with the provided UUID already exists.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines-config/runners/{runner_uuid}
-@required {workspace: any, repo_slug: any, runner_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get repository runner
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., runner_uuid: any # The runner uuid.}
+@returns(200) The repository runner.
+@errors {404: The repository runner was not found.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/pipelines-config/runners/{runner_uuid}
-@required {workspace: any, repo_slug: any, runner_uuid: any}
-@returns(200)
-@errors {404}
+@desc Update repository runner
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., runner_uuid: any # The runner uuid.}
+@returns(200) The repository runner.
+@errors {404: The repository runner was not found.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/pipelines-config/runners/{runner_uuid}
-@required {workspace: any, repo_slug: any, runner_uuid: any}
-@returns(204)
-@errors {404}
+@desc Delete repository runner
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., runner_uuid: any # The runner uuid.}
+@returns(204) The repository runner was deleted.
+@errors {404: The repository runner was not found.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}
-@required {workspace: any, repo_slug: any, pipeline_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get a pipeline
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., pipeline_uuid: any # The pipeline UUID.}
+@returns(200) The pipeline.
+@errors {404: No account, repository or pipeline with the UUID provided exists.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps
-@required {workspace: any, repo_slug: any, pipeline_uuid: any}
-@returns(200)
+@desc List steps for a pipeline
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., pipeline_uuid: any # The UUID of the pipeline.}
+@returns(200) The steps.
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}
-@required {workspace: any, repo_slug: any, pipeline_uuid: any, step_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get a step of a pipeline
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., pipeline_uuid: any # The UUID of the pipeline., step_uuid: any # The UUID of the step.}
+@returns(200) The step.
+@errors {404: No account, repository, pipeline or step with the UUID provided exists for the pipeline with the UUID provided.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}/log
-@required {workspace: any, repo_slug: any, pipeline_uuid: any, step_uuid: any}
-@returns(200)
-@errors {304, 307, 404, 416}
+@desc Get log file for a step
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., pipeline_uuid: any # The UUID of the pipeline., step_uuid: any # The UUID of the step.}
+@returns(200) The raw log file for this pipeline step.
+@errors {304: The log has the same etag as the provided If-None-Match header., 307: After the step is completed, the log is moved to long term storage and a redirection to the log file is returned., 404: A pipeline with the given UUID does not exist, a step with the given UUID does not exist in the pipeline or a log file does not exist for the given step., 416: The requested range does not exist for requests that specified the [HTTP Range header](https://tools.ietf.org/html/rfc7233#section-3.1).}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}/logs/{log_uuid}
-@required {workspace: any, repo_slug: any, pipeline_uuid: any, step_uuid: any, log_uuid: any}
-@returns(200)
-@errors {307, 404}
+@desc Get the logs for the build container or a service container for a given step of a pipeline.
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., pipeline_uuid: any # The UUID of the pipeline., step_uuid: any # The UUID of the step., log_uuid: any # For the main build container specify the step UUID; for a service container specify the service container UUID}
+@returns(200) The raw log file for the build container or service container.
+@errors {307: After the step is completed, the log is moved to long term storage and a redirection to the log file is returned., 404: No account, repository, pipeline, step or log exist for the provided path.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}/test_reports
-@required {workspace: any, repo_slug: any, pipeline_uuid: any, step_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get a summary of test reports for a given step of a pipeline.
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., pipeline_uuid: any # The UUID of the pipeline., step_uuid: any # The UUID of the step.}
+@returns(200) A summary of test reports for this pipeline step.
+@errors {404: No account, repository, pipeline, step or test reports exist for the provided path.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}/test_reports/test_cases
-@required {workspace: any, repo_slug: any, pipeline_uuid: any, step_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get test cases for a given step of a pipeline.
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., pipeline_uuid: any # The UUID of the pipeline., step_uuid: any # The UUID of the step.}
+@returns(200) Test cases for this pipeline step.
+@errors {404: No account, repository, pipeline, step or test reports exist for the provided path.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}/test_reports/test_cases/{test_case_uuid}/test_case_reasons
-@required {workspace: any, repo_slug: any, pipeline_uuid: any, step_uuid: any, test_case_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get test case reasons (output) for a given test case in a step of a pipeline.
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., pipeline_uuid: any # The UUID of the pipeline., step_uuid: any # The UUID of the step., test_case_uuid: any # The UUID of the test case.}
+@returns(200) Test case reasons (output).
+@errors {404: No account, repository, pipeline, step or test case with the UUID provided exists for the pipeline with the UUID provided.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/stopPipeline
-@required {workspace: any, repo_slug: any, pipeline_uuid: any}
-@returns(204)
-@errors {400, 404}
+@desc Stop a pipeline
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., pipeline_uuid: any # The UUID of the pipeline.}
+@returns(204) The pipeline has been signaled to stop.
+@errors {400: The specified pipeline has already completed., 404: Either the account, repository or pipeline with the given UUID does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines_config
-@required {workspace: any, repo_slug: any}
-@returns(200)
+@desc Get configuration
+@required {workspace: any # The account., repo_slug: any # The repository.}
+@returns(200) The repository pipelines configuration.
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/pipelines_config
-@required {workspace: any, repo_slug: any, _body: any}
-@returns(200)
+@desc Update configuration
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., _body: any # The updated repository pipelines configuration.}
+@returns(200) The repository pipelines configuration was updated.
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/pipelines_config/build_number
-@required {workspace: any, repo_slug: any, _body: any}
-@returns(200)
-@errors {400, 404}
+@desc Update the next build number
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., _body: any # The build number to update.}
+@returns(200) The build number has been configured.
+@errors {400: The update failed because the next number was invalid (it should be higher than the current number)., 404: The account or repository was not found.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pipelines_config/schedules
-@required {workspace: any, repo_slug: any, _body: any}
-@returns(201)
-@errors {400, 401, 404}
+@desc Create a schedule
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., _body: any # The schedule to create.}
+@returns(201) The created schedule.
+@errors {400: There were errors validating the request., 401: The maximum limit of schedules for this repository was reached., 404: The account or repository was not found.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines_config/schedules
-@required {workspace: any, repo_slug: any}
-@returns(200)
-@errors {404}
+@desc List schedules
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository.}
+@returns(200) The list of schedules.
+@errors {404: The account or repository was not found.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines_config/schedules/{schedule_uuid}
-@required {workspace: any, repo_slug: any, schedule_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get a schedule
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., schedule_uuid: any # The uuid of the schedule.}
+@returns(200) The requested schedule.
+@errors {404: The account, repository or schedule was not found.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/pipelines_config/schedules/{schedule_uuid}
-@required {workspace: any, repo_slug: any, schedule_uuid: any, _body: any}
-@returns(200)
-@errors {404}
+@desc Update a schedule
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., schedule_uuid: any # The uuid of the schedule., _body: any # The schedule to update.}
+@returns(200) The schedule is updated.
+@errors {404: The account, repository or schedule was not found.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/pipelines_config/schedules/{schedule_uuid}
-@required {workspace: any, repo_slug: any, schedule_uuid: any}
-@returns(204)
-@errors {404}
+@desc Delete a schedule
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., schedule_uuid: any # The uuid of the schedule.}
+@returns(204) The schedule was deleted.
+@errors {404: The account, repository or schedule was not found.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines_config/schedules/{schedule_uuid}/executions
-@required {workspace: any, repo_slug: any, schedule_uuid: any}
-@returns(200)
-@errors {404}
+@desc List executions of a schedule
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., schedule_uuid: any # The uuid of the schedule.}
+@returns(200) The list of executions of a schedule.
+@errors {404: The account or repository was not found.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/key_pair
-@required {workspace: any, repo_slug: any}
-@returns(200)
-@errors {404}
+@desc Get SSH key pair
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository.}
+@returns(200) The SSH key pair.
+@errors {404: The account, repository or SSH key pair was not found.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/key_pair
-@required {workspace: any, repo_slug: any, _body: any}
-@returns(200)
-@errors {404}
+@desc Update SSH key pair
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., _body: any # The created or updated SSH key pair.}
+@returns(200) The SSH key pair was created or updated.
+@errors {404: The account, repository or SSH key pair was not found.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/key_pair
-@required {workspace: any, repo_slug: any}
-@returns(204)
-@errors {404}
+@desc Delete SSH key pair
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository.}
+@returns(204) The SSH key pair was deleted.
+@errors {404: The account, repository or SSH key pair was not found.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/known_hosts
-@required {workspace: any, repo_slug: any}
-@returns(200)
+@desc List known hosts
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository.}
+@returns(200) The retrieved known hosts.
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/known_hosts
-@required {workspace: any, repo_slug: any, _body: any}
-@returns(201)
-@errors {404, 409}
+@desc Create a known host
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., _body: any # The known host to create.}
+@returns(201) The known host was created.
+@errors {404: The account or repository does not exist., 409: A known host with the provided hostname already exists.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/known_hosts/{known_host_uuid}
-@required {workspace: any, repo_slug: any, known_host_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get a known host
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., known_host_uuid: any # The UUID of the known host to retrieve.}
+@returns(200) The known host.
+@errors {404: The account, repository or known host with the specified UUID was not found.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/known_hosts/{known_host_uuid}
-@required {workspace: any, repo_slug: any, known_host_uuid: any, _body: any}
-@returns(200)
-@errors {404}
+@desc Update a known host
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., known_host_uuid: any # The UUID of the known host to update., _body: any # The updated known host.}
+@returns(200) The known host was updated.
+@errors {404: The account, repository or known host with the given UUID was not found.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/known_hosts/{known_host_uuid}
-@required {workspace: any, repo_slug: any, known_host_uuid: any}
-@returns(204)
-@errors {404}
+@desc Delete a known host
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., known_host_uuid: any # The UUID of the known host to delete.}
+@returns(204) The known host was deleted.
+@errors {404: The account, repository or known host with given UUID was not found.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines_config/variables
-@required {workspace: any, repo_slug: any}
-@returns(200)
+@desc List variables for a repository
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository.}
+@returns(200) The retrieved variables.
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pipelines_config/variables
-@required {workspace: any, repo_slug: any, _body: any}
-@returns(201)
-@errors {404, 409}
+@desc Create a variable for a repository
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., _body: any # The variable to create.}
+@returns(201) The variable was created.
+@errors {404: The account or repository does not exist., 409: A variable with the provided key already exists.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pipelines_config/variables/{variable_uuid}
-@required {workspace: any, repo_slug: any, variable_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get a variable for a repository
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., variable_uuid: any # The UUID of the variable to retrieve.}
+@returns(200) The variable.
+@errors {404: The account, repository or variable with the specified UUID was not found.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/pipelines_config/variables/{variable_uuid}
-@required {workspace: any, repo_slug: any, variable_uuid: any, _body: any}
-@returns(200)
-@errors {404}
+@desc Update a variable for a repository
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., variable_uuid: any # The UUID of the variable to update., _body: any # The updated variable}
+@returns(200) The variable was updated.
+@errors {404: The account, repository or variable with the given UUID was not found.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/pipelines_config/variables/{variable_uuid}
-@required {workspace: any, repo_slug: any, variable_uuid: any}
-@returns(204)
-@errors {404}
+@desc Delete a variable for a repository
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., repo_slug: any # The repository., variable_uuid: any # The UUID of the variable to delete.}
+@returns(204) The variable was deleted.
+@errors {404: The account, repository or variable with given UUID was not found.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/properties/{app_key}/{property_name}
-@required {workspace: any, repo_slug: any, app_key: any, property_name: any, _body: map}
-@returns(204)
+@desc Update a repository application property
+@required {workspace: any # The repository container; either the workspace slug or the UUID in curly braces., repo_slug: any # The repository., app_key: any # The key of the Connect app., property_name: any # The name of the property., _body: map # The application property to create or update.}
+@returns(204) An empty response.
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/properties/{app_key}/{property_name}
-@required {workspace: any, repo_slug: any, app_key: any, property_name: any}
-@returns(204)
+@desc Delete a repository application property
+@required {workspace: any # The repository container; either the workspace slug or the UUID in curly braces., repo_slug: any # The repository., app_key: any # The key of the Connect app., property_name: any # The name of the property.}
+@returns(204) An empty response.
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/properties/{app_key}/{property_name}
-@required {workspace: any, repo_slug: any, app_key: any, property_name: any}
-@returns(200)
+@desc Get a repository application property
+@required {workspace: any # The repository container; either the workspace slug or the UUID in curly braces., repo_slug: any # The repository., app_key: any # The key of the Connect app., property_name: any # The name of the property.}
+@returns(200) The value of the property.
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests
-@optional {state: any}
-@returns(200)
-@errors {401, 404}
+@desc List pull requests
+@optional {state: any # Only return pull requests that are in this state. This parameter can be repeated.}
+@returns(200) All pull requests on the specified repository.
+@errors {401: If the repository is private and the request was not authenticated., 404: If the specified repository does not exist.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pullrequests
-@optional {_body: any}
-@returns(201)
-@errors {400, 401}
+@desc Create a pull request
+@optional {_body: any # The new pull request.  The request URL you POST to becomes the destination repository URL. For this reason, you must specify an explicit source repository in the request object if you want to pull from a different repository (fork).  Since not all elements are required or even mutable, you only need to include the elements you want to initialize, such as the source branch and the title.}
+@returns(201) The newly created pull request.
+@errors {400: If the input document was invalid, or if the caller lacks the privilege to create repositories under the targeted account., 401: If the request was not authenticated.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/activity
-@returns(200)
-@errors {401, 404}
+@desc List a pull request activity log
+@returns(200) The pull request activity log
+@errors {401: If the repository is private and the request was not authenticated., 404: If the specified repository does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}
-@returns(200)
-@errors {401, 404}
+@desc Get a pull request
+@returns(200) The pull request object
+@errors {401: If the repository is private and the request was not authenticated., 404: If the repository or pull request does not exist}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}
-@optional {_body: any}
-@returns(200)
-@errors {400, 401, 404}
+@desc Update a pull request
+@optional {_body: any # The pull request that is to be updated.}
+@returns(200) The updated pull request
+@errors {400: If the input document was invalid., 401: If the request was not authenticated., 404: If the repository or pull request id does not exist}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/activity
-@returns(200)
-@errors {401, 404}
+@desc List a pull request activity log
+@returns(200) The pull request activity log
+@errors {401: If the repository is private and the request was not authenticated., 404: If the specified repository does not exist.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/approve
-@returns(204)
-@errors {400, 401, 404}
+@desc Unapprove a pull request
+@returns(204) An empty response indicating the authenticated user's approval has been withdrawn.
+@errors {400: Pull request cannot be unapproved because the pull request has already been merged., 401: The request wasn't authenticated., 404: The specified pull request or the repository does not exist.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/approve
-@returns(200)
-@errors {401, 404}
+@desc Approve a pull request
+@returns(200) The `participant` object recording that the authenticated user approved the pull request.
+@errors {401: The request wasn't authenticated., 404: The specified pull request or the repository does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments
-@returns(200)
-@errors {403, 404}
+@desc List comments on a pull request
+@returns(200) A paginated list of comments made on the given pull request, in chronological order.
+@errors {403: If the authenticated user does not have access to the pull request., 404: If the pull request does not exist.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments
-@required {_body: any}
-@returns(201)
-@errors {403, 404}
+@desc Create a comment on a pull request
+@required {_body: any # The comment object.}
+@returns(201) The newly created comment.
+@errors {403: If the authenticated user does not have access to the pull request., 404: If the pull request does not exist.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments/{comment_id}
-@returns(204)
-@errors {403, 404}
+@desc Delete a comment on a pull request
+@returns(204) Successful deletion.
+@errors {403: If the authenticated user does not have access to delete the comment., 404: If the comment does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments/{comment_id}
-@returns(200)
-@errors {403, 404}
+@desc Get a comment on a pull request
+@returns(200) The comment.
+@errors {403: If the authenticated user does not have access to the pull request., 404: If the comment does not exist.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments/{comment_id}
-@required {_body: any}
-@returns(200)
-@errors {403, 404}
+@desc Update a comment on a pull request
+@required {_body: any # The contents of the updated comment.}
+@returns(200) The updated comment.
+@errors {403: If the authenticated user does not have access to the comment., 404: If the comment does not exist.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments/{comment_id}/resolve
-@returns(204)
-@errors {403, 404}
+@desc Reopen a comment thread
+@returns(204) The comment is reopened.
+@errors {403: If the authenticated user does not have access to the pull request, or if the provided comment is not a top-level comment., 404: If the comment does not exist, or if the comment has not been resolved}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments/{comment_id}/resolve
-@returns(200)
-@errors {403, 404, 409}
+@desc Resolve a comment thread
+@returns(200) The comment resolution details.
+@errors {403: If the authenticated user does not have access to the pull request, if the provided comment is not a top-level comment, or if the comment is not on the diff., 404: If the comment does not exist., 409: If the comment has already been resolved.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/commits
-@returns(200)
-@errors {403, 404}
+@desc List commits on a pull request
+@returns(200) A paginated list of commits made on the given pull request, in chronological order. This list will be empty if the source branch no longer exists.
+@errors {403: If the authenticated user does not have access to the pull request., 404: If the pull request does not exist or the source branch is from a forked repository which no longer exists.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/decline
-@returns(200)
-@errors {555}
+@desc Decline a pull request
+@returns(200) The pull request was successfully declined.
+@errors {555: If the decline took too long and timed out. In this case the caller should retry the request later.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/diff
-@errors {302}
+@desc List changes in a pull request
+@errors {302: Redirects to the [repository diff](/cloud/bitbucket/rest/api-group-commits/#api-repositories-workspace-repo-slug-diff-spec-get) with the revspec that corresponds to the pull request.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/diffstat
-@errors {302}
+@desc Get the diff stat for a pull request
+@errors {302: Redirects to the [repository diffstat](/cloud/bitbucket/rest/api-group-commits/#api-repositories-workspace-repo-slug-diffstat-spec-get) with the revspec that corresponds to pull request.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/merge
-@optional {_body: map, async: any}
-@returns(200)
-@returns(202)
-@errors {409, 555}
+@desc Merge a pull request
+@optional {_body: map, async: any # Default value is false.   When set to true, runs merge asynchronously and immediately returns a 202 with polling link to the task-status API in the Location header.   When set to false, runs merge and waits for it to complete, returning 200 when it succeeds. If the duration of the merge exceeds a timeout threshold, the API returns a 202 with polling link to the task-status API in the Location header.}
+@returns(200) The pull request object.
+@returns(202) In the Location header, the URL to poll for the pull request merge status
+@errors {409: Unable to merge because one of the refs involved changed while attempting to merge, 555: If the merge took too long and timed out. In this case the caller should retry the request later}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/merge/task-status/{task_id}
-@returns(200)
-@errors {400, 403, 409}
+@desc Get the merge task status for a pull request
+@returns(200) Returns a task status if the merge is either pending or successful, and if it is successful, a pull request
+@errors {400: If the provided task ID does not relate to this pull request, or if something went wrong during the merge operation, 403: The user making the request does not have permission to the repo and is different from the user who queued the task, 409: Unable to merge because one of the refs involved changed while attempting to merge}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/patch
-@errors {302}
+@desc Get the patch for a pull request
+@errors {302: Redirects to the [repository patch](/cloud/bitbucket/rest/api-group-commits/#api-repositories-workspace-repo-slug-patch-spec-get) with the revspec that corresponds to pull request.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/request-changes
-@returns(204)
-@errors {400, 401, 404}
+@desc Remove change request for a pull request
+@returns(204) An empty response indicating the authenticated user's request for change has been withdrawn.
+@errors {400: Pull request requested changes cannot be removed because the pull request has already been merged., 401: The request wasn't authenticated., 404: The specified pull request or the repository does not exist.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/request-changes
-@returns(200)
-@errors {400, 401, 404}
+@desc Request changes for a pull request
+@returns(200) The `participant` object recording that the authenticated user requested changes on the pull request.
+@errors {400: Pull request changes cannot be requested because the pull request has already been merged., 401: The request wasn't authenticated., 404: The specified pull request or the repository does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/statuses
-@optional {q: any, sort: any}
-@returns(200)
-@errors {401, 404}
+@desc List commit statuses for a pull request
+@optional {q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Field by which the results should be sorted as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering). Defaults to `created_on`.}
+@returns(200) A paginated list of all commit statuses for this pull request.
+@errors {401: If the repository is private and the request was not authenticated., 404: If the specified repository or pull request does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/tasks
-@optional {q: any, sort: any, pagelen: any}
-@returns(200)
-@errors {400, 403, 404}
+@desc List tasks on a pull request
+@optional {q: any # Query string to narrow down the response. See [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering) for details., sort: any # Field by which the results should be sorted as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering). Defaults to `created_on`., pagelen: any # Current number of objects on the existing page. The default value is 10 with 100 being the maximum allowed value. Individual APIs may enforce different values.}
+@returns(200) A paginated list of pull request tasks for the given pull request.
+@errors {400: If the user provides an invalid filter, sort, or fields query parameter., 403: If the authenticated user does not have access to the pull request., 404: If the pull request does not exist.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/tasks
-@required {_body: map}
-@returns(201)
-@errors {400, 403, 404}
+@desc Create a task on a pull request
+@required {_body: map # The contents of the task}
+@returns(201) The newly created task.
+@errors {400: There is a missing required field in the request or the task content is blank., 403: If the authenticated user does not have access to the pull request., 404: If the pull request does not exist.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/tasks/{task_id}
-@returns(204)
-@errors {403, 404}
+@desc Delete a task on a pull request
+@returns(204) Successful deletion.
+@errors {403: If the authenticated user does not have access to delete the task., 404: If the task does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/tasks/{task_id}
-@returns(200)
-@errors {403, 404}
+@desc Get a task on a pull request
+@returns(200) The task.
+@errors {403: If the authenticated user does not have access to the pull request., 404: If the task does not exist.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/tasks/{task_id}
-@required {_body: map}
-@returns(200)
-@errors {400, 403, 404}
+@desc Update a task on a pull request
+@required {_body: map # The updated state and content of the task.}
+@returns(200) The updated task.
+@errors {400: There is a missing required field in the request or the task content is blank., 403: If the authenticated user does not have access to the pull request., 404: If the task does not exist.}
 
 @endpoint PUT /repositories/{workspace}/{repo_slug}/pullrequests/{pullrequest_id}/properties/{app_key}/{property_name}
-@required {workspace: any, repo_slug: any, pullrequest_id: any, app_key: any, property_name: any, _body: map}
-@returns(204)
+@desc Update a pull request application property
+@required {workspace: any # The repository container; either the workspace slug or the UUID in curly braces., repo_slug: any # The repository., pullrequest_id: any # The pull request ID., app_key: any # The key of the Connect app., property_name: any # The name of the property., _body: map # The application property to create or update.}
+@returns(204) An empty response.
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/pullrequests/{pullrequest_id}/properties/{app_key}/{property_name}
-@required {workspace: any, repo_slug: any, pullrequest_id: any, app_key: any, property_name: any}
-@returns(204)
+@desc Delete a pull request application property
+@required {workspace: any # The repository container; either the workspace slug or the UUID in curly braces., repo_slug: any # The repository., pullrequest_id: any # The pull request ID., app_key: any # The key of the Connect app., property_name: any # The name of the property.}
+@returns(204) An empty response.
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/pullrequests/{pullrequest_id}/properties/{app_key}/{property_name}
-@required {workspace: any, repo_slug: any, pullrequest_id: any, app_key: any, property_name: any}
-@returns(200)
+@desc Get a pull request application property
+@required {workspace: any # The repository container; either the workspace slug or the UUID in curly braces., repo_slug: any # The repository., pullrequest_id: any # The pull request ID., app_key: any # The key of the Connect app., property_name: any # The name of the property.}
+@returns(200) The value of the property.
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/refs
-@optional {q: any, sort: any}
-@returns(200)
-@errors {403, 404}
+@desc List branches and tags
+@optional {q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Field by which the results should be sorted as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering). The `name` field is handled specially for refs in that, if specified as the sort field, it uses a natural sort order instead of the default lexicographical sort order. For example, it will return ['1.1', '1.2', '1.10'] instead of ['1.1', '1.10', '1.2'].}
+@returns(200) A paginated list of refs matching any filter criteria that were provided.
+@errors {403: If the repository is private and the authenticated user does not have access to it., 404: The specified repository does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/refs/branches
-@optional {q: any, sort: any}
-@returns(200)
-@errors {403, 404}
+@desc List open branches
+@optional {q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Field by which the results should be sorted as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering). The `name` field is handled specially for branches in that, if specified as the sort field, it uses a natural sort order instead of the default lexicographical sort order. For example, it will return ['branch1', 'branch2', 'branch10'] instead of ['branch1', 'branch10', 'branch2'].}
+@returns(200) A paginated list of branches matching any filter criteria that were provided.
+@errors {403: If the repository is private and the authenticated user does not have access to it., 404: The specified repository does not exist.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/refs/branches
-@returns(201)
-@errors {403, 404}
+@desc Create a branch
+@returns(201) The newly created branch object.
+@errors {403: If the repository is private and the authenticated user does not have access to it., 404: The specified repository or branch does not exist.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/refs/branches/{name}
-@returns(204)
-@errors {403, 404}
+@desc Delete a branch
+@returns(204) Indicates that the specified branch was successfully deleted.
+@errors {403: If the repository is private and the authenticated user does not have access to it., 404: The specified repository or branch does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/refs/branches/{name}
-@returns(200)
-@errors {403, 404}
+@desc Get a branch
+@returns(200) The branch object.
+@errors {403: If the repository is private and the authenticated user does not have access to it., 404: The specified repository or branch does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/refs/tags
-@optional {q: any, sort: any}
-@returns(200)
-@errors {403, 404}
+@desc List tags
+@optional {q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Field by which the results should be sorted as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering). The `name` field is handled specially for tags in that, if specified as the sort field, it uses a natural sort order instead of the default lexicographical sort order. For example, it will return ['1.1', '1.2', '1.10'] instead of ['1.1', '1.10', '1.2'].}
+@returns(200) A paginated list of tags matching any filter criteria that were provided.
+@errors {403: If the repository is private and the authenticated user does not have access to it., 404: The specified repository does not exist.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/refs/tags
+@desc Create a tag
 @required {_body: any}
-@returns(201)
-@errors {400}
+@returns(201) The newly created tag.
+@errors {400: If the target hash is missing, ambiguous, or invalid, or if the name is not provided.}
 
 @endpoint DELETE /repositories/{workspace}/{repo_slug}/refs/tags/{name}
-@returns(204)
-@errors {403, 404}
+@desc Delete a tag
+@returns(204) Indicates the specified tag was successfully deleted.
+@errors {403: If the repository is private and the authenticated user does not have access to it., 404: The specified repository or tag does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/refs/tags/{name}
-@returns(200)
-@errors {403, 404}
+@desc Get a tag
+@returns(200) The tag object.
+@errors {403: If the repository is private and the authenticated user does not have access to it., 404: The specified repository or tag does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/src
-@optional {format: any}
-@returns(200)
-@errors {404}
+@desc Get the root directory of the main branch
+@optional {format: any # Instead of returning the file's contents, return the (json) meta data for it.}
+@returns(200) If the path matches a file, then the raw contents of the file are returned (unless the `format=meta` query parameter was provided, in which case a json document containing the file's meta data is returned). If the path matches a directory, then a paginated list of file and directory entries is returned (if the `format=meta` query parameter was provided, then the json document containing the directory's meta data is returned).
+@errors {404: If the path or commit in the URL does not exist.}
 
 @endpoint POST /repositories/{workspace}/{repo_slug}/src
-@optional {message: any, author: any, parents: any, files: any, branch: any}
+@desc Create a commit by uploading a file
+@optional {message: any # The commit message. When omitted, Bitbucket uses a canned string., author: any # The raw string to be used as the new commit's author. This string follows the format `Erik van Zijst <evzijst@atlassian.com>`.  When omitted, Bitbucket uses the authenticated user's full/display name and primary email address. Commits cannot be created anonymously., parents: any # #### Deprecation Notice: Support for specifying multiple parent commits is deprecated and will be removed in a future release. Only a single SHA1 is accepted.  A SHA1 of the commit that should be the parent of the newly created commit. When omitted, the new commit will inherit from and become a child of the main branch's tip/HEAD commit., files: any # Optional field that declares the files that the request is manipulating. When adding a new file to a repo, or when overwriting an existing file, the client can just upload the full contents of the file in a normal form field and the use of this `files` meta data field is redundant. However, when the `files` field contains a file path that does not have a corresponding, identically-named form field, then Bitbucket interprets that as the client wanting to replace the named file with the null set and the file is deleted instead.  Paths in the repo that are referenced in neither files nor an individual file field, remain unchanged and carry over from the parent to the new commit.  This API does not support renaming as an explicit feature. To rename a file, simply delete it and recreate it under the new name in the same commit., branch: any # The name of the branch that the new commit should be created on. When omitted, the commit will be created on top of the main branch and will become the main branch's new head.  When a branch name is provided that already exists in the repo, then the commit will be created on top of that branch. In this case, *if* a parent SHA1 was also provided, then it is asserted that the parent is the branch's tip/HEAD at the time the request is made. When this is not the case, a 409 is returned.  When a new branch name is specified (that does not already exist in the repo), and no parent SHA1s are provided, then the new commit will inherit from the current main branch's tip/HEAD commit, but not advance the main branch. The new commit will be the new branch. When the request *also* specifies a parent SHA1, then the new commit and branch are created directly on top of the parent commit, regardless of the state of the main branch.  When a branch name is not specified, but a parent SHA1 is provided, then Bitbucket asserts that it represents the main branch's current HEAD/tip, or a 409 is returned.  When a branch name is not specified and the repo is empty, the new commit will become the repo's root commit and will be on the main branch.  When a branch name is specified and the repo is empty, the new commit will become the repo's root commit and also define the repo's main branch going forward.  This API cannot be used to create additional root commits in non-empty repos.  The branch field cannot be repeated.  As a side effect, this API can be used to create a new branch without modifying any files, by specifying a new branch name in this field, together with `parents`, but omitting the `files` fields, while not sending any files. This will create a new commit and branch with the same contents as the first parent. The diff of this commit against its first parent will be empty.}
 @returns(201)
-@errors {403, 404}
+@errors {403: If the authenticated user does not have write or admin access, 404: If the repository does not exist.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/src/{commit}/{path}
-@optional {format: any, q: any, sort: any, max_depth: any}
-@returns(200)
-@errors {404, 555}
+@desc Get file or directory contents
+@optional {format: any # If 'meta' is provided, returns the (json) meta data for the contents of the file.  If 'rendered' is provided, returns the contents of a non-binary file in HTML-formatted rendered markup. The 'rendered' option only supports these filetypes: `.md`, `.markdown`, `.mkd`, `.mkdn`, `.mdown`, `.text`, `.rst`, and `.textile`. Since Git does not generally track what text encoding scheme is used, this endpoint attempts to detect the most appropriate character encoding. While usually correct, determining the character encoding can be ambiguous which in exceptional cases can lead to misinterpretation of the characters. As such, the raw element in the response object should not be treated as equivalent to the file's actual contents., q: any # Optional filter expression as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Optional sorting parameter as per [filtering and sorting](/cloud/bitbucket/rest/intro/#sorting-query-results)., max_depth: any # If provided, returns the contents of the repository and its subdirectories recursively until the specified max_depth of nested directories. When omitted, this defaults to 1.}
+@returns(200) If the path matches a file, then the raw contents of the file are returned.  If the `format=meta` query parameter is provided, a json document containing the file's meta data is returned.  If the `format=rendered` query parameter is provided, the contents of the file in HTML-formated rendered markup is returned. If the path matches a directory, then a paginated list of file and directory entries is returned (if the `format=meta` query parameter was provided, then the json document containing the directory's meta data is returned.)
+@errors {404: If the path or commit in the URL does not exist., 555: If the call times out, possibly because the specified recursion depth is too large.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/versions
-@returns(200)
-@errors {404}
+@desc List defined versions for issues
+@returns(200) The versions that have been defined in the issue tracker.
+@errors {404: The specified repository does not exist or does not have the issue tracker enabled.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/versions/{version_id}
-@returns(200)
-@errors {404}
+@desc Get a defined version for issues
+@returns(200) The specified version object.
+@errors {404: The specified repository or version does not exist or does not have the issue tracker enabled.}
 
 @endpoint GET /repositories/{workspace}/{repo_slug}/watchers
-@returns(200)
+@desc List repositories watchers
+@returns(200) A paginated list of all the watchers on the specified repository.
 
 @endgroup
 
 @group snippets
 @endpoint GET /snippets
-@optional {role: any}
-@returns(200)
-@errors {404}
+@desc List snippets
+@optional {role: any # Filter down the result based on the authenticated user's role (`owner`, `contributor`, or `member`).}
+@returns(200) A paginated list of snippets.
+@errors {404: If the snippet does not exist.}
 
 @endpoint POST /snippets
-@required {_body: any}
-@returns(201)
-@errors {401}
+@desc Create a snippet
+@required {_body: any # The new snippet object.}
+@returns(201) The newly created snippet object.
+@errors {401: If the request was not authenticated}
 
 @endpoint GET /snippets/{workspace}
-@optional {role: any}
-@returns(200)
-@errors {404}
+@desc List snippets in a workspace
+@optional {role: any # Filter down the result based on the authenticated user's role (`owner`, `contributor`, or `member`).}
+@returns(200) A paginated list of snippets.
+@errors {404: If the user does not exist.}
 
 @endpoint POST /snippets/{workspace}
-@required {_body: any}
-@returns(201)
-@errors {401, 403}
+@desc Create a snippet for a workspace
+@required {_body: any # The new snippet object.}
+@returns(201) The newly created snippet object.
+@errors {401: If the request was not authenticated, 403: If the authenticated user does not have permission to create snippets in the specified workspace.}
 
 @endpoint DELETE /snippets/{workspace}/{encoded_id}
-@returns(204)
-@errors {401, 403, 404}
+@desc Delete a snippet
+@returns(204) If the snippet was deleted successfully.
+@errors {401: If the snippet is private and the request was not authenticated., 403: If authenticated user does not have permission to delete the private snippet., 404: If the snippet does not exist.}
 
 @endpoint GET /snippets/{workspace}/{encoded_id}
-@returns(200)
-@errors {401, 403, 404, 410}
+@desc Get a snippet
+@returns(200) The snippet object.
+@errors {401: If the snippet is private and the request was not authenticated., 403: If authenticated user does not have access to the private snippet., 404: If the snippet does not exist., 410: If the snippet marked as spam.}
 
 @endpoint PUT /snippets/{workspace}/{encoded_id}
-@returns(200)
-@errors {401, 403, 404}
+@desc Update a snippet
+@returns(200) The updated snippet object.
+@errors {401: If the snippet is private and the request was not authenticated., 403: If authenticated user does not have permission to update the private snippet., 404: If the snippet does not exist.}
 
 @endpoint GET /snippets/{workspace}/{encoded_id}/comments
-@returns(200)
-@errors {403, 404}
+@desc List comments on a snippet
+@returns(200) A paginated list of snippet comments, ordered by creation date.
+@errors {403: If the authenticated user does not have access to the snippet., 404: If the snippet does not exist.}
 
 @endpoint POST /snippets/{workspace}/{encoded_id}/comments
-@required {_body: any}
-@returns(201)
-@errors {403, 404}
+@desc Create a comment on a snippet
+@required {_body: any # The contents of the new comment.}
+@returns(201) The newly created comment.
+@errors {403: If the authenticated user does not have access to the snippet., 404: If the snippet does not exist.}
 
 @endpoint DELETE /snippets/{workspace}/{encoded_id}/comments/{comment_id}
-@returns(204)
-@errors {403, 404}
+@desc Delete a comment on a snippet
+@returns(204) Indicates the comment was deleted successfully.
+@errors {403: If the authenticated user is not the author of the comment., 404: If the comment or the snippet does not exist.}
 
 @endpoint GET /snippets/{workspace}/{encoded_id}/comments/{comment_id}
-@returns(200)
-@errors {403, 404}
+@desc Get a comment on a snippet
+@returns(200) The specified comment.
+@errors {403: If the authenticated user does not have access to the snippet., 404: If the comment or snippet does not exist.}
 
 @endpoint PUT /snippets/{workspace}/{encoded_id}/comments/{comment_id}
-@required {_body: any}
-@returns(200)
-@errors {403, 404}
+@desc Update a comment on a snippet
+@required {_body: any # The contents to update the comment to.}
+@returns(200) The updated comment object.
+@errors {403: If the authenticated user does not have access to the snippet., 404: If the comment or snippet does not exist.}
 
 @endpoint GET /snippets/{workspace}/{encoded_id}/commits
-@returns(200)
-@errors {403, 404}
+@desc List snippet changes
+@returns(200) The paginated list of snippet commits.
+@errors {403: If the authenticated user does not have access to the snippet., 404: If the snippet does not exist.}
 
 @endpoint GET /snippets/{workspace}/{encoded_id}/commits/{revision}
-@returns(200)
-@errors {403, 404}
+@desc Get a previous snippet change
+@returns(200) The specified snippet commit.
+@errors {403: If the authenticated user does not have access to the snippet., 404: If the commit or the snippet does not exist.}
 
 @endpoint GET /snippets/{workspace}/{encoded_id}/files/{path}
-@errors {302, 403, 404}
+@desc Get a snippet's raw file at HEAD
+@errors {302: A redirect to the most recent revision of the specified file., 403: If the authenticated user does not have access to the snippet., 404: If the snippet does not exist.}
 
 @endpoint DELETE /snippets/{workspace}/{encoded_id}/watch
-@returns(204)
-@errors {401, 404}
+@desc Stop watching a snippet
+@returns(204) Indicates the user stopped watching the snippet successfully.
+@errors {401: If the request was not authenticated., 404: If the snippet does not exist.}
 
 @endpoint GET /snippets/{workspace}/{encoded_id}/watch
-@returns(204)
-@errors {404}
+@desc Check if the current user is watching a snippet
+@returns(204) If the authenticated user is watching the snippet.
+@errors {404: If the snippet does not exist, or if the authenticated user is not watching the snippet.}
 
 @endpoint PUT /snippets/{workspace}/{encoded_id}/watch
-@returns(204)
-@errors {401, 404}
+@desc Watch a snippet
+@returns(204) Indicates the authenticated user is now watching the snippet.
+@errors {401: If the request was not authenticated., 404: If the snippet does not exist.}
 
 @endpoint GET /snippets/{workspace}/{encoded_id}/watchers
-@returns(200)
-@errors {404}
+@desc List users watching a snippet
+@returns(200) The paginated list of users watching this snippet
+@errors {404: If the snippet does not exist.}
 
 @endpoint DELETE /snippets/{workspace}/{encoded_id}/{node_id}
-@returns(204)
-@errors {401, 403, 404, 405}
+@desc Delete a previous revision of a snippet
+@returns(204) If the snippet was deleted successfully.
+@errors {401: If the snippet is private and the request was not authenticated., 403: If authenticated user does not have permission to delete the private snippet., 404: If the snippet does not exist., 405: If `{node_id}` is not the latest revision.}
 
 @endpoint GET /snippets/{workspace}/{encoded_id}/{node_id}
-@returns(200)
-@errors {401, 403, 404}
+@desc Get a previous revision of a snippet
+@returns(200) The snippet object.
+@errors {401: If the snippet is private and the request was not authenticated., 403: If authenticated user does not have access to the private snippet., 404: If the snippet, or the revision does not exist.}
 
 @endpoint PUT /snippets/{workspace}/{encoded_id}/{node_id}
-@returns(200)
-@errors {401, 403, 404, 405}
+@desc Update a previous revision of a snippet
+@returns(200) The updated snippet object.
+@errors {401: If the snippet is private and the request was not authenticated., 403: If authenticated user does not have permission to update the private snippet., 404: If the snippet or the revision does not exist., 405: If `{node_id}` is not the latest revision.}
 
 @endpoint GET /snippets/{workspace}/{encoded_id}/{node_id}/files/{path}
-@returns(200)
-@errors {403, 404}
+@desc Get a snippet's raw file
+@returns(200) Returns the contents of the specified file.
+@errors {403: If the authenticated user does not have access to the snippet., 404: If the file or snippet does not exist.}
 
 @endpoint GET /snippets/{workspace}/{encoded_id}/{revision}/diff
-@optional {path: any}
-@returns(200)
-@errors {403, 404}
+@desc Get snippet changes between versions
+@optional {path: any # When used, only one the diff of the specified file will be returned.}
+@returns(200) The raw diff contents.
+@errors {403: If the authenticated user does not have access to the snippet., 404: If the snippet does not exist.}
 
 @endpoint GET /snippets/{workspace}/{encoded_id}/{revision}/patch
-@returns(200)
-@errors {403, 404}
+@desc Get snippet patch between versions
+@returns(200) The raw patch contents.
+@errors {403: If the authenticated user does not have access to the snippet., 404: If the snippet does not exist.}
 
 @endgroup
 
 @group teams
 @endpoint GET /teams/{username}/pipelines_config/variables
-@required {username: any}
-@returns(200)
+@desc List variables for an account
+@required {username: any # The account.}
+@returns(200) The found account level variables.
 
 @endpoint POST /teams/{username}/pipelines_config/variables
-@required {username: any}
-@optional {_body: any}
-@returns(201)
-@errors {404, 409}
+@desc Create a variable for a user
+@required {username: any # The account.}
+@optional {_body: any # The variable to create.}
+@returns(201) The created variable.
+@errors {404: The account does not exist., 409: A variable with the provided key already exists.}
 
 @endpoint GET /teams/{username}/pipelines_config/variables/{variable_uuid}
-@required {username: any, variable_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get a variable for a team
+@required {username: any # The account., variable_uuid: any # The UUID of the variable to retrieve.}
+@returns(200) The variable.
+@errors {404: The account or variable with the given UUID was not found.}
 
 @endpoint PUT /teams/{username}/pipelines_config/variables/{variable_uuid}
-@required {username: any, variable_uuid: any, _body: any}
-@returns(200)
-@errors {404}
+@desc Update a variable for a team
+@required {username: any # The account., variable_uuid: any # The UUID of the variable., _body: any # The updated variable.}
+@returns(200) The variable was updated.
+@errors {404: The account or the variable was not found.}
 
 @endpoint DELETE /teams/{username}/pipelines_config/variables/{variable_uuid}
-@required {username: any, variable_uuid: any}
-@returns(204)
-@errors {404}
+@desc Delete a variable for a team
+@required {username: any # The account., variable_uuid: any # The UUID of the variable to delete.}
+@returns(204) The variable was deleted
+@errors {404: The account or the variable with the provided UUID does not exist.}
 
 @endpoint GET /teams/{username}/search/code
-@required {username: any, search_query: any}
-@optional {page: any, pagelen: any}
-@returns(200)
-@errors {400, 404, 429}
+@desc Search for code in a team's repositories
+@required {username: any # The account to search in; either the username or the UUID in curly braces, search_query: any # The search query}
+@optional {page: any # Which page of the search results to retrieve, pagelen: any # How many search results to retrieve per page}
+@returns(200) Successful search
+@errors {400: If the search request was invalid due to one of the following reasons:  * the specified type of target account doesn''t match the actual account type;  * malformed pagination properties;  * missing or malformed search query, in the latter case an error key will be returned in `error.data.key` property., 404: Search is not enabled for the requested team, navigate to [https://bitbucket.org/search](https://bitbucket.org/search) to turn it on, 429: Too many requests, try again later}
 
 @endgroup
 
 @group user
 @endpoint GET /user
-@returns(200)
-@errors {401}
+@desc Get current user
+@returns(200) The current user.
+@errors {401: When the request wasn't authenticated.}
 
 @endpoint GET /user/emails
+@desc List email addresses for current user
 
 @endpoint GET /user/emails/{email}
+@desc Get an email address for current user
 
 @endpoint GET /user/permissions/repositories
-@optional {q: any, sort: any}
-@returns(200)
+@desc List repository permissions for a user
+@optional {q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Name of a response property sort the result by as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering).}
+@returns(200) Repository permissions for the repositories a caller has explicit access to.
 
 @endpoint GET /user/permissions/workspaces
-@optional {q: any, sort: any}
-@returns(200)
-@errors {401}
+@desc List workspaces for the current user
+@optional {q: any # Query string to narrow down the response. See [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering) for details., sort: any # Name of a response property to sort results. See [filtering and sorting](/cloud/bitbucket/rest/intro/#sorting-query-results) for details.}
+@returns(200) All of the workspace memberships for the authenticated user.
+@errors {401: The request wasn't authenticated.}
 
 @endpoint GET /user/workspaces
-@optional {sort: any, administrator: any}
-@returns(200)
-@errors {400, 401}
+@desc List workspaces for the current user
+@optional {sort: any # Name of a response property to sort results (only slug is supported)., administrator: any # Filter workspaces based on which ones the caller has admin permissions or not.}
+@returns(200) The list of workspaces accessible by the authenticated user.
+@errors {400: The request was invalid., 401: The request wasn't authenticated.}
 
 @endpoint GET /user/workspaces/{workspace}/permission
-@returns(200)
-@errors {401, 403}
+@desc Get user permission on a workspace
+@returns(200) The user that is part of a workspace.
+@errors {401: The request wasn't authenticated., 403: The requesting user does not have access to the workspace.}
 
 @endpoint GET /user/workspaces/{workspace}/permissions/repositories
-@optional {q: any, sort: any}
-@returns(200)
-@errors {400, 401, 403}
+@desc List repository permissions in a workspace for a user
+@optional {q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Name of a response property sort the result by as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering).}
+@returns(200) The list of repository permissions for the authenticated user in the specified workspace.
+@errors {400: The request was invalid., 401: The request wasn't authenticated., 403: The requesting user does not have access to the workspace.}
 
 @endgroup
 
 @group users
 @endpoint GET /users/{selected_user}
-@returns(200)
-@errors {404}
+@desc Get a user
+@returns(200) The user object
+@errors {404: If no user exists for the specified UUID, or if the specified account is a team account, not a personal account.}
 
 @endpoint GET /users/{selected_user}/gpg-keys
-@returns(200)
-@errors {403, 404}
+@desc List GPG keys
+@returns(200) A list of the GPG keys associated with the account.
+@errors {403: If the specified user's keys are not accessible to the current user, 404: If the specified user does not exist}
 
 @endpoint POST /users/{selected_user}/gpg-keys
-@optional {_body: any}
-@returns(201)
-@errors {400, 403, 404}
+@desc Add a new GPG key
+@optional {_body: any # The new GPG key object.}
+@returns(201) The newly created GPG key.
+@errors {400: If the submitted key or related value is invalid, 403: If the current user does not have permission to add a key for the specified user, 404: If the specified user does not exist}
 
 @endpoint DELETE /users/{selected_user}/gpg-keys/{fingerprint}
-@returns(204)
-@errors {400, 403, 404}
+@desc Delete a GPG key
+@returns(204) The key has been deleted
+@errors {400: If the submitted key or related value is invalid, 403: If the current user does not have permission to delete a key for the specified user, or the submitted key is a subkey, 404: If the specified key does not exist}
 
 @endpoint GET /users/{selected_user}/gpg-keys/{fingerprint}
-@returns(200)
-@errors {403, 404}
+@desc Get a GPG key
+@returns(200) The specific GPG key matching the user and fingerprint.
+@errors {403: If the specified user's keys are not accessible to the current user, 404: If the specified user does not exist}
 
 @endpoint GET /users/{selected_user}/pipelines_config/variables
-@required {selected_user: any}
-@returns(200)
+@desc List variables for a user
+@required {selected_user: any # Either the UUID of the account surrounded by curly-braces, for example `{account UUID}`, OR an Atlassian Account ID.}
+@returns(200) The found user level variables.
 
 @endpoint POST /users/{selected_user}/pipelines_config/variables
-@required {selected_user: any}
-@optional {_body: any}
-@returns(201)
-@errors {404, 409}
+@desc Create a variable for a user
+@required {selected_user: any # Either the UUID of the account surrounded by curly-braces, for example `{account UUID}`, OR an Atlassian Account ID.}
+@optional {_body: any # The variable to create.}
+@returns(201) The created variable.
+@errors {404: The account does not exist., 409: A variable with the provided key already exists.}
 
 @endpoint GET /users/{selected_user}/pipelines_config/variables/{variable_uuid}
-@required {selected_user: any, variable_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get a variable for a user
+@required {selected_user: any # Either the UUID of the account surrounded by curly-braces, for example `{account UUID}`, OR an Atlassian Account ID., variable_uuid: any # The UUID of the variable to retrieve.}
+@returns(200) The variable.
+@errors {404: The account or variable with the given UUID was not found.}
 
 @endpoint PUT /users/{selected_user}/pipelines_config/variables/{variable_uuid}
-@required {selected_user: any, variable_uuid: any, _body: any}
-@returns(200)
-@errors {404}
+@desc Update a variable for a user
+@required {selected_user: any # Either the UUID of the account surrounded by curly-braces, for example `{account UUID}`, OR an Atlassian Account ID., variable_uuid: any # The UUID of the variable., _body: any # The updated variable.}
+@returns(200) The variable was updated.
+@errors {404: The account or the variable was not found.}
 
 @endpoint DELETE /users/{selected_user}/pipelines_config/variables/{variable_uuid}
-@required {selected_user: any, variable_uuid: any}
-@returns(204)
-@errors {404}
+@desc Delete a variable for a user
+@required {selected_user: any # Either the UUID of the account surrounded by curly-braces, for example `{account UUID}`, OR an Atlassian Account ID., variable_uuid: any # The UUID of the variable to delete.}
+@returns(204) The variable was deleted
+@errors {404: The account or the variable with the provided UUID does not exist.}
 
 @endpoint PUT /users/{selected_user}/properties/{app_key}/{property_name}
-@required {selected_user: any, app_key: any, property_name: any, _body: map}
-@returns(204)
+@desc Update a user application property
+@required {selected_user: any # Either the UUID of the account surrounded by curly-braces, for example `{account UUID}`, OR an Atlassian Account ID., app_key: any # The key of the Connect app., property_name: any # The name of the property., _body: map # The application property to create or update.}
+@returns(204) An empty response.
 
 @endpoint DELETE /users/{selected_user}/properties/{app_key}/{property_name}
-@required {selected_user: any, app_key: any, property_name: any}
-@returns(204)
+@desc Delete a user application property
+@required {selected_user: any # Either the UUID of the account surrounded by curly-braces, for example `{account UUID}`, OR an Atlassian Account ID., app_key: any # The key of the Connect app., property_name: any # The name of the property.}
+@returns(204) An empty response.
 
 @endpoint GET /users/{selected_user}/properties/{app_key}/{property_name}
-@required {selected_user: any, app_key: any, property_name: any}
-@returns(200)
+@desc Get a user application property
+@required {selected_user: any # Either the UUID of the account surrounded by curly-braces, for example `{account UUID}`, OR an Atlassian Account ID., app_key: any # The key of the Connect app., property_name: any # The name of the property.}
+@returns(200) The value of the property.
 
 @endpoint GET /users/{selected_user}/search/code
-@required {selected_user: any, search_query: any}
-@optional {page: any, pagelen: any}
-@returns(200)
-@errors {400, 404, 429}
+@desc Search for code in a user's repositories
+@required {selected_user: any # Either the UUID of the account surrounded by curly-braces, for example `{account UUID}`, OR an Atlassian Account ID., search_query: any # The search query}
+@optional {page: any # Which page of the search results to retrieve, pagelen: any # How many search results to retrieve per page}
+@returns(200) Successful search
+@errors {400: If the search request was invalid due to one of the following reasons:  * the specified type of target account doesn''t match the actual account type;  * malformed pagination properties;  * missing or malformed search query, in the latter case an error key will be returned in `error.data.key` property., 404: Search is not enabled for the requested user, navigate to [https://bitbucket.org/search](https://bitbucket.org/search) to turn it on, 429: Too many requests, try again later}
 
 @endpoint GET /users/{selected_user}/ssh-keys
-@returns(200)
-@errors {403, 404}
+@desc List SSH keys
+@returns(200) A list of the SSH keys associated with the account.
+@errors {403: If the specified user's keys are not accessible to the current user, 404: If the specified user does not exist}
 
 @endpoint POST /users/{selected_user}/ssh-keys
-@optional {_body: any, expires_on: any}
-@returns(201)
-@errors {400, 403, 404}
+@desc Add a new SSH key
+@optional {_body: any # The new SSH key object. Note that the username property has been deprecated due to [privacy changes](https://developer.atlassian.com/cloud/bitbucket/bitbucket-api-changes-gdpr/#removal-of-usernames-from-user-referencing-apis)., expires_on: any # The date or date-time of when the key will expire, in [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) format. Example: `YYYY-MM-DDTHH:mm:ss.sssZ`}
+@returns(201) The newly created SSH key.
+@errors {400: If the submitted key or related value is invalid, 403: If the current user does not have permission to add a key for the specified user, 404: If the specified user does not exist}
 
 @endpoint DELETE /users/{selected_user}/ssh-keys/{key_id}
-@returns(204)
-@errors {400, 403, 404}
+@desc Delete a SSH key
+@returns(204) The key has been deleted
+@errors {400: If the submitted key or related value is invalid, 403: If the current user does not have permission to add a key for the specified user, 404: If the specified user does not exist}
 
 @endpoint GET /users/{selected_user}/ssh-keys/{key_id}
-@returns(200)
-@errors {403, 404}
+@desc Get a SSH key
+@returns(200) The specific SSH key matching the user and UUID
+@errors {403: If the specified user or key is not accessible to the current user, 404: If the specified user or key does not exist}
 
 @endpoint PUT /users/{selected_user}/ssh-keys/{key_id}
-@optional {_body: any}
-@returns(200)
-@errors {400, 403, 404}
+@desc Update a SSH key
+@optional {_body: any # The updated SSH key object}
+@returns(200) The newly updated SSH key.
+@errors {400: If the submitted key or related value is invalid, 403: If the current user does not have permission to add a key for the specified user, 404: If the specified user does not exist}
 
 @endgroup
 
 @group workspaces
 @endpoint GET /workspaces
-@optional {role: any, q: any, sort: any}
-@returns(200)
-@errors {401}
+@desc List workspaces for user
+@optional {role: any # Filters the workspaces based on the authenticated user's role on each workspace.              * **member**: returns a list of all the workspaces which the caller is a member of                 at least one workspace group or repository             * **collaborator**: returns a list of workspaces which the caller has write access                 to at least one repository in the workspace             * **owner**: returns a list of workspaces which the caller has administrator access, q: any # Query string to narrow down the response. See [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering) for details., sort: any # Name of a response property to sort results. See [filtering and sorting](/cloud/bitbucket/rest/intro/#sorting-query-results) for details.}
+@returns(200) The list of workspaces accessible by the authenticated user.
+@errors {401: The request wasn't authenticated.}
 
 @endpoint GET /workspaces/{workspace}
-@returns(200)
-@errors {404}
+@desc Get a workspace
+@returns(200) The workspace.
+@errors {404: If no workspace exists for the specified name or UUID.}
 
 @endpoint GET /workspaces/{workspace}/hooks
-@returns(200)
-@errors {403, 404}
+@desc List webhooks for a workspace
+@returns(200) The paginated list of installed webhooks.
+@errors {403: If the authenticated user is not an owner on the specified workspace., 404: If the specified workspace does not exist.}
 
 @endpoint POST /workspaces/{workspace}/hooks
-@returns(201)
-@errors {403, 404}
+@desc Create a webhook for a workspace
+@returns(201) If the webhook was registered successfully.
+@errors {403: If the authenticated user does not have permission to install webhooks on the specified workspace., 404: If the specified workspace does not exist.}
 
 @endpoint DELETE /workspaces/{workspace}/hooks/{uid}
-@returns(204)
-@errors {403, 404}
+@desc Delete a webhook for a workspace
+@returns(204) When the webhook was deleted successfully
+@errors {403: If the authenticated user does not have permission to delete the webhook., 404: If the webhook or workspace does not exist.}
 
 @endpoint GET /workspaces/{workspace}/hooks/{uid}
-@returns(200)
-@errors {404}
+@desc Get a webhook for a workspace
+@returns(200) The webhook subscription object.
+@errors {404: If the webhook or workspace does not exist.}
 
 @endpoint PUT /workspaces/{workspace}/hooks/{uid}
-@returns(200)
-@errors {403, 404}
+@desc Update a webhook for a workspace
+@returns(200) The webhook subscription object.
+@errors {403: If the authenticated user does not have permission to update the webhook., 404: If the webhook or workspace does not exist.}
 
 @endpoint GET /workspaces/{workspace}/members
-@returns(200)
-@errors {400, 401}
+@desc List users in a workspace
+@returns(200) The list of users that are part of a workspace.
+@errors {400: When more than 90 emails were provided when querying by email., 401: The request wasn't authenticated.}
 
 @endpoint GET /workspaces/{workspace}/members/{member}
-@returns(200)
-@errors {401, 404}
+@desc Get user membership for a workspace
+@returns(200) The user that is part of a workspace.
+@errors {401: The request wasn't authenticated., 404: A workspace cannot be found, or a user cannot be found, or the user is not a a member of the workspace.}
 
 @endpoint GET /workspaces/{workspace}/permissions
-@optional {q: any}
-@returns(200)
-@errors {401}
+@desc List user permissions in a workspace
+@optional {q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering).}
+@returns(200) The list of users that are part of a workspace, along with their permission.
+@errors {401: The request wasn't authenticated.}
 
 @endpoint GET /workspaces/{workspace}/permissions/repositories
-@optional {q: any, sort: any}
-@returns(200)
-@errors {403}
+@desc List all repository permissions for a workspace
+@optional {q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Name of a response property sort the result by as per [filtering and sorting](/cloud/bitbucket/rest/intro/#sorting-query-results).}
+@returns(200) List of workspace's repository permissions.
+@errors {403: The requesting user isn't an admin of the workspace.}
 
 @endpoint GET /workspaces/{workspace}/permissions/repositories/{repo_slug}
-@optional {q: any, sort: any}
-@returns(200)
-@errors {403}
+@desc List a repository permissions for a workspace
+@optional {q: any # Query string to narrow down the response as per [filtering and sorting](/cloud/bitbucket/rest/intro/#filtering)., sort: any # Name of a response property sort the result by as per [filtering and sorting](/cloud/bitbucket/rest/intro/#sorting-query-results).}
+@returns(200) The repository permission for all users in this repository.
+@errors {403: The requesting user isn't an admin of the repository.}
 
 @endpoint GET /workspaces/{workspace}/pipelines-config/identity/oidc/.well-known/openid-configuration
-@required {workspace: any}
-@returns(200)
-@errors {404}
+@desc Get OpenID configuration for OIDC in Pipelines
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`.}
+@returns(200) The OpenID configuration
+@errors {404: The workspace was not found.}
 
 @endpoint GET /workspaces/{workspace}/pipelines-config/identity/oidc/keys.json
-@required {workspace: any}
-@returns(200)
-@errors {404}
+@desc Get keys for OIDC in Pipelines
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`.}
+@returns(200) The keys in JSON web key format
+@errors {404: The workspace was not found.}
 
 @endpoint GET /workspaces/{workspace}/pipelines-config/runners
-@required {workspace: any}
-@returns(200)
+@desc Get workspace runners
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`.}
+@returns(200) The workspace runners.
 
 @endpoint POST /workspaces/{workspace}/pipelines-config/runners
-@required {workspace: any}
-@returns(200)
-@errors {400, 409}
+@desc Create workspace runner
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`.}
+@returns(200) The workspace runner.
+@errors {400: The request body contained invalid properties or runner limit exceeded., 409: The workspace runner with the provided UUID already exists.}
 
 @endpoint GET /workspaces/{workspace}/pipelines-config/runners/{runner_uuid}
-@required {workspace: any, runner_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get workspace runner
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., runner_uuid: any # The runner uuid.}
+@returns(200) The workspace runner.
+@errors {404: The workspace runner was not found.}
 
 @endpoint PUT /workspaces/{workspace}/pipelines-config/runners/{runner_uuid}
-@required {workspace: any, runner_uuid: any}
-@returns(200)
-@errors {404}
+@desc Update workspace runner
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., runner_uuid: any # The runner uuid.}
+@returns(200) The workspace runner.
+@errors {404: The workspace runner was not found.}
 
 @endpoint DELETE /workspaces/{workspace}/pipelines-config/runners/{runner_uuid}
-@required {workspace: any, runner_uuid: any}
-@returns(204)
-@errors {404}
+@desc Delete workspace runner
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., runner_uuid: any # The runner uuid.}
+@returns(204) The workspace runner was deleted.
+@errors {404: The workspace runner was not found.}
 
 @endpoint GET /workspaces/{workspace}/pipelines-config/variables
-@required {workspace: any}
-@returns(200)
+@desc List variables for a workspace
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`.}
+@returns(200) The found workspace level variables.
 
 @endpoint POST /workspaces/{workspace}/pipelines-config/variables
-@required {workspace: any}
-@optional {_body: any}
-@returns(201)
-@errors {404, 409}
+@desc Create a variable for a workspace
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`.}
+@optional {_body: any # The variable to create.}
+@returns(201) The created variable.
+@errors {404: The workspace does not exist., 409: A variable with the provided key already exists.}
 
 @endpoint GET /workspaces/{workspace}/pipelines-config/variables/{variable_uuid}
-@required {workspace: any, variable_uuid: any}
-@returns(200)
-@errors {404}
+@desc Get variable for a workspace
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., variable_uuid: any # The UUID of the variable to retrieve.}
+@returns(200) The variable.
+@errors {404: The workspace or variable with the given UUID was not found.}
 
 @endpoint PUT /workspaces/{workspace}/pipelines-config/variables/{variable_uuid}
-@required {workspace: any, variable_uuid: any, _body: any}
-@returns(200)
-@errors {404}
+@desc Update variable for a workspace
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., variable_uuid: any # The UUID of the variable., _body: any # The updated variable.}
+@returns(200) The variable was updated.
+@errors {404: The workspace or the variable was not found.}
 
 @endpoint DELETE /workspaces/{workspace}/pipelines-config/variables/{variable_uuid}
-@required {workspace: any, variable_uuid: any}
-@returns(204)
-@errors {404}
+@desc Delete a variable for a workspace
+@required {workspace: any # This can either be the workspace ID (slug) or the workspace UUID surrounded by curly-braces, for example `{workspace UUID}`., variable_uuid: any # The UUID of the variable to delete.}
+@returns(204) The variable was deleted
+@errors {404: The workspace or the variable with the provided UUID does not exist.}
 
 @endpoint GET /workspaces/{workspace}/projects
-@returns(200)
-@errors {404}
+@desc List projects in a workspace
+@returns(200) The list of projects in this workspace.
+@errors {404: A workspace doesn't exist at this location.}
 
 @endpoint POST /workspaces/{workspace}/projects
+@desc Create a project in a workspace
 @required {_body: any}
-@returns(201)
-@errors {403, 404}
+@returns(201) A new project has been created.
+@errors {403: The user requesting to create a project does not have the necessary permissions., 404: A workspace doesn't exist at this location.}
 
 @endpoint DELETE /workspaces/{workspace}/projects/{project_key}
-@returns(204)
-@errors {403, 404}
+@desc Delete a project for a workspace
+@returns(204) Successful deletion.
+@errors {403: The requesting user isn't authorized to delete the project or the project isn't empty., 404: A project isn't hosted at this location.}
 
 @endpoint GET /workspaces/{workspace}/projects/{project_key}
-@returns(200)
-@errors {401, 403, 404}
+@desc Get a project for a workspace
+@returns(200) The project that is part of a workspace.
+@errors {401: The request wasn't authenticated., 403: The requesting user isn't authorized to access the project., 404: A project isn't hosted at this location.}
 
 @endpoint PUT /workspaces/{workspace}/projects/{project_key}
+@desc Update a project for a workspace
 @required {_body: any}
-@returns(200)
-@returns(201)
-@errors {403, 404}
+@returns(200) The existing project is has been updated.
+@returns(201) A new project has been created.
+@errors {403: The requesting user isn't authorized to update or create the project., 404: A workspace doesn't exist at the location. Note that the project's absence from this location doesn't raise a 404, since a PUT at a non-existent location can be used to create a new project.}
 
 @endpoint GET /workspaces/{workspace}/projects/{project_key}/branching-model
-@returns(200)
-@errors {401, 403, 404}
+@desc Get the branching model for a project
+@returns(200) The branching model object
+@errors {401: If the request was not authenticated, 403: If the authenticated user does not have read access to the project, 404: If the project does not exist}
 
 @endpoint GET /workspaces/{workspace}/projects/{project_key}/branching-model/settings
-@returns(200)
-@errors {401, 403, 404}
+@desc Get the branching model config for a project
+@returns(200) The branching model configuration
+@errors {401: If the request was not authenticated, 403: If the authenticated user does not have admin access to the project, 404: If the project does not exist}
 
 @endpoint PUT /workspaces/{workspace}/projects/{project_key}/branching-model/settings
-@returns(200)
-@errors {400, 401, 403, 404}
+@desc Update the branching model config for a project
+@returns(200) The updated branching model configuration
+@errors {400: If the request contains an invalid branching model configuration, 401: If the request was not authenticated, 403: If the authenticated user does not have admin access to the project, 404: If the project does not exist}
 
 @endpoint GET /workspaces/{workspace}/projects/{project_key}/default-reviewers
-@returns(200)
-@errors {403, 404}
+@desc List the default reviewers in a project
+@returns(200) The list of project default reviewers
+@errors {403: If the authenticated user does not have admin access to the project, 404: If the workspace or project does not exist at this location}
 
 @endpoint DELETE /workspaces/{workspace}/projects/{project_key}/default-reviewers/{selected_user}
-@returns(204)
-@errors {400, 403, 404}
+@desc Remove the specific user from the project's default reviewers
+@returns(204) The specified user was removed from the list of project default reviewers
+@errors {400: If the specified user is not a default reviewer for the project, 403: If the authenticated user does not have admin access to the project, 404: If the specified user, project, or workspace does not exist}
 
 @endpoint GET /workspaces/{workspace}/projects/{project_key}/default-reviewers/{selected_user}
-@returns(200)
-@errors {400, 403, 404}
+@desc Get a default reviewer
+@returns(200) The specified user that is a default reviewer
+@errors {400: If the specified user is not a default reviewer for the project, 403: If the authenticated user does not have admin access to the project, 404: If the specified user, project, or workspace does not exist}
 
 @endpoint PUT /workspaces/{workspace}/projects/{project_key}/default-reviewers/{selected_user}
-@returns(200)
-@errors {400, 403, 404}
+@desc Add the specific user as a default reviewer for the project
+@returns(200) The specified user was added as a project default reviewer
+@errors {400: If the specified user cannot be added as a default reviewer for the project, 403: If the authenticated user does not have admin access to the project, 404: If the specified user, project, or workspace does not exist}
 
 @endpoint GET /workspaces/{workspace}/projects/{project_key}/deploy-keys
-@returns(200)
-@errors {403, 404}
+@desc List project deploy keys
+@returns(200) Deploy keys matching the project
+@errors {403: If the specified workspace or project is not accessible to the current user, 404: If the specified workspace or project does not exist}
 
 @endpoint POST /workspaces/{workspace}/projects/{project_key}/deploy-keys
-@returns(200)
-@errors {400, 403, 404}
+@desc Create a project deploy key
+@returns(200) The project deploy key that was created
+@errors {400: Invalid deploy key inputs, 403: If the specified workspace or project is not accessible to the current user, 404: If the specified workspace or project does not exist}
 
 @endpoint DELETE /workspaces/{workspace}/projects/{project_key}/deploy-keys/{key_id}
-@returns(204)
-@errors {403, 404}
+@desc Delete a deploy key from a project
+@returns(204) The project deploy key has been deleted
+@errors {403: If the current user does not have permission to delete a key for the specified project, 404: If the specified workspace, project, or project deploy key does not exist}
 
 @endpoint GET /workspaces/{workspace}/projects/{project_key}/deploy-keys/{key_id}
-@returns(200)
-@errors {403, 404}
+@desc Get a project deploy key
+@returns(200) Project deploy key matching the key ID
+@errors {403: If the specified workspace or project is not accessible to the current user, 404: If the specified workspace or project does not exist}
 
 @endpoint GET /workspaces/{workspace}/projects/{project_key}/permissions-config/groups
-@returns(200)
-@errors {401, 403, 404}
+@desc List explicit group permissions for a project
+@returns(200) Paginated list of project group permissions
+@errors {401: The user couldn't be authenticated., 403: The user doesn't have admin access to the project., 404: One or both of the workspace and project don't exist for the given identifiers or the requesting user is not authenticated}
 
 @endpoint DELETE /workspaces/{workspace}/projects/{project_key}/permissions-config/groups/{group_slug}
-@returns(204)
-@errors {401, 403, 404}
+@desc Delete an explicit group permission for a project
+@returns(204) The project group permission was deleted and no content returned.
+@errors {401: The user couldn't be authenticated., 403: The requesting user isn't an admin of the project, or the authentication method was not via app password., 404: One or more of the workspace, project, and group doesn't exist                               for the given identifiers or the requesting user is not                               authenticated}
 
 @endpoint GET /workspaces/{workspace}/projects/{project_key}/permissions-config/groups/{group_slug}
-@returns(200)
-@errors {401, 403, 404}
+@desc Get an explicit group permission for a project
+@returns(200) Project group permission
+@errors {401: The user couldn't be authenticated., 403: The user doesn't have admin access to the project., 404: One or more of the workspace, project, and group doesn't exist                               for the given identifiers or the requesting user is not                               authenticated}
 
 @endpoint PUT /workspaces/{workspace}/projects/{project_key}/permissions-config/groups/{group_slug}
-@required {_body: map}
-@returns(200)
-@errors {400, 401, 402, 403, 404}
+@desc Update an explicit group permission for a project
+@required {_body: map # The permission to grant}
+@returns(200) Project group permission updated.
+@errors {400: No permission value was provided or the value is invalid(not one of read, write, create-repo, or admin)., 401: The user couldn't be authenticated., 402: You have reached your plan's user limit and must upgrade before giving access to additional users., 403: The requesting user isn't an admin of the project, or the authentication method was not via app password., 404: One or more of the workspace, project, and group doesn't exist                               for the given identifiers or the requesting user is not                               authenticated}
 
 @endpoint GET /workspaces/{workspace}/projects/{project_key}/permissions-config/users
-@returns(200)
-@errors {401, 403, 404}
+@desc List explicit user permissions for a project
+@returns(200) Paginated list of explicit user permissions.
+@errors {401: The user couldn't be authenticated., 403: The user doesn't have admin access to the project., 404: One or both of the workspace and project don't exist for the given identifiers or the requesting user is not authenticated}
 
 @endpoint DELETE /workspaces/{workspace}/projects/{project_key}/permissions-config/users/{selected_user_id}
-@returns(204)
-@errors {401, 403, 404}
+@desc Delete an explicit user permission for a project
+@returns(204) The project user permission was deleted and no content returned.
+@errors {401: The user couldn't be authenticated., 403: The requesting user isn't an admin of the project, or the authentication method was not via app password., 404: One or more of the workspace, project, and selected user doesn't exist for the given identifiers or the requesting user is not authenticated}
 
 @endpoint GET /workspaces/{workspace}/projects/{project_key}/permissions-config/users/{selected_user_id}
-@returns(200)
-@errors {401, 403, 404}
+@desc Get an explicit user permission for a project
+@returns(200) Explicit user permission for user and project
+@errors {401: The user couldn't be authenticated., 403: The requesting user isn't an admin of the project., 404: One or more of the workspace, project, and selected user doesn't exist for the given identifiers or the requesting user is not authenticated}
 
 @endpoint PUT /workspaces/{workspace}/projects/{project_key}/permissions-config/users/{selected_user_id}
-@required {_body: map}
-@returns(200)
-@errors {400, 401, 402, 403, 404}
+@desc Update an explicit user permission for a project
+@required {_body: map # The permission to grant}
+@returns(200) Explicit user permission updated
+@errors {400: No permission value was provided or the value is invalid (not one of read, write, create-repo, or admin), 401: The user couldn't be authenticated., 402: You have reached your plan's user limit and must upgrade before giving access to additional users., 403: The requesting user isn't an admin of the project, or the authentication method was not via app password., 404: One or more of the workspace, project, and selected user doesn't exist for the given identifiers or the requesting user is not authenticated}
 
 @endpoint GET /workspaces/{workspace}/pullrequests/{selected_user}
-@optional {state: any}
-@returns(200)
-@errors {404}
+@desc List workspace pull requests for a user
+@optional {state: any # Only return pull requests that are in this state. This parameter can be repeated.}
+@returns(200) All pull requests authored by the specified user.
+@errors {404: If the specified user does not exist.}
 
 @endpoint GET /workspaces/{workspace}/search/code
-@required {workspace: any, search_query: any}
-@optional {page: any, pagelen: any}
-@returns(200)
-@errors {400, 404, 429}
+@desc Search for code in a workspace
+@required {workspace: any # The workspace to search in; either the slug or the UUID in curly braces, search_query: any # The search query}
+@optional {page: any # Which page of the search results to retrieve, pagelen: any # How many search results to retrieve per page}
+@returns(200) Successful search
+@errors {400: If the search request was invalid due to one of the following reasons:  * the specified type of target account doesn''t match the actual account type;  * malformed pagination properties;  * missing or malformed search query, in the latter case an error key will be returned in `error.data.key` property., 404: Search is not enabled for the requested workspace, navigate to [https://bitbucket.org/search](https://bitbucket.org/search) to turn it on, 429: Too many requests, try again later}
 
 @endgroup
 

@@ -183,89 +183,139 @@ https://api.planetscale.com/v1
 |--------|------|-------------|
 | GET | /user | Get current user |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What organizations do I belong to?" -> GET /organizations
-- "Show me details about my organization" -> GET /organizations/{organization}
-- "List all databases in my org" -> GET /organizations/{organization}/databases
-- "Create a new database" -> POST /organizations/{organization}/databases
-- "What branches exist on my database?" -> GET /organizations/{organization}/databases/{database}/branches
-- "Create a development branch from main" -> POST /organizations/{organization}/databases/{database}/branches
-- "How do I deploy schema changes?" -> POST /organizations/{organization}/databases/{database}/deploy-requests
-- "What's the status of my deploy request?" -> GET /organizations/{organization}/databases/{database}/deploy-requests/{number}
-- "Generate a connection password for a branch" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/passwords
-- "Who are the members of my organization?" -> GET /organizations/{organization}/members
-- "Show my recent invoices" -> GET /organizations/{organization}/invoices
-- "What regions are available?" -> GET /regions
-- "Who am I authenticated as?" -> GET /user
-- "List backups for my production branch" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/backups
-- "What schema recommendations exist for my database?" -> GET /organizations/{organization}/databases/{database}/schema-recommendations
-
-## Response Tips
-
-- **Paginated lists** (databases, branches, members, invoices, deploy-requests): Check for `page` and `per_page` params; iterate with `page=1,2,...` until results are empty. Default page size varies by endpoint.
-- **CRUD resources** (branches, passwords, roles, webhooks, CIDRs): 201 on create, 200 on read/update, 204 on delete (empty body). Always confirm 204 means success, not missing data.
-- **Deploy requests**: Stateful resource -- watch the `state` field across GET calls after triggering apply/deploy/revert/cancel actions. Operations sub-endpoint gives granular step tracking.
-- **Workflows** (data migrations): Multi-phase lifecycle -- use cutover, reverse-cutover, switch-primaries, switch-replicas, verify-data endpoints sequentially. Each PATCH returns the updated workflow state.
-- **Errors**: All endpoints share the same error shape (401 unauthorized, 403 forbidden, 404 not found, 500 server error). Some CIDR and team endpoints also return 400/422 for validation failures.
-- **OAuth tokens**: POST to `.../token` returns the raw token value only once -- store it immediately as it cannot be retrieved again.
-
-## Anomaly Flags
-
-- **401 on any call**: OAuth token may be expired or revoked. Surface immediately and suggest re-authentication.
-- **403 after successful auth**: The authenticated user/service-token lacks permission for this org or database. Flag the specific resource and suggest checking role assignments.
-- **422 on password or VSchema updates**: Input validation failure. Surface the response body which typically contains field-level error details.
-- **204 from PATCH on branch changes**: This endpoint can return either 200 or 204. A 204 means no actionable diff was found -- flag this so the user knows the change was a no-op.
-- **Deploy request stuck in non-terminal state**: If a deploy request remains in a non-complete/non-cancelled state across multiple checks, surface it as potentially stalled and suggest checking the operations sub-endpoint.
-- **302 on query pattern download**: This is a redirect to a signed URL, not an error. Agents should follow the redirect transparently.
-- **Backup state filtering**: When listing backups, if `state` filter returns zero results but unfiltered returns many, flag that no backups match the requested state (e.g., no completed backups).
-- **Service token creation**: The token value is only returned on creation (POST). Flag this to the user so they save it before moving on.
-
-## Playbook
-
-### 1. Create a Database and Connect to It
-
-1. GET /organizations to find your organization name
-2. POST /organizations/{organization}/databases with `{"name": "my-app-db", "cluster_size": "..."}` -- note the database name from the 201 response
-3. GET /organizations/{organization}/databases/{database}/branches to confirm the default `main` branch exists
-4. POST /organizations/{organization}/databases/{database}/branches/main/passwords to generate connection credentials
-5. Store the returned password immediately (it will not be shown again)
-6. Use the host, username, and password from the response to connect via your MySQL client
-
-### 2. Branch-Based Schema Change Workflow
-
-1. POST /organizations/{organization}/databases/{database}/branches to create a dev branch (e.g., `{"name": "add-users-table", "parent_branch": "main"}`)
-2. Connect to the new branch and apply your DDL changes directly
-3. POST /organizations/{organization}/databases/{database}/deploy-requests with `{"branch": "add-users-table", "into_branch": "main"}`
-4. GET /organizations/{organization}/databases/{database}/deploy-requests/{number} to review the schema diff
-5. POST /organizations/{organization}/databases/{database}/deploy-requests/{number}/deploy to begin deployment
-6. Poll GET /organizations/{organization}/databases/{database}/deploy-requests/{number} until state is `complete`
-7. DELETE /organizations/{organization}/databases/{database}/branches/add-users-table to clean up the dev branch
-
-### 3. Rotate a Branch Password
-
-1. GET /organizations/{organization}/databases/{database}/branches/{branch}/passwords to list current passwords
-2. POST /organizations/{organization}/databases/{database}/branches/{branch}/passwords to create a new password -- save the returned credentials immediately
-3. Update your application configuration to use the new credentials
-4. Verify connectivity with the new password
-5. DELETE /organizations/{organization}/databases/{database}/branches/{branch}/passwords/{id} using the old password's ID to revoke it
-
-### 4. Set Up a Deploy Webhook for Notifications
-
-1. POST /organizations/{organization}/databases/{database}/webhooks with your endpoint URL and desired events in the body
-2. GET /organizations/{organization}/databases/{database}/webhooks/{id} to confirm it was created
-3. POST /organizations/{organization}/databases/{database}/webhooks/{id}/test to send a test payload and verify your receiver works
-4. If the test fails, PATCH /organizations/{organization}/databases/{database}/webhooks/{id} to update the URL or config, then re-test
-
-### 5. Manage Organization Teams and Access
-
-1. POST /organizations/{organization}/teams with `{"name": "backend-team"}` to create a team
-2. GET /organizations/{organization}/members to find member IDs you want to add
-3. POST /organizations/{organization}/teams/{team}/members with the member ID to add them to the team
-4. PATCH /organizations/{organization}/members/{id} to adjust individual member roles if needed
-5. To revoke access: DELETE /organizations/{organization}/teams/{team}/members/{id} to remove from team, or DELETE /organizations/{organization}/members/{id} to remove from the org entirely
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all organizations?" -> GET /organizations
+- "Get organization details?" -> GET /organizations/{organization}
+- "Partially update a organization?" -> PATCH /organizations/{organization}
+- "List all audit-log?" -> GET /organizations/{organization}/audit-log
+- "List all cluster-size-skus?" -> GET /organizations/{organization}/cluster-size-skus
+- "Search databases?" -> GET /organizations/{organization}/databases
+- "Create a database?" -> POST /organizations/{organization}/databases
+- "Get database details?" -> GET /organizations/{organization}/databases/{database}
+- "Partially update a database?" -> PATCH /organizations/{organization}/databases/{database}
+- "Delete a database?" -> DELETE /organizations/{organization}/databases/{database}
+- "Search branches?" -> GET /organizations/{organization}/databases/{database}/branches
+- "Create a branche?" -> POST /organizations/{organization}/databases/{database}/branches
+- "Get branche details?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}
+- "Partially update a branche?" -> PATCH /organizations/{organization}/databases/{database}/branches/{branch}
+- "Delete a branche?" -> DELETE /organizations/{organization}/databases/{database}/branches/{branch}
+- "List all backups?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/backups
+- "Create a backup?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/backups
+- "Get backup details?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/backups/{id}
+- "Partially update a backup?" -> PATCH /organizations/{organization}/databases/{database}/branches/{branch}/backups/{id}
+- "Delete a backup?" -> DELETE /organizations/{organization}/databases/{database}/branches/{branch}/backups/{id}
+- "List all bouncer-resizes?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/bouncer-resizes
+- "List all bouncers?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/bouncers
+- "Create a bouncer?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/bouncers
+- "Get bouncer details?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/bouncers/{bouncer}
+- "Delete a bouncer?" -> DELETE /organizations/{organization}/databases/{database}/branches/{branch}/bouncers/{bouncer}
+- "List all resizes?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/bouncers/{bouncer}/resizes
+- "List all changes?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/changes
+- "Get change details?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/changes/{id}
+- "Create a demote?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/demote
+- "List all extensions?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/extensions
+- "List all keyspaces?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/keyspaces
+- "Create a keyspace?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/keyspaces
+- "Get keyspace details?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/keyspaces/{keyspace}
+- "Partially update a keyspace?" -> PATCH /organizations/{organization}/databases/{database}/branches/{branch}/keyspaces/{keyspace}
+- "Delete a keyspace?" -> DELETE /organizations/{organization}/databases/{database}/branches/{branch}/keyspaces/{keyspace}
+- "List all rollout-status?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/keyspaces/{keyspace}/rollout-status
+- "List all vschema?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/keyspaces/{keyspace}/vschema
+- "List all parameters?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/parameters
+- "List all passwords?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/passwords
+- "Create a password?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/passwords
+- "Get password details?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/passwords/{id}
+- "Partially update a password?" -> PATCH /organizations/{organization}/databases/{database}/branches/{branch}/passwords/{id}
+- "Delete a password?" -> DELETE /organizations/{organization}/databases/{database}/branches/{branch}/passwords/{id}
+- "Create a renew?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/passwords/{id}/renew
+- "Create a promote?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/promote
+- "List all query-patterns?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/query-patterns
+- "Create a query-pattern?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/query-patterns
+- "Get query-pattern details?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/query-patterns/{id}
+- "Delete a query-pattern?" -> DELETE /organizations/{organization}/databases/{database}/branches/{branch}/query-patterns/{id}
+- "List all download?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/query-patterns/{id}/download
+- "List all roles?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/roles
+- "Create a role?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/roles
+- "List all default?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/roles/default
+- "Create a reset-default?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/roles/reset-default
+- "Get role details?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/roles/{id}
+- "Partially update a role?" -> PATCH /organizations/{organization}/databases/{database}/branches/{branch}/roles/{id}
+- "Delete a role?" -> DELETE /organizations/{organization}/databases/{database}/branches/{branch}/roles/{id}
+- "Create a reassign?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/roles/{id}/reassign
+- "Create a renew?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/roles/{id}/renew
+- "Create a reset?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/roles/{id}/reset
+- "Create a safe-migration?" -> POST /organizations/{organization}/databases/{database}/branches/{branch}/safe-migrations
+- "List all schema?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/schema
+- "List all lint?" -> GET /organizations/{organization}/databases/{database}/branches/{branch}/schema/lint
+- "List all cidrs?" -> GET /organizations/{organization}/databases/{database}/cidrs
+- "Create a cidr?" -> POST /organizations/{organization}/databases/{database}/cidrs
+- "Get cidr details?" -> GET /organizations/{organization}/databases/{database}/cidrs/{id}
+- "Update a cidr?" -> PUT /organizations/{organization}/databases/{database}/cidrs/{id}
+- "Delete a cidr?" -> DELETE /organizations/{organization}/databases/{database}/cidrs/{id}
+- "List all deploy-queue?" -> GET /organizations/{organization}/databases/{database}/deploy-queue
+- "List all deploy-requests?" -> GET /organizations/{organization}/databases/{database}/deploy-requests
+- "Create a deploy-request?" -> POST /organizations/{organization}/databases/{database}/deploy-requests
+- "Get deploy-request details?" -> GET /organizations/{organization}/databases/{database}/deploy-requests/{number}
+- "Partially update a deploy-request?" -> PATCH /organizations/{organization}/databases/{database}/deploy-requests/{number}
+- "Create a apply-deploy?" -> POST /organizations/{organization}/databases/{database}/deploy-requests/{number}/apply-deploy
+- "Create a cancel?" -> POST /organizations/{organization}/databases/{database}/deploy-requests/{number}/cancel
+- "Create a complete-deploy?" -> POST /organizations/{organization}/databases/{database}/deploy-requests/{number}/complete-deploy
+- "Create a deploy?" -> POST /organizations/{organization}/databases/{database}/deploy-requests/{number}/deploy
+- "List all deployment?" -> GET /organizations/{organization}/databases/{database}/deploy-requests/{number}/deployment
+- "List all operations?" -> GET /organizations/{organization}/databases/{database}/deploy-requests/{number}/operations
+- "Create a revert?" -> POST /organizations/{organization}/databases/{database}/deploy-requests/{number}/revert
+- "List all reviews?" -> GET /organizations/{organization}/databases/{database}/deploy-requests/{number}/reviews
+- "Create a review?" -> POST /organizations/{organization}/databases/{database}/deploy-requests/{number}/reviews
+- "Create a skip-revert?" -> POST /organizations/{organization}/databases/{database}/deploy-requests/{number}/skip-revert
+- "List all throttler?" -> GET /organizations/{organization}/databases/{database}/deploy-requests/{number}/throttler
+- "List all read-only-regions?" -> GET /organizations/{organization}/databases/{database}/read-only-regions
+- "List all regions?" -> GET /organizations/{organization}/databases/{database}/regions
+- "List all schema-recommendations?" -> GET /organizations/{organization}/databases/{database}/schema-recommendations
+- "Get schema-recommendation details?" -> GET /organizations/{organization}/databases/{database}/schema-recommendations/{number}
+- "Create a dismiss?" -> POST /organizations/{organization}/databases/{database}/schema-recommendations/{number}/dismiss
+- "List all throttler?" -> GET /organizations/{organization}/databases/{database}/throttler
+- "List all webhooks?" -> GET /organizations/{organization}/databases/{database}/webhooks
+- "Create a webhook?" -> POST /organizations/{organization}/databases/{database}/webhooks
+- "Get webhook details?" -> GET /organizations/{organization}/databases/{database}/webhooks/{id}
+- "Partially update a webhook?" -> PATCH /organizations/{organization}/databases/{database}/webhooks/{id}
+- "Delete a webhook?" -> DELETE /organizations/{organization}/databases/{database}/webhooks/{id}
+- "Create a test?" -> POST /organizations/{organization}/databases/{database}/webhooks/{id}/test
+- "List all workflows?" -> GET /organizations/{organization}/databases/{database}/workflows
+- "Create a workflow?" -> POST /organizations/{organization}/databases/{database}/workflows
+- "Get workflow details?" -> GET /organizations/{organization}/databases/{database}/workflows/{number}
+- "Delete a workflow?" -> DELETE /organizations/{organization}/databases/{database}/workflows/{number}
+- "List all invoices?" -> GET /organizations/{organization}/invoices
+- "Get invoice details?" -> GET /organizations/{organization}/invoices/{id}
+- "List all line-items?" -> GET /organizations/{organization}/invoices/{id}/line-items
+- "Search members?" -> GET /organizations/{organization}/members
+- "Get member details?" -> GET /organizations/{organization}/members/{id}
+- "Partially update a member?" -> PATCH /organizations/{organization}/members/{id}
+- "Delete a member?" -> DELETE /organizations/{organization}/members/{id}
+- "List all oauth-applications?" -> GET /organizations/{organization}/oauth-applications
+- "Get oauth-application details?" -> GET /organizations/{organization}/oauth-applications/{application_id}
+- "List all tokens?" -> GET /organizations/{organization}/oauth-applications/{application_id}/tokens
+- "Get token details?" -> GET /organizations/{organization}/oauth-applications/{application_id}/tokens/{token_id}
+- "Delete a token?" -> DELETE /organizations/{organization}/oauth-applications/{application_id}/tokens/{token_id}
+- "Create a token?" -> POST /organizations/{organization}/oauth-applications/{id}/token
+- "List all regions?" -> GET /organizations/{organization}/regions
+- "List all service-tokens?" -> GET /organizations/{organization}/service-tokens
+- "Create a service-token?" -> POST /organizations/{organization}/service-tokens
+- "Get service-token details?" -> GET /organizations/{organization}/service-tokens/{id}
+- "Delete a service-token?" -> DELETE /organizations/{organization}/service-tokens/{id}
+- "Search teams?" -> GET /organizations/{organization}/teams
+- "Create a team?" -> POST /organizations/{organization}/teams
+- "Get team details?" -> GET /organizations/{organization}/teams/{team}
+- "Partially update a team?" -> PATCH /organizations/{organization}/teams/{team}
+- "Delete a team?" -> DELETE /organizations/{organization}/teams/{team}
+- "List all members?" -> GET /organizations/{organization}/teams/{team}/members
+- "Create a member?" -> POST /organizations/{organization}/teams/{team}/members
+- "Get member details?" -> GET /organizations/{organization}/teams/{team}/members/{id}
+- "Delete a member?" -> DELETE /organizations/{organization}/teams/{team}/members/{id}
+- "List all regions?" -> GET /regions
+- "List all user?" -> GET /user
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

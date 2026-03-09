@@ -173,84 +173,71 @@ https://api.twinehealth.com/pub
 | GET | /reward_program_activation | List reward program activations |
 | GET | /reward_program_activation/{id} | Get a reward program activation |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I authenticate with the Fitbit Plus API?" -> POST /oauth/token
-- "What groups does my token have access to?" -> GET /oauth/token/{id}/groups
-- "Which organization is associated with my token?" -> GET /oauth/token/{id}/organization
-- "How do I list all patients in a group?" -> GET /patient?filter[groups]={groupId}
-- "How do I create a new patient record?" -> POST /patient
-- "What coaches are assigned to a specific patient?" -> GET /patient/{id}/coaches
-- "How do I schedule a calendar event for a patient?" -> POST /calendar_event
-- "How do I look up a patient's health metrics?" -> GET /patient_health_metric?filter[patient]={patientId}
-- "How do I record a new health metric for a patient?" -> POST /patient_health_metric
-- "What rewards has a patient earned?" -> GET /reward_earning?filter[groups]={groupId}
-- "How do I fulfill a reward earning?" -> POST /reward_earning_fulfillment
-- "How do I view a patient's plan summary?" -> GET /patient_plan_summary?filter[patient]={patientId}
-- "How do I update a patient's action?" -> PATCH /action/{id}
-- "How do I check results for a specific patient and action?" -> GET /result?filter[patient]={patientId}&filter[actions]={actionId}
-- "How do I see emails sent to a patient?" -> GET /email_history?filter[receiver]={receiverId}
-
-## Response Tips
-
-- **OAuth/Auth**: Token responses return on 201; extract the token ID for subsequent `/groups` and `/organization` lookups.
-- **List endpoints** (patient, coach, group, reward): Responses likely use JSON:API envelope (`data`, `included`, `meta`); use the `include` param to sideload related resources and reduce round-trips.
-- **Filter-required endpoints** (result, reward_earning, reward_earning_fulfillment): These require at least one filter param -- omitting it will return a 401 or 409, not an unfiltered list.
-- **PATCH/PUT endpoints**: 409 on conflict means a concurrent update or validation failure; re-fetch the resource and retry with current state.
-- **Health profiles**: Use `include` to pull nested questions and answers in a single call instead of three separate requests.
-- **Calendar events**: DELETE returns 200 (not 204); expect a confirmation body rather than empty response.
-
-## Anomaly Flags
-
-- **409 Conflict on writes**: Surface immediately -- indicates data contention or validation failure that requires user attention before retrying.
-- **401 on previously working calls**: OAuth token may have expired; prompt re-authentication via POST /oauth/token.
-- **403 on group-scoped resources**: The token lacks permission for the target group; surface which group was requested and suggest checking token scope via GET /oauth/token/{id}/groups.
-- **Missing `filter` on required-filter endpoints**: If GET /result or GET /reward_earning returns an error, flag that the required filter parameter was omitted.
-- **Empty `included` arrays**: When `include` param is used but response has no sideloaded data, flag potential data integrity issue (e.g., patient exists but has no health profile).
-- **Deprecated API base**: The base URL uses `api.twinehealth.com` (Twine Health branding); if responses include deprecation headers or redirect notices, surface them proactively.
-
-## Playbook
-
-### 1. Onboard a New Patient
-
-1. Authenticate: POST /oauth/token with credentials to get a session token.
-2. Identify the organization: GET /oauth/token/{tokenId}/organization.
-3. List available groups: GET /group?filter[organization]={orgId}.
-4. Create the patient: POST /patient with patient details and group assignment.
-5. Verify enrollment: GET /patient/{id}/groups to confirm group membership.
-6. Assign a coach: confirm assignment via GET /patient/{id}/coaches.
-
-### 2. Record and Review Health Metrics
-
-1. Retrieve the patient's health profile: GET /health_profile?filter[patient]={patientId}&include=questions,answers.
-2. Post a new metric: POST /patient_health_metric with the measurement data.
-3. Verify the metric was recorded: GET /patient_health_metric/{id}.
-4. Check related results: GET /result?filter[patient]={patientId} to see how the metric affects plan outcomes.
-5. Update the plan summary if needed: PATCH /patient_plan_summary/{id}.
-
-### 3. Manage Reward Program Lifecycle
-
-1. Create a reward program: POST /reward_program with program rules.
-2. Activate for a patient: POST /reward_program_activation linking patient to program.
-3. Define a reward: POST /reward with reward details.
-4. Monitor earnings: GET /reward_earning?filter[groups]={groupId}&filter[ready_for_fulfillment]=true.
-5. Fulfill earned rewards: POST /reward_earning_fulfillment for each qualifying earning.
-
-### 4. Schedule and Track Calendar Events
-
-1. Create an event: POST /calendar_event with patient, time, and event type.
-2. List upcoming events: GET /calendar_event?filter[patient]={patientId}.
-3. Record a patient response: POST /calendar_event_response with attendance or feedback.
-4. Reschedule if needed: PATCH /calendar_event/{id} with updated time.
-5. Cancel if necessary: DELETE /calendar_event/{id}.
-
-### 5. Audit Communication History
-
-1. List emails for a patient: GET /email_history?filter[receiver]={patientId}&sort=-date.
-2. Inspect a specific email: GET /email_history/{id} for full content and delivery status.
-3. Cross-reference with calendar events: GET /calendar_event?filter[patient]={patientId} to correlate reminders with scheduled visits.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a token?" -> POST /oauth/token
+- "List all groups?" -> GET /oauth/token/{id}/groups
+- "List all organization?" -> GET /oauth/token/{id}/organization
+- "Get organization details?" -> GET /organization/{id}
+- "Create a group?" -> POST /group
+- "List all group?" -> GET /group
+- "Get group details?" -> GET /group/{id}
+- "List all coach?" -> GET /coach
+- "Get coach details?" -> GET /coach/{id}
+- "Create a reward_program?" -> POST /reward_program
+- "List all reward_program?" -> GET /reward_program
+- "Get reward_program details?" -> GET /reward_program/{id}
+- "List all group?" -> GET /reward_program/{id}/group
+- "Create a action?" -> POST /action
+- "Get action details?" -> GET /action/{id}
+- "Partially update a action?" -> PATCH /action/{id}
+- "Create a bundle?" -> POST /bundle
+- "Get bundle details?" -> GET /bundle/{id}
+- "Partially update a bundle?" -> PATCH /bundle/{id}
+- "Create a calendar_event?" -> POST /calendar_event
+- "List all calendar_event?" -> GET /calendar_event
+- "Get calendar_event details?" -> GET /calendar_event/{id}
+- "Partially update a calendar_event?" -> PATCH /calendar_event/{id}
+- "Delete a calendar_event?" -> DELETE /calendar_event/{id}
+- "Create a calendar_event_response?" -> POST /calendar_event_response
+- "List all email_history?" -> GET /email_history
+- "Get email_history details?" -> GET /email_history/{id}
+- "List all health_profile?" -> GET /health_profile
+- "Get health_profile details?" -> GET /health_profile/{id}
+- "List all health_profile_question?" -> GET /health_profile_question
+- "Get health_profile_question details?" -> GET /health_profile_question/{id}
+- "List all health_profile_answer?" -> GET /health_profile_answer
+- "Get health_profile_answer details?" -> GET /health_profile_answer/{id}
+- "List all health_question_definition?" -> GET /health_question_definition
+- "Get health_question_definition details?" -> GET /health_question_definition/{id}
+- "Create a patient_health_metric?" -> POST /patient_health_metric
+- "List all patient_health_metric?" -> GET /patient_health_metric
+- "Get patient_health_metric details?" -> GET /patient_health_metric/{id}
+- "Create a patient?" -> POST /patient
+- "List all patient?" -> GET /patient
+- "Get patient details?" -> GET /patient/{id}
+- "Partially update a patient?" -> PATCH /patient/{id}
+- "List all groups?" -> GET /patient/{id}/groups
+- "List all coaches?" -> GET /patient/{id}/coaches
+- "List all patient_plan_summary?" -> GET /patient_plan_summary
+- "Get patient_plan_summary details?" -> GET /patient_plan_summary/{id}
+- "Partially update a patient_plan_summary?" -> PATCH /patient_plan_summary/{id}
+- "List all result?" -> GET /result
+- "Get result details?" -> GET /result/{id}
+- "Create a reward?" -> POST /reward
+- "List all reward?" -> GET /reward
+- "Get reward details?" -> GET /reward/{id}
+- "Create a reward_earning?" -> POST /reward_earning
+- "List all reward_earning?" -> GET /reward_earning
+- "Get reward_earning details?" -> GET /reward_earning/{id}
+- "Create a reward_earning_fulfillment?" -> POST /reward_earning_fulfillment
+- "List all reward_earning_fulfillment?" -> GET /reward_earning_fulfillment
+- "Get reward_earning_fulfillment details?" -> GET /reward_earning_fulfillment/{id}
+- "Create a reward_program_activation?" -> POST /reward_program_activation
+- "List all reward_program_activation?" -> GET /reward_program_activation
+- "Get reward_program_activation details?" -> GET /reward_program_activation/{id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -117,85 +117,70 @@ https://api2.bigoven.com
 | GET | /recipes | Search for recipes. There are many parameters that you can apply. Starting with the most common, use title_kw to search within a title. |
 | GET | /recipes/recentviews | Get a list of recipes that the authenticated user has most recently viewed |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I search for recipes by ingredient?" -> GET /recipes (use `include_ing` param)
-- "What's a random recipe I can make tonight?" -> GET /recipes/random
-- "Show me the details for a specific recipe" -> GET /recipe/{id}
-- "How do I add a recipe's ingredients to my grocery list?" -> POST /grocerylist/recipe
-- "What's on my grocery list?" -> GET /grocerylist
-- "How do I check off items on my grocery list?" -> POST /grocerylist/clearcheckedlines
-- "Can I find gluten-free vegetarian recipes?" -> GET /recipes (combine `glf=1` and `vtn=1`)
-- "How do I leave a review on a recipe?" -> POST /recipe/{recipeId}/review
-- "What recipes have I looked at recently?" -> GET /recipes/recentviews
-- "How do I update my profile?" -> PUT /me/profile
-- "What are the top-rated recipes?" -> GET /recipes/raves
-- "How do I add a personal note to a recipe?" -> POST /recipe/{recipeId}/note
-- "Can I upload a photo of a dish I made?" -> POST /recipe/{recipeId}/image
-- "How do I delete a recipe I created?" -> DELETE /recipe/{id}
-- "What recipes are related to one I like?" -> GET /recipe/{recipeId}/related
-
-## Response Tips
-
-- **Recipes/Collections** (`GET /recipes`, `/collections`, `/collection/{id}`): Paginated via `pg` (page) and `rpp` (results per page) -- always check if more pages exist before stopping iteration.
-- **Grocery list** (`GET /grocerylist`): Returns line items with GUIDs -- use these GUIDs for update (`PUT`) and delete (`DELETE`) operations, not positional indices.
-- **Recipe detail** (`GET /recipe/{id}`): Use `prefetch=true` to inline related data; without it, images/notes/reviews require separate calls.
-- **Reviews/Notes** (`GET .../reviews`, `.../notes`): Paginated; nested replies on reviews require a separate call to `/recipe/review/{reviewId}/replies`.
-- **Search filters**: Dietary flags (`vtn`, `vgn`, `glf`, `ntf`, `dyf`, `sff`, `slf`, `tnf`, `wmf`, `rmf`, `cps`) are binary toggles -- combine freely for intersection filtering.
-- **Errors**: 401 means missing or invalid API key/auth; 403 means you lack ownership of the resource; 415 appears on image uploads with wrong content type.
-
-## Anomaly Flags
-
-- **401 on write operations**: Surface immediately -- likely an expired or missing API key. Prompt user to verify `X-BigOven-API-Key` header or Basic auth credentials.
-- **403 on recipe delete/access**: User does not own the recipe. Flag clearly rather than retrying.
-- **415 on image/scan uploads**: Wrong content type. Alert user to check that the request body is multipart form data with a valid image MIME type.
-- **402 on recipe scan**: Payment required -- the user's account tier may not support OCR scanning. Surface the upgrade requirement.
-- **Empty paginated results unexpectedly**: If `pg` exceeds available pages, the API may return empty rather than an error. Flag when a non-first page returns zero results.
-- **Grocery list sync conflicts**: `POST /grocerylist/sync` can produce merge issues. Surface any discrepancies between local and server state after sync.
-- **Deprecated `GET /recipe/{id}` vs `GET /recipes/{id}`**: Two similar endpoints exist with different error handling (the plural form returns 400/403/404/500). Flag if the singular form silently returns stale or incomplete data.
-
-## Playbook
-
-### 1. Search and Save a Recipe to Grocery List
-
-1. Search for recipes: `GET /recipes?any_kw=chicken&glf=1&rpp=10&pg=1`
-2. Browse results, pick a recipe ID from the response
-3. Fetch full details: `GET /recipe/{recipeId}`
-4. Review ingredients, then add to grocery list: `POST /grocerylist/recipe` with `{ recipeId: ... }`
-5. Verify grocery list: `GET /grocerylist`
-
-### 2. Review and Rate a Recipe
-
-1. Fetch the recipe: `GET /recipe/{recipeId}`
-2. Check existing reviews: `GET /recipe/{recipeId}/reviews?pg=1&rpp=5`
-3. Post your review: `POST /recipe/{recipeId}/review` with rating and comment in the body
-4. Optionally reply to another review: `POST /recipe/review/{reviewId}/replies` with your reply data
-
-### 3. Manage Your Grocery List
-
-1. View current list: `GET /grocerylist`
-2. Add a standalone item: `POST /grocerylist/item` with item details
-3. Update an item (e.g., change quantity): `PUT /grocerylist/item/{guid}` with updated fields
-4. Clear all checked-off items after shopping: `POST /grocerylist/clearcheckedlines`
-5. To start fresh: `DELETE /grocerylist`
-
-### 4. Create and Publish a New Recipe
-
-1. Check available categories: `GET /recipe/categories`
-2. Create the recipe: `POST /recipe` with full recipe map (title, ingredients, instructions, category)
-3. Upload a hero image: `POST /recipe/{recipeId}/image` with the photo file and optional caption
-4. Add personal notes: `POST /recipe/{recipeId}/note` with note content
-5. Verify it appears: `GET /recipe/{recipeId}`
-
-### 5. Discover Recipes for Meal Planning
-
-1. Get random inspiration: `GET /recipes/random` or `GET /recipes/top25random`
-2. Filter by dietary needs: `GET /recipes?vgn=1&maxIngredients=8&totalMins=30&rpp=10`
-3. Check related recipes for variety: `GET /recipe/{recipeId}/related?rpp=5`
-4. Review recently viewed recipes: `GET /recipes/recentviews?pg=1&rpp=10`
-5. Bulk-add selected recipes to grocery list: repeat `POST /grocerylist/recipe` for each chosen recipe
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get collection details?" -> GET /collection/{id}
+- "List all meta?" -> GET /collection/{id}/meta
+- "List all collections?" -> GET /collections
+- "Create a department?" -> POST /grocerylist/department
+- "List all grocerylist?" -> GET /grocerylist
+- "Create a recipe?" -> POST /grocerylist/recipe
+- "Create a line?" -> POST /grocerylist/line
+- "Create a item?" -> POST /grocerylist/item
+- "Create a sync?" -> POST /grocerylist/sync
+- "Update a item?" -> PUT /grocerylist/item/{guid}
+- "Delete a item?" -> DELETE /grocerylist/item/{guid}
+- "Create a clearcheckedline?" -> POST /grocerylist/clearcheckedlines
+- "List all images?" -> GET /recipe/{recipeId}/images
+- "List all pending?" -> GET /recipe/photos/pending
+- "List all photos?" -> GET /recipe/{recipeId}/photos
+- "List all scans?" -> GET /recipe/{recipeId}/scans
+- "Create a image?" -> POST /recipe/{recipeId}/image
+- "Create a avatar?" -> POST /image/avatar
+- "List all me?" -> GET /me
+- "List all skinny?" -> GET /me/skinny
+- "List all options?" -> GET /me/preferences/options
+- "Get note details?" -> GET /recipe/{recipeId}/note/{noteId}
+- "Update a note?" -> PUT /recipe/{recipeId}/note/{noteId}
+- "Delete a note?" -> DELETE /recipe/{recipeId}/note/{noteId}
+- "List all notes?" -> GET /recipe/{recipeId}/notes
+- "Create a note?" -> POST /recipe/{recipeId}/note
+- "List all raves?" -> GET /recipes/raves
+- "List all zap?" -> GET /recipe/{id}/zap
+- "Get recipe details?" -> GET /recipe/{id}
+- "Delete a recipe?" -> DELETE /recipe/{id}
+- "Get recipe details?" -> GET /recipes/{id}
+- "Get step details?" -> GET /recipe/steps/{id}
+- "Create a step?" -> POST /recipe/post/step
+- "Create a number?" -> POST /recipe/get/step/number
+- "List all recipe?" -> GET /recipe/get/active/recipe
+- "Create a step?" -> POST /recipe/get/saved/step
+- "List all related?" -> GET /recipe/{recipeId}/related
+- "Create a feedback?" -> POST /recipe/{recipeId}/feedback
+- "List all random?" -> GET /recipes/random
+- "List all top25random?" -> GET /recipes/top25random
+- "List all recipes?" -> GET /recipes
+- "List all categories?" -> GET /recipe/categories
+- "Search autocomplete?" -> GET /recipe/autocomplete
+- "Search mine?" -> GET /recipe/autocomplete/mine
+- "Search all?" -> GET /recipe/autocomplete/all
+- "Create a scan?" -> POST /recipe/scan
+- "Create a recipe?" -> POST /recipe
+- "List all recentviews?" -> GET /recipes/recentviews
+- "Get review details?" -> GET /recipe/{recipeId}/review/{reviewId}
+- "Update a review?" -> PUT /recipe/{recipeId}/review/{reviewId}
+- "Delete a review?" -> DELETE /recipe/{recipeId}/review/{reviewId}
+- "Get review details?" -> GET /recipe/review/{reviewId}
+- "Update a review?" -> PUT /recipe/review/{reviewId}
+- "List all review?" -> GET /recipe/{recipeId}/review
+- "Create a review?" -> POST /recipe/{recipeId}/review
+- "List all reviews?" -> GET /recipe/{recipeId}/reviews
+- "List all replies?" -> GET /recipe/review/{reviewId}/replies
+- "Create a reply?" -> POST /recipe/review/{reviewId}/replies
+- "Update a reply?" -> PUT /recipe/review/replies/{replyId}
+- "Delete a reply?" -> DELETE /recipe/review/replies/{replyId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

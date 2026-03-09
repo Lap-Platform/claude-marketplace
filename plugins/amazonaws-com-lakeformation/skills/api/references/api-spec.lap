@@ -9,6 +9,7 @@
 
 @group AddLFTagsToResource
 @endpoint POST /AddLFTagsToResource
+@desc Attaches one or more LF-tags to an existing resource.
 @required {Resource: Resource, LFTags: [LFTagPair]}
 @optional {CatalogId: str}
 @returns(200) {Failures: [LFTagError]?}
@@ -17,6 +18,7 @@
 
 @group AssumeDecoratedRoleWithSAML
 @endpoint POST /AssumeDecoratedRoleWithSAML
+@desc Allows a caller to assume an IAM role decorated as the SAML user specified in the SAML assertion included in the request. This decoration allows Lake Formation to enforce access policies against the SAML users and groups. This API operation requires SAML federation setup in the caller’s account as it can only be called with valid SAML assertions. Lake Formation does not scope down the permission of the assumed role. All permissions attached to the role via the SAML federation setup will be included in the role session.   This decorated role is expected to access data in Amazon S3 by getting temporary access from Lake Formation which is authorized via the virtual API GetDataAccess. Therefore, all SAML roles that can be assumed via AssumeDecoratedRoleWithSAML must at a minimum include lakeformation:GetDataAccess in their role policies. A typical IAM policy attached to such a role would look as follows:
 @required {SAMLAssertion: str, RoleArn: str, PrincipalArn: str}
 @optional {DurationSeconds: int}
 @returns(200) {AccessKeyId: str?, SecretAccessKey: str?, SessionToken: str?, Expiration: str(timestamp)?}
@@ -25,6 +27,7 @@
 
 @group BatchGrantPermissions
 @endpoint POST /BatchGrantPermissions
+@desc Batch operation to grant permissions to the principal.
 @required {Entries: [BatchPermissionsRequestEntry]}
 @optional {CatalogId: str}
 @returns(200) {Failures: [BatchPermissionsFailureEntry]?}
@@ -33,6 +36,7 @@
 
 @group BatchRevokePermissions
 @endpoint POST /BatchRevokePermissions
+@desc Batch operation to revoke permissions from the principal.
 @required {Entries: [BatchPermissionsRequestEntry]}
 @optional {CatalogId: str}
 @returns(200) {Failures: [BatchPermissionsFailureEntry]?}
@@ -41,12 +45,14 @@
 
 @group CancelTransaction
 @endpoint POST /CancelTransaction
+@desc Attempts to cancel the specified transaction. Returns an exception if the transaction was previously committed.
 @required {TransactionId: str}
 
 @endgroup
 
 @group CommitTransaction
 @endpoint POST /CommitTransaction
+@desc Attempts to commit the specified transaction. Returns an exception if the transaction was previously aborted. This API action is idempotent if called multiple times for the same transaction.
 @required {TransactionId: str}
 @returns(200) {TransactionStatus: str?}
 
@@ -54,12 +60,14 @@
 
 @group CreateDataCellsFilter
 @endpoint POST /CreateDataCellsFilter
+@desc Creates a data cell filter to allow one to grant access to certain columns on certain rows.
 @required {TableData: DataCellsFilter}
 
 @endgroup
 
 @group CreateLFTag
 @endpoint POST /CreateLFTag
+@desc Creates an LF-tag with the specified name and values.
 @required {TagKey: str, TagValues: [str]}
 @optional {CatalogId: str}
 
@@ -67,6 +75,7 @@
 
 @group CreateLakeFormationIdentityCenterConfiguration
 @endpoint POST /CreateLakeFormationIdentityCenterConfiguration
+@desc Creates an IAM Identity Center connection with Lake Formation to allow IAM Identity Center users and groups to access Data Catalog resources.
 @optional {CatalogId: str, InstanceArn: str, ExternalFiltering: ExternalFilteringConfiguration, ShareRecipients: [DataLakePrincipal]}
 @returns(200) {ApplicationArn: str?}
 
@@ -74,18 +83,21 @@
 
 @group CreateLakeFormationOptIn
 @endpoint POST /CreateLakeFormationOptIn
+@desc Enforce Lake Formation permissions for the given databases, tables, and principals.
 @required {Principal: DataLakePrincipal, Resource: Resource}
 
 @endgroup
 
 @group DeleteDataCellsFilter
 @endpoint POST /DeleteDataCellsFilter
+@desc Deletes a data cell filter.
 @optional {TableCatalogId: str, DatabaseName: str, TableName: str, Name: str}
 
 @endgroup
 
 @group DeleteLFTag
 @endpoint POST /DeleteLFTag
+@desc Deletes the specified LF-tag given a key name. If the input parameter tag key was not found, then the operation will throw an exception. When you delete an LF-tag, the LFTagPolicy attached to the LF-tag becomes invalid. If the deleted LF-tag was still assigned to any resource, the tag policy attach to the deleted LF-tag will no longer be applied to the resource.
 @required {TagKey: str}
 @optional {CatalogId: str}
 
@@ -93,18 +105,21 @@
 
 @group DeleteLakeFormationIdentityCenterConfiguration
 @endpoint POST /DeleteLakeFormationIdentityCenterConfiguration
+@desc Deletes an IAM Identity Center connection with Lake Formation.
 @optional {CatalogId: str}
 
 @endgroup
 
 @group DeleteLakeFormationOptIn
 @endpoint POST /DeleteLakeFormationOptIn
+@desc Remove the Lake Formation permissions enforcement of the given databases, tables, and principals.
 @required {Principal: DataLakePrincipal, Resource: Resource}
 
 @endgroup
 
 @group DeleteObjectsOnCancel
 @endpoint POST /DeleteObjectsOnCancel
+@desc For a specific governed table, provides a list of Amazon S3 objects that will be written during the current transaction and that can be automatically deleted if the transaction is canceled. Without this call, no Amazon S3 objects are automatically deleted when a transaction cancels.   The Glue ETL library function write_dynamic_frame.from_catalog() includes an option to automatically call DeleteObjectsOnCancel before writes. For more information, see Rolling Back Amazon S3 Writes.
 @required {DatabaseName: str, TableName: str, TransactionId: str, Objects: [VirtualObject]}
 @optional {CatalogId: str}
 
@@ -112,12 +127,14 @@
 
 @group DeregisterResource
 @endpoint POST /DeregisterResource
+@desc Deregisters the resource as managed by the Data Catalog. When you deregister a path, Lake Formation removes the path from the inline policy attached to your service-linked role.
 @required {ResourceArn: str}
 
 @endgroup
 
 @group DescribeLakeFormationIdentityCenterConfiguration
 @endpoint POST /DescribeLakeFormationIdentityCenterConfiguration
+@desc Retrieves the instance ARN and application ARN for the connection.
 @optional {CatalogId: str}
 @returns(200) {CatalogId: str?, InstanceArn: str?, ApplicationArn: str?, ExternalFiltering: ExternalFilteringConfiguration?{Status: str, AuthorizedTargets: [str]}, ShareRecipients: [DataLakePrincipal]?, ResourceShare: str?}
 
@@ -125,6 +142,7 @@
 
 @group DescribeResource
 @endpoint POST /DescribeResource
+@desc Retrieves the current data access role for the given resource registered in Lake Formation.
 @required {ResourceArn: str}
 @returns(200) {ResourceInfo: ResourceInfo?{ResourceArn: str?, RoleArn: str?, LastModified: str(timestamp)?, WithFederation: bool?, HybridAccessEnabled: bool?}}
 
@@ -132,6 +150,7 @@
 
 @group DescribeTransaction
 @endpoint POST /DescribeTransaction
+@desc Returns the details of a single transaction.
 @required {TransactionId: str}
 @returns(200) {TransactionDescription: TransactionDescription?{TransactionId: str?, TransactionStatus: str?, TransactionStartTime: str(timestamp)?, TransactionEndTime: str(timestamp)?}}
 
@@ -139,12 +158,14 @@
 
 @group ExtendTransaction
 @endpoint POST /ExtendTransaction
+@desc Indicates to the service that the specified transaction is still active and should not be treated as idle and aborted. Write transactions that remain idle for a long period are automatically aborted unless explicitly extended.
 @optional {TransactionId: str}
 
 @endgroup
 
 @group GetDataCellsFilter
 @endpoint POST /GetDataCellsFilter
+@desc Returns a data cells filter.
 @required {TableCatalogId: str, DatabaseName: str, TableName: str, Name: str}
 @returns(200) {DataCellsFilter: DataCellsFilter?{TableCatalogId: str, DatabaseName: str, TableName: str, Name: str, RowFilter: RowFilter?{FilterExpression: str?, AllRowsWildcard: AllRowsWildcard?}, ColumnNames: [str]?, ColumnWildcard: ColumnWildcard?{ExcludedColumnNames: [str]?}, VersionId: str?}}
 
@@ -152,19 +173,22 @@
 
 @group GetDataLakePrincipal
 @endpoint POST /GetDataLakePrincipal
+@desc Returns the identity of the invoking principal.
 @returns(200) {Identity: str?}
 
 @endgroup
 
 @group GetDataLakeSettings
 @endpoint POST /GetDataLakeSettings
+@desc Retrieves the list of the data lake administrators of a Lake Formation-managed data lake.
 @optional {CatalogId: str}
-@returns(200) {DataLakeSettings: DataLakeSettings?{DataLakeAdmins: [DataLakePrincipal]?, ReadOnlyAdmins: [DataLakePrincipal]?, CreateDatabaseDefaultPermissions: [PrincipalPermissions]?, CreateTableDefaultPermissions: [PrincipalPermissions]?, Parameters: map<str,str>?, TrustedResourceOwners: [str]?, AllowExternalDataFiltering: bool?, AllowFullTableExternalDataAccess: bool?, ExternalDataFilteringAllowList: [DataLakePrincipal]?, AuthorizedSessionTagValueList: [str]?}}
+@returns(200) {DataLakeSettings: DataLakeSettings?{DataLakeAdmins: [DataLakePrincipal]?, ReadOnlyAdmins: [DataLakePrincipal]?, CreateDatabaseDefaultPermissions: [PrincipalPermissions]?, CreateTableDefaultPermissions: [PrincipalPermissions]?, Parameters: map<str, str>?: any, TrustedResourceOwners: [str]?, AllowExternalDataFiltering: bool?, AllowFullTableExternalDataAccess: bool?, ExternalDataFilteringAllowList: [DataLakePrincipal]?, AuthorizedSessionTagValueList: [str]?}}
 
 @endgroup
 
 @group GetEffectivePermissionsForPath
 @endpoint POST /GetEffectivePermissionsForPath
+@desc Returns the Lake Formation permissions for a specified table or database resource located at a path in Amazon S3. GetEffectivePermissionsForPath will not return databases and tables if the catalog is encrypted.
 @required {ResourceArn: str}
 @optional {CatalogId: str, NextToken: str, MaxResults: int}
 @returns(200) {Permissions: [PrincipalResourcePermissions]?, NextToken: str?}
@@ -173,6 +197,7 @@
 
 @group GetLFTag
 @endpoint POST /GetLFTag
+@desc Returns an LF-tag definition.
 @required {TagKey: str}
 @optional {CatalogId: str}
 @returns(200) {CatalogId: str?, TagKey: str?, TagValues: [str]?}
@@ -181,6 +206,7 @@
 
 @group GetQueryState
 @endpoint POST /GetQueryState
+@desc Returns the state of a query previously submitted. Clients are expected to poll GetQueryState to monitor the current state of the planning before retrieving the work units. A query state is only visible to the principal that made the initial call to StartQueryPlanning.
 @required {QueryId: str}
 @returns(200) {Error: str?, State: str}
 
@@ -188,6 +214,7 @@
 
 @group GetQueryStatistics
 @endpoint POST /GetQueryStatistics
+@desc Retrieves statistics on the planning and execution of a query.
 @required {QueryId: str}
 @returns(200) {ExecutionStatistics: ExecutionStatistics?{AverageExecutionTimeMillis: int(i64)?, DataScannedBytes: int(i64)?, WorkUnitsExecutedCount: int(i64)?}, PlanningStatistics: PlanningStatistics?{EstimatedDataToScanBytes: int(i64)?, PlanningTimeMillis: int(i64)?, QueueTimeMillis: int(i64)?, WorkUnitsGeneratedCount: int(i64)?}, QuerySubmissionTime: str(timestamp)?}
 
@@ -195,6 +222,7 @@
 
 @group GetResourceLFTags
 @endpoint POST /GetResourceLFTags
+@desc Returns the LF-tags applied to a resource.
 @required {Resource: Resource}
 @optional {CatalogId: str, ShowAssignedLFTags: bool}
 @returns(200) {LFTagOnDatabase: [LFTagPair]?, LFTagsOnTable: [LFTagPair]?, LFTagsOnColumns: [ColumnLFTag]?}
@@ -203,6 +231,7 @@
 
 @group GetTableObjects
 @endpoint POST /GetTableObjects
+@desc Returns the set of Amazon S3 objects that make up the specified governed table. A transaction ID or timestamp can be specified for time-travel queries.
 @required {DatabaseName: str, TableName: str}
 @optional {CatalogId: str, TransactionId: str, QueryAsOfTime: str(timestamp), PartitionPredicate: str, MaxResults: int, NextToken: str}
 @returns(200) {Objects: [PartitionObjects]?, NextToken: str?}
@@ -211,6 +240,7 @@
 
 @group GetTemporaryGluePartitionCredentials
 @endpoint POST /GetTemporaryGluePartitionCredentials
+@desc This API is identical to GetTemporaryTableCredentials except that this is used when the target Data Catalog resource is of type Partition. Lake Formation restricts the permission of the vended credentials with the same scope down policy which restricts access to a single Amazon S3 prefix.
 @required {TableArn: str, Partition: PartitionValueList}
 @optional {Permissions: [str], DurationSeconds: int, AuditContext: AuditContext, SupportedPermissionTypes: [str]}
 @returns(200) {AccessKeyId: str?, SecretAccessKey: str?, SessionToken: str?, Expiration: str(timestamp)?}
@@ -219,6 +249,7 @@
 
 @group GetTemporaryGlueTableCredentials
 @endpoint POST /GetTemporaryGlueTableCredentials
+@desc Allows a caller in a secure environment to assume a role with permission to access Amazon S3. In order to vend such credentials, Lake Formation assumes the role associated with a registered location, for example an Amazon S3 bucket, with a scope down policy which restricts the access to a single prefix.
 @required {TableArn: str}
 @optional {Permissions: [str], DurationSeconds: int, AuditContext: AuditContext, SupportedPermissionTypes: [str], S3Path: str, QuerySessionContext: QuerySessionContext}
 @returns(200) {AccessKeyId: str?, SecretAccessKey: str?, SessionToken: str?, Expiration: str(timestamp)?, VendedS3Path: [str]?}
@@ -227,6 +258,7 @@
 
 @group GetWorkUnitResults
 @endpoint POST /GetWorkUnitResults
+@desc Returns the work units resulting from the query. Work units can be executed in any order and in parallel.
 @required {QueryId: str, WorkUnitId: int(i64), WorkUnitToken: str}
 @returns(200) {ResultStream: bytes?}
 
@@ -234,6 +266,7 @@
 
 @group GetWorkUnits
 @endpoint POST /GetWorkUnits
+@desc Retrieves the work units generated by the StartQueryPlanning operation.
 @required {QueryId: str}
 @optional {NextToken: str, PageSize: int}
 @returns(200) {NextToken: str?, QueryId: str, WorkUnitRanges: [WorkUnitRange]}
@@ -242,6 +275,7 @@
 
 @group GrantPermissions
 @endpoint POST /GrantPermissions
+@desc Grants permissions to the principal to access metadata in the Data Catalog and data organized in underlying data storage such as Amazon S3. For information about permissions, see Security and Access Control to Metadata and Data.
 @required {Principal: DataLakePrincipal, Resource: Resource, Permissions: [str]}
 @optional {CatalogId: str, PermissionsWithGrantOption: [str]}
 
@@ -249,6 +283,7 @@
 
 @group ListDataCellsFilter
 @endpoint POST /ListDataCellsFilter
+@desc Lists all the data cell filters on a table.
 @optional {Table: TableResource, NextToken: str, MaxResults: int}
 @returns(200) {DataCellsFilters: [DataCellsFilter]?, NextToken: str?}
 
@@ -256,6 +291,7 @@
 
 @group ListLFTags
 @endpoint POST /ListLFTags
+@desc Lists LF-tags that the requester has permission to view.
 @optional {CatalogId: str, ResourceShareType: str, MaxResults: int, NextToken: str}
 @returns(200) {LFTags: [LFTagPair]?, NextToken: str?}
 
@@ -263,6 +299,7 @@
 
 @group ListLakeFormationOptIns
 @endpoint POST /ListLakeFormationOptIns
+@desc Retrieve the current list of resources and principals that are opt in to enforce Lake Formation permissions.
 @optional {Principal: DataLakePrincipal, Resource: Resource, MaxResults: int, NextToken: str}
 @returns(200) {LakeFormationOptInsInfoList: [LakeFormationOptInsInfo]?, NextToken: str?}
 
@@ -270,6 +307,7 @@
 
 @group ListPermissions
 @endpoint POST /ListPermissions
+@desc Returns a list of the principal permissions on the resource, filtered by the permissions of the caller. For example, if you are granted an ALTER permission, you are able to see only the principal permissions for ALTER. This operation returns only those permissions that have been explicitly granted. For information about permissions, see Security and Access Control to Metadata and Data.
 @optional {CatalogId: str, Principal: DataLakePrincipal, ResourceType: str, Resource: Resource, NextToken: str, MaxResults: int, IncludeRelated: str}
 @returns(200) {PrincipalResourcePermissions: [PrincipalResourcePermissions]?, NextToken: str?}
 
@@ -277,6 +315,7 @@
 
 @group ListResources
 @endpoint POST /ListResources
+@desc Lists the resources registered to be managed by the Data Catalog.
 @optional {FilterConditionList: [FilterCondition], MaxResults: int, NextToken: str}
 @returns(200) {ResourceInfoList: [ResourceInfo]?, NextToken: str?}
 
@@ -284,6 +323,7 @@
 
 @group ListTableStorageOptimizers
 @endpoint POST /ListTableStorageOptimizers
+@desc Returns the configuration of all storage optimizers associated with a specified table.
 @required {DatabaseName: str, TableName: str}
 @optional {CatalogId: str, StorageOptimizerType: str, MaxResults: int, NextToken: str}
 @returns(200) {StorageOptimizerList: [StorageOptimizer]?, NextToken: str?}
@@ -292,6 +332,7 @@
 
 @group ListTransactions
 @endpoint POST /ListTransactions
+@desc Returns metadata about transactions and their status. To prevent the response from growing indefinitely, only uncommitted transactions and those available for time-travel queries are returned. This operation can help you identify uncommitted transactions or to get information about transactions.
 @optional {CatalogId: str, StatusFilter: str, MaxResults: int, NextToken: str}
 @returns(200) {Transactions: [TransactionDescription]?, NextToken: str?}
 
@@ -299,6 +340,7 @@
 
 @group PutDataLakeSettings
 @endpoint POST /PutDataLakeSettings
+@desc Sets the list of data lake administrators who have admin privileges on all resources managed by Lake Formation. For more information on admin privileges, see Granting Lake Formation Permissions. This API replaces the current list of data lake admins with the new list being passed. To add an admin, fetch the current list and add the new admin to that list and pass that list in this API.
 @required {DataLakeSettings: DataLakeSettings}
 @optional {CatalogId: str}
 
@@ -306,6 +348,7 @@
 
 @group RegisterResource
 @endpoint POST /RegisterResource
+@desc Registers the resource as managed by the Data Catalog. To add or update data, Lake Formation needs read/write access to the chosen Amazon S3 path. Choose a role that you know has permission to do this, or choose the AWSServiceRoleForLakeFormationDataAccess service-linked role. When you register the first Amazon S3 path, the service-linked role and a new inline policy are created on your behalf. Lake Formation adds the first path to the inline policy and attaches it to the service-linked role. When you register subsequent paths, Lake Formation adds the path to the existing policy. The following request registers a new location and gives Lake Formation permission to use the service-linked role to access that location.  ResourceArn = arn:aws:s3:::my-bucket UseServiceLinkedRole = true  If UseServiceLinkedRole is not set to true, you must provide or set the RoleArn:  arn:aws:iam::12345:role/my-data-access-role
 @required {ResourceArn: str}
 @optional {UseServiceLinkedRole: bool, RoleArn: str, WithFederation: bool, HybridAccessEnabled: bool}
 
@@ -313,6 +356,7 @@
 
 @group RemoveLFTagsFromResource
 @endpoint POST /RemoveLFTagsFromResource
+@desc Removes an LF-tag from the resource. Only database, table, or tableWithColumns resource are allowed. To tag columns, use the column inclusion list in tableWithColumns to specify column input.
 @required {Resource: Resource, LFTags: [LFTagPair]}
 @optional {CatalogId: str}
 @returns(200) {Failures: [LFTagError]?}
@@ -321,6 +365,7 @@
 
 @group RevokePermissions
 @endpoint POST /RevokePermissions
+@desc Revokes permissions to the principal to access metadata in the Data Catalog and data organized in underlying data storage such as Amazon S3.
 @required {Principal: DataLakePrincipal, Resource: Resource, Permissions: [str]}
 @optional {CatalogId: str, PermissionsWithGrantOption: [str]}
 
@@ -328,6 +373,7 @@
 
 @group SearchDatabasesByLFTags
 @endpoint POST /SearchDatabasesByLFTags
+@desc This operation allows a search on DATABASE resources by TagCondition. This operation is used by admins who want to grant user permissions on certain TagConditions. Before making a grant, the admin can use SearchDatabasesByTags to find all resources where the given TagConditions are valid to verify whether the returned resources can be shared.
 @required {Expression: [LFTag]}
 @optional {NextToken: str, MaxResults: int, CatalogId: str}
 @returns(200) {NextToken: str?, DatabaseList: [TaggedDatabase]?}
@@ -336,6 +382,7 @@
 
 @group SearchTablesByLFTags
 @endpoint POST /SearchTablesByLFTags
+@desc This operation allows a search on TABLE resources by LFTags. This will be used by admins who want to grant user permissions on certain LF-tags. Before making a grant, the admin can use SearchTablesByLFTags to find all resources where the given LFTags are valid to verify whether the returned resources can be shared.
 @required {Expression: [LFTag]}
 @optional {NextToken: str, MaxResults: int, CatalogId: str}
 @returns(200) {NextToken: str?, TableList: [TaggedTable]?}
@@ -344,6 +391,7 @@
 
 @group StartQueryPlanning
 @endpoint POST /StartQueryPlanning
+@desc Submits a request to process a query statement. This operation generates work units that can be retrieved with the GetWorkUnits operation as soon as the query state is WORKUNITS_AVAILABLE or FINISHED.
 @required {QueryPlanningContext: QueryPlanningContext, QueryString: str}
 @returns(200) {QueryId: str}
 
@@ -351,6 +399,7 @@
 
 @group StartTransaction
 @endpoint POST /StartTransaction
+@desc Starts a new transaction and returns its transaction ID. Transaction IDs are opaque objects that you can use to identify a transaction.
 @optional {TransactionType: str}
 @returns(200) {TransactionId: str?}
 
@@ -358,12 +407,14 @@
 
 @group UpdateDataCellsFilter
 @endpoint POST /UpdateDataCellsFilter
+@desc Updates a data cell filter.
 @required {TableData: DataCellsFilter}
 
 @endgroup
 
 @group UpdateLFTag
 @endpoint POST /UpdateLFTag
+@desc Updates the list of possible values for the specified LF-tag key. If the LF-tag does not exist, the operation throws an EntityNotFoundException. The values in the delete key values will be deleted from list of possible values. If any value in the delete key values is attached to a resource, then API errors out with a 400 Exception - "Update not allowed". Untag the attribute before deleting the LF-tag key's value.
 @required {TagKey: str}
 @optional {CatalogId: str, TagValuesToDelete: [str], TagValuesToAdd: [str]}
 
@@ -371,12 +422,14 @@
 
 @group UpdateLakeFormationIdentityCenterConfiguration
 @endpoint POST /UpdateLakeFormationIdentityCenterConfiguration
+@desc Updates the IAM Identity Center connection parameters.
 @optional {CatalogId: str, ShareRecipients: [DataLakePrincipal], ApplicationStatus: str, ExternalFiltering: ExternalFilteringConfiguration}
 
 @endgroup
 
 @group UpdateResource
 @endpoint POST /UpdateResource
+@desc Updates the data access role used for vending access to the given (registered) resource in Lake Formation.
 @required {RoleArn: str, ResourceArn: str}
 @optional {WithFederation: bool, HybridAccessEnabled: bool}
 
@@ -384,6 +437,7 @@
 
 @group UpdateTableObjects
 @endpoint POST /UpdateTableObjects
+@desc Updates the manifest of Amazon S3 objects that make up the specified governed table.
 @required {DatabaseName: str, TableName: str, WriteOperations: [WriteOperation]}
 @optional {CatalogId: str, TransactionId: str}
 
@@ -391,6 +445,7 @@
 
 @group UpdateTableStorageOptimizer
 @endpoint POST /UpdateTableStorageOptimizer
+@desc Updates the configuration of the storage optimizers for a table.
 @required {DatabaseName: str, TableName: str, StorageOptimizerConfig: map<str,map<str,str>>}
 @optional {CatalogId: str}
 @returns(200) {Result: str?}

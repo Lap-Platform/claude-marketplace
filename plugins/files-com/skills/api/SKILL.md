@@ -743,89 +743,323 @@ https://app.files.com/api/rest/v1
 | POST | /workspaces | Create Workspace |
 | GET | /workspaces | List Workspaces |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I authenticate with the API?" -> POST /sessions
-- "How do I upload a file?" -> POST /file_actions/begin_upload/{path} then POST /files/{path}
-- "How do I list files in a folder?" -> GET /folders/{path}
-- "How do I download a file?" -> GET /files/{path} (with action=download)
-- "How do I create a new user?" -> POST /users
-- "How do I see who accessed a file?" -> GET /history/files/{path}
-- "How do I share files externally via a bundle?" -> POST /bundles then POST /bundles/{id}/share
-- "How do I set up an automation to copy files on a schedule?" -> POST /automations
-- "How do I manage API keys for a specific user?" -> GET /users/{user_id}/api_keys or POST /users/{user_id}/api_keys
-- "How do I check site storage usage?" -> GET /site/usage
-- "How do I lock a file to prevent edits?" -> POST /locks/{path}
-- "How do I set folder-level permissions for a group?" -> POST /permissions (with group_id and path)
-- "How do I configure SIEM log forwarding to Splunk?" -> POST /siem_http_destinations (with destination_type and splunk_token)
-- "How do I restore deleted files?" -> POST /restores (with earliest_date)
-- "How do I sync files between a remote server and Files.com?" -> POST /syncs (with src/dest paths and remote_server_id)
-
-## Response Tips
-
-- **List endpoints** (users, files, groups, bundles, etc.): All paginated via `cursor` and `per_page` params. Follow the `cursor` value in the response to get the next page; stop when cursor is null.
-- **Action logs and history**: Filter results using `filter`, `filter_gt`, `filter_lt`, `filter_gteq`, `filter_lteq`, and `filter_prefix` params for date ranges and field matching. Results are sorted by `sort_by`.
-- **Create/POST endpoints**: Return 201 with the created resource object. The `id` in the response is needed for subsequent PATCH/DELETE calls.
-- **Delete endpoints**: Return 204 with no body. A successful delete has no content to parse.
-- **File operations** (copy, move, zip, unzip): Return 201 with a file migration or action object. Long operations may require polling GET /file_migrations/{id} for status.
-- **Export endpoints** (history_exports, action_notification_exports): POST creates an async job; poll the GET /{id} endpoint until status is ready, then fetch results from the corresponding _results endpoint.
-- **Error responses**: All endpoints share the same error code set (400-429). Expect a JSON body with `error` and `http-code` fields. 422 means validation failure with field-level detail. 423 means the resource is locked.
-
-## Anomaly Flags
-
-- **429 Too Many Requests**: Rate limit hit. Back off and retry with exponential delay. Surface the `Retry-After` header if present.
-- **423 Locked**: File or resource is locked by another user or process. Check GET /locks/{path} to identify who holds the lock before retrying.
-- **412 Precondition Failed**: Indicates a concurrency conflict (e.g., file changed since last read). Re-fetch the resource and retry the operation.
-- **409 Conflict**: Resource state conflict, often from duplicate creation attempts or username collisions. Surface the conflict detail from the error body.
-- **API key expiration approaching**: When listing keys via GET /api_keys, flag any keys where `expires_at` is within 7 days. Proactively suggest rotation via POST /api_keys + DELETE /api_keys/{id}.
-- **User lockout events**: If GET /users/{id} shows a locked/disabled user, surface this when the user attempts operations that require that account.
-- **Automation/sync failures**: After triggering POST /automations/{id}/manual_run or POST /syncs/{id}/manual_run, monitor GET /automation_runs or GET /sync_runs for error statuses and surface failures immediately.
-- **Insecure SFTP ciphers**: If GET /site returns `sftp_insecure_ciphers: true` or `sftp_insecure_diffie_hellman: true`, flag this as a security concern.
-- **2FA not required**: If GET /site shows `require_2fa` is disabled while sensitive operations are in use, surface as a security recommendation.
-
-## Playbook
-
-### 1. Onboard a New User with Group Access
-
-1. POST /users with `username`, `email`, `password`, and `authentication_method`
-2. POST /groups/{group_id}/users with the new user's `username` to add them to a group
-3. POST /permissions with `path`, `group_id`, and `permission` to grant folder access
-4. POST /users/{user_id}/public_keys with `title` and `public_key` if SFTP access is needed
-5. Verify with GET /users/{id} and GET /users/{user_id}/groups
-
-### 2. Share Files Externally via Bundle
-
-1. POST /bundles with `paths` (array of file/folder paths), optional `password`, `expires_at`, and `max_uses`
-2. Note the bundle `id` and `url` from the response
-3. POST /bundles/{id}/share with `to` (email addresses) and optional `note`
-4. POST /bundle_notifications with `bundle_id` to receive upload/download alerts
-5. Monitor activity via GET /bundle_downloads and GET /bundle_actions
-
-### 3. Set Up Scheduled File Sync with a Remote Server
-
-1. POST /remote_servers to configure the external server (S3, SFTP, Azure, etc.) with credentials
-2. POST /syncs with `src_path`, `dest_path`, `src_remote_server_id` or `dest_remote_server_id`, and schedule params (`schedule_days_of_week`, `schedule_times_of_day`, `schedule_time_zone`)
-3. POST /syncs/{id}/dry_run to validate the configuration without moving files
-4. Monitor runs via GET /sync_runs with the sync's `automation_id`
-5. Review errors in GET /sync_logs filtered by date range
-
-### 4. Audit File Activity for Compliance
-
-1. POST /history_exports with `start_at`, `end_at`, and query filters (`query_action`, `query_path`, `query_username`)
-2. Poll GET /history_exports/{id} until the export status is `ready`
-3. GET /history_export_results with `history_export_id` to retrieve paginated results
-4. For real-time monitoring, GET /history/files/{path} or GET /history/folders/{path} with date range filters
-5. For login auditing specifically, use GET /history/login with `start_at` and `end_at`
-
-### 5. Rotate and Manage API Keys
-
-1. GET /api_keys to list all current keys; identify any with upcoming `expires_at` dates
-2. POST /api_keys with `name`, `permission_set`, and `expires_at` to create a replacement key
-3. Update consuming applications with the new key value (returned only at creation time)
-4. DELETE /api_keys/{id} to revoke the old key
-5. Verify with GET /api_keys and check GET /api_request_logs to confirm the old key is no longer in use
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a session?" -> POST /sessions
+- "List all action_logs?" -> GET /action_logs
+- "Create a action_notification_export?" -> POST /action_notification_exports
+- "Get action_notification_export details?" -> GET /action_notification_exports/{id}
+- "List all action_notification_export_results?" -> GET /action_notification_export_results
+- "List all api_key?" -> GET /api_key
+- "Delete a api_key?" -> DELETE /api_keys/{id}
+- "Partially update a api_key?" -> PATCH /api_keys/{id}
+- "Get api_key details?" -> GET /api_keys/{id}
+- "Create a api_key?" -> POST /api_keys
+- "List all api_keys?" -> GET /api_keys
+- "List all usage?" -> GET /site/usage
+- "List all site?" -> GET /site
+- "List all ip_addresses?" -> GET /site/ip_addresses
+- "List all dns_records?" -> GET /site/dns_records
+- "Create a test-webhook?" -> POST /site/test-webhook
+- "Create a api_key?" -> POST /site/api_keys
+- "List all api_keys?" -> GET /site/api_keys
+- "Create a public_key?" -> POST /user/public_keys
+- "List all public_keys?" -> GET /user/public_keys
+- "List all groups?" -> GET /user/groups
+- "Create a api_key?" -> POST /user/api_keys
+- "List all api_keys?" -> GET /user/api_keys
+- "Create a unlock?" -> POST /users/{id}/unlock
+- "Create a resend_welcome_email?" -> POST /users/{id}/resend_welcome_email
+- "Create a reset?" -> POST /users/{id}/2fa/reset
+- "Delete a user?" -> DELETE /users/{id}
+- "Partially update a user?" -> PATCH /users/{id}
+- "Get user details?" -> GET /users/{id}
+- "Create a user?" -> POST /users
+- "Search users?" -> GET /users
+- "List all sftp_client_uses?" -> GET /users/{user_id}/sftp_client_uses
+- "List all cipher_uses?" -> GET /users/{user_id}/cipher_uses
+- "Create a public_key?" -> POST /users/{user_id}/public_keys
+- "List all public_keys?" -> GET /users/{user_id}/public_keys
+- "List all permissions?" -> GET /users/{user_id}/permissions
+- "List all groups?" -> GET /users/{user_id}/groups
+- "Create a api_key?" -> POST /users/{user_id}/api_keys
+- "List all api_keys?" -> GET /users/{user_id}/api_keys
+- "List all api_request_logs?" -> GET /api_request_logs
+- "List all apps?" -> GET /apps
+- "List all as2_incoming_messages?" -> GET /as2_incoming_messages
+- "List all as2_outgoing_messages?" -> GET /as2_outgoing_messages
+- "Delete a as2_partner?" -> DELETE /as2_partners/{id}
+- "Partially update a as2_partner?" -> PATCH /as2_partners/{id}
+- "Get as2_partner details?" -> GET /as2_partners/{id}
+- "Create a as2_partner?" -> POST /as2_partners
+- "List all as2_partners?" -> GET /as2_partners
+- "Delete a as2_station?" -> DELETE /as2_stations/{id}
+- "Partially update a as2_station?" -> PATCH /as2_stations/{id}
+- "Get as2_station details?" -> GET /as2_stations/{id}
+- "Create a as2_station?" -> POST /as2_stations
+- "List all as2_stations?" -> GET /as2_stations
+- "Create a manual_run?" -> POST /automations/{id}/manual_run
+- "Delete a automation?" -> DELETE /automations/{id}
+- "Partially update a automation?" -> PATCH /automations/{id}
+- "Get automation details?" -> GET /automations/{id}
+- "Create a automation?" -> POST /automations
+- "List all automations?" -> GET /automations
+- "List all automation_logs?" -> GET /automation_logs
+- "Get automation_run details?" -> GET /automation_runs/{id}
+- "List all automation_runs?" -> GET /automation_runs
+- "List all bandwidth_snapshots?" -> GET /bandwidth_snapshots
+- "Create a test?" -> POST /behaviors/webhook/test
+- "Delete a behavior?" -> DELETE /behaviors/{id}
+- "Partially update a behavior?" -> PATCH /behaviors/{id}
+- "Get behavior details?" -> GET /behaviors/{id}
+- "Create a behavior?" -> POST /behaviors
+- "List all behaviors?" -> GET /behaviors
+- "Get folder details?" -> GET /behaviors/folders/{path}
+- "List all bundle_actions?" -> GET /bundle_actions
+- "List all bundle_downloads?" -> GET /bundle_downloads
+- "Delete a bundle_notification?" -> DELETE /bundle_notifications/{id}
+- "Partially update a bundle_notification?" -> PATCH /bundle_notifications/{id}
+- "Get bundle_notification details?" -> GET /bundle_notifications/{id}
+- "Create a bundle_notification?" -> POST /bundle_notifications
+- "List all bundle_notifications?" -> GET /bundle_notifications
+- "Create a bundle_recipient?" -> POST /bundle_recipients
+- "List all bundle_recipients?" -> GET /bundle_recipients
+- "List all bundle_registrations?" -> GET /bundle_registrations
+- "Get bundle details?" -> GET /bundles/{id}
+- "Partially update a bundle?" -> PATCH /bundles/{id}
+- "Delete a bundle?" -> DELETE /bundles/{id}
+- "List all bundles?" -> GET /bundles
+- "Create a bundle?" -> POST /bundles
+- "Create a share?" -> POST /bundles/{id}/share
+- "Delete a child_site_management_policy?" -> DELETE /child_site_management_policies/{id}
+- "Partially update a child_site_management_policy?" -> PATCH /child_site_management_policies/{id}
+- "Get child_site_management_policy details?" -> GET /child_site_management_policies/{id}
+- "Create a child_site_management_policy?" -> POST /child_site_management_policies
+- "List all child_site_management_policies?" -> GET /child_site_management_policies
+- "List all clickwraps?" -> GET /clickwraps
+- "Create a clickwrap?" -> POST /clickwraps
+- "Delete a clickwrap?" -> DELETE /clickwraps/{id}
+- "Partially update a clickwrap?" -> PATCH /clickwraps/{id}
+- "Get clickwrap details?" -> GET /clickwraps/{id}
+- "List all dns_records?" -> GET /dns_records
+- "List all email_incoming_messages?" -> GET /email_incoming_messages
+- "List all email_logs?" -> GET /email_logs
+- "List all exavault_api_request_logs?" -> GET /exavault_api_request_logs
+- "Create a external_event?" -> POST /external_events
+- "List all external_events?" -> GET /external_events
+- "Get external_event details?" -> GET /external_events/{id}
+- "Delete a file?" -> DELETE /files/{path}
+- "Partially update a file?" -> PATCH /files/{path}
+- "Get file details?" -> GET /files/{path}
+- "Get metadata details?" -> GET /file_actions/metadata/{path}
+- "Create a unzip?" -> POST /file_actions/unzip
+- "Get zip_list details?" -> GET /file_actions/zip_list/{path}
+- "Create a zip?" -> POST /file_actions/zip
+- "Delete a file_comment?" -> DELETE /file_comments/{id}
+- "Partially update a file_comment?" -> PATCH /file_comments/{id}
+- "Create a file_comment?" -> POST /file_comments
+- "Get file details?" -> GET /file_comments/files/{path}
+- "Delete a file_comment_reaction?" -> DELETE /file_comment_reactions/{id}
+- "Create a file_comment_reaction?" -> POST /file_comment_reactions
+- "Get file_migration details?" -> GET /file_migrations/{id}
+- "List all file_migration_logs?" -> GET /file_migration_logs
+- "Search folders?" -> GET /folders/{path}
+- "Delete a form_field_set?" -> DELETE /form_field_sets/{id}
+- "Partially update a form_field_set?" -> PATCH /form_field_sets/{id}
+- "Get form_field_set details?" -> GET /form_field_sets/{id}
+- "Create a form_field_set?" -> POST /form_field_sets
+- "List all form_field_sets?" -> GET /form_field_sets
+- "List all ftp_action_logs?" -> GET /ftp_action_logs
+- "Create a user?" -> POST /groups/{group_id}/users
+- "List all users?" -> GET /groups/{group_id}/users
+- "List all permissions?" -> GET /groups/{group_id}/permissions
+- "Delete a membership?" -> DELETE /groups/{group_id}/memberships/{user_id}
+- "Partially update a membership?" -> PATCH /groups/{group_id}/memberships/{user_id}
+- "Delete a group?" -> DELETE /groups/{id}
+- "Partially update a group?" -> PATCH /groups/{id}
+- "Get group details?" -> GET /groups/{id}
+- "Create a group?" -> POST /groups
+- "List all groups?" -> GET /groups
+- "Delete a group_user?" -> DELETE /group_users/{id}
+- "Partially update a group_user?" -> PATCH /group_users/{id}
+- "List all group_users?" -> GET /group_users
+- "Create a group_user?" -> POST /group_users
+- "Delete a gpg_key?" -> DELETE /gpg_keys/{id}
+- "Partially update a gpg_key?" -> PATCH /gpg_keys/{id}
+- "Get gpg_key details?" -> GET /gpg_keys/{id}
+- "Create a gpg_key?" -> POST /gpg_keys
+- "List all gpg_keys?" -> GET /gpg_keys
+- "Get file details?" -> GET /history/files/{path}
+- "Get folder details?" -> GET /history/folders/{path}
+- "Get user details?" -> GET /history/users/{user_id}
+- "List all login?" -> GET /history/login
+- "List all history?" -> GET /history
+- "Create a history_export?" -> POST /history_exports
+- "Get history_export details?" -> GET /history_exports/{id}
+- "List all history_export_results?" -> GET /history_export_results
+- "List all supported?" -> GET /holiday_regions/supported
+- "Create a inbox_recipient?" -> POST /inbox_recipients
+- "List all inbox_recipients?" -> GET /inbox_recipients
+- "List all inbox_registrations?" -> GET /inbox_registrations
+- "List all inbox_uploads?" -> GET /inbox_uploads
+- "List all inbound_s3_logs?" -> GET /inbound_s3_logs
+- "Get invoice details?" -> GET /invoices/{id}
+- "List all invoices?" -> GET /invoices
+- "List all smartfile-reserved?" -> GET /ip_addresses/smartfile-reserved
+- "List all exavault-reserved?" -> GET /ip_addresses/exavault-reserved
+- "List all reserved?" -> GET /ip_addresses/reserved
+- "List all ip_addresses?" -> GET /ip_addresses
+- "Partially update a key_lifecycle_rule?" -> PATCH /key_lifecycle_rules/{id}
+- "Delete a key_lifecycle_rule?" -> DELETE /key_lifecycle_rules/{id}
+- "Get key_lifecycle_rule details?" -> GET /key_lifecycle_rules/{id}
+- "Create a key_lifecycle_rule?" -> POST /key_lifecycle_rules
+- "List all key_lifecycle_rules?" -> GET /key_lifecycle_rules
+- "Delete a lock?" -> DELETE /locks/{path}
+- "Get lock details?" -> GET /locks/{path}
+- "Delete a message?" -> DELETE /messages/{id}
+- "Partially update a message?" -> PATCH /messages/{id}
+- "Get message details?" -> GET /messages/{id}
+- "Create a message?" -> POST /messages
+- "List all messages?" -> GET /messages
+- "Delete a message_comment?" -> DELETE /message_comments/{id}
+- "Partially update a message_comment?" -> PATCH /message_comments/{id}
+- "Get message_comment details?" -> GET /message_comments/{id}
+- "Create a message_comment?" -> POST /message_comments
+- "List all message_comments?" -> GET /message_comments
+- "Delete a message_comment_reaction?" -> DELETE /message_comment_reactions/{id}
+- "Get message_comment_reaction details?" -> GET /message_comment_reactions/{id}
+- "Create a message_comment_reaction?" -> POST /message_comment_reactions
+- "List all message_comment_reactions?" -> GET /message_comment_reactions
+- "Delete a message_reaction?" -> DELETE /message_reactions/{id}
+- "Get message_reaction details?" -> GET /message_reactions/{id}
+- "Create a message_reaction?" -> POST /message_reactions
+- "List all message_reactions?" -> GET /message_reactions
+- "Delete a notification?" -> DELETE /notifications/{id}
+- "Partially update a notification?" -> PATCH /notifications/{id}
+- "Get notification details?" -> GET /notifications/{id}
+- "Create a notification?" -> POST /notifications
+- "List all notifications?" -> GET /notifications
+- "List all outbound_connection_logs?" -> GET /outbound_connection_logs
+- "Delete a partner?" -> DELETE /partners/{id}
+- "Partially update a partner?" -> PATCH /partners/{id}
+- "Get partner details?" -> GET /partners/{id}
+- "List all partners?" -> GET /partners
+- "Create a partner?" -> POST /partners
+- "List all linked_partner_sites?" -> GET /partner_sites/linked_partner_sites
+- "List all partner_sites?" -> GET /partner_sites
+- "Create a reject?" -> POST /partner_site_requests/{id}/reject
+- "Create a approve?" -> POST /partner_site_requests/{id}/approve
+- "List all find_by_pairing_key?" -> GET /partner_site_requests/find_by_pairing_key
+- "Delete a partner_site_request?" -> DELETE /partner_site_requests/{id}
+- "Create a partner_site_request?" -> POST /partner_site_requests
+- "List all partner_site_requests?" -> GET /partner_site_requests
+- "Get payment details?" -> GET /payments/{id}
+- "List all payments?" -> GET /payments
+- "Delete a permission?" -> DELETE /permissions/{id}
+- "Create a permission?" -> POST /permissions
+- "List all permissions?" -> GET /permissions
+- "List all priorities?" -> GET /priorities
+- "Delete a project?" -> DELETE /projects/{id}
+- "Partially update a project?" -> PATCH /projects/{id}
+- "Get project details?" -> GET /projects/{id}
+- "Create a project?" -> POST /projects
+- "List all projects?" -> GET /projects
+- "List all public_hosting_request_logs?" -> GET /public_hosting_request_logs
+- "Delete a public_key?" -> DELETE /public_keys/{id}
+- "Partially update a public_key?" -> PATCH /public_keys/{id}
+- "Get public_key details?" -> GET /public_keys/{id}
+- "Create a public_key?" -> POST /public_keys
+- "List all public_keys?" -> GET /public_keys
+- "Create a restore?" -> POST /restores
+- "List all restores?" -> GET /restores
+- "List all remote_bandwidth_snapshots?" -> GET /remote_bandwidth_snapshots
+- "Create a reset_status?" -> POST /remote_mount_backends/{id}/reset_status
+- "Delete a remote_mount_backend?" -> DELETE /remote_mount_backends/{id}
+- "Partially update a remote_mount_backend?" -> PATCH /remote_mount_backends/{id}
+- "Get remote_mount_backend details?" -> GET /remote_mount_backends/{id}
+- "List all remote_mount_backends?" -> GET /remote_mount_backends
+- "Create a remote_mount_backend?" -> POST /remote_mount_backends
+- "Create a agent_push_update?" -> POST /remote_servers/{id}/agent_push_update
+- "Create a configuration_file?" -> POST /remote_servers/{id}/configuration_file
+- "List all configuration_file?" -> GET /remote_servers/{id}/configuration_file
+- "List all remote_servers?" -> GET /remote_servers
+- "Create a remote_server?" -> POST /remote_servers
+- "Delete a remote_server?" -> DELETE /remote_servers/{id}
+- "Partially update a remote_server?" -> PATCH /remote_servers/{id}
+- "Get remote_server details?" -> GET /remote_servers/{id}
+- "List all remote_server_credentials?" -> GET /remote_server_credentials
+- "Create a remote_server_credential?" -> POST /remote_server_credentials
+- "Delete a remote_server_credential?" -> DELETE /remote_server_credentials/{id}
+- "Partially update a remote_server_credential?" -> PATCH /remote_server_credentials/{id}
+- "Get remote_server_credential details?" -> GET /remote_server_credentials/{id}
+- "Delete a request?" -> DELETE /requests/{id}
+- "Create a request?" -> POST /requests
+- "List all requests?" -> GET /requests
+- "Get folder details?" -> GET /requests/folders/{path}
+- "Get scim_log details?" -> GET /scim_logs/{id}
+- "List all scim_logs?" -> GET /scim_logs
+- "List all settings_changes?" -> GET /settings_changes
+- "List all sftp_action_logs?" -> GET /sftp_action_logs
+- "List all sftp_host_keys?" -> GET /sftp_host_keys
+- "Create a sftp_host_key?" -> POST /sftp_host_keys
+- "Delete a sftp_host_key?" -> DELETE /sftp_host_keys/{id}
+- "Partially update a sftp_host_key?" -> PATCH /sftp_host_keys/{id}
+- "Get sftp_host_key details?" -> GET /sftp_host_keys/{id}
+- "List all share_groups?" -> GET /share_groups
+- "Create a share_group?" -> POST /share_groups
+- "Delete a share_group?" -> DELETE /share_groups/{id}
+- "Get share_group details?" -> GET /share_groups/{id}
+- "Partially update a share_group?" -> PATCH /share_groups/{id}
+- "List all siem_http_destinations?" -> GET /siem_http_destinations
+- "Create a siem_http_destination?" -> POST /siem_http_destinations
+- "Delete a siem_http_destination?" -> DELETE /siem_http_destinations/{id}
+- "Get siem_http_destination details?" -> GET /siem_http_destinations/{id}
+- "Partially update a siem_http_destination?" -> PATCH /siem_http_destinations/{id}
+- "Create a send_test_entry?" -> POST /siem_http_destinations/send_test_entry
+- "Create a finalize?" -> POST /snapshots/{id}/finalize
+- "Delete a snapshot?" -> DELETE /snapshots/{id}
+- "Partially update a snapshot?" -> PATCH /snapshots/{id}
+- "Get snapshot details?" -> GET /snapshots/{id}
+- "Create a snapshot?" -> POST /snapshots
+- "List all snapshots?" -> GET /snapshots
+- "Create a sync?" -> POST /sso_strategies/{id}/sync
+- "Get sso_strategy details?" -> GET /sso_strategies/{id}
+- "List all sso_strategies?" -> GET /sso_strategies
+- "Delete a style?" -> DELETE /styles/{path}
+- "Partially update a style?" -> PATCH /styles/{path}
+- "Get style details?" -> GET /styles/{path}
+- "Create a dry_run?" -> POST /syncs/{id}/dry_run
+- "Create a manual_run?" -> POST /syncs/{id}/manual_run
+- "Delete a sync?" -> DELETE /syncs/{id}
+- "Partially update a sync?" -> PATCH /syncs/{id}
+- "Get sync details?" -> GET /syncs/{id}
+- "List all syncs?" -> GET /syncs
+- "Create a sync?" -> POST /syncs
+- "List all sync_logs?" -> GET /sync_logs
+- "Get sync_run details?" -> GET /sync_runs/{id}
+- "List all sync_runs?" -> GET /sync_runs
+- "List all usage_snapshots?" -> GET /usage_snapshots
+- "List all usage_daily_snapshots?" -> GET /usage_daily_snapshots
+- "List all user_cipher_uses?" -> GET /user_cipher_uses
+- "Partially update a user_lifecycle_rule?" -> PATCH /user_lifecycle_rules/{id}
+- "Delete a user_lifecycle_rule?" -> DELETE /user_lifecycle_rules/{id}
+- "Get user_lifecycle_rule details?" -> GET /user_lifecycle_rules/{id}
+- "Create a user_lifecycle_rule?" -> POST /user_lifecycle_rules
+- "List all user_lifecycle_rules?" -> GET /user_lifecycle_rules
+- "List all user_requests?" -> GET /user_requests
+- "Create a user_request?" -> POST /user_requests
+- "Delete a user_request?" -> DELETE /user_requests/{id}
+- "Get user_request details?" -> GET /user_requests/{id}
+- "List all user_sftp_client_uses?" -> GET /user_sftp_client_uses
+- "List all web_dav_action_logs?" -> GET /web_dav_action_logs
+- "Create a webhook_test?" -> POST /webhook_tests
+- "Delete a workspace?" -> DELETE /workspaces/{id}
+- "Partially update a workspace?" -> PATCH /workspaces/{id}
+- "Get workspace details?" -> GET /workspaces/{id}
+- "Create a workspace?" -> POST /workspaces
+- "List all workspaces?" -> GET /workspaces
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

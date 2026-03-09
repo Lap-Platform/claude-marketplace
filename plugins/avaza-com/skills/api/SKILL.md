@@ -125,88 +125,89 @@ https://api.avaza.com
 | PUT | /ScheduleSeries/EditLeave | Edit Leave Booking |
 | PUT | /ScheduleSeries/EditBooking | Edit Booking |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What account am I authenticated as?" -> GET /api/Account
-- "Show me all invoices for a specific company" -> GET /api/Invoice (with CompanyIDFK filter)
-- "How many hours did a user log this week?" -> GET /api/Timesheet (with EntryDateFrom, EntryDateTo, UserID)
-- "Create a new project and assign team members" -> POST /api/Project, then POST /api/ProjectMember
-- "Which tasks are overdue?" -> GET /api/Task (with DueDateTo set to today, isComplete=false)
-- "Record a timesheet entry and start a timer" -> POST /api/Timesheet, then POST /api/TimesheetTimer/{id}
-- "Submit expenses for approval" -> POST /api/ExpenseApproval/Submit (with ExpenseIDs)
-- "Find a company by name" -> GET /api/Company/Lookup (with search parameter)
-- "Get a summary of billable vs non-billable time on a project" -> GET /api/TimesheetSummary (with model.projectID, model.isBillable)
-- "Schedule a team member for a booking" -> POST /ScheduleSeries/AddBooking
-- "What changed since yesterday across invoices and bills?" -> GET /api/Invoice (UpdatedAfter), GET /api/Bill (UpdatedAfter)
-- "Delete a timesheet entry" -> DELETE /api/Timesheet/{id}
-- "List all active projects for a specific client" -> GET /api/Project (with CompanyID, ProjectStatusCode)
-- "Upload a receipt to an expense" -> POST /api/Expense/Attachment (with File)
-- "Who is currently running a timer?" -> GET /api/TimesheetTimer
-
-## Response Tips
-
-- **List endpoints** (Bill, Invoice, Task, Timesheet, etc.): Paginated via `pageSize` and `pageNumber` params -- always check total count in the response and loop pages if needed. Default page size is typically 100.
-- **Lookup endpoints** (Company/Lookup, Project/Lookup, Task/Lookup): Lightweight search results; use `search` param for fuzzy matching and paginate with `pageSize`/`pageNumber`.
-- **Single-resource GETs** (/{id} endpoints): Return the full object or 404. Expect nested objects for related entities (e.g., line items inside Invoice).
-- **Summary endpoints** (TimesheetSummary, ExpenseSummary): Grouped aggregates controlled by `model.groupBy` -- the response shape changes depending on the grouping dimension.
-- **Create/Update endpoints** (POST/PUT): Return the created/updated object on 200. The `model` body is a map -- inspect the returned object to discover the full field schema.
-- **Delete endpoints**: Return 200 on success. Some accept an ID in the path (Timesheet/{id}), others in the body or query (Task requires TaskID, Section requires SectionID).
-- **Schedule endpoints** (ScheduleSeries, ScheduleAssignment): Bookings and leave have separate create/edit paths under /ScheduleSeries; query assignments via /api/ScheduleAssignment.
-
-## Anomaly Flags
-
-- **401 on any endpoint**: OAuth2 token has expired or is invalid -- surface immediately and prompt for re-authentication.
-- **404 on resource fetch**: The ID may have been deleted or the user lacks permission -- flag before retrying with a different ID.
-- **409 on webhook creation**: A webhook with that target URL already exists -- surface the conflict and suggest listing existing webhooks first.
-- **400 on timer operations**: Timer start/stop can fail if the timesheet entry is in an invalid state (already running, already submitted) -- surface the specific error message.
-- **Pagination exhaustion**: If a list response returns a full page, warn the user that additional pages likely exist and offer to fetch them.
-- **UpdatedAfter returning empty results**: If polling for changes yields nothing repeatedly, flag that the sync window may be too narrow or the data is stale.
-- **Expense approval with no SendNotifications flag**: Surface that notifications are off by default so approvers may not be alerted.
-- **Deprecated or missing fields in responses**: If an expected field returns null or is absent in a response object, flag it as a potential schema change.
-
-## Playbook
-
-### 1. Invoice a Client for Tracked Time
-
-1. GET /api/Timesheet with `ProjectID`, `isBillable=true`, `isInvoiced=false`, `EntryDateFrom`, `EntryDateTo` to collect uninvoiced billable entries.
-2. GET /api/Project/{id} to confirm the billing rate and client company.
-3. POST /api/Invoice with line items referencing the timesheet entries and the CompanyIDFK.
-4. Verify the invoice with GET /api/Invoice/{id} and confirm the total matches expectations.
-
-### 2. Onboard a New Project
-
-1. POST /api/Company to create the client (or GET /api/Company/Lookup to find an existing one).
-2. POST /api/Project with the company ID, billing type, and budget settings.
-3. POST /api/Section to create task sections/phases within the project.
-4. POST /api/Task to add tasks under each section.
-5. POST /api/ProjectMember for each team member, linking them to the project.
-6. POST /api/ProjectTimesheetCategory to configure which time categories apply.
-
-### 3. Weekly Timesheet Review and Submission
-
-1. GET /api/UserProfile to identify the user(s) to review.
-2. GET /api/Timesheet with `UserID`, `EntryDateFrom` (Monday), `EntryDateTo` (Sunday) to pull the week's entries.
-3. GET /api/TimesheetSummary with `model.entryDateFrom`, `model.entryDateTo`, `model.userID` to check total hours.
-4. For any running timers, GET /api/TimesheetTimer with `UserID`, then DELETE /api/TimesheetTimer/{id} to stop them.
-5. POST /api/TimesheetSubmission with `WholeWeekOf` set to the Monday date to submit the full week.
-
-### 4. Expense Tracking and Reimbursement
-
-1. POST /api/Expense to log the expense with amount, category, and project.
-2. POST /api/Expense/Attachment with the receipt file to attach proof.
-3. Repeat steps 1-2 for each expense in the reporting period.
-4. POST /api/ExpenseApproval/Submit with all ExpenseIDs and `SendNotifications=true`.
-5. GET /api/ExpenseSummary with date range and `model.groupBy` to verify the totals.
-
-### 5. Sync Changes Since Last Poll
-
-1. Record the current timestamp as the new sync marker.
-2. In parallel, call GET on each entity with `UpdatedAfter` set to the last sync timestamp: /api/Company, /api/Invoice, /api/Bill, /api/Timesheet, /api/Task, /api/Expense.
-3. Page through each result set using `pageNumber` until all pages are consumed.
-4. For deleted timesheets specifically, call GET /api/Timesheet/deleted with `DeletedAfter`.
-5. Store the timestamp from step 1 as the new sync marker for the next run.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all Account?" -> GET /api/Account
+- "List all Bill?" -> GET /api/Bill
+- "Create a Bill?" -> POST /api/Bill
+- "Get Bill details?" -> GET /api/Bill/{id}
+- "List all BillPayment?" -> GET /api/BillPayment
+- "Create a BillPayment?" -> POST /api/BillPayment
+- "Get BillPayment details?" -> GET /api/BillPayment/{id}
+- "Search Lookup?" -> GET /api/Company/Lookup
+- "List all Company?" -> GET /api/Company
+- "Create a Company?" -> POST /api/Company
+- "Get Company details?" -> GET /api/Company/{id}
+- "List all Contact?" -> GET /api/Contact
+- "Create a Contact?" -> POST /api/Contact
+- "Get Contact details?" -> GET /api/Contact/{id}
+- "List all CreditNote?" -> GET /api/CreditNote
+- "Get CreditNote details?" -> GET /api/CreditNote/{id}
+- "List all Currency?" -> GET /api/Currency
+- "List all Estimate?" -> GET /api/Estimate
+- "Create a Estimate?" -> POST /api/Estimate
+- "Get Estimate details?" -> GET /api/Estimate/{id}
+- "Create a Attachment?" -> POST /api/Expense/Attachment
+- "Create a Submit?" -> POST /api/ExpenseApproval/Submit
+- "Search Expense?" -> GET /api/Expense
+- "Create a Expense?" -> POST /api/Expense
+- "Get Expense details?" -> GET /api/Expense/{id}
+- "List all ExpenseCategory?" -> GET /api/ExpenseCategory
+- "Search Lookup?" -> GET /api/ExpenseGroup/Lookup
+- "Search Lookup?" -> GET /api/ExpenseMerchant/Lookup
+- "List all Lookup?" -> GET /api/ExpensePaymentMethod/Lookup
+- "List all ExpenseSummary?" -> GET /api/ExpenseSummary
+- "List all FixedAmount?" -> GET /api/FixedAmount
+- "List all Inventory?" -> GET /api/Inventory
+- "Get Inventory details?" -> GET /api/Inventory/{id}
+- "List all Invoice?" -> GET /api/Invoice
+- "Create a Invoice?" -> POST /api/Invoice
+- "Get Invoice details?" -> GET /api/Invoice/{id}
+- "List all Payment?" -> GET /api/Payment
+- "Create a Payment?" -> POST /api/Payment
+- "Get Payment details?" -> GET /api/Payment/{id}
+- "Search Lookup?" -> GET /api/Project/Lookup
+- "List all Project?" -> GET /api/Project
+- "Create a Project?" -> POST /api/Project
+- "Get Project details?" -> GET /api/Project/{id}
+- "List all ProjectMember?" -> GET /api/ProjectMember
+- "Create a ProjectMember?" -> POST /api/ProjectMember
+- "List all ProjectTimesheetCategory?" -> GET /api/ProjectTimesheetCategory
+- "Create a ProjectTimesheetCategory?" -> POST /api/ProjectTimesheetCategory
+- "List all RecurringInvoice?" -> GET /api/RecurringInvoice
+- "Get RecurringInvoice details?" -> GET /api/RecurringInvoice/{id}
+- "List all ScheduleAssignment?" -> GET /api/ScheduleAssignment
+- "Create a AddBooking?" -> POST /ScheduleSeries/AddBooking
+- "Create a AddLeave?" -> POST /ScheduleSeries/AddLeave
+- "List all ScheduleSeries?" -> GET /api/ScheduleSeries
+- "Create a ScheduleSery?" -> POST /api/ScheduleSeries
+- "Delete a ScheduleSery?" -> DELETE /api/ScheduleSeries/{id}
+- "List all Section?" -> GET /api/Section
+- "Create a Section?" -> POST /api/Section
+- "Search Lookup?" -> GET /api/Task/Lookup
+- "List all Task?" -> GET /api/Task
+- "Create a Task?" -> POST /api/Task
+- "Get Task details?" -> GET /api/Task/{id}
+- "List all TaskDiscussion?" -> GET /api/TaskDiscussion
+- "List all TaskStatus?" -> GET /api/TaskStatus
+- "List all TaskType?" -> GET /api/TaskType
+- "List all Tax?" -> GET /api/Tax
+- "List all deleted?" -> GET /api/Timesheet/deleted
+- "List all Timesheet?" -> GET /api/Timesheet
+- "Create a Timesheet?" -> POST /api/Timesheet
+- "Get Timesheet details?" -> GET /api/Timesheet/{id}
+- "Delete a Timesheet?" -> DELETE /api/Timesheet/{id}
+- "Create a TimesheetSubmission?" -> POST /api/TimesheetSubmission
+- "List all TimesheetSummary?" -> GET /api/TimesheetSummary
+- "List all TimesheetTimer?" -> GET /api/TimesheetTimer
+- "Delete a TimesheetTimer?" -> DELETE /api/TimesheetTimer/{id}
+- "List all UserProfile?" -> GET /api/UserProfile
+- "List all Webhook?" -> GET /api/Webhook
+- "Create a Webhook?" -> POST /api/Webhook
+- "Get Webhook details?" -> GET /api/Webhook/{id}
+- "Delete a Webhook?" -> DELETE /api/Webhook/{id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

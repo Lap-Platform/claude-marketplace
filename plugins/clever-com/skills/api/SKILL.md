@@ -98,79 +98,54 @@ https://api.clever.com/v1.2
 | GET | /teachers/{id}/sections | Returns the sections for a teacher |
 | GET | /teachers/{id}/students | Returns the students for a teacher |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all students in a district?" -> GET /districts/{id}/students
-- "Who are the contacts for a specific student?" -> GET /students/{id}/contacts
-- "Which school does a student attend?" -> GET /students/{id}/school
-- "What sections does a teacher teach?" -> GET /teachers/{id}/sections
-- "Who are the teachers at a specific school?" -> GET /schools/{id}/teachers
-- "What grade levels does a teacher cover?" -> GET /teachers/{id}/grade_levels
-- "Which district does a school belong to?" -> GET /schools/{id}/district
-- "How do I find all sections in a school?" -> GET /schools/{id}/sections
-- "Who are the district admins?" -> GET /district_admins
-- "What is the sync status of a district?" -> GET /districts/{id}/status
-- "Which students are in a specific section?" -> GET /sections/{id}/students
-- "Who is the primary teacher for a section?" -> GET /sections/{id}/teacher
-- "What schools does a school admin manage?" -> GET /school_admins/{id}/schools
-- "Which district is a contact associated with?" -> GET /contacts/{id}/district
-- "How do I page through all teachers in a district?" -> GET /districts/{id}/teachers (use `starting_after` and `limit`)
-
-## Response Tips
-
-- **List endpoints** (`/students`, `/teachers`, `/schools`, etc.): Responses are cursor-paginated -- use `starting_after` with the last item's ID and `limit` to control page size. There is no total count; an empty page signals the end.
-- **Single resource** (`/students/{id}`, `/teachers/{id}`): Returns a `data` wrapper object; the entity lives inside `data`. A 404 means the ID is invalid or the token lacks access.
-- **Relationship endpoints** (`/students/{id}/school`, `/sections/{id}/teacher`): Return a single related object (not an array) when the relationship is one-to-one; return a paginated list for one-to-many.
-- **Filter parameters** (`where`): Available on most list endpoints under districts, schools, sections, students, and teachers -- not on contacts or district_admins.
-- **Include parameter**: Supported on `/districts/{id}`, `/school_admins/{id}`, `/students/{id}`, and `/teachers/{id}` to embed related data inline and reduce follow-up calls.
-
-## Anomaly Flags
-
-- **404 on relationship traversal**: Surface when a nested resource call (e.g., `/students/{id}/school`) returns 404 -- this likely means the parent record was deleted or the OAuth token's scope no longer covers that entity.
-- **Empty paginated results on first page**: Flag when a list endpoint returns zero results with no `starting_after` cursor -- the district may not have synced data yet or the token's scope is misconfigured.
-- **District status changes**: Proactively check `/districts/{id}/status` and alert if the sync status indicates paused, error, or pending states.
-- **Pagination loops**: Detect if `starting_after` returns the same cursor repeatedly, indicating a stuck pagination cycle.
-- **OAuth token scope mismatch**: If multiple endpoints return 401 or consistently empty results for a district known to have data, surface a likely token scope or permissions issue.
-- **Deprecated `show_links` parameter**: The `show_links` param on `/district_admins` is a legacy toggle -- flag its usage as potentially deprecated behavior.
-
-## Playbook
-
-### 1. Full Student Roster Export for a District
-
-1. Call GET /districts to find the target district ID.
-2. Call GET /districts/{id}/students with `limit=100`.
-3. Collect all student records, using `starting_after` set to the last student's ID to fetch subsequent pages.
-4. Repeat until an empty page is returned.
-5. Optionally enrich each student with GET /students/{id}?include=... for additional fields.
-
-### 2. Build a Class Roster (Students and Teachers per Section)
-
-1. Call GET /schools/{id}/sections to list all sections for the school.
-2. For each section, call GET /sections/{id}/students to get enrolled students.
-3. For each section, call GET /sections/{id}/teachers to get assigned teachers (or /sections/{id}/teacher for the primary teacher).
-4. Combine results into a per-section roster keyed by section ID.
-
-### 3. Retrieve a Student's Full Context (School, District, Contacts, Teachers)
-
-1. Call GET /students/{id} to get the student profile.
-2. In parallel, call GET /students/{id}/school, GET /students/{id}/district, GET /students/{id}/contacts, and GET /students/{id}/teachers.
-3. Merge all responses into a single enriched student record.
-
-### 4. Audit District Admin and School Admin Coverage
-
-1. Call GET /districts/{id}/admins to list all district-level admins.
-2. Call GET /districts/{id}/schools to list all schools.
-3. For each school, call GET /school_admins with a `where` filter scoped to that school (or iterate GET /school_admins and match).
-4. Cross-reference to identify schools with no assigned admin.
-
-### 5. Monitor District Sync Health
-
-1. Call GET /districts to retrieve all accessible districts.
-2. For each district, call GET /districts/{id}/status.
-3. Flag any district where the status is not healthy or last sync timestamp is stale.
-4. Schedule periodic re-checks and alert on status transitions (e.g., healthy to error).
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all contacts?" -> GET /contacts
+- "Get contact details?" -> GET /contacts/{id}
+- "List all district?" -> GET /contacts/{id}/district
+- "List all student?" -> GET /contacts/{id}/student
+- "List all district_admins?" -> GET /district_admins
+- "Get district_admin details?" -> GET /district_admins/{id}
+- "List all districts?" -> GET /districts
+- "Get district details?" -> GET /districts/{id}
+- "List all admins?" -> GET /districts/{id}/admins
+- "List all schools?" -> GET /districts/{id}/schools
+- "List all sections?" -> GET /districts/{id}/sections
+- "List all status?" -> GET /districts/{id}/status
+- "List all students?" -> GET /districts/{id}/students
+- "List all teachers?" -> GET /districts/{id}/teachers
+- "List all school_admins?" -> GET /school_admins
+- "Get school_admin details?" -> GET /school_admins/{id}
+- "List all schools?" -> GET /school_admins/{id}/schools
+- "List all schools?" -> GET /schools
+- "Get school details?" -> GET /schools/{id}
+- "List all district?" -> GET /schools/{id}/district
+- "List all sections?" -> GET /schools/{id}/sections
+- "List all students?" -> GET /schools/{id}/students
+- "List all teachers?" -> GET /schools/{id}/teachers
+- "List all sections?" -> GET /sections
+- "Get section details?" -> GET /sections/{id}
+- "List all district?" -> GET /sections/{id}/district
+- "List all school?" -> GET /sections/{id}/school
+- "List all students?" -> GET /sections/{id}/students
+- "List all teacher?" -> GET /sections/{id}/teacher
+- "List all teachers?" -> GET /sections/{id}/teachers
+- "List all students?" -> GET /students
+- "Get student details?" -> GET /students/{id}
+- "List all contacts?" -> GET /students/{id}/contacts
+- "List all district?" -> GET /students/{id}/district
+- "List all school?" -> GET /students/{id}/school
+- "List all sections?" -> GET /students/{id}/sections
+- "List all teachers?" -> GET /students/{id}/teachers
+- "List all teachers?" -> GET /teachers
+- "Get teacher details?" -> GET /teachers/{id}
+- "List all district?" -> GET /teachers/{id}/district
+- "List all grade_levels?" -> GET /teachers/{id}/grade_levels
+- "List all school?" -> GET /teachers/{id}/school
+- "List all sections?" -> GET /teachers/{id}/sections
+- "List all students?" -> GET /teachers/{id}/students
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

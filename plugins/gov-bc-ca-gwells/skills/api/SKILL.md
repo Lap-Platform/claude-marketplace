@@ -82,86 +82,34 @@ https://apps.nrs.gov.bc.ca/gwells/api/v1/
 | GET | /wells/{tag}/files | list files found for the well identified in the uri |
 | GET | /wells/{well_tag_number} | Return well detail. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What aquifers are in this area?" -> GET /aquifers/
-- "Show me details for aquifer 123" -> GET /aquifers/{aquifer_id}/
-- "Search for an aquifer by name" -> GET /aquifers/names/
-- "What files are attached to aquifer 456?" -> GET /aquifers/{aquifer_id}/files
-- "List all groundwater wells" -> GET /wells/
-- "Get full details for well tag 12345" -> GET /wells/{well_tag_number}
-- "What documents are associated with well 98765?" -> GET /wells/{tag}/files
-- "Search for wells by tag number" -> GET /wells/tags/
-- "Find a driller by name" -> GET /drillers/
-- "What cities have registered drillers?" -> GET /cities/drillers/
-- "What aquifer material types exist?" -> GET /aquifer-codes/materials/
-- "What vulnerability classifications are available?" -> GET /aquifer-codes/vulnerability/
-- "What water use codes does the system support?" -> GET /aquifer-codes/water-use/
-- "What submission options are available for well reports?" -> GET /submissions/options/
-- "What is the current API configuration?" -> GET /config
-
-## Response Tips
-
-- **Paginated lists** (wells, aquifers, drillers, aquifer-codes): All return `{count, next, previous, results}`. Use `next`/`previous` URIs directly for paging; `count` gives total records. Pass `limit` and `offset` to control page size.
-- **Aquifer detail** (`/aquifers/{id}/`): Description fields come in pairs -- a code field (e.g., `demand`) and a human-readable companion (e.g., `demand_description`). Always display the `_description` variant to users.
-- **Well detail** (`/wells/{tag}`): Deeply nested with embedded objects (`person_responsible`, `company_of_person_responsible`) and multiple array sets (`casing_set`, `screen_set`, `lithologydescription_set`). Parse set arrays as ordered construction records.
-- **File endpoints** (`/files`): Return `{public, private}`. Private files require authenticated access; unauthenticated callers only see the `public` array.
-- **Name search endpoints** (`/aquifers/names/`, `/drillers/names/`): Lightweight autocomplete responses -- use these for typeahead, not the full list endpoints.
-- **Code lookups** (`/aquifer-codes/*`): Reference data that rarely changes. Cache aggressively and refresh only on config changes.
-
-## Anomaly Flags
-
-- **Decommissioned wells**: Surface proactively when `decommission_start_date` or `decommission_end_date` is populated, or `well_status` indicates decommission. Users may not realize a well is no longer active.
-- **Missing coordinates**: Flag wells where `latitude`/`longitude` are null or zero -- common data quality issue that breaks mapping workflows.
-- **Artesian conditions**: Alert when `artesian_flow` or `artesian_pressure` has non-null values, as these wells have special regulatory and safety implications.
-- **Aquifer vulnerability**: When `vulnerability` is high or `aquifer_vulnerability_index` exceeds typical thresholds, surface this as a water quality risk indicator.
-- **Pagination exhaustion**: Warn when `count` exceeds 10,000 records and the user is iterating without search filters -- suggest narrowing the query.
-- **Private files present**: When `/files` returns a non-empty `private` array, note that additional documents exist behind authentication.
-- **Missing person responsible**: Flag wells where `person_responsible` is null -- may indicate incomplete regulatory records.
-- **JWT expiry**: Since auth is ApiKey JWT, surface reminders to check token validity before batch operations that could fail mid-run.
-
-## Playbook
-
-### 1. Profile a specific aquifer
-
-1. GET `/aquifers/{aquifer_id}/` to retrieve full aquifer details (material, vulnerability, productivity, water use).
-2. GET `/aquifer-codes/vulnerability/` and `/aquifer-codes/quality-concerns/` to decode the classification codes into human-readable labels.
-3. GET `/aquifers/{aquifer_id}/files` to check for associated maps, studies, or reports.
-4. GET `/wells/?search={aquifer_id}` to find all wells drawing from this aquifer. Page through results using `next`.
-
-### 2. Look up a well and its construction history
-
-1. GET `/wells/tags/?search={partial_tag}` to find the exact well tag number.
-2. GET `/wells/{well_tag_number}` for the full record including construction dates, casing, screen, and lithology sets.
-3. Inspect `lithologydescription_set` for geological layers and `casing_set`/`screen_set` for construction specs.
-4. Check `person_responsible` and `company_of_person_responsible` for the driller on record.
-5. GET `/wells/{tag}/files` for any attached completion reports or photos.
-
-### 3. Find a driller and review their work
-
-1. GET `/drillers/names/?search={name}` for quick name matching.
-2. GET `/drillers/?search={name}` for the full driller record including `person_guid`.
-3. GET `/drillers/{person_guid}/files/` to review certifications or compliance documents.
-4. GET `/cities/drillers/` to see which cities this driller operates in.
-5. GET `/wells/?search={driller_name}` to find wells they have drilled (cross-reference via `person_responsible`).
-
-### 4. Bulk export wells with pagination
-
-1. GET `/wells/?limit=100&offset=0` to fetch the first page.
-2. Read `count` from the response to calculate total pages (`Math.ceil(count / 100)`).
-3. Follow the `next` URI for each subsequent page until `next` is null.
-4. For large datasets, add search filters (e.g., city, aquifer ID) to reduce total records before paginating.
-
-### 5. Explore aquifer classification reference data
-
-1. GET `/aquifer-codes/materials/` for aquifer material types (sand, gravel, bedrock, etc.).
-2. GET `/aquifer-codes/subtypes/` for aquifer subtype classifications.
-3. GET `/aquifer-codes/demand/` and `/aquifer-codes/water-use/` for demand and usage categories.
-4. GET `/aquifer-codes/productivity/` for yield/productivity ratings.
-5. GET `/aquifer-codes/quality-concerns/` and `/aquifer-codes/vulnerability/` for risk assessment codes.
-6. Cache all code lookups locally and use them to enrich aquifer and well detail responses with human-readable labels.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all demand?" -> GET /aquifer-codes/demand/
+- "List all materials?" -> GET /aquifer-codes/materials/
+- "List all productivity?" -> GET /aquifer-codes/productivity/
+- "List all quality-concerns?" -> GET /aquifer-codes/quality-concerns/
+- "List all subtypes?" -> GET /aquifer-codes/subtypes/
+- "List all vulnerability?" -> GET /aquifer-codes/vulnerability/
+- "List all water-use?" -> GET /aquifer-codes/water-use/
+- "Search aquifers?" -> GET /aquifers/
+- "Search names?" -> GET /aquifers/names/
+- "Get aquifer details?" -> GET /aquifers/{aquifer_id}/
+- "List all files?" -> GET /aquifers/{aquifer_id}/files
+- "List all drillers?" -> GET /cities/drillers/
+- "List all installers?" -> GET /cities/installers/
+- "List all config?" -> GET /config
+- "Search drillers?" -> GET /drillers/
+- "Search names?" -> GET /drillers/names/
+- "List all files?" -> GET /drillers/{person_guid}/files/
+- "List all keycloak?" -> GET /keycloak
+- "List all options?" -> GET /submissions/options/
+- "List all surveys?" -> GET /surveys/
+- "List all wells?" -> GET /wells/
+- "Search tags?" -> GET /wells/tags/
+- "List all files?" -> GET /wells/{tag}/files
+- "Get well details?" -> GET /wells/{well_tag_number}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

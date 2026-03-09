@@ -9,16 +9,19 @@
 
 @group workspaces
 @endpoint POST /workspaces/{workspaceId}/alertmanager/definition
+@desc The CreateAlertManagerDefinition operation creates the alert manager definition in a workspace. If a workspace already has an alert manager definition, don't use this operation to update it. Instead, use PutAlertManagerDefinition.
 @required {workspaceId: str, data: bytes}
 @optional {clientToken: str}
 @returns(200) {status: AlertManagerDefinitionStatus{statusCode: str, statusReason: str?}}
 
 @endpoint POST /workspaces/{workspaceId}/logging
+@desc The CreateLoggingConfiguration operation creates a logging configuration for the workspace. Use this operation to set the CloudWatch log group to which the logs will be published to.
 @required {workspaceId: str, logGroupArn: str}
 @optional {clientToken: str}
 @returns(200) {status: LoggingConfigurationStatus{statusCode: str, statusReason: str?}}
 
 @endpoint POST /workspaces/{workspaceId}/rulegroupsnamespaces
+@desc The CreateRuleGroupsNamespace operation creates a rule groups namespace within a workspace. A rule groups namespace is associated with exactly one rules file. A workspace can have multiple rule groups namespaces. Use this operation only to create new rule groups namespaces. To update an existing rule groups namespace, use PutRuleGroupsNamespace.
 @required {workspaceId: str, data: bytes, name: str}
 @optional {clientToken: str, tags: map<str,str>}
 @returns(200) {arn: str, name: str, status: RuleGroupsNamespaceStatus{statusCode: str, statusReason: str?}, tags: map<str,str>?}
@@ -27,6 +30,7 @@
 
 @group scrapers
 @endpoint POST /scrapers
+@desc The CreateScraper operation creates a scraper to collect metrics. A scraper pulls metrics from Prometheus-compatible sources within an Amazon EKS cluster, and sends them to your Amazon Managed Service for Prometheus workspace. You can configure the scraper to control what metrics are collected, and what transformations are applied prior to sending them to your workspace. If needed, an IAM role will be created for you that gives Amazon Managed Service for Prometheus access to the metrics in your cluster. For more information, see Using roles for scraping metrics from EKS in the Amazon Managed Service for Prometheus User Guide. You cannot update a scraper. If you want to change the configuration of the scraper, create a new scraper and delete the old one. The scrapeConfiguration parameter contains the base64-encoded version of the YAML configuration file.  For more information about collectors, including what metrics are collected, and how to configure the scraper, see Amazon Web Services managed collectors in the Amazon Managed Service for Prometheus User Guide.
 @required {destination: Destination, scrapeConfiguration: ScrapeConfiguration, source: Source}
 @optional {alias: str, clientToken: str, tags: map<str,str>}
 @returns(200) {arn: str, scraperId: str, status: ScraperStatus{statusCode: str}, tags: map<str,str>?}
@@ -35,18 +39,22 @@
 
 @group workspaces
 @endpoint POST /workspaces
+@desc Creates a Prometheus workspace. A workspace is a logical space dedicated to the storage and querying of Prometheus metrics. You can have one or more workspaces in each Region in your account.
 @optional {alias: str, clientToken: str, kmsKeyArn: str, tags: map<str,str>}
 @returns(200) {arn: str, kmsKeyArn: str?, status: WorkspaceStatus{statusCode: str}, tags: map<str,str>?, workspaceId: str}
 
 @endpoint DELETE /workspaces/{workspaceId}/alertmanager/definition
+@desc Deletes the alert manager definition from a workspace.
 @required {workspaceId: str}
 @optional {clientToken: str}
 
 @endpoint DELETE /workspaces/{workspaceId}/logging
+@desc Deletes the logging configuration for a workspace.
 @required {workspaceId: str}
 @optional {clientToken: str}
 
 @endpoint DELETE /workspaces/{workspaceId}/rulegroupsnamespaces/{name}
+@desc Deletes one rule groups namespace and its associated rule groups definition.
 @required {name: str, workspaceId: str}
 @optional {clientToken: str}
 
@@ -54,6 +62,7 @@
 
 @group scrapers
 @endpoint DELETE /scrapers/{scraperId}
+@desc The DeleteScraper operation deletes one scraper, and stops any metrics collection that the scraper performs.
 @required {scraperId: str}
 @optional {clientToken: str}
 @returns(200) {scraperId: str, status: ScraperStatus{statusCode: str}}
@@ -62,45 +71,53 @@
 
 @group workspaces
 @endpoint DELETE /workspaces/{workspaceId}
+@desc Deletes an existing workspace.   When you delete a workspace, the data that has been ingested into it is not immediately deleted. It will be permanently deleted within one month.
 @required {workspaceId: str}
 @optional {clientToken: str}
 
 @endpoint GET /workspaces/{workspaceId}/alertmanager/definition
+@desc Retrieves the full information about the alert manager definition for a workspace.
 @required {workspaceId: str}
 @returns(200) {alertManagerDefinition: AlertManagerDefinitionDescription{createdAt: str(timestamp), data: bytes, modifiedAt: str(timestamp), status: AlertManagerDefinitionStatus{statusCode: str, statusReason: str?}}}
 
 @endpoint GET /workspaces/{workspaceId}/logging
+@desc Returns complete information about the current logging configuration of the workspace.
 @required {workspaceId: str}
 @returns(200) {loggingConfiguration: LoggingConfigurationMetadata{createdAt: str(timestamp), logGroupArn: str, modifiedAt: str(timestamp), status: LoggingConfigurationStatus{statusCode: str, statusReason: str?}, workspace: str}}
 
 @endpoint GET /workspaces/{workspaceId}/rulegroupsnamespaces/{name}
+@desc Returns complete information about one rule groups namespace. To retrieve a list of rule groups namespaces, use ListRuleGroupsNamespaces.
 @required {name: str, workspaceId: str}
-@returns(200) {ruleGroupsNamespace: RuleGroupsNamespaceDescription{arn: str, createdAt: str(timestamp), data: bytes, modifiedAt: str(timestamp), name: str, status: RuleGroupsNamespaceStatus{statusCode: str, statusReason: str?}, tags: map<str,str>?}}
+@returns(200) {ruleGroupsNamespace: RuleGroupsNamespaceDescription{arn: str, createdAt: str(timestamp), data: bytes, modifiedAt: str(timestamp), name: str, status: RuleGroupsNamespaceStatus{statusCode: str, statusReason: str?}, tags: map<str, str>?: any}}
 
 @endgroup
 
 @group scrapers
 @endpoint GET /scrapers/{scraperId}
+@desc The DescribeScraper operation displays information about an existing scraper.
 @required {scraperId: str}
-@returns(200) {scraper: ScraperDescription{alias: str?, arn: str, createdAt: str(timestamp), destination: Destination{ampConfiguration: AmpConfiguration?{workspaceArn: str}}, lastModifiedAt: str(timestamp), roleArn: str, scrapeConfiguration: ScrapeConfiguration{configurationBlob: bytes?}, scraperId: str, source: Source{eksConfiguration: EksConfiguration?{clusterArn: str, securityGroupIds: [str]?, subnetIds: [str]}}, status: ScraperStatus{statusCode: str}, statusReason: str?, tags: map<str,str>?}}
+@returns(200) {scraper: ScraperDescription{alias: str?, arn: str, createdAt: str(timestamp), destination: Destination{ampConfiguration: AmpConfiguration?{workspaceArn: str}}, lastModifiedAt: str(timestamp), roleArn: str, scrapeConfiguration: ScrapeConfiguration{configurationBlob: bytes?}, scraperId: str, source: Source{eksConfiguration: EksConfiguration?{clusterArn: str, securityGroupIds: [str]?, subnetIds: [str]}}, status: ScraperStatus{statusCode: str}, statusReason: str?, tags: map<str, str>?: any}}
 
 @endgroup
 
 @group workspaces
 @endpoint GET /workspaces/{workspaceId}
+@desc Returns information about an existing workspace.
 @required {workspaceId: str}
-@returns(200) {workspace: WorkspaceDescription{alias: str?, arn: str, createdAt: str(timestamp), kmsKeyArn: str?, prometheusEndpoint: str?, status: WorkspaceStatus{statusCode: str}, tags: map<str,str>?, workspaceId: str}}
+@returns(200) {workspace: WorkspaceDescription{alias: str?, arn: str, createdAt: str(timestamp), kmsKeyArn: str?, prometheusEndpoint: str?, status: WorkspaceStatus{statusCode: str}, tags: map<str, str>?: any, workspaceId: str}}
 
 @endgroup
 
 @group scraperconfiguration
 @endpoint GET /scraperconfiguration
+@desc The GetDefaultScraperConfiguration operation returns the default scraper configuration used when Amazon EKS creates a scraper for you.
 @returns(200) {configuration: bytes}
 
 @endgroup
 
 @group workspaces
 @endpoint GET /workspaces/{workspaceId}/rulegroupsnamespaces
+@desc Returns a list of rule groups namespaces in a workspace.
 @required {workspaceId: str}
 @optional {maxResults: int, name: str, nextToken: str}
 @returns(200) {nextToken: str?, ruleGroupsNamespaces: [RuleGroupsNamespaceSummary]}
@@ -109,6 +126,7 @@
 
 @group scrapers
 @endpoint GET /scrapers
+@desc The ListScrapers operation lists all of the scrapers in your account. This includes scrapers being created or deleted. You can optionally filter the returned list.
 @optional {filters: map<str,[str]>, maxResults: int, nextToken: str}
 @returns(200) {nextToken: str?, scrapers: [ScraperSummary]}
 
@@ -116,6 +134,7 @@
 
 @group tags
 @endpoint GET /tags/{resourceArn}
+@desc The ListTagsForResource operation returns the tags that are associated with an Amazon Managed Service for Prometheus resource. Currently, the only resources that can be tagged are workspaces and rule groups namespaces.
 @required {resourceArn: str}
 @returns(200) {tags: map<str,str>?}
 
@@ -123,15 +142,18 @@
 
 @group workspaces
 @endpoint GET /workspaces
+@desc Lists all of the Amazon Managed Service for Prometheus workspaces in your account. This includes workspaces being created or deleted.
 @optional {alias: str, maxResults: int, nextToken: str}
 @returns(200) {nextToken: str?, workspaces: [WorkspaceSummary]}
 
 @endpoint PUT /workspaces/{workspaceId}/alertmanager/definition
+@desc Updates an existing alert manager definition in a workspace. If the workspace does not already have an alert manager definition, don't use this operation to create it. Instead, use CreateAlertManagerDefinition.
 @required {workspaceId: str, data: bytes}
 @optional {clientToken: str}
 @returns(200) {status: AlertManagerDefinitionStatus{statusCode: str, statusReason: str?}}
 
 @endpoint PUT /workspaces/{workspaceId}/rulegroupsnamespaces/{name}
+@desc Updates an existing rule groups namespace within a workspace. A rule groups namespace is associated with exactly one rules file. A workspace can have multiple rule groups namespaces. Use this operation only to update existing rule groups namespaces. To create a new rule groups namespace, use CreateRuleGroupsNamespace. You can't use this operation to add tags to an existing rule groups namespace. Instead, use TagResource.
 @required {name: str, workspaceId: str, data: bytes}
 @optional {clientToken: str}
 @returns(200) {arn: str, name: str, status: RuleGroupsNamespaceStatus{statusCode: str, statusReason: str?}, tags: map<str,str>?}
@@ -140,20 +162,24 @@
 
 @group tags
 @endpoint POST /tags/{resourceArn}
+@desc The TagResource operation associates tags with an Amazon Managed Service for Prometheus resource. The only resources that can be tagged are workspaces and rule groups namespaces.  If you specify a new tag key for the resource, this tag is appended to the list of tags associated with the resource. If you specify a tag key that is already associated with the resource, the new tag value that you specify replaces the previous value for that tag.
 @required {resourceArn: str, tags: map<str,str>}
 
 @endpoint DELETE /tags/{resourceArn}
+@desc Removes the specified tags from an Amazon Managed Service for Prometheus resource. The only resources that can be tagged are workspaces and rule groups namespaces.
 @required {resourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group workspaces
 @endpoint PUT /workspaces/{workspaceId}/logging
+@desc Updates the log group ARN or the workspace ID of the current logging configuration.
 @required {workspaceId: str, logGroupArn: str}
 @optional {clientToken: str}
 @returns(200) {status: LoggingConfigurationStatus{statusCode: str, statusReason: str?}}
 
 @endpoint POST /workspaces/{workspaceId}/alias
+@desc Updates the alias of an existing workspace.
 @required {workspaceId: str}
 @optional {alias: str, clientToken: str}
 

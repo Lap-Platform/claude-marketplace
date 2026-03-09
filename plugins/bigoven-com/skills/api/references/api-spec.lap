@@ -10,316 +10,382 @@
 
 @group collection
 @endpoint GET /collection/{id}
-@required {id: any}
-@optional {rpp: any, pg: any, test: any, sessionForLogging: any}
-@returns(200)
+@desc Gets a recipe collection. A recipe collection is a curated set of recipes.
+@required {id: any # the collection identifier}
+@optional {rpp: any # results per page, pg: any # page number (starting with 1), test: any, sessionForLogging: any}
+@returns(200) OK
 
 @endpoint GET /collection/{id}/meta
-@required {id: any}
-@returns(200)
+@desc Gets a recipe collection metadata. A recipe collection is a curated set of recipes.
+@required {id: any # the collection identifier}
+@returns(200) OK
 
 @endgroup
 
 @group collections
 @endpoint GET /collections
+@desc Get the list of current, seasonal recipe collections. From here, you can use the /collection/{id} endpoint to retrieve the recipes in those collections.
 @optional {test: any}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group grocerylist
 @endpoint POST /grocerylist/department
-@required {model: map}
-@returns(200)
+@desc Departmentalize a list of strings -- used for ad-hoc grocery list item addition
+@required {model: map # see DepartmentModel for the request payload}
+@returns(200) OK
 
 @endpoint GET /grocerylist
-@returns(200)
+@desc Get the user's grocery list.  User is determined by Basic Authentication.
+@returns(200) OK
 
 @endpoint DELETE /grocerylist
-@returns(200)
+@desc Delete all the items on a grocery list; faster operation than a sync with deleted items.
+@returns(200) OK
 
 @endpoint POST /grocerylist/recipe
+@desc Add a Recipe to the grocery list.  In the request data, pass in recipeId, scale (scale=1.0 says to keep the recipe the same size as originally posted), markAsPending (true/false) to indicate that
 @required {data: map}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /grocerylist/line
-@required {newItem: map}
-@returns(200)
+@desc Add a single line item to the grocery list
+@required {newItem: map # name, quantity, unit, notes, department}
+@returns(200) OK
 
 @endpoint POST /grocerylist/item
-@required {newItem: map}
-@returns(200)
+@desc Add a single line item to the grocery list
+@required {newItem: map # name, quantity, unit, notes, department}
+@returns(200) OK
 
 @endpoint POST /grocerylist/sync
+@desc Synchronize the grocery list.  Call this with a POST to /grocerylist/sync
 @required {req: map}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /grocerylist/item/{guid}
+@desc Update a grocery item by GUID
 @required {req: map, guid: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /grocerylist/item/{guid}
+@desc /grocerylist/item/{guid}  DELETE will delete this item assuming you own it.
 @required {guid: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /grocerylist/clearcheckedlines
-@returns(200)
+@desc Clears the checked lines.
+@returns(200) OK
 
 @endgroup
 
 @group recipe
 @endpoint GET /recipe/{recipeId}/images
-@required {recipeId: any}
-@returns(200)
+@desc Get all the images for a recipe. DEPRECATED. Please use /recipe/{recipeId}/photos.
+@required {recipeId: any # Recipe ID (required)}
+@returns(200) OK
 
 @endpoint GET /recipe/photos/pending
-@returns(200)
+@desc Gets the pending by user.
+@returns(200) OK
 
 @endpoint GET /recipe/{recipeId}/photos
-@required {recipeId: any}
+@desc Get all the photos for a recipe
+@required {recipeId: any # Recipe ID (required)}
 @optional {pg: any, rpp: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /recipe/{recipeId}/scans
-@required {recipeId: any}
-@returns(200)
+@desc Gets a list of RecipeScan images for the recipe. There will be at most 3 per recipe.
+@required {recipeId: any # the recipe identifier (int)}
+@returns(200) OK
 
 @endpoint POST /recipe/{recipeId}/image
+@desc POST: /recipe/{recipeId}/image?lat=42&amp;lng=21&amp;caption=this%20is%20my%20caption
 @required {recipeId: any}
 @optional {caption: any, lat: any, lng: any}
-@returns(200)
-@errors {401, 415, 400}
+@returns(200) Success
+@errors {401: if the user is unknown, 415: if unsupported media type (e.g., bad JPG), 400: if bad request (e.g., missing parameters)}
 
 @endgroup
 
 @group image
 @endpoint POST /image/avatar
-@returns(200)
-@errors {401, 415, 400}
+@desc POST: /image/avatar
+@returns(200) Success
+@errors {401: if the user is unknown, 415: if unsupported media type (e.g., bad JPG), 400: if bad request (e.g., missing parameters)}
 
 @endgroup
 
 @group me
 @endpoint GET /me
-@returns(200)
+@desc Indexes this instance.
+@returns(200) OK
 
 @endpoint PUT /me
-@required {req: map}
-@returns(200)
+@desc Puts me.
+@required {req: map # The req.}
+@returns(200) OK
 
 @endpoint GET /me/skinny
-@returns(200)
+@desc Skinnies this instance.
+@returns(200) OK
 
 @endpoint GET /me/preferences/options
-@returns(200)
+@desc Gets the options.
+@returns(200) OK
 
 @endpoint PUT /me/profile
-@required {req: map}
-@returns(200)
+@desc Puts me.
+@required {req: map # The req.}
+@returns(200) OK
 
 @endpoint PUT /me/personal
-@required {req: map}
-@returns(200)
+@desc Puts me personal.
+@required {req: map # The req.}
+@returns(200) OK
 
 @endpoint PUT /me/preferences
-@required {req: map}
-@returns(200)
+@desc Puts me preferences.
+@required {req: map # The req.}
+@returns(200) OK
 
 @endgroup
 
 @group recipe
 @endpoint GET /recipe/{recipeId}/note/{noteId}
-@required {recipeId: any, noteId: any}
-@returns(200)
+@desc Get a given note. Make sure you're passing authentication information in the header for the user who owns the note.
+@required {recipeId: any # recipe identifier (integer), noteId: any # The note ID (note -- it's not the RecipeID)}
+@returns(200) OK
 
 @endpoint PUT /recipe/{recipeId}/note/{noteId}
+@desc HTTP PUT (update) a Recipe note (RecipeNote).
 @required {recipeId: any, noteId: any, recipeNote: map}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /recipe/{recipeId}/note/{noteId}
-@required {recipeId: any, noteId: any}
-@returns(200)
+@desc Delete a review
+@required {recipeId: any # recipeId (int), noteId: any # noteId (int)}
+@returns(200) OK
 
 @endpoint GET /recipe/{recipeId}/notes
-@required {recipeId: any}
-@optional {pg: any, rpp: any}
-@returns(200)
+@desc recipe/100/notes
+@required {recipeId: any # recipeId (int)}
+@optional {pg: any # page (int, starting from 1), rpp: any # recipeId}
+@returns(200) OK
 
 @endpoint POST /recipe/{recipeId}/note
-@required {recipeId: any, note: map}
-@returns(200)
+@desc HTTP POST a new note into the system.
+@required {recipeId: any # recipeId (int), note: map # a recipe note, with fields: Date (YYYY-MM-DD string), Notes (string), People (string), Variations (string), RecipeID (int?)}
+@returns(200) OK
 
 @endgroup
 
 @group recipes
 @endpoint GET /recipes/raves
-@optional {pg: any, rpp: any}
-@returns(200)
+@desc Get the recipe/comment tuples for those recipes with 4 or 5 star ratings
+@optional {pg: any # page, starting with 1, rpp: any # results per page}
+@returns(200) OK
 
 @endgroup
 
 @group recipe
 @endpoint GET /recipe/{id}/zap
-@required {id: any}
-@returns(200)
+@desc Zaps the recipe.
+@required {id: any # The identifier.}
+@returns(200) OK
 
 @endpoint GET /recipe/{id}
-@required {id: any}
-@optional {prefetch: any}
-@returns(200)
+@desc Return full Recipe detail. Returns 403 if the recipe is owned by someone else.
+@required {id: any # The Recipe ID to retrieve}
+@optional {prefetch: any # The prefetch.}
+@returns(200) OK
 
 @endpoint DELETE /recipe/{id}
-@required {id: any}
-@optional {Authorization: any}
-@returns(200)
-@errors {401, 403}
+@desc Deletes specified recipe (you must be authenticated as the owner of the recipe)
+@required {id: any # The recipe id.}
+@optional {Authorization: any # The authorization header (optional).}
+@returns(200) OK
+@errors {401: Unauthorized, 403: Forbidden}
 
 @endgroup
 
 @group recipes
 @endpoint GET /recipes/{id}
-@required {id: any}
-@optional {prefetch: any, includeInstructions: any, Authorization: any}
-@returns(200)
-@errors {400, 403, 404, 500}
+@desc Same as GET recipe but also includes the recipe videos (if any)
+@required {id: any # The Recipe ID to retrieve}
+@optional {prefetch: any # The prefetch., includeInstructions: any # (Optional) True to include instructions otherwise false (default false)., Authorization: any # The authorization header (optional).}
+@returns(200) OK
+@errors {400: BadRequest, 403: Forbidden, 404: NotFound, 500: InternalServerError}
 
 @endgroup
 
 @group recipe
 @endpoint GET /recipe/steps/{id}
-@required {id: any}
+@desc Return full Recipe detail with steps. Returns 403 if the recipe is owned by someone else.
+@required {id: any # the Recipe ID to retrieve}
 @optional {prefetch: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /recipe/post/step
+@desc Stores recipe step number and returns saved step data
 @required {userName: any, recipeId: any, stepId: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /recipe/get/step/number
+@desc Returns stored step number and number of steps in recipe
 @required {userName: any, recipeId: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /recipe/get/active/recipe
+@desc Returns last active recipe for the user
 @required {userName: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /recipe/get/saved/step
+@desc Gets recipe single step as text
 @required {userName: any, recipeId: any, stepId: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /recipe/{recipeId}/related
-@required {recipeId: any}
-@optional {pg: any, rpp: any}
-@returns(200)
+@desc Get recipes related to the given recipeId
+@required {recipeId: any # The recipe id}
+@optional {pg: any # The page, rpp: any # The results per page}
+@returns(200) OK
 
 @endpoint POST /recipe/{recipeId}/feedback
-@required {recipeId: any, data: map}
-@returns(200)
+@desc Feedback on a Recipe -- for internal BigOven editors
+@required {recipeId: any, data: map # The payload for feedback, which includes the field "feedback"}
+@returns(200) OK
 
 @endgroup
 
 @group recipes
 @endpoint GET /recipes/random
-@returns(200)
+@desc Get a random, home-page-quality Recipe.
+@returns(200) OK
 
 @endpoint GET /recipes/top25random
-@optional {any_kw: any, folder: any, coll: any, filter: any, title_kw: any, userId: any, username: any, token: any, photos: any, boostmine: any, include_cat: any, exclude_cat: any, include_primarycat: any, exclude_primarycat: any, include_ing: any, exclude_ing: any, cuisine: any, db: any, userset: any, servingsMin: any, totalMins: any, maxIngredients: any, minIngredients: any, vtn: any, vgn: any, chs: any, glf: any, ntf: any, dyf: any, sff: any, slf: any, tnf: any, wmf: any, rmf: any, cps: any, champion: any, synonyms: any}
-@returns(200)
+@desc Search for recipes. There are many parameters that you can apply. Starting with the most common, use title_kw to search within a title.
+@optional {any_kw: any # Search anywhere in the recipe for the keyword, folder: any # Search in a specific folder name for the authenticated user, coll: any # Limit to a collection ID number, filter: any # optionally set to either "myrecipes", "try", "favorites","added" to filter to just the authenticated user's recipe set, title_kw: any # Search just in the recipe title for the keyword, userId: any # Set the target userid to search their public recipes, username: any # Set the target username to search their public recipes, token: any, photos: any # if set to true, limit search results to photos only, boostmine: any # if set to true, boost my own recipes in my folders so they show up high in the list (at the expense of other sort orders), include_cat: any # integer of the subcategory you'd like to limit searches to (see the /recipe/categories endpoint for available id numbers). For instance, 58 is "Main Dish &gt; Casseroles"., exclude_cat: any # like include_cat, set this to an integer to exclude a specific category, include_primarycat: any # csv indicating up to three top-level categories -- valid values are [appetizers,bread,breakfast,desserts,drinks,maindish,salads,sidedish,soups,marinades,other], exclude_primarycat: any # csv indicating integer values for up to 3 top-level categories -- valid values are 1...11 [appetizers,bread,breakfast,desserts,drinks,maindish,salads,sidedish,soups,marinades,other], include_ing: any # A CSV representing up to 3 ingredients to include, e.g., tomatoes,corn%20%starch,chicken, exclude_ing: any # A CSV representing up to 3 ingredients to exclude  (Powersearch-capable plan required), cuisine: any # Limit to a specific cuisine. Cooks can enter anything free-form, but the few dozen preconfigured values are Afghan,African,American,American-South,Asian,Australian,Brazilian,Cajun,Canadian,Caribbean,Chinese,Croatian,Cuban,Dessert,Eastern European,English,French,German,Greek,Hawaiian,Hungarian,India,Indian,Irish,Italian,Japanese,Jewish,Korean,Latin,Mediterranean,Mexican,Middle Eastern,Moroccan,Polish,Russian,Scandanavian,Seafood,Southern,Southwestern,Spanish,Tex-Mex,Thai,Vegan,Vegetarian,Vietnamese, db: any, userset: any # If set to a given username, it'll force the search to filter to just that username, servingsMin: any # Limit to yield of a given number size or greater. Note that cooks usually enter recipes by Servings, but sometimes they are posted by "dozen", etc. This parameter simply specifies the minimum number for that value entered in "yield.", totalMins: any # Optional. If supplied, will restrict results to recipes that can be made in {totalMins} or less. (Convert "1 hour, 15 minutes" to 75 before passing in.), maxIngredients: any # Optional. If supplied, will restrict results to recipes that can be made with {maxIngredients} ingredients or less, minIngredients: any # Optional. If supplied, will restrict results to recipes that have at least {minIngredients}, vtn: any # when set to 1, limit to vegetarian (Powersearch-capable plan required), vgn: any # when set to 1, limit to vegan (Powersearch-capable plan required), chs: any # when set to 1, limit to contains-cheese (Powersearch-capable plan required), glf: any # when set to 1, limit to gluten-free (Powersearch-capable plan required), ntf: any # when set to 1, limit to nut-free (Powersearch-capable plan required), dyf: any # when set to 1, limit to dairy-free (Powersearch-capable plan required), sff: any # when set to 1, limit to seafood-free (Powersearch-capable plan required), slf: any # when set to 1, limit to shellfish-free (Powersearch-capable plan required), tnf: any # when set to 1, limit to tree-nut free (Powersearch-capable plan required), wmf: any # when set to 1, limit to white-meat free (Powersearch-capable plan required), rmf: any # when set to 1, limit to red-meat free (Powersearch-capable plan required), cps: any # when set to 1, recipe contains pasta, set to 0 means contains no pasta (Powersearch-capable plan required), champion: any # optional. When set to 1, this will limit search results to "best of" recipes as determined by various internal editorial and programmatic algorithms. For the most comprehensive results, don't include this parameter., synonyms: any # optional, default is false. When set to true, BigOven will attempt to apply synonyms in search (e.g., excluding pork will also exclude bacon)}
+@returns(200) OK
 
 @endpoint GET /recipes
-@optional {any_kw: any, folder: any, coll: any, filter: any, title_kw: any, userId: any, username: any, token: any, photos: any, boostmine: any, include_cat: any, exclude_cat: any, include_primarycat: any, exclude_primarycat: any, include_ing: any, exclude_ing: any, cuisine: any, db: any, userset: any, servingsMin: any, totalMins: any, maxIngredients: any, minIngredients: any, rpp: any, pg: any, vtn: any, vgn: any, chs: any, glf: any, ntf: any, dyf: any, sff: any, slf: any, tnf: any, wmf: any, rmf: any, cps: any, champion: any, synonyms: any}
-@returns(200)
+@desc Search for recipes. There are many parameters that you can apply. Starting with the most common, use title_kw to search within a title.
+@optional {any_kw: any # Search anywhere in the recipe for the keyword, folder: any # Search in a specific folder name for the authenticated user, coll: any # Limit to a collection ID number, filter: any # optionally set to either "myrecipes", "try", "favorites","added" to filter to just the authenticated user's recipe set, title_kw: any # Search just in the recipe title for the keyword, userId: any # Set the target userid to search their public recipes, username: any # Set the target username to search their public recipes, token: any, photos: any # if set to true, limit search results to photos only, boostmine: any # if set to true, boost my own recipes in my folders so they show up high in the list (at the expense of other sort orders), include_cat: any # integer of the subcategory you'd like to limit searches to (see the /recipe/categories endpoint for available id numbers). For instance, 58 is "Main Dish &gt; Casseroles"., exclude_cat: any # like include_cat, set this to an integer to exclude a specific category, include_primarycat: any # csv indicating up to three top-level categories -- valid values are [appetizers,bread,breakfast,desserts,drinks,maindish,salads,sidedish,soups,marinades,other], exclude_primarycat: any # csv indicating integer values for up to 3 top-level categories -- valid values are 1...11 [appetizers,bread,breakfast,desserts,drinks,maindish,salads,sidedish,soups,marinades,other], include_ing: any # A CSV representing up to 3 ingredients to include, e.g., tomatoes,corn%20%starch,chicken, exclude_ing: any # A CSV representing up to 3 ingredients to exclude  (Powersearch-capable plan required), cuisine: any # Limit to a specific cuisine. Cooks can enter anything free-form, but the few dozen preconfigured values are Afghan,African,American,American-South,Asian,Australian,Brazilian,Cajun,Canadian,Caribbean,Chinese,Croatian,Cuban,Dessert,Eastern European,English,French,German,Greek,Hawaiian,Hungarian,India,Indian,Irish,Italian,Japanese,Jewish,Korean,Latin,Mediterranean,Mexican,Middle Eastern,Moroccan,Polish,Russian,Scandanavian,Seafood,Southern,Southwestern,Spanish,Tex-Mex,Thai,Vegan,Vegetarian,Vietnamese, db: any, userset: any # If set to a given username, it'll force the search to filter to just that username, servingsMin: any # Limit to yield of a given number size or greater. Note that cooks usually enter recipes by Servings, but sometimes they are posted by "dozen", etc. This parameter simply specifies the minimum number for that value entered in "yield.", totalMins: any # Optional. If supplied, will restrict results to recipes that can be made in {totalMins} or less. (Convert "1 hour, 15 minutes" to 75 before passing in.), maxIngredients: any # Optional. If supplied, will restrict results to recipes that can be made with {maxIngredients} ingredients or less, minIngredients: any # Optional. If supplied, will restrict results to recipes that have at least {minIngredients}, rpp: any # integer; results per page, pg: any # integer: the page number, vtn: any # when set to 1, limit to vegetarian (Powersearch-capable plan required), vgn: any # when set to 1, limit to vegan (Powersearch-capable plan required), chs: any # when set to 1, limit to contains-cheese (Powersearch-capable plan required), glf: any # when set to 1, limit to gluten-free (Powersearch-capable plan required), ntf: any # when set to 1, limit to nut-free (Powersearch-capable plan required), dyf: any # when set to 1, limit to dairy-free (Powersearch-capable plan required), sff: any # when set to 1, limit to seafood-free (Powersearch-capable plan required), slf: any # when set to 1, limit to shellfish-free (Powersearch-capable plan required), tnf: any # when set to 1, limit to tree-nut free (Powersearch-capable plan required), wmf: any # when set to 1, limit to white-meat free (Powersearch-capable plan required), rmf: any # when set to 1, limit to red-meat free (Powersearch-capable plan required), cps: any # when set to 1, recipe contains pasta, set to 0 means contains no pasta (Powersearch-capable plan required), champion: any # optional. When set to 1, this will limit search results to "best of" recipes as determined by various internal editorial and programmatic algorithms. For the most comprehensive results, don't include this parameter., synonyms: any # optional, default is false. When set to true, BigOven will attempt to apply synonyms in search (e.g., excluding pork will also exclude bacon)}
+@returns(200) OK
 
 @endgroup
 
 @group recipe
 @endpoint GET /recipe/categories
-@returns(200)
+@desc Get a list of recipe categories (the ID field can be used for include_cat in search parameters)
+@returns(200) OK
 
 @endpoint GET /recipe/autocomplete
+@desc Given a query, return recipe titles starting with query. Query must be at least 3 chars in length.
 @required {query: any}
 @optional {limit: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /recipe/autocomplete/mine
-@required {query: any, limit: any}
-@returns(200)
+@desc Automatics the complete my recipes.
+@required {query: any # The query., limit: any # The limit.}
+@returns(200) OK
 
 @endpoint GET /recipe/autocomplete/all
-@required {query: any, limit: any}
-@returns(200)
+@desc Automatics the complete all recipes.
+@required {query: any # The query., limit: any # The limit.}
+@returns(200) OK
 
 @endpoint POST /recipe/scan
+@desc POST an image as a new RecipeScan request
 @optional {test: any, devicetype: any, lat: any, lng: any}
-@errors {401, 402, 415, 500}
+@errors {401: Not authorized, 402: Payment required (not enough credits), 415: Bad media type (bad JPG), 500: General error on initiating RecipeScan task; please try again or contact us at support[at]bigoven.com}
 
 @endpoint PUT /recipe
+@desc Update a recipe
 @required {recipe: map}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /recipe
+@desc Add a new recipe
 @required {recipe: map}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 
 @group recipes
 @endpoint GET /recipes/recentviews
-@optional {pg: any, rpp: any}
-@returns(200)
+@desc Get a list of recipes that the authenticated user has most recently viewed
+@optional {pg: any # Page number starting with 1, rpp: any # results per page}
+@returns(200) OK
 
 @endgroup
 
 @group recipe
 @endpoint GET /recipe/{recipeId}/review/{reviewId}
-@required {reviewId: any, recipeId: any}
-@returns(200)
+@desc Get a given review - DEPRECATED. See recipe/review/{reviewId} for the current usage.
+@required {reviewId: any # int, recipeId: any # int}
+@returns(200) OK
 
 @endpoint PUT /recipe/{recipeId}/review/{reviewId}
-@required {reviewId: any, review: map, recipeId: any}
-@returns(200)
+@desc HTTP PUT (update) a recipe review. DEPRECATED. Please see recipe/review/{reviewId} PUT for the new endpoint.
+@required {reviewId: any # reviewId (int), review: map, recipeId: any # recipeId (int)}
+@returns(200) OK
 
 @endpoint DELETE /recipe/{recipeId}/review/{reviewId}
+@desc DEPRECATED! - Deletes a review by recipeId and reviewId. Please use recipe/review/{reviewId} instead.
 @required {recipeId: any, reviewId: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /recipe/review/{reviewId}
+@desc Get a given review by string-style ID. This will return a payload with FeaturedReply, ReplyCount.
 @required {reviewId: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /recipe/review/{reviewId}
+@desc Update a given top-level review.
 @required {reviewId: any, review: map}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /recipe/{recipeId}/review
+@desc Get *my* review for the recipe {recipeId}, where "me" is determined by standard authentication headers
 @required {recipeId: any}
-@returns(200)
+@returns(200) OK
 
 @endpoint POST /recipe/{recipeId}/review
+@desc Add a new review. Only one review can be provided per {userId, recipeId} pair. Otherwise your review will be updated.
 @required {recipeId: any, data: map}
-@returns(200)
+@returns(200) OK
 
 @endpoint GET /recipe/{recipeId}/reviews
-@required {recipeId: any}
-@optional {pg: any, rpp: any}
-@returns(200)
+@desc Get paged list of reviews for a recipe. Each review will have at most one FeaturedReply, as well as a ReplyCount.
+@required {recipeId: any # recipe id (int)}
+@optional {pg: any # the page (int), starting with 1, rpp: any # results per page (int)}
+@returns(200) OK
 
 @endpoint GET /recipe/review/{reviewId}/replies
+@desc Get a paged list of replies for a given review.
 @required {reviewId: any}
-@optional {pg: any, rpp: any}
-@returns(200)
+@optional {pg: any # the page (int), starting with 1, rpp: any # results per page (int)}
+@returns(200) OK
 
 @endpoint POST /recipe/review/{reviewId}/replies
+@desc POST a reply to a given review. The date will be set by server. Note that replies no longer have star ratings, only top-level reviews do.
 @required {reviewId: any, data: map}
-@returns(200)
+@returns(200) OK
 
 @endpoint PUT /recipe/review/replies/{replyId}
+@desc Update (PUT) a reply to a given review. Authenticated user must be the original one that posted the reply.
 @required {replyId: any, data: map}
-@returns(200)
+@returns(200) OK
 
 @endpoint DELETE /recipe/review/replies/{replyId}
+@desc DELETE a reply to a given review. Authenticated user must be the one who originally posted the reply.
 @required {replyId: any}
-@returns(200)
+@returns(200) OK
 
 @endgroup
 

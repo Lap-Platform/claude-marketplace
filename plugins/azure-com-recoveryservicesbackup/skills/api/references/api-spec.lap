@@ -4,156 +4,189 @@
 @base https://management.azure.com
 @version 2016-06-01
 @auth OAuth2
-@common_fields {api-version: any, vaultName: any, resourceGroupName: any, subscriptionId: any}
+@common_fields {api-version: any # Client API version., vaultName: any # The name of the Recovery Services vault., resourceGroupName: any # The name of the resource group associated with the Recovery Services vault., subscriptionId: any # The subscription ID.}
 @endpoints 33
 @hint download_for_search
 @toc Subscriptions(33)
 
 @endpoint POST /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/protectionContainers/{containerName}/protectedItems/{protectedItemName}/recoveryPoints/{recoveryPointId}/revokeInstantItemRecovery
-@required {fabricName: any, containerName: any, protectedItemName: any, recoveryPointId: any}
-@returns(202)
+@desc Revokes an iSCSI connection which can be used to download a script. Executing this script opens a file explorer displaying all recoverable files and folders. This is an asynchronous operation.
+@required {fabricName: any # The fabric name associated with the backup items. The value allowed is Azure., containerName: any # The container name associated with the backup items., protectedItemName: any # The name of the backup items whose files or folders will be restored., recoveryPointId: any # The string that identifies the recovery point. The iSCSI connection will be revoked for this protected data.}
+@returns(202) The revocation was accepted.
 
 @endpoint POST /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/protectionContainers/{containerName}/protectedItems/{protectedItemName}/recoveryPoints/{recoveryPointId}/provisionInstantItemRecovery
-@required {fabricName: any, containerName: any, protectedItemName: any, recoveryPointId: any, resourceILRRequest: any}
-@returns(202)
+@desc Provisions a script which invokes an iSCSI connection to the backup data. Executing this script opens File Explorer which displays the recoverable files and folders. This is an asynchronous operation. To get the provisioning status, call GetProtectedItemOperationResult API.
+@required {fabricName: any # The fabric name associated with the backup items., containerName: any # The container name associated with the backup items., protectedItemName: any # The name of the backup item whose files or folders are to be restored., recoveryPointId: any # The recovery point ID for backup data. The iSCSI connection will be provisioned for this backup data., resourceILRRequest: any # The resource Item Level Recovery (ILR) request.}
+@returns(202) Accepted.
 
 @endpoint POST /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/protectionContainers/{containerName}/protectedItems/{protectedItemName}/recoveryPoints/{recoveryPointId}/restore
-@required {fabricName: any, containerName: any, protectedItemName: any, recoveryPointId: any, resourceRestoreRequest: any}
-@returns(202)
+@desc Restores the specified backup data. This is an asynchronous operation. To know the status of this API call, use GetProtectedItemOperationResult API.
+@required {fabricName: any # The fabric name associated with the backup items., containerName: any # The container name associated with the backup items., protectedItemName: any # The backup item to be restored., recoveryPointId: any # The recovery point ID for the backup data to be restored., resourceRestoreRequest: any # The resource restore request.}
+@returns(202) The data restore operation was accepted.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupPolicies/{policyName}/operations/{operationId}
-@required {policyName: any, operationId: any}
-@returns(200)
+@desc Provides the status of the asynchronous operations like backup or restore. The status can be: in progress, completed, or failed. You can refer to the Operation Status enumeration for the possible states of an operation. Some operations create jobs. This method returns the list of jobs associated with the operation.
+@required {policyName: any # The backup policy name used in this GET operation., operationId: any # The ID associated with this GET operation.}
+@returns(200) OK.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupPolicies/{policyName}/operationResults/{operationId}
-@required {policyName: any, operationId: any}
-@returns(200)
+@desc Provides the result of an operation.
+@required {policyName: any # The backup policy name used in this GET operation., operationId: any # The ID associated with this GET operation.}
+@returns(200) OK.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupPolicies/{policyName}
-@required {policyName: any}
-@returns(200)
+@desc Gets the details of the backup policy associated with the Recovery Services vault. This is an asynchronous operation. Use the GetPolicyOperationResult API to Get the operation status.
+@required {policyName: any # The backup policy name used in this GET operation.}
+@returns(200) OK.
 
 @endpoint PUT /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupPolicies/{policyName}
-@required {policyName: any, resourceProtectionPolicy: any}
-@returns(200)
-@returns(202)
+@desc Creates or modifies a backup policy. This is an asynchronous operation. Use the GetPolicyOperationResult API to Get the operation status.
+@required {policyName: any # The backup policy to be created., resourceProtectionPolicy: any # The resource backup policy.}
+@returns(200) OK.
+@returns(202) Accepted.
 
 @endpoint DELETE /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupPolicies/{policyName}
-@required {policyName: any}
-@returns(200)
-@returns(204)
+@desc Deletes the specified backup policy from your Recovery Services vault. This is an asynchronous operation. Use the GetPolicyOperationResult API to Get the operation status.
+@required {policyName: any # The name of the backup policy to be deleted.}
+@returns(200) OK.
+@returns(204) No content.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupPolicies
-@optional {$filter: any}
-@returns(200)
+@desc Lists the backup policies associated with the Recovery Services vault. The API provides parameters to Get scoped results.
+@optional {$filter: any # The following equation can be used to filter the list of backup policies. backupManagementType eq {AzureIaasVM, MAB, DPM, AzureBackupServer, AzureSql}.}
+@returns(200) OK.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/protectionContainers/{containerName}/operationResults/{operationId}
-@required {fabricName: any, containerName: any, operationId: any}
-@returns(200)
-@returns(202)
-@returns(204)
+@desc Gets the result of any operation on the container.
+@required {fabricName: any # The fabric name associated with the container., containerName: any # The container name used for this GET operation., operationId: any # The operation ID used for this GET operation.}
+@returns(200) OK.
+@returns(202) Accepted.
+@returns(204) No content.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/operationResults/{operationId}
-@required {fabricName: any, operationId: any}
-@returns(202)
-@returns(204)
+@desc Provides the result of the refresh operation triggered by the BeginRefresh operation.
+@required {fabricName: any # The fabric name associated with the container., operationId: any # The operation ID used for this GET operation.}
+@returns(202) Accepted.
+@returns(204) No content.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/protectionContainers/{containerName}
-@required {fabricName: any, containerName: any}
-@returns(200)
+@desc Gets details of the specific container registered to your Recovery Services vault.
+@required {fabricName: any # The fabric name associated with the container., containerName: any # The container name used for this GET operation.}
+@returns(200) OK.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupProtectionContainers
-@optional {$filter: any}
-@returns(200)
+@desc Lists the containers registered to the Recovery Services vault.
+@optional {$filter: any # The following equation is used to sort or filter the containers registered to the vault. providerType eq {AzureIaasVM, MAB, DPM, AzureBackupServer, AzureSql} and status eq {Unknown, NotRegistered, Registered, Registering} and friendlyName eq {containername} and backupManagementType eq {AzureIaasVM, MAB, DPM, AzureBackupServer, AzureSql}.}
+@returns(200) OK.
 
 @endpoint POST /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/refreshContainers
-@required {fabricName: any}
-@returns(202)
+@desc Discovers the containers in the subscription that can be protected in a Recovery Services vault. This is an asynchronous operation. To learn the status of the operation, use the GetRefreshOperationResult API.
+@required {fabricName: any # The fabric name associated with the container.}
+@returns(202) Accepted.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/protectionContainers/{containerName}/protectedItems/{protectedItemName}/recoveryPoints/{recoveryPointId}
-@required {fabricName: any, containerName: any, protectedItemName: any, recoveryPointId: any}
-@returns(200)
+@desc Provides the backup data for the RecoveryPointID. This is an asynchronous operation. To learn the status of the operation, call the GetProtectedItemOperationResult API.
+@required {fabricName: any # The fabric name associated with backup item., containerName: any # The container name associated with backup item., protectedItemName: any # The name of the backup item used in this GET operation., recoveryPointId: any # The RecoveryPointID associated with this GET operation.}
+@returns(200) OK.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/protectionContainers/{containerName}/protectedItems/{protectedItemName}/recoveryPoints
-@required {fabricName: any, containerName: any, protectedItemName: any}
-@optional {$filter: any}
-@returns(200)
+@desc Lists the recovery points, or backup copies, for the specified backup item.
+@required {fabricName: any # The fabric name associated with the backup item., containerName: any # The container name associated with the backup item., protectedItemName: any # The name of backup item used in this GET operation.}
+@optional {$filter: any # startDate eq {yyyy-mm-dd hh:mm:ss PM} and endDate { yyyy-mm-dd hh:mm:ss PM}.}
+@returns(200) OK.
 
 @endpoint POST /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/protectionContainers/{containerName}/protectedItems/{protectedItemName}/backup
-@required {fabricName: any, containerName: any, protectedItemName: any, resourceBackupRequest: any}
-@returns(202)
+@desc Triggers the backup job for the specified backup item. This is an asynchronous operation. To know the status of the operation, call GetProtectedItemOperationResult API.
+@required {fabricName: any # The fabric name associated with the backup item., containerName: any # The container name associated with the backup item., protectedItemName: any # The name of backup item used in this POST operation., resourceBackupRequest: any # The resource backup request.}
+@returns(202) Accepted
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/protectionContainers/{containerName}/protectedItems/{protectedItemName}/operationsStatus/{operationId}
-@required {fabricName: any, containerName: any, protectedItemName: any, operationId: any}
-@returns(200)
+@desc Gets the status of an operation such as triggering a backup or restore. The status can be: In progress, Completed, or Failed. You can refer to the OperationStatus enum for all the possible states of the operation. Some operations create jobs. This method returns the list of jobs associated with the operation.
+@required {fabricName: any # The fabric name associated with the backup item., containerName: any # The container name associated with the backup item., protectedItemName: any # The name of backup item used in this GET operation., operationId: any # The OperationID used in this GET operation.}
+@returns(200) OK.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/protectionContainers/{containerName}/protectedItems/{protectedItemName}/operationResults/{operationId}
-@required {fabricName: any, containerName: any, protectedItemName: any, operationId: any}
-@returns(200)
-@returns(202)
-@returns(204)
+@desc Gets the result of any operation on the backup item.
+@required {fabricName: any # The fabric name associated with the backup item., containerName: any # The container name associated with the backup item., protectedItemName: any # The name of backup item used in this GET operation., operationId: any # The OperationID used in this GET operation.}
+@returns(200) OK.
+@returns(202) Accepted.
+@returns(204) No content.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupProtectedItems
-@optional {$filter: any, $skipToken: any}
-@returns(200)
+@desc Provides a pageable list of all items in a subscription, that can be protected.
+@optional {$filter: any # itemType eq { VM , FileFolder , AzureSqlDb , SQLDB , Exchange , Sharepoint , DPMUnknown } and providerType eq { AzureIaasVM, MAB, DPM, AzureBackupServer, AzureSql } and policyName eq {policyName} and containerName eq {containername} and backupManagementType eq { AzureIaasVM, MAB, DPM, AzureBackupServer, AzureSql }., $skipToken: any # The Skip Token filter.}
+@returns(200) OK.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/protectionContainers/{containerName}/protectedItems/{protectedItemName}
-@required {fabricName: any, containerName: any, protectedItemName: any}
-@optional {$filter: any}
-@returns(200)
+@desc Provides the details of the backup item. This is an asynchronous operation. To know the status of the operation, call the GetItemOperationResult API.
+@required {fabricName: any # The fabric name associated with the backup item., containerName: any # The container name associated with the backup item., protectedItemName: any # The backup item name used in this GET operation.}
+@optional {$filter: any # expand eq {extendedInfo}. This filter enables you to choose (or filter) specific items in the list of backup items.}
+@returns(200) OK.
 
 @endpoint PUT /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/protectionContainers/{containerName}/protectedItems/{protectedItemName}
-@required {fabricName: any, containerName: any, protectedItemName: any, resourceProtectedItem: any}
-@returns(202)
+@desc This operation enables an item to be backed up, or modifies the existing backup policy information for an item that has been backed up. This is an asynchronous operation. To learn the status of the operation, call the GetItemOperationResult API.
+@required {fabricName: any # The fabric name associated with the backup item., containerName: any # The container name associated with the backup item., protectedItemName: any # The name of the backup item., resourceProtectedItem: any # The resource backup item.}
+@returns(202) Accepted.
 
 @endpoint DELETE /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupFabrics/{fabricName}/protectionContainers/{containerName}/protectedItems/{protectedItemName}
-@required {fabricName: any, containerName: any, protectedItemName: any}
-@returns(202)
-@returns(204)
+@desc Used to disable the backup job for an item within a container. This is an asynchronous operation. To learn the status of the request, call the GetItemOperationResult API.
+@required {fabricName: any # The fabric name associated with the backup item., containerName: any # The container name associated with the backup item., protectedItemName: any # The backup item to be deleted.}
+@returns(202) Accepted.
+@returns(204) No content.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupProtectableItems
-@optional {$filter: any, $skipToken: any}
-@returns(200)
+@desc Based on the query filter and the pagination parameters, this operation provides a pageable list of objects within the subscription that can be protected.
+@optional {$filter: any # Using the following query filters, you can sort a specific backup item based on: type of backup item, status, name of the item, and more.  providerType eq { AzureIaasVM, MAB, DPM, AzureBackupServer, AzureSql } and status eq { NotProtected , Protecting , Protected } and friendlyName {name} and skipToken eq {string which provides the next set of list} and topToken eq {int} and backupManagementType eq { AzureIaasVM, MAB, DPM, AzureBackupServer, AzureSql }., $skipToken: any # The Skip Token filter.}
+@returns(200) OK
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupJobs/operationResults/{operationId}
-@required {operationId: any}
-@returns(200)
-@returns(202)
+@desc Gets the result of the operation triggered by the ExportJob API.
+@required {operationId: any # The ID associated with the export job.}
+@returns(200) OK.
+@returns(202) Accepted
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupJobs/{jobName}/operationResults/{operationId}
-@required {jobName: any, operationId: any}
-@returns(200)
-@returns(202)
-@returns(204)
+@desc Gets the result of the operation.
+@required {jobName: any # Job name associated with this GET operation., operationId: any # OperationID associated with this GET operation.}
+@returns(200) OK.
+@returns(202) Accepted.
+@returns(204) No content.
 
 @endpoint POST /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupJobsExport
-@optional {$filter: any}
-@returns(202)
+@desc Exports all jobs for a given Shared Access Signatures (SAS) URL. The SAS URL expires within 15 minutes of its creation.
+@optional {$filter: any # The OData filter options. status eq { InProgress , Completed , Failed , CompletedWithWarnings , Cancelled , Cancelling } and backupManagementType eq {AzureIaasVM, MAB, DPM, AzureBackupServer, AzureSql } and operation eq { ConfigureBackup , Backup , Restore , DisableBackup , DeleteBackupData } and jobId eq {guid} and startTime eq { yyyy-mm-dd hh:mm:ss PM } and endTime eq { yyyy-mm-dd hh:mm:ss PM }.}
+@returns(202) Accepted.
 
 @endpoint POST /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupJobs/{jobName}/cancel
-@required {jobName: any}
-@returns(202)
+@desc Cancels the job. This is an asynchronous operation. To know the status of the cancellation, call the GetCancelOperationResult API.
+@required {jobName: any # Name of the job to cancel.}
+@returns(202) Accepted.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupJobs/{jobName}
-@required {jobName: any}
-@returns(200)
+@desc Gets extended information associated with the job.
+@required {jobName: any # Name of the job associated with this GET operation.}
+@returns(200) OK.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupJobs
-@optional {$filter: any, $skipToken: any}
-@returns(200)
+@desc Provides a pageable list of jobs.
+@optional {$filter: any # The following equation can be used to filter the list of jobs based on status, type, start date, and end date. status eq { InProgress , Completed , Failed , CompletedWithWarnings , Cancelled , Cancelling } and backupManagementType eq {AzureIaasVM, MAB, DPM, AzureBackupServer, AzureSql } and operation eq { ConfigureBackup , Backup , Restore , DisableBackup , DeleteBackupData } and jobId eq {guid} and startTime eq { yyyy-mm-dd hh:mm:ss PM } and endTime eq { yyyy-mm-dd hh:mm:ss PM }., $skipToken: any # The Skip Token filter.}
+@returns(200) OK.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupOperations/{operationId}
-@required {operationId: any}
-@returns(200)
+@desc Gets the status of an operation such as triggering a backup or restore. The status can be In progress, Completed or Failed. You can refer to the OperationStatus enum for all the possible states of an operation. Some operations create jobs. This method returns the list of jobs when the operation is complete.
+@required {operationId: any # The ID of the operation.}
+@returns(200) OK.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupOperationResults/{operationId}
-@required {operationId: any}
-@returns(200)
-@returns(202)
-@returns(204)
+@desc Provides the status of the delete operations, for example, deleting a backup item. Once the operation starts, the response status code is Accepted. The response status code remains in this state until the operation reaches completion. On successful completion, the status code changes to OK. This method expects OperationID as an argument. OperationID is part of the Location header of the operation response.
+@required {operationId: any # The ID of the operation.}
+@returns(200) OK.
+@returns(202) Accepted.
+@returns(204) No content.
 
 @endpoint GET /Subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RecoveryServices/vaults/{vaultName}/backupEngines
-@optional {$filter: any, $skipToken: any}
-@returns(200)
+@desc The backup management servers registered to a Recovery Services vault. This returns a pageable list of servers.
+@optional {$filter: any # Use this filter to choose the specific backup management server. backupManagementType { AzureIaasVM, MAB, DPM, AzureBackupServer, AzureSql }., $skipToken: any # The Skip Token filter.}
+@returns(200) OK.
 
 @end

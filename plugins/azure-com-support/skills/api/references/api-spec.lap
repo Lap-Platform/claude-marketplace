@@ -4,71 +4,85 @@
 @base https://management.azure.com
 @version 2019-05-01-preview
 @auth OAuth2
-@common_fields {api-version: any}
+@common_fields {api-version: any # Api version}
 @endpoints 14
 @toc providers(5), subscriptions(9)
 
 @group providers
 @endpoint GET /providers/Microsoft.Support/operations
-@returns(200)
+@desc This lists all the available Microsoft Support REST API operations.
+@returns(200) Successfully retrieved list of operations.
 
 @endpoint GET /providers/Microsoft.Support/services
-@returns(200)
+@desc Lists all the Azure services available for support ticket creation. Here are the Service Ids for **Billing**, **Subscription Management**, and **Service and subscription limits (Quotas)** issues: <br/><table><tr><td><u>Issue type</u></td><td><u>Service Id</u></td></tr><tr><td>Billing</td><td>'/providers/Microsoft.Support/services/517f2da6-78fd-0498-4e22-ad26996b1dfc'</td></tr><tr><td>Subscription Management</td><td>'/providers/Microsoft.Support/services/f3dc5421-79ef-1efa-41a5-42bf3cbb52c6'</td></tr><tr><td>Quota</td><td>'/providers/Microsoft.Support/services/06bfd9d3-516b-d5c6-5802-169c800dec89'</td></tr></table> <br/><br/> For **Technical** issues, select the Service Id that maps to the Azure service/product as displayed in the **Services** drop-down list on the Azure portal's <a target='_blank' href='https://portal.azure.com/#blade/Microsoft_Azure_Support/HelpAndSupportBlade/overview'>New support request</a> page. <br/><br/> Always use the service and it's corresponding problem classification(s) obtained programmatically for support ticket creation. This practice ensures that you always have the most recent set of service and problem classification Ids.
+@returns(200) Successfully retrieved list of Azure services available for support.
 
 @endpoint GET /providers/Microsoft.Support/services/{serviceName}
-@required {serviceName: any}
-@returns(200)
+@desc Gets a specific Azure service for support ticket creation.
+@required {serviceName: any # Name of Azure service}
+@returns(200) Successfully retrieved Azure service for support ticket creation.
 
 @endpoint GET /providers/Microsoft.Support/services/{serviceName}/problemClassifications
-@required {serviceName: any}
-@returns(200)
+@desc Lists all the problem classifications (categories) available for a specific Azure service.<br/><br/> Always use the service and problem classifications obtained programmatically. This practice ensures that you always have the most recent set of service and problem classification Ids.
+@required {serviceName: any # Name of Azure service for which the problem classifications need to be retrieved.}
+@returns(200) Successfully retrieved list of problem classifications for the specified Azure service.
 
 @endpoint GET /providers/Microsoft.Support/services/{serviceName}/problemClassifications/{problemClassificationName}
-@required {serviceName: any, problemClassificationName: any}
-@returns(200)
+@desc Gets the details of a specific problem classification for a specific Azure service.
+@required {serviceName: any # Name of Azure service available for support., problemClassificationName: any # Name of problem classification.}
+@returns(200) Successfully retrieved problem classification details.
 
 @endgroup
 
 @group subscriptions
 @endpoint POST /subscriptions/{subscriptionId}/providers/Microsoft.Support/checkNameAvailability
-@required {checkNameAvailabilityInput: map, subscriptionId: any}
-@returns(200)
+@desc Check the availability of a resource name. This API should to be used to check the uniqueness of the name for support ticket creation for the selected subscription.
+@required {checkNameAvailabilityInput: map # Input to check., subscriptionId: any # Azure subscription id}
+@returns(200) OK. The request has succeeded.
 
 @endpoint GET /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets
-@required {subscriptionId: any}
-@optional {$top: any, $filter: any}
-@returns(200)
+@desc Lists all the support tickets for an Azure subscription. <br/><br/>You can also filter the support tickets by <i>Status</i> or <i>CreatedDate</i> using the $filter parameter. Output will be a paged result with <i>nextLink</i>, using which you can retrieve the next set of support tickets. <br/><br/>Support ticket data is available for 18 months after ticket creation. If a ticket was created more than 18 months ago, a request for data might cause an error.
+@required {subscriptionId: any # Azure subscription id}
+@optional {$top: any # The number of values to return in the collection. Default is 25 and max is 100., $filter: any # The filter to apply on the operation. We support 'odata v4.0' filter semantics. <a target='_blank' href='https://docs.microsoft.com/odata/concepts/queryoptions-overview'>Learn more</a> <br/><i>Status</i> filter can only be used with 'eq' operator. For <i>CreatedDate</i> filter, the supported operators are 'gt' and 'ge'. When using both filters, combine them using the logical 'AND'.}
+@returns(200) Successfully retrieved support tickets.
 
 @endpoint GET /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}
-@required {supportTicketName: any, subscriptionId: any}
-@returns(200)
+@desc Gets details for a specific support ticket in an Azure subscription. <br/><br/>Support ticket data is available for 18 months after ticket creation. If a ticket was created more than 18 months ago, a request for data might cause an error.
+@required {supportTicketName: any # Support ticket name, subscriptionId: any # Azure subscription id}
+@returns(200) Successfully retrieved support ticket.
 
 @endpoint PATCH /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}
-@required {supportTicketName: any, updateSupportTicket: map, subscriptionId: any}
-@returns(200)
+@desc This API allows you to update the severity level or your contact information in the support ticket. <br/><br/> Note: The severity levels cannot be changed if a support ticket is actively being worked upon by an Azure support engineer. In such a case, contact your support engineer to request severity update by adding a new communication using the Communications API.
+@required {supportTicketName: any # Support ticket name, updateSupportTicket: map # UpdateSupportTicket object, subscriptionId: any # Azure subscription id}
+@returns(200) Successfully updated support ticket.
 
 @endpoint PUT /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}
-@required {supportTicketName: any, createSupportTicketParameters: map, subscriptionId: any}
-@returns(200)
-@returns(202)
+@desc Creates a new support ticket for Quota increase, Technical, Billing, and Subscription Management issues for the specified subscription. <br/><br/>A paid technical support plan is required to create a support ticket using this API. <a href='https://aka.ms/supportticketAPI'>Learn more</a> <br/><br/> Use the Services API to map the right Service Id to the issue type. For example: For billing tickets set *serviceId* to *'/providers/Microsoft.Support/services/517f2da6-78fd-0498-4e22-ad26996b1dfc'*. <br/> For Technical issues, the Service id will map to the Azure service you want to raise a support ticket for. <br/><br/>Always call the Services and ProblemClassifications API to get the most recent set of services and problem categories required for support ticket creation.
+@required {supportTicketName: any # Support ticket name., createSupportTicketParameters: map # Support ticket request payload., subscriptionId: any # Azure subscription id}
+@returns(200) OK - SupportTicket created successfully
+@returns(202) Accepted, SupportTicket will be created asynchronously
 
 @endpoint POST /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/checkNameAvailability
-@required {supportTicketName: any, checkNameAvailabilityInput: map, subscriptionId: any}
-@returns(200)
+@desc Check the availability of a resource name. This API should to be used to check the uniqueness of the name for adding a new communication to the support ticket.
+@required {supportTicketName: any # Support ticket name, checkNameAvailabilityInput: map # Input to check, subscriptionId: any # Azure subscription id}
+@returns(200) OK. The request has succeeded.
 
 @endpoint GET /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/communications
-@required {supportTicketName: any, subscriptionId: any}
-@optional {$top: any, $filter: any}
-@returns(200)
+@desc Lists all communications (attachments not included) for a support ticket. <br/></br> You can also filter support ticket communications by <i>CreatedDate</i>�or <i>CommunicationType</i> using the $filter parameter. The only type of communication supported today is <i>Web</i>. Output will be a paged result with <i>nextLink</i>, using which you can retrieve the next set of Communication results. <br/><br/> Support ticket data is available for 18 months after ticket creation. If a ticket was created more than 18 months ago, a request for data might cause an error.
+@required {supportTicketName: any # Support ticket name, subscriptionId: any # Azure subscription id}
+@optional {$top: any # The number of values to return in the collection. Default is 10 and max is 10., $filter: any # The filter to apply on the operation. You can filter by communicationType and createdDate properties. CommunicationType supports Equals ('eq') operator and createdDate supports Greater Than ('gt') and Greater Than or Equals ('ge') operators. You may combine the CommunicationType and CreatedDate filters by Logical And ('and') operator.}
+@returns(200) Successfully retrieved communications for a support ticket.
 
 @endpoint GET /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/communications/{communicationName}
-@required {supportTicketName: any, communicationName: any, subscriptionId: any}
-@returns(200)
+@desc Returns details of a specific communication in a support ticket.
+@required {supportTicketName: any # Support ticket name, communicationName: any # Communication name, subscriptionId: any # Azure subscription id}
+@returns(200) Successfully retrieved communication details.
 
 @endpoint PUT /subscriptions/{subscriptionId}/providers/Microsoft.Support/supportTickets/{supportTicketName}/communications/{communicationName}
-@required {supportTicketName: any, communicationName: any, createCommunicationParameters: map, subscriptionId: any}
-@returns(200)
-@returns(202)
+@desc Adds a new customer communication to an Azure support ticket. Adding attachments are not currently supported via the API. <br/>To add a file to a support ticket, visit the <a target='_blank' href='https://portal.azure.com/#blade/Microsoft_Azure_Support/HelpAndSupportBlade/managesupportrequest'>Manage support ticket</a> page in the Azure portal, select the support ticket, and use the file upload control to add a new file.
+@required {supportTicketName: any # Support ticket name, communicationName: any # Communication name, createCommunicationParameters: map # Communication object, subscriptionId: any # Azure subscription id}
+@returns(200) OK - Communication created successfully.
+@returns(202) Accepted, Communication will be created asynchronously
 
 @endgroup
 

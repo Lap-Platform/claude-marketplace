@@ -10,216 +10,264 @@
 
 @group domains
 @endpoint GET /domains
-@returns(200)
+@desc Get a list of the available domains.
+@returns(200) OK
 
 @endpoint GET /domains/{domainId}
-@required {domainId: any}
-@returns(200)
+@desc Get information about a specific domain.
+@required {domainId: any # The id of the domain to get information about.}
+@returns(200) OK
 
 @endgroup
 
 @group projects
 @endpoint GET /projects
-@returns(200)
+@desc Get your projects.
+@returns(200) OK
 
 @endpoint POST /projects
-@required {name: any}
-@optional {description: any, domainId: any, classificationType: any, targetExportPlatforms: any}
-@returns(200)
+@desc Create a project.
+@required {name: any # Name of the project.}
+@optional {description: any # The description of the project., domainId: any # The id of the domain to use for this project. Defaults to General., classificationType: any # The type of classifier to create for this project., targetExportPlatforms: any # List of platforms the trained model is intending exporting to.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}
-@required {projectId: any}
-@returns(200)
+@desc Get a specific project.
+@required {projectId: any # The id of the project to get.}
+@returns(200) OK
 
 @endpoint DELETE /projects/{projectId}
-@required {projectId: any}
-@returns(204)
+@desc Delete a specific project.
+@required {projectId: any # The project id.}
+@returns(204) No Content
 
 @endpoint PATCH /projects/{projectId}
-@required {projectId: any, updatedProject: map}
-@returns(200)
+@desc Update a specific project.
+@required {projectId: any # The id of the project to update., updatedProject: map # The updated project model.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}/export
-@required {projectId: any}
-@returns(200)
+@desc Exports a project.
+@required {projectId: any # The project id of the project to export.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/images
-@required {projectId: any, imageData: any}
-@optional {tagIds: any}
-@returns(200)
+@desc This API accepts body content as multipart/form-data and application/octet-stream. When using multipart
+@required {projectId: any # The project id., imageData: any # Binary image data. Supported formats are JPEG, GIF, PNG, and BMP. Supports images up to 6MB.}
+@optional {tagIds: any # The tags ids with which to tag each image. Limited to 20.}
+@returns(200) OK
 
 @endpoint DELETE /projects/{projectId}/images
-@required {projectId: any}
-@optional {imageIds: any, allImages: any, allIterations: any}
-@returns(202)
-@returns(204)
+@desc Delete images from the set of training images.
+@required {projectId: any # The project id.}
+@optional {imageIds: any # Ids of the images to be deleted. Limited to 256 images per batch., allImages: any # Flag to specify delete all images, specify this flag or a list of images. Using this flag will return a 202 response to indicate the images are being deleted., allIterations: any # Removes these images from all iterations, not just the current workspace. Using this flag will return a 202 response to indicate the images are being deleted.}
+@returns(202) Accepted
+@returns(204) No Content
 
 @endpoint POST /projects/{projectId}/images/{imageId}/regionproposals
-@required {projectId: any, imageId: any}
-@returns(200)
+@desc This API will get region proposals for an image along with confidences for the region. It returns an empty array if no proposals are found.
+@required {projectId: any # The project id., imageId: any # The image id.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/images/files
-@required {projectId: any, batch: map}
-@returns(200)
+@desc This API accepts a batch of files, and optionally tags, to create images. There is a limit of 64 images and 20 tags.
+@required {projectId: any # The project id., batch: map # The batch of image files to add. Limited to 64 images and 20 tags per batch.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}/images/id
-@required {projectId: any}
-@optional {imageIds: any, iterationId: any}
-@returns(200)
+@desc This API will return a set of Images for the specified tags and optionally iteration. If no iteration is specified the
+@required {projectId: any # The project id.}
+@optional {imageIds: any # The list of image ids to retrieve. Limited to 256., iterationId: any # The iteration id. Defaults to workspace.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/images/predictions
-@required {projectId: any, batch: map}
-@returns(200)
+@desc This API creates a batch of images from predicted images specified. There is a limit of 64 images and 20 tags.
+@required {projectId: any # The project id., batch: map # Image and tag ids. Limited to 64 images and 20 tags per batch.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/images/regions
-@required {projectId: any, batch: map}
-@returns(200)
+@desc This API accepts a batch of image regions, and optionally tags, to update existing images with region information.
+@required {projectId: any # The project id., batch: map # Batch of image regions which include a tag and bounding box. Limited to 64.}
+@returns(200) OK
 
 @endpoint DELETE /projects/{projectId}/images/regions
-@required {projectId: any, regionIds: any}
-@returns(204)
+@desc Delete a set of image regions.
+@required {projectId: any # The project id., regionIds: any # Regions to delete. Limited to 64.}
+@returns(204) No Content
 
 @endpoint POST /projects/{projectId}/images/suggested
-@required {projectId: any, iterationId: any, query: map}
-@returns(200)
+@desc This API will fetch untagged images filtered by suggested tags Ids. It returns an empty array if no images are found.
+@required {projectId: any # The project id., iterationId: any # IterationId to use for the suggested tags and regions., query: map # Contains properties we need to query suggested images.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/images/suggested/count
-@required {projectId: any, iterationId: any, query: map}
-@returns(200)
+@desc This API takes in tagIds to get count of untagged images per suggested tags for a given threshold.
+@required {projectId: any # The project id., iterationId: any # IterationId to use for the suggested tags and regions., query: map # Model that contains tagIds, threshold and projectType to query by.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}/images/tagged
-@required {projectId: any}
-@optional {iterationId: any, tagIds: any, orderBy: any, take: any, skip: any}
-@returns(200)
+@desc This API supports batching and range selection. By default it will only return first 50 images matching images.
+@required {projectId: any # The project id.}
+@optional {iterationId: any # The iteration id. Defaults to workspace., tagIds: any # A list of tags ids to filter the images. Defaults to all tagged images when null. Limited to 20., orderBy: any # The ordering. Defaults to newest., take: any # Maximum number of images to return. Defaults to 50, limited to 256., skip: any # Number of images to skip before beginning the image batch. Defaults to 0.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}/images/tagged/count
-@required {projectId: any}
-@optional {iterationId: any, tagIds: any}
-@returns(200)
+@desc The filtering is on an and/or relationship. For example, if the provided tag ids are for the "Dog" and
+@required {projectId: any # The project id.}
+@optional {iterationId: any # The iteration id. Defaults to workspace., tagIds: any # A list of tags ids to filter the images to count. Defaults to all tags when null.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/images/tags
-@required {projectId: any, batch: map}
-@returns(200)
+@desc Associate a set of images with a set of tags.
+@required {projectId: any # The project id., batch: map # Batch of image tags. Limited to 128 tags per batch.}
+@returns(200) OK
 
 @endpoint DELETE /projects/{projectId}/images/tags
-@required {projectId: any, imageIds: any, tagIds: any}
-@returns(204)
+@desc Remove a set of tags from a set of images.
+@required {projectId: any # The project id., imageIds: any # Image ids. Limited to 64 images., tagIds: any # Tags to be deleted from the specified images. Limited to 20 tags.}
+@returns(204) No Content
 
 @endpoint GET /projects/{projectId}/images/untagged
-@required {projectId: any}
-@optional {iterationId: any, orderBy: any, take: any, skip: any}
-@returns(200)
+@desc This API supports batching and range selection. By default it will only return first 50 images matching images.
+@required {projectId: any # The project id.}
+@optional {iterationId: any # The iteration id. Defaults to workspace., orderBy: any # The ordering. Defaults to newest., take: any # Maximum number of images to return. Defaults to 50, limited to 256., skip: any # Number of images to skip before beginning the image batch. Defaults to 0.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}/images/untagged/count
-@required {projectId: any}
-@optional {iterationId: any}
-@returns(200)
+@desc This API returns the images which have no tags for a given project and optionally an iteration. If no iteration is specified the
+@required {projectId: any # The project id.}
+@optional {iterationId: any # The iteration id. Defaults to workspace.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/images/urls
-@required {projectId: any, batch: map}
-@returns(200)
+@desc This API accepts a batch of urls, and optionally tags, to create images. There is a limit of 64 images and 20 tags.
+@required {projectId: any # The project id., batch: map # Image urls and tag ids. Limited to 64 images and 20 tags per batch.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}/iterations
-@required {projectId: any}
-@returns(200)
+@desc Get iterations for the project.
+@required {projectId: any # The project id.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}/iterations/{iterationId}
-@required {projectId: any, iterationId: any}
-@returns(200)
+@desc Get a specific iteration.
+@required {projectId: any # The id of the project the iteration belongs to., iterationId: any # The id of the iteration to get.}
+@returns(200) OK
 
 @endpoint DELETE /projects/{projectId}/iterations/{iterationId}
-@required {projectId: any, iterationId: any}
-@returns(204)
+@desc Delete a specific iteration of a project.
+@required {projectId: any # The project id., iterationId: any # The iteration id.}
+@returns(204) No Content
 
 @endpoint PATCH /projects/{projectId}/iterations/{iterationId}
-@required {projectId: any, iterationId: any, updatedIteration: map}
-@returns(200)
+@desc Update a specific iteration.
+@required {projectId: any # Project id., iterationId: any # Iteration id., updatedIteration: map # The updated iteration model.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}/iterations/{iterationId}/export
-@required {projectId: any, iterationId: any}
-@returns(200)
+@desc Get the list of exports for a specific iteration.
+@required {projectId: any # The project id., iterationId: any # The iteration id.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/iterations/{iterationId}/export
-@required {projectId: any, iterationId: any, platform: any}
-@optional {flavor: any}
-@returns(200)
+@desc Export a trained iteration.
+@required {projectId: any # The project id., iterationId: any # The iteration id., platform: any # The target platform.}
+@optional {flavor: any # The flavor of the target platform.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}/iterations/{iterationId}/performance
-@required {projectId: any, iterationId: any}
-@optional {threshold: any, overlapThreshold: any}
-@returns(200)
+@desc Get detailed performance information about an iteration.
+@required {projectId: any # The id of the project the iteration belongs to., iterationId: any # The id of the iteration to get.}
+@optional {threshold: any # The threshold used to determine true predictions., overlapThreshold: any # If applicable, the bounding box overlap threshold used to determine true predictions.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}/iterations/{iterationId}/performance/images
-@required {projectId: any, iterationId: any}
-@optional {tagIds: any, orderBy: any, take: any, skip: any}
-@returns(200)
+@desc This API supports batching and range selection. By default it will only return first 50 images matching images.
+@required {projectId: any # The project id., iterationId: any # The iteration id. Defaults to workspace.}
+@optional {tagIds: any # A list of tags ids to filter the images. Defaults to all tagged images when null. Limited to 20., orderBy: any # The ordering. Defaults to newest., take: any # Maximum number of images to return. Defaults to 50, limited to 256., skip: any # Number of images to skip before beginning the image batch. Defaults to 0.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}/iterations/{iterationId}/performance/images/count
-@required {projectId: any, iterationId: any}
-@optional {tagIds: any}
-@returns(200)
+@desc The filtering is on an and/or relationship. For example, if the provided tag ids are for the "Dog" and
+@required {projectId: any # The project id., iterationId: any # The iteration id. Defaults to workspace.}
+@optional {tagIds: any # A list of tags ids to filter the images to count. Defaults to all tags when null.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/iterations/{iterationId}/publish
-@required {projectId: any, iterationId: any, publishName: any, predictionId: any}
-@returns(200)
+@desc Publish a specific iteration.
+@required {projectId: any # The project id., iterationId: any # The iteration id., publishName: any # The name to give the published iteration., predictionId: any # The id of the prediction resource to publish to.}
+@returns(200) OK
 
 @endpoint DELETE /projects/{projectId}/iterations/{iterationId}/publish
-@required {projectId: any, iterationId: any}
-@returns(204)
+@desc Unpublish a specific iteration.
+@required {projectId: any # The project id., iterationId: any # The iteration id.}
+@returns(204) No Content
 
 @endpoint DELETE /projects/{projectId}/predictions
-@required {projectId: any, ids: any}
-@returns(204)
+@desc Delete a set of predicted images and their associated prediction results.
+@required {projectId: any # The project id., ids: any # The prediction ids. Limited to 64.}
+@returns(204) No Content
 
 @endpoint POST /projects/{projectId}/predictions/query
-@required {projectId: any, query: map}
-@returns(200)
+@desc Get images that were sent to your prediction endpoint.
+@required {projectId: any # The project id., query: map # Parameters used to query the predictions. Limited to combining 2 tags.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/quicktest/image
-@required {projectId: any, imageData: any}
-@optional {iterationId: any, store: any}
-@returns(200)
+@desc Quick test an image.
+@required {projectId: any # The project id., imageData: any # Binary image data. Supported formats are JPEG, GIF, PNG, and BMP. Supports images up to 6MB.}
+@optional {iterationId: any # Optional. Specifies the id of a particular iteration to evaluate against. The default iteration for the project will be used when not specified., store: any # Optional. Specifies whether or not to store the result of this prediction. The default is true, to store.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/quicktest/url
-@required {projectId: any, imageUrl: map}
-@optional {iterationId: any, store: any}
-@returns(200)
+@desc Quick test an image url.
+@required {projectId: any # The project to evaluate against., imageUrl: map # An ImageUrl that contains the url of the image to be evaluated.}
+@optional {iterationId: any # Optional. Specifies the id of a particular iteration to evaluate against. The default iteration for the project will be used when not specified., store: any # Optional. Specifies whether or not to store the result of this prediction. The default is true, to store.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}/tags
-@required {projectId: any}
-@optional {iterationId: any}
-@returns(200)
+@desc Get the tags for a given project and iteration.
+@required {projectId: any # The project id.}
+@optional {iterationId: any # The iteration id. Defaults to workspace.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/tags
-@required {projectId: any, name: any}
-@optional {description: any, type: any}
-@returns(200)
+@desc Create a tag for the project.
+@required {projectId: any # The project id., name: any # The tag name.}
+@optional {description: any # Optional description for the tag., type: any # Optional type for the tag.}
+@returns(200) OK
 
 @endpoint GET /projects/{projectId}/tags/{tagId}
-@required {projectId: any, tagId: any}
-@optional {iterationId: any}
-@returns(200)
+@desc Get information about a specific tag.
+@required {projectId: any # The project this tag belongs to., tagId: any # The tag id.}
+@optional {iterationId: any # The iteration to retrieve this tag from. Optional, defaults to current training set.}
+@returns(200) OK
 
 @endpoint DELETE /projects/{projectId}/tags/{tagId}
-@required {projectId: any, tagId: any}
-@returns(204)
+@desc Delete a tag from the project.
+@required {projectId: any # The project id., tagId: any # Id of the tag to be deleted.}
+@returns(204) No Content
 
 @endpoint PATCH /projects/{projectId}/tags/{tagId}
-@required {projectId: any, tagId: any, updatedTag: map}
-@returns(200)
+@desc Update a tag.
+@required {projectId: any # The project id., tagId: any # The id of the target tag., updatedTag: map # The updated tag model.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/tagsandregions/suggestions
-@required {projectId: any, iterationId: any, imageIds: any}
-@returns(200)
+@desc This API will get suggested tags and regions for an array/batch of untagged images along with confidences for the tags. It returns an empty array if no tags are found.
+@required {projectId: any # The project id., iterationId: any # IterationId to use for tag and region suggestion., imageIds: any # Array of image ids tag suggestion are needed for. Use GetUntaggedImages API to get imageIds.}
+@returns(200) OK
 
 @endpoint POST /projects/{projectId}/train
-@required {projectId: any}
-@optional {trainingType: any, reservedBudgetInHours: any, forceTrain: any, notificationEmailAddress: any, trainingParameters: map}
-@returns(200)
+@desc Queues project for training.
+@required {projectId: any # The project id.}
+@optional {trainingType: any # The type of training to use to train the project (default: Regular)., reservedBudgetInHours: any # The number of hours reserved as budget for training (if applicable)., forceTrain: any # Whether to force train even if dataset and configuration does not change (default: false)., notificationEmailAddress: any # The email address to send notification to when training finishes (default: null)., trainingParameters: map # Additional training parameters passed in to control how the project is trained.}
+@returns(200) OK
 
 @endpoint POST /projects/import
-@required {token: any}
-@returns(200)
+@desc Imports a project.
+@required {token: any # Token generated from the export project call.}
+@returns(200) OK
 
 @endgroup
 

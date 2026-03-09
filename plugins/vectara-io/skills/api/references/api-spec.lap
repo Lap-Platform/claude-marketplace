@@ -4,213 +4,246 @@
 @base https://api.vectara.io
 @version 1.0.0
 @auth OAuth2 | ApiKey x-api-key in header
-@common_fields {customer-id: int, timeout: str=30S}
+@common_fields {customer-id: int # Enter the Customer ID to use for the request., timeout: str=30S # (Optional) Enter the timeout value of the request in seconds, such as 10S or 30S.}
 @endpoints 29
 @hint download_for_search
 @toc compute-account-size(1), compute-corpus-size(1), create-api-key(1), create-corpus(1), delete-api-key(1), delete-conversations(1), delete-corpus(1), delete-doc(1), delete-turns(1), disable-turns(1), enable-api-key(1), get-usage-metrics(1), index(1), list-api-keys(1), list-conversations(1), list-corpora(1), list-documents(1), list-jobs(1), list-users(1), manage-user(1), query(1), read-conversations(1), read-corpus(1), replace-corpus-filter-attrs(1), reset-corpus(1), stream-query(1), update-corpus-enablement(1), core(1), upload(1)
 
 @group compute-account-size
 @endpoint POST /v1/compute-account-size
-@returns(200) {size: [map], status: map{code: str, statusDetail: str}}
+@desc Computes the amount of quota consumed across the entire Vectara account.
+@returns(200) {size: [map], status: map{code: str, statusDetail: str}} # A successful response.
 
 @endgroup
 
 @group compute-corpus-size
 @endpoint POST /v1/compute-corpus-size
-@optional {corpusId: int(int64)}
-@returns(200) {size: map{epochSecs: str(int64), size: str(uint64)}, status: map{code: str, statusDetail: str}}
+@desc Computes the amount of quota consumed by a corpus. This capability is useful for administrators to track and monitor the amount
+@optional {corpusId: int(int64) # The corpus for which to compute the size.}
+@returns(200) {size: map{epochSecs: str(int64), size: str(uint64)}, status: map{code: str, statusDetail: str}} # A successful response.
 
 @endgroup
 
 @group create-api-key
 @endpoint POST /v1/create-api-key
-@optional {apiKeyData: [map{description: str, apiKeyType: str, corpusId: [int(int64)]}]}
-@returns(200) {response: [map]}
+@desc Creates an API key that you bind with a specific corpus or multiple corpora. You can create an API key that only gives access to query data (read-only) or an API key that gives access to both querying and serving (read-write).
+@optional {apiKeyData: [map{description: str, apiKeyType: str, corpusId: [int(int64)]}] # List of ApiKey data to create.}
+@returns(200) {response: [map]} # A successful response.
 
 @endgroup
 
 @group create-corpus
 @endpoint POST /v1/create-corpus
+@desc Creates a corpus, which is a container to store data in.
 @optional {corpus: map{id: int(int64), name: str, description: str, dtProvision: str(int64), enabled: bool, swapQenc: bool, swapIenc: bool, textless: bool, encrypted: bool, encoderId: str(uint64), metadataMaxBytes: int(int64), customDimensions: [map{name: str, description: str, servingDefault: num(double), indexingDefault: num(double)}], filterAttributes: [map{name: str, description: str, indexed: bool, type: str, level: str}]}}
-@returns(200) {corpusId: int(int64), status: map{code: str, statusDetail: str}}
+@returns(200) {corpusId: int(int64), status: map{code: str, statusDetail: str}} # A successful response.
 
 @endgroup
 
 @group delete-api-key
 @endpoint POST /v1/delete-api-key
-@optional {keyId: [str]}
-@returns(200) {status: [map]}
+@desc Deletes API keys to help you manage the security and lifecycle of API keys in your application.
+@optional {keyId: [str] # List of ApiKey ids to delete.}
+@returns(200) {status: [map]} # A successful response.
+@example_request {"keyIds":["ID of API Key"]}
 
 @endgroup
 
 @group delete-conversations
 @endpoint POST /v1/delete-conversations
-@optional {conversationId: [str]}
-@returns(200) {status: map{code: str, statusDetail: str}}
+@desc Delete conversations from the chat history corpus. This is useful for data management to help ensure that you maintain data hygiene and support compliance with data retention policies.
+@optional {conversationId: [str] # The IDs of the conversations to delete. Limit: 1000 conversations.}
+@returns(200) {status: map{code: str, statusDetail: str}} # A successful response.
 
 @endgroup
 
 @group delete-corpus
 @endpoint POST /v1/delete-corpus
-@required {customerId: int(int64), corpusId: int(int64)}
-@returns(200) {status: map{code: str, statusDetail: str}}
+@desc Deletes a corpus and all of the data contained inside of the corpus.
+@required {customerId: int(int64) # The Customer ID that contains the corpus to be deleted., corpusId: int(int64) # The Corpus ID to be deleted.}
+@returns(200) {status: map{code: str, statusDetail: str}} # A successful response.
 
 @endgroup
 
 @group delete-doc
 @endpoint POST /v1/delete-doc
-@required {customerId: str(int64), corpusId: str(int64), documentId: str}
-@returns(200)
+@desc Delete documents from a corpus.
+@required {customerId: str(int64) # The Customer ID to issue the request for., corpusId: str(int64) # The Corpus ID that contains the document., documentId: str # The Document ID to be deleted.}
+@returns(200) A successful response.
 
 @endgroup
 
 @group delete-turns
 @endpoint POST /v1/delete-turns
-@optional {conversationId: str, turnId: str}
-@returns(200) {status: map{code: str, statusDetail: str}}
+@desc Deletes specific turns from a conversation within the chat history corpus. This enables developers to remove inaccurate or inappropriate responses from the conversation history.
+@optional {conversationId: str # The ID of the conversations from which to delete turns., turnId: str # The ID of the turn to start deletion from. All turns in this conversation starting from this turn (inclusive) will be deleted.}
+@returns(200) {status: map{code: str, statusDetail: str}} # A successful response.
 
 @endgroup
 
 @group disable-turns
 @endpoint POST /v1/disable-turns
-@optional {conversationId: str, turnId: str}
-@returns(200) {status: map{code: str, statusDetail: str}}
+@desc Disables specific turns from a conversation within the chat history corpus. This is useful for excluding specific turns from a conversation.
+@optional {conversationId: str # The ID of the conversations from which to disable turns., turnId: str # The ID of the turn to start disabling from. All turns in this conversation starting from this turn will be disabled.}
+@returns(200) {status: map{code: str, statusDetail: str}} # A successful response.
 
 @endgroup
 
 @group enable-api-key
 @endpoint POST /v1/enable-api-key
-@optional {keyEnablement: [map{keyId: str, enable: bool}]}
-@returns(200) {status: [map]}
+@desc Enables or disables a specific API key.
+@optional {keyEnablement: [map{keyId: str, enable: bool}] # List of ApiKey ids to enable or disable.}
+@returns(200) {status: [map]} # A successful response.
+@example_request {"keyEnablement":[{"keyId":"ID of the API Key","enable":true}]}
 
 @endgroup
 
 @group get-usage-metrics
 @endpoint POST /v1/get-usage-metrics
-@optional {corpusId: int(int64), window: map{startEpochSecs: str(int64), endEpochSecs: str(int64)}, type: str(METRICTYPE__NONE/METRICTYPE__INDEXING/METRICTYPE__SERVING)=METRICTYPE__NONE, aggregationIntervalSecs: str(int64)}
-@returns(200) {values: [map], status: map{code: str, statusDetail: str}}
+@desc Displays usage information about indexing and query operations in a corpus. This helps administrators in analyzing and managing resource consumption more efficiently for specific corpora.
+@optional {corpusId: int(int64) # The corpus for which the metric is requested., window: map{startEpochSecs: str(int64), endEpochSecs: str(int64)}, type: str(METRICTYPE__NONE/METRICTYPE__INDEXING/METRICTYPE__SERVING)=METRICTYPE__NONE, aggregationIntervalSecs: str(int64) # The response stats will be aggregated by this interval. Minimum aggregation interval is 1 minute. Supported granularity units for aggregation are days, hours and minutes. For example, If 2.5 days (in seconds) are passed, results will be aggregated by 2 days. Similarly, if 7.6 hours (in seconds) are passed, results will be aggregated by 7 hours.}
+@returns(200) {values: [map], status: map{code: str, statusDetail: str}} # A successful response.
 
 @endgroup
 
 @group index
 @endpoint POST /v1/index
-@required {customerId: str(int64), corpusId: str(int64), document: map{documentId: str, title: str, description: str, metadataJson: str, section: [map{id: int(int32), title: str, text: str, metadataJson: str, section: [map]}]}}
-@returns(200) {status: map{code: str, statusDetail: str}, quotaConsumed: map{numChars: str(int64), numMetadataChars: str(int64)}}
+@desc This is the "standard" Indexing API for indexing semi-structured, text-heavy "documents."  Indexing data into Vectara is typically very fast: within a few seconds.
+@required {customerId: str(int64), corpusId: str(int64), document: map{documentId: str, title: str, description: str, metadataJson: str, section: [map{id: int(int32), title: str, text: str, metadataJson: str, section: [map]}]} # A document to index.}
+@returns(200) {status: map{code: str, statusDetail: str}, quotaConsumed: map{numChars: str(int64), numMetadataChars: str(int64)}} # A successful response.
+@example_request {"customerId":123456,"corpusId":1,"document":{"documentId":"isbn-9781405053976","title":"The Hitchhiker's Guide to the Galaxy","description":"A great book with the answer to life, the universe, and everything","metadataJson":"{\"author\": \"Douglas Adams\"}","section":[{"title":"Intro","text":"Far out in the uncharted backwaters of the unfashionable end of the western spiral arm of the Galaxy lies a small unregarded yellow sun.","metadataJson":"{\"page\": 1}"},{"title":"The answer","text":"The Answer to the Great Question ... Of Life, the Universe and Everything ... Is ... Forty-two.","metadataJson":"{\"speaker\": \"Deep Thought\"}"}]}}
 
 @endgroup
 
 @group list-api-keys
 @endpoint POST /v1/list-api-keys
-@optional {numResults: int(int64), pageKey: str(byte), apiKeyType: [str], readCorporaInfo: bool}
-@returns(200) {keyData: [map], pageKey: str(byte), status: map{code: str, statusDetail: str}}
+@desc Lists the API keys and the associated corpora names and IDs.
+@optional {numResults: int(int64) # Max results to return., pageKey: str(byte) # A key that is passed to retrieve a specific page of results. Leave empty to retrieve first page. Subsequent page requests should use the page key returned in previous response, and all other fields are ignored., apiKeyType: [str] # [Optional] Get API keys of these types. Default: If not set, API_KEY_TYPE__SERVING and API_KEY_TYPE__SERVING_INDEXING are returned., readCorporaInfo: bool # If set, returns corpus name & id associated with api keys.}
+@returns(200) {keyData: [map], pageKey: str(byte), status: map{code: str, statusDetail: str}} # A successful response.
+@example_request {"numResults":5,"apiKeyType":["API_KEY_TYPE__PERSONAL"],"readCorporaInfo":true}
 
 @endgroup
 
 @group list-conversations
 @endpoint POST /v1/list-conversations
-@optional {numResults: int(int64), pageKey: str(byte)}
-@returns(200) {conversation: [map], status: map{code: str, statusDetail: str}, pageKey: str(byte)}
+@desc List all the conversations in a specific corpus. This data enables developers to monitor chatbot interactions and understand how users engage with the data. Pagination lets developers navigate through large datasets.
+@optional {numResults: int(int64) # Maximum number of conversations to return per page., pageKey: str(byte) # A key that is passed in to retrieve a specific page of results. Leave empty to retrieve the first page. Subsequent page request should use the page key returned in previous response, and all other fields are ignored.}
+@returns(200) {conversation: [map], status: map{code: str, statusDetail: str}, pageKey: str(byte)} # A successful response.
 
 @endgroup
 
 @group list-corpora
 @endpoint POST /v1/list-corpora
-@required {numResults: int(int64)}
-@optional {filter: str, pageKey: str(byte)}
-@returns(200) {corpus: [map], pageKey: str(byte), status: map{code: str, statusDetail: str}}
+@desc Lists all corpora accessible to the OAuth client.
+@required {numResults: int(int64) # The maximum results to return.}
+@optional {filter: str # A regex over the names and descriptions to match corpora against., pageKey: str(byte) # A key that is passed in to retrieve a specific page of results.}
+@returns(200) {corpus: [map], pageKey: str(byte), status: map{code: str, statusDetail: str}} # A successful response.
 
 @endgroup
 
 @group list-documents
 @endpoint POST /v1/list-documents
-@optional {corpusId: int(int64), numResults: int(int64), pageKey: str(byte), metadataFilter: str}
-@returns(200) {document: [map], nextPageKey: str(byte)}
+@desc Lists information about each document ingested into the corpus including the Document ID and metadata. This is useful for managing the lifecycle of documents and a quick way to check which documents are already in the index.
+@optional {corpusId: int(int64) # The Corpus ID., numResults: int(int64) # Maximum number of results to be returned by the server. Max is 1000. If the value is larger than 1000, it will be capped to 1000., pageKey: str(byte) # Key of the specific page of the list results to return. Null/empty value means the very first page of the results is requested., metadataFilter: str # Filter on document metadata. If empty, no filtering is done. Otherwise, only documents that match all of the specified metadata will be returned. The syntax is the same as for QueryRequest.metadata.}
+@returns(200) {document: [map], nextPageKey: str(byte)} # A successful response.
 
 @endgroup
 
 @group list-jobs
 @endpoint POST /v1/list-jobs
-@optional {jobId: str, corpusId: [int(int64)], epochSecs: str(int64), state: [str], numResults: int(int64), pageKey: str(byte)}
-@returns(200) {status: [map], job: [map], pageKey: str(byte)}
+@desc List the jobs associated with this account.  Jobs are background processes like [replacing the filterable metadata attributes](https://docs.vectara.com/docs/rest-api/replace-corpus-filter-attrs).
+@optional {jobId: str # Optional filters. If specified, the filters are logically ANDed.  [Optional] If specified, return the job for this id., corpusId: [int(int64)] # [Optional] If specified, return jobs for these corpora only., epochSecs: str(int64) # [Optional] Get jobs that were created since this epoch timestamp. Max allowed value is 180 days ago. Default is 180 days., state: [str] # [Optional] Get jobs with these states. If not specified, all job states are fetched. Default: If not set, JOB_STATE__QUEUED and JOB_STATE__STARTED are returned., numResults: int(int64) # Maximum results to return. Max allowed value is 100., pageKey: str(byte) # A key that is passed in to retrieve a specific page of results. Leave empty to retrieve first page. Subsequent page request should use the page key returned in previous response, and all other fields are ignored.}
+@returns(200) {status: [map], job: [map], pageKey: str(byte)} # A successful response.
 
 @endgroup
 
 @group list-users
 @endpoint POST /v1/list-users
-@optional {listUsersType: str(LIST_USERS_TYPE__NONE/LIST_USERS_TYPE__CUSTOMER/LIST_USERS_TYPE__ALL)=LIST_USERS_TYPE__NONE, pageKey: str(byte), numResults: int(int64)}
-@returns(200) {user: [map], pageKey: str(byte), status: map{code: str, statusDetail: str}}
+@desc Lists the users in your account along with their corpus access and customer-level authorizations.
+@optional {listUsersType: str(LIST_USERS_TYPE__NONE/LIST_USERS_TYPE__CUSTOMER/LIST_USERS_TYPE__ALL)=LIST_USERS_TYPE__NONE, pageKey: str(byte) # A key that is passed to retrieve a specific page of results. Leave empty to retrieve first page. Subsequent page requests should use the page key returned in previous response, and all other fields are ignored., numResults: int(int64) # Number of results to return.}
+@returns(200) {user: [map], pageKey: str(byte), status: map{code: str, statusDetail: str}} # A successful response.
 
 @endgroup
 
 @group manage-user
 @endpoint POST /v1/manage-user
+@desc Lets you manage users in your account by adding, deleting, enabling, or disabling users. You can also reset their passwords and edit user roles. This endpoint can help you streamline your onboarding process by programmatically adding new users, assigning appropriate roles, and setting up permissions.
 @optional {userAction: [map{user: map{id: int(int64), handle: str, type: str, comment: str, tsCreate: str(int64), idCreate: int(int64), email: str, userStatus: str, role: [str]}, userActionType: str}]}
-@returns(200) {response: [map]}
+@returns(200) {response: [map]} # A successful response.
 
 @endgroup
 
 @group query
 @endpoint POST /v1/query
-@required {query: [map{query: str, start: int(int64), numResults!: int(int64), contextConfig: map{charsBefore: int(int32), charsAfter: int(int32), sentencesBefore!: int(int32), sentencesAfter!: int(int32), startTag!: str, endTag!: str}, corpusKey!: [map{customerId: int(int64), corpusId!: int(int64), semantics: str, metadataFilter: str, lexicalInterpolationConfig: map}], summary: [map{summarizerPromptName: str, maxSummarizedResults!: int(int64), responseLang!: str, promptText: str, debug: bool, responseChars: int(int64), modelParams: map, citationParams: map, chat: map, factualConsistencyScore: bool}]}]}
-@returns(200) {responseSet: [map], status: [map], metrics: map{queryEncodeMs: int(int64), retrievalMs: int(int64), userdataRetrievalMs: int(int64), rerankMs: int(int64)}}
+@desc Search for relevant results, highlight relevant snippets, and do
+@required {query: [map{query: str, start: int(int64), numResults!: int(int64), contextConfig: map{charsBefore: int(int32), charsAfter: int(int32), sentencesBefore!: int(int32), sentencesAfter!: int(int32), startTag!: str, endTag!: str}, corpusKey!: [map{customerId: int(int64), corpusId!: int(int64), semantics: str, metadataFilter: str, lexicalInterpolationConfig: map}], summary: [map{summarizerPromptName: str, maxSummarizedResults!: int(int64), responseLang!: str, promptText: str, debug: bool, responseChars: int(int64), modelParams: map, citationParams: map, chat: map, factualConsistencyScore: bool}]}] # Each request can have multiple queries that result in multiple search results. Each query can search multiple corpora.}
+@returns(200) {responseSet: [map], status: [map], metrics: map{queryEncodeMs: int(int64), retrievalMs: int(int64), userdataRetrievalMs: int(int64), rerankMs: int(int64)}} # A successful response.
 
 @endgroup
 
 @group read-conversations
 @endpoint POST /v1/read-conversations
-@optional {conversationId: [str]}
-@returns(200) {Conversation: [map], status: map{code: str, statusDetail: str}}
+@desc Retrieves detailed information about specific conversations. This information enables developers to analyze the flow of user chats and understand the context of interactions, which helps in refining chatbot responses. You can read up to 100 conversations.
+@optional {conversationId: [str] # The IDs of the conversations to read. Limit: 10 conversations.}
+@returns(200) {Conversation: [map], status: map{code: str, statusDetail: str}} # A successful response.
 
 @endgroup
 
 @group read-corpus
 @endpoint POST /v1/read-corpus
-@optional {corpusId: [int(int64)], readBasicInfo: bool, readSize: bool, readApiKeys: bool, readCustomDimensions: bool, readFilterAttributes: bool}
-@returns(200) {corpora: [map]}
+@desc Displays detailed information about corpora within your account including basic information, metadata, and whether it is enabled or disabled.
+@optional {corpusId: [int(int64)] # Corpora IDs to read., readBasicInfo: bool # Subset of information to read. Set to true to read basic information about the corpus such as id, name, description, enabled, etc., readSize: bool # Set to true to read the size of the corpus., readApiKeys: bool # Set to true to read the API keys associated with the corpus., readCustomDimensions: bool # Set to true to read the custom dimensions of the corpus., readFilterAttributes: bool # Set to true to read the filter attributes of the corpus.}
+@returns(200) {corpora: [map]} # A successful response.
 
 @endgroup
 
 @group replace-corpus-filter-attrs
 @endpoint POST /v1/replace-corpus-filter-attrs
-@optional {corpusId: int(int64), filterAttributes: [map{name: str, description: str, indexed: bool, type: str, level: str}]}
-@returns(200) {status: map{code: str, statusDetail: str}, jobId: str}
+@desc Updates the filterable metadata fields for the corpus.
+@optional {corpusId: int(int64) # The corpus for which to update filters., filterAttributes: [map{name: str, description: str, indexed: bool, type: str, level: str}] # The filters to set. The existing filters are replaced with this list of filters.}
+@returns(200) {status: map{code: str, statusDetail: str}, jobId: str} # A successful response.
 
 @endgroup
 
 @group reset-corpus
 @endpoint POST /v1/reset-corpus
-@required {customerId: int(int64), corpusId: int(int64)}
-@returns(200) {status: map{code: str, statusDetail: str}}
+@desc Resets a corpus by removing all of the documents inside of it.
+@required {customerId: int(int64) # The Customer ID that contains the corpus to be reset., corpusId: int(int64) # The Corpus ID to be reset.}
+@returns(200) {status: map{code: str, statusDetail: str}} # A successful response.
 
 @endgroup
 
 @group stream-query
 @endpoint POST /v1/stream-query
-@required {query: [map{query: str, start: int(int64), numResults!: int(int64), contextConfig: map{charsBefore: int(int32), charsAfter: int(int32), sentencesBefore!: int(int32), sentencesAfter!: int(int32), startTag!: str, endTag!: str}, corpusKey!: [map{customerId: int(int64), corpusId!: int(int64), semantics: str, metadataFilter: str, lexicalInterpolationConfig: map}], summary: [map{summarizerPromptName: str, maxSummarizedResults!: int(int64), responseLang!: str, promptText: str, debug: bool, responseChars: int(int64), modelParams: map, citationParams: map, chat: map, factualConsistencyScore: bool}]}]}
-@returns(200) {result: map{batchQueryResponse: map{responseSet: [map], status: [map], metrics: map{queryEncodeMs: int(int64), retrievalMs: int(int64), userdataRetrievalMs: int(int64), rerankMs: int(int64)}}, responseSet: map{response: [map], status: [map], document: [map], summary: [map], futureId: int(int32)}, summary: map{text: str, lang: str, chat: map{conversationId: str, turnId: str, status: map}, factualConsistency: map{score: num(float), status: map}, done: bool, status: [map], futureId: int(int32)}, status: [map]}, error: map{code: int(int32), message: str, details: [map]}}
+@desc Stream responses as you search for relevant results, highlight relevant snippets, and do
+@required {query: [map{query: str, start: int(int64), numResults!: int(int64), contextConfig: map{charsBefore: int(int32), charsAfter: int(int32), sentencesBefore!: int(int32), sentencesAfter!: int(int32), startTag!: str, endTag!: str}, corpusKey!: [map{customerId: int(int64), corpusId!: int(int64), semantics: str, metadataFilter: str, lexicalInterpolationConfig: map}], summary: [map{summarizerPromptName: str, maxSummarizedResults!: int(int64), responseLang!: str, promptText: str, debug: bool, responseChars: int(int64), modelParams: map, citationParams: map, chat: map, factualConsistencyScore: bool}]}] # Each request can have multiple queries that result in multiple search results. Each query can search multiple corpora.}
+@returns(200) {result: map{batchQueryResponse: map{responseSet: [map], status: [map], metrics: map{queryEncodeMs: int(int64), retrievalMs: int(int64), userdataRetrievalMs: int(int64), rerankMs: int(int64)}}, responseSet: map{response: [map], status: [map], document: [map], summary: [map], futureId: int(int32)}, summary: map{text: str, lang: str, chat: map{conversationId: str, turnId: str, status: map}, factualConsistency: map{score: num(float), status: map}, done: bool, status: [map], futureId: int(int32)}, status: [map]}, error: map{code: int(int32), message: str, details: [map]}} # A successful response.(streaming responses)
 
 @endgroup
 
 @group update-corpus-enablement
 @endpoint POST /v1/update-corpus-enablement
-@optional {corpusId: int(int64), enable: bool}
-@returns(200) {status: map{code: str, statusDetail: str}}
+@desc Lets you enable or disable a corpus. This is useful when you need to take the corpus offline without having to delete the corpus.
+@optional {corpusId: int(int64) # The corpus to enable or disable., enable: bool # If true, enable the corpus. Otherwise, disable it.}
+@returns(200) {status: map{code: str, statusDetail: str}} # A successful response.
 
 @endgroup
 
 @group core
 @endpoint POST /v1/core/index
-@optional {customerId: str(int64), corpusId: str(int64), document: map{documentId: str, metadataJson: str, parts: [map{text: str, context: str, metadataJson: str, customDims: [map]}], defaultPartContext: str, customDims: [map{name: str, value: num(double)}]}}
-@returns(200) {status: map{code: str, statusDetail: str}, quotaConsumed: map{numChars: str(int64), numMetadataChars: str(int64)}}
+@desc This API is intended to be used by experts.  It gives you fine-grained control over chunking
+@optional {customerId: str(int64) # The Customer ID to issue the request for., corpusId: str(int64) # The Corpus ID to index the document into., document: map{documentId: str, metadataJson: str, parts: [map{text: str, context: str, metadataJson: str, customDims: [map]}], defaultPartContext: str, customDims: [map{name: str, value: num(double)}]} # A document to index.}
+@returns(200) {status: map{code: str, statusDetail: str}, quotaConsumed: map{numChars: str(int64), numMetadataChars: str(int64)}} # A successful response.
 
 @endgroup
 
 @group upload
 @endpoint POST /v1/upload
-@required {c: int, o: int}
-@optional {d: bool}
-@returns(200) {response: map{status: map, quotaConsumed: map{numChars: str, numMetadataChars: str}}}
-@errors {400, 401, 403, 409, 507}
+@desc The File Upload API can be used to index binary files like PDFs, Word Documents, and similar.
+@required {c: int # Customer ID, o: int # Corpus ID}
+@optional {d: bool # If true, the server returns the extracted document that was indexed}
+@returns(200) {response: map{status: map, quotaConsumed: map{numChars: str, numMetadataChars: str}}} # A successful response
+@errors {400: An invalid request was sent.  e.g. one or more parameters was missing, or the corpus does not exist., 401: The request was not authenticated, 403: The caller is not authorized to add documents to the corpus, 409: A document already exists in the corpus with the same document ID, yet the contents of the indexed document are different than the file being uploaded. Since the indexer is idempotent, the same document (identified by the document ID) can be uploaded multiple times. The indexer does not support updates yet, so an error is returned when a different document is uploaded for the same document ID Note that when a raw file is uploaded, the file name is used as the document ID., 507: There is no more indexing quota left for the corpus or customer to index more documents.  Upgrade your account, add a credit card, or contact sales.}
 
 @endgroup
 

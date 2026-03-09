@@ -130,87 +130,73 @@ Not specified.
 |--------|------|-------------|
 | GET | /operations/{operationId} | Retrieve the status of a take/apply snapshot operation. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I detect faces in an image?" -> POST /detect
-- "Can I find similar faces to a given face?" -> POST /findsimilars
-- "How do I verify if two faces belong to the same person?" -> POST /verify
-- "How do I identify a person from a group?" -> POST /identify
-- "How do I create a person group for recognition?" -> PUT /persongroups/{personGroupId}
-- "How do I add a person to a person group?" -> POST /persongroups/{personGroupId}/persons
-- "How do I add a face to a person in a group?" -> POST /persongroups/{personGroupId}/persons/{personId}/persistedfaces
-- "How do I train a person group after adding faces?" -> POST /persongroups/{personGroupId}/train
-- "Is my person group done training?" -> GET /persongroups/{personGroupId}/training
-- "How do I list all person groups?" -> GET /persongroups
-- "How do I create a face list for find-similar lookups?" -> PUT /facelists/{faceListId}
-- "How do I migrate data between subscriptions?" -> POST /snapshots then POST /snapshots/{snapshotId}/apply
-- "How do I check the status of a long-running operation?" -> GET /operations/{operationId}
-- "How do I group detected faces by visual similarity?" -> POST /group
-- "When should I use large person groups instead of regular ones?" -> PUT /largepersongroups/{largePersonGroupId} (use when exceeding 1,000 persons)
-
-## Response Tips
-
-- **Detect/FindSimilars/Group/Identify/Verify**: Returns arrays of face objects or match results; always check the `confidence` field and compare against your threshold before trusting a match.
-- **PersonGroups & LargePersonGroups (list)**: Paginated via `start` and `top` params; if the response array length equals `top`, fetch the next page using the last item's ID as `start`.
-- **Train endpoints**: Return 202 Accepted with no body; poll GET .../training until `status` is `succeeded` or `failed` before using the group for identification.
-- **Snapshots & Operations**: 202 responses include an `Operation-Location` header; extract the operation ID and poll GET /operations/{operationId} for completion status.
-- **Error responses**: All errors return a JSON object with `error.code` and `error.message`; common codes include `RateLimitExceeded`, `PersonGroupNotFound`, `PersonGroupNotTrained`, and `InvalidImage`.
-
-## Anomaly Flags
-
-- **Rate limit approaching**: Surface `Retry-After` headers immediately; the API enforces per-second and per-minute quotas (typically 10 TPS on free tier) and 429 responses should trigger a backoff alert.
-- **Training failures**: If GET .../training returns `status: "failed"`, surface the `message` field -- common causes are insufficient faces or corrupted data.
-- **Stale faceId usage**: Detected face IDs expire after `faceIdTimeToLive` (default 24h); flag any attempt to use a faceId that may have expired.
-- **Recognition model mismatch**: If `returnRecognitionModel` reveals faces or groups created with different recognition models, flag that they cannot be compared to each other.
-- **Snapshot apply failures**: If GET /operations/{operationId} returns a failed status during snapshot apply, surface immediately -- the target resource may be in an inconsistent state.
-- **Empty person groups**: Flag any attempt to train or identify against a person group that has zero persons or persons with zero persisted faces.
-
-## Playbook
-
-### 1. Set Up Face Identification from Scratch
-
-1. Create a person group: PUT /persongroups/{personGroupId} with a name and recognition model
-2. Add persons: POST /persongroups/{personGroupId}/persons for each individual (save returned `personId`)
-3. Add faces to each person: POST /persongroups/{personGroupId}/persons/{personId}/persistedfaces with image data (repeat for multiple angles)
-4. Train the group: POST /persongroups/{personGroupId}/train
-5. Poll training status: GET /persongroups/{personGroupId}/training until `status` is `succeeded`
-6. Detect faces in a new image: POST /detect (save returned `faceId` values)
-7. Identify: POST /identify with the faceIds and personGroupId
-
-### 2. Find Similar Faces Using a Face List
-
-1. Create a face list: PUT /facelists/{faceListId} with a name and recognition model
-2. Add faces: POST /facelists/{faceListId}/persistedfaces for each reference image
-3. Detect faces in a query image: POST /detect (save the `faceId`)
-4. Find similar: POST /findsimilars with the faceId and faceListId
-5. Review results sorted by confidence score
-
-### 3. Verify Two Faces Match (1:1 Comparison)
-
-1. Detect face A: POST /detect with the first image (save `faceId`)
-2. Detect face B: POST /detect with the second image (save `faceId`)
-3. Verify: POST /verify with both faceIds
-4. Check `isIdentical` (boolean) and `confidence` (0-1) in the response
-
-### 4. Migrate a Person Group to Another Subscription
-
-1. Take a snapshot: POST /snapshots with the source personGroupId and target subscription IDs
-2. Poll operation: GET /operations/{operationId} until complete
-3. Apply snapshot in target subscription: POST /snapshots/{snapshotId}/apply with the target resource ID
-4. Poll operation again: GET /operations/{operationId} until complete
-5. Clean up: DELETE /snapshots/{snapshotId} when migration is confirmed
-
-### 5. Scale Up: Migrate from PersonGroup to LargePersonGroup
-
-1. Create a large person group: PUT /largepersongroups/{largePersonGroupId}
-2. For each person in the original group: GET /persongroups/{personGroupId}/persons (paginate with `start`/`top`)
-3. Recreate each person: POST /largepersongroups/{largePersonGroupId}/persons
-4. For each person, list persisted faces: GET .../persons/{personId}/persistedfaces and re-add them to the large group
-5. Train: POST /largepersongroups/{largePersonGroupId}/train
-6. Poll: GET /largepersongroups/{largePersonGroupId}/training until `succeeded`
-7. Update identification calls to use the new largePersonGroupId
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a findsimilar?" -> POST /findsimilars
+- "Create a group?" -> POST /group
+- "Create a identify?" -> POST /identify
+- "Create a verify?" -> POST /verify
+- "Create a person?" -> POST /persongroups/{personGroupId}/persons
+- "List all persons?" -> GET /persongroups/{personGroupId}/persons
+- "Delete a person?" -> DELETE /persongroups/{personGroupId}/persons/{personId}
+- "Get person details?" -> GET /persongroups/{personGroupId}/persons/{personId}
+- "Partially update a person?" -> PATCH /persongroups/{personGroupId}/persons/{personId}
+- "Delete a persistedface?" -> DELETE /persongroups/{personGroupId}/persons/{personId}/persistedfaces/{persistedFaceId}
+- "Get persistedface details?" -> GET /persongroups/{personGroupId}/persons/{personId}/persistedfaces/{persistedFaceId}
+- "Partially update a persistedface?" -> PATCH /persongroups/{personGroupId}/persons/{personId}/persistedfaces/{persistedFaceId}
+- "Update a persongroup?" -> PUT /persongroups/{personGroupId}
+- "Delete a persongroup?" -> DELETE /persongroups/{personGroupId}
+- "Get persongroup details?" -> GET /persongroups/{personGroupId}
+- "Partially update a persongroup?" -> PATCH /persongroups/{personGroupId}
+- "List all training?" -> GET /persongroups/{personGroupId}/training
+- "List all persongroups?" -> GET /persongroups
+- "Create a train?" -> POST /persongroups/{personGroupId}/train
+- "Update a facelist?" -> PUT /facelists/{faceListId}
+- "Get facelist details?" -> GET /facelists/{faceListId}
+- "Partially update a facelist?" -> PATCH /facelists/{faceListId}
+- "Delete a facelist?" -> DELETE /facelists/{faceListId}
+- "List all facelists?" -> GET /facelists
+- "Delete a persistedface?" -> DELETE /facelists/{faceListId}/persistedfaces/{persistedFaceId}
+- "Create a persistedface?" -> POST /persongroups/{personGroupId}/persons/{personId}/persistedfaces
+- "Create a detect?" -> POST /detect
+- "Create a persistedface?" -> POST /facelists/{faceListId}/persistedfaces
+- "Create a person?" -> POST /largepersongroups/{largePersonGroupId}/persons
+- "List all persons?" -> GET /largepersongroups/{largePersonGroupId}/persons
+- "Delete a person?" -> DELETE /largepersongroups/{largePersonGroupId}/persons/{personId}
+- "Get person details?" -> GET /largepersongroups/{largePersonGroupId}/persons/{personId}
+- "Partially update a person?" -> PATCH /largepersongroups/{largePersonGroupId}/persons/{personId}
+- "Delete a persistedface?" -> DELETE /largepersongroups/{largePersonGroupId}/persons/{personId}/persistedfaces/{persistedFaceId}
+- "Get persistedface details?" -> GET /largepersongroups/{largePersonGroupId}/persons/{personId}/persistedfaces/{persistedFaceId}
+- "Partially update a persistedface?" -> PATCH /largepersongroups/{largePersonGroupId}/persons/{personId}/persistedfaces/{persistedFaceId}
+- "Update a largepersongroup?" -> PUT /largepersongroups/{largePersonGroupId}
+- "Delete a largepersongroup?" -> DELETE /largepersongroups/{largePersonGroupId}
+- "Get largepersongroup details?" -> GET /largepersongroups/{largePersonGroupId}
+- "Partially update a largepersongroup?" -> PATCH /largepersongroups/{largePersonGroupId}
+- "List all training?" -> GET /largepersongroups/{largePersonGroupId}/training
+- "List all largepersongroups?" -> GET /largepersongroups
+- "Create a train?" -> POST /largepersongroups/{largePersonGroupId}/train
+- "Create a persistedface?" -> POST /largepersongroups/{largePersonGroupId}/persons/{personId}/persistedfaces
+- "Update a largefacelist?" -> PUT /largefacelists/{largeFaceListId}
+- "Get largefacelist details?" -> GET /largefacelists/{largeFaceListId}
+- "Partially update a largefacelist?" -> PATCH /largefacelists/{largeFaceListId}
+- "Delete a largefacelist?" -> DELETE /largefacelists/{largeFaceListId}
+- "List all training?" -> GET /largefacelists/{largeFaceListId}/training
+- "List all largefacelists?" -> GET /largefacelists
+- "Create a train?" -> POST /largefacelists/{largeFaceListId}/train
+- "Delete a persistedface?" -> DELETE /largefacelists/{largeFaceListId}/persistedfaces/{persistedFaceId}
+- "Get persistedface details?" -> GET /largefacelists/{largeFaceListId}/persistedfaces/{persistedFaceId}
+- "Partially update a persistedface?" -> PATCH /largefacelists/{largeFaceListId}/persistedfaces/{persistedFaceId}
+- "Create a persistedface?" -> POST /largefacelists/{largeFaceListId}/persistedfaces
+- "List all persistedfaces?" -> GET /largefacelists/{largeFaceListId}/persistedfaces
+- "Create a snapshot?" -> POST /snapshots
+- "List all snapshots?" -> GET /snapshots
+- "Get snapshot details?" -> GET /snapshots/{snapshotId}
+- "Partially update a snapshot?" -> PATCH /snapshots/{snapshotId}
+- "Delete a snapshot?" -> DELETE /snapshots/{snapshotId}
+- "Create a apply?" -> POST /snapshots/{snapshotId}/apply
+- "Get operation details?" -> GET /operations/{operationId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

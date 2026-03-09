@@ -10,512 +10,605 @@
 
 @group discourse-post-event
 @endpoint GET /discourse-post-event/events.json
-@optional {include_details: str(true/false), category_id: int, include_subcategories: str(true/false), post_id: int, attending_user: str, before: str(date-time), after: str(date-time), order: str(asc/desc), limit: int}
-@returns(200) {events: [map]}
+@desc List calendar events
+@optional {include_details: str(true/false) # Include detailed event information (creator, invitees, stats, etc.), category_id: int # Filter events by category ID, include_subcategories: str(true/false) # Include events from subcategories when filtering by category, post_id: int # Filter to events associated with a specific post ID, attending_user: str # Filter to events where the specified user (username) has RSVP'd as going, before: str(date-time) # Return events starting before this date/time (ISO 8601 format), after: str(date-time) # Return events starting after this date/time (ISO 8601 format), order: str(asc/desc) # Sort order for events by start date (default: asc), limit: int # Maximum number of events to return (default: 200)}
+@returns(200) {events: [map]} # success response (detailed)
 
 @endpoint GET /discourse-post-event/events.ics
-@optional {category_id: int, include_subcategories: str(true/false), attending_user: str, before: str(date-time), after: str(date-time), order: str(asc/desc), limit: int}
-@returns(200)
+@desc Export calendar events in iCalendar format
+@optional {category_id: int # Filter events by category ID, include_subcategories: str(true/false) # Include events from subcategories when filtering by category, attending_user: str # Filter to events where the specified user (username) has RSVP'd as going, before: str(date-time) # Return events starting before this date/time (ISO 8601 format), after: str(date-time) # Return events starting after this date/time (ISO 8601 format), order: str(asc/desc) # Sort order for events by start date (default: asc), limit: int # Maximum number of events to return (default: 200)}
+@returns(200) iCalendar file
 
 @endgroup
 
 @group admin
 @endpoint GET /admin/backups.json
-@returns(200)
+@desc List backups
+@returns(200) success response
 
 @endpoint POST /admin/backups.json
+@desc Create backup
 @required {with_uploads: bool}
-@returns(200) {success: str}
+@returns(200) {success: str} # success response
 
 @endpoint PUT /admin/backups/{filename}
+@desc Send download backup email
 @required {filename: str}
-@returns(200)
+@returns(200) success response
 
 @endpoint GET /admin/backups/{filename}
+@desc Download backup
 @required {filename: str, token: str}
-@returns(200)
+@returns(200) success response
 
 @endpoint GET /admin/badges.json
-@returns(200) {badges: [map], badge_types: [map], badge_groupings: [map], admin_badges: map{protected_system_fields: [any], triggers: map{user_change: int, none: int, post_revision: int, trust_level_change: int, post_action: int}, badge_ids: [any], badge_grouping_ids: [any], badge_type_ids: [any]}}
+@desc List badges
+@returns(200) {badges: [map], badge_types: [map], badge_groupings: [map], admin_badges: map{protected_system_fields: [any], triggers: map{user_change: int, none: int, post_revision: int, trust_level_change: int, post_action: int}, badge_ids: [any], badge_grouping_ids: [any], badge_type_ids: [any]}} # success response
 
 @endpoint POST /admin/badges.json
-@required {name: str, badge_type_id: int}
-@returns(200) {badge_types: [map], badge: map{id: int, name: str, description: str, grant_count: int, allow_title: bool, multiple_grant: bool, icon: str, image_url: str?, image_upload_id: int?, listable: bool, enabled: bool, badge_grouping_id: int, system: bool, long_description: str, slug: str, manually_grantable: bool, query: str?, trigger: str?, target_posts: bool, auto_revoke: bool, show_posts: bool, badge_type_id: int, show_in_post_header: bool}}
+@desc Create badge
+@required {name: str # The name for the new badge., badge_type_id: int # The ID for the badge type. 1 for Gold, 2 for Silver, 3 for Bronze.}
+@returns(200) {badge_types: [map], badge: map{id: int, name: str, description: str, grant_count: int, allow_title: bool, multiple_grant: bool, icon: str, image_url: str?, image_upload_id: int?, listable: bool, enabled: bool, badge_grouping_id: int, system: bool, long_description: str, slug: str, manually_grantable: bool, query: str?, trigger: str?, target_posts: bool, auto_revoke: bool, show_posts: bool, badge_type_id: int, show_in_post_header: bool}} # success response
 
 @endpoint PUT /admin/badges/{id}.json
-@required {id: int, name: str, badge_type_id: int}
-@returns(200) {badge_types: [map], badge: map{id: int, name: str, description: str, grant_count: int, allow_title: bool, multiple_grant: bool, icon: str, image_url: str?, image_upload_id: int?, listable: bool, enabled: bool, badge_grouping_id: int, system: bool, long_description: str, slug: str, manually_grantable: bool, query: str?, trigger: str?, target_posts: bool, auto_revoke: bool, show_posts: bool, badge_type_id: int, show_in_post_header: bool}}
+@desc Update badge
+@required {id: int, name: str # The name for the new badge., badge_type_id: int # The ID for the badge type. 1 for Gold, 2 for Silver, 3 for Bronze.}
+@returns(200) {badge_types: [map], badge: map{id: int, name: str, description: str, grant_count: int, allow_title: bool, multiple_grant: bool, icon: str, image_url: str?, image_upload_id: int?, listable: bool, enabled: bool, badge_grouping_id: int, system: bool, long_description: str, slug: str, manually_grantable: bool, query: str?, trigger: str?, target_posts: bool, auto_revoke: bool, show_posts: bool, badge_type_id: int, show_in_post_header: bool}} # success response
 
 @endpoint DELETE /admin/badges/{id}.json
+@desc Delete badge
 @required {id: int}
-@returns(200)
+@returns(200) success response
 
 @endgroup
 
 @group categories.json
 @endpoint POST /categories.json
+@desc Creates a category
 @required {name: str}
 @optional {color: str, text_color: str, style_type: str, emoji: str, icon: str, parent_category_id: int, allow_badges: bool, slug: str, topic_featured_links_allowed: bool, permissions: map{everyone: int, staff: int}, search_priority: int, form_template_ids: [any], category_localizations: [map{id: int, locale!: str, name!: str, description: str}]}
-@returns(200) {category: map{id: int, name: str, color: str, text_color: str, style_type: str, emoji: str?, icon: str?, slug: str, topic_count: int, post_count: int, position: int, description: str?, description_text: str?, description_excerpt: str?, topic_url: str?, read_restricted: bool, permission: int?, notification_level: int, can_edit: bool, topic_template: str?, form_template_ids: [any], has_children: bool?, subcategory_count: int?, sort_order: str?, sort_ascending: str?, show_subcategory_list: bool, num_featured_topics: int, default_view: str?, subcategory_list_style: str, default_top_period: str, default_list_filter: str, minimum_required_tags: int, navigate_to_first_post_after_read: bool, custom_fields: map, allowed_tags: [any], allowed_tag_groups: [any], allow_global_tags: bool, required_tag_groups: [map], category_setting: map{auto_bump_cooldown_days: int, num_auto_bump_daily: int?, require_reply_approval: bool?, require_topic_approval: bool?}, category_localizations: [any], read_only_banner: str?, available_groups: [any], auto_close_hours: str?, auto_close_based_on_last_post: bool, allow_unlimited_owner_edits_on_first_post: bool, default_slow_mode_seconds: str?, group_permissions: [map], email_in: str?, email_in_allow_strangers: bool, mailinglist_mirror: bool, all_topics_wiki: bool, can_delete: bool, allow_badges: bool, topic_featured_link_allowed: bool, search_priority: int, uploaded_logo: str?, uploaded_logo_dark: str?, uploaded_background: str?, uploaded_background_dark: str?}}
+@returns(200) {category: map{id: int, name: str, color: str, text_color: str, style_type: str, emoji: str?, icon: str?, slug: str, topic_count: int, post_count: int, position: int, description: str?, description_text: str?, description_excerpt: str?, topic_url: str?, read_restricted: bool, permission: int?, notification_level: int, can_edit: bool, topic_template: str?, form_template_ids: [any], has_children: bool?, subcategory_count: int?, sort_order: str?, sort_ascending: str?, show_subcategory_list: bool, num_featured_topics: int, default_view: str?, subcategory_list_style: str, default_top_period: str, default_list_filter: str, minimum_required_tags: int, navigate_to_first_post_after_read: bool, custom_fields: map, allowed_tags: [any], allowed_tag_groups: [any], allow_global_tags: bool, required_tag_groups: [map], category_setting: map{auto_bump_cooldown_days: int, num_auto_bump_daily: int?, require_reply_approval: bool?, require_topic_approval: bool?}, category_localizations: [any], read_only_banner: str?, available_groups: [any], auto_close_hours: str?, auto_close_based_on_last_post: bool, allow_unlimited_owner_edits_on_first_post: bool, default_slow_mode_seconds: str?, group_permissions: [map], email_in: str?, email_in_allow_strangers: bool, mailinglist_mirror: bool, all_topics_wiki: bool, can_delete: bool, allow_badges: bool, topic_featured_link_allowed: bool, search_priority: int, uploaded_logo: str?, uploaded_logo_dark: str?, uploaded_background: str?, uploaded_background_dark: str?}} # success response
 
 @endpoint GET /categories.json
+@desc Retrieves a list of categories
 @optional {include_subcategories: bool}
-@returns(200) {category_list: map{can_create_category: bool, can_create_topic: bool, categories: [map]}}
+@returns(200) {category_list: map{can_create_category: bool, can_create_topic: bool, categories: [map]}} # success response
 
 @endgroup
 
 @group categories
 @endpoint PUT /categories/{id}.json
+@desc Updates a category
 @required {id: int, name: str}
 @optional {color: str, text_color: str, style_type: str, emoji: str, icon: str, parent_category_id: int, allow_badges: bool, slug: str, topic_featured_links_allowed: bool, permissions: map{everyone: int, staff: int}, search_priority: int, form_template_ids: [any], category_localizations: [map{id: int, locale!: str, name!: str, description: str}]}
-@returns(200) {success: str, category: map{id: int, name: str, color: str, text_color: str, style_type: str, emoji: str?, icon: str?, slug: str, topic_count: int, post_count: int, position: int, description: str?, description_text: str?, description_excerpt: str?, topic_url: str?, read_restricted: bool, permission: int?, notification_level: int, can_edit: bool, topic_template: str?, form_template_ids: [any], has_children: bool?, subcategory_count: int?, sort_order: str?, sort_ascending: str?, show_subcategory_list: bool, num_featured_topics: int, default_view: str?, subcategory_list_style: str, default_top_period: str, default_list_filter: str, minimum_required_tags: int, navigate_to_first_post_after_read: bool, custom_fields: map, allowed_tags: [any], allowed_tag_groups: [any], allow_global_tags: bool, required_tag_groups: [map], category_setting: map{auto_bump_cooldown_days: int, num_auto_bump_daily: int?, require_reply_approval: bool?, require_topic_approval: bool?}, category_localizations: [any], read_only_banner: str?, available_groups: [any], auto_close_hours: str?, auto_close_based_on_last_post: bool, allow_unlimited_owner_edits_on_first_post: bool, default_slow_mode_seconds: str?, group_permissions: [map], email_in: str?, email_in_allow_strangers: bool, mailinglist_mirror: bool, all_topics_wiki: bool, can_delete: bool, allow_badges: bool, topic_featured_link_allowed: bool, search_priority: int, uploaded_logo: str?, uploaded_logo_dark: str?, uploaded_background: str?, uploaded_background_dark: str?}}
+@returns(200) {success: str, category: map{id: int, name: str, color: str, text_color: str, style_type: str, emoji: str?, icon: str?, slug: str, topic_count: int, post_count: int, position: int, description: str?, description_text: str?, description_excerpt: str?, topic_url: str?, read_restricted: bool, permission: int?, notification_level: int, can_edit: bool, topic_template: str?, form_template_ids: [any], has_children: bool?, subcategory_count: int?, sort_order: str?, sort_ascending: str?, show_subcategory_list: bool, num_featured_topics: int, default_view: str?, subcategory_list_style: str, default_top_period: str, default_list_filter: str, minimum_required_tags: int, navigate_to_first_post_after_read: bool, custom_fields: map, allowed_tags: [any], allowed_tag_groups: [any], allow_global_tags: bool, required_tag_groups: [map], category_setting: map{auto_bump_cooldown_days: int, num_auto_bump_daily: int?, require_reply_approval: bool?, require_topic_approval: bool?}, category_localizations: [any], read_only_banner: str?, available_groups: [any], auto_close_hours: str?, auto_close_based_on_last_post: bool, allow_unlimited_owner_edits_on_first_post: bool, default_slow_mode_seconds: str?, group_permissions: [map], email_in: str?, email_in_allow_strangers: bool, mailinglist_mirror: bool, all_topics_wiki: bool, can_delete: bool, allow_badges: bool, topic_featured_link_allowed: bool, search_priority: int, uploaded_logo: str?, uploaded_logo_dark: str?, uploaded_background: str?, uploaded_background_dark: str?}} # success response
 
 @endgroup
 
 @group c
 @endpoint GET /c/{slug}/{id}.json
+@desc List topics
 @required {slug: str, id: int}
-@returns(200) {users: [map], primary_groups: [any], topic_list: map{can_create_topic: bool, per_page: int, top_tags: [map], topics: [map]}}
+@returns(200) {users: [map], primary_groups: [any], topic_list: map{can_create_topic: bool, per_page: int, top_tags: [map], topics: [map]}} # success response
 
 @endpoint GET /c/{id}/show.json
+@desc Show category
 @required {id: int}
-@returns(200) {category: map{id: int, name: str, color: str, text_color: str, style_type: str, emoji: str?, icon: str?, slug: str, topic_count: int, post_count: int, position: int, description: str?, description_text: str?, description_excerpt: str?, topic_url: str?, read_restricted: bool, permission: int?, notification_level: int, can_edit: bool, topic_template: str?, form_template_ids: [any], has_children: bool?, subcategory_count: int?, sort_order: str?, sort_ascending: str?, show_subcategory_list: bool, num_featured_topics: int, default_view: str?, subcategory_list_style: str, default_top_period: str, default_list_filter: str, minimum_required_tags: int, navigate_to_first_post_after_read: bool, custom_fields: map, allowed_tags: [any], allowed_tag_groups: [any], allow_global_tags: bool, required_tag_groups: [map], category_setting: map{auto_bump_cooldown_days: int, num_auto_bump_daily: int?, require_reply_approval: bool?, require_topic_approval: bool?}, category_localizations: [any], read_only_banner: str?, available_groups: [any], auto_close_hours: str?, auto_close_based_on_last_post: bool, allow_unlimited_owner_edits_on_first_post: bool, default_slow_mode_seconds: str?, group_permissions: [map], email_in: str?, email_in_allow_strangers: bool, mailinglist_mirror: bool, all_topics_wiki: bool, can_delete: bool, allow_badges: bool, topic_featured_link_allowed: bool, search_priority: int, uploaded_logo: str?, uploaded_logo_dark: str?, uploaded_background: str?, uploaded_background_dark: str?}}
+@returns(200) {category: map{id: int, name: str, color: str, text_color: str, style_type: str, emoji: str?, icon: str?, slug: str, topic_count: int, post_count: int, position: int, description: str?, description_text: str?, description_excerpt: str?, topic_url: str?, read_restricted: bool, permission: int?, notification_level: int, can_edit: bool, topic_template: str?, form_template_ids: [any], has_children: bool?, subcategory_count: int?, sort_order: str?, sort_ascending: str?, show_subcategory_list: bool, num_featured_topics: int, default_view: str?, subcategory_list_style: str, default_top_period: str, default_list_filter: str, minimum_required_tags: int, navigate_to_first_post_after_read: bool, custom_fields: map, allowed_tags: [any], allowed_tag_groups: [any], allow_global_tags: bool, required_tag_groups: [map], category_setting: map{auto_bump_cooldown_days: int, num_auto_bump_daily: int?, require_reply_approval: bool?, require_topic_approval: bool?}, category_localizations: [any], read_only_banner: str?, available_groups: [any], auto_close_hours: str?, auto_close_based_on_last_post: bool, allow_unlimited_owner_edits_on_first_post: bool, default_slow_mode_seconds: str?, group_permissions: [map], email_in: str?, email_in_allow_strangers: bool, mailinglist_mirror: bool, all_topics_wiki: bool, can_delete: bool, allow_badges: bool, topic_featured_link_allowed: bool, search_priority: int, uploaded_logo: str?, uploaded_logo_dark: str?, uploaded_background: str?, uploaded_background_dark: str?}} # response
 
 @endgroup
 
 @group admin
 @endpoint POST /admin/groups.json
+@desc Create a group
 @required {group: map{name!: str, full_name: str, bio_raw: str, usernames: str, owner_usernames: str, automatic_membership_email_domains: str, visibility_level: int, primary_group: bool, flair_icon: str, flair_upload_id: int, flair_bg_color: str, public_admission: bool, public_exit: bool, default_notification_level: int, muted_category_ids: [int], regular_category_ids: [int], watching_category_ids: [int], tracking_category_ids: [int], watching_first_post_category_ids: [int]}}
-@returns(200) {basic_group: map{id: int, automatic: bool, name: str, user_count: int, mentionable_level: int, messageable_level: int, visibility_level: int, primary_group: bool, title: str?, grant_trust_level: str?, incoming_email: str?, has_messages: bool, flair_url: str?, flair_bg_color: str?, flair_color: str?, bio_raw: str?, bio_cooked: str?, bio_excerpt: str?, public_admission: bool, public_exit: bool, allow_membership_requests: bool, full_name: str?, default_notification_level: int, membership_request_template: str?, members_visibility_level: int, can_see_members: bool, can_admin_group: bool, can_edit_group: bool, publish_read_state: bool}}
+@returns(200) {basic_group: map{id: int, automatic: bool, name: str, user_count: int, mentionable_level: int, messageable_level: int, visibility_level: int, primary_group: bool, title: str?, grant_trust_level: str?, incoming_email: str?, has_messages: bool, flair_url: str?, flair_bg_color: str?, flair_color: str?, bio_raw: str?, bio_cooked: str?, bio_excerpt: str?, public_admission: bool, public_exit: bool, allow_membership_requests: bool, full_name: str?, default_notification_level: int, membership_request_template: str?, members_visibility_level: int, can_see_members: bool, can_admin_group: bool, can_edit_group: bool, publish_read_state: bool}} # group created
 
 @endpoint DELETE /admin/groups/{id}.json
+@desc Delete a group
 @required {id: int}
-@returns(200) {success: str}
+@returns(200) {success: str} # response
 
 @endgroup
 
 @group groups
 @endpoint GET /groups/{name}.json
-@required {name: str}
-@returns(200) {group: map{id: int, automatic: bool, name: str, user_count: int, mentionable_level: int, messageable_level: int, visibility_level: int, primary_group: bool, title: str?, grant_trust_level: str?, incoming_email: str?, has_messages: bool, flair_url: str?, flair_bg_color: str?, flair_color: str?, bio_raw: str?, bio_cooked: str?, bio_excerpt: str?, public_admission: bool, public_exit: bool, allow_membership_requests: bool, full_name: str?, default_notification_level: int, membership_request_template: str?, is_group_user: bool, members_visibility_level: int, can_see_members: bool, can_admin_group: bool, can_edit_group: bool, publish_read_state: bool, is_group_owner_display: bool, mentionable: bool, messageable: bool, automatic_membership_email_domains: str?, smtp_updated_at: str?, smtp_updated_by: map?, smtp_enabled: bool, smtp_server: str?, smtp_port: str?, smtp_ssl_mode: int?, email_username: str?, email_from_alias: str?, email_password: str?, message_count: int, allow_unknown_sender_topic_replies: bool, associated_group_ids: [any], watching_category_ids: [any], tracking_category_ids: [any], watching_first_post_category_ids: [any], regular_category_ids: [any], muted_category_ids: [any], watching_tags: [any], watching_first_post_tags: [any], tracking_tags: [any], regular_tags: [any], muted_tags: [any]}, extras: map{visible_group_names: [any]}}
+@desc Get a group
+@required {name: str # Use group name instead of id}
+@returns(200) {group: map{id: int, automatic: bool, name: str, user_count: int, mentionable_level: int, messageable_level: int, visibility_level: int, primary_group: bool, title: str?, grant_trust_level: str?, incoming_email: str?, has_messages: bool, flair_url: str?, flair_bg_color: str?, flair_color: str?, bio_raw: str?, bio_cooked: str?, bio_excerpt: str?, public_admission: bool, public_exit: bool, allow_membership_requests: bool, full_name: str?, default_notification_level: int, membership_request_template: str?, is_group_user: bool, members_visibility_level: int, can_see_members: bool, can_admin_group: bool, can_edit_group: bool, publish_read_state: bool, is_group_owner_display: bool, mentionable: bool, messageable: bool, automatic_membership_email_domains: str?, smtp_updated_at: str?, smtp_updated_by: map?, smtp_enabled: bool, smtp_server: str?, smtp_port: str?, smtp_ssl_mode: int?, email_username: str?, email_from_alias: str?, email_password: str?, message_count: int, allow_unknown_sender_topic_replies: bool, associated_group_ids: [any], watching_category_ids: [any], tracking_category_ids: [any], watching_first_post_category_ids: [any], regular_category_ids: [any], muted_category_ids: [any], watching_tags: [any], watching_first_post_tags: [any], tracking_tags: [any], regular_tags: [any], muted_tags: [any]}, extras: map{visible_group_names: [any]}} # success response
 
 @endpoint PUT /groups/{id}.json
+@desc Update a group
 @required {id: int, group: map{name!: str, full_name: str, bio_raw: str, usernames: str, owner_usernames: str, automatic_membership_email_domains: str, visibility_level: int, primary_group: bool, flair_icon: str, flair_upload_id: int, flair_bg_color: str, public_admission: bool, public_exit: bool, default_notification_level: int, muted_category_ids: [int], regular_category_ids: [int], watching_category_ids: [int], tracking_category_ids: [int], watching_first_post_category_ids: [int]}}
-@returns(200) {success: str}
+@returns(200) {success: str} # success response
 
 @endpoint GET /groups/by-id/{id}.json
-@required {id: str}
-@returns(200) {group: map{id: int, automatic: bool, name: str, user_count: int, mentionable_level: int, messageable_level: int, visibility_level: int, primary_group: bool, title: str?, grant_trust_level: str?, incoming_email: str?, has_messages: bool, flair_url: str?, flair_bg_color: str?, flair_color: str?, bio_raw: str?, bio_cooked: str?, bio_excerpt: str?, public_admission: bool, public_exit: bool, allow_membership_requests: bool, full_name: str?, default_notification_level: int, membership_request_template: str?, is_group_user: bool, members_visibility_level: int, can_see_members: bool, can_admin_group: bool, can_edit_group: bool, publish_read_state: bool, is_group_owner_display: bool, mentionable: bool, messageable: bool, automatic_membership_email_domains: str?, smtp_updated_at: str?, smtp_updated_by: map?, smtp_enabled: bool, smtp_server: str?, smtp_port: str?, smtp_ssl_mode: int?, email_username: str?, email_from_alias: str?, email_password: str?, message_count: int, allow_unknown_sender_topic_replies: bool, associated_group_ids: [any], watching_category_ids: [any], tracking_category_ids: [any], watching_first_post_category_ids: [any], regular_category_ids: [any], muted_category_ids: [any], watching_tags: [any], watching_first_post_tags: [any], tracking_tags: [any], regular_tags: [any], muted_tags: [any]}, extras: map{visible_group_names: [any]}}
+@desc Get a group by id
+@required {id: str # Use group name instead of id}
+@returns(200) {group: map{id: int, automatic: bool, name: str, user_count: int, mentionable_level: int, messageable_level: int, visibility_level: int, primary_group: bool, title: str?, grant_trust_level: str?, incoming_email: str?, has_messages: bool, flair_url: str?, flair_bg_color: str?, flair_color: str?, bio_raw: str?, bio_cooked: str?, bio_excerpt: str?, public_admission: bool, public_exit: bool, allow_membership_requests: bool, full_name: str?, default_notification_level: int, membership_request_template: str?, is_group_user: bool, members_visibility_level: int, can_see_members: bool, can_admin_group: bool, can_edit_group: bool, publish_read_state: bool, is_group_owner_display: bool, mentionable: bool, messageable: bool, automatic_membership_email_domains: str?, smtp_updated_at: str?, smtp_updated_by: map?, smtp_enabled: bool, smtp_server: str?, smtp_port: str?, smtp_ssl_mode: int?, email_username: str?, email_from_alias: str?, email_password: str?, message_count: int, allow_unknown_sender_topic_replies: bool, associated_group_ids: [any], watching_category_ids: [any], tracking_category_ids: [any], watching_first_post_category_ids: [any], regular_category_ids: [any], muted_category_ids: [any], watching_tags: [any], watching_first_post_tags: [any], tracking_tags: [any], regular_tags: [any], muted_tags: [any]}, extras: map{visible_group_names: [any]}} # success response (by id)
 
 @endpoint GET /groups/{name}/members.json
-@required {name: str}
-@returns(200) {members: [map], owners: [map], meta: map{total: int, limit: int, offset: int}}
+@desc List group members
+@required {name: str # Use group name instead of id}
+@returns(200) {members: [map], owners: [map], meta: map{total: int, limit: int, offset: int}} # success response
 
 @endpoint PUT /groups/{id}/members.json
+@desc Add group members
 @required {id: int}
-@optional {usernames: str}
-@returns(200) {success: str, usernames: [any], emails: [any]}
+@optional {usernames: str # comma separated list}
+@returns(200) {success: str, usernames: [any], emails: [any]} # success response
 
 @endpoint DELETE /groups/{id}/members.json
+@desc Remove group members
 @required {id: int}
-@optional {usernames: str}
-@returns(200) {success: str, usernames: [any], skipped_usernames: [any]}
+@optional {usernames: str # comma separated list}
+@returns(200) {success: str, usernames: [any], skipped_usernames: [any]} # success response
 
 @endgroup
 
 @group groups.json
 @endpoint GET /groups.json
-@returns(200) {groups: [map], extras: map{type_filters: [any]}, total_rows_groups: int, load_more_groups: str}
+@desc List groups
+@returns(200) {groups: [map], extras: map{type_filters: [any]}, total_rows_groups: int, load_more_groups: str} # response
 
 @endgroup
 
 @group invites.json
 @endpoint POST /invites.json
+@desc Create an invite
 @required {Api-Key: str, Api-Username: str}
-@optional {email: str, skip_email: bool=False, custom_message: str, max_redemptions_allowed: int=1, topic_id: int, group_ids: str, group_names: str, expires_at: str}
-@returns(200) {id: int, invite_key: str, link: str, description: str?, email: str, domain: str?, emailed: bool, can_delete_invite: bool, custom_message: str?, created_at: str, updated_at: str, expires_at: str, expired: bool, topics: [map], groups: [map]}
+@optional {email: str # required for email invites only, skip_email: bool=False, custom_message: str # optional, for email invites, max_redemptions_allowed: int=1 # optional, for link invites, topic_id: int, group_ids: str # Optional, either this or `group_names`. Comma separated list for multiple ids., group_names: str # Optional, either this or `group_ids`. Comma separated list for multiple names., expires_at: str # optional, if not supplied, the invite_expiry_days site setting is used}
+@returns(200) {id: int, invite_key: str, link: str, description: str?, email: str, domain: str?, emailed: bool, can_delete_invite: bool, custom_message: str?, created_at: str, updated_at: str, expires_at: str, expired: bool, topics: [map], groups: [map]} # success response
 
 @endgroup
 
 @group invites
 @endpoint POST /invites/create-multiple.json
+@desc Create multiple invites
 @required {Api-Key: str, Api-Username: str}
-@optional {email: str, skip_email: bool=False, custom_message: str, max_redemptions_allowed: int=1, topic_id: int, group_ids: str, group_names: str, expires_at: str}
-@returns(200) {num_successfully_created_invitations: int, num_failed_invitations: int, failed_invitations: [any], successful_invitations: [any]}
+@optional {email: str # pass 1 email per invite to be generated. other properties will be shared by each invite., skip_email: bool=False, custom_message: str # optional, for email invites, max_redemptions_allowed: int=1 # optional, for link invites, topic_id: int, group_ids: str # Optional, either this or `group_names`. Comma separated list for multiple ids., group_names: str # Optional, either this or `group_ids`. Comma separated list for multiple names., expires_at: str # optional, if not supplied, the invite_expiry_days site setting is used}
+@returns(200) {num_successfully_created_invitations: int, num_failed_invitations: int, failed_invitations: [any], successful_invitations: [any]} # success response
 
 @endgroup
 
 @group notifications.json
 @endpoint GET /notifications.json
-@returns(200) {notifications: [map], total_rows_notifications: int, seen_notification_id: int, load_more_notifications: str}
+@desc Get the notifications that belong to the current user
+@returns(200) {notifications: [map], total_rows_notifications: int, seen_notification_id: int, load_more_notifications: str} # notifications
 
 @endgroup
 
 @group notifications
 @endpoint PUT /notifications/mark-read.json
-@optional {id: int}
-@returns(200) {success: str}
+@desc Mark notifications as read
+@optional {id: int # (optional) Leave off to mark all notifications as read}
+@returns(200) {success: str} # notifications marked read
 
 @endgroup
 
 @group posts.json
 @endpoint GET /posts.json
-@optional {before: int}
-@returns(200) {latest_posts: [map]}
+@desc List latest posts across topics
+@optional {before: int # Load posts with an id lower than this value. Useful for pagination.}
+@returns(200) {latest_posts: [map]} # latest posts
 
 @endpoint POST /posts.json
+@desc Creates a new topic, a new post, or a private message
 @required {raw: str}
-@optional {title: str, topic_id: int, category: int, target_recipients: str, target_usernames: str, archetype: str, created_at: str, reply_to_post_number: int, embed_url: str, external_id: str, auto_track: bool}
-@returns(200) {id: int, name: str?, username: str, avatar_template: str, created_at: str, raw: str, cooked: str, post_number: int, post_type: int, posts_count: int, updated_at: str, reply_count: int, reply_to_post_number: str?, quote_count: int, incoming_link_count: int, reads: int, readers_count: int, score: num, yours: bool, topic_id: int, topic_slug: str, display_username: str?, primary_group_name: str?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, flair_group_id: int?, badges_granted: [any], version: int, can_edit: bool, can_delete: bool, can_recover: bool, can_see_hidden_post: bool, can_wiki: bool, user_title: str?, bookmarked: bool, actions_summary: [map], moderator: bool, admin: bool, staff: bool, user_id: int, draft_sequence: int, hidden: bool, trust_level: int, deleted_at: str?, user_deleted: bool, edit_reason: str?, can_view_edit_history: bool, wiki: bool, reviewable_id: int?, reviewable_score_count: int, reviewable_score_pending_count: int, post_url: str, post_localizations: [any], mentioned_users: [any]}
+@optional {title: str # Required if creating a new topic or new private message., topic_id: int # Required if creating a new post., category: int # Optional if creating a new topic, and ignored if creating a new post., target_recipients: str # Required for private message, comma separated., target_usernames: str # Deprecated. Use target_recipients instead., archetype: str # Required for new private message., created_at: str, reply_to_post_number: int # Optional, the post number to reply to inside a topic., embed_url: str # Provide a URL from a remote system to associate a forum topic with that URL, typically for using Discourse as a comments system for an external blog., external_id: str # Provide an external_id from a remote system to associate a forum topic with that id., auto_track: bool # If false, the user will not track the topic. By default, the user will track the topic.}
+@returns(200) {id: int, name: str?, username: str, avatar_template: str, created_at: str, raw: str, cooked: str, post_number: int, post_type: int, posts_count: int, updated_at: str, reply_count: int, reply_to_post_number: str?, quote_count: int, incoming_link_count: int, reads: int, readers_count: int, score: num, yours: bool, topic_id: int, topic_slug: str, display_username: str?, primary_group_name: str?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, flair_group_id: int?, badges_granted: [any], version: int, can_edit: bool, can_delete: bool, can_recover: bool, can_see_hidden_post: bool, can_wiki: bool, user_title: str?, bookmarked: bool, actions_summary: [map], moderator: bool, admin: bool, staff: bool, user_id: int, draft_sequence: int, hidden: bool, trust_level: int, deleted_at: str?, user_deleted: bool, edit_reason: str?, can_view_edit_history: bool, wiki: bool, reviewable_id: int?, reviewable_score_count: int, reviewable_score_pending_count: int, post_url: str, post_localizations: [any], mentioned_users: [any]} # post created
 
 @endgroup
 
 @group posts
 @endpoint GET /posts/{id}.json
+@desc Retrieve a single post
 @required {id: str}
-@returns(200) {id: int, username: str, avatar_template: str, created_at: str, cooked: str, post_number: int, post_type: int, posts_count: int, updated_at: str, reply_count: int, reply_to_post_number: str?, quote_count: int, incoming_link_count: int, reads: int, readers_count: int, score: num, yours: bool, topic_id: int, topic_slug: str, primary_group_name: str?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, flair_group_id: int?, version: int, can_edit: bool, can_delete: bool, can_recover: bool, can_see_hidden_post: bool, can_wiki: bool, user_title: str?, bookmarked: bool, raw: str, actions_summary: [map], moderator: bool, admin: bool, staff: bool, user_id: int, hidden: bool, trust_level: int, deleted_at: str?, user_deleted: bool, edit_reason: str?, can_view_edit_history: bool, wiki: bool, reviewable_id: int?, reviewable_score_count: int, reviewable_score_pending_count: int, post_url: str, mentioned_users: [any], name: str?, display_username: str?}
+@returns(200) {id: int, username: str, avatar_template: str, created_at: str, cooked: str, post_number: int, post_type: int, posts_count: int, updated_at: str, reply_count: int, reply_to_post_number: str?, quote_count: int, incoming_link_count: int, reads: int, readers_count: int, score: num, yours: bool, topic_id: int, topic_slug: str, primary_group_name: str?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, flair_group_id: int?, version: int, can_edit: bool, can_delete: bool, can_recover: bool, can_see_hidden_post: bool, can_wiki: bool, user_title: str?, bookmarked: bool, raw: str, actions_summary: [map], moderator: bool, admin: bool, staff: bool, user_id: int, hidden: bool, trust_level: int, deleted_at: str?, user_deleted: bool, edit_reason: str?, can_view_edit_history: bool, wiki: bool, reviewable_id: int?, reviewable_score_count: int, reviewable_score_pending_count: int, post_url: str, mentioned_users: [any], name: str?, display_username: str?} # single reviewable post
 
 @endpoint PUT /posts/{id}.json
+@desc Update a single post
 @required {id: str}
-@optional {post: map{raw!: str, edit_reason: str}, bypass_bump: bool}
-@returns(200) {post: map{id: int, username: str, avatar_template: str, created_at: str, cooked: str, post_number: int, post_type: int, posts_count: int, updated_at: str, reply_count: int, reply_to_post_number: str?, quote_count: int, incoming_link_count: int, reads: int, readers_count: int, score: num, yours: bool, topic_id: int, topic_slug: str, primary_group_name: str?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, flair_group_id: int?, badges_granted: [any], version: int, can_edit: bool, can_delete: bool, can_recover: bool, can_see_hidden_post: bool, can_wiki: bool, user_title: str?, bookmarked: bool, raw: str, actions_summary: [map], moderator: bool, admin: bool, staff: bool, user_id: int, draft_sequence: int, hidden: bool, trust_level: int, deleted_at: str?, user_deleted: bool, edit_reason: str?, can_view_edit_history: bool, wiki: bool, reviewable_id: int?, reviewable_score_count: int, reviewable_score_pending_count: int, post_url: str, post_localizations: [any], mentioned_users: [any], name: str?, display_username: str?}}
+@optional {post: map{raw!: str, edit_reason: str}, bypass_bump: bool # Skip bumping the topic when updating the post. Requires staff or TL4 permissions.}
+@returns(200) {post: map{id: int, username: str, avatar_template: str, created_at: str, cooked: str, post_number: int, post_type: int, posts_count: int, updated_at: str, reply_count: int, reply_to_post_number: str?, quote_count: int, incoming_link_count: int, reads: int, readers_count: int, score: num, yours: bool, topic_id: int, topic_slug: str, primary_group_name: str?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, flair_group_id: int?, badges_granted: [any], version: int, can_edit: bool, can_delete: bool, can_recover: bool, can_see_hidden_post: bool, can_wiki: bool, user_title: str?, bookmarked: bool, raw: str, actions_summary: [map], moderator: bool, admin: bool, staff: bool, user_id: int, draft_sequence: int, hidden: bool, trust_level: int, deleted_at: str?, user_deleted: bool, edit_reason: str?, can_view_edit_history: bool, wiki: bool, reviewable_id: int?, reviewable_score_count: int, reviewable_score_pending_count: int, post_url: str, post_localizations: [any], mentioned_users: [any], name: str?, display_username: str?}} # post updated
 
 @endpoint DELETE /posts/{id}.json
+@desc delete a single post
 @required {id: int}
-@optional {force_destroy: bool}
-@returns(200)
+@optional {force_destroy: bool # The `SiteSetting.can_permanently_delete` needs to be enabled first before this param can be used. Also this endpoint needs to be called first without `force_destroy` and then followed up with a second call 5 minutes later with `force_destroy` to permanently delete.}
+@returns(200) success response
 
 @endpoint GET /posts/{id}/replies.json
+@desc List replies to a post
 @required {id: str}
-@returns(200)
+@returns(200) post replies
 
 @endpoint PUT /posts/{id}/locked.json
-@required {Api-Key: str, Api-Username: str, id: str, locked: str}
-@returns(200) {locked: bool}
+@desc Lock a post from being edited
+@required {Api-Key: str, Api-Username: str, id: str, locked: str # Whether to lock the post (true/false)}
+@returns(200) {locked: bool} # post updated
 
 @endgroup
 
 @group post_actions.json
 @endpoint POST /post_actions.json
-@required {Api-Key: str, Api-Username: str, id: int, post_action_type_id: int}
-@optional {flag_topic: bool}
-@returns(200) {id: int, name: str, username: str, avatar_template: str, created_at: str, cooked: str, post_number: int, post_type: int, posts_count: int, updated_at: str, reply_count: int, reply_to_post_number: str?, quote_count: int, incoming_link_count: int, reads: int, readers_count: int, score: num, yours: bool, topic_id: int, topic_slug: str, display_username: str, primary_group_name: str?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, flair_group_id: int?, badges_granted: [any], version: int, can_edit: bool, can_delete: bool, can_recover: bool, can_see_hidden_post: bool, can_wiki: bool, user_title: str?, bookmarked: bool, actions_summary: [map], moderator: bool, admin: bool, staff: bool, user_id: int, hidden: bool, trust_level: int, deleted_at: str?, user_deleted: bool, edit_reason: str?, can_view_edit_history: bool, wiki: bool, reviewable_id: int?, reviewable_score_count: int, reviewable_score_pending_count: int, post_url: str}
+@desc Like a post and other actions
+@required {Api-Key: str, Api-Username: str, id: int # The ID of the post to perform the action on, post_action_type_id: int # The ID of the post action type (e.g., 2 for like)}
+@optional {flag_topic: bool # Whether to flag the entire topic}
+@returns(200) {id: int, name: str, username: str, avatar_template: str, created_at: str, cooked: str, post_number: int, post_type: int, posts_count: int, updated_at: str, reply_count: int, reply_to_post_number: str?, quote_count: int, incoming_link_count: int, reads: int, readers_count: int, score: num, yours: bool, topic_id: int, topic_slug: str, display_username: str, primary_group_name: str?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, flair_group_id: int?, badges_granted: [any], version: int, can_edit: bool, can_delete: bool, can_recover: bool, can_see_hidden_post: bool, can_wiki: bool, user_title: str?, bookmarked: bool, actions_summary: [map], moderator: bool, admin: bool, staff: bool, user_id: int, hidden: bool, trust_level: int, deleted_at: str?, user_deleted: bool, edit_reason: str?, can_view_edit_history: bool, wiki: bool, reviewable_id: int?, reviewable_score_count: int, reviewable_score_pending_count: int, post_url: str} # post updated
 
 @endgroup
 
 @group topics
 @endpoint GET /topics/private-messages/{username}.json
+@desc Get a list of private messages for a user
 @required {username: str}
-@returns(200) {users: [map], primary_groups: [any], topic_list: map{can_create_topic: bool, draft: str?, draft_key: str, draft_sequence: int, per_page: int, topics: [map]}}
+@returns(200) {users: [map], primary_groups: [any], topic_list: map{can_create_topic: bool, draft: str?, draft_key: str, draft_sequence: int, per_page: int, topics: [map]}} # private messages
 
 @endpoint GET /topics/private-messages-sent/{username}.json
+@desc Get a list of private messages sent for a user
 @required {username: str}
-@returns(200) {users: [map], primary_groups: [any], topic_list: map{can_create_topic: bool, draft: str?, draft_key: str, draft_sequence: int, per_page: int, topics: [map]}}
+@returns(200) {users: [map], primary_groups: [any], topic_list: map{can_create_topic: bool, draft: str?, draft_key: str, draft_sequence: int, per_page: int, topics: [map]}} # private messages
 
 @endgroup
 
 @group search.json
 @endpoint GET /search.json
-@optional {q: str, page: int}
-@returns(200) {posts: [any], users: [any], categories: [any], tags: [map], groups: [any], grouped_search_result: map{more_posts: str?, more_users: str?, more_categories: str?, term: str, search_log_id: int, more_full_page_results: str?, can_create_topic: bool, error: str?, extra: map{categories: [any]?}, post_ids: [any], user_ids: [any], category_ids: [any], tag_ids: [any], group_ids: [any]}}
+@desc Search for a term
+@optional {q: str # The query string needs to be url encoded and is made up of the following options: - Search term. This is just a string. Usually it would be the first item in the query. - `@<username>`: Use the `@` followed by the username to specify posts by this user. - `#<category>`: Use the `#` followed by the category slug to search within this category. - `tags:`: `api,solved` or for posts that have all the specified tags `api+solved`. - `before:`: `yyyy-mm-dd` - `after:`: `yyyy-mm-dd` - `order:`: `latest`, `likes`, `views`, `latest_topic` - `assigned:`: username (without `@`) - `in:`: `title`, `likes`, `personal`, `messages`, `seen`, `unseen`, `posted`, `created`, `watching`, `tracking`, `bookmarks`, `assigned`, `unassigned`, `first`, `pinned`, `wiki` - `with:`: `images` - `status:`: `open`, `closed`, `public`, `archived`, `noreplies`, `single_user`, `solved`, `unsolved` - `group:`: group_name or group_id - `group_messages:`: group_name or group_id - `min_posts:`: 1 - `max_posts:`: 10 - `min_views:`: 1 - `max_views:`: 10  If you are using cURL you can use the `-G` and the `--data-urlencode` flags to encode the query:  ``` curl -i -sS -X GET -G "http://localhost:4200/search.json" \ --data-urlencode 'q=wordpress @scossar #fun after:2020-01-01' ```, page: int}
+@returns(200) {posts: [any], users: [any], categories: [any], tags: [map], groups: [any], grouped_search_result: map{more_posts: str?, more_users: str?, more_categories: str?, term: str, search_log_id: int, more_full_page_results: str?, can_create_topic: bool, error: str?, extra: map{categories: [any]?}, post_ids: [any], user_ids: [any], category_ids: [any], tag_ids: [any], group_ids: [any]}} # success response
 
 @endgroup
 
 @group site.json
 @endpoint GET /site.json
-@returns(200) {default_archetype: str, notification_types: map{mentioned: int, replied: int, quoted: int, edited: int, liked: int, private_message: int, invited_to_private_message: int, invitee_accepted: int, posted: int, watching_category_or_tag: int, new_features: int, admin_problems: int, moved_post: int, linked: int, granted_badge: int, invited_to_topic: int, custom: int, group_mentioned: int, group_message_summary: int, watching_first_post: int, topic_reminder: int, liked_consolidated: int, linked_consolidated: int, post_approved: int, code_review_commit_approved: int, membership_request_accepted: int, membership_request_consolidated: int, bookmark_reminder: int, reaction: int, votes_released: int, event_reminder: int, event_invitation: int, chat_mention: int, chat_message: int, chat_invitation: int, chat_group_mention: int, chat_quoted: int, chat_watched_thread: int, upcoming_change_available: int, upcoming_change_automatically_promoted: int, assigned: int, question_answer_user_commented: int, following: int, following_created_topic: int, following_replied: int, circles_activity: int}, post_types: map{regular: int, moderator_action: int, small_action: int, whisper: int}, trust_levels: map{newuser: int, basic: int, member: int, regular: int, leader: int}, user_tips: map{first_notification: int, topic_timeline: int, post_menu: int, topic_notification_levels: int, suggested_topics: int}, groups: [map], filters: [any], periods: [any], top_menu_items: [any], anonymous_top_menu_items: [any], uncategorized_category_id: int, user_field_max_length: int, post_action_types: [map], topic_flag_types: [map], can_create_tag: bool, can_tag_topics: bool, can_tag_pms: bool, tags_filter_regexp: str, top_tags: [map], wizard_required: bool, can_associate_groups: bool, email_configured: bool, topic_featured_link_allowed_category_ids: [any], user_themes: [map], user_color_schemes: [map], default_light_color_scheme: map?, default_dark_color_scheme: map?, censored_regexp: [map], custom_emoji_translation: map, watched_words_replace: str?, watched_words_link: str?, markdown_additional_options: map, hashtag_configurations: map, hashtag_icons: map, displayed_about_plugin_stat_groups: [any], categories: [map], archetypes: [map], user_fields: [any], auth_providers: [any], whispers_allowed_groups_names: [any], denied_emojis: [any], valid_flag_applies_to_types: [any], navigation_menu_site_top_tags: [any], full_name_required_for_signup: bool, full_name_visible_in_signup: bool, admin_config_login_routes: [any]}
+@desc Get site info
+@returns(200) {default_archetype: str, notification_types: map{mentioned: int, replied: int, quoted: int, edited: int, liked: int, private_message: int, invited_to_private_message: int, invitee_accepted: int, posted: int, watching_category_or_tag: int, new_features: int, admin_problems: int, moved_post: int, linked: int, granted_badge: int, invited_to_topic: int, custom: int, group_mentioned: int, group_message_summary: int, watching_first_post: int, topic_reminder: int, liked_consolidated: int, linked_consolidated: int, post_approved: int, code_review_commit_approved: int, membership_request_accepted: int, membership_request_consolidated: int, bookmark_reminder: int, reaction: int, votes_released: int, event_reminder: int, event_invitation: int, chat_mention: int, chat_message: int, chat_invitation: int, chat_group_mention: int, chat_quoted: int, chat_watched_thread: int, upcoming_change_available: int, upcoming_change_automatically_promoted: int, assigned: int, question_answer_user_commented: int, following: int, following_created_topic: int, following_replied: int, circles_activity: int}, post_types: map{regular: int, moderator_action: int, small_action: int, whisper: int}, trust_levels: map{newuser: int, basic: int, member: int, regular: int, leader: int}, user_tips: map{first_notification: int, topic_timeline: int, post_menu: int, topic_notification_levels: int, suggested_topics: int}, groups: [map], filters: [any], periods: [any], top_menu_items: [any], anonymous_top_menu_items: [any], uncategorized_category_id: int, user_field_max_length: int, post_action_types: [map], topic_flag_types: [map], can_create_tag: bool, can_tag_topics: bool, can_tag_pms: bool, tags_filter_regexp: str, top_tags: [map], wizard_required: bool, can_associate_groups: bool, email_configured: bool, topic_featured_link_allowed_category_ids: [any], user_themes: [map], user_color_schemes: [map], default_light_color_scheme: map?, default_dark_color_scheme: map?, censored_regexp: [map], custom_emoji_translation: map, watched_words_replace: str?, watched_words_link: str?, markdown_additional_options: map, hashtag_configurations: map, hashtag_icons: map, displayed_about_plugin_stat_groups: [any], categories: [map], archetypes: [map], user_fields: [any], auth_providers: [any], whispers_allowed_groups_names: [any], denied_emojis: [any], valid_flag_applies_to_types: [any], navigation_menu_site_top_tags: [any], full_name_required_for_signup: bool, full_name_visible_in_signup: bool, admin_config_login_routes: [any]} # success response
 
 @endgroup
 
 @group site
 @endpoint GET /site/basic-info.json
-@returns(200) {logo_url: str, logo_small_url: str, apple_touch_icon_url: str, favicon_url: str, title: str, description: str, header_primary_color: str, header_background_color: str, login_required: bool, locale: str, include_in_discourse_discover: bool, mobile_logo_url: str}
+@desc Get site basic info
+@returns(200) {logo_url: str, logo_small_url: str, apple_touch_icon_url: str, favicon_url: str, title: str, description: str, header_primary_color: str, header_background_color: str, login_required: bool, locale: str, include_in_discourse_discover: bool, mobile_logo_url: str} # success response
 
 @endgroup
 
 @group tag_groups.json
 @endpoint GET /tag_groups.json
-@returns(200) {tag_groups: [map]}
+@desc Get a list of tag groups
+@returns(200) {tag_groups: [map]} # tags
 
 @endpoint POST /tag_groups.json
+@desc Creates a tag group
 @required {name: str}
-@returns(200) {tag_group: map{id: int, name: str, tags: [map], parent_tag: [map], one_per_topic: bool, permissions: map}}
+@returns(200) {tag_group: map{id: int, name: str, tags: [map], parent_tag: [map], one_per_topic: bool, permissions: map}} # tag group created
 
 @endgroup
 
 @group tag_groups
 @endpoint GET /tag_groups/{id}.json
+@desc Get a single tag group
 @required {id: str}
-@returns(200) {tag_group: map{id: int, name: str, tag_names: [any], parent_tag_name: [any], one_per_topic: bool, permissions: map{everyone: int}}}
+@returns(200) {tag_group: map{id: int, name: str, tag_names: [any], parent_tag_name: [any], one_per_topic: bool, permissions: map{everyone: int}}} # notifications
 
 @endpoint PUT /tag_groups/{id}.json
+@desc Update tag group
 @required {id: str}
 @optional {name: str}
-@returns(200) {success: str, tag_group: map{id: int, name: str, tag_names: [any], parent_tag_name: [any], one_per_topic: bool, permissions: map{everyone: int}}}
+@returns(200) {success: str, tag_group: map{id: int, name: str, tag_names: [any], parent_tag_name: [any], one_per_topic: bool, permissions: map{everyone: int}}} # Tag group updated
 
 @endgroup
 
 @group tags.json
 @endpoint GET /tags.json
-@returns(200) {tags: [map], extras: map{categories: [any]}}
+@desc Get a list of tags
+@returns(200) {tags: [map], extras: map{categories: [any]}} # notifications
 
 @endgroup
 
 @group tag
 @endpoint GET /tag/{name}.json
+@desc Get a specific tag
 @required {name: str}
-@returns(200) {users: [map], primary_groups: [any], topic_list: map{can_create_topic: bool, draft: str?, draft_key: str, draft_sequence: int, per_page: int, tags: [map], topics: [map]}}
+@returns(200) {users: [map], primary_groups: [any], topic_list: map{can_create_topic: bool, draft: str?, draft_key: str, draft_sequence: int, per_page: int, tags: [map], topics: [map]}} # notifications
 
 @endgroup
 
 @group t
 @endpoint GET /t/{id}/posts.json
+@desc Get specific posts from a topic
 @required {Api-Key: str, Api-Username: str, id: str, post_ids[]: int}
-@returns(200) {post_stream: map{posts: [map]}, id: int}
+@returns(200) {post_stream: map{posts: [map]}, id: int} # specific posts
 
 @endpoint GET /t/{id}.json
+@desc Get a single topic
 @required {Api-Key: str, Api-Username: str, id: str}
-@returns(200) {post_stream: map{posts: [map], stream: [any]}, timeline_lookup: [any], suggested_topics: [map], tags: [map], tags_descriptions: map, id: int, title: str, fancy_title: str, posts_count: int, created_at: str, views: int, reply_count: int, like_count: int, last_posted_at: str?, visible: bool, closed: bool, archived: bool, has_summary: bool, archetype: str, slug: str, category_id: int, word_count: int?, deleted_at: str?, user_id: int, featured_link: str?, pinned_globally: bool, pinned_at: str?, pinned_until: str?, image_url: str?, slow_mode_seconds: int, draft: str?, draft_key: str, draft_sequence: int, unpinned: str?, pinned: bool, current_post_number: int, highest_post_number: int?, deleted_by: str?, has_deleted: bool, actions_summary: [map], chunk_size: int, bookmarked: bool, bookmarks: [any], topic_timer: str?, message_bus_last_id: int, participant_count: int, show_read_indicator: bool, thumbnails: str?, slow_mode_enabled_until: str?, details: map{can_edit: bool, notification_level: int, can_move_posts: bool, can_delete: bool, can_remove_allowed_users: bool, can_create_post: bool, can_reply_as_new_topic: bool, can_invite_to: bool, can_invite_via_email: bool, can_flag_topic: bool, can_convert_topic: bool, can_review_topic: bool, can_close_topic: bool, can_archive_topic: bool, can_split_merge_topic: bool, can_edit_staff_notes: bool, can_toggle_topic_visibility: bool, can_pin_unpin_topic: bool, can_moderate_category: bool, can_remove_self_id: int, participants: [map], created_by: map{id: int, username: str, name: str, avatar_template: str}, last_poster: map{id: int, username: str, name: str, avatar_template: str}}}
+@returns(200) {post_stream: map{posts: [map], stream: [any]}, timeline_lookup: [any], suggested_topics: [map], tags: [map], tags_descriptions: map, id: int, title: str, fancy_title: str, posts_count: int, created_at: str, views: int, reply_count: int, like_count: int, last_posted_at: str?, visible: bool, closed: bool, archived: bool, has_summary: bool, archetype: str, slug: str, category_id: int, word_count: int?, deleted_at: str?, user_id: int, featured_link: str?, pinned_globally: bool, pinned_at: str?, pinned_until: str?, image_url: str?, slow_mode_seconds: int, draft: str?, draft_key: str, draft_sequence: int, unpinned: str?, pinned: bool, current_post_number: int, highest_post_number: int?, deleted_by: str?, has_deleted: bool, actions_summary: [map], chunk_size: int, bookmarked: bool, bookmarks: [any], topic_timer: str?, message_bus_last_id: int, participant_count: int, show_read_indicator: bool, thumbnails: str?, slow_mode_enabled_until: str?, details: map{can_edit: bool, notification_level: int, can_move_posts: bool, can_delete: bool, can_remove_allowed_users: bool, can_create_post: bool, can_reply_as_new_topic: bool, can_invite_to: bool, can_invite_via_email: bool, can_flag_topic: bool, can_convert_topic: bool, can_review_topic: bool, can_close_topic: bool, can_archive_topic: bool, can_split_merge_topic: bool, can_edit_staff_notes: bool, can_toggle_topic_visibility: bool, can_pin_unpin_topic: bool, can_moderate_category: bool, can_remove_self_id: int, participants: [map], created_by: map{id: int, username: str, name: str, avatar_template: str}, last_poster: map{id: int, username: str, name: str, avatar_template: str}}} # specific posts
 
 @endpoint DELETE /t/{id}.json
+@desc Remove a topic
 @required {Api-Key: str, Api-Username: str, id: str}
-@returns(200)
+@returns(200) specific posts
 
 @endpoint PUT /t/-/{id}.json
+@desc Update a topic
 @required {Api-Key: str, Api-Username: str, id: str}
 @optional {topic: map{title: str, category_id: int}}
-@returns(200) {basic_topic: map{id: int, title: str, fancy_title: str, slug: str, posts_count: int}}
+@returns(200) {basic_topic: map{id: int, title: str, fancy_title: str, slug: str, posts_count: int}} # topic updated
 
 @endpoint POST /t/{id}/invite.json
+@desc Invite to topic
 @required {Api-Key: str, Api-Username: str, id: str}
 @optional {user: str, email: str}
-@returns(200) {user: map{id: int, username: str, name: str, avatar_template: str}}
+@returns(200) {user: map{id: int, username: str, name: str, avatar_template: str}} # topic updated
 
 @endpoint POST /t/{id}/invite-group.json
+@desc Invite group to topic
 @required {Api-Key: str, Api-Username: str, id: str}
-@optional {group: str, should_notify: bool}
-@returns(200) {group: map{id: int, name: str}}
+@optional {group: str # The name of the group to invite, should_notify: bool # Whether to notify the group, it defaults to true}
+@returns(200) {group: map{id: int, name: str}} # invites to a PM
 
 @endpoint PUT /t/{id}/bookmark.json
+@desc Bookmark topic
 @required {Api-Key: str, Api-Username: str, id: str}
-@returns(200)
+@returns(200) topic updated
 
 @endpoint PUT /t/{id}/status.json
+@desc Update the status of a topic
 @required {Api-Key: str, Api-Username: str, id: str, status: str(closed/pinned/pinned_globally/archived/visible), enabled: str(true/false)}
-@optional {until: str}
-@returns(200) {success: str, topic_status_update: str?}
+@optional {until: str # Only required for `pinned` and `pinned_globally`}
+@returns(200) {success: str, topic_status_update: str?} # topic updated
 
 @endgroup
 
 @group latest.json
 @endpoint GET /latest.json
+@desc Get the latest topics
 @required {Api-Key: str, Api-Username: str}
-@optional {order: str, ascending: str, per_page: int}
-@returns(200) {users: [map], primary_groups: [any], topic_list: map{can_create_topic: bool, draft: str?, draft_key: str, draft_sequence: int, per_page: int, topics: [map]}}
+@optional {order: str # Enum: `default`, `created`, `activity`, `views`, `posts`, `category`, `likes`, `op_likes`, `posters`, ascending: str # Defaults to `desc`, add `ascending=true` to sort asc, per_page: int # Maximum number of topics returned, between 1-100}
+@returns(200) {users: [map], primary_groups: [any], topic_list: map{can_create_topic: bool, draft: str?, draft_key: str, draft_sequence: int, per_page: int, topics: [map]}} # topic updated
 
 @endgroup
 
 @group top.json
 @endpoint GET /top.json
+@desc Get the top topics filtered by period
 @required {Api-Key: str, Api-Username: str}
-@optional {period: str, per_page: int}
-@returns(200) {users: [map], primary_groups: [any], topic_list: map{can_create_topic: bool, draft: str?, draft_key: str, draft_sequence: int, for_period: str, per_page: int, topics: [map]}}
+@optional {period: str # Enum: `all`, `yearly`, `quarterly`, `monthly`, `weekly`, `daily`, per_page: int # Maximum number of topics returned, between 1-100}
+@returns(200) {users: [map], primary_groups: [any], topic_list: map{can_create_topic: bool, draft: str?, draft_key: str, draft_sequence: int, for_period: str, per_page: int, topics: [map]}} # response
 
 @endgroup
 
 @group t
 @endpoint POST /t/{id}/notifications.json
+@desc Set notification level
 @required {Api-Key: str, Api-Username: str, id: str, notification_level: str(0/1/2/3)}
-@returns(200) {success: str}
+@returns(200) {success: str} # topic updated
 
 @endpoint PUT /t/{id}/change-timestamp.json
+@desc Update topic timestamp
 @required {Api-Key: str, Api-Username: str, id: str, timestamp: str}
-@returns(200) {success: str}
+@returns(200) {success: str} # topic updated
 
 @endpoint POST /t/{id}/timer.json
+@desc Create topic timer
 @required {Api-Key: str, Api-Username: str, id: str}
 @optional {time: str, status_type: str, based_on_last_post: bool, category_id: int}
-@returns(200) {success: str, execute_at: str, duration: str?, based_on_last_post: bool, closed: bool, category_id: int?}
+@returns(200) {success: str, execute_at: str, duration: str?, based_on_last_post: bool, closed: bool, category_id: int?} # topic updated
 
 @endpoint GET /t/external_id/{external_id}.json
+@desc Get topic by external_id
 @required {external_id: str}
-@errors {301}
+@errors {301: redirects to /t/{topic_id}.json}
 
 @endgroup
 
 @group uploads.json
 @endpoint POST /uploads.json
-@returns(200) {id: int, url: str, original_filename: str, filesize: int, width: int, height: int, thumbnail_width: int, thumbnail_height: int, extension: str, short_url: str, short_path: str, retain_hours: str?, human_filesize: str, dominant_color: str?, thumbnail: map?, optimized_video: map?}
+@desc Creates an upload
+@returns(200) {id: int, url: str, original_filename: str, filesize: int, width: int, height: int, thumbnail_width: int, thumbnail_height: int, extension: str, short_url: str, short_path: str, retain_hours: str?, human_filesize: str, dominant_color: str?, thumbnail: map?, optimized_video: map?} # file uploaded
 
 @endgroup
 
 @group uploads
 @endpoint POST /uploads/generate-presigned-put.json
-@required {type: str(avatar/profile_background/card_background/custom_emoji/composer), file_name: str, file_size: int}
+@desc Initiates a direct external upload
+@required {type: str(avatar/profile_background/card_background/custom_emoji/composer), file_name: str, file_size: int # File size should be represented in bytes.}
 @optional {metadata: map{sha1-checksum: str}}
-@returns(200) {key: str, url: str, signed_headers: map, unique_identifier: str}
+@returns(200) {key: str, url: str, signed_headers: map, unique_identifier: str} # external upload initialized
 
 @endpoint POST /uploads/complete-external-upload.json
-@required {unique_identifier: str}
-@optional {for_private_message: str, for_site_setting: str, pasted: str}
-@returns(200) {id: int, url: str, original_filename: str, filesize: int, width: int, height: int, thumbnail_width: int, thumbnail_height: int, extension: str, short_url: str, short_path: str, retain_hours: str?, human_filesize: str, dominant_color: str?, thumbnail: map?, optimized_video: map?}
+@desc Completes a direct external upload
+@required {unique_identifier: str # The unique identifier returned in the original /generate-presigned-put request.}
+@optional {for_private_message: str # Optionally set this to true if the upload is for a private message., for_site_setting: str # Optionally set this to true if the upload is for a site setting., pasted: str # Optionally set this to true if the upload was pasted into the upload area. This will convert PNG files to JPEG.}
+@returns(200) {id: int, url: str, original_filename: str, filesize: int, width: int, height: int, thumbnail_width: int, thumbnail_height: int, extension: str, short_url: str, short_path: str, retain_hours: str?, human_filesize: str, dominant_color: str?, thumbnail: map?, optimized_video: map?} # external upload initialized
 
 @endpoint POST /uploads/create-multipart.json
-@required {upload_type: str(avatar/profile_background/card_background/custom_emoji/composer), file_name: str, file_size: int}
+@desc Creates a multipart external upload
+@required {upload_type: str(avatar/profile_background/card_background/custom_emoji/composer), file_name: str, file_size: int # File size should be represented in bytes.}
 @optional {metadata: map{sha1-checksum: str}}
-@returns(200) {key: str, external_upload_identifier: str, unique_identifier: str}
+@returns(200) {key: str, external_upload_identifier: str, unique_identifier: str} # external upload initialized
 
 @endpoint POST /uploads/batch-presign-multipart-parts.json
-@required {part_numbers: [any], unique_identifier: str}
-@returns(200) {presigned_urls: map}
+@desc Generates batches of presigned URLs for multipart parts
+@required {part_numbers: [any] # The part numbers to generate the presigned URLs for, must be between 1 and 10000., unique_identifier: str # The unique identifier returned in the original /create-multipart request.}
+@returns(200) {presigned_urls: map} # external upload initialized
 
 @endpoint POST /uploads/abort-multipart.json
-@required {external_upload_identifier: str}
-@returns(200) {success: str}
+@desc Abort multipart upload
+@required {external_upload_identifier: str # The identifier of the multipart upload in the external storage provider. This is the multipart upload_id in AWS S3.}
+@returns(200) {success: str} # external upload initialized
 
 @endpoint POST /uploads/complete-multipart.json
-@required {unique_identifier: str, parts: [any]}
-@returns(200) {id: int, url: str, original_filename: str, filesize: int, width: int, height: int, thumbnail_width: int, thumbnail_height: int, extension: str, short_url: str, short_path: str, retain_hours: str?, human_filesize: str, dominant_color: str?, thumbnail: map?, optimized_video: map?}
+@desc Complete multipart upload
+@required {unique_identifier: str # The unique identifier returned in the original /create-multipart request., parts: [any] # All of the part numbers and their corresponding ETags that have been uploaded must be provided.}
+@returns(200) {id: int, url: str, original_filename: str, filesize: int, width: int, height: int, thumbnail_width: int, thumbnail_height: int, extension: str, short_url: str, short_path: str, retain_hours: str?, human_filesize: str, dominant_color: str?, thumbnail: map?, optimized_video: map?} # external upload initialized
 
 @endgroup
 
 @group user-badges
 @endpoint GET /user-badges/{username}.json
+@desc List badges for a user
 @required {username: str}
-@returns(200) {badges: [map], badge_types: [map], granted_bies: [map], user_badges: [map]}
+@returns(200) {badges: [map], badge_types: [map], granted_bies: [map], user_badges: [map]} # success response
 
 @endgroup
 
 @group users.json
 @endpoint POST /users.json
+@desc Creates a user
 @required {Api-Key: str, Api-Username: str, name: str, email: str, password: str, username: str}
-@optional {active: bool, approved: bool, user_fields: map{1: bool}, external_ids: map}
-@returns(200) {success: bool, active: bool, message: str, user_id: int}
+@optional {active: bool # This param requires an admin api key in the request header or it will be ignored, approved: bool, user_fields: map{1: bool}, external_ids: map}
+@returns(200) {success: bool, active: bool, message: str, user_id: int} # user created
 
 @endgroup
 
 @group u
 @endpoint GET /u/{username}.json
+@desc Get a single user by username
 @required {Api-Key: str, Api-Username: str, username: str}
-@returns(200) {user_badges: [any], user: map{id: int, username: str, name: str, avatar_template: str, last_posted_at: str?, last_seen_at: str?, created_at: str, ignored: bool, muted: bool, can_ignore_user: bool, can_ignore_users: bool, can_mute_user: bool, can_mute_users: bool, can_send_private_messages: bool, can_send_private_message_to_user: bool, trust_level: int, moderator: bool, admin: bool, title: str?, badge_count: int, second_factor_backup_enabled: bool, user_fields: map{1: str?, 2: str?}, custom_fields: map{first_name: str?}, time_read: int, recent_time_read: int, primary_group_id: int?, primary_group_name: str?, flair_group_id: int?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, featured_topic: str?, staged: bool, can_edit: bool, can_edit_username: bool, can_edit_email: bool, can_edit_name: bool, uploaded_avatar_id: int?, has_title_badges: bool, pending_count: int, pending_posts_count: int, profile_view_count: int, second_factor_enabled: bool, can_upload_profile_header: bool, can_upload_user_card_background: bool, post_count: int, topic_count: int, can_be_deleted: bool, can_delete_all_posts: bool, locale: str?, muted_category_ids: [any], regular_category_ids: [any], watched_tags: [any], watching_first_post_tags: [any], tracked_tags: [any], muted_tags: [any], tracked_category_ids: [any], watched_category_ids: [any], watched_first_post_category_ids: [any], system_avatar_upload_id: str?, system_avatar_template: str, muted_usernames: [any], ignored_usernames: [any], allowed_pm_usernames: [any], mailing_list_posts_per_day: int, can_change_bio: bool, can_change_location: bool, can_change_website: bool, can_change_tracking_preferences: bool, user_api_keys: str?, user_passkeys: [any], sidebar_tags: [any], sidebar_category_ids: [any], display_sidebar_tags: bool, can_pick_theme_with_custom_homepage: bool, user_auth_tokens: [map], user_notification_schedule: map{enabled: bool, day_0_start_time: int, day_0_end_time: int, day_1_start_time: int, day_1_end_time: int, day_2_start_time: int, day_2_end_time: int, day_3_start_time: int, day_3_end_time: int, day_4_start_time: int, day_4_end_time: int, day_5_start_time: int, day_5_end_time: int, day_6_start_time: int, day_6_end_time: int}, use_logo_small_as_avatar: bool, featured_user_badge_ids: [any], invited_by: str?, groups: [map], group_users: [map], user_option: map{user_id: int, mailing_list_mode: bool, mailing_list_mode_frequency: int, email_digests: bool, email_level: int, email_messages_level: int, external_links_in_new_tab: bool, bookmark_auto_delete_preference: int, color_scheme_id: str?, dark_scheme_id: str?, dynamic_favicon: bool, enable_quoting: bool, enable_smart_lists: bool, enable_markdown_monospace_font: bool, enable_defer: bool, digest_after_minutes: int, automatically_unpin_topics: bool, auto_track_topics_after_msecs: int, notification_level_when_replying: int, new_topic_duration_minutes: int, email_previous_replies: int, email_in_reply_to: bool, like_notification_frequency: int, notify_on_linked_posts: bool, include_tl0_in_digests: bool, theme_ids: [any], theme_key_seq: int, allow_private_messages: bool, enable_allowed_pm_users: bool, homepage_id: str?, hide_profile_and_presence: bool, hide_profile: bool, hide_presence: bool, text_size: str, text_size_seq: int, title_count_mode: str, timezone: str?, skip_new_user_tips: bool, default_calendar: str, oldest_search_log_date: str?, sidebar_link_to_filtered_list: bool, sidebar_show_count_of_new_items: bool, watched_precedence_over_muted: bool, seen_popups: [any]?, topics_unread_when_closed: bool, composition_mode: int, interface_color_mode: int}}}
+@returns(200) {user_badges: [any], user: map{id: int, username: str, name: str, avatar_template: str, last_posted_at: str?, last_seen_at: str?, created_at: str, ignored: bool, muted: bool, can_ignore_user: bool, can_ignore_users: bool, can_mute_user: bool, can_mute_users: bool, can_send_private_messages: bool, can_send_private_message_to_user: bool, trust_level: int, moderator: bool, admin: bool, title: str?, badge_count: int, second_factor_backup_enabled: bool, user_fields: map{1: str?, 2: str?}, custom_fields: map{first_name: str?}, time_read: int, recent_time_read: int, primary_group_id: int?, primary_group_name: str?, flair_group_id: int?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, featured_topic: str?, staged: bool, can_edit: bool, can_edit_username: bool, can_edit_email: bool, can_edit_name: bool, uploaded_avatar_id: int?, has_title_badges: bool, pending_count: int, pending_posts_count: int, profile_view_count: int, second_factor_enabled: bool, can_upload_profile_header: bool, can_upload_user_card_background: bool, post_count: int, topic_count: int, can_be_deleted: bool, can_delete_all_posts: bool, locale: str?, muted_category_ids: [any], regular_category_ids: [any], watched_tags: [any], watching_first_post_tags: [any], tracked_tags: [any], muted_tags: [any], tracked_category_ids: [any], watched_category_ids: [any], watched_first_post_category_ids: [any], system_avatar_upload_id: str?, system_avatar_template: str, muted_usernames: [any], ignored_usernames: [any], allowed_pm_usernames: [any], mailing_list_posts_per_day: int, can_change_bio: bool, can_change_location: bool, can_change_website: bool, can_change_tracking_preferences: bool, user_api_keys: str?, user_passkeys: [any], sidebar_tags: [any], sidebar_category_ids: [any], display_sidebar_tags: bool, can_pick_theme_with_custom_homepage: bool, user_auth_tokens: [map], user_notification_schedule: map{enabled: bool, day_0_start_time: int, day_0_end_time: int, day_1_start_time: int, day_1_end_time: int, day_2_start_time: int, day_2_end_time: int, day_3_start_time: int, day_3_end_time: int, day_4_start_time: int, day_4_end_time: int, day_5_start_time: int, day_5_end_time: int, day_6_start_time: int, day_6_end_time: int}, use_logo_small_as_avatar: bool, featured_user_badge_ids: [any], invited_by: str?, groups: [map], group_users: [map], user_option: map{user_id: int, mailing_list_mode: bool, mailing_list_mode_frequency: int, email_digests: bool, email_level: int, email_messages_level: int, external_links_in_new_tab: bool, bookmark_auto_delete_preference: int, color_scheme_id: str?, dark_scheme_id: str?, dynamic_favicon: bool, enable_quoting: bool, enable_smart_lists: bool, enable_markdown_monospace_font: bool, enable_defer: bool, digest_after_minutes: int, automatically_unpin_topics: bool, auto_track_topics_after_msecs: int, notification_level_when_replying: int, new_topic_duration_minutes: int, email_previous_replies: int, email_in_reply_to: bool, like_notification_frequency: int, notify_on_linked_posts: bool, include_tl0_in_digests: bool, theme_ids: [any], theme_key_seq: int, allow_private_messages: bool, enable_allowed_pm_users: bool, homepage_id: str?, hide_profile_and_presence: bool, hide_profile: bool, hide_presence: bool, text_size: str, text_size_seq: int, title_count_mode: str, timezone: str?, skip_new_user_tips: bool, default_calendar: str, oldest_search_log_date: str?, sidebar_link_to_filtered_list: bool, sidebar_show_count_of_new_items: bool, watched_precedence_over_muted: bool, seen_popups: [any]?, topics_unread_when_closed: bool, composition_mode: int, interface_color_mode: int}}} # user with primary group response
 
 @endpoint PUT /u/{username}.json
+@desc Update a user
 @required {Api-Key: str, Api-Username: str, username: str}
 @optional {name: str, external_ids: map}
-@returns(200) {success: str, user: map}
+@returns(200) {success: str, user: map} # user updated
 
 @endpoint GET /u/by-external/{external_id}.json
+@desc Get a user by external_id
 @required {Api-Key: str, Api-Username: str, external_id: str}
-@returns(200) {user_badges: [any], user: map{id: int, username: str, name: str, avatar_template: str, last_posted_at: str?, last_seen_at: str?, created_at: str, ignored: bool, muted: bool, can_ignore_user: bool, can_ignore_users: bool, can_mute_user: bool, can_mute_users: bool, can_send_private_messages: bool, can_send_private_message_to_user: bool, trust_level: int, moderator: bool, admin: bool, title: str?, badge_count: int, second_factor_backup_enabled: bool, user_fields: map{1: str?, 2: str?}, custom_fields: map{first_name: str?}, time_read: int, recent_time_read: int, primary_group_id: int?, primary_group_name: str?, flair_group_id: int?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, featured_topic: str?, staged: bool, can_edit: bool, can_edit_username: bool, can_edit_email: bool, can_edit_name: bool, uploaded_avatar_id: int?, has_title_badges: bool, pending_count: int, pending_posts_count: int, profile_view_count: int, second_factor_enabled: bool, can_upload_profile_header: bool, can_upload_user_card_background: bool, post_count: int, topic_count: int, can_be_deleted: bool, can_delete_all_posts: bool, locale: str?, muted_category_ids: [any], regular_category_ids: [any], watched_tags: [any], watching_first_post_tags: [any], tracked_tags: [any], muted_tags: [any], tracked_category_ids: [any], watched_category_ids: [any], watched_first_post_category_ids: [any], system_avatar_upload_id: str?, system_avatar_template: str, muted_usernames: [any], ignored_usernames: [any], allowed_pm_usernames: [any], mailing_list_posts_per_day: int, can_change_bio: bool, can_change_location: bool, can_change_website: bool, can_change_tracking_preferences: bool, user_api_keys: str?, user_passkeys: [any], sidebar_tags: [any], sidebar_category_ids: [any], display_sidebar_tags: bool, can_pick_theme_with_custom_homepage: bool, user_auth_tokens: [map], user_notification_schedule: map{enabled: bool, day_0_start_time: int, day_0_end_time: int, day_1_start_time: int, day_1_end_time: int, day_2_start_time: int, day_2_end_time: int, day_3_start_time: int, day_3_end_time: int, day_4_start_time: int, day_4_end_time: int, day_5_start_time: int, day_5_end_time: int, day_6_start_time: int, day_6_end_time: int}, use_logo_small_as_avatar: bool, featured_user_badge_ids: [any], invited_by: str?, groups: [map], group_users: [map], user_option: map{user_id: int, mailing_list_mode: bool, mailing_list_mode_frequency: int, email_digests: bool, email_level: int, email_messages_level: int, external_links_in_new_tab: bool, bookmark_auto_delete_preference: int, color_scheme_id: str?, dark_scheme_id: str?, dynamic_favicon: bool, enable_quoting: bool, enable_smart_lists: bool, enable_markdown_monospace_font: bool, enable_defer: bool, digest_after_minutes: int, automatically_unpin_topics: bool, auto_track_topics_after_msecs: int, notification_level_when_replying: int, new_topic_duration_minutes: int, email_previous_replies: int, email_in_reply_to: bool, like_notification_frequency: int, notify_on_linked_posts: bool, include_tl0_in_digests: bool, theme_ids: [any], theme_key_seq: int, allow_private_messages: bool, enable_allowed_pm_users: bool, homepage_id: str?, hide_profile_and_presence: bool, hide_profile: bool, hide_presence: bool, text_size: str, text_size_seq: int, title_count_mode: str, timezone: str?, skip_new_user_tips: bool, default_calendar: str, oldest_search_log_date: str?, sidebar_link_to_filtered_list: bool, sidebar_show_count_of_new_items: bool, watched_precedence_over_muted: bool, seen_popups: [any]?, topics_unread_when_closed: bool, composition_mode: int, interface_color_mode: int}}}
+@returns(200) {user_badges: [any], user: map{id: int, username: str, name: str, avatar_template: str, last_posted_at: str?, last_seen_at: str?, created_at: str, ignored: bool, muted: bool, can_ignore_user: bool, can_ignore_users: bool, can_mute_user: bool, can_mute_users: bool, can_send_private_messages: bool, can_send_private_message_to_user: bool, trust_level: int, moderator: bool, admin: bool, title: str?, badge_count: int, second_factor_backup_enabled: bool, user_fields: map{1: str?, 2: str?}, custom_fields: map{first_name: str?}, time_read: int, recent_time_read: int, primary_group_id: int?, primary_group_name: str?, flair_group_id: int?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, featured_topic: str?, staged: bool, can_edit: bool, can_edit_username: bool, can_edit_email: bool, can_edit_name: bool, uploaded_avatar_id: int?, has_title_badges: bool, pending_count: int, pending_posts_count: int, profile_view_count: int, second_factor_enabled: bool, can_upload_profile_header: bool, can_upload_user_card_background: bool, post_count: int, topic_count: int, can_be_deleted: bool, can_delete_all_posts: bool, locale: str?, muted_category_ids: [any], regular_category_ids: [any], watched_tags: [any], watching_first_post_tags: [any], tracked_tags: [any], muted_tags: [any], tracked_category_ids: [any], watched_category_ids: [any], watched_first_post_category_ids: [any], system_avatar_upload_id: str?, system_avatar_template: str, muted_usernames: [any], ignored_usernames: [any], allowed_pm_usernames: [any], mailing_list_posts_per_day: int, can_change_bio: bool, can_change_location: bool, can_change_website: bool, can_change_tracking_preferences: bool, user_api_keys: str?, user_passkeys: [any], sidebar_tags: [any], sidebar_category_ids: [any], display_sidebar_tags: bool, can_pick_theme_with_custom_homepage: bool, user_auth_tokens: [map], user_notification_schedule: map{enabled: bool, day_0_start_time: int, day_0_end_time: int, day_1_start_time: int, day_1_end_time: int, day_2_start_time: int, day_2_end_time: int, day_3_start_time: int, day_3_end_time: int, day_4_start_time: int, day_4_end_time: int, day_5_start_time: int, day_5_end_time: int, day_6_start_time: int, day_6_end_time: int}, use_logo_small_as_avatar: bool, featured_user_badge_ids: [any], invited_by: str?, groups: [map], group_users: [map], user_option: map{user_id: int, mailing_list_mode: bool, mailing_list_mode_frequency: int, email_digests: bool, email_level: int, email_messages_level: int, external_links_in_new_tab: bool, bookmark_auto_delete_preference: int, color_scheme_id: str?, dark_scheme_id: str?, dynamic_favicon: bool, enable_quoting: bool, enable_smart_lists: bool, enable_markdown_monospace_font: bool, enable_defer: bool, digest_after_minutes: int, automatically_unpin_topics: bool, auto_track_topics_after_msecs: int, notification_level_when_replying: int, new_topic_duration_minutes: int, email_previous_replies: int, email_in_reply_to: bool, like_notification_frequency: int, notify_on_linked_posts: bool, include_tl0_in_digests: bool, theme_ids: [any], theme_key_seq: int, allow_private_messages: bool, enable_allowed_pm_users: bool, homepage_id: str?, hide_profile_and_presence: bool, hide_profile: bool, hide_presence: bool, text_size: str, text_size_seq: int, title_count_mode: str, timezone: str?, skip_new_user_tips: bool, default_calendar: str, oldest_search_log_date: str?, sidebar_link_to_filtered_list: bool, sidebar_show_count_of_new_items: bool, watched_precedence_over_muted: bool, seen_popups: [any]?, topics_unread_when_closed: bool, composition_mode: int, interface_color_mode: int}}} # user response
 
 @endpoint GET /u/by-external/{provider}/{external_id}.json
-@required {Api-Key: str, Api-Username: str, provider: str, external_id: str}
-@returns(200) {user_badges: [any], user: map{id: int, username: str, name: str, avatar_template: str, last_posted_at: str?, last_seen_at: str?, created_at: str, ignored: bool, muted: bool, can_ignore_user: bool, can_ignore_users: bool, can_mute_user: bool, can_mute_users: bool, can_send_private_messages: bool, can_send_private_message_to_user: bool, trust_level: int, moderator: bool, admin: bool, title: str?, badge_count: int, second_factor_backup_enabled: bool, user_fields: map{1: str?, 2: str?}, custom_fields: map{first_name: str?}, time_read: int, recent_time_read: int, primary_group_id: int?, primary_group_name: str?, flair_group_id: int?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, featured_topic: str?, staged: bool, can_edit: bool, can_edit_username: bool, can_edit_email: bool, can_edit_name: bool, uploaded_avatar_id: int?, has_title_badges: bool, pending_count: int, pending_posts_count: int, profile_view_count: int, second_factor_enabled: bool, can_upload_profile_header: bool, can_upload_user_card_background: bool, post_count: int, topic_count: int, can_be_deleted: bool, can_delete_all_posts: bool, locale: str?, muted_category_ids: [any], regular_category_ids: [any], watched_tags: [any], watching_first_post_tags: [any], tracked_tags: [any], muted_tags: [any], tracked_category_ids: [any], watched_category_ids: [any], watched_first_post_category_ids: [any], system_avatar_upload_id: str?, system_avatar_template: str, muted_usernames: [any], ignored_usernames: [any], allowed_pm_usernames: [any], mailing_list_posts_per_day: int, can_change_bio: bool, can_change_location: bool, can_change_website: bool, can_change_tracking_preferences: bool, user_api_keys: str?, user_passkeys: [any], sidebar_tags: [any], sidebar_category_ids: [any], display_sidebar_tags: bool, can_pick_theme_with_custom_homepage: bool, user_auth_tokens: [map], user_notification_schedule: map{enabled: bool, day_0_start_time: int, day_0_end_time: int, day_1_start_time: int, day_1_end_time: int, day_2_start_time: int, day_2_end_time: int, day_3_start_time: int, day_3_end_time: int, day_4_start_time: int, day_4_end_time: int, day_5_start_time: int, day_5_end_time: int, day_6_start_time: int, day_6_end_time: int}, use_logo_small_as_avatar: bool, featured_user_badge_ids: [any], invited_by: str?, groups: [map], group_users: [map], user_option: map{user_id: int, mailing_list_mode: bool, mailing_list_mode_frequency: int, email_digests: bool, email_level: int, email_messages_level: int, external_links_in_new_tab: bool, bookmark_auto_delete_preference: int, color_scheme_id: str?, dark_scheme_id: str?, dynamic_favicon: bool, enable_quoting: bool, enable_smart_lists: bool, enable_markdown_monospace_font: bool, enable_defer: bool, digest_after_minutes: int, automatically_unpin_topics: bool, auto_track_topics_after_msecs: int, notification_level_when_replying: int, new_topic_duration_minutes: int, email_previous_replies: int, email_in_reply_to: bool, like_notification_frequency: int, notify_on_linked_posts: bool, include_tl0_in_digests: bool, theme_ids: [any], theme_key_seq: int, allow_private_messages: bool, enable_allowed_pm_users: bool, homepage_id: str?, hide_profile_and_presence: bool, hide_profile: bool, hide_presence: bool, text_size: str, text_size_seq: int, title_count_mode: str, timezone: str?, skip_new_user_tips: bool, default_calendar: str, oldest_search_log_date: str?, sidebar_link_to_filtered_list: bool, sidebar_show_count_of_new_items: bool, watched_precedence_over_muted: bool, seen_popups: [any]?, topics_unread_when_closed: bool, composition_mode: int, interface_color_mode: int}}}
+@desc Get a user by identity provider external ID
+@required {Api-Key: str, Api-Username: str, provider: str # Authentication provider name. Can be found in the provider callback URL: `/auth/{provider}/callback`, external_id: str}
+@returns(200) {user_badges: [any], user: map{id: int, username: str, name: str, avatar_template: str, last_posted_at: str?, last_seen_at: str?, created_at: str, ignored: bool, muted: bool, can_ignore_user: bool, can_ignore_users: bool, can_mute_user: bool, can_mute_users: bool, can_send_private_messages: bool, can_send_private_message_to_user: bool, trust_level: int, moderator: bool, admin: bool, title: str?, badge_count: int, second_factor_backup_enabled: bool, user_fields: map{1: str?, 2: str?}, custom_fields: map{first_name: str?}, time_read: int, recent_time_read: int, primary_group_id: int?, primary_group_name: str?, flair_group_id: int?, flair_name: str?, flair_url: str?, flair_bg_color: str?, flair_color: str?, featured_topic: str?, staged: bool, can_edit: bool, can_edit_username: bool, can_edit_email: bool, can_edit_name: bool, uploaded_avatar_id: int?, has_title_badges: bool, pending_count: int, pending_posts_count: int, profile_view_count: int, second_factor_enabled: bool, can_upload_profile_header: bool, can_upload_user_card_background: bool, post_count: int, topic_count: int, can_be_deleted: bool, can_delete_all_posts: bool, locale: str?, muted_category_ids: [any], regular_category_ids: [any], watched_tags: [any], watching_first_post_tags: [any], tracked_tags: [any], muted_tags: [any], tracked_category_ids: [any], watched_category_ids: [any], watched_first_post_category_ids: [any], system_avatar_upload_id: str?, system_avatar_template: str, muted_usernames: [any], ignored_usernames: [any], allowed_pm_usernames: [any], mailing_list_posts_per_day: int, can_change_bio: bool, can_change_location: bool, can_change_website: bool, can_change_tracking_preferences: bool, user_api_keys: str?, user_passkeys: [any], sidebar_tags: [any], sidebar_category_ids: [any], display_sidebar_tags: bool, can_pick_theme_with_custom_homepage: bool, user_auth_tokens: [map], user_notification_schedule: map{enabled: bool, day_0_start_time: int, day_0_end_time: int, day_1_start_time: int, day_1_end_time: int, day_2_start_time: int, day_2_end_time: int, day_3_start_time: int, day_3_end_time: int, day_4_start_time: int, day_4_end_time: int, day_5_start_time: int, day_5_end_time: int, day_6_start_time: int, day_6_end_time: int}, use_logo_small_as_avatar: bool, featured_user_badge_ids: [any], invited_by: str?, groups: [map], group_users: [map], user_option: map{user_id: int, mailing_list_mode: bool, mailing_list_mode_frequency: int, email_digests: bool, email_level: int, email_messages_level: int, external_links_in_new_tab: bool, bookmark_auto_delete_preference: int, color_scheme_id: str?, dark_scheme_id: str?, dynamic_favicon: bool, enable_quoting: bool, enable_smart_lists: bool, enable_markdown_monospace_font: bool, enable_defer: bool, digest_after_minutes: int, automatically_unpin_topics: bool, auto_track_topics_after_msecs: int, notification_level_when_replying: int, new_topic_duration_minutes: int, email_previous_replies: int, email_in_reply_to: bool, like_notification_frequency: int, notify_on_linked_posts: bool, include_tl0_in_digests: bool, theme_ids: [any], theme_key_seq: int, allow_private_messages: bool, enable_allowed_pm_users: bool, homepage_id: str?, hide_profile_and_presence: bool, hide_profile: bool, hide_presence: bool, text_size: str, text_size_seq: int, title_count_mode: str, timezone: str?, skip_new_user_tips: bool, default_calendar: str, oldest_search_log_date: str?, sidebar_link_to_filtered_list: bool, sidebar_show_count_of_new_items: bool, watched_precedence_over_muted: bool, seen_popups: [any]?, topics_unread_when_closed: bool, composition_mode: int, interface_color_mode: int}}} # user response
 
 @endpoint PUT /u/{username}/preferences/avatar/pick.json
+@desc Update avatar
 @required {username: str, upload_id: int, type: str(uploaded/custom/gravatar/system)}
-@returns(200) {success: str}
+@returns(200) {success: str} # avatar updated
 
 @endpoint PUT /u/{username}/preferences/email.json
+@desc Update email
 @required {username: str, email: str(email)}
-@returns(200)
+@returns(200) email updated
 
 @endpoint PUT /u/{username}/preferences/username.json
+@desc Update username
 @required {username: str, new_username: str}
-@returns(200)
+@returns(200) username updated
 
 @endgroup
 
 @group directory_items.json
 @endpoint GET /directory_items.json
+@desc Get a public list of users
 @required {period: str(daily/weekly/monthly/quarterly/yearly/all), order: str(likes_received/likes_given/topic_count/post_count/topics_entered/posts_read/days_visited)}
 @optional {asc: str, page: int}
-@returns(200) {directory_items: [map], meta: map{last_updated_at: str?, total_rows_directory_items: int, load_more_directory_items: str}}
+@returns(200) {directory_items: [map], meta: map{last_updated_at: str?, total_rows_directory_items: int, load_more_directory_items: str}} # directory items response
 
 @endgroup
 
 @group admin
 @endpoint GET /admin/users/{id}.json
+@desc Get a user by id
 @required {id: int}
-@returns(200) {id: int, username: str, name: str?, avatar_template: str, active: bool, admin: bool, moderator: bool, last_seen_at: str?, last_emailed_at: str?, created_at: str, last_seen_age: num?, last_emailed_age: num?, created_at_age: num?, trust_level: int, manual_locked_trust_level: str?, title: str?, time_read: int, staged: bool, days_visited: int, posts_read_count: int, topics_entered: int, post_count: int, associated_accounts: [any], can_send_activation_email: bool, can_activate: bool, can_deactivate: bool, can_change_trust_level: bool, ip_address: str, registration_ip_address: str?, can_grant_admin: bool, can_revoke_admin: bool, can_grant_moderation: bool, can_revoke_moderation: bool, can_impersonate: bool, like_count: int, like_given_count: int, topic_count: int, flags_given_count: int, flags_received_count: int, private_topics_count: int, can_delete_all_posts: bool, can_be_deleted: bool, can_be_anonymized: bool, can_be_merged: bool, full_suspend_reason: str?, latest_export: map?, silence_reason: str?, post_edits_count: int?, primary_group_id: int?, badge_count: int, warnings_received_count: int, bounce_score: int?, reset_bounce_score_after: str?, can_view_action_logs: bool, can_disable_second_factor: bool, can_delete_sso_record: bool, api_key_count: int, similar_users_count: int, single_sign_on_record: str?, approved_by: map?, suspended_by: str?, silenced_by: str?, penalty_counts: map{silenced: int, suspended: int}, next_penalty: str, tl3_requirements: map{time_period: int, requirements_met: bool, requirements_lost: bool, trust_level_locked: bool, on_grace_period: bool, days_visited: int, min_days_visited: int, num_topics_replied_to: int, min_topics_replied_to: int, topics_viewed: int, min_topics_viewed: int, posts_read: int, min_posts_read: int, topics_viewed_all_time: int, min_topics_viewed_all_time: int, posts_read_all_time: int, min_posts_read_all_time: int, num_flagged_posts: int, max_flagged_posts: int, num_flagged_by_users: int, max_flagged_by_users: int, num_likes_given: int, min_likes_given: int, num_likes_received: int, min_likes_received: int, num_likes_received_days: int, min_likes_received_days: int, num_likes_received_users: int, min_likes_received_users: int, penalty_counts: map{silenced: int, suspended: int, total: int}}, groups: [map], external_ids: map, include_ip: bool}
+@returns(200) {id: int, username: str, name: str?, avatar_template: str, active: bool, admin: bool, moderator: bool, last_seen_at: str?, last_emailed_at: str?, created_at: str, last_seen_age: num?, last_emailed_age: num?, created_at_age: num?, trust_level: int, manual_locked_trust_level: str?, title: str?, time_read: int, staged: bool, days_visited: int, posts_read_count: int, topics_entered: int, post_count: int, associated_accounts: [any], can_send_activation_email: bool, can_activate: bool, can_deactivate: bool, can_change_trust_level: bool, ip_address: str, registration_ip_address: str?, can_grant_admin: bool, can_revoke_admin: bool, can_grant_moderation: bool, can_revoke_moderation: bool, can_impersonate: bool, like_count: int, like_given_count: int, topic_count: int, flags_given_count: int, flags_received_count: int, private_topics_count: int, can_delete_all_posts: bool, can_be_deleted: bool, can_be_anonymized: bool, can_be_merged: bool, full_suspend_reason: str?, latest_export: map?, silence_reason: str?, post_edits_count: int?, primary_group_id: int?, badge_count: int, warnings_received_count: int, bounce_score: int?, reset_bounce_score_after: str?, can_view_action_logs: bool, can_disable_second_factor: bool, can_delete_sso_record: bool, api_key_count: int, similar_users_count: int, single_sign_on_record: str?, approved_by: map?, suspended_by: str?, silenced_by: str?, penalty_counts: map{silenced: int, suspended: int}, next_penalty: str, tl3_requirements: map{time_period: int, requirements_met: bool, requirements_lost: bool, trust_level_locked: bool, on_grace_period: bool, days_visited: int, min_days_visited: int, num_topics_replied_to: int, min_topics_replied_to: int, topics_viewed: int, min_topics_viewed: int, posts_read: int, min_posts_read: int, topics_viewed_all_time: int, min_topics_viewed_all_time: int, posts_read_all_time: int, min_posts_read_all_time: int, num_flagged_posts: int, max_flagged_posts: int, num_flagged_by_users: int, max_flagged_by_users: int, num_likes_given: int, min_likes_given: int, num_likes_received: int, min_likes_received: int, num_likes_received_days: int, min_likes_received_days: int, num_likes_received_users: int, min_likes_received_users: int, penalty_counts: map{silenced: int, suspended: int, total: int}}, groups: [map], external_ids: map, include_ip: bool} # response
 
 @endpoint DELETE /admin/users/{id}.json
+@desc Delete a user
 @required {id: int}
 @optional {delete_posts: bool, block_email: bool, block_urls: bool, block_ip: bool}
-@returns(200) {deleted: bool}
+@returns(200) {deleted: bool} # response
 
 @endpoint PUT /admin/users/{id}/activate.json
+@desc Activate a user
 @required {id: int}
-@returns(200) {success: str}
+@returns(200) {success: str} # response
 
 @endpoint PUT /admin/users/{id}/deactivate.json
+@desc Deactivate a user
 @required {id: int}
-@returns(200) {success: str}
+@returns(200) {success: str} # response
 
 @endpoint PUT /admin/users/{id}/suspend.json
+@desc Suspend a user
 @required {id: int, suspend_until: str, reason: str}
-@optional {message: str, post_action: str}
-@returns(200) {suspension: map{suspend_reason: str, full_suspend_reason: str, suspended_till: str, suspended_at: str, suspended_by: map{id: int, username: str, name: str, avatar_template: str}}}
+@optional {message: str # Will send an email with this message when present, post_action: str}
+@returns(200) {suspension: map{suspend_reason: str, full_suspend_reason: str, suspended_till: str, suspended_at: str, suspended_by: map{id: int, username: str, name: str, avatar_template: str}}} # response
 
 @endpoint PUT /admin/users/{id}/silence.json
+@desc Silence a user
 @required {id: int, silenced_till: str, reason: str}
-@optional {message: str, post_action: str}
-@returns(200) {silence: map{silenced: bool, silence_reason: str, silenced_till: str, silenced_at: str, silenced_by: map{id: int, username: str, name: str, avatar_template: str}}}
+@optional {message: str # Will send an email with this message when present, post_action: str}
+@returns(200) {silence: map{silenced: bool, silence_reason: str, silenced_till: str, silenced_at: str, silenced_by: map{id: int, username: str, name: str, avatar_template: str}}} # response
 
 @endpoint PUT /admin/users/{id}/anonymize.json
+@desc Anonymize a user
 @required {id: int}
-@returns(200) {success: str, username: str}
+@returns(200) {success: str, username: str} # response
 
 @endpoint POST /admin/users/{id}/log_out.json
+@desc Log a user out
 @required {id: int}
-@returns(200) {success: str}
+@returns(200) {success: str} # response
 
 @endgroup
 
 @group user_avatar
 @endpoint POST /user_avatar/{username}/refresh_gravatar.json
+@desc Refresh gravatar
 @required {username: str}
-@returns(200) {gravatar_upload_id: int?, gravatar_avatar_template: str?}
+@returns(200) {gravatar_upload_id: int?, gravatar_avatar_template: str?} # response
 
 @endgroup
 
 @group admin
 @endpoint GET /admin/users.json
-@optional {order: str(created/last_emailed/seen/username/email/trust_level/days_visited/posts_read/topics_viewed/posts/read_time), asc: str, page: int, show_emails: bool, stats: bool, email: str, ip: str}
-@returns(200)
+@desc List users
+@optional {order: str(created/last_emailed/seen/username/email/trust_level/days_visited/posts_read/topics_viewed/posts/read_time), asc: str, page: int, show_emails: bool # Include user email addresses in response. These requests will be logged in the staff action logs., stats: bool # Include user stats information, email: str # Filter to the user with this email address, ip: str # Filter to users with this IP address}
+@returns(200) users response
 
 @endpoint GET /admin/users/list/{flag}.json
+@desc List users by flag
 @required {flag: str(active/new/staff/suspended/blocked/suspect)}
-@optional {order: str(created/last_emailed/seen/username/email/trust_level/days_visited/posts_read/topics_viewed/posts/read_time), asc: str, page: int, show_emails: bool, stats: bool, email: str, ip: str}
-@returns(200)
+@optional {order: str(created/last_emailed/seen/username/email/trust_level/days_visited/posts_read/topics_viewed/posts/read_time), asc: str, page: int, show_emails: bool # Include user email addresses in response. These requests will be logged in the staff action logs., stats: bool # Include user stats information, email: str # Filter to the user with this email address, ip: str # Filter to users with this IP address}
+@returns(200) response
 
 @endgroup
 
 @group user_actions.json
 @endpoint GET /user_actions.json
+@desc Get a list of user actions
 @required {offset: int, username: str, filter: str}
-@returns(200) {user_actions: [map]}
+@returns(200) {user_actions: [map]} # response
 
 @endgroup
 
 @group session
 @endpoint POST /session/forgot_password.json
+@desc Send password reset email
 @required {login: str}
-@returns(200) {success: str, user_found: bool}
+@returns(200) {success: str, user_found: bool} # success response
 
 @endgroup
 
 @group users
 @endpoint PUT /users/password-reset/{token}.json
+@desc Change password
 @required {token: str, username: str, password: str}
-@returns(200)
+@returns(200) success response
 
 @endgroup
 
 @group u
 @endpoint GET /u/{username}/emails.json
+@desc Get email addresses belonging to a user
 @required {username: str}
-@returns(200) {email: str, secondary_emails: [any], unconfirmed_emails: [any], associated_accounts: [any]}
+@returns(200) {email: str, secondary_emails: [any], unconfirmed_emails: [any], associated_accounts: [any]} # success response
 
 @endgroup
 

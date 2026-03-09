@@ -81,93 +81,10 @@ Not specified.
 | POST | / | Renames the specified organizational unit (OU). The ID and ARN don't change. The child OUs and accounts remain in place, and any attached policies of the OU remain attached. This operation can be called only from the organization's management account. |
 | POST | / | Updates an existing policy with a new name, description, or content. If you don't supply any parameter, that value remains unchanged. You can't change a policy's type. This operation can be called only from the organization's management account or by a member account that is a delegated administrator for an Amazon Web Services service. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I create a new AWS organization?" -> POST / (CreateOrganization: FeatureSet optional, defaults to ALL)
-- "How do I add a new member account to my organization?" -> POST / (CreateAccount: Email + AccountName required) then POST / (DescribeCreateAccountStatus: poll until State is SUCCEEDED or FAILED)
-- "How do I invite an existing AWS account to join my organization?" -> POST / (InviteAccountToOrganization: Target with account ID or email)
-- "How do I accept a pending invitation handshake?" -> POST / (AcceptHandshake: HandshakeId)
-- "How do I move an account between organizational units?" -> POST / (MoveAccount: AccountId + SourceParentId + DestinationParentId)
-- "How do I create and attach a service control policy?" -> POST / (CreatePolicy: Type=SERVICE_CONTROL_POLICY) then POST / (AttachPolicy: PolicyId + TargetId)
-- "How do I list all accounts in my organization?" -> POST / (ListAccounts: paginate with NextToken + MaxResults)
-- "How do I find which OUs exist under a given parent?" -> POST / (ListOrganizationalUnitsForParent: ParentId required)
-- "How do I check if an account creation request finished?" -> POST / (DescribeCreateAccountStatus: CreateAccountRequestId)
-- "How do I see what policies apply to a specific OU or account?" -> POST / (ListPoliciesForTarget: TargetId + Filter for policy type)
-- "How do I enable a trusted AWS service for organization-wide access?" -> POST / (EnableAWSServiceAccess: ServicePrincipal)
-- "How do I remove an account from the organization?" -> POST / (RemoveAccountFromOrganization: AccountId)
-- "How do I see the effective policy merged from all inherited SCPs?" -> POST / (DescribeEffectivePolicy: PolicyType + optional TargetId)
-- "How do I tag and untag organization resources?" -> POST / (TagResource: ResourceId + Tags) or POST / (UntagResource: ResourceId + TagKeys)
-- "How do I delegate administration of a service to a member account?" -> POST / (RegisterDelegatedAdministrator: AccountId + ServicePrincipal)
-
-## Response Tips
-
-- **Handshake responses** (Accept/Cancel/Decline/Describe/Invite): Check `Handshake.State` for REQUESTED, OPEN, CANCELED, ACCEPTED, DECLINED, or EXPIRED; the `Parties` array identifies both the initiator and target.
-- **Account creation** (CreateAccount/CreateGovCloudAccount): Returns a `CreateAccountStatus` with `State` of IN_PROGRESS -- you must poll `DescribeCreateAccountStatus` until it becomes SUCCEEDED or FAILED; check `FailureReason` on failure.
-- **List endpoints** (ListAccounts, ListChildren, ListPolicies, etc.): All use `NextToken`/`MaxResults` pagination; a null or absent `NextToken` in the response means no more pages. Default page size varies by endpoint (typically 20).
-- **Organization description**: `AvailablePolicyTypes` only shows types enabled on roots, not all possible types; `MasterAccountId` is the management account (legacy naming).
-- **Policy responses**: `Policy` nests `PolicySummary` (metadata) and `Content` (JSON string); `AwsManaged: true` means the policy is AWS-managed and cannot be modified or deleted.
-- **Effective policy**: `PolicyContent` is the merged JSON result of all inherited policies for the target -- not the raw policy document.
-- **Void responses** (AttachPolicy, DetachPolicy, MoveAccount, DeleteOrganization, etc.): Return no body on success; any non-2xx status indicates an error via the standard AWS error JSON (`__type` + `Message`).
-
-## Anomaly Flags
-
-- **CreateAccountStatus stuck in IN_PROGRESS**: If polling exceeds 10 minutes, surface a warning -- account creation may be hitting AWS service limits or requires manual intervention.
-- **Handshake approaching expiration**: `ExpirationTimestamp` is typically 15 days from creation; proactively warn if a handshake is within 48 hours of expiring.
-- **FailureReason on account creation**: Surface immediately with the specific reason (ACCOUNT_LIMIT_EXCEEDED, EMAIL_ALREADY_EXISTS, GOVCLOUD_ACCOUNT_ALREADY_EXISTS, etc.) and suggest remediation.
-- **AwsManaged: true on policy modifications**: If the agent attempts to update or delete an AWS-managed policy, flag it before making the call -- the request will fail.
-- **TooManyRequestsException / throttling**: AWS Organizations has aggressive rate limits (especially on account creation -- 5 concurrent); surface throttle errors and suggest exponential backoff.
-- **FeatureSet downgrade impossible**: If organization has ALL features enabled, attempting operations that assume CONSOLIDATED_BILLING only will fail; flag the mismatch.
-- **Detaching the last SCP from a target**: AWS prevents detaching the last SCP (FullAWSAccess) from any target; if the agent detects this scenario, warn before attempting.
-- **OrganizationalUnit not empty**: DeleteOrganizationalUnit fails if the OU still contains accounts or child OUs; proactively check with ListAccountsForParent and ListOrganizationalUnitsForParent first.
-
-## Playbook
-
-### 1. Set Up a New Organization with OUs and SCPs
-
-1. Call **CreateOrganization** with `FeatureSet: "ALL"` to create the org.
-2. Call **ListRoots** to get the root ID (needed as parent for top-level OUs).
-3. Call **EnablePolicyType** with `RootId` and `PolicyType: "SERVICE_CONTROL_POLICY"` to enable SCPs.
-4. Call **CreateOrganizationalUnit** under the root for each environment (e.g., Production, Staging, Sandbox).
-5. Call **CreatePolicy** with `Type: "SERVICE_CONTROL_POLICY"` and the desired JSON policy content.
-6. Call **AttachPolicy** to bind each SCP to the appropriate OU.
-7. Verify with **DescribeOrganization** and **ListPoliciesForTarget** to confirm the setup.
-
-### 2. Onboard a New Member Account
-
-1. Call **CreateAccount** with `Email` and `AccountName` (optionally set `RoleName` for cross-account role).
-2. Capture `CreateAccountStatus.Id` from the response.
-3. Poll **DescribeCreateAccountStatus** with the request ID every 10-15 seconds until `State` is SUCCEEDED or FAILED.
-4. On SUCCEEDED, retrieve the new `AccountId` from the status response.
-5. Call **MoveAccount** to place the account into the correct OU (from root to target OU).
-6. Call **TagResource** to apply organization-standard tags to the new account.
-
-### 3. Invite and Integrate an External Account
-
-1. Call **InviteAccountToOrganization** with `Target: {Id: "<account-id-or-email>", Type: "ACCOUNT" | "EMAIL"}` and optional `Notes`.
-2. Record the returned `Handshake.Id` and share it with the external account owner.
-3. The external account calls **AcceptHandshake** with the `HandshakeId`.
-4. Verify the account appears via **ListAccounts** and call **DescribeAccount** to confirm status is ACTIVE.
-5. Call **MoveAccount** to place it in the appropriate OU and **AttachPolicy** for any required SCPs.
-
-### 4. Audit Policies and Compliance Across the Organization
-
-1. Call **ListRoots** to get all root IDs.
-2. For each root, call **ListOrganizationalUnitsForParent** recursively to build the full OU tree.
-3. Call **ListPolicies** with `Filter: "SERVICE_CONTROL_POLICY"` to enumerate all SCPs.
-4. For each OU and account, call **ListPoliciesForTarget** to see directly attached policies.
-5. For specific accounts, call **DescribeEffectivePolicy** with `PolicyType: "SERVICE_CONTROL_POLICY"` to see the merged effective policy.
-6. Call **ListTagsForResource** on each OU/account to verify tagging compliance.
-
-### 5. Safely Remove an Account from the Organization
-
-1. Call **DescribeAccount** to verify the account exists and note its current status.
-2. Call **ListParents** with the account ID to identify its current OU.
-3. Call **ListPoliciesForTarget** to review any directly attached policies.
-4. Call **DetachPolicy** for each non-inherited policy attached directly to the account.
-5. Call **RemoveAccountFromOrganization** with the `AccountId` (account must have standalone billing configured).
-6. Verify removal by calling **ListAccounts** and confirming the account is no longer listed.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

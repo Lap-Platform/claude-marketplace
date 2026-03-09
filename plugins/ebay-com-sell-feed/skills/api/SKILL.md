@@ -12,7 +12,7 @@ API version: v1.3.1
 OAuth2
 
 ## Base URL
-https://api.ebay.com{basePath}
+https://api.ebay.com/sell/feed/v1
 
 ## Setup
 1. Configure auth: OAuth2
@@ -70,84 +70,33 @@ https://api.ebay.com{basePath}
 | POST | /customer_service_metric_task | <p>Use this method to create a customer service metrics download task with filter criteria for the customer service metrics report. When using this method, specify the <strong>feedType</strong> and <strong>filterCriteria</strong> including both <strong>evaluationMarketplaceId</strong> and <strong>customerServiceMetricType</strong> for the report. The method returns the location response header containing the call URI to use with <strong>getCustomerServiceMetricTask</strong> to retrieve status and details on the task.</p><p>Only CURRENT Customer Service Metrics reports can be generated with the Sell Feed API. PROJECTED reports are not supported at this time. See the <a href="/api-docs/sell/analytics/resources/customer_service_metric/methods/getCustomerServiceMetric">getCustomerServiceMetric</a> method document in the Analytics API for more information about these two types of reports.</p><p><span class="tablenote"><strong>Note:</strong> Before calling this API, retrieve the summary of the seller's performance and rating for the customer service metric by calling <strong>getCustomerServiceMetric</strong> (part of the <a href="/api-docs/sell/analytics/resources/methods">Analytics API</a>). You can then populate the create task request fields with the values from the response. This technique eliminates failed tasks that request a report for a <strong>customerServiceMetricType</strong> and <strong>evaluationMarketplaceId</strong> that are without evaluation.</span></p> |
 | GET | /customer_service_metric_task/{task_id} | <p>Use this method to retrieve customer service metric task details for the specified task. The input is <strong>task_id</strong>.</p> |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list my order feed tasks?" -> GET /order_task
-- "How do I create a new order feed task with date filtering?" -> POST /order_task
-- "What is the status of my order task?" -> GET /order_task/{task_id}
-- "How do I list my inventory feed tasks?" -> GET /inventory_task
-- "How do I create an inventory task filtered by listing format?" -> POST /inventory_task
-- "How do I check if my inventory task finished?" -> GET /inventory_task/{task_id}
-- "What feed schedules exist for a given feed type?" -> GET /schedule
-- "How do I set up a recurring feed schedule?" -> POST /schedule
-- "How do I change the trigger time on an existing schedule?" -> PUT /schedule/{schedule_id}
-- "How do I cancel a feed schedule?" -> DELETE /schedule/{schedule_id}
-- "How do I download the result file from a scheduled feed?" -> GET /schedule/{schedule_id}/download_result_file
-- "What schedule templates are available for a feed type?" -> GET /schedule_template
-- "How do I upload a file to a feed task?" -> POST /task/{task_id}/upload_file
-- "How do I download the results of a completed task?" -> GET /task/{task_id}/download_result_file
-- "How do I check my customer service metric tasks?" -> GET /customer_service_metric_task
-
-## Response Tips
-
-- **Task lists** (order_task, inventory_task, task, customer_service_metric_task): Paginated via `limit`/`offset`; use `next`/`prev` hrefs to navigate. `total` gives the full count. The `tasks` array contains maps -- always check array length before accessing.
-- **Single task lookups**: Check `status` field for completion state before attempting file downloads. `uploadSummary.failureCount` and `successCount` tell you partial success outcomes.
-- **Schedules**: `status` and `statusReason` on GET explain why a schedule may be inactive. 204 on PUT/DELETE means success with no body.
-- **Schedule templates**: `supportedConfigurations` is an array of maps describing valid options -- iterate it to discover allowed trigger settings before creating a schedule.
-- **File downloads**: 200 returns the raw file content (not JSON). Handle as binary/stream. No body schema is defined -- expect a file attachment.
-- **Error responses**: All endpoints share 400 (bad input), 403 (auth/permission), 500 (server error). 404 appears on single-resource GETs. 409 on POSTs/PUTs means a conflicting resource already exists.
-
-## Anomaly Flags
-
-- **409 Conflict on task creation**: A task or schedule with the same parameters already exists. Surface this clearly -- the user likely needs to check existing tasks rather than retry.
-- **Task stuck in non-complete status**: If `GET /order_task/{task_id}` or similar returns a status other than complete and `completionDate` is null after a long period, flag potential processing delays.
-- **High failureCount in uploadSummary**: When `failureCount` exceeds `successCount`, proactively warn the user that most records in the feed failed processing and suggest downloading the result file for details.
-- **Empty task lists with non-zero total**: If `tasks` array is empty but `total > 0`, the offset/limit combination is past the result set -- flag pagination misconfiguration.
-- **Missing detailHref on completed tasks**: If a task is complete but `detailHref` is empty or null, the result file may not be available -- alert the user before they attempt a download.
-- **Schedule statusReason populated**: When a schedule has a non-empty `statusReason`, surface it immediately as it usually indicates a problem (paused, failed template, expired).
-
-## Playbook
-
-### 1. Create and Monitor an Order Feed Task
-
-1. Call `POST /order_task` with `feedType` and optional `filterCriteria` (date ranges, order status).
-2. Capture the task ID from the 202 response Location header.
-3. Poll `GET /order_task/{task_id}` until `status` indicates completion.
-4. Check `uploadSummary.failureCount` -- if non-zero, investigate partial failures.
-5. Use `detailHref` to download the completed feed file.
-
-### 2. Set Up a Recurring Inventory Feed Schedule
-
-1. Call `GET /schedule_template?feed_type=<type>` to discover available templates and supported configurations.
-2. Pick a `scheduleTemplateId` from the results.
-3. Call `POST /schedule` with `feedType`, `scheduleTemplateId`, trigger preferences (day/hour), and start/end dates.
-4. Verify creation with `GET /schedule/{schedule_id}`.
-5. Periodically call `GET /schedule/{schedule_id}/download_result_file` to retrieve outputs.
-
-### 3. Upload and Process a Feed File
-
-1. Call `POST /task` with `X-EBAY-C-MARKETPLACE-ID` header and `feedType` to create the task.
-2. Capture the task ID from the 202 response.
-3. Call `POST /task/{task_id}/upload_file` with `Content-Type` header and the file payload.
-4. Poll `GET /task/{task_id}` until `status` shows completion.
-5. Call `GET /task/{task_id}/download_result_file` to retrieve processing results and check for errors.
-
-### 4. Review Customer Service Metrics
-
-1. Call `POST /customer_service_metric_task` with `Accept-Language`, desired `feedType`, and `filterCriteria` (metric type, marketplace, categories, shipping regions).
-2. Capture the task ID from the 202 response.
-3. Poll `GET /customer_service_metric_task/{task_id}` until the task completes.
-4. Use `detailHref` to access the resulting metrics file.
-
-### 5. Manage and Update Feed Schedules
-
-1. Call `GET /schedule?feed_type=<type>` to list all schedules for a feed type.
-2. Identify the schedule to modify by `scheduleId`.
-3. Call `PUT /schedule/{schedule_id}` with updated trigger preferences or date range. Expect 204 on success.
-4. To deactivate, call `DELETE /schedule/{schedule_id}`. Expect 204 on success.
-5. Confirm changes with `GET /schedule/{schedule_id}` and check `status`/`statusReason`.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all order_task?" -> GET /order_task
+- "Create a order_task?" -> POST /order_task
+- "Get order_task details?" -> GET /order_task/{task_id}
+- "List all inventory_task?" -> GET /inventory_task
+- "Create a inventory_task?" -> POST /inventory_task
+- "Get inventory_task details?" -> GET /inventory_task/{task_id}
+- "List all schedule?" -> GET /schedule
+- "Create a schedule?" -> POST /schedule
+- "Get schedule details?" -> GET /schedule/{schedule_id}
+- "Update a schedule?" -> PUT /schedule/{schedule_id}
+- "Delete a schedule?" -> DELETE /schedule/{schedule_id}
+- "List all download_result_file?" -> GET /schedule/{schedule_id}/download_result_file
+- "Get schedule_template details?" -> GET /schedule_template/{schedule_template_id}
+- "List all schedule_template?" -> GET /schedule_template
+- "List all task?" -> GET /task
+- "Create a task?" -> POST /task
+- "List all download_input_file?" -> GET /task/{task_id}/download_input_file
+- "List all download_result_file?" -> GET /task/{task_id}/download_result_file
+- "Get task details?" -> GET /task/{task_id}
+- "Create a upload_file?" -> POST /task/{task_id}/upload_file
+- "List all customer_service_metric_task?" -> GET /customer_service_metric_task
+- "Create a customer_service_metric_task?" -> POST /customer_service_metric_task
+- "Get customer_service_metric_task details?" -> GET /customer_service_metric_task/{task_id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

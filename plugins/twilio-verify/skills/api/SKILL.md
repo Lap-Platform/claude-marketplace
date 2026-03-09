@@ -100,83 +100,59 @@ https://verify.twilio.com
 |--------|------|-------------|
 | GET | /v2/Templates | List all the available templates for a given Account. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I send a verification code to a phone number?" -> POST /v2/Services/{ServiceSid}/Verifications
-- "How do I check if a verification code is correct?" -> POST /v2/Services/{ServiceSid}/VerificationCheck
-- "How do I create a new Verify service?" -> POST /v2/Services
-- "How do I list all my Verify services?" -> GET /v2/Services
-- "How do I set up rate limiting for a service?" -> POST /v2/Services/{ServiceSid}/RateLimits
-- "How do I configure messaging for a specific country?" -> POST /v2/Services/{ServiceSid}/MessagingConfigurations
-- "How do I register a passkey factor for a user?" -> POST /v2/Services/{ServiceSid}/Passkeys/Factors
-- "How do I check my verification attempt conversion rate?" -> GET /v2/Attempts/Summary
-- "How do I add a phone number to the SafeList?" -> POST /v2/SafeList/Numbers
-- "How do I set up a webhook for verification events?" -> POST /v2/Services/{ServiceSid}/Webhooks
-- "How do I list all factors for a user entity?" -> GET /v2/Services/{ServiceSid}/Entities/{Identity}/Factors
-- "How do I create a push notification challenge for MFA?" -> POST /v2/Services/{ServiceSid}/Entities/{Identity}/Challenges
-- "How do I look up a specific verification attempt?" -> GET /v2/Attempts/{Sid}
-- "How do I delete a Verify service I no longer need?" -> DELETE /v2/Services/{Sid}
-- "How do I authenticate a user with a passkey?" -> POST /v2/Services/{ServiceSid}/Passkeys/Challenges then POST /v2/Services/{ServiceSid}/Passkeys/ApproveChallenge
-
-## Response Tips
-
-- **Services/Verifications**: Check `valid` (bool) and `status` ("pending"/"approved"/"canceled") on VerificationCheck responses; `send_code_attempts` is an array tracking each delivery attempt.
-- **List endpoints**: All paginated responses use a `meta` object with `next_page_url`/`previous_page_url` (null when at boundary); iterate by following `next_page_url` until null.
-- **DELETE endpoints**: Return 204 with no body; treat any non-204 as an error.
-- **Attempts/Summary**: `conversion_rate_percentage` is a string (not a number); parse it for calculations.
-- **Challenges**: `status` tracks lifecycle ("pending"/"approved"/"denied"/"expired"); `details` and `hidden_details` are opaque `any` types whose shape varies by factor type.
-- **Passkeys**: The factor creation response includes `binding` and `options` (WebAuthn ceremony data); pass `options` directly to the browser's `navigator.credentials.create()`.
-
-## Anomaly Flags
-
-- **429 on Verifications**: The `POST /v2/Services/{ServiceSid}/Verifications` endpoint declares `@errors {429}` -- surface rate limit hits immediately and suggest implementing backoff or adjusting RateLimit Buckets.
-- **Verification status "canceled"**: If a VerificationCheck returns `valid: false` with status "canceled", the verification was explicitly invalidated -- flag this as it may indicate a user or system-initiated abort.
-- **Challenge expiration**: Surface `expiration_date` on challenges proactively; if a challenge is fetched and `expiration_date` is in the past, warn that it cannot be approved.
-- **Factor status not "verified"**: After creating a factor, `status` starts as "unverified" -- flag if a factor remains unverified after the expected verification window.
-- **Empty `send_code_attempts` array**: If a verification shows no delivery attempts, the message was never dispatched -- surface as a delivery failure signal.
-- **Conversion rate drops**: When calling Attempts/Summary, flag if `conversion_rate_percentage` drops below a reasonable threshold (e.g., < 50%) compared to previous checks.
-
-## Playbook
-
-### 1. Send and Verify an OTP Code
-
-1. Create a service if you don't have one: `POST /v2/Services` with a `friendly_name`.
-2. Start a verification: `POST /v2/Services/{ServiceSid}/Verifications` with `To` (phone/email) and `Channel` (sms/call/email).
-3. Note the returned `sid` and `status` ("pending").
-4. Collect the code from the user, then check it: `POST /v2/Services/{ServiceSid}/VerificationCheck` with `To` and `Code`.
-5. Confirm `valid: true` and `status: "approved"` in the response.
-
-### 2. Set Up Passkey Authentication (WebAuthn)
-
-1. Register a factor: `POST /v2/Services/{ServiceSid}/Passkeys/Factors` with `friendly_name`, `identity`, and optional `config` for relying party settings.
-2. Pass the response's `binding`/`options` to the browser's `navigator.credentials.create()` to complete device registration.
-3. Verify the factor: `POST /v2/Services/{ServiceSid}/Passkeys/VerifyFactor` with the attestation response from the browser.
-4. To authenticate later, create a challenge: `POST /v2/Services/{ServiceSid}/Passkeys/Challenges` with the user's `identity`.
-5. Pass the challenge `options` to `navigator.credentials.get()`, then approve: `POST /v2/Services/{ServiceSid}/Passkeys/ApproveChallenge` with the assertion response.
-
-### 3. Configure Rate Limiting for a Service
-
-1. Create a rate limit: `POST /v2/Services/{ServiceSid}/RateLimits` with a `unique_name` and optional `description`.
-2. Add a bucket to define the limit: `POST /v2/Services/{ServiceSid}/RateLimits/{RateLimitSid}/Buckets` with `max` (request count) and `interval` (seconds).
-3. Verify the configuration: `GET /v2/Services/{ServiceSid}/RateLimits/{RateLimitSid}/Buckets` to list all buckets.
-4. Adjust if needed: `POST /v2/Services/{ServiceSid}/RateLimits/{RateLimitSid}/Buckets/{Sid}` to update max/interval.
-
-### 4. Monitor Verification Delivery Health
-
-1. Pull recent attempts: `GET /v2/Attempts` with `DateCreatedAfter`/`DateCreatedBefore` and optional `Channel` or `Country` filters.
-2. Get aggregate stats: `GET /v2/Attempts/Summary` with the same date range.
-3. Check `conversion_rate_percentage` -- below 50% warrants investigation.
-4. For failed attempts, inspect individual records: `GET /v2/Attempts/{Sid}` and review `conversion_status`, `channel_data`, and `price`.
-5. If a specific country is underperforming, check messaging config: `GET /v2/Services/{ServiceSid}/MessagingConfigurations/{Country}` and verify the linked Messaging Service SID.
-
-### 5. Manage the SafeList for Testing
-
-1. Add a test number to the SafeList: `POST /v2/SafeList/Numbers` with the `phone_number`.
-2. Verify it was added: `GET /v2/SafeList/Numbers/{PhoneNumber}`.
-3. Send verifications to the SafeList number -- these will bypass fraud checks.
-4. When testing is complete, remove the number: `DELETE /v2/SafeList/Numbers/{PhoneNumber}` (returns 204).
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a AccessToken?" -> POST /v2/Services/{ServiceSid}/AccessTokens
+- "Get AccessToken details?" -> GET /v2/Services/{ServiceSid}/AccessTokens/{Sid}
+- "Create a Bucket?" -> POST /v2/Services/{ServiceSid}/RateLimits/{RateLimitSid}/Buckets
+- "List all Buckets?" -> GET /v2/Services/{ServiceSid}/RateLimits/{RateLimitSid}/Buckets
+- "Get Bucket details?" -> GET /v2/Services/{ServiceSid}/RateLimits/{RateLimitSid}/Buckets/{Sid}
+- "Delete a Bucket?" -> DELETE /v2/Services/{ServiceSid}/RateLimits/{RateLimitSid}/Buckets/{Sid}
+- "Create a Challenge?" -> POST /v2/Services/{ServiceSid}/Entities/{Identity}/Challenges
+- "List all Challenges?" -> GET /v2/Services/{ServiceSid}/Entities/{Identity}/Challenges
+- "Get Challenge details?" -> GET /v2/Services/{ServiceSid}/Entities/{Identity}/Challenges/{Sid}
+- "Create a Entity?" -> POST /v2/Services/{ServiceSid}/Entities
+- "List all Entities?" -> GET /v2/Services/{ServiceSid}/Entities
+- "Delete a Entity?" -> DELETE /v2/Services/{ServiceSid}/Entities/{Identity}
+- "Get Entity details?" -> GET /v2/Services/{ServiceSid}/Entities/{Identity}
+- "Delete a Factor?" -> DELETE /v2/Services/{ServiceSid}/Entities/{Identity}/Factors/{Sid}
+- "Get Factor details?" -> GET /v2/Services/{ServiceSid}/Entities/{Identity}/Factors/{Sid}
+- "List all Factors?" -> GET /v2/Services/{ServiceSid}/Entities/{Identity}/Factors
+- "Create a Factor?" -> POST /v2/Services/{ServiceSid}/Entities/{Identity}/Factors
+- "Get Form details?" -> GET /v2/Forms/{FormType}
+- "Create a MessagingConfiguration?" -> POST /v2/Services/{ServiceSid}/MessagingConfigurations
+- "List all MessagingConfigurations?" -> GET /v2/Services/{ServiceSid}/MessagingConfigurations
+- "Get MessagingConfiguration details?" -> GET /v2/Services/{ServiceSid}/MessagingConfigurations/{Country}
+- "Delete a MessagingConfiguration?" -> DELETE /v2/Services/{ServiceSid}/MessagingConfigurations/{Country}
+- "Create a Notification?" -> POST /v2/Services/{ServiceSid}/Entities/{Identity}/Challenges/{ChallengeSid}/Notifications
+- "Create a RateLimit?" -> POST /v2/Services/{ServiceSid}/RateLimits
+- "List all RateLimits?" -> GET /v2/Services/{ServiceSid}/RateLimits
+- "Get RateLimit details?" -> GET /v2/Services/{ServiceSid}/RateLimits/{Sid}
+- "Delete a RateLimit?" -> DELETE /v2/Services/{ServiceSid}/RateLimits/{Sid}
+- "Create a Number?" -> POST /v2/SafeList/Numbers
+- "Get Number details?" -> GET /v2/SafeList/Numbers/{PhoneNumber}
+- "Delete a Number?" -> DELETE /v2/SafeList/Numbers/{PhoneNumber}
+- "Create a Service?" -> POST /v2/Services
+- "List all Services?" -> GET /v2/Services
+- "Get Service details?" -> GET /v2/Services/{Sid}
+- "Delete a Service?" -> DELETE /v2/Services/{Sid}
+- "Create a Verification?" -> POST /v2/Services/{ServiceSid}/Verifications
+- "Get Verification details?" -> GET /v2/Services/{ServiceSid}/Verifications/{Sid}
+- "List all Attempts?" -> GET /v2/Attempts
+- "Get Attempt details?" -> GET /v2/Attempts/{Sid}
+- "List all Summary?" -> GET /v2/Attempts/Summary
+- "Create a VerificationCheck?" -> POST /v2/Services/{ServiceSid}/VerificationCheck
+- "List all Templates?" -> GET /v2/Templates
+- "Create a Webhook?" -> POST /v2/Services/{ServiceSid}/Webhooks
+- "List all Webhooks?" -> GET /v2/Services/{ServiceSid}/Webhooks
+- "Delete a Webhook?" -> DELETE /v2/Services/{ServiceSid}/Webhooks/{Sid}
+- "Get Webhook details?" -> GET /v2/Services/{ServiceSid}/Webhooks/{Sid}
+- "Create a VerifyFactor?" -> POST /v2/Services/{ServiceSid}/Passkeys/VerifyFactor
+- "Create a Factor?" -> POST /v2/Services/{ServiceSid}/Passkeys/Factors
+- "Create a Challenge?" -> POST /v2/Services/{ServiceSid}/Passkeys/Challenges
+- "Create a ApproveChallenge?" -> POST /v2/Services/{ServiceSid}/Passkeys/ApproveChallenge
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

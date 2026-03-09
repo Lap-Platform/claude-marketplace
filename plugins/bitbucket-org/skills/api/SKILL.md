@@ -390,93 +390,320 @@ https://api.bitbucket.org/2.0
 | GET | /workspaces/{workspace}/pullrequests/{selected_user} | List workspace pull requests for a user |
 | GET | /workspaces/{workspace}/search/code | Search for code in a workspace |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I list all repositories in a workspace?" -> GET /repositories/{workspace}
-- "How do I create a pull request?" -> POST /repositories/{workspace}/{repo_slug}/pullrequests
-- "How do I merge a pull request?" -> POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/merge
-- "How do I trigger a pipeline build?" -> POST /repositories/{workspace}/{repo_slug}/pipelines
-- "How do I get the diff for a pull request?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/diff
-- "How do I search for code across a workspace?" -> GET /workspaces/{workspace}/search/code
-- "How do I add a comment to a pull request?" -> POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments
-- "How do I create a new branch?" -> POST /repositories/{workspace}/{repo_slug}/refs/branches
-- "How do I check the status of a pipeline step?" -> GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}
-- "How do I set a pipeline environment variable?" -> POST /repositories/{workspace}/{repo_slug}/pipelines_config/variables
-- "How do I approve a pull request?" -> POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/approve
-- "How do I get the current authenticated user?" -> GET /user
-- "How do I list workspaces I belong to?" -> GET /workspaces
-- "How do I create an issue on a repository?" -> POST /repositories/{workspace}/{repo_slug}/issues
-- "How do I read a file from a repository at a specific commit?" -> GET /repositories/{workspace}/{repo_slug}/src/{commit}/{path}
-
-## Response Tips
-
-- **Paginated lists** (repositories, PRs, issues, commits, branches): All return a paginated envelope with `values`, `page`, `size`, `pagelen`, and `next`/`previous` URLs. Always follow the `next` link to get more results rather than manually incrementing `page`.
-- **Pull requests**: The PR object nests `source` and `destination` objects containing branch and repository info. Merge returns 200 for sync merge or 202 for async -- check which you get.
-- **Pipelines**: Pipeline and step objects use `state.name` (e.g., `COMPLETED`, `RUNNING`) and `state.result.name` (e.g., `SUCCESSFUL`, `FAILED`) as nested status indicators. Logs return raw bytes (check `Content-Type`).
-- **Diffs and patches**: Diff endpoints may return 302 redirects to the actual content. Some return error 555 for unsupported diff types -- handle this as a "not available" rather than a server error.
-- **Search**: Code search results include `content_matches` with line-level context. Responses are paginated with `page` and `pagelen` query params. 429 means rate limited.
-- **Writes and deletes**: Successful creates return 201, updates return 200, deletes return 204 (no body). Check for 409 on creates to detect conflicts (duplicate variables, existing resources).
-
-## Anomaly Flags
-
-- **429 Too Many Requests**: Surface immediately on code search endpoints (`/search/code`). Bitbucket rate limits these aggressively -- back off and inform the user.
-- **410 Gone**: Returned for deleted repositories and snippets. Flag that the resource was permanently removed, not just missing.
-- **555 errors on diff/patch/diffstat**: This is a Bitbucket-specific status indicating the diff cannot be generated (e.g., too large, binary content). Surface this as a limitation, not a server failure.
-- **409 Conflict on merge**: The PR has merge conflicts or unmet merge checks. Surface the conflict details so the user can resolve before retrying.
-- **402 Payment Required**: Returned on permissions-config endpoints when the workspace plan does not support the feature. Alert the user this is a billing issue, not an auth problem.
-- **202 Accepted on merge**: An async merge was initiated. The agent should proactively poll GET `/pullrequests/{id}/merge/task-status/{task_id}` and report completion.
-- **401 on /user**: Authentication is broken or token expired. Surface immediately as all subsequent calls will also fail.
-- **Deprecated addon endpoints**: If the user interacts with `/addon` linker endpoints, note that Bitbucket Connect addon APIs have limited support and may be sunset.
-
-## Playbook
-
-### 1. Create and Merge a Pull Request
-
-1. Create a branch: POST /repositories/{workspace}/{repo_slug}/refs/branches with target hash and branch name
-2. Commit files to the branch: POST /repositories/{workspace}/{repo_slug}/src with files, message, and branch
-3. Create the PR: POST /repositories/{workspace}/{repo_slug}/pullrequests with source branch, destination branch, title, and description
-4. Add reviewers or wait for approval: POST /repositories/{workspace}/{repo_slug}/pullrequests/{id}/approve
-5. Merge the PR: POST /repositories/{workspace}/{repo_slug}/pullrequests/{id}/merge (check for 200 sync or 202 async)
-6. If 202, poll GET /repositories/{workspace}/{repo_slug}/pullrequests/{id}/merge/task-status/{task_id} until complete
-
-### 2. Trigger and Monitor a Pipeline
-
-1. Trigger a pipeline: POST /repositories/{workspace}/{repo_slug}/pipelines with target branch/commit in the body
-2. Note the `uuid` from the 201 response
-3. Poll pipeline status: GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid} until `state.name` is `COMPLETED`
-4. List steps: GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps
-5. For failed steps, fetch logs: GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}/log
-6. Optionally check test reports: GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}/test_reports/test_cases
-
-### 3. Set Up Repository Permissions and Branch Protections
-
-1. List current branch restrictions: GET /repositories/{workspace}/{repo_slug}/branch-restrictions
-2. Add a restriction (e.g., require approvals on main): POST /repositories/{workspace}/{repo_slug}/branch-restrictions with `kind` and `pattern` in the body
-3. Configure default reviewers: PUT /repositories/{workspace}/{repo_slug}/default-reviewers/{target_username}
-4. Set user-level permissions: PUT /repositories/{workspace}/{repo_slug}/permissions-config/users/{selected_user_id} with permission level in body
-5. Set group-level permissions: PUT /repositories/{workspace}/{repo_slug}/permissions-config/groups/{group_slug} with permission level in body
-
-### 4. Manage Pipeline Variables Across Scopes
-
-1. List workspace-level variables: GET /workspaces/{workspace}/pipelines-config/variables
-2. Add a workspace variable: POST /workspaces/{workspace}/pipelines-config/variables with key, value, and secured flag
-3. List repo-level variables: GET /repositories/{workspace}/{repo_slug}/pipelines_config/variables
-4. Add a repo variable: POST /repositories/{workspace}/{repo_slug}/pipelines_config/variables
-5. For deployment-specific vars, list environments: GET /repositories/{workspace}/{repo_slug}/environments
-6. Add an environment variable: POST /repositories/{workspace}/{repo_slug}/deployments_config/environments/{environment_uuid}/variables
-
-### 5. Code Review Workflow with Comments and Tasks
-
-1. List open PRs: GET /repositories/{workspace}/{repo_slug}/pullrequests?state=OPEN
-2. View PR details: GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}
-3. Review the diff: GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/diff
-4. Add an inline comment: POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments with `inline.path`, `inline.from`/`inline.to` line numbers, and content
-5. Create a task on the PR: POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/tasks with task content
-6. Request changes: POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/request-changes
-7. Once resolved, remove the request: DELETE /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/request-changes
-8. Approve: POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/approve
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all linkers?" -> GET /addon/linkers
+- "Get linker details?" -> GET /addon/linkers/{linker_key}
+- "List all values?" -> GET /addon/linkers/{linker_key}/values
+- "Create a value?" -> POST /addon/linkers/{linker_key}/values
+- "Delete a value?" -> DELETE /addon/linkers/{linker_key}/values/{value_id}
+- "Get value details?" -> GET /addon/linkers/{linker_key}/values/{value_id}
+- "List all hook_events?" -> GET /hook_events
+- "Get hook_event details?" -> GET /hook_events/{subject_type}
+- "Search repositories?" -> GET /repositories
+- "Search repositories?" -> GET /repositories/{workspace}
+- "Delete a repository?" -> DELETE /repositories/{workspace}/{repo_slug}
+- "Get repository details?" -> GET /repositories/{workspace}/{repo_slug}
+- "Update a repository?" -> PUT /repositories/{workspace}/{repo_slug}
+- "List all branch-restrictions?" -> GET /repositories/{workspace}/{repo_slug}/branch-restrictions
+- "Create a branch-restriction?" -> POST /repositories/{workspace}/{repo_slug}/branch-restrictions
+- "Delete a branch-restriction?" -> DELETE /repositories/{workspace}/{repo_slug}/branch-restrictions/{id}
+- "Get branch-restriction details?" -> GET /repositories/{workspace}/{repo_slug}/branch-restrictions/{id}
+- "Update a branch-restriction?" -> PUT /repositories/{workspace}/{repo_slug}/branch-restrictions/{id}
+- "List all branching-model?" -> GET /repositories/{workspace}/{repo_slug}/branching-model
+- "List all settings?" -> GET /repositories/{workspace}/{repo_slug}/branching-model/settings
+- "Get commit details?" -> GET /repositories/{workspace}/{repo_slug}/commit/{commit}
+- "Create a approve?" -> POST /repositories/{workspace}/{repo_slug}/commit/{commit}/approve
+- "Search comments?" -> GET /repositories/{workspace}/{repo_slug}/commit/{commit}/comments
+- "Create a comment?" -> POST /repositories/{workspace}/{repo_slug}/commit/{commit}/comments
+- "Delete a comment?" -> DELETE /repositories/{workspace}/{repo_slug}/commit/{commit}/comments/{comment_id}
+- "Get comment details?" -> GET /repositories/{workspace}/{repo_slug}/commit/{commit}/comments/{comment_id}
+- "Update a comment?" -> PUT /repositories/{workspace}/{repo_slug}/commit/{commit}/comments/{comment_id}
+- "Update a property?" -> PUT /repositories/{workspace}/{repo_slug}/commit/{commit}/properties/{app_key}/{property_name}
+- "Delete a property?" -> DELETE /repositories/{workspace}/{repo_slug}/commit/{commit}/properties/{app_key}/{property_name}
+- "Get property details?" -> GET /repositories/{workspace}/{repo_slug}/commit/{commit}/properties/{app_key}/{property_name}
+- "List all pullrequests?" -> GET /repositories/{workspace}/{repo_slug}/commit/{commit}/pullrequests
+- "List all reports?" -> GET /repositories/{workspace}/{repo_slug}/commit/{commit}/reports
+- "Update a report?" -> PUT /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}
+- "Get report details?" -> GET /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}
+- "Delete a report?" -> DELETE /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}
+- "List all annotations?" -> GET /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}/annotations
+- "Create a annotation?" -> POST /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}/annotations
+- "Get annotation details?" -> GET /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}/annotations/{annotationId}
+- "Update a annotation?" -> PUT /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}/annotations/{annotationId}
+- "Delete a annotation?" -> DELETE /repositories/{workspace}/{repo_slug}/commit/{commit}/reports/{reportId}/annotations/{annotationId}
+- "Search statuses?" -> GET /repositories/{workspace}/{repo_slug}/commit/{commit}/statuses
+- "Create a build?" -> POST /repositories/{workspace}/{repo_slug}/commit/{commit}/statuses/build
+- "Get build details?" -> GET /repositories/{workspace}/{repo_slug}/commit/{commit}/statuses/build/{key}
+- "Update a build?" -> PUT /repositories/{workspace}/{repo_slug}/commit/{commit}/statuses/build/{key}
+- "List all commits?" -> GET /repositories/{workspace}/{repo_slug}/commits
+- "Create a commit?" -> POST /repositories/{workspace}/{repo_slug}/commits
+- "Get commit details?" -> GET /repositories/{workspace}/{repo_slug}/commits/{revision}
+- "List all components?" -> GET /repositories/{workspace}/{repo_slug}/components
+- "Get component details?" -> GET /repositories/{workspace}/{repo_slug}/components/{component_id}
+- "List all default-reviewers?" -> GET /repositories/{workspace}/{repo_slug}/default-reviewers
+- "Delete a default-reviewer?" -> DELETE /repositories/{workspace}/{repo_slug}/default-reviewers/{target_username}
+- "Get default-reviewer details?" -> GET /repositories/{workspace}/{repo_slug}/default-reviewers/{target_username}
+- "Update a default-reviewer?" -> PUT /repositories/{workspace}/{repo_slug}/default-reviewers/{target_username}
+- "List all deploy-keys?" -> GET /repositories/{workspace}/{repo_slug}/deploy-keys
+- "Create a deploy-key?" -> POST /repositories/{workspace}/{repo_slug}/deploy-keys
+- "Delete a deploy-key?" -> DELETE /repositories/{workspace}/{repo_slug}/deploy-keys/{key_id}
+- "Get deploy-key details?" -> GET /repositories/{workspace}/{repo_slug}/deploy-keys/{key_id}
+- "Update a deploy-key?" -> PUT /repositories/{workspace}/{repo_slug}/deploy-keys/{key_id}
+- "List all deployments?" -> GET /repositories/{workspace}/{repo_slug}/deployments
+- "Get deployment details?" -> GET /repositories/{workspace}/{repo_slug}/deployments/{deployment_uuid}
+- "List all variables?" -> GET /repositories/{workspace}/{repo_slug}/deployments_config/environments/{environment_uuid}/variables
+- "Create a variable?" -> POST /repositories/{workspace}/{repo_slug}/deployments_config/environments/{environment_uuid}/variables
+- "Update a variable?" -> PUT /repositories/{workspace}/{repo_slug}/deployments_config/environments/{environment_uuid}/variables/{variable_uuid}
+- "Delete a variable?" -> DELETE /repositories/{workspace}/{repo_slug}/deployments_config/environments/{environment_uuid}/variables/{variable_uuid}
+- "Get diff details?" -> GET /repositories/{workspace}/{repo_slug}/diff/{spec}
+- "Get diffstat details?" -> GET /repositories/{workspace}/{repo_slug}/diffstat/{spec}
+- "List all downloads?" -> GET /repositories/{workspace}/{repo_slug}/downloads
+- "Create a download?" -> POST /repositories/{workspace}/{repo_slug}/downloads
+- "Delete a download?" -> DELETE /repositories/{workspace}/{repo_slug}/downloads/{filename}
+- "Get download details?" -> GET /repositories/{workspace}/{repo_slug}/downloads/{filename}
+- "List all effective-branching-model?" -> GET /repositories/{workspace}/{repo_slug}/effective-branching-model
+- "List all effective-default-reviewers?" -> GET /repositories/{workspace}/{repo_slug}/effective-default-reviewers
+- "List all environments?" -> GET /repositories/{workspace}/{repo_slug}/environments
+- "Create a environment?" -> POST /repositories/{workspace}/{repo_slug}/environments
+- "Get environment details?" -> GET /repositories/{workspace}/{repo_slug}/environments/{environment_uuid}
+- "Delete a environment?" -> DELETE /repositories/{workspace}/{repo_slug}/environments/{environment_uuid}
+- "Create a change?" -> POST /repositories/{workspace}/{repo_slug}/environments/{environment_uuid}/changes
+- "Search filehistory?" -> GET /repositories/{workspace}/{repo_slug}/filehistory/{commit}/{path}
+- "Search forks?" -> GET /repositories/{workspace}/{repo_slug}/forks
+- "Create a fork?" -> POST /repositories/{workspace}/{repo_slug}/forks
+- "List all hooks?" -> GET /repositories/{workspace}/{repo_slug}/hooks
+- "Create a hook?" -> POST /repositories/{workspace}/{repo_slug}/hooks
+- "Delete a hook?" -> DELETE /repositories/{workspace}/{repo_slug}/hooks/{uid}
+- "Get hook details?" -> GET /repositories/{workspace}/{repo_slug}/hooks/{uid}
+- "Update a hook?" -> PUT /repositories/{workspace}/{repo_slug}/hooks/{uid}
+- "List all issues?" -> GET /repositories/{workspace}/{repo_slug}/issues
+- "Create a issue?" -> POST /repositories/{workspace}/{repo_slug}/issues
+- "Create a export?" -> POST /repositories/{workspace}/{repo_slug}/issues/export
+- "Get export details?" -> GET /repositories/{workspace}/{repo_slug}/issues/export/{repo_name}-issues-{task_id}.zip
+- "List all import?" -> GET /repositories/{workspace}/{repo_slug}/issues/import
+- "Create a import?" -> POST /repositories/{workspace}/{repo_slug}/issues/import
+- "Delete a issue?" -> DELETE /repositories/{workspace}/{repo_slug}/issues/{issue_id}
+- "Get issue details?" -> GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}
+- "Update a issue?" -> PUT /repositories/{workspace}/{repo_slug}/issues/{issue_id}
+- "List all attachments?" -> GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/attachments
+- "Create a attachment?" -> POST /repositories/{workspace}/{repo_slug}/issues/{issue_id}/attachments
+- "Delete a attachment?" -> DELETE /repositories/{workspace}/{repo_slug}/issues/{issue_id}/attachments/{path}
+- "Get attachment details?" -> GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/attachments/{path}
+- "Search changes?" -> GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/changes
+- "Create a change?" -> POST /repositories/{workspace}/{repo_slug}/issues/{issue_id}/changes
+- "Get change details?" -> GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/changes/{change_id}
+- "Search comments?" -> GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/comments
+- "Create a comment?" -> POST /repositories/{workspace}/{repo_slug}/issues/{issue_id}/comments
+- "Delete a comment?" -> DELETE /repositories/{workspace}/{repo_slug}/issues/{issue_id}/comments/{comment_id}
+- "Get comment details?" -> GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/comments/{comment_id}
+- "Update a comment?" -> PUT /repositories/{workspace}/{repo_slug}/issues/{issue_id}/comments/{comment_id}
+- "List all vote?" -> GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/vote
+- "List all watch?" -> GET /repositories/{workspace}/{repo_slug}/issues/{issue_id}/watch
+- "Get merge-base details?" -> GET /repositories/{workspace}/{repo_slug}/merge-base/{revspec}
+- "List all milestones?" -> GET /repositories/{workspace}/{repo_slug}/milestones
+- "Get milestone details?" -> GET /repositories/{workspace}/{repo_slug}/milestones/{milestone_id}
+- "List all override-settings?" -> GET /repositories/{workspace}/{repo_slug}/override-settings
+- "Get patch details?" -> GET /repositories/{workspace}/{repo_slug}/patch/{spec}
+- "List all groups?" -> GET /repositories/{workspace}/{repo_slug}/permissions-config/groups
+- "Delete a group?" -> DELETE /repositories/{workspace}/{repo_slug}/permissions-config/groups/{group_slug}
+- "Get group details?" -> GET /repositories/{workspace}/{repo_slug}/permissions-config/groups/{group_slug}
+- "Update a group?" -> PUT /repositories/{workspace}/{repo_slug}/permissions-config/groups/{group_slug}
+- "List all users?" -> GET /repositories/{workspace}/{repo_slug}/permissions-config/users
+- "Delete a user?" -> DELETE /repositories/{workspace}/{repo_slug}/permissions-config/users/{selected_user_id}
+- "Get user details?" -> GET /repositories/{workspace}/{repo_slug}/permissions-config/users/{selected_user_id}
+- "Update a user?" -> PUT /repositories/{workspace}/{repo_slug}/permissions-config/users/{selected_user_id}
+- "List all pipelines?" -> GET /repositories/{workspace}/{repo_slug}/pipelines
+- "Create a pipeline?" -> POST /repositories/{workspace}/{repo_slug}/pipelines
+- "List all caches?" -> GET /repositories/{workspace}/{repo_slug}/pipelines-config/caches
+- "Delete a cache?" -> DELETE /repositories/{workspace}/{repo_slug}/pipelines-config/caches/{cache_uuid}
+- "List all content-uri?" -> GET /repositories/{workspace}/{repo_slug}/pipelines-config/caches/{cache_uuid}/content-uri
+- "List all runners?" -> GET /repositories/{workspace}/{repo_slug}/pipelines-config/runners
+- "Create a runner?" -> POST /repositories/{workspace}/{repo_slug}/pipelines-config/runners
+- "Get runner details?" -> GET /repositories/{workspace}/{repo_slug}/pipelines-config/runners/{runner_uuid}
+- "Update a runner?" -> PUT /repositories/{workspace}/{repo_slug}/pipelines-config/runners/{runner_uuid}
+- "Delete a runner?" -> DELETE /repositories/{workspace}/{repo_slug}/pipelines-config/runners/{runner_uuid}
+- "Get pipeline details?" -> GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}
+- "List all steps?" -> GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps
+- "Get step details?" -> GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}
+- "List all log?" -> GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}/log
+- "Get log details?" -> GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}/logs/{log_uuid}
+- "List all test_reports?" -> GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}/test_reports
+- "List all test_cases?" -> GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}/test_reports/test_cases
+- "List all test_case_reasons?" -> GET /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/steps/{step_uuid}/test_reports/test_cases/{test_case_uuid}/test_case_reasons
+- "Create a stopPipeline?" -> POST /repositories/{workspace}/{repo_slug}/pipelines/{pipeline_uuid}/stopPipeline
+- "List all pipelines_config?" -> GET /repositories/{workspace}/{repo_slug}/pipelines_config
+- "Create a schedule?" -> POST /repositories/{workspace}/{repo_slug}/pipelines_config/schedules
+- "List all schedules?" -> GET /repositories/{workspace}/{repo_slug}/pipelines_config/schedules
+- "Get schedule details?" -> GET /repositories/{workspace}/{repo_slug}/pipelines_config/schedules/{schedule_uuid}
+- "Update a schedule?" -> PUT /repositories/{workspace}/{repo_slug}/pipelines_config/schedules/{schedule_uuid}
+- "Delete a schedule?" -> DELETE /repositories/{workspace}/{repo_slug}/pipelines_config/schedules/{schedule_uuid}
+- "List all executions?" -> GET /repositories/{workspace}/{repo_slug}/pipelines_config/schedules/{schedule_uuid}/executions
+- "List all key_pair?" -> GET /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/key_pair
+- "List all known_hosts?" -> GET /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/known_hosts
+- "Create a known_host?" -> POST /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/known_hosts
+- "Get known_host details?" -> GET /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/known_hosts/{known_host_uuid}
+- "Update a known_host?" -> PUT /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/known_hosts/{known_host_uuid}
+- "Delete a known_host?" -> DELETE /repositories/{workspace}/{repo_slug}/pipelines_config/ssh/known_hosts/{known_host_uuid}
+- "List all variables?" -> GET /repositories/{workspace}/{repo_slug}/pipelines_config/variables
+- "Create a variable?" -> POST /repositories/{workspace}/{repo_slug}/pipelines_config/variables
+- "Get variable details?" -> GET /repositories/{workspace}/{repo_slug}/pipelines_config/variables/{variable_uuid}
+- "Update a variable?" -> PUT /repositories/{workspace}/{repo_slug}/pipelines_config/variables/{variable_uuid}
+- "Delete a variable?" -> DELETE /repositories/{workspace}/{repo_slug}/pipelines_config/variables/{variable_uuid}
+- "Update a property?" -> PUT /repositories/{workspace}/{repo_slug}/properties/{app_key}/{property_name}
+- "Delete a property?" -> DELETE /repositories/{workspace}/{repo_slug}/properties/{app_key}/{property_name}
+- "Get property details?" -> GET /repositories/{workspace}/{repo_slug}/properties/{app_key}/{property_name}
+- "List all pullrequests?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests
+- "Create a pullrequest?" -> POST /repositories/{workspace}/{repo_slug}/pullrequests
+- "List all activity?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/activity
+- "Get pullrequest details?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}
+- "Update a pullrequest?" -> PUT /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}
+- "List all activity?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/activity
+- "Create a approve?" -> POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/approve
+- "List all comments?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments
+- "Create a comment?" -> POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments
+- "Delete a comment?" -> DELETE /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments/{comment_id}
+- "Get comment details?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments/{comment_id}
+- "Update a comment?" -> PUT /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments/{comment_id}
+- "Create a resolve?" -> POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/comments/{comment_id}/resolve
+- "List all commits?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/commits
+- "Create a decline?" -> POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/decline
+- "List all diff?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/diff
+- "List all diffstat?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/diffstat
+- "Create a merge?" -> POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/merge
+- "Get task-status details?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/merge/task-status/{task_id}
+- "List all patch?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/patch
+- "Create a request-change?" -> POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/request-changes
+- "Search statuses?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/statuses
+- "Search tasks?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/tasks
+- "Create a task?" -> POST /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/tasks
+- "Delete a task?" -> DELETE /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/tasks/{task_id}
+- "Get task details?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/tasks/{task_id}
+- "Update a task?" -> PUT /repositories/{workspace}/{repo_slug}/pullrequests/{pull_request_id}/tasks/{task_id}
+- "Update a property?" -> PUT /repositories/{workspace}/{repo_slug}/pullrequests/{pullrequest_id}/properties/{app_key}/{property_name}
+- "Delete a property?" -> DELETE /repositories/{workspace}/{repo_slug}/pullrequests/{pullrequest_id}/properties/{app_key}/{property_name}
+- "Get property details?" -> GET /repositories/{workspace}/{repo_slug}/pullrequests/{pullrequest_id}/properties/{app_key}/{property_name}
+- "Search refs?" -> GET /repositories/{workspace}/{repo_slug}/refs
+- "Search branches?" -> GET /repositories/{workspace}/{repo_slug}/refs/branches
+- "Create a branche?" -> POST /repositories/{workspace}/{repo_slug}/refs/branches
+- "Delete a branche?" -> DELETE /repositories/{workspace}/{repo_slug}/refs/branches/{name}
+- "Get branche details?" -> GET /repositories/{workspace}/{repo_slug}/refs/branches/{name}
+- "Search tags?" -> GET /repositories/{workspace}/{repo_slug}/refs/tags
+- "Create a tag?" -> POST /repositories/{workspace}/{repo_slug}/refs/tags
+- "Delete a tag?" -> DELETE /repositories/{workspace}/{repo_slug}/refs/tags/{name}
+- "Get tag details?" -> GET /repositories/{workspace}/{repo_slug}/refs/tags/{name}
+- "List all src?" -> GET /repositories/{workspace}/{repo_slug}/src
+- "Create a src?" -> POST /repositories/{workspace}/{repo_slug}/src
+- "Search src?" -> GET /repositories/{workspace}/{repo_slug}/src/{commit}/{path}
+- "List all versions?" -> GET /repositories/{workspace}/{repo_slug}/versions
+- "Get version details?" -> GET /repositories/{workspace}/{repo_slug}/versions/{version_id}
+- "List all watchers?" -> GET /repositories/{workspace}/{repo_slug}/watchers
+- "List all snippets?" -> GET /snippets
+- "Create a snippet?" -> POST /snippets
+- "Get snippet details?" -> GET /snippets/{workspace}
+- "Delete a snippet?" -> DELETE /snippets/{workspace}/{encoded_id}
+- "Get snippet details?" -> GET /snippets/{workspace}/{encoded_id}
+- "Update a snippet?" -> PUT /snippets/{workspace}/{encoded_id}
+- "List all comments?" -> GET /snippets/{workspace}/{encoded_id}/comments
+- "Create a comment?" -> POST /snippets/{workspace}/{encoded_id}/comments
+- "Delete a comment?" -> DELETE /snippets/{workspace}/{encoded_id}/comments/{comment_id}
+- "Get comment details?" -> GET /snippets/{workspace}/{encoded_id}/comments/{comment_id}
+- "Update a comment?" -> PUT /snippets/{workspace}/{encoded_id}/comments/{comment_id}
+- "List all commits?" -> GET /snippets/{workspace}/{encoded_id}/commits
+- "Get commit details?" -> GET /snippets/{workspace}/{encoded_id}/commits/{revision}
+- "Get file details?" -> GET /snippets/{workspace}/{encoded_id}/files/{path}
+- "List all watch?" -> GET /snippets/{workspace}/{encoded_id}/watch
+- "List all watchers?" -> GET /snippets/{workspace}/{encoded_id}/watchers
+- "Delete a snippet?" -> DELETE /snippets/{workspace}/{encoded_id}/{node_id}
+- "Get snippet details?" -> GET /snippets/{workspace}/{encoded_id}/{node_id}
+- "Update a snippet?" -> PUT /snippets/{workspace}/{encoded_id}/{node_id}
+- "Get file details?" -> GET /snippets/{workspace}/{encoded_id}/{node_id}/files/{path}
+- "List all diff?" -> GET /snippets/{workspace}/{encoded_id}/{revision}/diff
+- "List all patch?" -> GET /snippets/{workspace}/{encoded_id}/{revision}/patch
+- "List all variables?" -> GET /teams/{username}/pipelines_config/variables
+- "Create a variable?" -> POST /teams/{username}/pipelines_config/variables
+- "Get variable details?" -> GET /teams/{username}/pipelines_config/variables/{variable_uuid}
+- "Update a variable?" -> PUT /teams/{username}/pipelines_config/variables/{variable_uuid}
+- "Delete a variable?" -> DELETE /teams/{username}/pipelines_config/variables/{variable_uuid}
+- "List all code?" -> GET /teams/{username}/search/code
+- "List all user?" -> GET /user
+- "List all emails?" -> GET /user/emails
+- "Get email details?" -> GET /user/emails/{email}
+- "Search repositories?" -> GET /user/permissions/repositories
+- "Search workspaces?" -> GET /user/permissions/workspaces
+- "List all workspaces?" -> GET /user/workspaces
+- "List all permission?" -> GET /user/workspaces/{workspace}/permission
+- "Search repositories?" -> GET /user/workspaces/{workspace}/permissions/repositories
+- "Get user details?" -> GET /users/{selected_user}
+- "List all gpg-keys?" -> GET /users/{selected_user}/gpg-keys
+- "Create a gpg-key?" -> POST /users/{selected_user}/gpg-keys
+- "Delete a gpg-key?" -> DELETE /users/{selected_user}/gpg-keys/{fingerprint}
+- "Get gpg-key details?" -> GET /users/{selected_user}/gpg-keys/{fingerprint}
+- "List all variables?" -> GET /users/{selected_user}/pipelines_config/variables
+- "Create a variable?" -> POST /users/{selected_user}/pipelines_config/variables
+- "Get variable details?" -> GET /users/{selected_user}/pipelines_config/variables/{variable_uuid}
+- "Update a variable?" -> PUT /users/{selected_user}/pipelines_config/variables/{variable_uuid}
+- "Delete a variable?" -> DELETE /users/{selected_user}/pipelines_config/variables/{variable_uuid}
+- "Update a property?" -> PUT /users/{selected_user}/properties/{app_key}/{property_name}
+- "Delete a property?" -> DELETE /users/{selected_user}/properties/{app_key}/{property_name}
+- "Get property details?" -> GET /users/{selected_user}/properties/{app_key}/{property_name}
+- "List all code?" -> GET /users/{selected_user}/search/code
+- "List all ssh-keys?" -> GET /users/{selected_user}/ssh-keys
+- "Create a ssh-key?" -> POST /users/{selected_user}/ssh-keys
+- "Delete a ssh-key?" -> DELETE /users/{selected_user}/ssh-keys/{key_id}
+- "Get ssh-key details?" -> GET /users/{selected_user}/ssh-keys/{key_id}
+- "Update a ssh-key?" -> PUT /users/{selected_user}/ssh-keys/{key_id}
+- "Search workspaces?" -> GET /workspaces
+- "Get workspace details?" -> GET /workspaces/{workspace}
+- "List all hooks?" -> GET /workspaces/{workspace}/hooks
+- "Create a hook?" -> POST /workspaces/{workspace}/hooks
+- "Delete a hook?" -> DELETE /workspaces/{workspace}/hooks/{uid}
+- "Get hook details?" -> GET /workspaces/{workspace}/hooks/{uid}
+- "Update a hook?" -> PUT /workspaces/{workspace}/hooks/{uid}
+- "List all members?" -> GET /workspaces/{workspace}/members
+- "Get member details?" -> GET /workspaces/{workspace}/members/{member}
+- "Search permissions?" -> GET /workspaces/{workspace}/permissions
+- "Search repositories?" -> GET /workspaces/{workspace}/permissions/repositories
+- "Search repositories?" -> GET /workspaces/{workspace}/permissions/repositories/{repo_slug}
+- "List all openid-configuration?" -> GET /workspaces/{workspace}/pipelines-config/identity/oidc/.well-known/openid-configuration
+- "List all keys.json?" -> GET /workspaces/{workspace}/pipelines-config/identity/oidc/keys.json
+- "List all runners?" -> GET /workspaces/{workspace}/pipelines-config/runners
+- "Create a runner?" -> POST /workspaces/{workspace}/pipelines-config/runners
+- "Get runner details?" -> GET /workspaces/{workspace}/pipelines-config/runners/{runner_uuid}
+- "Update a runner?" -> PUT /workspaces/{workspace}/pipelines-config/runners/{runner_uuid}
+- "Delete a runner?" -> DELETE /workspaces/{workspace}/pipelines-config/runners/{runner_uuid}
+- "List all variables?" -> GET /workspaces/{workspace}/pipelines-config/variables
+- "Create a variable?" -> POST /workspaces/{workspace}/pipelines-config/variables
+- "Get variable details?" -> GET /workspaces/{workspace}/pipelines-config/variables/{variable_uuid}
+- "Update a variable?" -> PUT /workspaces/{workspace}/pipelines-config/variables/{variable_uuid}
+- "Delete a variable?" -> DELETE /workspaces/{workspace}/pipelines-config/variables/{variable_uuid}
+- "List all projects?" -> GET /workspaces/{workspace}/projects
+- "Create a project?" -> POST /workspaces/{workspace}/projects
+- "Delete a project?" -> DELETE /workspaces/{workspace}/projects/{project_key}
+- "Get project details?" -> GET /workspaces/{workspace}/projects/{project_key}
+- "Update a project?" -> PUT /workspaces/{workspace}/projects/{project_key}
+- "List all branching-model?" -> GET /workspaces/{workspace}/projects/{project_key}/branching-model
+- "List all settings?" -> GET /workspaces/{workspace}/projects/{project_key}/branching-model/settings
+- "List all default-reviewers?" -> GET /workspaces/{workspace}/projects/{project_key}/default-reviewers
+- "Delete a default-reviewer?" -> DELETE /workspaces/{workspace}/projects/{project_key}/default-reviewers/{selected_user}
+- "Get default-reviewer details?" -> GET /workspaces/{workspace}/projects/{project_key}/default-reviewers/{selected_user}
+- "Update a default-reviewer?" -> PUT /workspaces/{workspace}/projects/{project_key}/default-reviewers/{selected_user}
+- "List all deploy-keys?" -> GET /workspaces/{workspace}/projects/{project_key}/deploy-keys
+- "Create a deploy-key?" -> POST /workspaces/{workspace}/projects/{project_key}/deploy-keys
+- "Delete a deploy-key?" -> DELETE /workspaces/{workspace}/projects/{project_key}/deploy-keys/{key_id}
+- "Get deploy-key details?" -> GET /workspaces/{workspace}/projects/{project_key}/deploy-keys/{key_id}
+- "List all groups?" -> GET /workspaces/{workspace}/projects/{project_key}/permissions-config/groups
+- "Delete a group?" -> DELETE /workspaces/{workspace}/projects/{project_key}/permissions-config/groups/{group_slug}
+- "Get group details?" -> GET /workspaces/{workspace}/projects/{project_key}/permissions-config/groups/{group_slug}
+- "Update a group?" -> PUT /workspaces/{workspace}/projects/{project_key}/permissions-config/groups/{group_slug}
+- "List all users?" -> GET /workspaces/{workspace}/projects/{project_key}/permissions-config/users
+- "Delete a user?" -> DELETE /workspaces/{workspace}/projects/{project_key}/permissions-config/users/{selected_user_id}
+- "Get user details?" -> GET /workspaces/{workspace}/projects/{project_key}/permissions-config/users/{selected_user_id}
+- "Update a user?" -> PUT /workspaces/{workspace}/projects/{project_key}/permissions-config/users/{selected_user_id}
+- "Get pullrequest details?" -> GET /workspaces/{workspace}/pullrequests/{selected_user}
+- "List all code?" -> GET /workspaces/{workspace}/search/code
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

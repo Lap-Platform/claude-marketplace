@@ -167,89 +167,39 @@ https://api.vectara.io
 |--------|------|-------------|
 | POST | /v1/upload | The File Upload API can be used to index binary files like PDFs, Word Documents, and similar. |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I search my corpus for documents?" -> POST /v1/query
-- "How do I stream search results in real time?" -> POST /v1/stream-query
-- "How do I add a document to a corpus?" -> POST /v1/index
-- "How do I upload a file to Vectara?" -> POST /v1/upload
-- "How do I create a new corpus?" -> POST /v1/create-corpus
-- "How do I list all my corpora?" -> POST /v1/list-corpora
-- "How do I delete a document from a corpus?" -> POST /v1/delete-doc
-- "How do I check my account storage usage?" -> POST /v1/compute-account-size
-- "How do I create and manage API keys?" -> POST /v1/create-api-key, POST /v1/list-api-keys, POST /v1/delete-api-key, POST /v1/enable-api-key
-- "How do I view conversation history for chat?" -> POST /v1/list-conversations, POST /v1/read-conversations
-- "How do I remove old conversation turns?" -> POST /v1/delete-turns, POST /v1/disable-turns
-- "How do I get usage metrics for a corpus over a time window?" -> POST /v1/get-usage-metrics
-- "How do I manage users and their roles?" -> POST /v1/manage-user, POST /v1/list-users
-- "How do I wipe all data in a corpus without deleting it?" -> POST /v1/reset-corpus
-- "How do I update filter attributes on a corpus?" -> POST /v1/replace-corpus-filter-attrs
-
-## Response Tips
-
-- **Query/Stream-Query**: Responses contain `responseSet` arrays with nested document matches, summary text, and `metrics` (encode/retrieval/rerank timings) -- always check `status` arrays at multiple nesting levels for partial failures.
-- **List endpoints** (corpora, documents, conversations, API keys, jobs, users): All use cursor-based pagination via `pageKey`/`nextPageKey` -- pass the returned key into the next request; an empty or absent key means no more pages.
-- **Mutation endpoints** (create, delete, reset, update): Return a top-level `status` map with `code` and `statusDetail` -- treat any `code` other than `"OK"` as an error and read `statusDetail` for diagnostics.
-- **Index/Upload**: Return `quotaConsumed` with `numChars` and `numMetadataChars` as string-encoded integers -- parse these to track indexing budget.
-- **Stream-Query**: Returns chunked results with `result.summary.done` as a boolean sentinel -- keep consuming until `done: true`; intermediate chunks carry partial summary text and chat metadata.
-- **Jobs** (replace-corpus-filter-attrs, etc.): Some mutations return a `jobId` -- poll via `list-jobs` filtering by that ID until state shows completion.
-
-## Anomaly Flags
-
-- **Quota exhaustion**: Surface `quotaConsumed` values from index/upload responses when `numChars` approaches known account limits; flag 507 (Insufficient Storage) errors immediately.
-- **Partial failures in batch queries**: `status` arrays inside `responseSet` can contain per-corpus errors even when the HTTP response is 200 -- alert when any nested status code is not `"OK"`.
-- **Pagination loops**: If `pageKey` in a list response is identical to the one sent, flag a potential infinite loop.
-- **Slow query metrics**: Surface `metrics.retrievalMs` or `metrics.rerankMs` values that exceed typical thresholds (e.g., >5000ms) as performance warnings.
-- **Auth errors (401/403)**: Distinguish between expired OAuth2 tokens (refresh needed) and invalid API keys (reconfiguration needed); suggest corrective action.
-- **Corpus disabled**: `update-corpus-enablement` can silently disable a corpus -- flag when queries return empty results against a recently disabled corpus.
-- **409 Conflict on upload**: Indicates a duplicate document ID -- surface the conflicting `documentId` and suggest delete-then-reupload or a new ID.
-- **Factual consistency score**: When `factualConsistencyScore: true` is requested in summaries, flag scores below 0.5 as low-confidence answers.
-
-## Playbook
-
-### 1. Index a Document and Verify It
-
-1. Call `POST /v1/create-corpus` with a `name` and optional `filterAttributes` to set up the target corpus. Note the returned `corpusId`.
-2. Call `POST /v1/index` with `customerId`, `corpusId`, and a `document` object containing `documentId`, `title`, `text` sections, and optional `metadataJson`.
-3. Check the response `status.code` is `"OK"` and note `quotaConsumed`.
-4. Call `POST /v1/list-documents` with the `corpusId` and verify the new `documentId` appears in the results.
-5. Call `POST /v1/compute-corpus-size` with the `corpusId` to confirm the size increased.
-
-### 2. Run a Semantic Search with Summarization
-
-1. Call `POST /v1/query` with a `query` array containing your search text, target `corpusKey` (with `corpusId`), `numResults`, and a `summary` block specifying `summarizerPromptName`, `maxSummarizedResults`, and `responseLang`.
-2. Parse `responseSet[0].response` for ranked document matches with scores.
-3. Read `responseSet[0].summary[0].text` for the generated answer.
-4. If `factualConsistencyScore` was enabled, check `factualConsistency.score` -- values below 0.5 warrant a caveat to the user.
-5. Review `metrics` to assess query performance and decide if tuning (e.g., adjusting `numResults` or `lexicalInterpolationConfig`) is needed.
-
-### 3. Manage a Conversational Chat Session
-
-1. Start a query with `POST /v1/query` or `POST /v1/stream-query`, including a `chat` object inside the `summary` block (omit `conversationId` for a new session).
-2. Extract `conversationId` and `turnId` from the response's `summary.chat` field.
-3. For follow-up questions, pass the same `conversationId` in the `chat` object to maintain context.
-4. To review history, call `POST /v1/read-conversations` with the `conversationId`.
-5. To prune context, call `POST /v1/disable-turns` or `POST /v1/delete-turns` with specific `turnId` values.
-6. To end and clean up, call `POST /v1/delete-conversations` with the `conversationId`.
-
-### 4. Rotate API Keys Safely
-
-1. Call `POST /v1/list-api-keys` to inventory existing keys and their types/corpus bindings.
-2. Call `POST /v1/create-api-key` with a new `description`, `apiKeyType`, and target `corpusId` list.
-3. Update your application config to use the new key.
-4. Call `POST /v1/enable-api-key` with `keyId` of the old key and `enable: false` to disable it.
-5. Monitor for 401 errors in logs to confirm nothing still uses the old key.
-6. Call `POST /v1/delete-api-key` with the old `keyId` to permanently remove it.
-
-### 5. Bulk Upload Files to a Corpus
-
-1. Call `POST /v1/read-corpus` with the target `corpusId` and `readFilterAttributes: true` to confirm the corpus exists and check its schema.
-2. For each file, call `POST /v1/upload` with query params `c` (customer ID) and `o` (corpus ID), attaching the file as multipart form data. Set `d: true` to extract and index document content.
-3. Check each response for `status` -- handle 409 (duplicate) by either skipping or deleting the existing doc first with `POST /v1/delete-doc`.
-4. After all uploads, call `POST /v1/list-jobs` filtered by `corpusId` to verify all indexing jobs completed successfully.
-5. Call `POST /v1/compute-corpus-size` to confirm the final indexed size matches expectations.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Create a compute-account-size?" -> POST /v1/compute-account-size
+- "Create a compute-corpus-size?" -> POST /v1/compute-corpus-size
+- "Create a create-api-key?" -> POST /v1/create-api-key
+- "Create a create-corpus?" -> POST /v1/create-corpus
+- "Create a delete-api-key?" -> POST /v1/delete-api-key
+- "Create a delete-conversation?" -> POST /v1/delete-conversations
+- "Create a delete-corpus?" -> POST /v1/delete-corpus
+- "Create a delete-doc?" -> POST /v1/delete-doc
+- "Create a delete-turn?" -> POST /v1/delete-turns
+- "Create a disable-turn?" -> POST /v1/disable-turns
+- "Create a enable-api-key?" -> POST /v1/enable-api-key
+- "Create a get-usage-metric?" -> POST /v1/get-usage-metrics
+- "Create a index?" -> POST /v1/index
+- "Create a list-api-key?" -> POST /v1/list-api-keys
+- "Create a list-conversation?" -> POST /v1/list-conversations
+- "Create a list-corpora?" -> POST /v1/list-corpora
+- "Create a list-document?" -> POST /v1/list-documents
+- "Create a list-job?" -> POST /v1/list-jobs
+- "Create a list-user?" -> POST /v1/list-users
+- "Create a manage-user?" -> POST /v1/manage-user
+- "Create a query?" -> POST /v1/query
+- "Create a read-conversation?" -> POST /v1/read-conversations
+- "Create a read-corpus?" -> POST /v1/read-corpus
+- "Create a replace-corpus-filter-attr?" -> POST /v1/replace-corpus-filter-attrs
+- "Create a reset-corpus?" -> POST /v1/reset-corpus
+- "Create a stream-query?" -> POST /v1/stream-query
+- "Create a update-corpus-enablement?" -> POST /v1/update-corpus-enablement
+- "Create a index?" -> POST /v1/core/index
+- "Create a upload?" -> POST /v1/upload
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

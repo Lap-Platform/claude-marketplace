@@ -10,1204 +10,1470 @@
 
 @group static
 @endpoint GET /static/web-videos/{filename}
-@required {filename: str}
-@returns(200)
-@errors {404}
+@desc Get public Web Video file
+@required {filename: str # Filename}
+@returns(200) successful operation
+@errors {404: not found}
 
 @endpoint GET /static/web-videos/private/{filename}
-@required {filename: str}
-@optional {videoFileToken: str}
-@returns(200)
-@errors {403, 404}
+@desc Get private Web Video file
+@required {filename: str # Filename}
+@optional {videoFileToken: str # Video file token [generated](#operation/requestVideoToken) by PeerTube so you don't need to provide an OAuth token in the request header.}
+@returns(200) successful operation
+@errors {403: invalid auth, 404: not found}
 
 @endpoint GET /static/streaming-playlists/hls/{filename}
-@required {filename: str}
-@returns(200)
-@errors {403, 404}
+@desc Get public HLS video file
+@required {filename: str # Filename}
+@returns(200) successful operation
+@errors {403: invalid auth, 404: not found}
 
 @endpoint GET /static/streaming-playlists/hls/private/{filename}
-@required {filename: str}
-@optional {videoFileToken: str, reinjectVideoFileToken: bool}
-@returns(200)
-@errors {403, 404}
+@desc Get private HLS video file
+@required {filename: str # Filename}
+@optional {videoFileToken: str # Video file token [generated](#operation/requestVideoToken) by PeerTube so you don't need to provide an OAuth token in the request header., reinjectVideoFileToken: bool # Ask the server to reinject videoFileToken in URLs in m3u8 playlist}
+@returns(200) successful operation
+@errors {403: invalid auth, 404: not found}
 
 @endgroup
 
 @group download
 @endpoint GET /download/videos/generate/{videoId}
-@required {videoId: any, videoFileIds: [int]}
-@optional {videoFileToken: str}
-@returns(200)
+@desc Download video file
+@required {videoId: any # The video id, videoFileIds: [int] # streams of video files to mux in the output}
+@optional {videoFileToken: str # Video file token [generated](#operation/requestVideoToken) by PeerTube so you don't need to provide an OAuth token in the request header.}
+@returns(200) successful operation
 
 @endgroup
 
 @group feeds
 @endpoint GET /feeds/video-comments.{format}
-@required {format: str(xml/rss/rss2/atom/atom1/json/json1)}
-@optional {videoId: str, accountId: str, accountName: str, videoChannelId: str, videoChannelName: str}
-@returns(200)
-@errors {400, 404, 406}
+@desc Comments on videos feeds
+@required {format: str(xml/rss/rss2/atom/atom1/json/json1) # format expected (we focus on making `rss` the most feature-rich ; it serves [Media RSS](https://www.rssboard.org/media-rss))}
+@optional {videoId: str # limit listing comments to a specific video, accountId: str # limit listing comments to videos of a specific account, accountName: str # limit listing comments to videos of a specific account, videoChannelId: str # limit listing comments to videos of a specific video channel, videoChannelName: str # limit listing comments to videos of a specific video channel}
+@returns(200) successful operation
+@errors {400: Arises when:   - videoId filter is mixed with a channel filter, 404: video, video channel or account not found, 406: accept header unsupported}
 
 @endpoint GET /feeds/videos.{format}
-@required {format: str(xml/rss/rss2/atom/atom1/json/json1)}
-@optional {accountId: str, accountName: str, videoChannelId: str, videoChannelName: str, sort: str, nsfw: str(true/false), isLocal: bool, include: int(0/1/2/4/8/16/32), privacyOneOf: int, hasHLSFiles: bool, hasWebVideoFiles: bool}
-@returns(200)
-@errors {404, 406}
+@desc Common videos feeds
+@required {format: str(xml/rss/rss2/atom/atom1/json/json1) # format expected (we focus on making `rss` the most feature-rich ; it serves [Media RSS](https://www.rssboard.org/media-rss))}
+@optional {accountId: str # limit listing to a specific account, accountName: str # limit listing to a specific account, videoChannelId: str # limit listing to a specific video channel, videoChannelName: str # limit listing to a specific video channel, sort: str # Sort column, nsfw: str(true/false) # whether to include nsfw videos, if any, isLocal: bool # **PeerTube >= 4.0** Display only local or remote objects, include: int(0/1/2/4/8/16/32) # **Only administrators and moderators can use this parameter**  Include additional videos in results (can be combined using bitwise or operator) - `0` NONE - `1` NOT_PUBLISHED_STATE - `2` BLACKLISTED - `4` BLOCKED_OWNER - `8` FILES - `16` CAPTIONS - `32` VIDEO SOURCE, privacyOneOf: int # **PeerTube >= 4.0** Display only videos in this specific privacy/privacies, hasHLSFiles: bool # **PeerTube >= 4.0** Display only videos that have HLS files, hasWebVideoFiles: bool # **PeerTube >= 6.0** Display only videos that have Web Video files}
+@returns(200) successful operation
+@errors {404: video channel or account not found, 406: accept header unsupported}
 
 @endpoint GET /feeds/subscriptions.{format}
-@required {format: str(xml/rss/rss2/atom/atom1/json/json1), accountId: str, token: str}
-@optional {sort: str, nsfw: str(true/false), isLocal: bool, include: int(0/1/2/4/8/16/32), privacyOneOf: int, hasHLSFiles: bool, hasWebVideoFiles: bool}
-@returns(200)
-@errors {406}
+@desc Videos of subscriptions feeds
+@required {format: str(xml/rss/rss2/atom/atom1/json/json1) # format expected (we focus on making `rss` the most feature-rich ; it serves [Media RSS](https://www.rssboard.org/media-rss)), accountId: str # limit listing to a specific account, token: str # private token allowing access}
+@optional {sort: str # Sort column, nsfw: str(true/false) # whether to include nsfw videos, if any, isLocal: bool # **PeerTube >= 4.0** Display only local or remote objects, include: int(0/1/2/4/8/16/32) # **Only administrators and moderators can use this parameter**  Include additional videos in results (can be combined using bitwise or operator) - `0` NONE - `1` NOT_PUBLISHED_STATE - `2` BLACKLISTED - `4` BLOCKED_OWNER - `8` FILES - `16` CAPTIONS - `32` VIDEO SOURCE, privacyOneOf: int # **PeerTube >= 4.0** Display only videos in this specific privacy/privacies, hasHLSFiles: bool # **PeerTube >= 4.0** Display only videos that have HLS files, hasWebVideoFiles: bool # **PeerTube >= 6.0** Display only videos that have Web Video files}
+@returns(200) successful operation
+@errors {406: accept header unsupported}
 
 @endpoint GET /feeds/podcast/videos.xml
-@required {videoChannelId: str}
-@returns(200)
-@errors {404}
+@desc Videos podcast feed
+@required {videoChannelId: str # Limit listing to a specific video channel}
+@returns(200) successful operation
+@errors {404: video channel not found}
 
 @endgroup
 
 @group api
 @endpoint GET /api/v1/accounts/{name}
-@required {name: str}
-@returns(200)
-@errors {404}
+@desc Get an account
+@required {name: str # The username or handle of the account}
+@returns(200) successful operation
+@errors {404: account not found}
 
 @endpoint GET /api/v1/accounts/{name}/videos
-@required {name: str}
-@optional {start: int, count: int=15, skipCount: str(true/false)=false, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false), nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool, includeScheduledLive: bool, categoryOneOf: any, licenceOneOf: any, languageOneOf: any, tagsOneOf: any, tagsAllOf: any, isLocal: bool, include: int(0/1/2/4/8/16/32), hasHLSFiles: bool, hasWebVideoFiles: bool, host: str, autoTagOneOf: any, privacyOneOf: int, excludeAlreadyWatched: bool, search: str}
-@returns(200) {total: int, data: [any]}
+@desc List videos of an account
+@required {name: str # The username or handle of the account}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, skipCount: str(true/false)=false # if you don't need the `total` in the response, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false) # whether to include nsfw videos, if any, nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool # whether or not the video is a live, includeScheduledLive: bool # whether or not include live that are scheduled for later, categoryOneOf: any # category id of the video (see [/videos/categories](#operation/getCategories)), licenceOneOf: any # licence id of the video (see [/videos/licences](#operation/getLicences)), languageOneOf: any # language id of the video (see [/videos/languages](#operation/getLanguages)). Use `_unknown` to filter on videos that don't have a video language, tagsOneOf: any # tag(s) of the video, tagsAllOf: any # tag(s) of the video, where all should be present in the video, isLocal: bool # **PeerTube >= 4.0** Display only local or remote objects, include: int(0/1/2/4/8/16/32) # **Only administrators and moderators can use this parameter**  Include additional videos in results (can be combined using bitwise or operator) - `0` NONE - `1` NOT_PUBLISHED_STATE - `2` BLACKLISTED - `4` BLOCKED_OWNER - `8` FILES - `16` CAPTIONS - `32` VIDEO SOURCE, hasHLSFiles: bool # **PeerTube >= 4.0** Display only videos that have HLS files, hasWebVideoFiles: bool # **PeerTube >= 6.0** Display only videos that have Web Video files, host: str # Find elements owned by this host, autoTagOneOf: any # **PeerTube >= 6.2** **Admins and moderators only** filter on videos that contain one of these automatic tags, privacyOneOf: int # **PeerTube >= 4.0** Display only videos in this specific privacy/privacies, excludeAlreadyWatched: bool # Whether or not to exclude videos that are in the user's video history, search: str # Plain text search, applied to various parts of the model depending on endpoint}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/accounts/{name}/followers
-@required {name: str}
-@optional {start: int, count: int=15, sort: str, search: str}
-@returns(200) {total: int, data: [any]}
+@desc List followers of an account
+@required {name: str # The username or handle of the account}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort followers by criteria, search: str # Plain text search, applied to various parts of the model depending on endpoint}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/accounts
-@optional {start: int, count: int=15, sort: str}
-@returns(200) {total: int, data: [any]}
+@desc List accounts
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/config
-@returns(200) {instance: map{name: str, shortDescription: str, defaultClientRoute: str, isNSFW: bool, defaultNSFWPolicy: str, serverCountry: str, defaultLanguage: str, support: map{text: str}, social: map{externalLink: str, mastodonLink: str, blueskyLink: str, xLink: str}, customizations: map{javascript: str, css: str}, avatars: [any], banners: [any]}, search: map{remoteUri: map{users: bool, anonymous: bool}}, plugin: map{registered: [str]}, theme: map{registered: [str]}, email: map{enabled: bool}, contactForm: map{enabled: bool}, serverVersion: str, serverCommit: str, signup: map{allowed: bool, allowedForCurrentIP: bool, requiresEmailVerification: bool}, transcoding: map{hls: map{enabled: bool}, web_videos: map{enabled: bool}, enabledResolutions: [int]}, import: map{videos: map{http: map{enabled: bool}, torrent: map{enabled: bool}}, videoChannelSynchronization: map{enabled: bool}, users: map{enabled: bool}}, export: map{users: map{enabled: bool, exportExpiration: num, maxUserVideoQuota: num}}, autoBlacklist: map{videos: map{ofUsers: map{enabled: bool}}}, avatar: map{file: map{size: map{max: int}}, extensions: [str]}, video: map{image: map{extensions: [str], size: map{max: int}}, file: map{extensions: [str]}}, videoCaption: map{file: map{size: map{max: int}, extensions: [str]}}, user: map{videoQuota: int, videoQuotaDaily: int}, trending: map{videos: map{intervalDays: int}}, tracker: map{enabled: bool}, followings: map{instance: map{autoFollowIndex: map{indexUrl: str(url)}}}, federation: map{enabled: bool}, homepage: map{enabled: bool}, openTelemetry: map{metrics: map{enabled: bool, playbackStatsInterval: num}}, views: map{views: map{watchingInterval: map{anonymous: num, users: num}}}}
+@desc Get instance public configuration
+@returns(200) {instance: map{name: str, shortDescription: str, defaultClientRoute: str, isNSFW: bool, defaultNSFWPolicy: str, serverCountry: str, defaultLanguage: str, support: map{text: str}, social: map{externalLink: str, mastodonLink: str, blueskyLink: str, xLink: str}, customizations: map{javascript: str, css: str}, avatars: [any], banners: [any]}, search: map{remoteUri: map{users: bool, anonymous: bool}}, plugin: map{registered: [str]}, theme: map{registered: [str]}, email: map{enabled: bool}, contactForm: map{enabled: bool}, serverVersion: str, serverCommit: str, signup: map{allowed: bool, allowedForCurrentIP: bool, requiresEmailVerification: bool}, transcoding: map{hls: map{enabled: bool}, web_videos: map{enabled: bool}, enabledResolutions: [int]}, import: map{videos: map{http: map{enabled: bool}, torrent: map{enabled: bool}}, videoChannelSynchronization: map{enabled: bool}, users: map{enabled: bool}}, export: map{users: map{enabled: bool, exportExpiration: num, maxUserVideoQuota: num}}, autoBlacklist: map{videos: map{ofUsers: map{enabled: bool}}}, avatar: map{file: map{size: map{max: int}}, extensions: [str]}, video: map{image: map{extensions: [str], size: map{max: int}}, file: map{extensions: [str]}}, videoCaption: map{file: map{size: map{max: int}, extensions: [str]}}, user: map{videoQuota: int, videoQuotaDaily: int}, trending: map{videos: map{intervalDays: int}}, tracker: map{enabled: bool}, followings: map{instance: map{autoFollowIndex: map{indexUrl: str(url)}}}, federation: map{enabled: bool}, homepage: map{enabled: bool}, openTelemetry: map{metrics: map{enabled: bool, playbackStatsInterval: num}}, views: map{views: map{watchingInterval: map{anonymous: num, users: num}}}} # successful operation
 
 @endpoint GET /api/v1/config/about
-@returns(200) {instance: map{name: str, shortDescription: str, description: str, terms: str, codeOfConduct: str, hardwareInformation: str, creationReason: str, moderationInformation: str, administrator: str, maintenanceLifetime: str, businessModel: str, languages: [str], categories: [int], avatars: [any], banners: [any]}}
+@desc Get instance "About" information
+@returns(200) {instance: map{name: str, shortDescription: str, description: str, terms: str, codeOfConduct: str, hardwareInformation: str, creationReason: str, moderationInformation: str, administrator: str, maintenanceLifetime: str, businessModel: str, languages: [str], categories: [int], avatars: [any], banners: [any]}} # successful operation
 
 @endpoint GET /api/v1/config/custom
-@returns(200) {instance: map{name: str, shortDescription: str, description: str, terms: str, codeOfConduct: str, creationReason: str, moderationInformation: str, administrator: str, maintenanceLifetime: str, businessModel: str, hardwareInformation: str, languages: [str], categories: [num], isNSFW: bool, defaultNSFWPolicy: str, serverCountry: str, support: map{text: str}, social: map{externalLink: str, mastodonLink: str, blueskyLink: str, xLink: str}, defaultClientRoute: str, customizations: map{javascript: str, css: str}}, theme: map{default: str}, services: map{twitter: map{username: str}}, cache: map{previews: map{size: int}, captions: map{size: int}}, signup: map{enabled: bool, limit: int, requiresEmailVerification: bool}, admin: map{email: str(email)}, contactForm: map{enabled: bool}, user: map{videoQuota: int, videoQuotaDaily: int}, transcoding: map{enabled: bool, originalFile: map{keep: bool}, allowAdditionalExtensions: bool, allowAudioFiles: bool, threads: int, concurrency: num, profile: str, resolutions: map{0p: bool, 144p: bool, 240p: bool, 360p: bool, 480p: bool, 720p: bool, 1080p: bool, 1440p: bool, 2160p: bool}, web_videos: map{enabled: bool}, hls: map{enabled: bool, splitAudioAndVideo: bool}}, import: map{videos: map{http: map{enabled: bool}, torrent: map{enabled: bool}}, video_channel_synchronization: map{enabled: bool}}, autoBlacklist: map{videos: map{ofUsers: map{enabled: bool}}}, followers: map{instance: map{enabled: bool, manualApproval: bool}}, storyboard: map{enabled: bool}, defaults: map{publish: map{downloadEnabled: bool, commentsPolicy: int, privacy: int, licence: int}, p2p: map{webapp: map{enabled: bool}, embed: map{enabled: bool}}, player: map{autoPlay: bool}}}
+@desc Get instance runtime configuration
+@returns(200) {instance: map{name: str, shortDescription: str, description: str, terms: str, codeOfConduct: str, creationReason: str, moderationInformation: str, administrator: str, maintenanceLifetime: str, businessModel: str, hardwareInformation: str, languages: [str], categories: [num], isNSFW: bool, defaultNSFWPolicy: str, serverCountry: str, support: map{text: str}, social: map{externalLink: str, mastodonLink: str, blueskyLink: str, xLink: str}, defaultClientRoute: str, customizations: map{javascript: str, css: str}}, theme: map{default: str}, services: map{twitter: map{username: str}}, cache: map{previews: map{size: int}, captions: map{size: int}}, signup: map{enabled: bool, limit: int, requiresEmailVerification: bool}, admin: map{email: str(email)}, contactForm: map{enabled: bool}, user: map{videoQuota: int, videoQuotaDaily: int}, transcoding: map{enabled: bool, originalFile: map{keep: bool}, allowAdditionalExtensions: bool, allowAudioFiles: bool, threads: int, concurrency: num, profile: str, resolutions: map{0p: bool, 144p: bool, 240p: bool, 360p: bool, 480p: bool, 720p: bool, 1080p: bool, 1440p: bool, 2160p: bool}, web_videos: map{enabled: bool}, hls: map{enabled: bool, splitAudioAndVideo: bool}}, import: map{videos: map{http: map{enabled: bool}, torrent: map{enabled: bool}}, video_channel_synchronization: map{enabled: bool}}, autoBlacklist: map{videos: map{ofUsers: map{enabled: bool}}}, followers: map{instance: map{enabled: bool, manualApproval: bool}}, storyboard: map{enabled: bool}, defaults: map{publish: map{downloadEnabled: bool, commentsPolicy: int, privacy: int, licence: int}, p2p: map{webapp: map{enabled: bool}, embed: map{enabled: bool}}, player: map{autoPlay: bool}}} # successful operation
 
 @endpoint PUT /api/v1/config/custom
-@returns(200)
-@errors {400}
+@desc Set instance runtime configuration
+@returns(200) successful operation
+@errors {400: Arises when:   - the emailer is disabled and the instance is open to registrations   - web videos and hls are disabled with transcoding enabled - you need at least one enabled}
 
 @endpoint DELETE /api/v1/config/custom
-@returns(200)
+@desc Delete instance runtime configuration
+@returns(200) successful operation
 
 @endpoint POST /api/v1/config/instance-banner/pick
-@returns(204)
-@errors {413}
+@desc Update instance banner
+@returns(204) successful operation
+@errors {413: image file too large}
 
 @endpoint DELETE /api/v1/config/instance-banner
-@returns(204)
+@desc Delete instance banner
+@returns(204) successful operation
 
 @endpoint POST /api/v1/config/instance-avatar/pick
-@returns(204)
-@errors {413}
+@desc Update instance avatar
+@returns(204) successful operation
+@errors {413: image file too large}
 
 @endpoint DELETE /api/v1/config/instance-avatar
-@returns(204)
+@desc Delete instance avatar
+@returns(204) successful operation
 
 @endpoint POST /api/v1/config/instance-logo/{logoType}/pick
+@desc Update instance logo
 @required {logoType: str(favicon/header-wide/header-square/opengraph)}
-@returns(204)
-@errors {413}
+@returns(204) successful operation
+@errors {413: image file too large}
 
 @endpoint DELETE /api/v1/config/instance-logo/{logoType}
+@desc Delete instance logo
 @required {logoType: str(favicon/header-wide/header-square/opengraph)}
-@returns(204)
+@returns(204) successful operation
 
 @endpoint GET /api/v1/custom-pages/homepage/instance
-@returns(200) {content: str}
-@errors {404}
+@desc Get instance custom homepage
+@returns(200) {content: str} # successful operation
+@errors {404: No homepage set}
 
 @endpoint PUT /api/v1/custom-pages/homepage/instance
-@optional {content: str}
-@returns(204)
+@desc Set instance custom homepage
+@optional {content: str # content of the homepage, that will be injected in the client}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/jobs/pause
-@returns(204)
+@desc Pause job queue
+@returns(204) successful operation
 
 @endpoint POST /api/v1/jobs/resume
-@returns(204)
+@desc Resume job queue
+@returns(204) successful operation
 
 @endpoint GET /api/v1/jobs/{state}
-@required {state: str(/active/completed/failed/waiting/delayed)}
-@optional {jobType: str(activitypub-follow/activitypub-http-broadcast/activitypub-http-fetcher/activitypub-http-unicast/email/video-transcoding/video-file-import/video-import/videos-views-stats/activitypub-refresher/video-redundancy/video-live-ending/video-channel-import), start: int, count: int=15, sort: str}
-@returns(200) {total: int, data: [any]}
+@desc List instance jobs
+@required {state: str(/active/completed/failed/waiting/delayed) # The state of the job ('' for for no filter)}
+@optional {jobType: str(activitypub-follow/activitypub-http-broadcast/activitypub-http-fetcher/activitypub-http-unicast/email/video-transcoding/video-file-import/video-import/videos-views-stats/activitypub-refresher/video-redundancy/video-live-ending/video-channel-import) # job type, start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/server/followers
-@optional {state: str(pending/accepted), actorType: str(Person/Application/Group/Service/Organization), start: int, count: int=15, sort: str}
-@returns(200) {total: int, data: [any]}
+@desc List instances following the server
+@optional {state: str(pending/accepted), actorType: str(Person/Application/Group/Service/Organization), start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint DELETE /api/v1/server/followers/{handle}
-@required {handle: str(email)}
-@returns(204)
-@errors {404}
+@desc Remove or reject a follower to your server
+@required {handle: str(email) # The remote actor handle to remove from your followers}
+@returns(204) successful operation
+@errors {404: follower not found}
 
 @endpoint POST /api/v1/server/followers/{handle}/reject
-@required {handle: str(email)}
-@returns(204)
-@errors {404}
+@desc Reject a pending follower to your server
+@required {handle: str(email) # The remote actor handle to remove from your followers}
+@returns(204) successful operation
+@errors {404: follower not found}
 
 @endpoint POST /api/v1/server/followers/{handle}/accept
-@required {handle: str(email)}
-@returns(204)
-@errors {404}
+@desc Accept a pending follower to your server
+@required {handle: str(email) # The remote actor handle to remove from your followers}
+@returns(204) successful operation
+@errors {404: follower not found}
 
 @endpoint GET /api/v1/server/following
-@optional {state: str(pending/accepted), actorType: str(Person/Application/Group/Service/Organization), start: int, count: int=15, sort: str}
-@returns(200) {total: int, data: [any]}
+@desc List instances followed by the server
+@optional {state: str(pending/accepted), actorType: str(Person/Application/Group/Service/Organization), start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/server/following
+@desc Follow a list of actors (PeerTube instance, channel or account)
 @optional {hosts: [str(hostname)], handles: [str]}
-@returns(204)
-@errors {500}
+@returns(204) successful operation
+@errors {500: cannot follow a non-HTTPS server}
 
 @endpoint DELETE /api/v1/server/following/{hostOrHandle}
-@required {hostOrHandle: str}
-@returns(204)
-@errors {404}
+@desc Unfollow an actor (PeerTube instance, channel or account)
+@required {hostOrHandle: str # The hostOrHandle to unfollow}
+@returns(204) successful operation
+@errors {404: host or handle not found}
 
 @endpoint POST /api/v1/users
-@required {username: str, password: str(password), email: str(email), role: int(0/1/2)}
-@optional {videoQuota: int, videoQuotaDaily: int, channelName: str, adminFlags: int(0/1)}
-@returns(200) {user: map{id: int, account: map{id: int}}}
-@errors {403}
+@desc Create a user
+@required {username: str # immutable name of the user, used to find or mention its actor, password: str(password), email: str(email) # The user email, role: int(0/1/2) # The user role (Admin = `0`, Moderator = `1`, User = `2`)}
+@optional {videoQuota: int # The user video quota in bytes, videoQuotaDaily: int # The user daily video quota in bytes, channelName: str # immutable name of the channel, used to interact with its actor, adminFlags: int(0/1) # Admin flags for the user (None = `0`, Bypass video blocklist = `1`)}
+@returns(200) {user: map{id: int, account: map{id: int}}} # user created
+@errors {403: insufficient authority to create an admin or moderator}
 
 @endpoint GET /api/v1/users
-@optional {search: str, blocked: bool, start: int, count: int=15, sort: str(-id/-username/-createdAt)}
-@returns(200)
+@desc List users
+@optional {search: str # Plain text search that will match with user usernames or emails, blocked: bool # Filter results down to (un)banned users, start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str(-id/-username/-createdAt) # Sort users by criteria}
+@returns(200) successful operation
 
 @endpoint DELETE /api/v1/users/{id}
-@returns(204)
+@desc Delete a user
+@returns(204) successful operation
 
 @endpoint GET /api/v1/users/{id}
-@optional {withStats: bool}
-@returns(200)
+@desc Get a user
+@optional {withStats: bool # include statistics about the user (only available as a moderator/admin)}
+@returns(200) As an admin/moderator, you can request a response augmented with statistics about the user's moderation relations and videos usage, by using the `withStats` parameter.
 
 @endpoint PUT /api/v1/users/{id}
-@optional {email: any, emailVerified: bool, videoQuota: int, videoQuotaDaily: int, pluginAuth: str, role: int(0/1/2), adminFlags: int(0/1), password: str(password)}
-@returns(204)
+@desc Update a user
+@optional {email: any # The updated email of the user, emailVerified: bool # Set the email as verified, videoQuota: int # The updated video quota of the user in bytes, videoQuotaDaily: int # The updated daily video quota of the user in bytes, pluginAuth: str # The auth plugin to use to authenticate the user, role: int(0/1/2) # The user role (Admin = `0`, Moderator = `1`, User = `2`), adminFlags: int(0/1) # Admin flags for the user (None = `0`, Bypass video blocklist = `1`), password: str(password)}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/oauth-clients/local
-@returns(200) {client_id: str, client_secret: str}
+@desc Login prerequisite
+@returns(200) {client_id: str, client_secret: str} # successful operation
 
 @endpoint POST /api/v1/users/token
-@optional {x-peertube-otp: str}
-@returns(200) {token_type: str, access_token: str, refresh_token: str, expires_in: int, refresh_token_expires_in: int}
-@errors {400, 401}
+@desc Login
+@optional {x-peertube-otp: str # If the user enabled two factor authentication, you need to provide the OTP code in this header}
+@returns(200) {token_type: str, access_token: str, refresh_token: str, expires_in: int, refresh_token_expires_in: int} # successful operation
+@errors {400: Disambiguate via `code`: - `invalid_client` for an unmatched `client_id` - `invalid_grant` for unmatched credentials, 401: Disambiguate via `code`: - default value for a regular authentication failure - `invalid_token` for an expired token - `missing_two_factor` if two factor header is missing}
 
 @endpoint POST /api/v1/users/revoke-token
-@returns(200)
+@desc Logout
+@returns(200) successful operation
 
 @endpoint GET /api/v1/users/{id}/token-sessions
-@required {id: int}
-@returns(200) {total: int, data: [any]}
+@desc List token sessions
+@required {id: int # Entity id}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/users/{id}/token-sessions/{tokenSessionId}/revoke
-@required {id: int, tokenSessionId: int}
-@returns(200)
+@desc List token sessions
+@required {id: int # Entity id, tokenSessionId: int # Token session Id}
+@returns(200) successful operation
 
 @endpoint POST /api/v1/users/ask-send-verify-email
-@required {email: str}
-@returns(204)
+@desc Resend user verification link
+@required {email: str # User email}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/users/registrations/ask-send-verify-email
-@required {email: str}
-@returns(204)
+@desc Resend verification link to registration request email
+@required {email: str # Registration email}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/users/{id}/verify-email
-@required {id: int, verificationString: str(url)}
+@desc Verify a user
+@required {id: int # Entity id, verificationString: str(url)}
 @optional {isPendingEmail: bool}
-@returns(204)
-@errors {403, 404}
+@returns(204) successful operation
+@errors {403: invalid verification string, 404: user not found}
 
 @endpoint POST /api/v1/users/registrations/{registrationId}/verify-email
-@required {registrationId: int, verificationString: str(url)}
-@returns(204)
-@errors {403, 404}
+@desc Verify a registration email
+@required {registrationId: int # Registration ID, verificationString: str(url)}
+@returns(204) successful operation
+@errors {403: invalid verification string, 404: registration not found}
 
 @endpoint POST /api/v1/users/ask-reset-password
-@required {email: str}
-@returns(204)
+@desc Ask to reset password
+@required {email: str # User email}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/users/{id}/reset-password
-@required {id: int, verificationString: str(url), password: str}
-@returns(204)
-@errors {403, 404}
+@desc Reset password
+@required {id: int # Entity id, verificationString: str(url), password: str}
+@returns(204) successful operation
+@errors {403: invalid verification string, 404: user not found}
 
 @endpoint POST /api/v1/users/{id}/two-factor/request
-@required {id: int}
-@optional {currentPassword: str}
-@returns(200)
-@errors {403, 404}
+@desc Request two factor auth
+@required {id: int # Entity id}
+@optional {currentPassword: str # Password of the currently authenticated user}
+@returns(200) successful operation
+@errors {403: invalid password, 404: user not found}
 
 @endpoint POST /api/v1/users/{id}/two-factor/confirm-request
-@required {id: int, requestToken: str, otpToken: str}
-@returns(204)
-@errors {403, 404}
+@desc Confirm two factor auth
+@required {id: int # Entity id, requestToken: str # Token to identify the two factor request, otpToken: str # OTP token generated by the app}
+@returns(204) successful operation
+@errors {403: invalid request token or OTP token, 404: user not found}
 
 @endpoint POST /api/v1/users/{id}/two-factor/disable
-@required {id: int}
-@optional {currentPassword: str}
-@returns(204)
-@errors {403, 404}
+@desc Disable two factor auth
+@required {id: int # Entity id}
+@optional {currentPassword: str # Password of the currently authenticated user}
+@returns(204) successful operation
+@errors {403: invalid password, 404: user not found}
 
 @endpoint POST /api/v1/users/{userId}/imports/import-resumable
-@required {userId: int, X-Upload-Content-Length: num, X-Upload-Content-Type: str(mimetype)}
-@optional {filename: str(filename)}
-@returns(201)
+@desc Initialize the resumable user import
+@required {userId: int # User id, X-Upload-Content-Length: num # Number of bytes that will be uploaded in subsequent requests. Set this value to the size of the file you are uploading., X-Upload-Content-Type: str(mimetype) # MIME type of the file that you are uploading. Depending on your instance settings, acceptable values might vary.}
+@optional {filename: str(filename) # Archive filename including extension}
+@returns(201) created
 
 @endpoint PUT /api/v1/users/{userId}/imports/import-resumable
-@required {userId: int, upload_id: str, Content-Range: str, Content-Length: num}
-@returns(204)
-@errors {308}
+@desc Send chunk for the resumable user import
+@required {userId: int # User id, upload_id: str # Created session id to proceed with. If you didn't send chunks in the last hour, it is not valid anymore and you need to initialize a new upload., Content-Range: str # Specifies the bytes in the file that the request is uploading.  For example, a value of `bytes 0-262143/1000000` shows that the request is sending the first 262144 bytes (256 x 1024) in a 2,469,036 byte file., Content-Length: num # Size of the chunk that the request is sending.  Remember that larger chunks are more efficient. PeerTube's web client uses chunks varying from 1048576 bytes (~1MB) and increases or reduces size depending on connection health.}
+@returns(204) last chunk received: successful operation
+@errors {308: resume incomplete}
 
 @endpoint DELETE /api/v1/users/{userId}/imports/import-resumable
-@required {userId: int, upload_id: str, Content-Length: num}
-@returns(204)
+@desc Cancel the resumable user import
+@required {userId: int # User id, upload_id: str # Created session id to proceed with. If you didn't send chunks in the last hour, it is not valid anymore and you need to initialize a new upload., Content-Length: num}
+@returns(204) import cancelled
 
 @endpoint GET /api/v1/users/{userId}/imports/latest
-@required {userId: int}
-@returns(200) {id: int, state: map{id: int, label: str}, createdAt: str(date-time)}
+@desc Get latest user import
+@required {userId: int # User id}
+@returns(200) {id: int, state: map{id: int, label: str}, createdAt: str(date-time)} # successful operation
 
 @endpoint POST /api/v1/users/{userId}/exports/request
-@required {userId: int}
-@optional {withVideoFiles: bool}
-@returns(200) {export: map{id: int}}
+@desc Request user export
+@required {userId: int # User id}
+@optional {withVideoFiles: bool # Whether to include video files in the archive}
+@returns(200) {export: map{id: int}} # successful operation
 
 @endpoint GET /api/v1/users/{userId}/exports
-@required {userId: int}
-@returns(200) {id: int, state: map{id: int, label: str}, size: int, privateDownloadUrl: str, createdAt: str(date-time), expiresOn: str(date-time)}
+@desc List user exports
+@required {userId: int # User id}
+@returns(200) {id: int, state: map{id: int, label: str}, size: int, privateDownloadUrl: str, createdAt: str(date-time), expiresOn: str(date-time)} # successful operation
 
 @endpoint DELETE /api/v1/users/{userId}/exports/{id}
-@required {userId: int, id: int}
-@returns(204)
+@desc Delete a user export
+@required {userId: int # User id, id: int # Entity id}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/users/me
-@returns(200)
+@desc Get my user information
+@returns(200) successful operation
 
 @endpoint PUT /api/v1/users/me
-@optional {password: str(password), currentPassword: str(password), email: any, displayName: str, nsfwPolicy: str(true/false/both), nsfwFlagsDisplayed: int(0/1/2/4), nsfwFlagsHidden: int(0/1/2/4), nsfwFlagsWarned: int(0/1/2/4), nsfwFlagsBlurred: int(0/1/2/4), p2pEnabled: bool, autoPlayVideo: bool, autoPlayNextVideo: bool, autoPlayNextVideoPlaylist: bool, videosHistoryEnabled: bool, videoLanguages: [str], language: str, theme: str, noInstanceConfigWarningModal: bool, noAccountSetupWarningModal: bool, noWelcomeModal: bool}
-@returns(204)
+@desc Update my user information
+@optional {password: str(password), currentPassword: str(password), email: any # new email used for login and service communications, displayName: str # new name of the user in its representations, nsfwPolicy: str(true/false/both) # new NSFW display policy, nsfwFlagsDisplayed: int(0/1/2/4) # NSFW flags (can be combined using bitwise or operator) - `0` NONE - `1` VIOLENT - `2` EXPLICIT_SEX, nsfwFlagsHidden: int(0/1/2/4) # NSFW flags (can be combined using bitwise or operator) - `0` NONE - `1` VIOLENT - `2` EXPLICIT_SEX, nsfwFlagsWarned: int(0/1/2/4) # NSFW flags (can be combined using bitwise or operator) - `0` NONE - `1` VIOLENT - `2` EXPLICIT_SEX, nsfwFlagsBlurred: int(0/1/2/4) # NSFW flags (can be combined using bitwise or operator) - `0` NONE - `1` VIOLENT - `2` EXPLICIT_SEX, p2pEnabled: bool # whether to enable P2P in the player or not, autoPlayVideo: bool # new preference regarding playing videos automatically, autoPlayNextVideo: bool # new preference regarding playing following videos automatically, autoPlayNextVideoPlaylist: bool # new preference regarding playing following playlist videos automatically, videosHistoryEnabled: bool # whether to keep track of watched history or not, videoLanguages: [str] # list of languages to filter videos down to, language: str # default language for this user, theme: str, noInstanceConfigWarningModal: bool, noAccountSetupWarningModal: bool, noWelcomeModal: bool}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/users/me/videos/comments
-@optional {search: str, searchAccount: str, searchVideo: str, videoId: int, videoChannelId: int, autoTagOneOf: any, isHeldForReview: bool, includeCollaborations: bool}
-@returns(200) {total: int, data: [any]}
+@desc List comments on user's videos
+@optional {search: str # Plain text search, applied to various parts of the model depending on endpoint, searchAccount: str # Filter comments by searching on the account, searchVideo: str # Filter comments by searching on the video, videoId: int # Limit results on this specific video, videoChannelId: int # Limit results on this specific video channel, autoTagOneOf: any # **PeerTube >= 6.2** filter on comments that contain one of these automatic tags, isHeldForReview: bool # only display comments that are held for review, includeCollaborations: bool # **PeerTube >= 8.0** Include objects from collaborated channels}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/users/me/videos/imports
-@optional {start: int, count: int=15, sort: str, includeCollaborations: bool, videoId: int, targetUrl: str, videoChannelSyncId: num, search: str}
-@returns(200) {total: int, data: [any]}
+@desc Get video imports of my user
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column, includeCollaborations: bool # **PeerTube >= 8.0** Include objects from collaborated channels, videoId: int # Filter on import video ID, targetUrl: str # Filter on import target URL, videoChannelSyncId: num # Filter on imports created by a specific channel synchronization, search: str # Search in video names}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/users/me/video-quota-used
-@returns(200) {videoQuotaUsed: num, videoQuotaUsedDaily: num}
+@desc Get my user used quota
+@returns(200) {videoQuotaUsed: num, videoQuotaUsedDaily: num} # successful operation
 
 @endpoint GET /api/v1/users/me/videos/{videoId}/rating
-@required {videoId: any}
-@returns(200) {id: int, rating: str}
+@desc Get rate of my user for a video
+@required {videoId: any # The video id}
+@returns(200) {id: int, rating: str} # successful operation
 
 @endpoint GET /api/v1/users/me/videos
-@optional {channelNameOneOf: any, start: int, count: int=15, skipCount: str(true/false)=false, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false), nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool, includeScheduledLive: bool, categoryOneOf: any, licenceOneOf: any, languageOneOf: any, tagsOneOf: any, tagsAllOf: any, isLocal: bool, include: int(0/1/2/4/8/16/32), hasHLSFiles: bool, hasWebVideoFiles: bool, host: str, autoTagOneOf: any, privacyOneOf: int, excludeAlreadyWatched: bool, search: str, includeCollaborations: bool}
-@returns(200) {total: int, data: [any]}
+@desc List videos of my user
+@optional {channelNameOneOf: any # **PeerTube >= 7.2** Filter on videos that are published by a channel with one of these names, start: int # Offset used to paginate results, count: int=15 # Number of items to return, skipCount: str(true/false)=false # if you don't need the `total` in the response, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false) # whether to include nsfw videos, if any, nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool # whether or not the video is a live, includeScheduledLive: bool # whether or not include live that are scheduled for later, categoryOneOf: any # category id of the video (see [/videos/categories](#operation/getCategories)), licenceOneOf: any # licence id of the video (see [/videos/licences](#operation/getLicences)), languageOneOf: any # language id of the video (see [/videos/languages](#operation/getLanguages)). Use `_unknown` to filter on videos that don't have a video language, tagsOneOf: any # tag(s) of the video, tagsAllOf: any # tag(s) of the video, where all should be present in the video, isLocal: bool # **PeerTube >= 4.0** Display only local or remote objects, include: int(0/1/2/4/8/16/32) # **Only administrators and moderators can use this parameter**  Include additional videos in results (can be combined using bitwise or operator) - `0` NONE - `1` NOT_PUBLISHED_STATE - `2` BLACKLISTED - `4` BLOCKED_OWNER - `8` FILES - `16` CAPTIONS - `32` VIDEO SOURCE, hasHLSFiles: bool # **PeerTube >= 4.0** Display only videos that have HLS files, hasWebVideoFiles: bool # **PeerTube >= 6.0** Display only videos that have Web Video files, host: str # Find elements owned by this host, autoTagOneOf: any # **PeerTube >= 6.2** **Admins and moderators only** filter on videos that contain one of these automatic tags, privacyOneOf: int # **PeerTube >= 4.0** Display only videos in this specific privacy/privacies, excludeAlreadyWatched: bool # Whether or not to exclude videos that are in the user's video history, search: str # Plain text search, applied to various parts of the model depending on endpoint, includeCollaborations: bool # **PeerTube >= 8.0** Include objects from collaborated channels}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/users/me/subscriptions
-@optional {start: int, count: int=15, sort: str(-id/-createdAt/-channelUpdatedAt)}
-@returns(200) {total: int, data: [any]}
+@desc List my user subscriptions
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str(-id/-createdAt/-channelUpdatedAt)}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/users/me/subscriptions
-@required {uri: str(uri)}
-@returns(204)
+@desc Add subscription to my user
+@required {uri: str(uri) # uri of the video channels to subscribe to}
+@returns(204) successful operation
+@example_request {"uri":"008a0e54-375d-49d0-8379-143202e24152@video.lqdn.fr"}
 
 @endpoint GET /api/v1/users/me/subscriptions/exist
-@required {uris: [str(uri)]}
-@returns(200)
+@desc Get if subscriptions exist for my user
+@required {uris: [str(uri)] # list of uris to check if each is part of the user subscriptions}
+@returns(200) successful operation
 
 @endpoint GET /api/v1/users/me/subscriptions/videos
-@optional {start: int, count: int=15, skipCount: str(true/false)=false, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false), nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool, includeScheduledLive: bool, categoryOneOf: any, licenceOneOf: any, languageOneOf: any, tagsOneOf: any, tagsAllOf: any, isLocal: bool, include: int(0/1/2/4/8/16/32), hasHLSFiles: bool, hasWebVideoFiles: bool, host: str, autoTagOneOf: any, privacyOneOf: int, excludeAlreadyWatched: bool, search: str}
-@returns(200) {total: int, data: [any]}
+@desc List videos of subscriptions of my user
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, skipCount: str(true/false)=false # if you don't need the `total` in the response, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false) # whether to include nsfw videos, if any, nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool # whether or not the video is a live, includeScheduledLive: bool # whether or not include live that are scheduled for later, categoryOneOf: any # category id of the video (see [/videos/categories](#operation/getCategories)), licenceOneOf: any # licence id of the video (see [/videos/licences](#operation/getLicences)), languageOneOf: any # language id of the video (see [/videos/languages](#operation/getLanguages)). Use `_unknown` to filter on videos that don't have a video language, tagsOneOf: any # tag(s) of the video, tagsAllOf: any # tag(s) of the video, where all should be present in the video, isLocal: bool # **PeerTube >= 4.0** Display only local or remote objects, include: int(0/1/2/4/8/16/32) # **Only administrators and moderators can use this parameter**  Include additional videos in results (can be combined using bitwise or operator) - `0` NONE - `1` NOT_PUBLISHED_STATE - `2` BLACKLISTED - `4` BLOCKED_OWNER - `8` FILES - `16` CAPTIONS - `32` VIDEO SOURCE, hasHLSFiles: bool # **PeerTube >= 4.0** Display only videos that have HLS files, hasWebVideoFiles: bool # **PeerTube >= 6.0** Display only videos that have Web Video files, host: str # Find elements owned by this host, autoTagOneOf: any # **PeerTube >= 6.2** **Admins and moderators only** filter on videos that contain one of these automatic tags, privacyOneOf: int # **PeerTube >= 4.0** Display only videos in this specific privacy/privacies, excludeAlreadyWatched: bool # Whether or not to exclude videos that are in the user's video history, search: str # Plain text search, applied to various parts of the model depending on endpoint}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/users/me/subscriptions/{subscriptionHandle}
-@required {subscriptionHandle: str}
-@returns(200)
+@desc Get subscription of my user
+@required {subscriptionHandle: str # The subscription handle}
+@returns(200) successful operation
 
 @endpoint DELETE /api/v1/users/me/subscriptions/{subscriptionHandle}
-@required {subscriptionHandle: str}
-@returns(204)
+@desc Delete subscription of my user
+@required {subscriptionHandle: str # The subscription handle}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/users/me/notifications
-@optional {typeOneOf: [int], unread: bool, start: int, count: int=15, sort: str}
-@returns(200) {total: int, data: [any]}
+@desc List my notifications
+@optional {typeOneOf: [int] # only list notifications of these types, unread: bool # only list unread notifications, start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/users/me/notifications/read
-@required {ids: [int]}
-@returns(204)
+@desc Mark notifications as read by their id
+@required {ids: [int] # ids of the notifications to mark as read}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/users/me/notifications/read-all
-@returns(204)
+@desc Mark all my notification as read
+@returns(204) successful operation
 
 @endpoint PUT /api/v1/users/me/notification-settings
-@optional {abuseAsModerator: int, videoAutoBlacklistAsModerator: int, newUserRegistration: int, newVideoFromSubscription: int, blacklistOnMyVideo: int, myVideoPublished: int, myVideoImportFinished: int, commentMention: int, newCommentOnMyVideo: int, newFollow: int, newInstanceFollower: int, autoInstanceFollowing: int, abuseStateChange: int, abuseNewMessage: int, newPeerTubeVersion: int, newPluginVersion: int, myVideoStudioEditionFinished: int, myVideoTranscriptionGenerated: int}
-@returns(204)
+@desc Update my notification settings
+@optional {abuseAsModerator: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, videoAutoBlacklistAsModerator: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, newUserRegistration: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, newVideoFromSubscription: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, blacklistOnMyVideo: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, myVideoPublished: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, myVideoImportFinished: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, commentMention: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, newCommentOnMyVideo: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, newFollow: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, newInstanceFollower: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, autoInstanceFollowing: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, abuseStateChange: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, abuseNewMessage: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, newPeerTubeVersion: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, newPluginVersion: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, myVideoStudioEditionFinished: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL, myVideoTranscriptionGenerated: int # Notification type. One of the following values, or a sum of multiple values: - `0` NONE - `1` WEB - `2` EMAIL}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/users/me/new-feature-info/read
-@required {feature: int}
-@returns(204)
+@desc Mark feature info as read
+@required {feature: int # Represent a new feature that can be displayed to inform users. One of the following values:    - `1` CHANNEL_COLLABORATION}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/users/me/history/videos
-@optional {start: int, count: int=15, search: str}
-@returns(200) {total: int, data: [any]}
+@desc List watched videos history
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, search: str # Plain text search, applied to various parts of the model depending on endpoint}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint DELETE /api/v1/users/me/history/videos/{videoId}
+@desc Delete history element
 @required {videoId: any}
-@returns(204)
+@returns(204) successful operation
 
 @endpoint POST /api/v1/users/me/history/videos/remove
-@returns(204)
+@desc Clear video history
+@returns(204) successful operation
 
 @endpoint POST /api/v1/users/me/avatar/pick
-@returns(200) {avatars: [any]}
-@errors {413}
+@desc Update my user avatar
+@returns(200) {avatars: [any]} # successful operation
+@errors {413: image file too large}
 
 @endpoint DELETE /api/v1/users/me/avatar
-@returns(204)
+@desc Delete my avatar
+@returns(204) successful operation
 
 @endpoint POST /api/v1/users/register
-@required {username: any, password: str(password), email: str(email)}
-@optional {displayName: str, channel: map{name: str, displayName: str}}
-@returns(204)
-@errors {400, 403, 409}
+@desc Register a user
+@required {username: any # immutable name of the user, used to find or mention its actor, password: str(password), email: str(email) # email of the user, used for login or service communications}
+@optional {displayName: str # editable name of the user, displayed in its representations, channel: map{name: str, displayName: str} # channel base information used to create the first channel of the user}
+@returns(204) successful operation
+@errors {400: request error, 403: user registration is not enabled, user limit is reached, registration is not allowed for the ip, requires approval or blocked by a plugin, 409: a user with this username, channel name or email already exists}
 
 @endpoint POST /api/v1/users/registrations/request
-@returns(200) {id: int, state: map{id: int, label: str}, registrationReason: str, moderationResponse: str?, username: str, email: str(email), emailVerified: bool, accountDisplayName: str, channelHandle: str, channelDisplayName: str, createdAt: str(date-time), updatedAt: str(date-time), user: map?{id: int}}
-@errors {400, 403, 409}
+@desc Request registration
+@returns(200) {id: int, state: map{id: int, label: str}, registrationReason: str, moderationResponse: str?, username: str, email: str(email), emailVerified: bool, accountDisplayName: str, channelHandle: str, channelDisplayName: str, createdAt: str(date-time), updatedAt: str(date-time), user: map?{id: int}} # successful operation
+@errors {400: request error or signup approval is not enabled on the instance, 403: user registration is not enabled, user limit is reached, registration is not allowed for the ip or blocked by a plugin, 409: a user or registration with this username, channel name or email already exists}
 
 @endpoint POST /api/v1/users/registrations/{registrationId}/accept
-@required {registrationId: int, moderationResponse: str}
-@optional {preventEmailDelivery: bool}
-@returns(204)
+@desc Accept registration
+@required {registrationId: int # Registration ID, moderationResponse: str # Moderation response to send to the user}
+@optional {preventEmailDelivery: bool # Set it to true if you don't want PeerTube to send an email to the user}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/users/registrations/{registrationId}/reject
-@required {registrationId: int, moderationResponse: str}
-@optional {preventEmailDelivery: bool}
-@returns(204)
+@desc Reject registration
+@required {registrationId: int # Registration ID, moderationResponse: str # Moderation response to send to the user}
+@optional {preventEmailDelivery: bool # Set it to true if you don't want PeerTube to send an email to the user}
+@returns(204) successful operation
 
 @endpoint DELETE /api/v1/users/registrations/{registrationId}
-@required {registrationId: int}
-@returns(204)
+@desc Delete registration
+@required {registrationId: int # Registration ID}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/users/registrations
-@optional {start: int, count: int=15, search: str, sort: str(-createdAt/createdAt/state/-state)}
-@returns(200) {total: int, data: [any]}
+@desc List registrations
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, search: str, sort: str(-createdAt/createdAt/state/-state)}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/videos/ownership
-@returns(200)
+@desc List video ownership changes
+@returns(200) successful operation
 
 @endpoint POST /api/v1/videos/ownership/{id}/accept
-@required {id: any}
-@returns(204)
-@errors {403, 404}
+@desc Accept ownership change request
+@required {id: any # The object id, uuid or short uuid}
+@returns(204) successful operation
+@errors {403: cannot terminate an ownership change of another user, 404: video ownership change not found}
 
 @endpoint POST /api/v1/videos/ownership/{id}/refuse
-@required {id: any}
-@returns(204)
-@errors {403, 404}
+@desc Refuse ownership change request
+@required {id: any # The object id, uuid or short uuid}
+@returns(204) successful operation
+@errors {403: cannot terminate an ownership change of another user, 404: video ownership change not found}
 
 @endpoint POST /api/v1/videos/{id}/give-ownership
-@required {id: any, username: str}
-@returns(204)
-@errors {400, 404}
+@desc Request ownership change
+@required {id: any # The object id, uuid or short uuid, username: str}
+@returns(204) successful operation
+@errors {400: changing video ownership to a remote account is not supported yet, 404: video not found}
 
 @endpoint POST /api/v1/videos/{id}/token
-@required {id: any}
-@optional {x-peertube-video-password: str}
-@returns(200) {files: map{token: str, expires: str(date-time)}}
-@errors {400, 404}
+@desc Request video token
+@required {id: any # The object id, uuid or short uuid}
+@optional {x-peertube-video-password: str # Required on password protected video}
+@returns(200) {files: map{token: str, expires: str(date-time)}} # successful operation
+@errors {400: incorrect parameters, 404: video not found}
 
 @endpoint POST /api/v1/videos/{id}/studio/edit
-@required {id: any}
-@returns(204)
-@errors {400, 404}
+@desc Create a studio task
+@required {id: any # The object id, uuid or short uuid}
+@returns(204) successful operation
+@errors {400: incorrect parameters, 404: video not found}
 
 @endpoint GET /api/v1/videos
-@optional {start: int, count: int=15, skipCount: str(true/false)=false, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false), nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool, includeScheduledLive: bool, categoryOneOf: any, licenceOneOf: any, languageOneOf: any, tagsOneOf: any, tagsAllOf: any, isLocal: bool, include: int(0/1/2/4/8/16/32), hasHLSFiles: bool, hasWebVideoFiles: bool, host: str, autoTagOneOf: any, privacyOneOf: int, excludeAlreadyWatched: bool, search: str}
-@returns(200) {total: int, data: [any]}
+@desc List videos
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, skipCount: str(true/false)=false # if you don't need the `total` in the response, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false) # whether to include nsfw videos, if any, nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool # whether or not the video is a live, includeScheduledLive: bool # whether or not include live that are scheduled for later, categoryOneOf: any # category id of the video (see [/videos/categories](#operation/getCategories)), licenceOneOf: any # licence id of the video (see [/videos/licences](#operation/getLicences)), languageOneOf: any # language id of the video (see [/videos/languages](#operation/getLanguages)). Use `_unknown` to filter on videos that don't have a video language, tagsOneOf: any # tag(s) of the video, tagsAllOf: any # tag(s) of the video, where all should be present in the video, isLocal: bool # **PeerTube >= 4.0** Display only local or remote objects, include: int(0/1/2/4/8/16/32) # **Only administrators and moderators can use this parameter**  Include additional videos in results (can be combined using bitwise or operator) - `0` NONE - `1` NOT_PUBLISHED_STATE - `2` BLACKLISTED - `4` BLOCKED_OWNER - `8` FILES - `16` CAPTIONS - `32` VIDEO SOURCE, hasHLSFiles: bool # **PeerTube >= 4.0** Display only videos that have HLS files, hasWebVideoFiles: bool # **PeerTube >= 6.0** Display only videos that have Web Video files, host: str # Find elements owned by this host, autoTagOneOf: any # **PeerTube >= 6.2** **Admins and moderators only** filter on videos that contain one of these automatic tags, privacyOneOf: int # **PeerTube >= 4.0** Display only videos in this specific privacy/privacies, excludeAlreadyWatched: bool # Whether or not to exclude videos that are in the user's video history, search: str # Plain text search, applied to various parts of the model depending on endpoint}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/videos/categories
-@returns(200)
+@desc List available video categories
+@returns(200) successful operation
 
 @endpoint GET /api/v1/videos/licences
-@returns(200)
+@desc List available video licences
+@returns(200) successful operation
 
 @endpoint GET /api/v1/videos/languages
-@returns(200)
+@desc List available video languages
+@returns(200) successful operation
 
 @endpoint GET /api/v1/videos/privacies
-@returns(200)
+@desc List available video privacy policies
+@returns(200) successful operation
 
 @endpoint PUT /api/v1/videos/{id}
-@required {id: any}
-@returns(204)
+@desc Update a video
+@required {id: any # The object id, uuid or short uuid}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/videos/{id}
-@required {id: any}
-@optional {x-peertube-video-password: str}
-@returns(200)
-@errors {401, 403}
+@desc Get a video
+@required {id: any # The object id, uuid or short uuid}
+@optional {x-peertube-video-password: str # Required on password protected video}
+@returns(200) successful operation
+@errors {401: Requires authentication or the video requires a password, 403: Invalid authentication or the video requires a password}
 
 @endpoint DELETE /api/v1/videos/{id}
-@required {id: any}
-@returns(204)
+@desc Delete a video
+@required {id: any # The object id, uuid or short uuid}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/videos/{id}/description
-@required {id: any}
-@optional {x-peertube-video-password: str}
-@returns(200)
+@desc Get complete video description
+@required {id: any # The object id, uuid or short uuid}
+@optional {x-peertube-video-password: str # Required on password protected video}
+@returns(200) successful operation
 
 @endpoint POST /api/v1/videos/{id}/views
-@required {id: any, currentTime: int(seconds)}
-@optional {viewEvent: str, sessionId: str, client: str, device: any, operatingSystem: str}
-@returns(204)
+@desc Notify user is watching a video
+@required {id: any # The object id, uuid or short uuid, currentTime: int(seconds) # timestamp within the video, in seconds}
+@optional {viewEvent: str # Event since last viewing call:  * `seek` - If the user seeked the video, sessionId: str # Optional param to represent the current viewer session. Used by the backend to properly count one view per session per video. PeerTube admin can configure the server to not trust this `sessionId` parameter but use the request IP address instead to identify a viewer., client: str # Client software used to watch the video. For example "Firefox", "PeerTube Approval Android", etc., device: any # Device used to watch the video. For example "desktop", "mobile", "smarttv", etc., operatingSystem: str # Operating system used to watch the video. For example "Windows", "Ubuntu", etc.}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/videos/{id}/stats/overall
-@required {id: any}
-@optional {startDate: str(date-time), endDate: str(date-time)}
-@returns(200) {averageWatchTime: num, totalWatchTime: num, viewersPeak: num, totalViewers: num, viewersPeakDate: str(date-time), countries: [map], subdivisions: [map]}
+@desc Get overall stats of a video
+@required {id: any # The object id, uuid or short uuid}
+@optional {startDate: str(date-time) # Filter stats by start date, endDate: str(date-time) # Filter stats by end date}
+@returns(200) {averageWatchTime: num, totalWatchTime: num, viewersPeak: num, totalViewers: num, viewersPeakDate: str(date-time), countries: [map], subdivisions: [map]} # successful operation
 
 @endpoint GET /api/v1/videos/{id}/stats/user-agent
-@required {id: any}
-@optional {startDate: str(date-time), endDate: str(date-time)}
-@returns(200) {clients: [map], devices: [map], operatingSystem: [map]}
+@desc Get user agent stats of a video
+@required {id: any # The object id, uuid or short uuid}
+@optional {startDate: str(date-time) # Filter stats by start date, endDate: str(date-time) # Filter stats by end date}
+@returns(200) {clients: [map], devices: [map], operatingSystem: [map]} # successful operation
 
 @endpoint GET /api/v1/videos/{id}/stats/retention
-@required {id: any}
-@returns(200) {data: [map]}
+@desc Get retention stats of a video
+@required {id: any # The object id, uuid or short uuid}
+@returns(200) {data: [map]} # successful operation
 
 @endpoint GET /api/v1/videos/{id}/stats/timeseries/{metric}
-@required {id: any, metric: str(viewers/aggregateWatchTime)}
-@optional {startDate: str(date-time), endDate: str(date-time)}
-@returns(200) {data: [map]}
+@desc Get timeserie stats of a video
+@required {id: any # The object id, uuid or short uuid, metric: str(viewers/aggregateWatchTime) # The metric to get}
+@optional {startDate: str(date-time) # Filter stats by start date, endDate: str(date-time) # Filter stats by end date}
+@returns(200) {data: [map]} # successful operation
 
 @endpoint POST /api/v1/videos/upload
-@returns(200) {video: map{id: any, uuid: any, shortUUID: any}}
-@errors {403, 408, 413, 415, 422}
+@desc Upload a video
+@returns(200) {video: map{id: any, uuid: any, shortUUID: any}} # successful operation
+@errors {403: video didn't pass upload filter, 408: upload has timed out, 413: If the response has no body, it means the reverse-proxy didn't let it through. Otherwise disambiguate via `code`: - `quota_reached` for quota limits whether daily or global, 415: video type unsupported, 422: video unreadable}
 
 @endpoint POST /api/v1/videos/upload-resumable
-@required {X-Upload-Content-Length: num, X-Upload-Content-Type: str(mimetype)}
-@returns(200)
-@returns(201)
-@errors {413, 415}
+@desc Initialize the resumable upload of a video
+@required {X-Upload-Content-Length: num # Number of bytes that will be uploaded in subsequent requests. Set this value to the size of the file you are uploading., X-Upload-Content-Type: str(mimetype) # MIME type of the file that you are uploading. Depending on your instance settings, acceptable values might vary.}
+@returns(200) file already exists, send a [`resume`](https://github.com/kukhariev/node-uploadx/blob/master/proto.md) request instead
+@returns(201) created
+@errors {413: Disambiguate via `code`: - `max_file_size_reached` for the absolute file size limit - `quota_reached` for quota limits whether daily or global, 415: video type unsupported}
 
 @endpoint PUT /api/v1/videos/upload-resumable
-@required {upload_id: str, Content-Range: str, Content-Length: num}
-@returns(200) {video: map{id: any, uuid: any, shortUUID: any}}
-@errors {308, 403, 404, 409, 422, 429, 503}
+@desc Send chunk for the resumable upload of a video
+@required {upload_id: str # Created session id to proceed with. If you didn't send chunks in the last hour, it is not valid anymore and you need to initialize a new upload., Content-Range: str # Specifies the bytes in the file that the request is uploading.  For example, a value of `bytes 0-262143/1000000` shows that the request is sending the first 262144 bytes (256 x 1024) in a 2,469,036 byte file., Content-Length: num # Size of the chunk that the request is sending.  Remember that larger chunks are more efficient. PeerTube's web client uses chunks varying from 1048576 bytes (~1MB) and increases or reduces size depending on connection health.}
+@returns(200) {video: map{id: any, uuid: any, shortUUID: any}} # last chunk received
+@errors {308: resume incomplete, 403: video didn't pass upload filter, 404: upload not found, 409: chunk doesn't match range, 422: video unreadable, 429: too many concurrent requests, 503: upload is already being processed}
 
 @endpoint DELETE /api/v1/videos/upload-resumable
-@required {upload_id: str, Content-Length: num}
-@returns(204)
-@errors {404}
+@desc Cancel the resumable upload of a video, deleting any data uploaded so far
+@required {upload_id: str # Created session id to proceed with. If you didn't send chunks in the last hour, it is not valid anymore and you need to initialize a new upload., Content-Length: num}
+@returns(204) upload cancelled
+@errors {404: upload not found}
 
 @endpoint POST /api/v1/videos/imports
-@returns(200) {video: map{id: any, uuid: any, shortUUID: any}}
-@errors {400, 403, 409}
+@desc Import a video
+@returns(200) {video: map{id: any, uuid: any, shortUUID: any}} # successful operation
+@errors {400: `magnetUri` or `targetUrl` or a torrent file missing, 403: video didn't pass pre-import filter, 409: HTTP or Torrent/magnetURI import not enabled}
 
 @endpoint POST /api/v1/videos/imports/{id}/cancel
-@required {id: int}
-@returns(204)
+@desc Cancel video import
+@required {id: int # Entity id}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/videos/imports/{id}/retry
-@required {id: int}
-@returns(204)
+@desc Retry video import
+@required {id: int # Entity id}
+@returns(204) successful operation
 
 @endpoint DELETE /api/v1/videos/imports/{id}
-@required {id: int}
-@returns(204)
+@desc Delete video import
+@required {id: int # Entity id}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/videos/live
-@returns(200) {video: map{id: any, uuid: any, shortUUID: any}}
-@errors {400, 403}
+@desc Create a live
+@returns(200) {video: map{id: any, uuid: any, shortUUID: any}} # successful operation
+@errors {400: Disambiguate via `code`: - default type for a validation error - `live_conflicting_permanent_and_save_replay` for conflicting parameters set, 403: Disambiguate via `code`: - `live_not_enabled` for a disabled live feature - `live_not_allowing_replay` for a disabled replay feature - `max_instance_lives_limit_reached` for the absolute concurrent live limit - `max_user_lives_limit_reached` for the user concurrent live limit}
 
 @endpoint GET /api/v1/videos/live/{id}
-@required {id: any}
-@returns(200) {rtmpUrl: str, rtmpsUrl: str, streamKey: str, saveReplay: bool, replaySettings: map{privacy: int}, permanentLive: bool, latencyMode: any, schedules: [any]}
+@desc Get information about a live
+@required {id: any # The object id, uuid or short uuid}
+@returns(200) {rtmpUrl: str, rtmpsUrl: str, streamKey: str, saveReplay: bool, replaySettings: map{privacy: int}, permanentLive: bool, latencyMode: any, schedules: [any]} # successful operation
 
 @endpoint PUT /api/v1/videos/live/{id}
-@required {id: any}
-@optional {saveReplay: bool, replaySettings: map{privacy: int}, permanentLive: bool, latencyMode: any, schedules: [any]}
-@returns(204)
-@errors {400, 403}
+@desc Update information about a live
+@required {id: any # The object id, uuid or short uuid}
+@optional {saveReplay: bool, replaySettings: map{privacy: int}, permanentLive: bool # User can stream multiple times in a permanent live, latencyMode: any # User can select live latency mode if enabled by the instance, schedules: [any]}
+@returns(204) successful operation
+@errors {400: bad parameters or trying to update a live that has already started, 403: trying to save replay of the live but saving replay is not enabled on the instance}
 
 @endpoint GET /api/v1/videos/live/{id}/sessions
-@required {id: any}
-@optional {sort: str}
-@returns(200) {total: int, data: [any]}
+@desc List live sessions
+@required {id: any # The object id, uuid or short uuid}
+@optional {sort: str # Sort column}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/videos/{id}/live-session
-@required {id: any}
-@optional {x-peertube-video-password: str}
-@returns(200) {id: int, startDate: str(date-time), endDate: str(date-time)?, error: int?, replayVideo: map{id: num, uuid: str(uuid), shortUUID: str}}
+@desc Get live session of a replay
+@required {id: any # The object id, uuid or short uuid}
+@optional {x-peertube-video-password: str # Required on password protected video}
+@returns(200) {id: int, startDate: str(date-time), endDate: str(date-time)?, error: int?, replayVideo: map{id: num, uuid: str(uuid), shortUUID: str}} # successful operation
 
 @endpoint GET /api/v1/videos/{id}/source
-@required {id: any}
-@returns(200) {inputFilename: str, fileDownloadUrl: str, resolution: any, size: int, fps: num, width: int, height: int, createdAt: str(date-time)}
+@desc Get video source file metadata
+@required {id: any # The object id, uuid or short uuid}
+@returns(200) {inputFilename: str, fileDownloadUrl: str, resolution: any, size: int, fps: num, width: int, height: int, createdAt: str(date-time)} # successful operation
 
 @endpoint DELETE /api/v1/videos/{id}/source/file
-@required {id: any}
-@returns(204)
-@errors {404}
+@desc Delete video source file
+@required {id: any # The object id, uuid or short uuid}
+@returns(204) successful operation
+@errors {404: video source not found}
 
 @endpoint POST /api/v1/videos/{id}/source/replace-resumable
-@required {id: any, X-Upload-Content-Length: num, X-Upload-Content-Type: str(mimetype)}
-@optional {filename: str(filename)}
-@returns(200)
-@returns(201)
-@errors {413, 415}
+@desc Initialize the resumable replacement of a video
+@required {id: any # The object id, uuid or short uuid, X-Upload-Content-Length: num # Number of bytes that will be uploaded in subsequent requests. Set this value to the size of the file you are uploading., X-Upload-Content-Type: str(mimetype) # MIME type of the file that you are uploading. Depending on your instance settings, acceptable values might vary.}
+@optional {filename: str(filename) # Video filename including extension}
+@returns(200) file already exists, send a [`resume`](https://github.com/kukhariev/node-uploadx/blob/master/proto.md) request instead
+@returns(201) created
+@errors {413: Disambiguate via `code`: - `max_file_size_reached` for the absolute file size limit - `quota_reached` for quota limits whether daily or global, 415: video type unsupported}
 
 @endpoint PUT /api/v1/videos/{id}/source/replace-resumable
-@required {id: any, upload_id: str, Content-Range: str, Content-Length: num}
-@returns(204)
-@errors {308, 403, 404, 409, 422, 429, 503}
+@desc Send chunk for the resumable replacement of a video
+@required {id: any # The object id, uuid or short uuid, upload_id: str # Created session id to proceed with. If you didn't send chunks in the last hour, it is not valid anymore and you need to initialize a new upload., Content-Range: str # Specifies the bytes in the file that the request is uploading.  For example, a value of `bytes 0-262143/1000000` shows that the request is sending the first 262144 bytes (256 x 1024) in a 2,469,036 byte file., Content-Length: num # Size of the chunk that the request is sending.  Remember that larger chunks are more efficient. PeerTube's web client uses chunks varying from 1048576 bytes (~1MB) and increases or reduces size depending on connection health.}
+@returns(204) last chunk received: successful operation
+@errors {308: resume incomplete, 403: video didn't pass file replacement filter, 404: replace upload not found, 409: chunk doesn't match range, 422: video unreadable, 429: too many concurrent requests, 503: upload is already being processed}
 
 @endpoint DELETE /api/v1/videos/{id}/source/replace-resumable
-@required {id: any, upload_id: str, Content-Length: num}
-@returns(204)
-@errors {404}
+@desc Cancel the resumable replacement of a video
+@required {id: any # The object id, uuid or short uuid, upload_id: str # Created session id to proceed with. If you didn't send chunks in the last hour, it is not valid anymore and you need to initialize a new upload., Content-Length: num}
+@returns(204) source file replacement cancelled
+@errors {404: source file replacement not found}
 
 @endpoint GET /api/v1/users/me/abuses
-@optional {id: int, state: int, sort: str(-id/-createdAt/-state), start: int, count: int=15}
-@returns(200) {total: int, data: [any]}
+@desc List my abuses
+@optional {id: int # only list the report with this id, state: int, sort: str(-id/-createdAt/-state) # Sort abuses by criteria, start: int # Offset used to paginate results, count: int=15 # Number of items to return}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/abuses
-@optional {id: int, predefinedReason: [str], search: str, state: int, searchReporter: str, searchReportee: str, searchVideo: str, searchVideoChannel: str, videoIs: str(deleted/blacklisted), filter: str(video/comment/account), start: int, count: int=15, sort: str(-id/-createdAt/-state)}
-@returns(200) {total: int, data: [any]}
+@desc List abuses
+@optional {id: int # only list the report with this id, predefinedReason: [str] # predefined reason the listed reports should contain, search: str # plain search that will match with video titles, reporter names and more, state: int, searchReporter: str # only list reports of a specific reporter, searchReportee: str # only list reports of a specific reportee, searchVideo: str # only list reports of a specific video, searchVideoChannel: str # only list reports of a specific video channel, videoIs: str(deleted/blacklisted) # only list deleted or blocklisted videos, filter: str(video/comment/account) # only list account, comment or video reports, start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str(-id/-createdAt/-state) # Sort abuses by criteria}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/abuses
-@required {reason: str}
-@optional {predefinedReasons: [str], video: map{id: any, startAt: int(seconds), endAt: int(seconds)}, comment: map{id: any}, account: map{id: int}}
-@returns(200) {abuse: map{id: int}}
-@errors {400}
+@desc Report an abuse
+@required {reason: str # Reason why the user reports this video}
+@optional {predefinedReasons: [str] # Reason categories that help triage reports, video: map{id: any, startAt: int(seconds), endAt: int(seconds)}, comment: map{id: any}, account: map{id: int}}
+@returns(200) {abuse: map{id: int}} # successful operation
+@errors {400: incorrect request parameters}
 
 @endpoint PUT /api/v1/abuses/{abuseId}
-@required {abuseId: int}
-@optional {state: int(1/2/3), moderationComment: str}
-@returns(204)
-@errors {404}
+@desc Update an abuse
+@required {abuseId: int # Abuse id}
+@optional {state: int(1/2/3) # The abuse state (Pending = `1`, Rejected = `2`, Accepted = `3`), moderationComment: str # Update the report comment visible only to the moderation team}
+@returns(204) successful operation
+@errors {404: abuse not found}
 
 @endpoint DELETE /api/v1/abuses/{abuseId}
-@required {abuseId: int}
-@returns(204)
-@errors {404}
+@desc Delete an abuse
+@required {abuseId: int # Abuse id}
+@returns(204) successful operation
+@errors {404: block not found}
 
 @endpoint GET /api/v1/abuses/{abuseId}/messages
-@required {abuseId: int}
-@returns(200) {total: int, data: [any]}
+@desc List messages of an abuse
+@required {abuseId: int # Abuse id}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/abuses/{abuseId}/messages
-@required {abuseId: int, message: str}
-@returns(200)
-@errors {400}
+@desc Add message to an abuse
+@required {abuseId: int # Abuse id, message: str # Message to send}
+@returns(200) successful operation
+@errors {400: incorrect request parameters}
 
 @endpoint DELETE /api/v1/abuses/{abuseId}/messages/{abuseMessageId}
-@required {abuseId: int, abuseMessageId: int}
-@returns(204)
+@desc Delete an abuse message
+@required {abuseId: int # Abuse id, abuseMessageId: int # Abuse message id}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/videos/{id}/blacklist
-@required {id: any}
-@returns(204)
+@desc Block a video
+@required {id: any # The object id, uuid or short uuid}
+@returns(204) successful operation
 
 @endpoint DELETE /api/v1/videos/{id}/blacklist
-@required {id: any}
-@returns(204)
-@errors {404}
+@desc Unblock a video by its id
+@required {id: any # The object id, uuid or short uuid}
+@returns(204) successful operation
+@errors {404: block not found}
 
 @endpoint GET /api/v1/videos/blacklist
-@optional {type: int(1/2), search: str, start: int, count: int=15, sort: str(-id/name/-duration/-views/-likes/-dislikes/-uuid/-createdAt)}
-@returns(200) {total: int, data: [any]}
+@desc List video blocks
+@optional {type: int(1/2) # list only blocks that match this type: - `1`: manual block - `2`: automatic block that needs review, search: str # plain search that will match with video titles, and more, start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str(-id/name/-duration/-views/-likes/-dislikes/-uuid/-createdAt) # Sort blocklists by criteria}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/videos/{id}/storyboards
-@required {id: any}
-@returns(200) {storyboards: [any]}
+@desc List storyboards of a video
+@required {id: any # The object id, uuid or short uuid}
+@returns(200) {storyboards: [any]} # successful operation
 
 @endpoint GET /api/v1/videos/{id}/captions
-@required {id: any}
-@optional {x-peertube-video-password: str}
-@returns(200) {total: int, data: [any]}
+@desc List captions of a video
+@required {id: any # The object id, uuid or short uuid}
+@optional {x-peertube-video-password: str # Required on password protected video}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/videos/{id}/captions/generate
-@required {id: any}
+@desc Generate a video caption
+@required {id: any # The object id, uuid or short uuid}
 @optional {forceTranscription: bool=False}
-@returns(204)
-@errors {404}
+@returns(204) successful operation
+@errors {404: video not found}
 
 @endpoint PUT /api/v1/videos/{id}/captions/{captionLanguage}
-@required {id: any, captionLanguage: str}
-@returns(204)
-@errors {404}
+@desc Add or replace a video caption
+@required {id: any # The object id, uuid or short uuid, captionLanguage: str # The caption language}
+@returns(204) successful operation
+@errors {404: video or language not found}
 
 @endpoint DELETE /api/v1/videos/{id}/captions/{captionLanguage}
-@required {id: any, captionLanguage: str}
-@returns(204)
-@errors {404}
+@desc Delete a video caption
+@required {id: any # The object id, uuid or short uuid, captionLanguage: str # The caption language}
+@returns(204) successful operation
+@errors {404: video or language or caption for that language not found}
 
 @endpoint GET /api/v1/videos/{id}/chapters
-@required {id: any}
-@optional {x-peertube-video-password: str}
-@returns(200) {chapters: map{title: str, timecode: int}}
+@desc Get chapters of a video
+@required {id: any # The object id, uuid or short uuid}
+@optional {x-peertube-video-password: str # Required on password protected video}
+@returns(200) {chapters: map{title: str, timecode: int}} # successful operation
 
 @endpoint PUT /api/v1/videos/{id}/chapters
-@required {id: any}
+@desc Replace video chapters
+@required {id: any # The object id, uuid or short uuid}
 @optional {chapters: [map{title: str, timecode: int}]}
-@returns(204)
-@errors {404}
+@returns(204) successful operation
+@errors {404: video not found}
 
 @endpoint GET /api/v1/videos/{id}/embed-privacy
-@required {id: any}
-@returns(200) {policy: map{id: int, label: str}, domains: [str]}
-@errors {400}
+@desc Get video embed privacy
+@required {id: any # The object id, uuid or short uuid}
+@returns(200) {policy: map{id: int, label: str}, domains: [str]} # successful operation
+@errors {400: invalid request}
 
 @endpoint PUT /api/v1/videos/{id}/embed-privacy
-@required {id: any}
-@optional {policy: int(1/2/3), domains: [str]}
-@returns(204)
-@errors {400}
+@desc Update video embed privacy
+@required {id: any # The object id, uuid or short uuid}
+@optional {policy: int(1/2/3) # The video embed privacy level:   - `1` All allowed: anyone can embed the video   - `2` Allowlist: only the domains in the allowlist can embed the video   - `3` Remote restrictions: the remote instance has restrictions on where the video can be embedded, domains: [str]}
+@returns(204) successful operation
+@errors {400: invalid request}
 
 @endpoint GET /api/v1/videos/{id}/embed-privacy/allowed
-@required {id: any, domain: str}
-@returns(200) {domainAllowed: bool, userBypassAllowed: bool?}
-@errors {400}
+@desc Check if embed is allowed
+@required {id: any # The object id, uuid or short uuid, domain: str # The domain to check if embed is allowed}
+@returns(200) {domainAllowed: bool, userBypassAllowed: bool?} # successful operation
+@errors {400: invalid request}
 
 @endpoint GET /api/v1/videos/{id}/passwords
-@required {id: any}
-@optional {start: int, count: int=15, sort: str}
-@returns(204) {total: int, data: [any]}
-@errors {400}
+@desc List video passwords
+@required {id: any # The object id, uuid or short uuid}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column}
+@returns(204) {total: int, data: [any]} # successful operation
+@errors {400: video is not password protected}
 
 @endpoint PUT /api/v1/videos/{id}/passwords
-@required {id: any}
+@desc Update video passwords
+@required {id: any # The object id, uuid or short uuid}
 @optional {passwords: [str]}
-@returns(204)
-@errors {400}
+@returns(204) successful operation
+@errors {400: video is not password protected}
 
 @endpoint POST /api/v1/videos/{id}/passwords
-@required {id: any}
+@desc Add a video password
+@required {id: any # The object id, uuid or short uuid}
 @optional {password: str}
-@returns(204)
-@errors {400}
+@returns(204) successful operation
+@errors {400: video is not password protected}
 
 @endpoint DELETE /api/v1/videos/{id}/passwords/{videoPasswordId}
-@required {id: any, videoPasswordId: int}
-@returns(204)
-@errors {403, 400}
+@desc Delete a video password
+@required {id: any # The object id, uuid or short uuid, videoPasswordId: int # The video password id}
+@returns(204) successful operation
+@errors {403: cannot delete the last password of the protected video, 400: video is not password protected}
 
 @endpoint GET /api/v1/video-channels
-@optional {start: int, count: int=15, sort: str}
-@returns(200) {total: int, data: [any]}
+@desc List video channels
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/video-channels
-@returns(200) {videoChannel: map{id: int}}
+@desc Create a video channel
+@returns(200) {videoChannel: map{id: int}} # successful operation
 
 @endpoint GET /api/v1/video-channels/{channelHandle}
-@required {channelHandle: str}
-@returns(200)
+@desc Get a video channel
+@required {channelHandle: str # The video channel handle}
+@returns(200) successful operation
 
 @endpoint PUT /api/v1/video-channels/{channelHandle}
-@required {channelHandle: str}
-@returns(204)
+@desc Update a video channel
+@required {channelHandle: str # The video channel handle}
+@returns(204) successful operation
 
 @endpoint DELETE /api/v1/video-channels/{channelHandle}
-@required {channelHandle: str}
-@returns(204)
+@desc Delete a video channel
+@required {channelHandle: str # The video channel handle}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/video-channels/{channelHandle}/videos
-@required {channelHandle: str}
-@optional {start: int, count: int=15, skipCount: str(true/false)=false, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false), nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool, includeScheduledLive: bool, categoryOneOf: any, licenceOneOf: any, languageOneOf: any, tagsOneOf: any, tagsAllOf: any, isLocal: bool, include: int(0/1/2/4/8/16/32), hasHLSFiles: bool, hasWebVideoFiles: bool, host: str, autoTagOneOf: any, privacyOneOf: int, excludeAlreadyWatched: bool, search: str}
-@returns(200) {total: int, data: [any]}
+@desc List videos of a video channel
+@required {channelHandle: str # The video channel handle}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, skipCount: str(true/false)=false # if you don't need the `total` in the response, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false) # whether to include nsfw videos, if any, nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool # whether or not the video is a live, includeScheduledLive: bool # whether or not include live that are scheduled for later, categoryOneOf: any # category id of the video (see [/videos/categories](#operation/getCategories)), licenceOneOf: any # licence id of the video (see [/videos/licences](#operation/getLicences)), languageOneOf: any # language id of the video (see [/videos/languages](#operation/getLanguages)). Use `_unknown` to filter on videos that don't have a video language, tagsOneOf: any # tag(s) of the video, tagsAllOf: any # tag(s) of the video, where all should be present in the video, isLocal: bool # **PeerTube >= 4.0** Display only local or remote objects, include: int(0/1/2/4/8/16/32) # **Only administrators and moderators can use this parameter**  Include additional videos in results (can be combined using bitwise or operator) - `0` NONE - `1` NOT_PUBLISHED_STATE - `2` BLACKLISTED - `4` BLOCKED_OWNER - `8` FILES - `16` CAPTIONS - `32` VIDEO SOURCE, hasHLSFiles: bool # **PeerTube >= 4.0** Display only videos that have HLS files, hasWebVideoFiles: bool # **PeerTube >= 6.0** Display only videos that have Web Video files, host: str # Find elements owned by this host, autoTagOneOf: any # **PeerTube >= 6.2** **Admins and moderators only** filter on videos that contain one of these automatic tags, privacyOneOf: int # **PeerTube >= 4.0** Display only videos in this specific privacy/privacies, excludeAlreadyWatched: bool # Whether or not to exclude videos that are in the user's video history, search: str # Plain text search, applied to various parts of the model depending on endpoint}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/video-channels/{channelHandle}/activities
-@required {channelHandle: str}
-@optional {start: int, count: int=15, sort: str}
-@returns(200) {total: int, data: [map]}
+@desc List activities of a video channel
+@required {channelHandle: str # The video channel handle}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column}
+@returns(200) {total: int, data: [map]} # successful operation
 
 @endpoint GET /api/v1/video-channels/{channelHandle}/video-playlists
-@required {channelHandle: str}
-@optional {start: int, count: int=15, sort: str, playlistType: int}
-@returns(200) {total: int, data: [any]}
+@desc List playlists of a channel
+@required {channelHandle: str # The video channel handle}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column, playlistType: int}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/video-channels/{channelHandle}/video-playlists/reorder
-@required {channelHandle: str, startPosition: int, insertAfterPosition: int}
-@optional {reorderLength: int}
-@returns(204)
+@desc Reorder channel playlists
+@required {channelHandle: str # The video channel handle, startPosition: int # Start position of the element to reorder, insertAfterPosition: int # New position for the block to reorder, to add the block before the first element}
+@optional {reorderLength: int # How many element from `startPosition` to reorder}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/video-channels/{channelHandle}/followers
-@required {channelHandle: str}
-@optional {start: int, count: int=15, sort: str, search: str}
-@returns(200) {total: int, data: [any]}
+@desc List followers of a video channel
+@required {channelHandle: str # The video channel handle}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort followers by criteria, search: str # Plain text search, applied to various parts of the model depending on endpoint}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/video-channels/{channelHandle}/avatar/pick
-@required {channelHandle: str}
-@returns(200) {avatars: [any]}
-@errors {413}
+@desc Update channel avatar
+@required {channelHandle: str # The video channel handle}
+@returns(200) {avatars: [any]} # successful operation
+@errors {413: image file too large}
 
 @endpoint DELETE /api/v1/video-channels/{channelHandle}/avatar
-@required {channelHandle: str}
-@returns(204)
+@desc Delete channel avatar
+@required {channelHandle: str # The video channel handle}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/video-channels/{channelHandle}/banner/pick
-@required {channelHandle: str}
-@returns(200) {banners: [any]}
-@errors {413}
+@desc Update channel banner
+@required {channelHandle: str # The video channel handle}
+@returns(200) {banners: [any]} # successful operation
+@errors {413: image file too large}
 
 @endpoint DELETE /api/v1/video-channels/{channelHandle}/banner
-@required {channelHandle: str}
-@returns(204)
+@desc Delete channel banner
+@required {channelHandle: str # The video channel handle}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/video-channels/{channelHandle}/import-videos
-@required {channelHandle: str, externalChannelUrl: str}
-@optional {videoChannelSyncId: int}
-@returns(204)
+@desc Import videos in channel
+@required {channelHandle: str # The video channel handle, externalChannelUrl: str}
+@optional {videoChannelSyncId: int # If part of a channel sync process, specify its id to assign video imports to this channel synchronization}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/video-channel-syncs
+@desc Create a synchronization for a video channel
 @optional {externalChannelUrl: str, videoChannelId: int}
-@returns(200) {videoChannelSync: map{id: int, state: map{id: int, label: str}, externalChannelUrl: str, createdAt: str(date-time), lastSyncAt: str(date-time)?, channel: any}}
+@returns(200) {videoChannelSync: map{id: int, state: map{id: int, label: str}, externalChannelUrl: str, createdAt: str(date-time), lastSyncAt: str(date-time)?, channel: any}} # successful operation
 
 @endpoint DELETE /api/v1/video-channel-syncs/{channelSyncId}
-@required {channelSyncId: int}
-@returns(204)
+@desc Delete a video channel synchronization
+@required {channelSyncId: int # Channel Sync id}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/video-channel-syncs/{channelSyncId}/sync
-@required {channelSyncId: int}
-@returns(204)
+@desc Triggers the channel synchronization job, fetching all the videos from the remote channel
+@required {channelSyncId: int # Channel Sync id}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/player-settings/videos/{id}
-@required {id: any}
-@optional {raw: bool=False}
-@returns(200) {theme: str}
-@errors {404}
+@desc Get video player settings
+@required {id: any # The object id, uuid or short uuid}
+@optional {raw: bool=False # Return raw settings without merging channel defaults}
+@returns(200) {theme: str} # successful operation
+@errors {404: video not found}
 
 @endpoint PUT /api/v1/player-settings/videos/{id}
-@required {id: any, theme: str(channel-default/instance-default/galaxy/lucide)}
-@returns(200) {theme: str}
-@errors {404}
+@desc Update video player settings
+@required {id: any # The object id, uuid or short uuid, theme: str(channel-default/instance-default/galaxy/lucide) # Player theme setting for a video:   - `channel-default` Use the channel default theme   - `instance-default` Use the instance default theme   - `galaxy` Use the galaxy theme   - `lucide` Use the lucide theme}
+@returns(200) {theme: str} # successful operation
+@errors {404: video not found}
 
 @endpoint GET /api/v1/player-settings/video-channels/{channelHandle}
-@required {channelHandle: str}
-@optional {raw: bool=False}
-@returns(200) {theme: str}
-@errors {404}
+@desc Get channel player settings
+@required {channelHandle: str # The video channel handle}
+@optional {raw: bool=False # Return raw settings without applying instance defaults}
+@returns(200) {theme: str} # successful operation
+@errors {404: video channel not found}
 
 @endpoint PUT /api/v1/player-settings/video-channels/{channelHandle}
-@required {channelHandle: str, theme: str(instance-default/galaxy/lucide)}
-@returns(200) {theme: str}
-@errors {404}
+@desc Update channel player settings
+@required {channelHandle: str # The video channel handle, theme: str(instance-default/galaxy/lucide) # Player theme setting for a channel:   - `instance-default` Use the instance default theme   - `galaxy` Use the galaxy theme   - `lucide` Use the lucide theme}
+@returns(200) {theme: str} # successful operation
+@errors {404: video channel not found}
 
 @endpoint GET /api/v1/video-playlists/privacies
-@returns(200)
+@desc List available playlist privacy policies
+@returns(200) successful operation
 
 @endpoint GET /api/v1/video-playlists
-@optional {start: int, count: int=15, sort: str, playlistType: int}
-@returns(200) {total: int, data: [any]}
+@desc List video playlists
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column, playlistType: int}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/video-playlists
-@returns(200) {videoPlaylist: map{id: int, uuid: str(uuid), shortUUID: any}}
+@desc Create a video playlist
+@returns(200) {videoPlaylist: map{id: int, uuid: str(uuid), shortUUID: any}} # successful operation
 
 @endpoint GET /api/v1/video-playlists/{playlistId}
-@required {playlistId: int}
-@returns(200) {id: int, uuid: str(uuid), shortUUID: any, createdAt: str(date-time), updatedAt: str(date-time), description: str, displayName: str, isLocal: bool, videoLength: int, thumbnailPath: str, thumbnails: [any], privacy: any, type: any, ownerAccount: any, videoChannel: any, videoChannelPosition: int}
+@desc Get a video playlist
+@required {playlistId: int # Playlist id}
+@returns(200) {id: int, uuid: str(uuid), shortUUID: any, createdAt: str(date-time), updatedAt: str(date-time), description: str, displayName: str, isLocal: bool, videoLength: int, thumbnailPath: str, thumbnails: [any], privacy: any, type: any, ownerAccount: any, videoChannel: any, videoChannelPosition: int} # successful operation
 
 @endpoint PUT /api/v1/video-playlists/{playlistId}
-@required {playlistId: int}
-@returns(204)
+@desc Update a video playlist
+@required {playlistId: int # Playlist id}
+@returns(204) successful operation
 
 @endpoint DELETE /api/v1/video-playlists/{playlistId}
-@required {playlistId: int}
-@returns(204)
+@desc Delete a video playlist
+@required {playlistId: int # Playlist id}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/video-playlists/{playlistId}/videos
-@required {playlistId: int}
-@optional {start: int, count: int=15}
-@returns(200) {total: int, data: [map]}
+@desc List videos of a playlist
+@required {playlistId: int # Playlist id}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return}
+@returns(200) {total: int, data: [map]} # successful operation
 
 @endpoint POST /api/v1/video-playlists/{playlistId}/videos
-@required {playlistId: int, videoId: any}
-@optional {startTimestamp: int(seconds), stopTimestamp: int(seconds)}
-@returns(200) {videoPlaylistElement: map{id: int}}
+@desc Add a video in a playlist
+@required {playlistId: int # Playlist id, videoId: any # Video to add in the playlist}
+@optional {startTimestamp: int(seconds) # Start the video at this specific timestamp, stopTimestamp: int(seconds) # Stop the video at this specific timestamp}
+@returns(200) {videoPlaylistElement: map{id: int}} # successful operation
 
 @endpoint POST /api/v1/video-playlists/{playlistId}/videos/reorder
-@required {playlistId: int, startPosition: int, insertAfterPosition: int}
-@optional {reorderLength: int}
-@returns(204)
+@desc Reorder playlist elements
+@required {playlistId: int # Playlist id, startPosition: int # Start position of the element to reorder, insertAfterPosition: int # New position for the block to reorder, to add the block before the first element}
+@optional {reorderLength: int # How many element from `startPosition` to reorder}
+@returns(204) successful operation
 
 @endpoint PUT /api/v1/video-playlists/{playlistId}/videos/{playlistElementId}
-@required {playlistId: int, playlistElementId: int}
-@optional {startTimestamp: int(seconds), stopTimestamp: int(seconds)}
-@returns(204)
+@desc Update a playlist element
+@required {playlistId: int # Playlist id, playlistElementId: int # Playlist element id}
+@optional {startTimestamp: int(seconds) # Start the video at this specific timestamp, stopTimestamp: int(seconds) # Stop the video at this specific timestamp}
+@returns(204) successful operation
 
 @endpoint DELETE /api/v1/video-playlists/{playlistId}/videos/{playlistElementId}
-@required {playlistId: int, playlistElementId: int}
-@returns(204)
+@desc Delete an element from a playlist
+@required {playlistId: int # Playlist id, playlistElementId: int # Playlist element id}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/users/me/video-playlists/videos-exist
-@required {videoIds: [any]}
-@returns(200) {videoId: [map]}
+@desc Check video exists in my playlists
+@required {videoIds: [any] # The video ids to check}
+@returns(200) {videoId: [map]} # successful operation
 
 @endpoint GET /api/v1/accounts/{name}/video-playlists
-@required {name: str}
-@optional {start: int, count: int=15, sort: str, search: str, playlistType: int, includeCollaborations: bool, channelNameOneOf: any}
-@returns(200) {total: int, data: [any]}
+@desc List playlists of an account
+@required {name: str # The username or handle of the account}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column, search: str # Plain text search, applied to various parts of the model depending on endpoint, playlistType: int, includeCollaborations: bool # **PeerTube >= 8.0** Include objects from collaborated channels, channelNameOneOf: any # **PeerTube >= 8.0** Filter on playlists that are published on a channel with one of these names}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/accounts/{name}/video-channels
-@required {name: str}
-@optional {withStats: bool, start: int, count: int=15, search: str, sort: str, includeCollaborations: bool}
-@returns(200) {total: int, data: [any]}
+@desc List video channels of an account
+@required {name: str # The username or handle of the account}
+@optional {withStats: bool # include daily view statistics for the last 30 days and total views (only if authenticated as the account user), start: int # Offset used to paginate results, count: int=15 # Number of items to return, search: str # Plain text search, applied to various parts of the model depending on endpoint, sort: str # Sort column, includeCollaborations: bool # **PeerTube >= 8.0** Include objects from collaborated channels}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/accounts/{name}/video-channel-syncs
-@required {name: str}
-@optional {start: int, count: int=15, sort: str, includeCollaborations: bool}
-@returns(200) {total: int, data: [any]}
+@desc List the synchronizations of video channels of an account
+@required {name: str # The username or handle of the account}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column, includeCollaborations: bool # **PeerTube >= 8.0** Include objects from collaborated channels}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/accounts/{name}/ratings
-@required {name: str}
-@optional {start: int, count: int=15, sort: str, rating: str(like/dislike)}
-@returns(200)
+@desc List ratings of an account
+@required {name: str # The username or handle of the account}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column, rating: str(like/dislike) # Optionally filter which ratings to retrieve}
+@returns(200) successful operation
 
 @endpoint GET /api/v1/videos/{id}/comment-threads
-@required {id: any}
-@optional {start: int, count: int=15, sort: str(-createdAt/-totalReplies), x-peertube-video-password: str}
-@returns(200) {total: int, totalNotDeletedComments: int, data: [any]}
+@desc List threads of a video
+@required {id: any # The object id, uuid or short uuid}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str(-createdAt/-totalReplies) # Sort comments by criteria, x-peertube-video-password: str # Required on password protected video}
+@returns(200) {total: int, totalNotDeletedComments: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/videos/{id}/comment-threads
-@required {id: any, text: any}
-@returns(200) {comment: any}
-@errors {404}
+@desc Create a thread
+@required {id: any # The object id, uuid or short uuid, text: any}
+@returns(200) {comment: any} # successful operation
+@errors {404: video does not exist}
 
 @endpoint GET /api/v1/videos/{id}/comment-threads/{threadId}
-@required {id: any, threadId: int}
-@optional {x-peertube-video-password: str}
-@returns(200) {comment: any, children: [any]}
+@desc Get a thread
+@required {id: any # The object id, uuid or short uuid, threadId: int # The thread id (root comment id)}
+@optional {x-peertube-video-password: str # Required on password protected video}
+@returns(200) {comment: any, children: [any]} # successful operation
 
 @endpoint GET /api/v1/videos/comments
-@optional {search: str, searchAccount: str, searchVideo: str, videoId: int, videoChannelId: int, autoTagOneOf: any, isLocal: bool, onLocalVideo: bool}
-@returns(200) {total: int, data: [any]}
+@desc List instance comments
+@optional {search: str # Plain text search, applied to various parts of the model depending on endpoint, searchAccount: str # Filter comments by searching on the account, searchVideo: str # Filter comments by searching on the video, videoId: int # Limit results on this specific video, videoChannelId: int # Limit results on this specific video channel, autoTagOneOf: any # **PeerTube >= 6.2** filter on comments that contain one of these automatic tags, isLocal: bool # **PeerTube >= 4.0** Display only local or remote objects, onLocalVideo: bool # Display only objects of local or remote videos}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/videos/{id}/comments/{commentId}
-@required {id: any, commentId: int, text: any}
-@optional {x-peertube-video-password: str}
-@returns(200) {comment: any}
-@errors {404}
+@desc Reply to a thread of a video
+@required {id: any # The object id, uuid or short uuid, commentId: int # The comment id, text: any}
+@optional {x-peertube-video-password: str # Required on password protected video}
+@returns(200) {comment: any} # successful operation
+@errors {404: thread or video does not exist}
 
 @endpoint DELETE /api/v1/videos/{id}/comments/{commentId}
-@required {id: any, commentId: int}
-@returns(204)
-@errors {403, 404, 409}
+@desc Delete a comment or a reply
+@required {id: any # The object id, uuid or short uuid, commentId: int # The comment id}
+@returns(204) successful operation
+@errors {403: cannot remove comment of another user, 404: comment or video does not exist, 409: comment is already deleted}
 
 @endpoint POST /api/v1/videos/{id}/comments/{commentId}/approve
-@required {id: any, commentId: int}
-@returns(204)
+@desc Approve a comment
+@required {id: any # The object id, uuid or short uuid, commentId: int # The comment id}
+@returns(204) successful operation
 
 @endpoint PUT /api/v1/videos/{id}/rate
-@required {id: any, rating: str(like/dislike)}
-@optional {x-peertube-video-password: str}
-@returns(204)
-@errors {404}
+@desc Like/dislike a video
+@required {id: any # The object id, uuid or short uuid, rating: str(like/dislike)}
+@optional {x-peertube-video-password: str # Required on password protected video}
+@returns(204) successful operation
+@errors {404: video does not exist}
 
 @endpoint DELETE /api/v1/videos/{id}/hls
-@required {id: any}
-@returns(204)
-@errors {404}
+@desc Delete video HLS files
+@required {id: any # The object id, uuid or short uuid}
+@returns(204) successful operation
+@errors {404: video does not exist}
 
 @endpoint DELETE /api/v1/videos/{id}/web-videos
-@required {id: any}
-@returns(204)
-@errors {404}
+@desc Delete video Web Video files
+@required {id: any # The object id, uuid or short uuid}
+@returns(204) successful operation
+@errors {404: video does not exist}
 
 @endpoint POST /api/v1/videos/{id}/transcoding
-@required {id: any, transcodingType: str(hls/web-video)}
-@optional {forceTranscoding: bool=False}
-@returns(204)
-@errors {404}
+@desc Create a transcoding job
+@required {id: any # The object id, uuid or short uuid, transcodingType: str(hls/web-video)}
+@optional {forceTranscoding: bool=False # If the video is stuck in transcoding state, do it anyway}
+@returns(204) successful operation
+@errors {404: video does not exist}
 
 @endpoint GET /api/v1/search/videos
-@required {search: str}
-@optional {uuids: any, searchTarget: str(local/search-index), start: int, count: int=15, skipCount: str(true/false)=false, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false), nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool, includeScheduledLive: bool, categoryOneOf: any, licenceOneOf: any, languageOneOf: any, tagsOneOf: any, tagsAllOf: any, isLocal: bool, include: int(0/1/2/4/8/16/32), hasHLSFiles: bool, hasWebVideoFiles: bool, host: str, autoTagOneOf: any, privacyOneOf: int, excludeAlreadyWatched: bool, startDate: str(date-time), endDate: str(date-time), originallyPublishedStartDate: str(date-time), originallyPublishedEndDate: str(date-time), durationMin: int, durationMax: int}
-@returns(200) {total: int, data: [any]}
-@errors {500}
+@desc Search videos
+@required {search: str # String to search. If the user can make a remote URI search, and the string is an URI then the PeerTube instance will fetch the remote object and add it to its database. Then, you can use the REST API to fetch the complete video information and interact with it.}
+@optional {uuids: any # Find elements with specific UUIDs, searchTarget: str(local/search-index) # If the administrator enabled search index support, you can override the default search target.  **Warning**: If you choose to make an index search, PeerTube will get results from a third party service. It means the instance may not yet know the objects you fetched. If you want to load video/channel information:   * If the current user has the ability to make a remote URI search (this information is available in the config endpoint),   then reuse the search API to make a search using the object URI so PeerTube instance fetches the remote object and fill its database.   After that, you can use the classic REST API endpoints to fetch the complete object or interact with it   * If the current user doesn't have the ability to make a remote URI search, then redirect the user on the origin instance or fetch   the data from the origin instance API, start: int # Offset used to paginate results, count: int=15 # Number of items to return, skipCount: str(true/false)=false # if you don't need the `total` in the response, sort: str(name/-duration/-createdAt/-publishedAt/-views/-likes/-comments/-trending/-hot/-best), nsfw: str(true/false) # whether to include nsfw videos, if any, nsfwFlagsIncluded: int, nsfwFlagsExcluded: int, isLive: bool # whether or not the video is a live, includeScheduledLive: bool # whether or not include live that are scheduled for later, categoryOneOf: any # category id of the video (see [/videos/categories](#operation/getCategories)), licenceOneOf: any # licence id of the video (see [/videos/licences](#operation/getLicences)), languageOneOf: any # language id of the video (see [/videos/languages](#operation/getLanguages)). Use `_unknown` to filter on videos that don't have a video language, tagsOneOf: any # tag(s) of the video, tagsAllOf: any # tag(s) of the video, where all should be present in the video, isLocal: bool # **PeerTube >= 4.0** Display only local or remote objects, include: int(0/1/2/4/8/16/32) # **Only administrators and moderators can use this parameter**  Include additional videos in results (can be combined using bitwise or operator) - `0` NONE - `1` NOT_PUBLISHED_STATE - `2` BLACKLISTED - `4` BLOCKED_OWNER - `8` FILES - `16` CAPTIONS - `32` VIDEO SOURCE, hasHLSFiles: bool # **PeerTube >= 4.0** Display only videos that have HLS files, hasWebVideoFiles: bool # **PeerTube >= 6.0** Display only videos that have Web Video files, host: str # Find elements owned by this host, autoTagOneOf: any # **PeerTube >= 6.2** **Admins and moderators only** filter on videos that contain one of these automatic tags, privacyOneOf: int # **PeerTube >= 4.0** Display only videos in this specific privacy/privacies, excludeAlreadyWatched: bool # Whether or not to exclude videos that are in the user's video history, startDate: str(date-time) # Get videos that are published after this date, endDate: str(date-time) # Get videos that are published before this date, originallyPublishedStartDate: str(date-time) # Get videos that are originally published after this date, originallyPublishedEndDate: str(date-time) # Get videos that are originally published before this date, durationMin: int # Get videos that have this minimum duration, durationMax: int # Get videos that have this maximum duration}
+@returns(200) {total: int, data: [any]} # successful operation
+@errors {500: search index unavailable}
 
 @endpoint GET /api/v1/search/video-channels
-@required {search: str}
-@optional {start: int, count: int=15, searchTarget: str(local/search-index), sort: str, host: str, handles: any}
-@returns(200) {total: int, data: [any]}
-@errors {500}
+@desc Search channels
+@required {search: str # String to search. If the user can make a remote URI search, and the string is an URI then the PeerTube instance will fetch the remote object and add it to its database. Then, you can use the REST API to fetch the complete channel information and interact with it.}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, searchTarget: str(local/search-index) # If the administrator enabled search index support, you can override the default search target.  **Warning**: If you choose to make an index search, PeerTube will get results from a third party service. It means the instance may not yet know the objects you fetched. If you want to load video/channel information:   * If the current user has the ability to make a remote URI search (this information is available in the config endpoint),   then reuse the search API to make a search using the object URI so PeerTube instance fetches the remote object and fill its database.   After that, you can use the classic REST API endpoints to fetch the complete object or interact with it   * If the current user doesn't have the ability to make a remote URI search, then redirect the user on the origin instance or fetch   the data from the origin instance API, sort: str # Sort column, host: str # Find elements owned by this host, handles: any # Find elements with these handles}
+@returns(200) {total: int, data: [any]} # successful operation
+@errors {500: search index unavailable}
 
 @endpoint GET /api/v1/search/video-playlists
-@required {search: str}
-@optional {start: int, count: int=15, searchTarget: str(local/search-index), sort: str, host: str, uuids: any}
-@returns(200) {total: int, data: [any]}
-@errors {500}
+@desc Search playlists
+@required {search: str # String to search. If the user can make a remote URI search, and the string is an URI then the PeerTube instance will fetch the remote object and add it to its database. Then, you can use the REST API to fetch the complete playlist information and interact with it.}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, searchTarget: str(local/search-index) # If the administrator enabled search index support, you can override the default search target.  **Warning**: If you choose to make an index search, PeerTube will get results from a third party service. It means the instance may not yet know the objects you fetched. If you want to load video/channel information:   * If the current user has the ability to make a remote URI search (this information is available in the config endpoint),   then reuse the search API to make a search using the object URI so PeerTube instance fetches the remote object and fill its database.   After that, you can use the classic REST API endpoints to fetch the complete object or interact with it   * If the current user doesn't have the ability to make a remote URI search, then redirect the user on the origin instance or fetch   the data from the origin instance API, sort: str # Sort column, host: str # Find elements owned by this host, uuids: any # Find elements with specific UUIDs}
+@returns(200) {total: int, data: [any]} # successful operation
+@errors {500: search index unavailable}
 
 @endpoint GET /api/v1/blocklist/status
-@optional {accounts: [str], hosts: [str]}
-@returns(200) {accounts: map, hosts: map}
+@desc Get block status of accounts/hosts
+@optional {accounts: [str] # Check if these accounts are blocked, hosts: [str] # Check if these hosts are blocked}
+@returns(200) {accounts: map, hosts: map} # successful operation
 
 @endpoint GET /api/v1/server/blocklist/accounts
-@optional {start: int, count: int=15, sort: str}
-@returns(200)
+@desc List account blocks
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column}
+@returns(200) successful operation
 
 @endpoint POST /api/v1/server/blocklist/accounts
-@required {accountName: str}
-@returns(200)
-@errors {409}
+@desc Block an account
+@required {accountName: str # account to block, in the form `username@domain`}
+@returns(200) successful operation
+@errors {409: self-blocking forbidden}
 
 @endpoint DELETE /api/v1/server/blocklist/accounts/{accountName}
-@required {accountName: str}
-@returns(201)
-@errors {404}
+@desc Unblock an account by its handle
+@required {accountName: str # account to unblock, in the form `username@domain`}
+@returns(201) successful operation
+@errors {404: account or account block does not exist}
 
 @endpoint GET /api/v1/server/blocklist/servers
-@optional {start: int, count: int=15, sort: str}
-@returns(200)
+@desc List server blocks
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column}
+@returns(200) successful operation
 
 @endpoint POST /api/v1/server/blocklist/servers
-@required {host: str(hostname)}
-@returns(204)
-@errors {409}
+@desc Block a server
+@required {host: str(hostname) # server domain to block}
+@returns(204) successful operation
+@errors {409: self-blocking forbidden}
 
 @endpoint DELETE /api/v1/server/blocklist/servers/{host}
-@required {host: str(hostname)}
-@returns(204)
-@errors {404}
+@desc Unblock a server by its domain
+@required {host: str(hostname) # server domain to unblock}
+@returns(204) successful operation
+@errors {404: account block does not exist}
 
 @endpoint PUT /api/v1/server/redundancy/{host}
-@required {host: str(hostname), redundancyAllowed: bool}
-@returns(204)
-@errors {404}
+@desc Update a server redundancy policy
+@required {host: str(hostname) # server domain to mirror, redundancyAllowed: bool # allow mirroring of the host's local videos}
+@returns(204) successful operation
+@errors {404: server is not already known}
 
 @endpoint GET /api/v1/server/redundancy/videos
-@required {target: str(my-videos/remote-videos)}
-@optional {start: int, count: int=15, sort: str}
-@returns(200)
+@desc List videos being mirrored
+@required {target: str(my-videos/remote-videos) # direction of the mirror}
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort abuses by criteria}
+@returns(200) successful operation
 
 @endpoint POST /api/v1/server/redundancy/videos
-@required {videoId: any}
-@returns(204)
-@errors {400, 404, 409}
+@desc Mirror a video
+@required {videoId: any # object id for the video}
+@returns(204) successful operation
+@errors {400: cannot mirror a local video, 404: video does not exist, 409: video is already mirrored}
 
 @endpoint DELETE /api/v1/server/redundancy/videos/{redundancyId}
-@required {redundancyId: str}
-@returns(204)
-@errors {404}
+@desc Delete a mirror done on a video
+@required {redundancyId: str # id of an existing redundancy on a video}
+@returns(204) successful operation
+@errors {404: video redundancy not found}
 
 @endpoint GET /api/v1/server/stats
-@returns(200) {totalUsers: num, totalDailyActiveUsers: num, totalWeeklyActiveUsers: num, totalMonthlyActiveUsers: num, totalModerators: num, totalAdmins: num, totalLocalVideos: num, totalLocalVideoViews: num, totalLocalVideoComments: num, totalLocalVideoFilesSize: num, totalVideos: num, totalVideoComments: num, totalLocalVideoChannels: num, totalLocalDailyActiveVideoChannels: num, totalLocalWeeklyActiveVideoChannels: num, totalLocalMonthlyActiveVideoChannels: num, totalLocalPlaylists: num, totalInstanceFollowers: num, totalInstanceFollowing: num, videosRedundancy: [map], totalActivityPubMessagesProcessed: num, totalActivityPubMessagesSuccesses: num, totalActivityPubMessagesErrors: num, activityPubMessagesProcessedPerSecond: num, totalActivityPubMessagesWaiting: num, averageRegistrationRequestResponseTimeMs: num, totalRegistrationRequestsProcessed: num, totalRegistrationRequests: num, averageAbuseResponseTimeMs: num, totalAbusesProcessed: num, totalAbuses: num}
+@desc Get instance stats
+@returns(200) {totalUsers: num, totalDailyActiveUsers: num, totalWeeklyActiveUsers: num, totalMonthlyActiveUsers: num, totalModerators: num, totalAdmins: num, totalLocalVideos: num, totalLocalVideoViews: num, totalLocalVideoComments: num, totalLocalVideoFilesSize: num, totalVideos: num, totalVideoComments: num, totalLocalVideoChannels: num, totalLocalDailyActiveVideoChannels: num, totalLocalWeeklyActiveVideoChannels: num, totalLocalMonthlyActiveVideoChannels: num, totalLocalPlaylists: num, totalInstanceFollowers: num, totalInstanceFollowing: num, videosRedundancy: [map], totalActivityPubMessagesProcessed: num, totalActivityPubMessagesSuccesses: num, totalActivityPubMessagesErrors: num, activityPubMessagesProcessedPerSecond: num, totalActivityPubMessagesWaiting: num, averageRegistrationRequestResponseTimeMs: num, totalRegistrationRequestsProcessed: num, totalRegistrationRequests: num, averageAbuseResponseTimeMs: num, totalAbusesProcessed: num, totalAbuses: num} # successful operation
 
 @endpoint POST /api/v1/server/logs/client
-@required {message: str, url: str, level: any(error/warn)}
-@optional {stackTrace: str, userAgent: str, meta: str}
-@returns(204)
+@desc Send client log
+@required {message: str, url: str # URL of the current user page, level: any(error/warn)}
+@optional {stackTrace: str # Stack trace of the error if there is one, userAgent: str # User agent of the web browser that sends the message, meta: str # Additional information regarding this log}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/server/logs
-@returns(200)
+@desc Get instance logs
+@returns(200) successful operation
 
 @endpoint GET /api/v1/server/audit-logs
-@returns(200)
+@desc Get instance audit logs
+@returns(200) successful operation
 
 @endpoint GET /api/v1/plugins
-@optional {pluginType: int, uninstalled: bool, start: int, count: int=15, sort: str}
-@returns(200) {total: int, data: [any]}
+@desc List plugins
+@optional {pluginType: int, uninstalled: bool, start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/plugins/available
-@optional {search: str, pluginType: int, currentPeerTubeEngine: str, start: int, count: int=15, sort: str}
-@returns(200) {total: int, data: [any]}
-@errors {503}
+@desc List available plugins
+@optional {search: str, pluginType: int, currentPeerTubeEngine: str, start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort column}
+@returns(200) {total: int, data: [any]} # successful operation
+@errors {503: plugin index unavailable}
 
 @endpoint POST /api/v1/plugins/install
-@returns(204)
-@errors {400}
+@desc Install a plugin
+@returns(204) successful operation
+@errors {400: should have either `npmName` or `path` set}
 
 @endpoint POST /api/v1/plugins/update
-@returns(204)
-@errors {400, 404}
+@desc Update a plugin
+@returns(204) successful operation
+@errors {400: should have either `npmName` or `path` set, 404: existing plugin not found}
 
 @endpoint POST /api/v1/plugins/uninstall
-@required {npmName: str}
-@returns(204)
-@errors {404}
+@desc Uninstall a plugin
+@required {npmName: str # name of the plugin/theme in its package.json}
+@returns(204) successful operation
+@errors {404: existing plugin not found}
 
 @endpoint GET /api/v1/plugins/{npmName}
-@required {npmName: str}
-@returns(200) {name: str, type: int, latestVersion: str, version: str, enabled: bool, uninstalled: bool, peertubeEngine: str, description: str, homepage: str(url), settings: map, createdAt: str(date-time), updatedAt: str(date-time)}
-@errors {404}
+@desc Get a plugin
+@required {npmName: str # name of the plugin/theme on npmjs.com or in its package.json}
+@returns(200) {name: str, type: int, latestVersion: str, version: str, enabled: bool, uninstalled: bool, peertubeEngine: str, description: str, homepage: str(url), settings: map, createdAt: str(date-time), updatedAt: str(date-time)} # successful operation
+@errors {404: plugin not found}
 
 @endpoint PUT /api/v1/plugins/{npmName}/settings
-@required {npmName: str}
+@desc Set a plugin's settings
+@required {npmName: str # name of the plugin/theme on npmjs.com or in its package.json}
 @optional {settings: map}
-@returns(204)
-@errors {404}
+@returns(204) successful operation
+@errors {404: plugin not found}
 
 @endpoint GET /api/v1/plugins/{npmName}/public-settings
-@required {npmName: str}
-@returns(200)
-@errors {404}
+@desc Get a plugin's public settings
+@required {npmName: str # name of the plugin/theme on npmjs.com or in its package.json}
+@returns(200) successful operation
+@errors {404: plugin not found}
 
 @endpoint GET /api/v1/plugins/{npmName}/registered-settings
-@required {npmName: str}
-@returns(200)
-@errors {404}
+@desc Get a plugin's registered settings
+@required {npmName: str # name of the plugin/theme on npmjs.com or in its package.json}
+@returns(200) successful operation
+@errors {404: plugin not found}
 
 @endpoint POST /api/v1/metrics/playback
-@required {playerMode: str(p2p-media-loader/web-video), p2pEnabled: bool, resolutionChanges: num, errors: num, downloadedBytesP2P: num, downloadedBytesHTTP: num, uploadedBytesP2P: num, videoId: any}
-@optional {resolution: num, fps: num, p2pPeers: num, bufferStalled: num}
-@returns(204)
+@desc Create playback metrics
+@required {playerMode: str(p2p-media-loader/web-video), p2pEnabled: bool, resolutionChanges: num # How many resolution changes occurred since the last metric creation, errors: num # How many errors occurred since the last metric creation, downloadedBytesP2P: num # How many bytes were downloaded with P2P since the last metric creation, downloadedBytesHTTP: num # How many bytes were downloaded with HTTP since the last metric creation, uploadedBytesP2P: num # How many bytes were uploaded with P2P since the last metric creation, videoId: any}
+@optional {resolution: num # Current player video resolution, fps: num # Current player video fps, p2pPeers: num # P2P peers connected (doesn't include WebSeed peers), bufferStalled: num # How many times buffer has been stalled since the last metric creation}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/runners/registration-tokens/generate
-@returns(204)
+@desc Generate registration token
+@returns(204) successful operation
 
 @endpoint DELETE /api/v1/runners/registration-tokens/{registrationTokenId}
+@desc Remove registration token
 @required {registrationTokenId: int}
-@returns(204)
+@returns(204) successful operation
 
 @endpoint GET /api/v1/runners/registration-tokens
-@optional {start: int, count: int=15, sort: str}
-@returns(200) {total: int, data: [any]}
+@desc List registration tokens
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort registration tokens by criteria}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/runners/register
+@desc Register a new runner
 @required {registrationToken: str, name: str}
 @optional {description: str}
-@returns(200) {id: int, runnerToken: str}
+@returns(200) {id: int, runnerToken: str} # successful operation
 
 @endpoint POST /api/v1/runners/unregister
+@desc Unregister a runner
 @required {runnerToken: str}
-@returns(204)
+@returns(204) successful operation
 
 @endpoint DELETE /api/v1/runners/{runnerId}
+@desc Delete a runner
 @required {runnerId: int, runnerToken: str}
-@returns(204)
+@returns(204) successful operation
 
 @endpoint GET /api/v1/runners
-@optional {start: int, count: int=15, sort: str}
-@returns(200) {total: int, data: [any]}
+@desc List runners
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str # Sort runners by criteria}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/runners/jobs/request
+@desc Request a new job
 @required {runnerToken: str}
-@optional {jobTypes: [str]}
-@returns(200) {availableJobs: [map]}
+@optional {jobTypes: [str] # Filter jobs depending on their types}
+@returns(200) {availableJobs: [map]} # successful operation
 
 @endpoint POST /api/v1/runners/jobs/{jobUUID}/accept
+@desc Accept job
 @required {jobUUID: str(uuid), runnerToken: str}
-@returns(200) {job: any}
+@returns(200) {job: any} # successful operation
 
 @endpoint POST /api/v1/runners/jobs/{jobUUID}/abort
-@required {jobUUID: str(uuid), runnerToken: str, jobToken: str, reason: str}
-@returns(204)
+@desc Abort job
+@required {jobUUID: str(uuid), runnerToken: str, jobToken: str, reason: str # Why the runner aborts this job}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/runners/jobs/{jobUUID}/update
+@desc Update job
 @required {jobUUID: str(uuid), runnerToken: str, jobToken: str}
-@optional {progress: int, payload: any}
-@returns(204)
+@optional {progress: int # Update job progression percentage (optional), payload: any}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/runners/jobs/{jobUUID}/error
-@required {jobUUID: str(uuid), runnerToken: str, jobToken: str, message: str}
-@returns(204)
+@desc Post job error
+@required {jobUUID: str(uuid), runnerToken: str, jobToken: str, message: str # Why the runner failed to process this job}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/runners/jobs/{jobUUID}/success
+@desc Post job success
 @required {jobUUID: str(uuid), runnerToken: str, jobToken: str, payload: any}
-@returns(204)
+@returns(204) successful operation
 
 @endpoint GET /api/v1/runners/jobs/{jobUUID}/cancel
+@desc Cancel a job
 @required {jobUUID: str(uuid)}
-@returns(204)
+@returns(204) successful operation
 
 @endpoint DELETE /api/v1/runners/jobs/{jobUUID}
+@desc Delete a job
 @required {jobUUID: str(uuid)}
-@returns(204)
+@returns(204) successful operation
 
 @endpoint GET /api/v1/runners/jobs
-@optional {start: int, count: int=15, sort: str(updatedAt/createdAt/priority/state/progress), search: str, stateOneOf: [int]}
-@returns(200) {total: int, data: [any]}
+@desc List jobs
+@optional {start: int # Offset used to paginate results, count: int=15 # Number of items to return, sort: str(updatedAt/createdAt/priority/state/progress) # Sort runner jobs by criteria, search: str # Plain text search, applied to various parts of the model depending on endpoint, stateOneOf: [int]}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint GET /api/v1/automatic-tags/policies/accounts/{accountName}/comments
-@required {accountName: str}
-@returns(200) {review: [str]}
+@desc Get account auto tag policies on comments
+@required {accountName: str # account name to get auto tag policies}
+@returns(200) {review: [str]} # successful operation
 
 @endpoint PUT /api/v1/automatic-tags/policies/accounts/{accountName}/comments
-@required {accountName: str}
-@optional {review: [str]}
-@returns(204)
+@desc Update account auto tag policies on comments
+@required {accountName: str # account name to update auto tag policies}
+@optional {review: [str] # Auto tags that automatically set the comment in review state}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/automatic-tags/accounts/{accountName}/available
-@required {accountName: str}
-@returns(200) {available: [map]}
+@desc Get account available auto tags
+@required {accountName: str # account name to get auto tag policies}
+@returns(200) {available: [map]} # successful operation
 
 @endpoint GET /api/v1/automatic-tags/server/available
-@returns(200) {available: [map]}
+@desc Get server available auto tags
+@returns(200) {available: [map]} # successful operation
 
 @endpoint GET /api/v1/watched-words/accounts/{accountName}/lists
-@required {accountName: str}
-@returns(200) {total: int, data: [any]}
+@desc List account watched words
+@required {accountName: str # account name to list watched words}
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/watched-words/accounts/{accountName}/lists
+@desc Add account watched words
 @required {accountName: str}
 @optional {listName: str, words: [str]}
-@returns(200) {watchedWordsList: map{id: int}}
+@returns(200) {watchedWordsList: map{id: int}} # successful operation
 
 @endpoint PUT /api/v1/watched-words/accounts/{accountName}/lists/{listId}
-@required {accountName: str, listId: str}
+@desc Update account watched words
+@required {accountName: str, listId: str # list of watched words to update}
 @optional {listName: str, words: [str]}
-@returns(204)
+@returns(204) successful operation
 
 @endpoint DELETE /api/v1/watched-words/accounts/{accountName}/lists/{listId}
-@required {accountName: str, listId: str}
-@returns(204)
+@desc Delete account watched words
+@required {accountName: str, listId: str # list of watched words to delete}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/watched-words/server/lists
-@returns(200) {total: int, data: [any]}
+@desc List server watched words
+@returns(200) {total: int, data: [any]} # successful operation
 
 @endpoint POST /api/v1/watched-words/server/lists
+@desc Add server watched words
 @optional {listName: str, words: [str]}
-@returns(200) {watchedWordsList: map{id: int}}
+@returns(200) {watchedWordsList: map{id: int}} # successful operation
 
 @endpoint PUT /api/v1/watched-words/server/lists/{listId}
-@required {listId: str}
+@desc Update server watched words
+@required {listId: str # list of watched words to update}
 @optional {listName: str, words: [str]}
-@returns(204)
+@returns(204) successful operation
 
 @endpoint DELETE /api/v1/watched-words/server/lists/{listId}
-@required {listId: str}
-@returns(204)
+@desc Delete server watched words
+@required {listId: str # list of watched words to delete}
+@returns(204) successful operation
 
 @endpoint POST /api/v1/client-config/update-language
-@required {language: str}
-@returns(204)
+@desc Update client language
+@required {language: str # Language code to set}
+@returns(204) successful operation
 
 @endpoint GET /api/v1/video-channels/{channelHandle}/collaborators
-@required {channelHandle: str}
-@returns(200) {total: int, data: [map]}
+@desc *List channel collaborators
+@required {channelHandle: str # The video channel handle}
+@returns(200) {total: int, data: [map]} # successful operation
 
 @endpoint POST /api/v1/video-channels/{channelHandle}/collaborators/invite
-@required {channelHandle: str}
-@optional {accountHandle: str}
-@returns(200) {collaborator: map{id: int, account: any, state: map{id: int, label: str}, createdAt: str(date-time), updatedAt: str(date-time)}}
+@desc Invite a collaborator
+@required {channelHandle: str # The video channel handle}
+@optional {accountHandle: str # Local user username to invite}
+@returns(200) {collaborator: map{id: int, account: any, state: map{id: int, label: str}, createdAt: str(date-time), updatedAt: str(date-time)}} # Collaborator invited
 
 @endpoint POST /api/v1/video-channels/{channelHandle}/collaborators/{collaboratorId}/accept
-@required {channelHandle: str, collaboratorId: int}
-@returns(204)
+@desc Accept a collaboration invitation
+@required {channelHandle: str # The video channel handle, collaboratorId: int # The collaborator id}
+@returns(204) Collaboration accepted
 
 @endpoint POST /api/v1/video-channels/{channelHandle}/collaborators/{collaboratorId}/reject
-@required {channelHandle: str, collaboratorId: int}
-@returns(204)
+@desc Reject a collaboration invitation
+@required {channelHandle: str # The video channel handle, collaboratorId: int # The collaborator id}
+@returns(204) Collaboration rejected
 
 @endpoint DELETE /api/v1/video-channels/{channelHandle}/collaborators/{collaboratorId}
-@required {channelHandle: str, collaboratorId: int}
-@returns(204)
+@desc Remove a channel collaborator
+@required {channelHandle: str # The video channel handle, collaboratorId: int # The collaborator id}
+@returns(204) successful operation
 
 @endgroup
 

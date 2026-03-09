@@ -153,88 +153,68 @@ Requires API key (key parameter)
 |--------|------|-------------|
 | GET | /statements | Get Statements |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I authenticate my cobrand session?" -> POST /cobrand/login
-- "What transactions happened in my account last month?" -> GET /transactions
-- "How many transactions match a specific category?" -> GET /transactions/count
-- "What financial providers are available for linking?" -> GET /providers
-- "How do I link a new bank account?" -> PUT /providerAccounts
-- "What is my current net worth across all accounts?" -> GET /derived/networth
-- "How do I register a new user?" -> POST /user/register
-- "How do I categorize a transaction differently?" -> PUT /transactions/{transactionId}
-- "What are my investment holdings?" -> GET /holdings
-- "How do I verify a newly linked account with micro-deposits?" -> POST /verification
-- "What notification webhooks are configured?" -> GET /configs/notifications/events
-- "How do I get a summary of spending by category?" -> GET /derived/transactionSummary
-- "How do I download a specific document or statement?" -> GET /documents/{documentId}
-- "What historical balances does my account have?" -> GET /accounts/historicalBalances
-- "How do I delete a linked provider account?" -> DELETE /providerAccounts/{providerAccountId}
-
-## Response Tips
-
-- **Transactions**: Results use `skip`/`top` for pagination; always check `transactions.count` first to size your iteration. Amounts are nested `{amount, currency}` objects.
-- **Accounts**: The `include` param controls which nested objects (e.g., profile, holder) appear; omitting it returns a slim payload. Status field values drive account lifecycle.
-- **Providers**: Large result sets; use `skip`/`top` and `name` filter to narrow. `providerId` is required for detail calls and linking flows.
-- **Holdings**: Securities and holdings are separate endpoints; join on `holdingId`. Classification types come from `/holdings/assetClassificationList`.
-- **Derived**: Summary endpoints require `groupBy` and return nested interval arrays. Date ranges are mandatory for meaningful results.
-- **Auth/Cobrand**: Login returns session tokens (cobSession, userSession) used as headers in all subsequent calls. 204 responses have no body.
-- **Verification**: Response contains verification status and matched transactions. The `verificationType` field determines the flow (matching, challenge-deposit).
-- **Errors**: All endpoints return 400 (bad request), 401 (expired or missing session), or 404 (resource not found). Parse the `errorCode` and `errorMessage` fields in the error body.
-
-## Anomaly Flags
-
-- **401 on any call**: Session token has expired. Surface immediately and suggest re-authenticating via `POST /cobrand/login` then `POST /auth/token`.
-- **Repeated 400 errors on provider linking**: Provider login form fields may have changed. Recommend refreshing provider details via `GET /providers/{providerId}`.
-- **Empty transaction results with valid date range**: Account refresh may still be in progress. Check provider account status via `GET /providerAccounts/{providerAccountId}` and surface the `refreshInfo` status.
-- **Net worth returning unexpected values**: Flag if `includeInNetWorth` is inconsistent across accounts; suggest reviewing via `GET /accounts`.
-- **Notification event callbacks returning 404**: Webhook URL may be unreachable. Surface when `GET /configs/notifications/events` returns no registered events after a create call returned 201.
-- **Data extract queries returning empty for valid date ranges**: User may not have data extracts enabled. Check provider account preferences (`isDataExtractsEnabled`).
-- **Verification stuck in pending state**: Flag if `PUT /verification` status has not advanced after expected timeframe; suggest checking with `GET /verification`.
-
-## Playbook
-
-### 1. Initial Setup and Authentication
-
-1. Authenticate the cobrand: `POST /cobrand/login` with cobrandLogin and cobrandPassword
-2. Register a new user: `POST /user/register` with loginName and optional profile fields
-3. Generate a user session token: `POST /auth/token`
-4. Store both `cobSession` and `userSession` tokens for all subsequent API headers
-
-### 2. Link a Financial Institution
-
-1. Search for the provider: `GET /providers?name=BankName`
-2. Get provider login form: `GET /providers/{providerId}` to retrieve required credential fields
-3. Submit credentials: `PUT /providerAccounts` with the provider's login form fields populated
-4. Poll for status: `GET /providerAccounts/{providerAccountId}` until `refreshInfo.status` is `SUCCESS` or `FAILED`
-5. Verify the account if needed: `POST /verification` or `POST /verifyAccount/{providerAccountId}`
-
-### 3. Retrieve and Categorize Transactions
-
-1. Get total count: `GET /transactions/count?fromDate=YYYY-MM-DD&toDate=YYYY-MM-DD`
-2. Fetch transactions in pages: `GET /transactions?fromDate=...&toDate=...&skip=0&top=100`
-3. Review existing categories: `GET /transactions/categories`
-4. Create a custom category if needed: `POST /transactions/categories` with parentCategoryId
-5. Recategorize a transaction: `PUT /transactions/{transactionId}` with new categoryId
-6. Optionally create an auto-categorization rule: `POST /transactions/categories/rules`
-
-### 4. Monitor Net Worth and Holdings
-
-1. Fetch all linked accounts: `GET /accounts`
-2. Get current net worth: `GET /derived/networth?interval=M&fromDate=...&toDate=...`
-3. Review investment holdings: `GET /holdings?include=assetClassification`
-4. Get holding summary by classification: `GET /derived/holdingSummary?classificationType=assetCategory`
-5. Check historical account balances: `GET /accounts/historicalBalances?fromDate=...&toDate=...&interval=M`
-
-### 5. Set Up Webhook Notifications
-
-1. Check existing notification subscriptions: `GET /configs/notifications/events`
-2. Subscribe to refresh events: `POST /configs/notifications/events/REFRESH` with your callbackUrl
-3. Subscribe to data update events: `POST /configs/notifications/events/DATA_UPDATES` with callbackUrl
-4. Update a callback URL if it changes: `PUT /configs/notifications/events/{eventName}`
-5. Remove a subscription when no longer needed: `DELETE /configs/notifications/events/{eventName}`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all transactions?" -> GET /transactions
+- "Create a login?" -> POST /cobrand/login
+- "List all userData?" -> GET /dataExtracts/userData
+- "List all providers?" -> GET /providers
+- "Get provider details?" -> GET /providers/{providerId}
+- "Update a event?" -> PUT /cobrand/config/notifications/events/{eventName}
+- "Delete a event?" -> DELETE /cobrand/config/notifications/events/{eventName}
+- "List all events?" -> GET /configs/notifications/events
+- "List all count?" -> GET /providers/count
+- "List all networth?" -> GET /derived/networth
+- "Create a samlLogin?" -> POST /user/samlLogin
+- "Update a rule?" -> PUT /transactions/categories/rules/{ruleId}
+- "Delete a rule?" -> DELETE /transactions/categories/rules/{ruleId}
+- "Get document details?" -> GET /documents/{documentId}
+- "Delete a document?" -> DELETE /documents/{documentId}
+- "List all accessTokens?" -> GET /user/accessTokens
+- "Create a logout?" -> POST /cobrand/logout
+- "Create a token?" -> POST /auth/token
+- "List all user?" -> GET /user
+- "Get providerAccount details?" -> GET /providerAccounts/{providerAccountId}
+- "Delete a providerAccount?" -> DELETE /providerAccounts/{providerAccountId}
+- "List all accounts?" -> GET /accounts
+- "Create a account?" -> POST /accounts
+- "List all assetClassificationList?" -> GET /holdings/assetClassificationList
+- "List all publicKey?" -> GET /configs/publicKey
+- "Delete a apiKey?" -> DELETE /auth/apiKey/{key}
+- "List all providerAccounts?" -> GET /providerAccounts
+- "List all count?" -> GET /transactions/count
+- "List all transactionSummary?" -> GET /derived/transactionSummary
+- "List all txnRules?" -> GET /transactions/categories/txnRules
+- "Delete a category?" -> DELETE /transactions/categories/{categoryId}
+- "List all documents?" -> GET /documents
+- "Create a evaluateAddress?" -> POST /accounts/evaluateAddress
+- "Get account details?" -> GET /accounts/{accountId}
+- "Update a account?" -> PUT /accounts/{accountId}
+- "Delete a account?" -> DELETE /accounts/{accountId}
+- "List all historicalBalances?" -> GET /accounts/historicalBalances
+- "Create a register?" -> POST /user/register
+- "List all profile?" -> GET /providerAccounts/profile
+- "List all verification?" -> GET /verification
+- "Create a verification?" -> POST /verification
+- "List all securities?" -> GET /holdings/securities
+- "Update a event?" -> PUT /configs/notifications/events/{eventName}
+- "Delete a event?" -> DELETE /configs/notifications/events/{eventName}
+- "List all holdings?" -> GET /holdings
+- "List all events?" -> GET /cobrand/config/notifications/events
+- "List all apiKey?" -> GET /auth/apiKey
+- "Create a apiKey?" -> POST /auth/apiKey
+- "List all publicKey?" -> GET /cobrand/publicKey
+- "List all categories?" -> GET /transactions/categories
+- "Create a category?" -> POST /transactions/categories
+- "List all rules?" -> GET /transactions/categories/rules
+- "Create a rule?" -> POST /transactions/categories/rules
+- "List all statements?" -> GET /statements
+- "List all holdingTypeList?" -> GET /holdings/holdingTypeList
+- "Create a logout?" -> POST /user/logout
+- "Update a transaction?" -> PUT /transactions/{transactionId}
+- "List all events?" -> GET /dataExtracts/events
+- "List all holdingSummary?" -> GET /derived/holdingSummary
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

@@ -10,537 +10,688 @@
 
 @group projects
 @endpoint GET /projects/{project_id}/advisors
-@optional {branch_id: str, database_name: str, category: str, min_severity: str(INFO/WARN/ERROR)}
-@returns(200) {issues: [map]}
+@desc Get advisor issues
+@optional {branch_id: str # Branch ID to analyze. If not specified, the project's default branch is used., database_name: str # Database name to analyze. Required if branch has multiple databases., category: str # Filter issues by category, min_severity: str(INFO/WARN/ERROR) # Minimum severity level to include. For example, WARN returns WARN and ERROR issues, excluding INFO.}
+@returns(200) {issues: [map]} # Successfully retrieved security advisor issues
 
 @endgroup
 
 @group api_keys
 @endpoint GET /api_keys
-@returns(200)
+@desc List API keys
+@returns(200) Returned the API keys for the Neon account
 
 @endpoint POST /api_keys
-@required {key_name: str}
-@returns(200) {id: int(int64), key: str, name: str, created_at: str(date-time), created_by: str(uuid)}
+@desc Create API key
+@required {key_name: str # A user-specified API key name. This value is required when creating an API key.}
+@returns(200) {id: int(int64), key: str, name: str, created_at: str(date-time), created_by: str(uuid)} # Created an API key
+@example_request {"key_name":"mykey"}
 
 @endpoint DELETE /api_keys/{key_id}
-@required {key_id: int(int64)}
-@returns(200) {id: int(int64), name: str, created_at: str(date-time), created_by: str(uuid), last_used_at: str(date-time)?, last_used_from_addr: str, revoked: bool}
+@desc Revoke API key
+@required {key_id: int(int64) # The API key ID}
+@returns(200) {id: int(int64), name: str, created_at: str(date-time), created_by: str(uuid), last_used_at: str(date-time)?, last_used_from_addr: str, revoked: bool} # Revoked the specified API key
 
 @endgroup
 
 @group projects
 @endpoint GET /projects/{project_id}/operations/{operation_id}
-@returns(200) {operation: map{id: str(uuid), project_id: str, branch_id: str, endpoint_id: str, action: str, status: str, error: str, failures_count: int(int32), retry_at: str(date-time), created_at: str(date-time), updated_at: str(date-time), total_duration_ms: int(int32)}}
+@desc Retrieve operation details
+@returns(200) {operation: map{id: str(uuid), project_id: str, branch_id: str, endpoint_id: str, action: str, status: str, error: str, failures_count: int(int32), retry_at: str(date-time), created_at: str(date-time), updated_at: str(date-time), total_duration_ms: int(int32)}} # Returned details for the specified operation
 
 @endpoint GET /projects
-@optional {cursor: str, limit: int=10, search: str, org_id: str, timeout: int, recoverable: bool=False}
-@returns(200)
+@desc List projects
+@optional {cursor: str # Specify the cursor value from the previous response to retrieve the next batch of projects., limit: int=10 # Specify a value from 1 to 400 to limit number of projects in the response., search: str # Search by project `name` or `id`. You can specify partial `name` or `id` values to filter results., org_id: str # Search for projects by `org_id`., timeout: int # Specify an explicit timeout in milliseconds to limit response delay. After timing out, the incomplete list of project data fetched so far will be returned. Projects still being fetched when the timeout occurred are listed in the "unavailable" attribute of the response. If not specified, an implicit implementation defined timeout is chosen with the same behaviour as above, recoverable: bool=False # Show only deleted projects within the recovery window.}
+@returns(200) Returned a list of projects for the Neon account
 
 @endpoint POST /projects
+@desc Create project
 @required {project: map{settings: map{quota: map, allowed_ips: map, enable_logical_replication: bool, maintenance_window: map, block_public_connections: bool, block_vpc_connections: bool, audit_log_level: str, hipaa: bool, preload_libraries: map}, name: str, branch: map{name: str, role_name: str, database_name: str, annotations: map}, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, provisioner: str, region_id: str, default_endpoint_settings: map{pg_settings: map, pgbouncer_settings: map, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, suspend_timeout_seconds: int(int64)}, pg_version: int, store_passwords: bool, history_retention_seconds: int(int32), org_id: str}}
-@returns(201)
+@returns(201) Created a project. The project includes a connection URI with a database, password, and role. At least one non-protected role is created with a password. Wait until the operations are finished before attempting to connect to a project database.
+@example_request {"project":{"name":"myproject"}}
 
 @endpoint GET /projects/shared
-@optional {cursor: str, limit: int=10, search: str, timeout: int}
-@returns(200)
+@desc List shared projects
+@optional {cursor: str # Specify the cursor value from the previous response to get the next batch of projects., limit: int=10 # Specify a value from 1 to 400 to limit number of projects in the response., search: str # Search query by name or id., timeout: int # Specify an explicit timeout in milliseconds to limit response delay. After timing out, the incomplete list of project data fetched so far will be returned. Projects still being fetched when the timeout occurred are listed in the "unavailable" attribute of the response. If not specified, an implicit implementation defined timeout is chosen with the same behaviour as above}
+@returns(200) Returned a list of shared projects for the Neon account
 
 @endpoint GET /projects/{project_id}
-@returns(200) {project: map{data_storage_bytes_hour: int(int64), data_transfer_bytes: int(int64), written_data_bytes: int(int64), compute_time_seconds: int(int64), active_time_seconds: int(int64), cpu_used_sec: int(int64), id: str, platform_id: str, region_id: str, name: str, provisioner: str, default_endpoint_settings: map{pg_settings: map, pgbouncer_settings: map, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, suspend_timeout_seconds: int(int64)}, settings: map{quota: map{active_time_seconds: int(int64), compute_time_seconds: int(int64), written_data_bytes: int(int64), data_transfer_bytes: int(int64), logical_size_bytes: int(int64)}, allowed_ips: map{ips: [str], protected_branches_only: bool}, enable_logical_replication: bool, maintenance_window: map{weekdays: [int], start_time: str, end_time: str}, block_public_connections: bool, block_vpc_connections: bool, audit_log_level: str, hipaa: bool, preload_libraries: map{use_defaults: bool, enabled_libraries: [str]}}, pg_version: int, proxy_host: str, branch_logical_size_limit: int(int64), branch_logical_size_limit_bytes: int(int64), store_passwords: bool, maintenance_starts_at: str(date-time), creation_source: str, history_retention_seconds: int(int32), created_at: str(date-time), updated_at: str(date-time), synthetic_storage_size: int(int64), consumption_period_start: str(date-time), consumption_period_end: str(date-time), quota_reset_at: str(date-time), owner_id: str, owner: map{email: str(email), name: str, branches_limit: int, subscription_type: str}, compute_last_active_at: str(date-time), org_id: str, maintenance_scheduled_for: str(date-time), hipaa_enabled_at: str(date-time)}}
+@desc Retrieve project details
+@returns(200) {project: map{data_storage_bytes_hour: int(int64), data_transfer_bytes: int(int64), written_data_bytes: int(int64), compute_time_seconds: int(int64), active_time_seconds: int(int64), cpu_used_sec: int(int64), id: str, platform_id: str, region_id: str, name: str, provisioner: str, default_endpoint_settings: map{pg_settings: map, pgbouncer_settings: map, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, suspend_timeout_seconds: int(int64)}, settings: map{quota: map{active_time_seconds: int(int64), compute_time_seconds: int(int64), written_data_bytes: int(int64), data_transfer_bytes: int(int64), logical_size_bytes: int(int64)}, allowed_ips: map{ips: [str], protected_branches_only: bool}, enable_logical_replication: bool, maintenance_window: map{weekdays: [int], start_time: str, end_time: str}, block_public_connections: bool, block_vpc_connections: bool, audit_log_level: str, hipaa: bool, preload_libraries: map{use_defaults: bool, enabled_libraries: [str]}}, pg_version: int, proxy_host: str, branch_logical_size_limit: int(int64), branch_logical_size_limit_bytes: int(int64), store_passwords: bool, maintenance_starts_at: str(date-time), creation_source: str, history_retention_seconds: int(int32), created_at: str(date-time), updated_at: str(date-time), synthetic_storage_size: int(int64), consumption_period_start: str(date-time), consumption_period_end: str(date-time), quota_reset_at: str(date-time), owner_id: str, owner: map{email: str(email), name: str, branches_limit: int, subscription_type: str}, compute_last_active_at: str(date-time), org_id: str, maintenance_scheduled_for: str(date-time), hipaa_enabled_at: str(date-time)}} # Returned information about the specified project
 
 @endpoint PATCH /projects/{project_id}
+@desc Update project
 @required {project: map{settings: map{quota: map, allowed_ips: map, enable_logical_replication: bool, maintenance_window: map, block_public_connections: bool, block_vpc_connections: bool, audit_log_level: str, hipaa: bool, preload_libraries: map}, name: str, default_endpoint_settings: map{pg_settings: map, pgbouncer_settings: map, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, suspend_timeout_seconds: int(int64)}, history_retention_seconds: int(int32)}}
-@returns(200)
+@returns(200) Updated the specified project
+@example_request {"project":{"name":"myproject"}}
 
 @endpoint DELETE /projects/{project_id}
-@returns(200) {project: map{data_storage_bytes_hour: int(int64), data_transfer_bytes: int(int64), written_data_bytes: int(int64), compute_time_seconds: int(int64), active_time_seconds: int(int64), cpu_used_sec: int(int64), id: str, platform_id: str, region_id: str, name: str, provisioner: str, default_endpoint_settings: map{pg_settings: map, pgbouncer_settings: map, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, suspend_timeout_seconds: int(int64)}, settings: map{quota: map{active_time_seconds: int(int64), compute_time_seconds: int(int64), written_data_bytes: int(int64), data_transfer_bytes: int(int64), logical_size_bytes: int(int64)}, allowed_ips: map{ips: [str], protected_branches_only: bool}, enable_logical_replication: bool, maintenance_window: map{weekdays: [int], start_time: str, end_time: str}, block_public_connections: bool, block_vpc_connections: bool, audit_log_level: str, hipaa: bool, preload_libraries: map{use_defaults: bool, enabled_libraries: [str]}}, pg_version: int, proxy_host: str, branch_logical_size_limit: int(int64), branch_logical_size_limit_bytes: int(int64), store_passwords: bool, maintenance_starts_at: str(date-time), creation_source: str, history_retention_seconds: int(int32), created_at: str(date-time), updated_at: str(date-time), synthetic_storage_size: int(int64), consumption_period_start: str(date-time), consumption_period_end: str(date-time), quota_reset_at: str(date-time), owner_id: str, owner: map{email: str(email), name: str, branches_limit: int, subscription_type: str}, compute_last_active_at: str(date-time), org_id: str, maintenance_scheduled_for: str(date-time), hipaa_enabled_at: str(date-time)}}
+@desc Delete project
+@returns(200) {project: map{data_storage_bytes_hour: int(int64), data_transfer_bytes: int(int64), written_data_bytes: int(int64), compute_time_seconds: int(int64), active_time_seconds: int(int64), cpu_used_sec: int(int64), id: str, platform_id: str, region_id: str, name: str, provisioner: str, default_endpoint_settings: map{pg_settings: map, pgbouncer_settings: map, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, suspend_timeout_seconds: int(int64)}, settings: map{quota: map{active_time_seconds: int(int64), compute_time_seconds: int(int64), written_data_bytes: int(int64), data_transfer_bytes: int(int64), logical_size_bytes: int(int64)}, allowed_ips: map{ips: [str], protected_branches_only: bool}, enable_logical_replication: bool, maintenance_window: map{weekdays: [int], start_time: str, end_time: str}, block_public_connections: bool, block_vpc_connections: bool, audit_log_level: str, hipaa: bool, preload_libraries: map{use_defaults: bool, enabled_libraries: [str]}}, pg_version: int, proxy_host: str, branch_logical_size_limit: int(int64), branch_logical_size_limit_bytes: int(int64), store_passwords: bool, maintenance_starts_at: str(date-time), creation_source: str, history_retention_seconds: int(int32), created_at: str(date-time), updated_at: str(date-time), synthetic_storage_size: int(int64), consumption_period_start: str(date-time), consumption_period_end: str(date-time), quota_reset_at: str(date-time), owner_id: str, owner: map{email: str(email), name: str, branches_limit: int, subscription_type: str}, compute_last_active_at: str(date-time), org_id: str, maintenance_scheduled_for: str(date-time), hipaa_enabled_at: str(date-time)}} # Deleted the specified project
 
 @endpoint POST /projects/{project_id}/restore
-@returns(200)
+@desc Restore a deleted project
+@returns(200) Returned the restored project
 
 @endpoint POST /projects/{project_id}/recover
-@returns(200)
+@desc Recover a deleted project
+@returns(200) Returned the recovered project
 
 @endpoint GET /projects/{project_id}/operations
-@required {project_id: str}
-@optional {cursor: str, limit: int}
-@returns(200)
+@desc List operations
+@required {project_id: str # The Neon project ID}
+@optional {cursor: str # Specify the cursor value from the previous response to get the next batch of operations, limit: int # Specify a value from 1 to 1000 to limit number of operations in the response}
+@returns(200) Returned a list of operations
 
 @endpoint GET /projects/{project_id}/permissions
-@returns(200) {project_permissions: [map]}
+@desc List project access
+@returns(200) {project_permissions: [map]} # Returned project access details
 
 @endpoint POST /projects/{project_id}/permissions
+@desc Grant project access
 @required {email: str(email)}
-@returns(200) {id: str, granted_to_email: str(email), granted_at: str(date-time), revoked_at: str(date-time)}
+@returns(200) {id: str, granted_to_email: str(email), granted_at: str(date-time), revoked_at: str(date-time)} # Granted project access
 
 @endpoint DELETE /projects/{project_id}/permissions/{permission_id}
-@returns(200) {id: str, granted_to_email: str(email), granted_at: str(date-time), revoked_at: str(date-time)}
+@desc Revoke project access
+@returns(200) {id: str, granted_to_email: str(email), granted_at: str(date-time), revoked_at: str(date-time)} # Revoked project access
 
 @endpoint GET /projects/{project_id}/available_preload_libraries
+@desc Return available shared preload libraries
 @required {project_id: str}
-@returns(200) {libraries: [map]}
+@returns(200) {libraries: [map]} # Successfully returned available shared preload libraries
 
 @endpoint POST /projects/{project_id}/transfer_requests
-@optional {ttl_seconds: int(int64)}
-@returns(201) {id: str(uuid), project_id: str, created_at: str(date-time), expires_at: str(date-time)}
+@desc Create a project transfer request
+@optional {ttl_seconds: int(int64) # Specifies the validity duration of the transfer request in seconds. If not provided, the request will expire after 24 hours (86,400 seconds).}
+@returns(201) {id: str(uuid), project_id: str, created_at: str(date-time), expires_at: str(date-time)} # Project transfer request created successfully
 
 @endpoint PUT /projects/{project_id}/transfer_requests/{request_id}
-@optional {org_id: str}
-@returns(204)
-@errors {406}
+@desc Accept a project transfer request
+@optional {org_id: str # The Neon organization ID to transfer the project to. If not provided, the project will be transferred to the current user or organization account.}
+@returns(204) Project transfer request accepted successfully
+@errors {406: Account doesn't satisfy the plan requirements to own the project}
 
 @endpoint GET /projects/{project_id}/jwks
-@returns(200) {jwks: [map]}
+@desc List JWKS URLs
+@returns(200) {jwks: [map]} # The JWKS URLs available for the project
 
 @endpoint POST /projects/{project_id}/jwks
-@required {jwks_url: str, provider_name: str}
-@optional {branch_id: str, jwt_audience: str, role_names: [str], skip_role_creation: bool=False}
-@returns(201)
+@desc Add JWKS URL
+@required {jwks_url: str # The URL that lists the JWKS, provider_name: str # The name of the authentication provider (e.g., Clerk, Stytch, Auth0)}
+@optional {branch_id: str # Branch ID, jwt_audience: str # The name of the required JWT Audience to be used, role_names: [str] # DEPRECATED. This field should only be used when using Neon RLS. The roles the JWKS should be mapped to. By default, the JWKS is mapped to the `authenticator`, `authenticated` and `anonymous` roles., skip_role_creation: bool=False # DEPRECATED. This field should only be used when using Neon RLS. If true, the role creation will be skipped.}
+@returns(201) The JWKS URL was added to the project's authentication connections
 
 @endpoint DELETE /projects/{project_id}/jwks/{jwks_id}
-@returns(200) {id: str, project_id: str, branch_id: str, jwks_url: str, provider_name: str, created_at: str(date-time), updated_at: str(date-time), jwt_audience: str, role_names: [str]}
+@desc Delete JWKS URL
+@returns(200) {id: str, project_id: str, branch_id: str, jwks_url: str, provider_name: str, created_at: str(date-time), updated_at: str(date-time), jwt_audience: str, role_names: [str]} # Deleted a JWKS URL from the project
 
 @endpoint POST /projects/{project_id}/branches/{branch_id}/data-api/{database_name}
-@optional {auth_provider: str(neon_auth/external), jwks_url: str(uri), provider_name: str, jwt_audience: str, add_default_grants: bool=False, skip_auth_schema: bool=False, settings: map{db_aggregates_enabled: bool, db_anon_role: str, db_extra_search_path: str, db_max_rows: int, db_schemas: [str], jwt_role_claim_key: str, jwt_cache_max_lifetime: int, openapi_mode: str, server_cors_allowed_origins: str, server_timing_enabled: bool}}
-@returns(201) {url: str(uri)}
+@desc Create Neon Data API
+@optional {auth_provider: str(neon_auth/external) # The authentication provider to use for the Neon Data API, jwks_url: str(uri) # The URL that lists the JWKS, provider_name: str # The name of the authentication provider (e.g., Clerk, Stytch, Auth0), jwt_audience: str # WARNING - using this setting will only reject tokens with a different audience claim. Tokens without audience claim will still be accepted., add_default_grants: bool=False # Grant all permissions to the tables in the public schema to authenticated users, skip_auth_schema: bool=False # Skip creating the auth schema and RLS functions, settings: map{db_aggregates_enabled: bool, db_anon_role: str, db_extra_search_path: str, db_max_rows: int, db_schemas: [str], jwt_role_claim_key: str, jwt_cache_max_lifetime: int, openapi_mode: str, server_cors_allowed_origins: str, server_timing_enabled: bool} # Configuration settings for the Neon Data API}
+@returns(201) {url: str(uri)} # Creates a new app
 
 @endpoint PATCH /projects/{project_id}/branches/{branch_id}/data-api/{database_name}
-@optional {settings: map{db_aggregates_enabled: bool, db_anon_role: str, db_extra_search_path: str, db_max_rows: int, db_schemas: [str], jwt_role_claim_key: str, jwt_cache_max_lifetime: int, openapi_mode: str, server_cors_allowed_origins: str, server_timing_enabled: bool}}
-@returns(201)
+@desc Update Neon Data API
+@optional {settings: map{db_aggregates_enabled: bool, db_anon_role: str, db_extra_search_path: str, db_max_rows: int, db_schemas: [str], jwt_role_claim_key: str, jwt_cache_max_lifetime: int, openapi_mode: str, server_cors_allowed_origins: str, server_timing_enabled: bool} # Configuration settings for the Neon Data API}
+@returns(201) Updated the Neon Data API configuration and refreshed the schema cache
 
 @endpoint DELETE /projects/{project_id}/branches/{branch_id}/data-api/{database_name}
-@returns(200)
+@desc Delete Neon Data API
+@returns(200) Deleted the Neon Data API for the specified branch
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/data-api/{database_name}
-@returns(200) {url: str(uri), status: str, settings: map?, available_schemas: [str]?}
+@desc Get Neon Data API
+@returns(200) {url: str(uri), status: str, settings: map?, available_schemas: [str]?} # Returns the Neon Data API for the specified branch
 
 @endpoint POST /projects/auth/create
+@desc Create Neon Auth integration
 @required {auth_provider: str(mock/stack/stack_v2/better_auth), project_id: str, branch_id: str}
 @optional {database_name: str, role_name: str}
-@returns(201) {auth_provider: str, auth_provider_project_id: str, pub_client_key: str, secret_server_key: str, jwks_url: str, schema_name: str, table_name: str, base_url: str}
+@returns(201) {auth_provider: str, auth_provider_project_id: str, pub_client_key: str, secret_server_key: str, jwks_url: str, schema_name: str, table_name: str, base_url: str} # Creates Neon Auth integration
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/auth
-@returns(200) {auth_provider: str, auth_provider_project_id: str, branch_id: str, db_name: str, created_at: str(date-time), owned_by: str, transfer_status: str, jwks_url: str, base_url: str}
+@desc Get details of Neon Auth for the branch
+@returns(200) {auth_provider: str, auth_provider_project_id: str, branch_id: str, db_name: str, created_at: str(date-time), owned_by: str, transfer_status: str, jwks_url: str, base_url: str} # Fetched the details of the Neon Auth integration for the specified branch
 
 @endpoint POST /projects/{project_id}/branches/{branch_id}/auth
+@desc Enable Neon Auth for the branch
 @required {auth_provider: str(mock/stack/stack_v2/better_auth)}
 @optional {database_name: str}
-@returns(201) {auth_provider: str, auth_provider_project_id: str, pub_client_key: str, secret_server_key: str, jwks_url: str, schema_name: str, table_name: str, base_url: str}
+@returns(201) {auth_provider: str, auth_provider_project_id: str, pub_client_key: str, secret_server_key: str, jwks_url: str, schema_name: str, table_name: str, base_url: str} # Enables Neon Auth integration for the branch
 
 @endpoint DELETE /projects/{project_id}/branches/{branch_id}/auth
-@optional {delete_data: bool=False}
-@returns(200)
+@desc Disables Neon Auth for the branch
+@optional {delete_data: bool=False # If true, deletes the `neon_auth` schema from the database}
+@returns(200) Delete the integration with the authentication provider
 
 @endpoint GET /projects/{project_id}/auth/domains
-@returns(200) {domains: [map]}
+@desc List domains in redirect_uri whitelist
+@returns(200) {domains: [map]} # Returned the domains in the redirect_uri whitelist
 
 @endpoint POST /projects/{project_id}/auth/domains
+@desc Add domain to redirect_uri whitelist
 @required {domain: str(uri), auth_provider: str(mock/stack/stack_v2/better_auth)}
-@returns(201)
+@returns(201) Added the domain to the redirect_uri whitelist
 
 @endpoint DELETE /projects/{project_id}/auth/domains
+@desc Delete domain from redirect_uri whitelist
 @required {auth_provider: str(mock/stack/stack_v2/better_auth), domains: [map{domain!: str(uri)}]}
-@returns(200)
+@returns(200) Deleted the domain from the redirect_uri whitelist
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/auth/domains
-@returns(200) {domains: [map]}
+@desc List domains in redirect_uri whitelist
+@returns(200) {domains: [map]} # Returned the domains in the redirect_uri whitelist
 
 @endpoint POST /projects/{project_id}/branches/{branch_id}/auth/domains
+@desc Add domain to redirect_uri whitelist
 @required {domain: str(uri), auth_provider: str(mock/stack/stack_v2/better_auth)}
-@returns(201)
+@returns(201) Added the domain to the redirect_uri whitelist
 
 @endpoint DELETE /projects/{project_id}/branches/{branch_id}/auth/domains
+@desc Delete domain from redirect_uri whitelist
 @required {auth_provider: str(mock/stack/stack_v2/better_auth), domains: [map{domain!: str(uri)}]}
-@returns(200)
+@returns(200) Deleted the domain from the redirect_uri whitelist
 
 @endpoint POST /projects/auth/keys
+@desc Create Auth Provider SDK keys
 @required {project_id: str, auth_provider: str(mock/stack/stack_v2/better_auth)}
-@returns(201) {auth_provider: str, auth_provider_project_id: str, pub_client_key: str, secret_server_key: str, jwks_url: str, schema_name: str, table_name: str, base_url: str}
+@returns(201) {auth_provider: str, auth_provider_project_id: str, pub_client_key: str, secret_server_key: str, jwks_url: str, schema_name: str, table_name: str, base_url: str} # Creates Auth Provider SDK keys
 
 @endpoint POST /projects/auth/user
+@desc Create new auth user
 @required {project_id: str, auth_provider: str(mock/stack/stack_v2/better_auth), email: str(email)}
 @optional {name: str}
-@returns(201) {id: str}
+@returns(201) {id: str} # Creates new user
 
 @endpoint POST /projects/{project_id}/branches/{branch_id}/auth/users
+@desc Create new auth user
 @required {email: str(email)}
 @optional {name: str}
-@returns(201) {id: str}
+@returns(201) {id: str} # Creates new user
 
 @endpoint DELETE /projects/{project_id}/branches/{branch_id}/auth/users/{auth_user_id}
-@returns(204)
+@desc Delete auth user
+@returns(204) Deleted the auth user
 
 @endpoint PUT /projects/{project_id}/branches/{branch_id}/auth/users/{auth_user_id}/role
-@required {roles: [str]}
-@returns(200) {id: str}
+@desc Update auth user role
+@required {roles: [str] # Array of roles to assign to the user}
+@returns(200) {id: str} # Updated the auth user role
 
 @endpoint DELETE /projects/{project_id}/auth/users/{auth_user_id}
-@required {project_id: str, auth_user_id: str}
-@returns(204)
+@desc Delete auth user
+@required {project_id: str # The Neon project ID, auth_user_id: str # The Neon user ID}
+@returns(204) Deleted the auth user
 
 @endpoint POST /projects/auth/transfer_ownership
+@desc Transfer Neon-managed auth project to your own account
 @required {project_id: str, auth_provider: str(mock/stack/stack_v2/better_auth)}
-@returns(200) {url: str}
+@returns(200) {url: str} # Transfer initiated. Follow the URL to complete the process in your auth provider's UI.
 
 @endpoint GET /projects/{project_id}/auth/integrations
-@required {project_id: str}
-@returns(200) {data: [map]}
+@desc Lists active integrations with auth providers
+@required {project_id: str # The Neon project ID}
+@returns(200) {data: [map]} # Return management API keys metadata
 
 @endpoint GET /projects/{project_id}/auth/oauth_providers
-@returns(200) {providers: [map]}
+@desc List OAuth providers
+@returns(200) {providers: [map]} # Returns the OAuth providers for the Neon Auth
 
 @endpoint POST /projects/{project_id}/auth/oauth_providers
+@desc Add a OAuth provider
 @required {id: str(google/github/microsoft/vercel)}
 @optional {client_id: str, client_secret: str, microsoft_tenant_id: str}
-@returns(200) {id: str, type: str, client_id: str, client_secret: str}
+@returns(200) {id: str, type: str, client_id: str, client_secret: str} # The OAuth provider has been added to the project
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/auth/oauth_providers
-@returns(200) {providers: [map]}
+@desc List OAuth providers for neon auth for a branch
+@returns(200) {providers: [map]} # Returns the OAuth providers for the Neon Auth
 
 @endpoint POST /projects/{project_id}/branches/{branch_id}/auth/oauth_providers
+@desc Add a OAuth provider
 @required {id: str(google/github/microsoft/vercel)}
 @optional {client_id: str, client_secret: str, microsoft_tenant_id: str}
-@returns(200) {id: str, type: str, client_id: str, client_secret: str}
+@returns(200) {id: str, type: str, client_id: str, client_secret: str} # The OAuth provider has been added to the project
 
 @endpoint PATCH /projects/{project_id}/auth/oauth_providers/{oauth_provider_id}
+@desc Update OAuth provider
 @optional {client_id: str, client_secret: str, microsoft_tenant_id: str}
-@returns(200) {id: str, type: str, client_id: str, client_secret: str}
+@returns(200) {id: str, type: str, client_id: str, client_secret: str} # The OAuth provider has been added to the project
 
 @endpoint DELETE /projects/{project_id}/auth/oauth_providers/{oauth_provider_id}
-@returns(200)
+@desc Delete OAuth provider
+@returns(200) Deleted the OAuth provider from the project
 
 @endpoint PATCH /projects/{project_id}/branches/{branch_id}/auth/oauth_providers/{oauth_provider_id}
+@desc Update OAuth provider
 @optional {client_id: str, client_secret: str, microsoft_tenant_id: str}
-@returns(200) {id: str, type: str, client_id: str, client_secret: str}
+@returns(200) {id: str, type: str, client_id: str, client_secret: str} # The OAuth provider has been added to the project
 
 @endpoint DELETE /projects/{project_id}/branches/{branch_id}/auth/oauth_providers/{oauth_provider_id}
-@returns(200)
+@desc Delete OAuth provider
+@returns(200) Deleted the OAuth provider from the project
 
 @endpoint GET /projects/{project_id}/auth/email_server
-@returns(200)
+@desc Get email server configuration
+@returns(200) Returns the email server configuration for the Neon Auth
 
 @endpoint PATCH /projects/{project_id}/auth/email_server
-@returns(200)
+@desc Update email server configuration
+@returns(200) The OAuth provider has been added to the project
 
 @endpoint POST /projects/{project_id}/branches/{branch_id}/auth/send_test_email
-@returns(200) {success: bool, error_message: str}
+@desc Send test email
+@returns(200) {success: bool, error_message: str} # Response with the result of the test email send
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/auth/email_and_password
-@returns(200) {enabled: bool, email_verification_method: str, require_email_verification: bool, auto_sign_in_after_verification: bool, send_verification_email_on_sign_up: bool, send_verification_email_on_sign_in: bool, disable_sign_up: bool}
+@desc Get email and password configuration
+@returns(200) {enabled: bool, email_verification_method: str, require_email_verification: bool, auto_sign_in_after_verification: bool, send_verification_email_on_sign_up: bool, send_verification_email_on_sign_in: bool, disable_sign_up: bool} # Returns the email and password configuration for Neon Auth
 
 @endpoint PATCH /projects/{project_id}/branches/{branch_id}/auth/email_and_password
-@optional {enabled: bool, email_verification_method: str(link/otp), require_email_verification: bool, auto_sign_in_after_verification: bool, send_verification_email_on_sign_up: bool, send_verification_email_on_sign_in: bool, disable_sign_up: bool}
-@returns(200) {enabled: bool, email_verification_method: str, require_email_verification: bool, auto_sign_in_after_verification: bool, send_verification_email_on_sign_up: bool, send_verification_email_on_sign_in: bool, disable_sign_up: bool}
+@desc Update email and password configuration
+@optional {enabled: bool # Whether email and password authentication is enabled, email_verification_method: str(link/otp) # The email verification method to use. - `link`: Sends a verification link via email - `otp`: Sends a one-time password (OTP) via email, require_email_verification: bool # Whether email verification is required before users can sign in, auto_sign_in_after_verification: bool # Whether users are automatically signed in after verifying their email, send_verification_email_on_sign_up: bool # Whether to send a verification email when users sign up, send_verification_email_on_sign_in: bool # Whether to send a verification email when users sign in, disable_sign_up: bool # Whether to disable new user sign ups}
+@returns(200) {enabled: bool, email_verification_method: str, require_email_verification: bool, auto_sign_in_after_verification: bool, send_verification_email_on_sign_up: bool, send_verification_email_on_sign_in: bool, disable_sign_up: bool} # The email and password configuration has been updated
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/auth/email_provider
-@returns(200)
+@desc Get email provider configuration
+@returns(200) Returns the email provider configuration for the Neon Auth
 
 @endpoint PATCH /projects/{project_id}/branches/{branch_id}/auth/email_provider
-@returns(200)
+@desc Update email provider configuration
+@returns(200) The email provider configuration has been updated
 
 @endpoint DELETE /projects/{project_id}/auth/integration/{auth_provider}
-@required {project_id: str, auth_provider: str}
-@optional {delete_data: bool=False}
-@returns(200)
+@desc Delete integration with auth provider
+@required {project_id: str # The Neon project ID, auth_provider: str # The authentication provider name}
+@optional {delete_data: bool=False # If true, deletes the `neon_auth` schema from the database}
+@returns(200) Delete the integration with the authentication provider
 
 @endpoint GET /projects/{project_id}/connection_uri
-@required {project_id: str, database_name: str, role_name: str}
-@optional {branch_id: str, endpoint_id: str, pooled: bool}
-@returns(200) {uri: str}
+@desc Retrieve connection URI
+@required {project_id: str # The Neon project ID, database_name: str # The database name, role_name: str # The role name}
+@optional {branch_id: str # The branch ID. Defaults to your project's default `branch_id` if not specified., endpoint_id: str # The endpoint ID. Defaults to the read-write `endpoint_id` associated with the `branch_id` if not specified., pooled: bool # Adds the `-pooler` option to the connection URI when set to `true`, creating a pooled connection URI.}
+@returns(200) {uri: str} # Returned the connection URI
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/auth/allow_localhost
-@returns(200) {allow_localhost: bool}
+@desc Get allow localhost
+@returns(200) {allow_localhost: bool} # The allow localhost configuration
 
 @endpoint PATCH /projects/{project_id}/branches/{branch_id}/auth/allow_localhost
-@required {allow_localhost: bool}
-@returns(200) {allow_localhost: bool}
+@desc Update allow localhost
+@required {allow_localhost: bool # Whether to allow localhost connections}
+@returns(200) {allow_localhost: bool} # Updated the allow localhost configuration
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/auth/plugins
-@returns(200) {organization: map{enabled: bool, organization_limit: int(int32), allow_user_to_create_organization: bool, creator_role: str}, email_provider: map, email_and_password: map{enabled: bool, email_verification_method: str, require_email_verification: bool, auto_sign_in_after_verification: bool, send_verification_email_on_sign_up: bool, send_verification_email_on_sign_in: bool, disable_sign_up: bool}, oauth_providers: [map], allow_localhost: bool}
+@desc Get all plugin configurations
+@returns(200) {organization: map{enabled: bool, organization_limit: int(int32), allow_user_to_create_organization: bool, creator_role: str}, email_provider: map, email_and_password: map{enabled: bool, email_verification_method: str, require_email_verification: bool, auto_sign_in_after_verification: bool, send_verification_email_on_sign_up: bool, send_verification_email_on_sign_in: bool, disable_sign_up: bool}, oauth_providers: [map], allow_localhost: bool} # Returns all plugin configurations
 
 @endpoint PATCH /projects/{project_id}/branches/{branch_id}/auth/plugins/organization
-@optional {enabled: bool, organization_limit: int(int32), allow_user_to_create_organization: bool, creator_role: str(admin/owner)}
-@returns(200) {enabled: bool, organization_limit: int(int32), allow_user_to_create_organization: bool, creator_role: str}
+@desc Update organization plugin configuration
+@optional {enabled: bool # Whether the organization plugin is enabled, organization_limit: int(int32) # Maximum number of organizations a user can create, allow_user_to_create_organization: bool # Whether users are allowed to create organizations, creator_role: str(admin/owner) # The role assigned to the user who creates an organization}
+@returns(200) {enabled: bool, organization_limit: int(int32), allow_user_to_create_organization: bool, creator_role: str} # The organization plugin configuration has been updated
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/auth/webhooks
-@returns(200) {enabled: bool, webhook_url: str, enabled_events: [str], timeout_seconds: int}
+@desc Get webhook configuration for Neon Auth
+@returns(200) {enabled: bool, webhook_url: str, enabled_events: [str], timeout_seconds: int} # Returns webhook configuration for Neon Auth
 
 @endpoint PUT /projects/{project_id}/branches/{branch_id}/auth/webhooks
+@desc Update webhook configuration for Neon Auth
 @required {enabled: bool}
 @optional {webhook_url: str, enabled_events: [str], timeout_seconds: int=5}
-@returns(200) {enabled: bool, webhook_url: str, enabled_events: [str], timeout_seconds: int}
+@returns(200) {enabled: bool, webhook_url: str, enabled_events: [str], timeout_seconds: int} # Returns the updated webhook configuration
 
 @endpoint POST /projects/{project_id}/branches
-@returns(201)
+@desc Create branch
+@returns(201) Created a branch. An endpoint is only created if it was specified in the request.
+@example_request {"branch":{"parent_id":"br-aged-salad-637688","name":"mybranch"}}
 
 @endpoint GET /projects/{project_id}/branches
-@optional {search: str, sort_by: str(name/created_at/updated_at)=updated_at, cursor: str, sort_order: str(asc/desc)=desc, limit: int}
-@returns(200)
+@desc List branches
+@optional {search: str # Search by branch `name` or `id`. You can specify partial `name` or `id` values to filter results., sort_by: str(name/created_at/updated_at)=updated_at # Sort the branches by sort_field. If not provided, branches will be sorted by updated_at descending order, cursor: str # A cursor to use in pagination. A cursor defines your place in the data list. Include `response.pagination.next` in subsequent API calls to fetch next page of the list., sort_order: str(asc/desc)=desc # Defines the sorting order of entities., limit: int # The maximum number of records to be returned in the response}
+@returns(200) Returned a list of branches for the specified project
 
 @endpoint POST /projects/{project_id}/branch_anonymized
-@returns(201)
+@desc Create anonymized branch
+@returns(201) Created a branch. An endpoint is only created if it was specified in the request.
 
 @endpoint GET /projects/{project_id}/branches/count
-@optional {search: str}
-@returns(200)
+@desc Retrieve number of branches
+@optional {search: str # Count branches matching the `name` in search query}
+@returns(200) Returned a count of branches for the specified project
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}
-@returns(200)
+@desc Retrieve branch details
+@returns(200) Returned information about the specified branch
 
 @endpoint DELETE /projects/{project_id}/branches/{branch_id}
-@returns(200)
-@returns(204)
+@desc Delete branch
+@returns(200) Deleted the specified branch
+@returns(204) Returned if the branch doesn't exist or has already been deleted
 
 @endpoint PATCH /projects/{project_id}/branches/{branch_id}
+@desc Update branch
 @required {branch: map{name: str, protected: bool, expires_at: str(date-time)}}
-@returns(200)
+@returns(200) Updated the specified branch
+@example_request {"branch":{"name":"mybranch"}}
 
 @endpoint POST /projects/{project_id}/branches/{branch_id}/restore
-@required {project_id: str, branch_id: str, source_branch_id: str}
-@optional {source_lsn: str, source_timestamp: str(date-time), preserve_under_name: str}
-@returns(200)
+@desc Restore branch
+@required {project_id: str # The Neon project ID, branch_id: str # The branch ID, source_branch_id: str # The `branch_id` of the restore source branch. If `source_timestamp` and `source_lsn` are omitted, the branch will be restored to head. If `source_branch_id` is equal to the branch's id, `source_timestamp` or `source_lsn` is required.}
+@optional {source_lsn: str # A Log Sequence Number (LSN) on the source branch. The branch will be restored with data from this LSN., source_timestamp: str(date-time) # A timestamp identifying a point in time on the source branch. The branch will be restored with data starting from this point in time. The timestamp must be provided in ISO 8601 format; for example: `2024-02-26T12:00:00Z`., preserve_under_name: str # If not empty, the previous state of the branch will be saved to a branch with this name. If the branch has children or the `source_branch_id` is equal to the branch id, this field is required. All existing child branches will be moved to the newly created branch under the name `preserve_under_name`.}
+@returns(200) Updated the specified branch
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/schema
-@required {project_id: str, branch_id: str, db_name: str}
-@optional {lsn: str, timestamp: str(date-time), format: str}
-@returns(200) {sql: str, json: map{tables: [map]}}
+@desc Retrieve database schema
+@required {project_id: str # The Neon project ID, branch_id: str # The branch ID, db_name: str # Name of the database for which the schema is retrieved}
+@optional {lsn: str # The Log Sequence Number (LSN) for which the schema is retrieved, timestamp: str(date-time) # The point in time for which the schema is retrieved, format: str # The format of the schema to retrieve. Possible values: - `sql` (default) - `json`}
+@returns(200) {sql: str, json: map{tables: [map]}} # Schema definition
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/compare_schema
-@required {project_id: str, branch_id: str, db_name: str}
-@optional {base_branch_id: str, lsn: str, timestamp: str(date-time), base_lsn: str, base_timestamp: str(date-time)}
-@returns(200) {diff: str}
+@desc Compare database schema
+@required {project_id: str # The Neon project ID, branch_id: str # The branch ID, db_name: str # Name of the database for which the schema is retrieved}
+@optional {base_branch_id: str # The branch ID to compare the schema with, lsn: str # The Log Sequence Number (LSN) for which the schema is retrieved, timestamp: str(date-time) # The point in time for which the schema is retrieved, base_lsn: str # The Log Sequence Number (LSN) for the base branch schema, base_timestamp: str(date-time) # The point in time for the base branch schema}
+@returns(200) {diff: str} # Difference between the schemas
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/masking_rules
-@returns(200) {masking_rules: [map]}
+@desc Get masking rules
+@returns(200) {masking_rules: [map]} # Masking rules retrieved successfully
 
 @endpoint PATCH /projects/{project_id}/branches/{branch_id}/masking_rules
-@required {masking_rules: [map{database_name!: str, schema_name!: str, table_name!: str, column_name!: str, masking_function: str, masking_value: str}]}
-@returns(200) {masking_rules: [map]}
+@desc Update masking rules
+@required {masking_rules: [map{database_name!: str, schema_name!: str, table_name!: str, column_name!: str, masking_function: str, masking_value: str}] # List of masking rules to apply to the branch. This will replace all existing masking rules for the branch.}
+@returns(200) {masking_rules: [map]} # Masking rules updated successfully
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/anonymized_status
-@returns(200) {project_id: str, branch_id: str, state: str, status_message: str, created_at: str(date-time), updated_at: str(date-time), failed_at: str(date-time), last_run: map{started_at: str(date-time), completed_at: str(date-time), triggered_by: str(uuid), triggered_by_username: str, masked_columns: int}}
+@desc Get anonymized branch status
+@returns(200) {project_id: str, branch_id: str, state: str, status_message: str, created_at: str(date-time), updated_at: str(date-time), failed_at: str(date-time), last_run: map{started_at: str(date-time), completed_at: str(date-time), triggered_by: str(uuid), triggered_by_username: str, masked_columns: int}} # Anonymized branch status retrieved successfully
 
 @endpoint POST /projects/{project_id}/branches/{branch_id}/anonymize
-@returns(200) {project_id: str, branch_id: str, state: str, status_message: str, created_at: str(date-time), updated_at: str(date-time), failed_at: str(date-time), last_run: map{started_at: str(date-time), completed_at: str(date-time), triggered_by: str(uuid), triggered_by_username: str, masked_columns: int}}
+@desc Start anonymization
+@returns(200) {project_id: str, branch_id: str, state: str, status_message: str, created_at: str(date-time), updated_at: str(date-time), failed_at: str(date-time), last_run: map{started_at: str(date-time), completed_at: str(date-time), triggered_by: str(uuid), triggered_by_username: str, masked_columns: int}} # Anonymization started successfully
 
 @endpoint POST /projects/{project_id}/branches/{branch_id}/set_as_default
-@returns(200)
+@desc Set branch as default
+@returns(200) Updated the specified branch
 
 @endpoint POST /projects/{project_id}/branches/{branch_id}/finalize_restore
-@optional {name: str}
-@returns(200) {operations: [map]}
+@desc Finalize restore
+@optional {name: str # used to rename the existing branch when it is replaced. if omitted, a default name is generated and used}
+@returns(200) {operations: [map]} # OK
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/endpoints
-@returns(200) {endpoints: [map]}
+@desc List branch endpoints
+@returns(200) {endpoints: [map]} # Returned a list of endpoints for the specified branch
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/databases
-@returns(200) {databases: [map]}
+@desc List databases
+@returns(200) {databases: [map]} # Returned a list of databases of the specified branch
 
 @endpoint POST /projects/{project_id}/branches/{branch_id}/databases
+@desc Create database
 @required {database: map{name!: str, owner_name!: str}}
-@returns(201)
+@returns(201) Created a database in the specified branch
+@example_request {"database":{"name":"mydb","owner_name":"casey"}}
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/databases/{database_name}
-@returns(200) {database: map{id: int(int64), branch_id: str, name: str, owner_name: str, created_at: str(date-time), updated_at: str(date-time)}}
+@desc Retrieve database details
+@returns(200) {database: map{id: int(int64), branch_id: str, name: str, owner_name: str, created_at: str(date-time), updated_at: str(date-time)}} # Returned the database details
 
 @endpoint PATCH /projects/{project_id}/branches/{branch_id}/databases/{database_name}
+@desc Update database
 @required {database: map{name: str, owner_name: str}}
-@returns(200)
+@returns(200) Updated the database
+@example_request {"database":{"name":"mydb","owner_name":"sally"}}
 
 @endpoint DELETE /projects/{project_id}/branches/{branch_id}/databases/{database_name}
-@returns(200)
-@returns(204)
+@desc Delete database
+@returns(200) Deleted the specified database
+@returns(204) Returned if the database doesn't exist or has already been deleted
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/roles
-@returns(200) {roles: [map]}
+@desc List roles
+@returns(200) {roles: [map]} # Returned a list of roles from the specified branch.
 
 @endpoint POST /projects/{project_id}/branches/{branch_id}/roles
+@desc Create role
 @required {role: map{name!: str, no_login: bool}}
-@returns(201)
+@returns(201) Created a role in the specified branch
+@example_request {"role":{"name":"sally"}}
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/roles/{role_name}
-@returns(200) {role: map{branch_id: str, name: str, password: str, protected: bool, authentication_method: str, created_at: str(date-time), updated_at: str(date-time)}}
+@desc Retrieve role details
+@returns(200) {role: map{branch_id: str, name: str, password: str, protected: bool, authentication_method: str, created_at: str(date-time), updated_at: str(date-time)}} # Returned details for the specified role
 
 @endpoint DELETE /projects/{project_id}/branches/{branch_id}/roles/{role_name}
-@returns(200)
-@returns(204)
+@desc Delete role
+@returns(200) Deleted the specified role from the branch
+@returns(204) Returned if the role doesn't exist or has already been deleted
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/roles/{role_name}/reveal_password
-@returns(200) {password: str}
-@errors {404, 412}
+@desc Retrieve role password
+@returns(200) {password: str} # Returned password for the specified role
+@errors {404: Role not found, 412: Storing passwords is disabled}
 
 @endpoint POST /projects/{project_id}/branches/{branch_id}/roles/{role_name}/reset_password
-@returns(200)
+@desc Reset role password
+@returns(200) Reset the password for the specified role
 
 @endpoint GET /projects/{project_id}/vpc_endpoints
-@returns(200) {endpoints: [map]}
+@desc List VPC endpoint restrictions
+@returns(200) {endpoints: [map]} # Returned VPC endpoint restrictions for the specified project
 
 @endpoint POST /projects/{project_id}/vpc_endpoints/{vpc_endpoint_id}
+@desc Set VPC endpoint restriction
 @required {label: str}
-@returns(200)
+@returns(200) Configured the specified VPC endpoint as a restriction for the specified project.
 
 @endpoint DELETE /projects/{project_id}/vpc_endpoints/{vpc_endpoint_id}
-@returns(200)
+@desc Delete VPC endpoint restriction
+@returns(200) Removed the VPC endpoint restriction from the specified Neon project
 
 @endpoint POST /projects/{project_id}/endpoints
+@desc Create compute endpoint
 @required {endpoint: map{branch_id!: str, region_id: str, type!: str, settings: map{pg_settings: map, pgbouncer_settings: map, preload_libraries: map}, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, provisioner: str, pooler_enabled: bool, pooler_mode: str, disabled: bool, passwordless_access: bool, suspend_timeout_seconds: int(int64), name: str}}
-@returns(201)
+@returns(201) Created a compute endpoint
+@example_request {"endpoint":{"branch_id":"br-floral-mountain-251143","type":"read_write"}}
 
 @endpoint GET /projects/{project_id}/endpoints
-@returns(200) {endpoints: [map]}
+@desc List compute endpoints
+@returns(200) {endpoints: [map]} # Returned a list of endpoints for the specified project
 
 @endpoint GET /projects/{project_id}/endpoints/{endpoint_id}
-@returns(200) {endpoint: map{host: str, id: str, name: str, project_id: str, branch_id: str, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, region_id: str, type: str, current_state: str, pending_state: str, settings: map{pg_settings: map, pgbouncer_settings: map, preload_libraries: map{use_defaults: bool, enabled_libraries: [str]}}, pooler_enabled: bool, pooler_mode: str, disabled: bool, passwordless_access: bool, last_active: str(date-time), creation_source: str, created_at: str(date-time), updated_at: str(date-time), started_at: str(date-time), suspended_at: str(date-time), proxy_host: str, suspend_timeout_seconds: int(int64), provisioner: str, compute_release_version: str}}
+@desc Retrieve compute endpoint details
+@returns(200) {endpoint: map{host: str, id: str, name: str, project_id: str, branch_id: str, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, region_id: str, type: str, current_state: str, pending_state: str, settings: map{pg_settings: map, pgbouncer_settings: map, preload_libraries: map{use_defaults: bool, enabled_libraries: [str]}}, pooler_enabled: bool, pooler_mode: str, disabled: bool, passwordless_access: bool, last_active: str(date-time), creation_source: str, created_at: str(date-time), updated_at: str(date-time), started_at: str(date-time), suspended_at: str(date-time), proxy_host: str, suspend_timeout_seconds: int(int64), provisioner: str, compute_release_version: str}} # Returned information about the specified endpoint
 
 @endpoint DELETE /projects/{project_id}/endpoints/{endpoint_id}
-@returns(200)
-@returns(204)
+@desc Delete compute endpoint
+@returns(200) Deleted the specified compute endpoint
+@returns(204) Returned if the endpoint doesn't exist or has already been deleted
 
 @endpoint PATCH /projects/{project_id}/endpoints/{endpoint_id}
+@desc Update compute endpoint
 @required {endpoint: map{branch_id: str, autoscaling_limit_min_cu: num, autoscaling_limit_max_cu: num, provisioner: str, settings: map{pg_settings: map, pgbouncer_settings: map, preload_libraries: map}, pooler_enabled: bool, pooler_mode: str, disabled: bool, passwordless_access: bool, suspend_timeout_seconds: int(int64), name: str}}
-@returns(200)
+@returns(200) Updated the specified compute endpoint
+@example_request {"endpoint":{"suspend_timeout_seconds":300}}
 
 @endpoint POST /projects/{project_id}/endpoints/{endpoint_id}/start
-@required {project_id: str, endpoint_id: str}
-@returns(200)
+@desc Start compute endpoint
+@required {project_id: str # The Neon project ID, endpoint_id: str # The endpoint ID}
+@returns(200) Started the specified compute endpoint
 
 @endpoint POST /projects/{project_id}/endpoints/{endpoint_id}/suspend
-@returns(200)
+@desc Suspend compute endpoint
+@returns(200) Suspended the specified endpoint
 
 @endpoint POST /projects/{project_id}/endpoints/{endpoint_id}/restart
-@returns(200)
+@desc Restart compute endpoint
+@returns(200) Restarted endpoint
 
 @endgroup
 
 @group consumption_history
 @endpoint GET /consumption_history/account
-@required {from: str(date-time), to: str(date-time), granularity: str}
-@optional {org_id: str, include_v1_metrics: bool, metrics: [str]}
-@returns(200) {periods: [map]}
-@errors {403, 404, 406, 429}
+@desc Retrieve account consumption metrics (legacy plans)
+@required {from: str(date-time) # Specify the start `date-time` for the consumption period. The `date-time` value is rounded according to the specified `granularity`. For example, `2024-03-15T15:30:00Z` for `daily` granularity will be rounded to `2024-03-15T00:00:00Z`. The specified `date-time` value must respect the specified granularity: - For `hourly`, consumption metrics are limited to the last 168 hours. - For `daily`, consumption metrics are limited to the last 60 days. - For `monthly`, consumption metrics are limited to the past year.  The consumption history is available starting from `March 1, 2024, at 00:00:00 UTC`., to: str(date-time) # Specify the end `date-time` for the consumption period. The `date-time` value is rounded according to the specified granularity. For example, `2024-03-15T15:30:00Z` for `daily` granularity will be rounded to `2024-03-15T00:00:00Z`. The specified `date-time` value must respect the specified granularity: - For `hourly`, consumption metrics are limited to the last 168 hours. - For `daily`, consumption metrics are limited to the last 60 days. - For `monthly`, consumption metrics are limited to the past year., granularity: str # Specify the granularity of consumption metrics. Hourly, daily, and monthly metrics are available for the last 168 hours, 60 days, and 1 year, respectively.}
+@optional {org_id: str # Specify the organization for which the consumption metrics should be returned. If this parameter is not provided, the endpoint will return the metrics for the authenticated user's account., include_v1_metrics: bool # The field is deprecated. Please use `metrics` instead. If `metrics` is specified, this field is ignored. Include metrics utilized in previous pricing models. - **data_storage_bytes_hour**: The sum of the maximum observed storage values for each hour   for each project, which never decreases., metrics: [str] # Specify a list of metrics to include in the response. If omitted, active_time, compute_time, written_data, synthetic_storage_size are returned. Possible values: - `active_time_seconds` - `compute_time_seconds` - `written_data_bytes` - `synthetic_storage_size_bytes` - `data_storage_bytes_hour`  A list of metrics can be specified as an array of parameter values or as a comma-separated list in a single parameter value. - As an array of parameter values: `metrics=cpu_seconds&metrics=ram_bytes` - As a comma-separated list in a single parameter value: `metrics=cpu_seconds,ram_bytes`}
+@returns(200) {periods: [map]} # Returned consumption metrics for the Neon account
+@errors {403: This endpoint is not available. It is only supported for Scale, Business, and Enterprise plan accounts., 404: Account is not a member of the organization specified by `org_id`., 406: The specified `date-time` range is outside the boundaries of the specified `granularity`. Adjust your `from` and `to` values or select a different `granularity`., 429: Too many requests}
 
 @endpoint GET /consumption_history/projects
-@required {from: str(date-time), to: str(date-time), granularity: str}
-@optional {cursor: str, limit: int=10, project_ids: [str], org_id: str, include_v1_metrics: bool, metrics: [str]}
-@returns(200)
-@errors {403, 404, 406, 429}
+@desc Retrieve project consumption metrics (legacy plans)
+@required {from: str(date-time) # Specify the start `date-time` for the consumption period. The `date-time` value is rounded according to the specified `granularity`. For example, `2024-03-15T15:30:00Z` for `daily` granularity will be rounded to `2024-03-15T00:00:00Z`. The specified `date-time` value must respect the specified `granularity`: - For `hourly`, consumption metrics are limited to the last 168 hours. - For `daily`, consumption metrics are limited to the last 60 days. - For `monthly`, consumption metrics are limited to the last year.  The consumption history is available starting from `March 1, 2024, at 00:00:00 UTC`., to: str(date-time) # Specify the end `date-time` for the consumption period. The `date-time` value is rounded according to the specified granularity. For example, `2024-03-15T15:30:00Z` for `daily` granularity will be rounded to `2024-03-15T00:00:00Z`. The specified `date-time` value must respect the specified `granularity`: - For `hourly`, consumption metrics are limited to the last 168 hours. - For `daily`, consumption metrics are limited to the last 60 days. - For `monthly`, consumption metrics are limited to the last year., granularity: str # Specify the granularity of consumption metrics. Hourly, daily, and monthly metrics are available for the last 168 hours, 60 days, and 1 year, respectively.}
+@optional {cursor: str # Specify the cursor value from the previous response to get the next batch of projects., limit: int=10 # Specify a value from 1 to 100 to limit number of projects in the response., project_ids: [str] # Specify a list of project IDs to filter the response. If omitted, the response will contain all projects. A list of project IDs can be specified as an array of parameter values or as a comma-separated list in a single parameter value. - As an array of parameter values: `project_ids=cold-poetry-09157238%20&project_ids=quiet-snow-71788278` - As a comma-separated list in a single parameter value: `project_ids=cold-poetry-09157238,quiet-snow-71788278`, org_id: str # Specify the organization for which the project consumption metrics should be returned. If this parameter is not provided, the endpoint will return the metrics for the authenticated user's projects., include_v1_metrics: bool # The field is deprecated. Please use `metrics` instead. If `metrics` is specified, this field is ignored. Include metrics utilized in previous pricing models. - **data_storage_bytes_hour**: The sum of the maximum observed storage values for each hour,   which never decreases., metrics: [str] # Specify a list of metrics to include in the response. If omitted, active_time, compute_time, written_data, synthetic_storage_size are returned. Possible values: - `active_time_seconds` - `compute_time_seconds` - `written_data_bytes` - `synthetic_storage_size_bytes` - `data_storage_bytes_hour` - `logical_size_bytes` - `logical_size_bytes_hour`  A list of metrics can be specified as an array of parameter values or as a comma-separated list in a single parameter value. - As an array of parameter values: `metrics=cpu_seconds&metrics=ram_bytes` - As a comma-separated list in a single parameter value: `metrics=cpu_seconds,ram_bytes`}
+@returns(200) Returned project consumption metrics for the Neon account
+@errors {403: This endpoint is not available. It is only supported with Scale, Business, and Enterprise plan accounts., 404: Account is not a member of the organization specified by `org_id`., 406: The specified `date-time` range is outside the boundaries of the specified `granularity`. Adjust your `from` and `to` values or select a different `granularity`., 429: Too many requests}
 
 @endpoint GET /consumption_history/v2/projects
-@required {from: str(date-time), to: str(date-time), granularity: str, org_id: str}
-@optional {cursor: str, limit: int=10, project_ids: [str], metrics: [str]}
-@returns(200)
-@errors {403, 404, 406, 429}
+@desc Retrieve project consumption metrics
+@required {from: str(date-time) # Specify the start `date-time` for the consumption period. The `date-time` value is rounded according to the specified `granularity`. For example, `2024-03-15T15:30:00Z` for `daily` granularity will be rounded to `2024-03-15T00:00:00Z`. The specified `date-time` value must respect the specified `granularity`: - For `hourly`, consumption metrics are limited to the last 168 hours. - For `daily`, consumption metrics are limited to the last 60 days. - For `monthly`, consumption metrics are limited to the last year.  The consumption history is available starting from `March 1, 2024, at 00:00:00 UTC`., to: str(date-time) # Specify the end `date-time` for the consumption period. The `date-time` value is rounded according to the specified granularity. For example, `2024-03-15T15:30:00Z` for `daily` granularity will be rounded to `2024-03-15T00:00:00Z`. The specified `date-time` value must respect the specified `granularity`: - For `hourly`, consumption metrics are limited to the last 168 hours. - For `daily`, consumption metrics are limited to the last 60 days. - For `monthly`, consumption metrics are limited to the last year., granularity: str # Specify the granularity of consumption metrics. Hourly, daily, and monthly metrics are available for the last 168 hours, 60 days, and 1 year, respectively., org_id: str # Specify the organization for which the project consumption metrics should be returned. If this parameter is not provided, the endpoint will return the metrics for the authenticated user's projects.}
+@optional {cursor: str # Specify the cursor value from the previous response to get the next batch of projects., limit: int=10 # Specify a value from 1 to 100 to limit number of projects in the response., project_ids: [str] # Specify a list of project IDs to filter the response. If omitted, the response will contain all projects. A list of project IDs can be specified as an array of parameter values or as a comma-separated list in a single parameter value. - As an array of parameter values: `project_ids=cold-poetry-09157238%20&project_ids=quiet-snow-71788278` - As a comma-separated list in a single parameter value: `project_ids=cold-poetry-09157238,quiet-snow-71788278`, metrics: [str] # Specify a list of metrics to include in the response. Possible values: - `compute_unit_seconds` - `root_branch_bytes_month` - `child_branch_bytes_month` - `instant_restore_bytes_month` - `public_network_transfer_bytes` - `private_network_transfer_bytes` - `extra_branches_month`  A list of metrics can be specified as an array of parameter values or as a comma-separated list in a single parameter value. - As an array of parameter values: `metrics=compute_unit_seconds&metrics=extra_branches_month` - As a comma-separated list in a single parameter value: `metrics=compute_unit_seconds,extra_branches_month`}
+@returns(200) Returned project consumption metrics for the Neon account.
+@errors {403: This endpoint is not available. It is only supported with Scale, Business, and Enterprise plan accounts., 404: Account is not a member of the organization specified by `org_id`., 406: The specified `date-time` range is outside the boundaries of the specified `granularity`. Adjust your `from` and `to` values or select a different `granularity`., 429: Too many requests}
 
 @endgroup
 
 @group organizations
 @endpoint GET /organizations/{org_id}
-@returns(200) {id: str, name: str, handle: str, plan: str, created_at: str(date-time), managed_by: str, updated_at: str(date-time), allow_hipaa_projects: bool}
+@desc Retrieve organization details
+@returns(200) {id: str, name: str, handle: str, plan: str, created_at: str(date-time), managed_by: str, updated_at: str(date-time), allow_hipaa_projects: bool} # Returned information about the organization
 
 @endpoint GET /organizations/{org_id}/api_keys
-@returns(200)
+@desc List organization API keys
+@returns(200) Returned the API keys for the specified organization
 
 @endpoint POST /organizations/{org_id}/api_keys
-@returns(200)
+@desc Create organization API key
+@returns(200) Created an organization API key
+@example_request {"key_name":"orgkey"}
 
 @endpoint DELETE /organizations/{org_id}/api_keys/{key_id}
-@required {key_id: int(int64)}
-@returns(200)
+@desc Revoke organization API key
+@required {key_id: int(int64) # The API key ID}
+@returns(200) Revoked the specified organization API key
 
 @endpoint GET /organizations/{org_id}/members
-@returns(200) {members: [map]}
+@desc Retrieve organization members details
+@returns(200) {members: [map]} # Returned information about organization members
 
 @endpoint GET /organizations/{org_id}/members/{member_id}
-@returns(200) {id: str(uuid), user_id: str(uuid), org_id: str, role: str, joined_at: str(date-time)}
+@desc Retrieve organization member details
+@returns(200) {id: str(uuid), user_id: str(uuid), org_id: str, role: str, joined_at: str(date-time)} # Returned information about the organization member
 
 @endpoint PATCH /organizations/{org_id}/members/{member_id}
-@required {role: str(admin/member)}
-@returns(200) {id: str(uuid), user_id: str(uuid), org_id: str, role: str, joined_at: str(date-time)}
+@desc Update role for organization member
+@required {role: str(admin/member) # The role of the organization member}
+@returns(200) {id: str(uuid), user_id: str(uuid), org_id: str, role: str, joined_at: str(date-time)} # The updated organization member
+@example_request {"role":"admin"}
 
 @endpoint DELETE /organizations/{org_id}/members/{member_id}
-@returns(200)
+@desc Remove member from the organization
+@returns(200) Removed organization member
 
 @endpoint GET /organizations/{org_id}/invitations
-@returns(200) {invitations: [map]}
+@desc Retrieve organization invitation details
+@returns(200) {invitations: [map]} # Returned information about the organization invitations
 
 @endpoint POST /organizations/{org_id}/invitations
+@desc Create organization invitations
 @required {invitations: [map{email!: str(email), role!: str}]}
-@returns(200) {invitations: [map]}
+@returns(200) {invitations: [map]} # The created organization invitation
+@example_request {"invitations":[{"email":"invited-user@email.com","role":"member"}]}
 
 @endpoint POST /organizations/{source_org_id}/projects/transfer
-@required {destination_org_id: str, project_ids: [str]}
-@returns(200)
-@errors {406, 422}
+@desc Transfer projects between organizations
+@required {destination_org_id: str # The destination organization identifier, project_ids: [str] # The list of projects ids to transfer. Maximum of 400 project ids}
+@returns(200) Projects successfully transferred from organization to organization
+@errors {406: Transfer failed - the target organization has too many projects or its plan is incompatible with the source organization. Reduce projects or upgrade the organization., 422: One or more of the provided project IDs have GitHub or Vercel integrations installed. Transferring integration projects is currently not supported}
 
 @endpoint GET /organizations/{org_id}/vpc/vpc_endpoints
-@returns(200) {endpoints: [any]}
+@desc List VPC endpoints across all regions
+@returns(200) {endpoints: [any]} # The list of configured VPC endpoint IDs for the specified organization across all regions
 
 @endpoint GET /organizations/{org_id}/vpc/region/{region_id}/vpc_endpoints
-@returns(200) {endpoints: [map]}
+@desc List VPC endpoints
+@returns(200) {endpoints: [map]} # The list of configured VPC endpoint IDs for the specified organization
 
 @endpoint GET /organizations/{org_id}/vpc/region/{region_id}/vpc_endpoints/{vpc_endpoint_id}
-@returns(200) {vpc_endpoint_id: str, label: str, state: str, num_restricted_projects: int, example_restricted_projects: [str]}
+@desc Retrieve VPC endpoint details
+@returns(200) {vpc_endpoint_id: str, label: str, state: str, num_restricted_projects: int, example_restricted_projects: [str]} # Returned the current status and configuration details of the specified VPC endpoint.
 
 @endpoint POST /organizations/{org_id}/vpc/region/{region_id}/vpc_endpoints/{vpc_endpoint_id}
+@desc Assign or update VPC endpoint
 @required {label: str}
-@returns(200)
+@returns(200) Assigned the VPC endpoint to the specified Neon organization
 
 @endpoint DELETE /organizations/{org_id}/vpc/region/{region_id}/vpc_endpoints/{vpc_endpoint_id}
-@returns(200)
+@desc Delete VPC endpoint
+@returns(200) Deleted the VPC endpoint from the specified Neon organization
 
 @endgroup
 
 @group regions
 @endpoint GET /regions
-@returns(200) {regions: [map]}
+@desc List supported regions
+@returns(200) {regions: [map]} # The list of active regions
 
 @endgroup
 
 @group users
 @endpoint GET /users/me
-@returns(200) {active_seconds_limit: int(int64), billing_account: map{state: str, payment_source: map{type: str, card: map{last4: str, brand: str, exp_month: int(int64), exp_year: int(int64)}}, subscription_type: str, payment_method: str, quota_reset_at_last: str(date-time), name: str, email: str(email), address_city: str, address_country: str, address_country_name: str, address_line1: str, address_line2: str, address_postal_code: str, address_state: str, orb_portal_url: str, tax_id: str, tax_id_type: str, plan_details: map{name: str, version: map{major: int, minor: int}}}, auth_accounts: [map], email: str(email), id: str, image: str, login: str, name: str, last_name: str, projects_limit: int(int64), branches_limit: int(int64), max_autoscaling_limit: num, compute_seconds_limit: int(int64), plan: str}
+@desc Retrieve current user details
+@returns(200) {active_seconds_limit: int(int64), billing_account: map{state: str, payment_source: map{type: str, card: map{last4: str, brand: str, exp_month: int(int64), exp_year: int(int64)}}, subscription_type: str, payment_method: str, quota_reset_at_last: str(date-time), name: str, email: str(email), address_city: str, address_country: str, address_country_name: str, address_line1: str, address_line2: str, address_postal_code: str, address_state: str, orb_portal_url: str, tax_id: str, tax_id_type: str, plan_details: map{name: str, version: map{major: int, minor: int}}}, auth_accounts: [map], email: str(email), id: str, image: str, login: str, name: str, last_name: str, projects_limit: int(int64), branches_limit: int(int64), max_autoscaling_limit: num, compute_seconds_limit: int(int64), plan: str} # Returned information about the current user
 
 @endpoint GET /users/me/organizations
-@returns(200) {organizations: [map]}
+@desc Retrieve current user organizations list
+@returns(200) {organizations: [map]} # Returned information about the current user organizations
 
 @endpoint POST /users/me/projects/transfer
-@required {destination_org_id: str, project_ids: [str]}
-@returns(200)
-@errors {406, 422}
+@desc Transfer projects from personal account to organization
+@required {destination_org_id: str # The destination organization identifier, project_ids: [str] # The list of projects ids to transfer. Maximum of 400 project ids}
+@returns(200) Projects successfully transferred from personal account to organization
+@errors {406: Transfer failed - the target organization has too many projects or its plan is incompatible with the source account. Reduce the number of projects or upgrade the target organization to increase its capacity., 422: One or more of the provided project IDs have GitHub or Vercel integrations installed. Transferring integration projects is currently not supported}
 
 @endgroup
 
 @group auth
 @endpoint GET /auth
-@returns(200) {account_id: str, auth_method: str, auth_data: str}
+@desc Get request authentication details
+@returns(200) {account_id: str, auth_method: str, auth_data: str} # Returned auth information about the current auth entity
 
 @endgroup
 
 @group projects
 @endpoint POST /projects/{project_id}/branches/{branch_id}/snapshot
-@optional {lsn: str, timestamp: str, name: str, expires_at: str}
-@returns(200) {snapshot: map{id: str, name: str, lsn: str, timestamp: str, source_branch_id: str, created_at: str, expires_at: str, manual: bool}, operations: [map]}
+@desc Create snapshot
+@optional {lsn: str # The target Log Sequence Number (LSN) to take the snapshot from. Must fall within the restore window. Cannot be used with `timestamp`, timestamp: str # The target timestamp for the snapshot. Must fall within the restore window. Use ISO 8601 format (e.g. 2025-08-05T22:00:00Z). Cannot be used with `lsn`., name: str # A name for the snapshot., expires_at: str # The time at which the snapshot will be automatically deleted. Use ISO 8601 format (e.g. 2025-08-05T22:00:00Z).}
+@returns(200) {snapshot: map{id: str, name: str, lsn: str, timestamp: str, source_branch_id: str, created_at: str, expires_at: str, manual: bool}, operations: [map]} # Successfully created the snapshot
 
 @endpoint GET /projects/{project_id}/snapshots
-@returns(200) {snapshots: [map]}
+@desc List project snapshots
+@returns(200) {snapshots: [map]} # Projects snapshots
 
 @endpoint DELETE /projects/{project_id}/snapshots/{snapshot_id}
-@returns(202) {operations: [map]}
+@desc Delete snapshot
+@returns(202) {operations: [map]} # OK
 
 @endpoint PATCH /projects/{project_id}/snapshots/{snapshot_id}
+@desc Update snapshot
 @required {snapshot: map{name: str}}
-@returns(200) {snapshot: map{id: str, name: str, lsn: str, timestamp: str, source_branch_id: str, created_at: str, expires_at: str, manual: bool}}
+@returns(200) {snapshot: map{id: str, name: str, lsn: str, timestamp: str, source_branch_id: str, created_at: str, expires_at: str, manual: bool}} # Successfully updated the snapshot
 
 @endpoint POST /projects/{project_id}/snapshots/{snapshot_id}/restore
-@optional {name: str, name: str, target_branch_id: str, finalize_restore: bool=False}
-@returns(200)
+@desc Restore snapshot
+@optional {name: str # DEPRECATED. Use the `name` field in the request body instead. A name for the newly restored branch. If omitted, a default name will be generated., name: str # A name for the newly restored branch. If omitted, a default name will be generated., target_branch_id: str # The ID of the branch to restore the snapshot into. If not specified, the branch from which the snapshot was originally created (`snapshot.source_branch_id`) will be used., finalize_restore: bool=False # Set to `true` to finalize the restore operation immediately. This will complete the restore and move any associated computes to the new branch, similar to the `finalizeRestoreBranch` operation. Defaults to `false` to allow previewing the restored snapshot data first.}
+@returns(200) Branch restored from snapshot and its operations.
 
 @endpoint GET /projects/{project_id}/branches/{branch_id}/backup_schedule
-@returns(200) {schedule: [map]}
+@desc View backup schedule
+@returns(200) {schedule: [map]} # Schedule of frequencies to create snapshots
 
 @endpoint PUT /projects/{project_id}/branches/{branch_id}/backup_schedule
+@desc Update backup schedule
 @required {schedule: [map{frequency!: str, hour: int, day: int, month: int, retention_seconds: int}]}
-@returns(200)
+@returns(200) Empty response
 
 @endgroup
 

@@ -7,43 +7,50 @@
 @toc geomarks(7)
 
 @endpoint POST /geomarks/new
-@returns(200)
-@errors {302, 400, 500}
+@desc Create a new geomark
+@returns(200) If the geomark was created via a web service call.
+@errors {302: If the geomark was created and a redirectUrl was specified then the response will redirect to the redirectUrl with the query string parameters geomarkId and geomarkUrl of the created geomark.  Additional reasons for this status code can be found in the [Geomark Web Service Developer Guide](https://apps.gov.bc.ca/pub/geomark/docs/rest-api/), 400: **Couldn't create Geomark.**  Possible reasons:  * No Polygon, Multi-Polygon, or folder(set) of Polygons provided. * A point or line was provided without a buffer width.  Additional reasons for this status code can be found in the [Geomark Web Service Developer Guide](https://apps.gov.bc.ca/pub/geomark/docs/rest-api/), 500: **Internal Server Error**}
 
 @endpoint POST /geomarks/copy
-@required {geomarkUrl: str}
-@optional {allowOverlap: bool(false/true)=False, bufferMetres: int, bufferSegments: int=8, bufferMitreLimit: int=5, bufferCap: str(ROUND/SQUARE/FLAT)=ROUND, bufferJoin: str(ROUND/MITRE/BEVEL)=ROUND, callback: str, redirectUrl: str, failureRedirectUrl: str, resultFormat: str(json/xml/kml/kmz/shp/shpz/geojson/gml/gpkg/wkt)}
-@returns(200)
-@errors {302, 400, 500}
+@desc Create a new geomark by copying the geometries from one or more existing geomarks from the current server.
+@required {geomarkUrl: str # One or more geomark URLs or identifiers to create the new geomark from.}
+@optional {allowOverlap: bool(false/true)=False # Select this option to allow overlapping geometries, bufferMetres: int # The amount to buffer the geometry in metres, must only contain numerical digits (e.g 10). Leave blank and no buffer will be added to input geometries. If blank then any Point, LineString, MultiPoint and MultiLineString geometries will be ignored., bufferSegments: int=8 # If bufferMetres is specified, the number of line segments used in each quadrant to approximate the curve for round end-cap and join styles. Must be > 0., bufferMitreLimit: int=5 # If bufferMetres is specified, the maximum ratio of distance from the original geometry to a mitre buffer point and the buffer amount. If the ratio is greater than this a bevel will be used instead. This prevents infinite distances when the angle between the two lines at a join is small. Must be > 0., bufferCap: str(ROUND/SQUARE/FLAT)=ROUND # If bufferMetres is specified, The style of buffer to use at the ends of a buffered line., bufferJoin: str(ROUND/MITRE/BEVEL)=ROUND # If bufferMetres is specified, The style of buffer to use for joins between the line segments for lines and polygons., callback: str # The callback function a JSON result format would be wrapped in to support Ajax requests., redirectUrl: str # The optional external URL to redirect the user to when the geomark is created rather than showing the geomark info page. The geomarkId and geomarkUrl query string parameters will be added to the redirectUrl so that the target application gets a reference to the geomark., failureRedirectUrl: str # The url to redirect if the geomark could not be created. The URL will include a <fieldName>_Error parameter with the error message for the field that caused the error., resultFormat: str(json/xml/kml/kmz/shp/shpz/geojson/gml/gpkg/wkt) # The file format the geomark info resource should be returned using.}
+@returns(200) If the geomark was created via a web service call.
+@errors {302: If the geomark was created and a redirectUrl was specified then the response will redirect to the redirectUrl with the query string parameters geomarkId and geomarkUrl of the created geomark.  Additional reasons for this status code can be found in the [Geomark Web Service Developer Guide](https://apps.gov.bc.ca/pub/geomark/docs/rest-api/), 400: **Couldn't create Geomark.**  Possible reasons:  * No Polygon, Multi-Polygon, or folder(set) of Polygons provided. * A point or line was provided without a buffer width.  Additional reasons for this status code can be found in the [Geomark Web Service Developer Guide](https://apps.gov.bc.ca/pub/geomark/docs/rest-api/), 500: **Internal Server Error**}
 
 @endpoint GET /geomarks/{geomarkId}/boundingBox.{fileFormatExtension}
-@required {geomarkId: str, fileFormatExtension: str(json/xml/kml/kmz/shp/shpz/geojson/gml/gpkg/wkt)}
-@optional {srid: int(4326/3005/3857/26907/26908/26909/26910/26911)=4326}
-@returns(200)
-@errors {400, 404, 500}
+@desc Gets the bounding box of the geomark
+@required {geomarkId: str # The unique identifier for the geomark, fileFormatExtension: str(json/xml/kml/kmz/shp/shpz/geojson/gml/gpkg/wkt) # The file format name extension used to represent the geomark download.}
+@optional {srid: int(4326/3005/3857/26907/26908/26909/26910/26911)=4326 # The srid of the coordinate system the geometry should be converted to.}
+@returns(200) The geomark will be returned in the body of the HTTP response encoded in the requested [file format](https://apps.gov.bc.ca/pub/geomark/docs/fileFormats.html).
+@errors {400: **Coordinate system with srid = <srid> is not supported.**  Check the list of supported [coordinate systems](https://apps.gov.bc.ca/pub/geomark/docs/coordinateSystems.html)., 404: **The geomark <geomarkId> could not be found.**  Check for extra characters on the end of the URL. The geomark may have expired and been deleted., 500: **Internal Server Error**}
 
 @endpoint GET /geomarks/{geomarkId}/feature.{fileFormatExtension}
-@required {geomarkId: str, fileFormatExtension: str(json/xml/kml/kmz/shp/shpz/geojson/gml/gpkg/wkt)}
-@optional {srid: int(4326/3005/3857/26907/26908/26909/26910/26911)=4326}
-@returns(200)
-@errors {400, 404, 500}
+@desc Get the feature and attribution of the geomark
+@required {geomarkId: str # The unique identifier for the geomark, fileFormatExtension: str(json/xml/kml/kmz/shp/shpz/geojson/gml/gpkg/wkt) # The file format name extension used to represent the geomark download.}
+@optional {srid: int(4326/3005/3857/26907/26908/26909/26910/26911)=4326 # The srid of the coordinate system the geometry should be converted to.}
+@returns(200) The geomark will be returned in the body of the HTTP response encoded in the requested [file format](https://apps.gov.bc.ca/pub/geomark/docs/fileFormats.html).
+@errors {400: **Coordinate system with srid = <srid> is not supported.**  Check the list of supported [coordinate systems](https://apps.gov.bc.ca/pub/geomark/docs/coordinateSystems.html)., 404: **The geomark <geomarkId> could not be found.**  Check for extra characters on the end of the URL. The geomark may have expired and been deleted., 500: **Internal Server Error**}
 
 @endpoint GET /geomarks/{geomarkId}.{fileFormatExtension}
-@required {geomarkId: str, fileFormatExtension: str(json/xml/kml/kmz/shp/shpz/geojson/gml/gpkg/wkt)}
-@optional {srid: int(4326/3005/3857/26907/26908/26909/26910/26911)=4326}
-@returns(200)
-@errors {404, 500}
+@desc Get information about a particular geomark
+@required {geomarkId: str # The unique identifier for the geomark., fileFormatExtension: str(json/xml/kml/kmz/shp/shpz/geojson/gml/gpkg/wkt) # The file format name extension used to represent the geomark download.}
+@optional {srid: int(4326/3005/3857/26907/26908/26909/26910/26911)=4326 # The srid of the coordinate system the geometry should be converted to.}
+@returns(200) The geomark will be returned in the body of the HTTP response encoded in the requested [file format](https://apps.gov.bc.ca/pub/geomark/docs/fileFormats.html).
+@errors {404: **The geomark <geomarkId> could not be found.**  Check for extra characters on the end of the URL. The geomark may have expired and been deleted., 500: **Internal Server Error**}
 
 @endpoint GET /geomarks/{geomarkId}/parts.{fileFormatExtension}
-@required {geomarkId: str, fileFormatExtension: str(json/xml/kml/kmz/shp/shpz/geojson/gml/gpkg/wkt)}
-@optional {srid: int(4326/3005/3857/26907/26908/26909/26910/26911)=4326}
-@returns(200)
-@errors {400, 404, 500}
+@desc Get the individual geometries within a multi-part geometry
+@required {geomarkId: str # The unique identifier for the geomark, fileFormatExtension: str(json/xml/kml/kmz/shp/shpz/geojson/gml/gpkg/wkt) # The file format name extension used to represent the geomark download.}
+@optional {srid: int(4326/3005/3857/26907/26908/26909/26910/26911)=4326 # The srid of the coordinate system the geometry should be converted to.}
+@returns(200) The geomark will be returned in the body of the HTTP response encoded in the requested [file format](https://apps.gov.bc.ca/pub/geomark/docs/fileFormats.html).
+@errors {400: **Coordinate system with srid = <srid> is not supported.**  Check the list of supported [coordinate systems](https://apps.gov.bc.ca/pub/geomark/docs/coordinateSystems.html)., 404: **The geomark <geomarkId> could not be found.**  Check for extra characters on the end of the URL. The geomark may have expired and been deleted., 500: **Internal Server Error**}
 
 @endpoint GET /geomarks/{geomarkId}/point.{fileFormatExtension}
-@required {geomarkId: str, fileFormatExtension: str(json/xml/kml/kmz/shp/shpz/geojson/gml/gpkg/wkt)}
-@optional {srid: int(4326/3005/3857/26907/26908/26909/26910/26911)=4326}
-@returns(200)
-@errors {400, 404, 500}
+@desc Gets a single spatial point representative of the geomark.
+@required {geomarkId: str # The unique identifier for the geomark., fileFormatExtension: str(json/xml/kml/kmz/shp/shpz/geojson/gml/gpkg/wkt) # The file format name extension used to represent the geomark download.}
+@optional {srid: int(4326/3005/3857/26907/26908/26909/26910/26911)=4326 # The srid of the coordinate system the geometry should be converted to.}
+@returns(200) The geomark will be returned in the body of the HTTP response encoded in the requested [file format](https://apps.gov.bc.ca/pub/geomark/docs/fileFormats.html).
+@errors {400: **Coordinate system with srid = <srid> is not supported.**  Check the list of supported [coordinate systems](https://apps.gov.bc.ca/pub/geomark/docs/coordinateSystems.html)., 404: **The geomark <geomarkId> could not be found.**  Check for extra characters on the end of the URL. The geomark may have expired and been deleted., 500: **Internal Server Error**}
 
 @end

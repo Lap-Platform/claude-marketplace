@@ -46,81 +46,25 @@ https://management.azure.com
 | GET | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{rootResourceName}/project/{resourceName} | Projects_Get |
 | PATCH | /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{rootResourceName}/project/{resourceName} | Projects_Update |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What operations are available for the Visual Studio resource provider?" -> GET /providers/microsoft.visualstudio/operations
-- "Is this Visual Studio account name available?" -> POST /subscriptions/{subscriptionId}/providers/microsoft.visualstudio/checkNameAvailability
-- "List all Visual Studio accounts in my resource group?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account
-- "Get details for a specific Visual Studio account?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{resourceName}
-- "How do I create or update a Visual Studio account?" -> PUT /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{resourceName}
-- "How do I delete a Visual Studio account?" -> DELETE /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{resourceName}
-- "What extensions are installed on my Visual Studio account?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{accountResourceName}/extension
-- "How do I install an extension on a Visual Studio account?" -> PUT /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{accountResourceName}/extension/{extensionResourceName}
-- "How do I get details for a specific extension?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{accountResourceName}/extension/{extensionResourceName}
-- "How do I update an existing extension's configuration?" -> PATCH /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{accountResourceName}/extension/{extensionResourceName}
-- "How do I remove an extension from a Visual Studio account?" -> DELETE /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{accountResourceName}/extension/{extensionResourceName}
-- "List all projects under a Visual Studio account?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{rootResourceName}/project
-- "How do I create a new project in my Visual Studio account?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{rootResourceName}/project/{resourceName}
-- "How do I get details for a specific project?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{rootResourceName}/project/{resourceName}
-- "How do I update an existing project's properties?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{rootResourceName}/project/{resourceName}
-
-## Response Tips
-
-- **Operations (providers):** Returns a flat list of available operations; no pagination. Use to discover supported actions before scripting.
-- **Accounts & Extensions:** 200 means success; 404 on GET/PUT for accounts and GET for extensions means the resource does not exist. Check the `error.code` and `error.message` fields in error responses for actionable detail.
-- **Projects (PUT):** Returns 200 for immediate completion or 202 for long-running creation. On 202, check the `Location` or `Azure-AsyncOperation` header to poll for completion status.
-- **Name Availability:** The 200 response body contains a boolean `nameAvailable` field and a `message` explaining why a name is unavailable -- always check both.
-- **List endpoints:** Account and project list responses return arrays; extension lists are scoped to a single account. No server-side pagination is documented, so expect the full set in one response.
-
-## Anomaly Flags
-
-- **202 Accepted on project creation:** The operation is running asynchronously. Surface this immediately so the agent can poll for completion rather than assuming success.
-- **404 on account or project GET:** The resource was deleted or never existed. Flag when this appears mid-workflow (e.g., after a PUT that returned 200) as it may indicate a race condition or propagation delay.
-- **404 on account PUT:** Unlike most Azure PUT-creates, this endpoint can return 404, suggesting the resource group or subscription is invalid. Surface with a suggestion to verify the parent resources.
-- **Missing api-version parameter:** Every endpoint requires `api-version`. If omitted, Azure returns a generic 400. Flag this as the likely root cause for any unexpected 400 errors.
-- **Extension GET returning 404 vs list returning empty:** A 404 on a specific extension means it was never installed or was removed. An empty list means no extensions at all. Distinguish these for the user.
-- **Deprecated API version (2017-11-01-preview):** This is a preview API version from 2017. Proactively warn that newer stable versions may be available and behavior may change without notice.
-
-## Playbook
-
-### 1. Set Up a New Visual Studio Account with Extensions
-
-1. Call POST `/subscriptions/{subscriptionId}/providers/microsoft.visualstudio/checkNameAvailability` with the desired account name to verify availability.
-2. If `nameAvailable` is true, call PUT `/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{resourceName}` with the account configuration body.
-3. Confirm creation by calling GET on the same account path and verifying the returned properties.
-4. Install required extensions by calling PUT `.../account/{accountResourceName}/extension/{extensionResourceName}` for each extension, passing the extension configuration body.
-5. Verify installed extensions by calling GET `.../account/{accountResourceName}/extension` and confirming all expected extensions appear.
-
-### 2. Create and Monitor a Project
-
-1. Call PUT `/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{rootResourceName}/project/{resourceName}` with the project body. Optionally set `validating` parameter to validate without creating.
-2. If response is 200, the project is ready immediately.
-3. If response is 202, extract the async operation URL from response headers and poll until the operation completes.
-4. Confirm project details by calling GET on the project path.
-
-### 3. Audit and Clean Up Extensions
-
-1. List all extensions by calling GET `.../account/{accountResourceName}/extension`.
-2. For each extension, call GET `.../extension/{extensionResourceName}` to inspect its configuration and status.
-3. For unwanted extensions, call DELETE `.../extension/{extensionResourceName}`.
-4. For extensions needing configuration changes, call PATCH `.../extension/{extensionResourceName}` with the updated body.
-
-### 4. Decommission a Visual Studio Account
-
-1. List all projects under the account by calling GET `.../account/{rootResourceName}/project` and note any active projects.
-2. List all extensions by calling GET `.../account/{accountResourceName}/extension`.
-3. Remove each extension by calling DELETE on each extension resource.
-4. Delete the account by calling DELETE `/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{resourceName}`.
-5. Verify deletion by calling GET on the account path and confirming a 404 response.
-
-### 5. Discover Available Operations and Validate Access
-
-1. Call GET `/providers/microsoft.visualstudio/operations` to list all supported operations.
-2. Verify your subscription has access by calling GET `.../account` against a known resource group.
-3. If the account list returns successfully, your OAuth token and subscription are valid for this provider.
-4. If you receive a 403 or 401, check that your OAuth2 token has the required Azure RBAC role assignments for the Visual Studio resource provider.
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all operations?" -> GET /providers/microsoft.visualstudio/operations
+- "Create a checkNameAvailability?" -> POST /subscriptions/{subscriptionId}/providers/microsoft.visualstudio/checkNameAvailability
+- "List all account?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account
+- "List all extension?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{accountResourceName}/extension
+- "Update a extension?" -> PUT /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{accountResourceName}/extension/{extensionResourceName}
+- "Delete a extension?" -> DELETE /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{accountResourceName}/extension/{extensionResourceName}
+- "Get extension details?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{accountResourceName}/extension/{extensionResourceName}
+- "Partially update a extension?" -> PATCH /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{accountResourceName}/extension/{extensionResourceName}
+- "Update a account?" -> PUT /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{resourceName}
+- "Delete a account?" -> DELETE /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{resourceName}
+- "Get account details?" -> GET /subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{resourceName}
+- "List all project?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{rootResourceName}/project
+- "Update a project?" -> PUT /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{rootResourceName}/project/{resourceName}
+- "Get project details?" -> GET /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{rootResourceName}/project/{resourceName}
+- "Partially update a project?" -> PATCH /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/microsoft.visualstudio/account/{rootResourceName}/project/{resourceName}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

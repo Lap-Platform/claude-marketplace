@@ -9,6 +9,7 @@
 
 @group recipes
 @endpoint POST /recipes/{name}/batchDeleteRecipeVersion
+@desc Deletes one or more versions of a recipe at a time. The entire request will be rejected if:   The recipe does not exist.   There is an invalid version identifier in the list of versions.   The version list is empty.   The version list size exceeds 50.   The version list contains duplicate entries.   The request will complete successfully, but with partial failures, if:   A version does not exist.   A version is being used by a job.   You specify LATEST_WORKING, but it's being used by a project.   The version fails to be deleted.   The LATEST_WORKING version will only be deleted if the recipe has no other versions. If you try to delete LATEST_WORKING while other versions exist (or if they can't be deleted), then LATEST_WORKING will be listed as partial failure in the response.
 @required {Name: str, RecipeVersions: [str]}
 @returns(200) {Name: str, Errors: [RecipeVersionErrorDetail]?}
 
@@ -16,6 +17,7 @@
 
 @group datasets
 @endpoint POST /datasets
+@desc Creates a new DataBrew dataset.
 @required {Name: str, Input: Input}
 @optional {Format: str, FormatOptions: FormatOptions, PathOptions: PathOptions, Tags: map<str,str>}
 @returns(200) {Name: str}
@@ -24,6 +26,7 @@
 
 @group profileJobs
 @endpoint POST /profileJobs
+@desc Creates a new job to analyze a dataset and create its data profile.
 @required {DatasetName: str, Name: str, OutputLocation: S3Location, RoleArn: str}
 @optional {EncryptionKeyArn: str, EncryptionMode: str, LogSubscription: str, MaxCapacity: int, MaxRetries: int, Configuration: ProfileConfiguration, ValidationConfigurations: [ValidationConfiguration], Tags: map<str,str>, Timeout: int, JobSample: JobSample}
 @returns(200) {Name: str}
@@ -32,6 +35,7 @@
 
 @group projects
 @endpoint POST /projects
+@desc Creates a new DataBrew project.
 @required {DatasetName: str, Name: str, RecipeName: str, RoleArn: str}
 @optional {Sample: Sample, Tags: map<str,str>}
 @returns(200) {Name: str}
@@ -40,6 +44,7 @@
 
 @group recipes
 @endpoint POST /recipes
+@desc Creates a new DataBrew recipe.
 @required {Name: str, Steps: [RecipeStep]}
 @optional {Description: str, Tags: map<str,str>}
 @returns(200) {Name: str}
@@ -48,6 +53,7 @@
 
 @group recipeJobs
 @endpoint POST /recipeJobs
+@desc Creates a new job to transform input data, using steps defined in an existing Glue DataBrew recipe
 @required {Name: str, RoleArn: str}
 @optional {DatasetName: str, EncryptionKeyArn: str, EncryptionMode: str, LogSubscription: str, MaxCapacity: int, MaxRetries: int, Outputs: [Output], DataCatalogOutputs: [DataCatalogOutput], DatabaseOutputs: [DatabaseOutput], ProjectName: str, RecipeReference: RecipeReference, Tags: map<str,str>, Timeout: int}
 @returns(200) {Name: str}
@@ -56,6 +62,7 @@
 
 @group rulesets
 @endpoint POST /rulesets
+@desc Creates a new ruleset that can be used in a profile job to validate the data quality of a dataset.
 @required {Name: str, TargetArn: str, Rules: [Rule]}
 @optional {Description: str, Tags: map<str,str>}
 @returns(200) {Name: str}
@@ -64,6 +71,7 @@
 
 @group schedules
 @endpoint POST /schedules
+@desc Creates a new schedule for one or more DataBrew jobs. Jobs can be run at a specific date and time, or at regular intervals.
 @required {CronExpression: str, Name: str}
 @optional {JobNames: [str], Tags: map<str,str>}
 @returns(200) {Name: str}
@@ -72,6 +80,7 @@
 
 @group datasets
 @endpoint DELETE /datasets/{name}
+@desc Deletes a dataset from DataBrew.
 @required {Name: str}
 @returns(200) {Name: str}
 
@@ -79,6 +88,7 @@
 
 @group jobs
 @endpoint DELETE /jobs/{name}
+@desc Deletes the specified DataBrew job.
 @required {Name: str}
 @returns(200) {Name: str}
 
@@ -86,6 +96,7 @@
 
 @group projects
 @endpoint DELETE /projects/{name}
+@desc Deletes an existing DataBrew project.
 @required {Name: str}
 @returns(200) {Name: str}
 
@@ -93,6 +104,7 @@
 
 @group recipes
 @endpoint DELETE /recipes/{name}/recipeVersion/{recipeVersion}
+@desc Deletes a single version of a DataBrew recipe.
 @required {Name: str, RecipeVersion: str}
 @returns(200) {Name: str, RecipeVersion: str}
 
@@ -100,6 +112,7 @@
 
 @group rulesets
 @endpoint DELETE /rulesets/{name}
+@desc Deletes a ruleset.
 @required {Name: str}
 @returns(200) {Name: str}
 
@@ -107,6 +120,7 @@
 
 @group schedules
 @endpoint DELETE /schedules/{name}
+@desc Deletes the specified DataBrew schedule.
 @required {Name: str}
 @returns(200) {Name: str}
 
@@ -114,17 +128,20 @@
 
 @group datasets
 @endpoint GET /datasets/{name}
+@desc Returns the definition of a specific DataBrew dataset.
 @required {Name: str}
-@returns(200) {CreatedBy: str?, CreateDate: str(timestamp)?, Name: str, Format: str?, FormatOptions: FormatOptions?{Json: JsonOptions?{MultiLine: bool?}, Excel: ExcelOptions?{SheetNames: [str]?, SheetIndexes: [int]?, HeaderRow: bool?}, Csv: CsvOptions?{Delimiter: str?, HeaderRow: bool?}}, Input: Input{S3InputDefinition: S3Location?{Bucket: str, Key: str?, BucketOwner: str?}, DataCatalogInputDefinition: DataCatalogInputDefinition?{CatalogId: str?, DatabaseName: str, TableName: str, TempDirectory: S3Location?{Bucket: str, Key: str?, BucketOwner: str?}}, DatabaseInputDefinition: DatabaseInputDefinition?{GlueConnectionName: str, DatabaseTableName: str?, TempDirectory: S3Location?{Bucket: str, Key: str?, BucketOwner: str?}, QueryString: str?}, Metadata: Metadata?{SourceArn: str?}}, LastModifiedDate: str(timestamp)?, LastModifiedBy: str?, Source: str?, PathOptions: PathOptions?{LastModifiedDateCondition: FilterExpression?{Expression: str, ValuesMap: map<str,str>}, FilesLimit: FilesLimit?{MaxFiles: int, OrderedBy: str?, Order: str?}, Parameters: map<str,DatasetParameter>?}, Tags: map<str,str>?, ResourceArn: str?}
+@returns(200) {CreatedBy: str?, CreateDate: str(timestamp)?, Name: str, Format: str?, FormatOptions: FormatOptions?{Json: JsonOptions?{MultiLine: bool?}, Excel: ExcelOptions?{SheetNames: [str]?, SheetIndexes: [int]?, HeaderRow: bool?}, Csv: CsvOptions?{Delimiter: str?, HeaderRow: bool?}}, Input: Input{S3InputDefinition: S3Location?{Bucket: str, Key: str?, BucketOwner: str?}, DataCatalogInputDefinition: DataCatalogInputDefinition?{CatalogId: str?, DatabaseName: str, TableName: str, TempDirectory: S3Location?{Bucket: str, Key: str?, BucketOwner: str?}}, DatabaseInputDefinition: DatabaseInputDefinition?{GlueConnectionName: str, DatabaseTableName: str?, TempDirectory: S3Location?{Bucket: str, Key: str?, BucketOwner: str?}, QueryString: str?}, Metadata: Metadata?{SourceArn: str?}}, LastModifiedDate: str(timestamp)?, LastModifiedBy: str?, Source: str?, PathOptions: PathOptions?{LastModifiedDateCondition: FilterExpression?{Expression: str, ValuesMap: map<str, str>: any}, FilesLimit: FilesLimit?{MaxFiles: int, OrderedBy: str?, Order: str?}, Parameters: map<str, DatasetParameter>?: any}, Tags: map<str,str>?, ResourceArn: str?}
 
 @endgroup
 
 @group jobs
 @endpoint GET /jobs/{name}
+@desc Returns the definition of a specific DataBrew job.
 @required {Name: str}
 @returns(200) {CreateDate: str(timestamp)?, CreatedBy: str?, DatasetName: str?, EncryptionKeyArn: str?, EncryptionMode: str?, Name: str, Type: str?, LastModifiedBy: str?, LastModifiedDate: str(timestamp)?, LogSubscription: str?, MaxCapacity: int?, MaxRetries: int?, Outputs: [Output]?, DataCatalogOutputs: [DataCatalogOutput]?, DatabaseOutputs: [DatabaseOutput]?, ProjectName: str?, ProfileConfiguration: ProfileConfiguration?{DatasetStatisticsConfiguration: StatisticsConfiguration?{IncludedStatistics: [str]?, Overrides: [StatisticOverride]?}, ProfileColumns: [ColumnSelector]?, ColumnStatisticsConfigurations: [ColumnStatisticsConfiguration]?, EntityDetectorConfiguration: EntityDetectorConfiguration?{EntityTypes: [str], AllowedStatistics: [AllowedStatistics]?}}, ValidationConfigurations: [ValidationConfiguration]?, RecipeReference: RecipeReference?{Name: str, RecipeVersion: str?}, ResourceArn: str?, RoleArn: str?, Tags: map<str,str>?, Timeout: int?, JobSample: JobSample?{Mode: str?, Size: int(i64)?}}
 
 @endpoint GET /jobs/{name}/jobRun/{runId}
+@desc Represents one run of a DataBrew job.
 @required {Name: str, RunId: str}
 @returns(200) {Attempt: int?, CompletedOn: str(timestamp)?, DatasetName: str?, ErrorMessage: str?, ExecutionTime: int?, JobName: str, ProfileConfiguration: ProfileConfiguration?{DatasetStatisticsConfiguration: StatisticsConfiguration?{IncludedStatistics: [str]?, Overrides: [StatisticOverride]?}, ProfileColumns: [ColumnSelector]?, ColumnStatisticsConfigurations: [ColumnStatisticsConfiguration]?, EntityDetectorConfiguration: EntityDetectorConfiguration?{EntityTypes: [str], AllowedStatistics: [AllowedStatistics]?}}, ValidationConfigurations: [ValidationConfiguration]?, RunId: str?, State: str?, LogSubscription: str?, LogGroupName: str?, Outputs: [Output]?, DataCatalogOutputs: [DataCatalogOutput]?, DatabaseOutputs: [DatabaseOutput]?, RecipeReference: RecipeReference?{Name: str, RecipeVersion: str?}, StartedBy: str?, StartedOn: str(timestamp)?, JobSample: JobSample?{Mode: str?, Size: int(i64)?}}
 
@@ -132,6 +149,7 @@
 
 @group projects
 @endpoint GET /projects/{name}
+@desc Returns the definition of a specific DataBrew project.
 @required {Name: str}
 @returns(200) {CreateDate: str(timestamp)?, CreatedBy: str?, DatasetName: str?, LastModifiedDate: str(timestamp)?, LastModifiedBy: str?, Name: str, RecipeName: str?, ResourceArn: str?, Sample: Sample?{Size: int?, Type: str}, RoleArn: str?, Tags: map<str,str>?, SessionStatus: str?, OpenedBy: str?, OpenDate: str(timestamp)?}
 
@@ -139,6 +157,7 @@
 
 @group recipes
 @endpoint GET /recipes/{name}
+@desc Returns the definition of a specific DataBrew recipe corresponding to a particular version.
 @required {Name: str}
 @optional {recipeVersion: str}
 @returns(200) {CreatedBy: str?, CreateDate: str(timestamp)?, LastModifiedBy: str?, LastModifiedDate: str(timestamp)?, ProjectName: str?, PublishedBy: str?, PublishedDate: str(timestamp)?, Description: str?, Name: str, Steps: [RecipeStep]?, Tags: map<str,str>?, ResourceArn: str?, RecipeVersion: str?}
@@ -147,6 +166,7 @@
 
 @group rulesets
 @endpoint GET /rulesets/{name}
+@desc Retrieves detailed information about the ruleset.
 @required {Name: str}
 @returns(200) {Name: str, Description: str?, TargetArn: str?, Rules: [Rule]?, CreateDate: str(timestamp)?, CreatedBy: str?, LastModifiedBy: str?, LastModifiedDate: str(timestamp)?, ResourceArn: str?, Tags: map<str,str>?}
 
@@ -154,6 +174,7 @@
 
 @group schedules
 @endpoint GET /schedules/{name}
+@desc Returns the definition of a specific DataBrew schedule.
 @required {Name: str}
 @returns(200) {CreateDate: str(timestamp)?, CreatedBy: str?, JobNames: [str]?, LastModifiedBy: str?, LastModifiedDate: str(timestamp)?, ResourceArn: str?, CronExpression: str?, Tags: map<str,str>?, Name: str}
 
@@ -161,6 +182,7 @@
 
 @group datasets
 @endpoint GET /datasets
+@desc Lists all of the DataBrew datasets.
 @optional {maxResults: int, nextToken: str}
 @returns(200) {Datasets: [Dataset], NextToken: str?}
 
@@ -168,11 +190,13 @@
 
 @group jobs
 @endpoint GET /jobs/{name}/jobRuns
+@desc Lists all of the previous runs of a particular DataBrew job.
 @required {Name: str}
 @optional {maxResults: int, nextToken: str}
 @returns(200) {JobRuns: [JobRun], NextToken: str?}
 
 @endpoint GET /jobs
+@desc Lists all of the DataBrew jobs that are defined.
 @optional {datasetName: str, maxResults: int, nextToken: str, projectName: str}
 @returns(200) {Jobs: [Job], NextToken: str?}
 
@@ -180,6 +204,7 @@
 
 @group projects
 @endpoint GET /projects
+@desc Lists all of the DataBrew projects that are defined.
 @optional {nextToken: str, maxResults: int}
 @returns(200) {Projects: [Project], NextToken: str?}
 
@@ -187,6 +212,7 @@
 
 @group recipeVersions
 @endpoint GET /recipeVersions
+@desc Lists the versions of a particular DataBrew recipe, except for LATEST_WORKING.
 @required {name: str}
 @optional {maxResults: int, nextToken: str}
 @returns(200) {NextToken: str?, Recipes: [Recipe]}
@@ -195,6 +221,7 @@
 
 @group recipes
 @endpoint GET /recipes
+@desc Lists all of the DataBrew recipes that are defined.
 @optional {maxResults: int, nextToken: str, recipeVersion: str}
 @returns(200) {Recipes: [Recipe], NextToken: str?}
 
@@ -202,6 +229,7 @@
 
 @group rulesets
 @endpoint GET /rulesets
+@desc List all rulesets available in the current account or rulesets associated with a specific resource (dataset).
 @optional {targetArn: str, maxResults: int, nextToken: str}
 @returns(200) {Rulesets: [RulesetItem], NextToken: str?}
 
@@ -209,6 +237,7 @@
 
 @group schedules
 @endpoint GET /schedules
+@desc Lists the DataBrew schedules that are defined.
 @optional {jobName: str, maxResults: int, nextToken: str}
 @returns(200) {Schedules: [Schedule], NextToken: str?}
 
@@ -216,6 +245,7 @@
 
 @group tags
 @endpoint GET /tags/{ResourceArn}
+@desc Lists all the tags for a DataBrew resource.
 @required {ResourceArn: str}
 @returns(200) {Tags: map<str,str>?}
 
@@ -223,6 +253,7 @@
 
 @group recipes
 @endpoint POST /recipes/{name}/publishRecipe
+@desc Publishes a new version of a DataBrew recipe.
 @required {Name: str}
 @optional {Description: str}
 @returns(200) {Name: str}
@@ -231,6 +262,7 @@
 
 @group projects
 @endpoint PUT /projects/{name}/sendProjectSessionAction
+@desc Performs a recipe step within an interactive DataBrew session that's currently open.
 @required {Name: str}
 @optional {Preview: bool, RecipeStep: RecipeStep, StepIndex: int, ClientSessionId: str, ViewFrame: ViewFrame}
 @returns(200) {Result: str?, Name: str, ActionId: int?}
@@ -239,6 +271,7 @@
 
 @group jobs
 @endpoint POST /jobs/{name}/startJobRun
+@desc Runs a DataBrew job.
 @required {Name: str}
 @returns(200) {RunId: str}
 
@@ -246,6 +279,7 @@
 
 @group projects
 @endpoint PUT /projects/{name}/startProjectSession
+@desc Creates an interactive session, enabling you to manipulate data in a DataBrew project.
 @required {Name: str}
 @optional {AssumeControl: bool}
 @returns(200) {Name: str, ClientSessionId: str?}
@@ -254,6 +288,7 @@
 
 @group jobs
 @endpoint POST /jobs/{name}/jobRun/{runId}/stopJobRun
+@desc Stops a particular run of a job.
 @required {Name: str, RunId: str}
 @returns(200) {RunId: str}
 
@@ -261,15 +296,18 @@
 
 @group tags
 @endpoint POST /tags/{ResourceArn}
+@desc Adds metadata tags to a DataBrew resource, such as a dataset, project, recipe, job, or schedule.
 @required {ResourceArn: str, Tags: map<str,str>}
 
 @endpoint DELETE /tags/{ResourceArn}
+@desc Removes metadata tags from a DataBrew resource.
 @required {ResourceArn: str, tagKeys: [str]}
 
 @endgroup
 
 @group datasets
 @endpoint PUT /datasets/{name}
+@desc Modifies the definition of an existing DataBrew dataset.
 @required {Name: str, Input: Input}
 @optional {Format: str, FormatOptions: FormatOptions, PathOptions: PathOptions}
 @returns(200) {Name: str}
@@ -278,6 +316,7 @@
 
 @group profileJobs
 @endpoint PUT /profileJobs/{name}
+@desc Modifies the definition of an existing profile job.
 @required {Name: str, OutputLocation: S3Location, RoleArn: str}
 @optional {Configuration: ProfileConfiguration, EncryptionKeyArn: str, EncryptionMode: str, LogSubscription: str, MaxCapacity: int, MaxRetries: int, ValidationConfigurations: [ValidationConfiguration], Timeout: int, JobSample: JobSample}
 @returns(200) {Name: str}
@@ -286,6 +325,7 @@
 
 @group projects
 @endpoint PUT /projects/{name}
+@desc Modifies the definition of an existing DataBrew project.
 @required {Name: str, RoleArn: str}
 @optional {Sample: Sample}
 @returns(200) {LastModifiedDate: str(timestamp)?, Name: str}
@@ -294,6 +334,7 @@
 
 @group recipes
 @endpoint PUT /recipes/{name}
+@desc Modifies the definition of the LATEST_WORKING version of a DataBrew recipe.
 @required {Name: str}
 @optional {Description: str, Steps: [RecipeStep]}
 @returns(200) {Name: str}
@@ -302,6 +343,7 @@
 
 @group recipeJobs
 @endpoint PUT /recipeJobs/{name}
+@desc Modifies the definition of an existing DataBrew recipe job.
 @required {Name: str, RoleArn: str}
 @optional {EncryptionKeyArn: str, EncryptionMode: str, LogSubscription: str, MaxCapacity: int, MaxRetries: int, Outputs: [Output], DataCatalogOutputs: [DataCatalogOutput], DatabaseOutputs: [DatabaseOutput], Timeout: int}
 @returns(200) {Name: str}
@@ -310,6 +352,7 @@
 
 @group rulesets
 @endpoint PUT /rulesets/{name}
+@desc Updates specified ruleset.
 @required {Name: str, Rules: [Rule]}
 @optional {Description: str}
 @returns(200) {Name: str}
@@ -318,6 +361,7 @@
 
 @group schedules
 @endpoint PUT /schedules/{name}
+@desc Modifies the definition of an existing DataBrew schedule.
 @required {Name: str, CronExpression: str}
 @optional {JobNames: [str]}
 @returns(200) {Name: str}

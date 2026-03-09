@@ -8,397 +8,487 @@
 @toc root(90)
 
 @endpoint POST /
+@desc Accepts an offer to share the specified portfolio.
 @required {PortfolioId: str}
 @optional {AcceptLanguage: str, PortfolioShareType: str}
 
 @endpoint POST /
+@desc Associates the specified budget with the specified resource.
 @required {BudgetName: str, ResourceId: str}
 
 @endpoint POST /
+@desc Associates the specified principal ARN with the specified portfolio. If you share the portfolio with principal name sharing enabled, the PrincipalARN association is included in the share.  The PortfolioID, PrincipalARN, and PrincipalType parameters are required.  You can associate a maximum of 10 Principals with a portfolio using PrincipalType as IAM_PATTERN.   When you associate a principal with portfolio, a potential privilege escalation path may occur when that portfolio is then shared with other accounts. For a user in a recipient account who is not an Service Catalog Admin, but still has the ability to create Principals (Users/Groups/Roles), that user could create a role that matches a principal name association for the portfolio. Although this user may not know which principal names are associated through Service Catalog, they may be able to guess the user. If this potential escalation path is a concern, then Service Catalog recommends using PrincipalType as IAM. With this configuration, the PrincipalARN must already exist in the recipient account before it can be associated.
 @required {PortfolioId: str, PrincipalARN: str, PrincipalType: str}
 @optional {AcceptLanguage: str}
 
 @endpoint POST /
+@desc Associates the specified product with the specified portfolio. A delegated admin is authorized to invoke this command.
 @required {ProductId: str, PortfolioId: str}
 @optional {AcceptLanguage: str, SourcePortfolioId: str}
 
 @endpoint POST /
+@desc Associates a self-service action with a provisioning artifact.
 @required {ProductId: str, ProvisioningArtifactId: str, ServiceActionId: str}
 @optional {AcceptLanguage: str, IdempotencyToken: str}
 
 @endpoint POST /
+@desc Associate the specified TagOption with the specified portfolio or product.
 @required {ResourceId: str, TagOptionId: str}
 
 @endpoint POST /
+@desc Associates multiple self-service actions with provisioning artifacts.
 @required {ServiceActionAssociations: [ServiceActionAssociation]}
 @optional {AcceptLanguage: str}
 @returns(200) {FailedServiceActionAssociations: [FailedServiceActionAssociation]?}
 
 @endpoint POST /
+@desc Disassociates a batch of self-service actions from the specified provisioning artifact.
 @required {ServiceActionAssociations: [ServiceActionAssociation]}
 @optional {AcceptLanguage: str}
 @returns(200) {FailedServiceActionAssociations: [FailedServiceActionAssociation]?}
 
 @endpoint POST /
+@desc Copies the specified source product to the specified target product or a new product. You can copy a product to the same account or another account. You can copy a product to the same Region or another Region. If you copy a product to another account, you must first share the product in a portfolio using CreatePortfolioShare. This operation is performed asynchronously. To track the progress of the operation, use DescribeCopyProductStatus.
 @required {SourceProductArn: str, IdempotencyToken: str}
 @optional {AcceptLanguage: str, TargetProductId: str, TargetProductName: str, SourceProvisioningArtifactIdentifiers: [map<str,str>], CopyOptions: [str]}
 @returns(200) {CopyProductToken: str?}
 
 @endpoint POST /
+@desc Creates a constraint. A delegated admin is authorized to invoke this command.
 @required {PortfolioId: str, ProductId: str, Parameters: str, Type: str, IdempotencyToken: str}
 @optional {AcceptLanguage: str, Description: str}
 @returns(200) {ConstraintDetail: ConstraintDetail?{ConstraintId: str?, Type: str?, Description: str?, Owner: str?, ProductId: str?, PortfolioId: str?}, ConstraintParameters: str?, Status: str?}
 
 @endpoint POST /
+@desc Creates a portfolio. A delegated admin is authorized to invoke this command.
 @required {DisplayName: str, ProviderName: str, IdempotencyToken: str}
 @optional {AcceptLanguage: str, Description: str, Tags: [Tag]}
 @returns(200) {PortfolioDetail: PortfolioDetail?{Id: str?, ARN: str?, DisplayName: str?, Description: str?, CreatedTime: str(timestamp)?, ProviderName: str?}, Tags: [Tag]?}
 
 @endpoint POST /
+@desc Shares the specified portfolio with the specified account or organization node. Shares to an organization node can only be created by the management account of an organization or by a delegated administrator. You can share portfolios to an organization, an organizational unit, or a specific account. Note that if a delegated admin is de-registered, they can no longer create portfolio shares.  AWSOrganizationsAccess must be enabled in order to create a portfolio share to an organization node. You can't share a shared resource, including portfolios that contain a shared product. If the portfolio share with the specified account or organization node already exists, this action will have no effect and will not return an error. To update an existing share, you must use the  UpdatePortfolioShare API instead.   When you associate a principal with portfolio, a potential privilege escalation path may occur when that portfolio is then shared with other accounts. For a user in a recipient account who is not an Service Catalog Admin, but still has the ability to create Principals (Users/Groups/Roles), that user could create a role that matches a principal name association for the portfolio. Although this user may not know which principal names are associated through Service Catalog, they may be able to guess the user. If this potential escalation path is a concern, then Service Catalog recommends using PrincipalType as IAM. With this configuration, the PrincipalARN must already exist in the recipient account before it can be associated.
 @required {PortfolioId: str}
 @optional {AcceptLanguage: str, AccountId: str, OrganizationNode: OrganizationNode, ShareTagOptions: bool, SharePrincipals: bool}
 @returns(200) {PortfolioShareToken: str?}
 
 @endpoint POST /
+@desc Creates a product. A delegated admin is authorized to invoke this command. The user or role that performs this operation must have the cloudformation:GetTemplate IAM policy permission. This policy permission is required when using the ImportFromPhysicalId template source in the information data section.
 @required {Name: str, Owner: str, ProductType: str, IdempotencyToken: str}
 @optional {AcceptLanguage: str, Description: str, Distributor: str, SupportDescription: str, SupportEmail: str, SupportUrl: str, Tags: [Tag], ProvisioningArtifactParameters: ProvisioningArtifactProperties, SourceConnection: SourceConnection}
 @returns(200) {ProductViewDetail: ProductViewDetail?{ProductViewSummary: ProductViewSummary?{Id: str?, ProductId: str?, Name: str?, Owner: str?, ShortDescription: str?, Type: str?, Distributor: str?, HasDefaultPath: bool?, SupportEmail: str?, SupportDescription: str?, SupportUrl: str?}, Status: str?, ProductARN: str?, CreatedTime: str(timestamp)?, SourceConnection: SourceConnectionDetail?{Type: str?, ConnectionParameters: SourceConnectionParameters?{CodeStar: CodeStarParameters?}, LastSync: LastSync?{LastSyncTime: str(timestamp)?, LastSyncStatus: str?, LastSyncStatusMessage: str?, LastSuccessfulSyncTime: str(timestamp)?, LastSuccessfulSyncProvisioningArtifactId: str?}}}, ProvisioningArtifactDetail: ProvisioningArtifactDetail?{Id: str?, Name: str?, Description: str?, Type: str?, CreatedTime: str(timestamp)?, Active: bool?, Guidance: str?, SourceRevision: str?}, Tags: [Tag]?}
 
 @endpoint POST /
+@desc Creates a plan. A plan includes the list of resources to be created (when provisioning a new product) or modified (when updating a provisioned product) when the plan is executed. You can create one plan for each provisioned product. To create a plan for an existing provisioned product, the product status must be AVAILABLE or TAINTED. To view the resource changes in the change set, use DescribeProvisionedProductPlan. To create or modify the provisioned product, use ExecuteProvisionedProductPlan.
 @required {PlanName: str, PlanType: str, ProductId: str, ProvisionedProductName: str, ProvisioningArtifactId: str, IdempotencyToken: str}
 @optional {AcceptLanguage: str, NotificationArns: [str], PathId: str, ProvisioningParameters: [UpdateProvisioningParameter], Tags: [Tag]}
 @returns(200) {PlanName: str?, PlanId: str?, ProvisionProductId: str?, ProvisionedProductName: str?, ProvisioningArtifactId: str?}
 
 @endpoint POST /
+@desc Creates a provisioning artifact (also known as a version) for the specified product. You cannot create a provisioning artifact for a product that was shared with you. The user or role that performs this operation must have the cloudformation:GetTemplate IAM policy permission. This policy permission is required when using the ImportFromPhysicalId template source in the information data section.
 @required {ProductId: str, Parameters: ProvisioningArtifactProperties, IdempotencyToken: str}
 @optional {AcceptLanguage: str}
 @returns(200) {ProvisioningArtifactDetail: ProvisioningArtifactDetail?{Id: str?, Name: str?, Description: str?, Type: str?, CreatedTime: str(timestamp)?, Active: bool?, Guidance: str?, SourceRevision: str?}, Info: map<str,str>?, Status: str?}
 
 @endpoint POST /
+@desc Creates a self-service action.
 @required {Name: str, DefinitionType: str, Definition: map<str,str>, IdempotencyToken: str}
 @optional {Description: str, AcceptLanguage: str}
-@returns(200) {ServiceActionDetail: ServiceActionDetail?{ServiceActionSummary: ServiceActionSummary?{Id: str?, Name: str?, Description: str?, DefinitionType: str?}, Definition: map<str,str>?}}
+@returns(200) {ServiceActionDetail: ServiceActionDetail?{ServiceActionSummary: ServiceActionSummary?{Id: str?, Name: str?, Description: str?, DefinitionType: str?}, Definition: map<str, str>?: any}}
 
 @endpoint POST /
+@desc Creates a TagOption.
 @required {Key: str, Value: str}
 @returns(200) {TagOptionDetail: TagOptionDetail?{Key: str?, Value: str?, Active: bool?, Id: str?, Owner: str?}}
 
 @endpoint POST /
+@desc Deletes the specified constraint. A delegated admin is authorized to invoke this command.
 @required {Id: str}
 @optional {AcceptLanguage: str}
 
 @endpoint POST /
+@desc Deletes the specified portfolio. You cannot delete a portfolio if it was shared with you or if it has associated products, users, constraints, or shared accounts. A delegated admin is authorized to invoke this command.
 @required {Id: str}
 @optional {AcceptLanguage: str}
 
 @endpoint POST /
+@desc Stops sharing the specified portfolio with the specified account or organization node. Shares to an organization node can only be deleted by the management account of an organization or by a delegated administrator. Note that if a delegated admin is de-registered, portfolio shares created from that account are removed.
 @required {PortfolioId: str}
 @optional {AcceptLanguage: str, AccountId: str, OrganizationNode: OrganizationNode}
 @returns(200) {PortfolioShareToken: str?}
 
 @endpoint POST /
+@desc Deletes the specified product. You cannot delete a product if it was shared with you or is associated with a portfolio. A delegated admin is authorized to invoke this command.
 @required {Id: str}
 @optional {AcceptLanguage: str}
 
 @endpoint POST /
+@desc Deletes the specified plan.
 @required {PlanId: str}
 @optional {AcceptLanguage: str, IgnoreErrors: bool}
 
 @endpoint POST /
+@desc Deletes the specified provisioning artifact (also known as a version) for the specified product. You cannot delete a provisioning artifact associated with a product that was shared with you. You cannot delete the last provisioning artifact for a product, because a product must have at least one provisioning artifact.
 @required {ProductId: str, ProvisioningArtifactId: str}
 @optional {AcceptLanguage: str}
 
 @endpoint POST /
+@desc Deletes a self-service action.
 @required {Id: str}
 @optional {AcceptLanguage: str, IdempotencyToken: str}
 
 @endpoint POST /
+@desc Deletes the specified TagOption. You cannot delete a TagOption if it is associated with a product or portfolio.
 @required {Id: str}
 
 @endpoint POST /
+@desc Gets information about the specified constraint.
 @required {Id: str}
 @optional {AcceptLanguage: str}
 @returns(200) {ConstraintDetail: ConstraintDetail?{ConstraintId: str?, Type: str?, Description: str?, Owner: str?, ProductId: str?, PortfolioId: str?}, ConstraintParameters: str?, Status: str?}
 
 @endpoint POST /
+@desc Gets the status of the specified copy product operation.
 @required {CopyProductToken: str}
 @optional {AcceptLanguage: str}
 @returns(200) {CopyProductStatus: str?, TargetProductId: str?, StatusDetail: str?}
 
 @endpoint POST /
+@desc Gets information about the specified portfolio. A delegated admin is authorized to invoke this command.
 @required {Id: str}
 @optional {AcceptLanguage: str}
 @returns(200) {PortfolioDetail: PortfolioDetail?{Id: str?, ARN: str?, DisplayName: str?, Description: str?, CreatedTime: str(timestamp)?, ProviderName: str?}, Tags: [Tag]?, TagOptions: [TagOptionDetail]?, Budgets: [BudgetDetail]?}
 
 @endpoint POST /
+@desc Gets the status of the specified portfolio share operation. This API can only be called by the management account in the organization or by a delegated admin.
 @required {PortfolioShareToken: str}
 @returns(200) {PortfolioShareToken: str?, PortfolioId: str?, OrganizationNodeValue: str?, Status: str?, ShareDetails: ShareDetails?{SuccessfulShares: [str]?, ShareErrors: [ShareError]?}}
 
 @endpoint POST /
+@desc Returns a summary of each of the portfolio shares that were created for the specified portfolio. You can use this API to determine which accounts or organizational nodes this portfolio have been shared, whether the recipient entity has imported the share, and whether TagOptions are included with the share. The PortfolioId and Type parameters are both required.
 @required {PortfolioId: str, Type: str}
 @optional {PageToken: str, PageSize: int}
 @returns(200) {NextPageToken: str?, PortfolioShareDetails: [PortfolioShareDetail]?}
 
 @endpoint POST /
+@desc Gets information about the specified product.   Running this operation with administrator access results in a failure. DescribeProductAsAdmin should be used instead.
 @optional {AcceptLanguage: str, Id: str, Name: str}
 @returns(200) {ProductViewSummary: ProductViewSummary?{Id: str?, ProductId: str?, Name: str?, Owner: str?, ShortDescription: str?, Type: str?, Distributor: str?, HasDefaultPath: bool?, SupportEmail: str?, SupportDescription: str?, SupportUrl: str?}, ProvisioningArtifacts: [ProvisioningArtifact]?, Budgets: [BudgetDetail]?, LaunchPaths: [LaunchPath]?}
 
 @endpoint POST /
+@desc Gets information about the specified product. This operation is run with administrator access.
 @optional {AcceptLanguage: str, Id: str, Name: str, SourcePortfolioId: str}
 @returns(200) {ProductViewDetail: ProductViewDetail?{ProductViewSummary: ProductViewSummary?{Id: str?, ProductId: str?, Name: str?, Owner: str?, ShortDescription: str?, Type: str?, Distributor: str?, HasDefaultPath: bool?, SupportEmail: str?, SupportDescription: str?, SupportUrl: str?}, Status: str?, ProductARN: str?, CreatedTime: str(timestamp)?, SourceConnection: SourceConnectionDetail?{Type: str?, ConnectionParameters: SourceConnectionParameters?{CodeStar: CodeStarParameters?}, LastSync: LastSync?{LastSyncTime: str(timestamp)?, LastSyncStatus: str?, LastSyncStatusMessage: str?, LastSuccessfulSyncTime: str(timestamp)?, LastSuccessfulSyncProvisioningArtifactId: str?}}}, ProvisioningArtifactSummaries: [ProvisioningArtifactSummary]?, Tags: [Tag]?, TagOptions: [TagOptionDetail]?, Budgets: [BudgetDetail]?}
 
 @endpoint POST /
+@desc Gets information about the specified product.
 @required {Id: str}
 @optional {AcceptLanguage: str}
 @returns(200) {ProductViewSummary: ProductViewSummary?{Id: str?, ProductId: str?, Name: str?, Owner: str?, ShortDescription: str?, Type: str?, Distributor: str?, HasDefaultPath: bool?, SupportEmail: str?, SupportDescription: str?, SupportUrl: str?}, ProvisioningArtifacts: [ProvisioningArtifact]?}
 
 @endpoint POST /
+@desc Gets information about the specified provisioned product.
 @optional {AcceptLanguage: str, Id: str, Name: str}
 @returns(200) {ProvisionedProductDetail: ProvisionedProductDetail?{Name: str?, Arn: str?, Type: str?, Id: str?, Status: str?, StatusMessage: str?, CreatedTime: str(timestamp)?, IdempotencyToken: str?, LastRecordId: str?, LastProvisioningRecordId: str?, LastSuccessfulProvisioningRecordId: str?, ProductId: str?, ProvisioningArtifactId: str?, LaunchRoleArn: str?}, CloudWatchDashboards: [CloudWatchDashboard]?}
 
 @endpoint POST /
+@desc Gets information about the resource changes for the specified plan.
 @required {PlanId: str}
 @optional {AcceptLanguage: str, PageSize: int, PageToken: str}
 @returns(200) {ProvisionedProductPlanDetails: ProvisionedProductPlanDetails?{CreatedTime: str(timestamp)?, PathId: str?, ProductId: str?, PlanName: str?, PlanId: str?, ProvisionProductId: str?, ProvisionProductName: str?, PlanType: str?, ProvisioningArtifactId: str?, Status: str?, UpdatedTime: str(timestamp)?, NotificationArns: [str]?, ProvisioningParameters: [UpdateProvisioningParameter]?, Tags: [Tag]?, StatusMessage: str?}, ResourceChanges: [ResourceChange]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Gets information about the specified provisioning artifact (also known as a version) for the specified product.
 @optional {AcceptLanguage: str, ProvisioningArtifactId: str, ProductId: str, ProvisioningArtifactName: str, ProductName: str, Verbose: bool, IncludeProvisioningArtifactParameters: bool}
 @returns(200) {ProvisioningArtifactDetail: ProvisioningArtifactDetail?{Id: str?, Name: str?, Description: str?, Type: str?, CreatedTime: str(timestamp)?, Active: bool?, Guidance: str?, SourceRevision: str?}, Info: map<str,str>?, Status: str?, ProvisioningArtifactParameters: [ProvisioningArtifactParameter]?}
 
 @endpoint POST /
+@desc Gets information about the configuration required to provision the specified product using the specified provisioning artifact. If the output contains a TagOption key with an empty list of values, there is a TagOption conflict for that key. The end user cannot take action to fix the conflict, and launch is not blocked. In subsequent calls to ProvisionProduct, do not include conflicted TagOption keys as tags, or this causes the error "Parameter validation failed: Missing required parameter in Tags[N]:Value". Tag the provisioned product with the value sc-tagoption-conflict-portfolioId-productId.
 @optional {AcceptLanguage: str, ProductId: str, ProductName: str, ProvisioningArtifactId: str, ProvisioningArtifactName: str, PathId: str, PathName: str}
 @returns(200) {ProvisioningArtifactParameters: [ProvisioningArtifactParameter]?, ConstraintSummaries: [ConstraintSummary]?, UsageInstructions: [UsageInstruction]?, TagOptions: [TagOptionSummary]?, ProvisioningArtifactPreferences: ProvisioningArtifactPreferences?{StackSetAccounts: [str]?, StackSetRegions: [str]?}, ProvisioningArtifactOutputs: [ProvisioningArtifactOutput]?, ProvisioningArtifactOutputKeys: [ProvisioningArtifactOutput]?}
 
 @endpoint POST /
+@desc Gets information about the specified request operation. Use this operation after calling a request operation (for example, ProvisionProduct, TerminateProvisionedProduct, or UpdateProvisionedProduct).   If a provisioned product was transferred to a new owner using UpdateProvisionedProductProperties, the new owner will be able to describe all past records for that product. The previous owner will no longer be able to describe the records, but will be able to use ListRecordHistory to see the product's history from when he was the owner.
 @required {Id: str}
 @optional {AcceptLanguage: str, PageToken: str, PageSize: int}
 @returns(200) {RecordDetail: RecordDetail?{RecordId: str?, ProvisionedProductName: str?, Status: str?, CreatedTime: str(timestamp)?, UpdatedTime: str(timestamp)?, ProvisionedProductType: str?, RecordType: str?, ProvisionedProductId: str?, ProductId: str?, ProvisioningArtifactId: str?, PathId: str?, RecordErrors: [RecordError]?, RecordTags: [RecordTag]?, LaunchRoleArn: str?}, RecordOutputs: [RecordOutput]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Describes a self-service action.
 @required {Id: str}
 @optional {AcceptLanguage: str}
-@returns(200) {ServiceActionDetail: ServiceActionDetail?{ServiceActionSummary: ServiceActionSummary?{Id: str?, Name: str?, Description: str?, DefinitionType: str?}, Definition: map<str,str>?}}
+@returns(200) {ServiceActionDetail: ServiceActionDetail?{ServiceActionSummary: ServiceActionSummary?{Id: str?, Name: str?, Description: str?, DefinitionType: str?}, Definition: map<str, str>?: any}}
 
 @endpoint POST /
+@desc Finds the default parameters for a specific self-service action on a specific provisioned product and returns a map of the results to the user.
 @required {ProvisionedProductId: str, ServiceActionId: str}
 @optional {AcceptLanguage: str}
 @returns(200) {ServiceActionParameters: [ExecutionParameter]?}
 
 @endpoint POST /
+@desc Gets information about the specified TagOption.
 @required {Id: str}
 @returns(200) {TagOptionDetail: TagOptionDetail?{Key: str?, Value: str?, Active: bool?, Id: str?, Owner: str?}}
 
 @endpoint POST /
+@desc Disable portfolio sharing through the Organizations service. This command will not delete your current shares, but prevents you from creating new shares throughout your organization. Current shares are not kept in sync with your organization structure if the structure changes after calling this API. Only the management account in the organization can call this API. You cannot call this API if there are active delegated administrators in the organization. Note that a delegated administrator is not authorized to invoke DisableAWSOrganizationsAccess.  If you share an Service Catalog portfolio in an organization within Organizations, and then disable Organizations access for Service Catalog, the portfolio access permissions will not sync with the latest changes to the organization structure. Specifically, accounts that you removed from the organization after disabling Service Catalog access will retain access to the previously shared portfolio.
 
 @endpoint POST /
+@desc Disassociates the specified budget from the specified resource.
 @required {BudgetName: str, ResourceId: str}
 
 @endpoint POST /
+@desc Disassociates a previously associated principal ARN from a specified portfolio. The PrincipalType and PrincipalARN must match the AssociatePrincipalWithPortfolio call request details. For example, to disassociate an association created with a PrincipalARN of PrincipalType IAM you must use the PrincipalType IAM when calling DisassociatePrincipalFromPortfolio.  For portfolios that have been shared with principal name sharing enabled: after disassociating a principal, share recipient accounts will no longer be able to provision products in this portfolio using a role matching the name of the associated principal.  For more information, review associate-principal-with-portfolio in the Amazon Web Services CLI Command Reference.   If you disassociate a principal from a portfolio, with PrincipalType as IAM, the same principal will still have access to the portfolio if it matches one of the associated principals of type IAM_PATTERN. To fully remove access for a principal, verify all the associated Principals of type IAM_PATTERN, and then ensure you disassociate any IAM_PATTERN principals that match the principal whose access you are removing.
 @required {PortfolioId: str, PrincipalARN: str}
 @optional {AcceptLanguage: str, PrincipalType: str}
 
 @endpoint POST /
+@desc Disassociates the specified product from the specified portfolio.  A delegated admin is authorized to invoke this command.
 @required {ProductId: str, PortfolioId: str}
 @optional {AcceptLanguage: str}
 
 @endpoint POST /
+@desc Disassociates the specified self-service action association from the specified provisioning artifact.
 @required {ProductId: str, ProvisioningArtifactId: str, ServiceActionId: str}
 @optional {AcceptLanguage: str, IdempotencyToken: str}
 
 @endpoint POST /
+@desc Disassociates the specified TagOption from the specified resource.
 @required {ResourceId: str, TagOptionId: str}
 
 @endpoint POST /
+@desc Enable portfolio sharing feature through Organizations. This API will allow Service Catalog to receive updates on your organization in order to sync your shares with the current structure. This API can only be called by the management account in the organization. When you call this API, Service Catalog calls organizations:EnableAWSServiceAccess on your behalf so that your shares stay in sync with any changes in your Organizations structure. Note that a delegated administrator is not authorized to invoke EnableAWSOrganizationsAccess.  If you have previously disabled Organizations access for Service Catalog, and then enable access again, the portfolio access permissions might not sync with the latest changes to the organization structure. Specifically, accounts that you removed from the organization after disabling Service Catalog access, and before you enabled access again, can retain access to the previously shared portfolio. As a result, an account that has been removed from the organization might still be able to create or manage Amazon Web Services resources when it is no longer authorized to do so. Amazon Web Services is working to resolve this issue.
 
 @endpoint POST /
+@desc Provisions or modifies a product based on the resource changes for the specified plan.
 @required {PlanId: str, IdempotencyToken: str}
 @optional {AcceptLanguage: str}
 @returns(200) {RecordDetail: RecordDetail?{RecordId: str?, ProvisionedProductName: str?, Status: str?, CreatedTime: str(timestamp)?, UpdatedTime: str(timestamp)?, ProvisionedProductType: str?, RecordType: str?, ProvisionedProductId: str?, ProductId: str?, ProvisioningArtifactId: str?, PathId: str?, RecordErrors: [RecordError]?, RecordTags: [RecordTag]?, LaunchRoleArn: str?}}
 
 @endpoint POST /
+@desc Executes a self-service action against a provisioned product.
 @required {ProvisionedProductId: str, ServiceActionId: str, ExecuteToken: str}
 @optional {AcceptLanguage: str, Parameters: map<str,[str]>}
 @returns(200) {RecordDetail: RecordDetail?{RecordId: str?, ProvisionedProductName: str?, Status: str?, CreatedTime: str(timestamp)?, UpdatedTime: str(timestamp)?, ProvisionedProductType: str?, RecordType: str?, ProvisionedProductId: str?, ProductId: str?, ProvisioningArtifactId: str?, PathId: str?, RecordErrors: [RecordError]?, RecordTags: [RecordTag]?, LaunchRoleArn: str?}}
 
 @endpoint POST /
+@desc Get the Access Status for Organizations portfolio share feature. This API can only be called by the management account in the organization or by a delegated admin.
 @returns(200) {AccessStatus: str?}
 
 @endpoint POST /
+@desc This API takes either a ProvisonedProductId or a ProvisionedProductName, along with a list of one or more output keys, and responds with the key/value pairs of those outputs.
 @optional {AcceptLanguage: str, ProvisionedProductId: str, ProvisionedProductName: str, OutputKeys: [str], PageSize: int, PageToken: str}
 @returns(200) {Outputs: [RecordOutput]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Requests the import of a resource as an Service Catalog provisioned product that is associated to an Service Catalog product and provisioning artifact. Once imported, all supported governance actions are supported on the provisioned product.   Resource import only supports CloudFormation stack ARNs. CloudFormation StackSets, and non-root nested stacks, are not supported.   The CloudFormation stack must have one of the following statuses to be imported: CREATE_COMPLETE, UPDATE_COMPLETE, UPDATE_ROLLBACK_COMPLETE, IMPORT_COMPLETE, and IMPORT_ROLLBACK_COMPLETE.   Import of the resource requires that the CloudFormation stack template matches the associated Service Catalog product provisioning artifact.    When you import an existing CloudFormation stack into a portfolio, Service Catalog does not apply the product's associated constraints during the import process. Service Catalog applies the constraints after you call UpdateProvisionedProduct for the provisioned product.    The user or role that performs this operation must have the cloudformation:GetTemplate and cloudformation:DescribeStacks IAM policy permissions.  You can only import one provisioned product at a time. The product's CloudFormation stack must have the IMPORT_COMPLETE status before you import another.
 @required {ProductId: str, ProvisioningArtifactId: str, ProvisionedProductName: str, PhysicalId: str, IdempotencyToken: str}
 @optional {AcceptLanguage: str}
 @returns(200) {RecordDetail: RecordDetail?{RecordId: str?, ProvisionedProductName: str?, Status: str?, CreatedTime: str(timestamp)?, UpdatedTime: str(timestamp)?, ProvisionedProductType: str?, RecordType: str?, ProvisionedProductId: str?, ProductId: str?, ProvisioningArtifactId: str?, PathId: str?, RecordErrors: [RecordError]?, RecordTags: [RecordTag]?, LaunchRoleArn: str?}}
 
 @endpoint POST /
+@desc Lists all imported portfolios for which account-to-account shares were accepted by this account. By specifying the PortfolioShareType, you can list portfolios for which organizational shares were accepted by this account.
 @optional {AcceptLanguage: str, PageToken: str, PageSize: int, PortfolioShareType: str}
 @returns(200) {PortfolioDetails: [PortfolioDetail]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists all the budgets associated to the specified resource.
 @required {ResourceId: str}
 @optional {AcceptLanguage: str, PageSize: int, PageToken: str}
 @returns(200) {Budgets: [BudgetDetail]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists the constraints for the specified portfolio and product.
 @required {PortfolioId: str}
 @optional {AcceptLanguage: str, ProductId: str, PageSize: int, PageToken: str}
 @returns(200) {ConstraintDetails: [ConstraintDetail]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists the paths to the specified product. A path describes how the user gets access to a specified product and is necessary when provisioning a product. A path also determines the constraints that are put on a product. A path is dependent on a specific product, porfolio, and principal.    When provisioning a product that's been added to a portfolio, you must grant your user, group, or role access to the portfolio. For more information, see Granting users access in the Service Catalog User Guide.
 @required {ProductId: str}
 @optional {AcceptLanguage: str, PageSize: int, PageToken: str}
 @returns(200) {LaunchPathSummaries: [LaunchPathSummary]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists the organization nodes that have access to the specified portfolio. This API can only be called by the management account in the organization or by a delegated admin. If a delegated admin is de-registered, they can no longer perform this operation.
 @required {PortfolioId: str, OrganizationNodeType: str}
 @optional {AcceptLanguage: str, PageToken: str, PageSize: int}
 @returns(200) {OrganizationNodes: [OrganizationNode]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists the account IDs that have access to the specified portfolio. A delegated admin can list the accounts that have access to the shared portfolio. Note that if a delegated admin is de-registered, they can no longer perform this operation.
 @required {PortfolioId: str}
 @optional {AcceptLanguage: str, OrganizationParentId: str, PageToken: str, PageSize: int}
 @returns(200) {AccountIds: [str]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists all portfolios in the catalog.
 @optional {AcceptLanguage: str, PageToken: str, PageSize: int}
 @returns(200) {PortfolioDetails: [PortfolioDetail]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists all portfolios that the specified product is associated with.
 @required {ProductId: str}
 @optional {AcceptLanguage: str, PageToken: str, PageSize: int}
 @returns(200) {PortfolioDetails: [PortfolioDetail]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists all PrincipalARNs and corresponding PrincipalTypes associated with the specified portfolio.
 @required {PortfolioId: str}
 @optional {AcceptLanguage: str, PageSize: int, PageToken: str}
 @returns(200) {Principals: [Principal]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists the plans for the specified provisioned product or all plans to which the user has access.
 @optional {AcceptLanguage: str, ProvisionProductId: str, PageSize: int, PageToken: str, AccessLevelFilter: AccessLevelFilter}
 @returns(200) {ProvisionedProductPlans: [ProvisionedProductPlanSummary]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists all provisioning artifacts (also known as versions) for the specified product.
 @required {ProductId: str}
 @optional {AcceptLanguage: str}
 @returns(200) {ProvisioningArtifactDetails: [ProvisioningArtifactDetail]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists all provisioning artifacts (also known as versions) for the specified self-service action.
 @required {ServiceActionId: str}
 @optional {PageSize: int, PageToken: str, AcceptLanguage: str}
 @returns(200) {ProvisioningArtifactViews: [ProvisioningArtifactView]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists the specified requests or all performed requests.
 @optional {AcceptLanguage: str, AccessLevelFilter: AccessLevelFilter, SearchFilter: ListRecordHistorySearchFilter, PageSize: int, PageToken: str}
 @returns(200) {RecordDetails: [RecordDetail]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists the resources associated with the specified TagOption.
 @required {TagOptionId: str}
 @optional {ResourceType: str, PageSize: int, PageToken: str}
 @returns(200) {ResourceDetails: [ResourceDetail]?, PageToken: str?}
 
 @endpoint POST /
+@desc Lists all self-service actions.
 @optional {AcceptLanguage: str, PageSize: int, PageToken: str}
 @returns(200) {ServiceActionSummaries: [ServiceActionSummary]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Returns a paginated list of self-service actions associated with the specified Product ID and Provisioning Artifact ID.
 @required {ProductId: str, ProvisioningArtifactId: str}
 @optional {PageSize: int, PageToken: str, AcceptLanguage: str}
 @returns(200) {ServiceActionSummaries: [ServiceActionSummary]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Returns summary information about stack instances that are associated with the specified CFN_STACKSET type provisioned product. You can filter for stack instances that are associated with a specific Amazon Web Services account name or Region.
 @required {ProvisionedProductId: str}
 @optional {AcceptLanguage: str, PageToken: str, PageSize: int}
 @returns(200) {StackInstances: [StackInstance]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Lists the specified TagOptions or all TagOptions.
 @optional {Filters: ListTagOptionsFilters, PageSize: int, PageToken: str}
 @returns(200) {TagOptionDetails: [TagOptionDetail]?, PageToken: str?}
 
 @endpoint POST /
+@desc Notifies the result of the provisioning engine execution.
 @required {WorkflowToken: str, RecordId: str, Status: str, IdempotencyToken: str}
 @optional {FailureReason: str, ResourceIdentifier: EngineWorkflowResourceIdentifier, Outputs: [RecordOutput]}
 
 @endpoint POST /
+@desc Notifies the result of the terminate engine execution.
 @required {WorkflowToken: str, RecordId: str, Status: str, IdempotencyToken: str}
 @optional {FailureReason: str}
 
 @endpoint POST /
+@desc Notifies the result of the update engine execution.
 @required {WorkflowToken: str, RecordId: str, Status: str, IdempotencyToken: str}
 @optional {FailureReason: str, Outputs: [RecordOutput]}
 
 @endpoint POST /
+@desc Provisions the specified product.   A provisioned product is a resourced instance of a product. For example, provisioning a product that's based on an CloudFormation template launches an CloudFormation stack and its underlying resources. You can check the status of this request using DescribeRecord.   If the request contains a tag key with an empty list of values, there's a tag conflict for that key. Don't include conflicted keys as tags, or this will cause the error "Parameter validation failed: Missing required parameter in Tags[N]:Value".    When provisioning a product that's been added to a portfolio, you must grant your user, group, or role access to the portfolio. For more information, see Granting users access in the Service Catalog User Guide.
 @required {ProvisionedProductName: str, ProvisionToken: str}
 @optional {AcceptLanguage: str, ProductId: str, ProductName: str, ProvisioningArtifactId: str, ProvisioningArtifactName: str, PathId: str, PathName: str, ProvisioningParameters: [ProvisioningParameter], ProvisioningPreferences: ProvisioningPreferences, Tags: [Tag], NotificationArns: [str]}
 @returns(200) {RecordDetail: RecordDetail?{RecordId: str?, ProvisionedProductName: str?, Status: str?, CreatedTime: str(timestamp)?, UpdatedTime: str(timestamp)?, ProvisionedProductType: str?, RecordType: str?, ProvisionedProductId: str?, ProductId: str?, ProvisioningArtifactId: str?, PathId: str?, RecordErrors: [RecordError]?, RecordTags: [RecordTag]?, LaunchRoleArn: str?}}
 
 @endpoint POST /
+@desc Rejects an offer to share the specified portfolio.
 @required {PortfolioId: str}
 @optional {AcceptLanguage: str, PortfolioShareType: str}
 
 @endpoint POST /
+@desc Lists the provisioned products that are available (not terminated). To use additional filtering, see SearchProvisionedProducts.
 @optional {AcceptLanguage: str, AccessLevelFilter: AccessLevelFilter, PageSize: int, PageToken: str}
 @returns(200) {ProvisionedProducts: [ProvisionedProductDetail]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Gets information about the products to which the caller has access.
 @optional {AcceptLanguage: str, Filters: map<str,[str]>, PageSize: int, SortBy: str, SortOrder: str, PageToken: str}
 @returns(200) {ProductViewSummaries: [ProductViewSummary]?, ProductViewAggregations: map<str,[ProductViewAggregationValue]>?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Gets information about the products for the specified portfolio or all products.
 @optional {AcceptLanguage: str, PortfolioId: str, Filters: map<str,[str]>, SortBy: str, SortOrder: str, PageToken: str, PageSize: int, ProductSource: str}
 @returns(200) {ProductViewDetails: [ProductViewDetail]?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Gets information about the provisioned products that meet the specified criteria.
 @optional {AcceptLanguage: str, AccessLevelFilter: AccessLevelFilter, Filters: map<str,[str]>, SortBy: str, SortOrder: str, PageSize: int, PageToken: str}
 @returns(200) {ProvisionedProducts: [ProvisionedProductAttribute]?, TotalResultsCount: int?, NextPageToken: str?}
 
 @endpoint POST /
+@desc Terminates the specified provisioned product. This operation does not delete any records associated with the provisioned product. You can check the status of this request using DescribeRecord.
 @required {TerminateToken: str}
 @optional {ProvisionedProductName: str, ProvisionedProductId: str, IgnoreErrors: bool, AcceptLanguage: str, RetainPhysicalResources: bool}
 @returns(200) {RecordDetail: RecordDetail?{RecordId: str?, ProvisionedProductName: str?, Status: str?, CreatedTime: str(timestamp)?, UpdatedTime: str(timestamp)?, ProvisionedProductType: str?, RecordType: str?, ProvisionedProductId: str?, ProductId: str?, ProvisioningArtifactId: str?, PathId: str?, RecordErrors: [RecordError]?, RecordTags: [RecordTag]?, LaunchRoleArn: str?}}
 
 @endpoint POST /
+@desc Updates the specified constraint.
 @required {Id: str}
 @optional {AcceptLanguage: str, Description: str, Parameters: str}
 @returns(200) {ConstraintDetail: ConstraintDetail?{ConstraintId: str?, Type: str?, Description: str?, Owner: str?, ProductId: str?, PortfolioId: str?}, ConstraintParameters: str?, Status: str?}
 
 @endpoint POST /
+@desc Updates the specified portfolio. You cannot update a product that was shared with you.
 @required {Id: str}
 @optional {AcceptLanguage: str, DisplayName: str, Description: str, ProviderName: str, AddTags: [Tag], RemoveTags: [str]}
 @returns(200) {PortfolioDetail: PortfolioDetail?{Id: str?, ARN: str?, DisplayName: str?, Description: str?, CreatedTime: str(timestamp)?, ProviderName: str?}, Tags: [Tag]?}
 
 @endpoint POST /
+@desc Updates the specified portfolio share. You can use this API to enable or disable TagOptions sharing or Principal sharing for an existing portfolio share.  The portfolio share cannot be updated if the CreatePortfolioShare operation is IN_PROGRESS, as the share is not available to recipient entities. In this case, you must wait for the portfolio share to be completed. You must provide the accountId or organization node in the input, but not both. If the portfolio is shared to both an external account and an organization node, and both shares need to be updated, you must invoke UpdatePortfolioShare separately for each share type.  This API cannot be used for removing the portfolio share. You must use DeletePortfolioShare API for that action.   When you associate a principal with portfolio, a potential privilege escalation path may occur when that portfolio is then shared with other accounts. For a user in a recipient account who is not an Service Catalog Admin, but still has the ability to create Principals (Users/Groups/Roles), that user could create a role that matches a principal name association for the portfolio. Although this user may not know which principal names are associated through Service Catalog, they may be able to guess the user. If this potential escalation path is a concern, then Service Catalog recommends using PrincipalType as IAM. With this configuration, the PrincipalARN must already exist in the recipient account before it can be associated.
 @required {PortfolioId: str}
 @optional {AcceptLanguage: str, AccountId: str, OrganizationNode: OrganizationNode, ShareTagOptions: bool, SharePrincipals: bool}
 @returns(200) {PortfolioShareToken: str?, Status: str?}
 
 @endpoint POST /
+@desc Updates the specified product.
 @required {Id: str}
 @optional {AcceptLanguage: str, Name: str, Owner: str, Description: str, Distributor: str, SupportDescription: str, SupportEmail: str, SupportUrl: str, AddTags: [Tag], RemoveTags: [str], SourceConnection: SourceConnection}
 @returns(200) {ProductViewDetail: ProductViewDetail?{ProductViewSummary: ProductViewSummary?{Id: str?, ProductId: str?, Name: str?, Owner: str?, ShortDescription: str?, Type: str?, Distributor: str?, HasDefaultPath: bool?, SupportEmail: str?, SupportDescription: str?, SupportUrl: str?}, Status: str?, ProductARN: str?, CreatedTime: str(timestamp)?, SourceConnection: SourceConnectionDetail?{Type: str?, ConnectionParameters: SourceConnectionParameters?{CodeStar: CodeStarParameters?}, LastSync: LastSync?{LastSyncTime: str(timestamp)?, LastSyncStatus: str?, LastSyncStatusMessage: str?, LastSuccessfulSyncTime: str(timestamp)?, LastSuccessfulSyncProvisioningArtifactId: str?}}}, Tags: [Tag]?}
 
 @endpoint POST /
+@desc Requests updates to the configuration of the specified provisioned product. If there are tags associated with the object, they cannot be updated or added. Depending on the specific updates requested, this operation can update with no interruption, with some interruption, or replace the provisioned product entirely. You can check the status of this request using DescribeRecord.
 @required {UpdateToken: str}
 @optional {AcceptLanguage: str, ProvisionedProductName: str, ProvisionedProductId: str, ProductId: str, ProductName: str, ProvisioningArtifactId: str, ProvisioningArtifactName: str, PathId: str, PathName: str, ProvisioningParameters: [UpdateProvisioningParameter], ProvisioningPreferences: UpdateProvisioningPreferences, Tags: [Tag]}
 @returns(200) {RecordDetail: RecordDetail?{RecordId: str?, ProvisionedProductName: str?, Status: str?, CreatedTime: str(timestamp)?, UpdatedTime: str(timestamp)?, ProvisionedProductType: str?, RecordType: str?, ProvisionedProductId: str?, ProductId: str?, ProvisioningArtifactId: str?, PathId: str?, RecordErrors: [RecordError]?, RecordTags: [RecordTag]?, LaunchRoleArn: str?}}
 
 @endpoint POST /
+@desc Requests updates to the properties of the specified provisioned product.
 @required {ProvisionedProductId: str, ProvisionedProductProperties: map<str,str>, IdempotencyToken: str}
 @optional {AcceptLanguage: str}
 @returns(200) {ProvisionedProductId: str?, ProvisionedProductProperties: map<str,str>?, RecordId: str?, Status: str?}
 
 @endpoint POST /
+@desc Updates the specified provisioning artifact (also known as a version) for the specified product. You cannot update a provisioning artifact for a product that was shared with you.
 @required {ProductId: str, ProvisioningArtifactId: str}
 @optional {AcceptLanguage: str, Name: str, Description: str, Active: bool, Guidance: str}
 @returns(200) {ProvisioningArtifactDetail: ProvisioningArtifactDetail?{Id: str?, Name: str?, Description: str?, Type: str?, CreatedTime: str(timestamp)?, Active: bool?, Guidance: str?, SourceRevision: str?}, Info: map<str,str>?, Status: str?}
 
 @endpoint POST /
+@desc Updates a self-service action.
 @required {Id: str}
 @optional {Name: str, Definition: map<str,str>, Description: str, AcceptLanguage: str}
-@returns(200) {ServiceActionDetail: ServiceActionDetail?{ServiceActionSummary: ServiceActionSummary?{Id: str?, Name: str?, Description: str?, DefinitionType: str?}, Definition: map<str,str>?}}
+@returns(200) {ServiceActionDetail: ServiceActionDetail?{ServiceActionSummary: ServiceActionSummary?{Id: str?, Name: str?, Description: str?, DefinitionType: str?}, Definition: map<str, str>?: any}}
 
 @endpoint POST /
+@desc Updates the specified TagOption.
 @required {Id: str}
 @optional {Value: str, Active: bool}
 @returns(200) {TagOptionDetail: TagOptionDetail?{Key: str?, Value: str?, Active: bool?, Id: str?, Owner: str?}}

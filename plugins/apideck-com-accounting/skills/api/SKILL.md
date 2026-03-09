@@ -165,84 +165,147 @@ https://unify.apideck.com
 | PATCH | /accounting/expense-reports/{id} | Update Expense Report |
 | DELETE | /accounting/expense-reports/{id} | Delete Expense Report |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "What tax rates are configured in the system?" -> GET /accounting/tax-rates
-- "Create a new invoice for a customer" -> POST /accounting/invoices
-- "What is the outstanding balance on bill {id}?" -> GET /accounting/bills/{id}
-- "Show me the profit and loss report" -> GET /accounting/profit-and-loss
-- "Record a payment of $500 against an invoice" -> POST /accounting/payments
-- "What is the company's balance sheet?" -> GET /accounting/balance-sheet
-- "List all unpaid bills from a specific supplier" -> GET /accounting/bills (with filter)
-- "Add a credit note for a returned product" -> POST /accounting/credit-notes
-- "Who are my aged creditors past 90 days?" -> GET /accounting/aged-creditors
-- "Create a journal entry to adjust accounts" -> POST /accounting/journal-entries
-- "Attach a receipt to an expense" -> POST /accounting/attachments/{reference_type}/{reference_id}
-- "What purchase orders are currently open?" -> GET /accounting/purchase-orders (with filter on status)
-- "Submit an employee expense report" -> POST /accounting/expense-reports
-- "Which ledger accounts are classified as expenses?" -> GET /accounting/ledger-accounts (with filter on classification)
-- "Update the status of a quote to accepted" -> PATCH /accounting/quotes/{id}
-
-## Response Tips
-
-- **List endpoints** (invoices, bills, payments, etc.): Data lives in `data[]` array; paginate via `meta.cursors.next` passed as `cursor` param; default page size is 20 (adjustable via `limit`).
-- **Single-resource GETs**: Primary object is in `data` (not an array); many fields are nullable (marked `?`) so always handle missing values.
-- **Create/Update (POST/PATCH)**: Returns only `data.id` (and sometimes `downstream_id`) -- not the full object; follow up with a GET if you need the complete record.
-- **Financial reports** (balance-sheet, profit-and-loss, aged-creditors/debtors): Return nested hierarchical structures in `data.reports[]` or `data.outstanding_balances[]` rather than flat lists.
-- **Errors**: All endpoints share the same error codes (400, 401, 402, 404, 422); 402 indicates a billing/plan issue with the Apideck connector, not an accounting payment failure.
-
-## Anomaly Flags
-
-- **402 Payment Required**: Surface immediately -- indicates the Apideck integration tier does not cover this endpoint; user action required.
-- **422 Unprocessable Entity**: Flag the validation details; often means required fields like `total_amount` or `transaction_date` are missing or malformed.
-- **Stale `row_version`**: If a PATCH returns 422, check whether the `row_version` sent is outdated (optimistic concurrency conflict).
-- **Null financial totals**: Alert when `total`, `balance`, or `total_amount` come back null on invoices/bills -- may indicate incomplete upstream sync.
-- **Status transitions**: Flag invoices or bills in unexpected states (e.g., `void`, `deleted`, `credit`) when the user expects active records.
-- **Currency mismatch**: When `currency` on a transaction differs from the company default (via GET /accounting/company-info), surface the `currency_rate` for review.
-- **Missing `x-apideck-consumer-id` or `x-apideck-app-id`**: These common headers are required on every request; omission causes silent auth failures.
-
-## Playbook
-
-### 1. Create and send an invoice
-
-1. GET /accounting/customers to find or confirm the customer ID
-2. GET /accounting/invoice-items to look up product/service item IDs and unit prices
-3. GET /accounting/tax-rates to get the applicable tax rate ID
-4. POST /accounting/invoices with `customer.id`, `line_items` (each with `item`, `tax_rate`, `quantity`, `unit_price`), `invoice_date`, `due_date`, and `currency`
-5. PATCH /accounting/invoices/{id} with `status: "submitted"` and `invoice_sent: true`
-
-### 2. Record a bill and pay it
-
-1. GET /accounting/suppliers to find the supplier ID
-2. POST /accounting/bills with `supplier.id`, `line_items`, `bill_date`, `due_date`, `status: "authorised"`
-3. Capture the returned bill `id`
-4. POST /accounting/bill-payments with `supplier.id`, `total_amount`, `transaction_date`, and `allocations` referencing the bill ID
-5. Verify via GET /accounting/bills/{id} that `status` changed to `paid` and `balance` is 0
-
-### 3. Issue a credit note and apply it
-
-1. GET /accounting/invoices/{id} to confirm the original invoice details and customer
-2. POST /accounting/credit-notes with `customer.id`, `total_amount`, `type: "accounts_receivable_credit"`, `line_items` matching the items to credit, and `status: "authorised"`
-3. PATCH /accounting/credit-notes/{id} to add `allocations` linking back to the original invoice ID
-4. GET /accounting/invoices/{id} to confirm the `balance` has been reduced accordingly
-
-### 4. Generate a month-end financial snapshot
-
-1. GET /accounting/company-info to confirm fiscal year, currency, and tax settings
-2. GET /accounting/profit-and-loss with `filter` for the target date range (`start_date`, `end_date`)
-3. GET /accounting/balance-sheet with `filter` for the period end date
-4. GET /accounting/aged-debtors and GET /accounting/aged-creditors to assess receivables and payables aging
-5. Summarize net income from P&L, total assets/liabilities from balance sheet, and overdue amounts from aging reports
-
-### 5. Submit and track an employee expense report
-
-1. GET /accounting/employees to find the employee ID
-2. GET /accounting/expense-categories to identify the correct category IDs for each line item
-3. POST /accounting/expense-reports with `employee.id`, `transaction_date`, and `line_items` (each with `expense_category`, `amount`, `description`)
-4. POST /accounting/attachments/expense-reports/{report_id} to upload receipt images for each line item
-5. Monitor status via GET /accounting/expense-reports/{id} -- watch for transitions from `submitted` to `approved` to `reimbursed`
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "List all tax-rates?" -> GET /accounting/tax-rates
+- "Create a tax-rate?" -> POST /accounting/tax-rates
+- "Get tax-rate details?" -> GET /accounting/tax-rates/{id}
+- "Partially update a tax-rate?" -> PATCH /accounting/tax-rates/{id}
+- "Delete a tax-rate?" -> DELETE /accounting/tax-rates/{id}
+- "List all bills?" -> GET /accounting/bills
+- "Create a bill?" -> POST /accounting/bills
+- "Get bill details?" -> GET /accounting/bills/{id}
+- "Partially update a bill?" -> PATCH /accounting/bills/{id}
+- "Delete a bill?" -> DELETE /accounting/bills/{id}
+- "List all invoices?" -> GET /accounting/invoices
+- "Create a invoice?" -> POST /accounting/invoices
+- "Get invoice details?" -> GET /accounting/invoices/{id}
+- "Partially update a invoice?" -> PATCH /accounting/invoices/{id}
+- "Delete a invoice?" -> DELETE /accounting/invoices/{id}
+- "List all ledger-accounts?" -> GET /accounting/ledger-accounts
+- "Create a ledger-account?" -> POST /accounting/ledger-accounts
+- "Get ledger-account details?" -> GET /accounting/ledger-accounts/{id}
+- "Partially update a ledger-account?" -> PATCH /accounting/ledger-accounts/{id}
+- "Delete a ledger-account?" -> DELETE /accounting/ledger-accounts/{id}
+- "List all invoice-items?" -> GET /accounting/invoice-items
+- "Create a invoice-item?" -> POST /accounting/invoice-items
+- "Get invoice-item details?" -> GET /accounting/invoice-items/{id}
+- "Partially update a invoice-item?" -> PATCH /accounting/invoice-items/{id}
+- "Delete a invoice-item?" -> DELETE /accounting/invoice-items/{id}
+- "List all credit-notes?" -> GET /accounting/credit-notes
+- "Create a credit-note?" -> POST /accounting/credit-notes
+- "Get credit-note details?" -> GET /accounting/credit-notes/{id}
+- "Partially update a credit-note?" -> PATCH /accounting/credit-notes/{id}
+- "Delete a credit-note?" -> DELETE /accounting/credit-notes/{id}
+- "List all customers?" -> GET /accounting/customers
+- "Create a customer?" -> POST /accounting/customers
+- "Get customer details?" -> GET /accounting/customers/{id}
+- "Partially update a customer?" -> PATCH /accounting/customers/{id}
+- "Delete a customer?" -> DELETE /accounting/customers/{id}
+- "List all suppliers?" -> GET /accounting/suppliers
+- "Create a supplier?" -> POST /accounting/suppliers
+- "Get supplier details?" -> GET /accounting/suppliers/{id}
+- "Partially update a supplier?" -> PATCH /accounting/suppliers/{id}
+- "Delete a supplier?" -> DELETE /accounting/suppliers/{id}
+- "List all payments?" -> GET /accounting/payments
+- "Create a payment?" -> POST /accounting/payments
+- "Get payment details?" -> GET /accounting/payments/{id}
+- "Partially update a payment?" -> PATCH /accounting/payments/{id}
+- "Delete a payment?" -> DELETE /accounting/payments/{id}
+- "List all company-info?" -> GET /accounting/company-info
+- "List all companies?" -> GET /accounting/companies
+- "List all balance-sheet?" -> GET /accounting/balance-sheet
+- "List all profit-and-loss?" -> GET /accounting/profit-and-loss
+- "List all journal-entries?" -> GET /accounting/journal-entries
+- "Create a journal-entry?" -> POST /accounting/journal-entries
+- "Get journal-entry details?" -> GET /accounting/journal-entries/{id}
+- "Partially update a journal-entry?" -> PATCH /accounting/journal-entries/{id}
+- "Delete a journal-entry?" -> DELETE /accounting/journal-entries/{id}
+- "List all purchase-orders?" -> GET /accounting/purchase-orders
+- "Create a purchase-order?" -> POST /accounting/purchase-orders
+- "Get purchase-order details?" -> GET /accounting/purchase-orders/{id}
+- "Partially update a purchase-order?" -> PATCH /accounting/purchase-orders/{id}
+- "Delete a purchase-order?" -> DELETE /accounting/purchase-orders/{id}
+- "List all subsidiaries?" -> GET /accounting/subsidiaries
+- "Create a subsidiary?" -> POST /accounting/subsidiaries
+- "Get subsidiary details?" -> GET /accounting/subsidiaries/{id}
+- "Partially update a subsidiary?" -> PATCH /accounting/subsidiaries/{id}
+- "Delete a subsidiary?" -> DELETE /accounting/subsidiaries/{id}
+- "List all locations?" -> GET /accounting/locations
+- "Create a location?" -> POST /accounting/locations
+- "Get location details?" -> GET /accounting/locations/{id}
+- "Partially update a location?" -> PATCH /accounting/locations/{id}
+- "Delete a location?" -> DELETE /accounting/locations/{id}
+- "List all departments?" -> GET /accounting/departments
+- "Create a department?" -> POST /accounting/departments
+- "Get department details?" -> GET /accounting/departments/{id}
+- "Partially update a department?" -> PATCH /accounting/departments/{id}
+- "Delete a department?" -> DELETE /accounting/departments/{id}
+- "Get attachment details?" -> GET /accounting/attachments/{reference_type}/{reference_id}
+- "Get attachment details?" -> GET /accounting/attachments/{reference_type}/{reference_id}/{id}
+- "Delete a attachment?" -> DELETE /accounting/attachments/{reference_type}/{reference_id}/{id}
+- "List all download?" -> GET /accounting/attachments/{reference_type}/{reference_id}/{id}/download
+- "List all bank-accounts?" -> GET /accounting/bank-accounts
+- "Create a bank-account?" -> POST /accounting/bank-accounts
+- "Get bank-account details?" -> GET /accounting/bank-accounts/{id}
+- "Partially update a bank-account?" -> PATCH /accounting/bank-accounts/{id}
+- "Delete a bank-account?" -> DELETE /accounting/bank-accounts/{id}
+- "List all tracking-categories?" -> GET /accounting/tracking-categories
+- "Create a tracking-category?" -> POST /accounting/tracking-categories
+- "Get tracking-category details?" -> GET /accounting/tracking-categories/{id}
+- "Partially update a tracking-category?" -> PATCH /accounting/tracking-categories/{id}
+- "Delete a tracking-category?" -> DELETE /accounting/tracking-categories/{id}
+- "List all bill-payments?" -> GET /accounting/bill-payments
+- "Create a bill-payment?" -> POST /accounting/bill-payments
+- "Get bill-payment details?" -> GET /accounting/bill-payments/{id}
+- "Partially update a bill-payment?" -> PATCH /accounting/bill-payments/{id}
+- "Delete a bill-payment?" -> DELETE /accounting/bill-payments/{id}
+- "List all expenses?" -> GET /accounting/expenses
+- "Create a expense?" -> POST /accounting/expenses
+- "Get expense details?" -> GET /accounting/expenses/{id}
+- "Partially update a expense?" -> PATCH /accounting/expenses/{id}
+- "Delete a expense?" -> DELETE /accounting/expenses/{id}
+- "List all aged-creditors?" -> GET /accounting/aged-creditors
+- "List all aged-debtors?" -> GET /accounting/aged-debtors
+- "List all bank-feed-accounts?" -> GET /accounting/bank-feed-accounts
+- "Create a bank-feed-account?" -> POST /accounting/bank-feed-accounts
+- "Get bank-feed-account details?" -> GET /accounting/bank-feed-accounts/{id}
+- "Partially update a bank-feed-account?" -> PATCH /accounting/bank-feed-accounts/{id}
+- "Delete a bank-feed-account?" -> DELETE /accounting/bank-feed-accounts/{id}
+- "List all bank-feed-statements?" -> GET /accounting/bank-feed-statements
+- "Create a bank-feed-statement?" -> POST /accounting/bank-feed-statements
+- "Get bank-feed-statement details?" -> GET /accounting/bank-feed-statements/{id}
+- "Partially update a bank-feed-statement?" -> PATCH /accounting/bank-feed-statements/{id}
+- "Delete a bank-feed-statement?" -> DELETE /accounting/bank-feed-statements/{id}
+- "List all categories?" -> GET /accounting/categories
+- "Get category details?" -> GET /accounting/categories/{id}
+- "List all quotes?" -> GET /accounting/quotes
+- "Create a quote?" -> POST /accounting/quotes
+- "Get quote details?" -> GET /accounting/quotes/{id}
+- "Partially update a quote?" -> PATCH /accounting/quotes/{id}
+- "Delete a quote?" -> DELETE /accounting/quotes/{id}
+- "List all projects?" -> GET /accounting/projects
+- "Create a project?" -> POST /accounting/projects
+- "Get project details?" -> GET /accounting/projects/{id}
+- "Partially update a project?" -> PATCH /accounting/projects/{id}
+- "Delete a project?" -> DELETE /accounting/projects/{id}
+- "List all employees?" -> GET /accounting/employees
+- "Create a employee?" -> POST /accounting/employees
+- "Get employee details?" -> GET /accounting/employees/{id}
+- "Partially update a employee?" -> PATCH /accounting/employees/{id}
+- "Delete a employee?" -> DELETE /accounting/employees/{id}
+- "List all expense-categories?" -> GET /accounting/expense-categories
+- "Create a expense-category?" -> POST /accounting/expense-categories
+- "Get expense-category details?" -> GET /accounting/expense-categories/{id}
+- "Partially update a expense-category?" -> PATCH /accounting/expense-categories/{id}
+- "Delete a expense-category?" -> DELETE /accounting/expense-categories/{id}
+- "List all expense-reports?" -> GET /accounting/expense-reports
+- "Create a expense-report?" -> POST /accounting/expense-reports
+- "Get expense-report details?" -> GET /accounting/expense-reports/{id}
+- "Partially update a expense-report?" -> PATCH /accounting/expense-reports/{id}
+- "Delete a expense-report?" -> DELETE /accounting/expense-reports/{id}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details

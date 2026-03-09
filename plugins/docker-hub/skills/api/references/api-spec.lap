@@ -10,286 +10,342 @@
 
 @group users
 @endpoint POST /v2/users/login
-@required {username: str, password: str}
-@returns(200) {token: str}
-@errors {401}
+@desc Create an authentication token
+@required {username: str # The username of the Docker Hub account to authenticate with., password: str # The password or personal access token (PAT) of the Docker Hub account to authenticate with.}
+@returns(200) {token: str} # Authentication successful
+@errors {401: Authentication failed or second factor required}
 
 @endpoint POST /v2/users/2fa-login
-@required {login_2fa_token: str, code: str}
-@returns(200) {token: str}
-@errors {401}
+@desc Second factor authentication
+@required {login_2fa_token: str # The intermediate 2FA token returned from `/v2/users/login` API., code: str # The Time-based One-Time Password of the Docker Hub account to authenticate with.}
+@returns(200) {token: str} # Authentication successful
+@errors {401: Authentication failed}
 
 @endgroup
 
 @group auth
 @endpoint POST /v2/auth/token
-@required {identifier: str, secret: str}
-@returns(200) {access_token: str}
-@errors {401}
+@desc Create access token
+@required {identifier: str # The identifier of the account to create an access token for. If using a password or personal access token, this must be a username. If using an organization access token, this must be an organization name., secret: str # The secret of the account to create an access token for. This can be a password, personal access token, or organization access token.}
+@returns(200) {access_token: str} # Token created
+@errors {401: Unauthorized}
 
 @endgroup
 
 @group access-tokens
 @endpoint POST /v2/access-tokens
-@required {token_label: str, scopes: [str]}
-@optional {expires_at: str(date-time)}
-@returns(201) {uuid: str, client_id: str, creator_ip: str, creator_ua: str, created_at: str, last_used: str?, generated_by: str, is_active: bool, token: str, token_label: str, scopes: [str], expires_at: str(date-time)}
-@errors {400, 401}
+@desc Create personal access token
+@required {token_label: str # Friendly name for you to identify the token., scopes: [str] # Valid scopes: "repo:admin", "repo:write", "repo:read", "repo:public_read"}
+@optional {expires_at: str(date-time) # Optional expiration date for the token. If omitted, the token will remain valid indefinitely.}
+@returns(201) {uuid: str, client_id: str, creator_ip: str, creator_ua: str, created_at: str, last_used: str?, generated_by: str, is_active: bool, token: str, token_label: str, scopes: [str], expires_at: str(date-time)} # Created
+@errors {400: Bad Request, 401: Unauthorized}
 
 @endpoint GET /v2/access-tokens
+@desc List personal access tokens
 @optional {page: num=1, page_size: num=10}
-@returns(200) {count: num, next: str, previous: str, active_count: num, results: [any]}
-@errors {400, 401}
+@returns(200) {count: num, next: str, previous: str, active_count: num, results: [any]} # OK
+@errors {400: Bad Request, 401: Unauthorized}
 
 @endpoint PATCH /v2/access-tokens/{uuid}
+@desc Update personal access token
 @optional {token_label: str, is_active: bool}
-@returns(200) {uuid: str, client_id: str, creator_ip: str, creator_ua: str, created_at: str, last_used: str?, generated_by: str, is_active: bool, token: str, token_label: str, scopes: [str], expires_at: str(date-time)}
-@errors {400, 401}
+@returns(200) {uuid: str, client_id: str, creator_ip: str, creator_ua: str, created_at: str, last_used: str?, generated_by: str, is_active: bool, token: str, token_label: str, scopes: [str], expires_at: str(date-time)} # OK
+@errors {400: Bad Request, 401: Unauthorized}
 
 @endpoint GET /v2/access-tokens/{uuid}
-@returns(200)
-@errors {401, 404}
+@desc Get personal access token
+@returns(200) OK
+@errors {401: Unauthorized, 404: Not Found}
 
 @endpoint DELETE /v2/access-tokens/{uuid}
-@returns(204)
-@errors {401, 404}
+@desc Delete personal access token
+@returns(204) A successful response.
+@errors {401: Unauthorized, 404: Not Found}
 
 @endgroup
 
 @group auditlogs
 @endpoint GET /v2/auditlogs/{account}/actions
-@required {account: str}
-@returns(200) {actions: map}
+@desc List audit log actions
+@required {account: str # Namespace to query audit log actions for.}
+@returns(200) {actions: map} # A successful response.
 @errors {429, 500}
 
 @endpoint GET /v2/auditlogs/{account}
-@required {account: str}
-@optional {action: str, name: str, actor: str, from: str(date-time), to: str(date-time), page: int(int32)=1, page_size: int(int32)=25}
-@returns(200) {logs: [map]}
+@desc List audit log events
+@required {account: str # Namespace to query audit logs for.}
+@optional {action: str # action name one of ["repo.tag.push", ...]. Optional parameter to filter specific audit log actions., name: str # name. Optional parameter to filter audit log events to a specific name. For repository events, this is the name of the repository. For organization events, this is the name of the organization. For team member events, this is the username of the team member., actor: str # actor name. Optional parameter to filter audit log events to the specific user who triggered the event., from: str(date-time) # Start of the time window you wish to query audit events for., to: str(date-time) # End of the time window you wish to query audit events for., page: int(int32)=1 # page - specify page number. Page number to get., page_size: int(int32)=25 # page_size - specify page size. Number of events to return per page.}
+@returns(200) {logs: [map]} # A successful response.
 @errors {429, 500}
 
 @endgroup
 
 @group orgs
 @endpoint GET /v2/orgs/{name}/settings
-@returns(200) {restricted_images: map{enabled: bool, allow_official_images: bool, allow_verified_publishers: bool}}
-@errors {401, 403, 404}
+@desc Get organization settings
+@returns(200) {restricted_images: map{enabled: bool, allow_official_images: bool, allow_verified_publishers: bool}} # OK
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint PUT /v2/orgs/{name}/settings
+@desc Update organization settings
 @required {restricted_images: any}
-@returns(200) {restricted_images: map{enabled: bool, allow_official_images: bool, allow_verified_publishers: bool}}
-@errors {401, 403, 404}
+@returns(200) {restricted_images: map{enabled: bool, allow_official_images: bool, allow_verified_publishers: bool}} # OK
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint POST /v2/orgs/{name}/access-tokens
-@optional {label: str, description: str, resources: [map{type: str, path: str, scopes: [str]}], expires_at: str(date-time)}
-@returns(201)
-@errors {400, 401, 403, 404}
+@desc Create access token
+@optional {label: str # Label for the access token, description: str # Description of the access token, resources: [map{type: str, path: str, scopes: [str]}] # Resources this token has access to, expires_at: str(date-time) # Expiration date for the token}
+@returns(201) Created
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint GET /v2/orgs/{name}/access-tokens
+@desc List access tokens
 @optional {page: num=1, page_size: num=10}
-@returns(200) {total: num, next: str, previous: str, results: [map]}
-@errors {401, 403, 404}
+@returns(200) {total: num, next: str, previous: str, results: [map]} # OK
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint GET /v2/orgs/{org_name}/access-tokens/{access_token_id}
-@returns(200)
-@errors {401, 403, 404}
+@desc Get access token
+@returns(200) OK
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint PATCH /v2/orgs/{org_name}/access-tokens/{access_token_id}
-@optional {label: str, description: str, resources: [map{type: str, path: str, scopes: [str]}], is_active: bool}
-@returns(200)
-@errors {401, 403, 404}
+@desc Update access token
+@optional {label: str # Label for the access token, description: str # Description of the access token, resources: [map{type: str, path: str, scopes: [str]}] # Resources this token has access to, is_active: bool # Whether the token is active}
+@returns(200) OK
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint DELETE /v2/orgs/{org_name}/access-tokens/{access_token_id}
-@returns(204)
-@errors {401, 403, 404}
+@desc Delete access token
+@returns(204) Access token deleted successfully
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endgroup
 
 @group namespaces
 @endpoint GET /v2/namespaces/{namespace}/repositories/{repository}/tags
-@optional {page: int, page_size: int}
-@returns(200)
-@errors {403, 404}
+@desc List repository tags
+@optional {page: int # Page number to get. Defaults to 1., page_size: int # Number of items to get per page. Defaults to 10. Max of 100.}
+@returns(200) list repository tags
+@errors {403: Forbidden, 404: Not Found}
 
 @endpoint HEAD /v2/namespaces/{namespace}/repositories/{repository}/tags
-@returns(200)
-@errors {403, 404}
+@desc Check repository tags
+@returns(200) Repository contains tags
+@errors {403: Forbidden, 404: Not Found}
 
 @endpoint GET /v2/namespaces/{namespace}/repositories/{repository}/tags/{tag}
-@returns(200) {id: int, images: map{architecture: str, features: str, variant: str, digest: str?, layers: [map], os: str, os_features: str, os_version: str, size: int, status: str, last_pulled: str?, last_pushed: str?}, creator: int, last_updated: str?, last_updater: int, last_updater_username: str, name: str, repository: int, full_size: int, v2: str, status: str, tag_last_pulled: str?, tag_last_pushed: str?}
-@errors {403, 404}
+@desc Read repository tag
+@returns(200) {id: int, images: map{architecture: str, features: str, variant: str, digest: str?, layers: [map], os: str, os_features: str, os_version: str, size: int, status: str, last_pulled: str?, last_pushed: str?}, creator: int, last_updated: str?, last_updater: int, last_updater_username: str, name: str, repository: int, full_size: int, v2: str, status: str, tag_last_pulled: str?, tag_last_pushed: str?} # repository tag
+@errors {403: Forbidden, 404: Not Found}
 
 @endpoint HEAD /v2/namespaces/{namespace}/repositories/{repository}/tags/{tag}
-@returns(200)
-@errors {403, 404}
+@desc Check repository tag
+@returns(200) Repository tag exists
+@errors {403: Forbidden, 404: Not Found}
 
 @endpoint PATCH /v2/namespaces/{namespace}/repositories/{repository}/immutabletags
-@required {immutable_tags: bool, immutable_tags_rules: [str]}
+@desc Update repository immutable tags
+@required {immutable_tags: bool # Whether immutable tags are enabled, immutable_tags_rules: [str] # List of immutable tag rules}
 @returns(200) {user: str, name: str, namespace: str, repository_type: str?, status: int, status_description: str, description: str, is_private: bool, is_automated: bool, star_count: int(int64), pull_count: int(int64), last_updated: str(date-time), last_modified: str(date-time)?, date_registered: str(date-time), collaborator_count: int(int64), affiliation: str?, hub_user: str?, has_starred: bool, full_description: str?, permissions: map{read: bool, write: bool, admin: bool}, media_types: [str], content_types: [str], categories: [map], immutable_tags_settings: map{enabled: bool, rules: [str]}, storage_size: int(int64)?, source: str?}
-@errors {400, 401, 403, 404}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint POST /v2/namespaces/{namespace}/repositories/{repository}/immutabletags/verify
-@required {regex: str}
+@desc Verify repository immutable tags
+@required {regex: str # Immutable tags rule regex pattern. Must match format: [a-z0-9]+((\\.|_|__|-+)[a-z0-9]+)*(\\/[a-z0-9]+((\\.|_|__|-+)[a-z0-9]+)*)*}
 @returns(200) {tags: [str]}
-@errors {400, 401, 403, 404}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endgroup
 
 @group repositories
 @endpoint POST /v2/repositories/{namespace}/{repository}/groups
-@required {group_id: int(int64), permission: str(read/write/admin)}
-@returns(200) {group_name: str, permission: str, group_id: int(int64)}
-@errors {400, 401, 403, 404}
+@desc Assign a group (Team) to a repository for access
+@required {group_id: int(int64) # The ID of the organization group to grant access to, permission: str(read/write/admin) # The permission level to grant to the group: - read: Can view and pull from the repository - write: Can view, pull, and push to the repository - admin: Can view, pull, push, and manage repository settings}
+@returns(200) {group_name: str, permission: str, group_id: int(int64)} # Repository group permission created successfully
+@errors {400: Bad Request - Invalid request parameters, 401: Unauthorized, 403: Forbidden, 404: Not Found}
+@example_request {"group_id":12345,"permission":"write"}
 
 @endgroup
 
 @group namespaces
 @endpoint GET /v2/namespaces/{namespace}/repositories
-@optional {page: int=1, page_size: int=10, name: str, ordering: str(name/-name/last_updated/-last_updated/pull_count/-pull_count)}
-@returns(200)
-@errors {400, 401, 403, 404}
+@desc List repositories in a namespace
+@optional {page: int=1 # Page number to get. Defaults to 1., page_size: int=10 # Number of repositories to get per page. Defaults to 10. Max of 100., name: str # Filter repositories by name (partial match)., ordering: str(name/-name/last_updated/-last_updated/pull_count/-pull_count) # Order repositories by the specified field. Prefix with '-' for descending order. Available options: - `name` / `-name`: Repository name (ascending/descending) - `last_updated` / `-last_updated`: Last update time (ascending/descending) - `pull_count` / `-pull_count`: Number of pulls (ascending/descending)}
+@returns(200) List of repositories
+@errors {400: Bad Request - Invalid request parameters, 401: Unauthorized, 403: Forbidden, 404: Page not found - occurs when requesting a page number `>1` that exceeds the available results}
 
 @endpoint POST /v2/namespaces/{namespace}/repositories
-@required {name: str, namespace: str}
-@optional {description: str, full_description: str, registry: str, is_private: bool=False}
-@returns(201) {user: str, name: str, namespace: str, repository_type: str?, status: int, status_description: str, description: str, is_private: bool, is_automated: bool, star_count: int(int64), pull_count: int(int64), last_updated: str(date-time), last_modified: str(date-time)?, date_registered: str(date-time), collaborator_count: int(int64), affiliation: str?, hub_user: str?, has_starred: bool, full_description: str?, permissions: map{read: bool, write: bool, admin: bool}, media_types: [str], content_types: [str], categories: [map], immutable_tags_settings: map{enabled: bool, rules: [str]}, storage_size: int(int64)?, source: str?}
-@errors {400, 401, 403, 404, 500}
+@desc Create a new repository
+@required {name: str # The name of the repository. Must be 2-255 characters long and may only include  alphanumeric characters, periods (.), underscores (_), or hyphens (-).  Letters must be lowercase., namespace: str # The namespace where the repository will be created}
+@optional {description: str # Short description of the repository, full_description: str # Detailed description of the repository, registry: str # The registry where the repository will be hosted, is_private: bool=False # Whether the repository should be private}
+@returns(201) {user: str, name: str, namespace: str, repository_type: str?, status: int, status_description: str, description: str, is_private: bool, is_automated: bool, star_count: int(int64), pull_count: int(int64), last_updated: str(date-time), last_modified: str(date-time)?, date_registered: str(date-time), collaborator_count: int(int64), affiliation: str?, hub_user: str?, has_starred: bool, full_description: str?, permissions: map{read: bool, write: bool, admin: bool}, media_types: [str], content_types: [str], categories: [map], immutable_tags_settings: map{enabled: bool, rules: [str]}, storage_size: int(int64)?, source: str?} # Repository created successfully
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal}
+@example_request {"name":"my-app","namespace":"myorganization","description":"A sample application repository","full_description":"This is a comprehensive description of my application repository that contains additional details about the project.","registry":"docker.io","is_private":false}
 
 @endpoint GET /v2/namespaces/{namespace}/repositories/{repository}
+@desc Get repository in a namespace
 @returns(200) {user: str, name: str, namespace: str, repository_type: str?, status: int, status_description: str, description: str, is_private: bool, is_automated: bool, star_count: int(int64), pull_count: int(int64), last_updated: str(date-time), last_modified: str(date-time)?, date_registered: str(date-time), collaborator_count: int(int64), affiliation: str?, hub_user: str?, has_starred: bool, full_description: str?, permissions: map{read: bool, write: bool, admin: bool}, media_types: [str], content_types: [str], categories: [map], immutable_tags_settings: map{enabled: bool, rules: [str]}, storage_size: int(int64)?, source: str?}
-@errors {401, 403, 404, 500}
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal}
 
 @endpoint HEAD /v2/namespaces/{namespace}/repositories/{repository}
+@desc Check repository in a namespace
 @returns(200) {user: str, name: str, namespace: str, repository_type: str?, status: int, status_description: str, description: str, is_private: bool, is_automated: bool, star_count: int(int64), pull_count: int(int64), last_updated: str(date-time), last_modified: str(date-time)?, date_registered: str(date-time), collaborator_count: int(int64), affiliation: str?, hub_user: str?, has_starred: bool, full_description: str?, permissions: map{read: bool, write: bool, admin: bool}, media_types: [str], content_types: [str], categories: [map], immutable_tags_settings: map{enabled: bool, rules: [str]}, storage_size: int(int64)?, source: str?}
-@errors {401, 403, 404, 500}
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal}
 
 @endgroup
 
 @group orgs
 @endpoint GET /v2/orgs/{org_name}/members
-@returns(200)
-@errors {400, 401, 403, 404}
+@desc List org members
+@returns(200) List of members
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint GET /v2/orgs/{org_name}/members/export
-@returns(200)
-@errors {400, 401, 403, 404}
+@desc Export org members CSV
+@returns(200) Exported members
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint PUT /v2/orgs/{org_name}/members/{username}
-@required {role: str(owner/editor/member)}
-@returns(200) {email: str, role: str, groups: [str], is_guest: bool, primary_email: str, last_logged_in_at: str(date-time), last_seen_at: str(date-time), last_desktop_version: str}
-@errors {400, 401, 403, 404}
+@desc Update org member (role)
+@required {role: str(owner/editor/member) # Role of the member}
+@returns(200) {email: str, role: str, groups: [str], is_guest: bool, primary_email: str, last_logged_in_at: str(date-time), last_seen_at: str(date-time), last_desktop_version: str} # Member role updated
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint DELETE /v2/orgs/{org_name}/members/{username}
-@returns(204)
-@errors {400, 401, 403, 404}
+@desc Remove member from org
+@returns(204) Member removed successfully
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint GET /v2/orgs/{org_name}/invites
+@desc List org invites
 @returns(200) {data: [map]}
-@errors {401, 403, 404}
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint GET /v2/orgs/{org_name}/groups
-@optional {page: int, page_size: int, username: str, search: str}
+@desc Get groups of an organization
+@optional {page: int # Page number (starts on 1)., page_size: int # Number of items (rows) per page., username: str # Get groups for the specified username in the organization., search: str # Get groups for the specified group in the organization.}
 @returns(200) {count: num, next: str, previous: str, results: [map]}
-@errors {401, 403, 404}
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint POST /v2/orgs/{org_name}/groups
+@desc Create a new group
 @required {name: str}
 @optional {description: str}
-@returns(201) {id: num, uuid: str, name: str, description: str, member_count: num}
-@errors {400, 401, 403}
+@returns(201) {id: num, uuid: str, name: str, description: str, member_count: num} # Group created successfully
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden}
 
 @endpoint GET /v2/orgs/{org_name}/groups/{group_name}
+@desc Get a group of an organization
 @returns(200) {id: num, uuid: str, name: str, description: str, member_count: num}
-@errors {401, 403, 404}
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint PUT /v2/orgs/{org_name}/groups/{group_name}
+@desc Update the details for an organization group
 @required {name: str}
 @optional {description: str}
 @returns(200) {id: num, uuid: str, name: str, description: str, member_count: num}
-@errors {401, 403, 404}
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint PATCH /v2/orgs/{org_name}/groups/{group_name}
+@desc Update some details for an organization group
 @optional {name: str, description: str}
 @returns(200) {id: num, uuid: str, name: str, description: str, member_count: num}
-@errors {401, 403, 404}
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint DELETE /v2/orgs/{org_name}/groups/{group_name}
-@returns(204)
-@errors {401, 403, 404}
+@desc Delete an organization group
+@returns(204) Group deleted successfully
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint GET /v2/orgs/{org_name}/groups/{group_name}/members
-@required {org_name: str, group_name: str}
-@optional {page: int, page_size: int, search: str}
+@desc List members of a group
+@required {org_name: str # Name of the organization (namespace)., group_name: str # Name of the group (team) in the organization.}
+@optional {page: int # Page number (starts on 1)., page_size: int # Number of items (rows) per page., search: str # Search members by username, full_name or email.}
 @returns(200) {count: num, next: str, previous: str, results: [map]}
-@errors {401, 403, 404}
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint POST /v2/orgs/{org_name}/groups/{group_name}/members
-@required {org_name: str, group_name: str, member: str}
-@returns(200)
-@errors {401, 403, 404, 500}
+@desc Add a member to a group
+@required {org_name: str # Name of the organization (namespace)., group_name: str # Name of the group (team) in the organization., member: str}
+@returns(200) OK
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal}
 
 @endpoint DELETE /v2/orgs/{org_name}/groups/{group_name}/members/{username}
-@returns(204)
-@errors {401, 403, 404}
+@desc Remove a user from a group
+@returns(204) User removed successfully
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endgroup
 
 @group invites
 @endpoint DELETE /v2/invites/{id}
+@desc Cancel an invite
 @returns(204)
-@errors {401, 403, 404}
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint PATCH /v2/invites/{id}/resend
+@desc Resend an invite
 @returns(204)
-@errors {401, 403, 404}
+@errors {401: Unauthorized, 403: Forbidden, 404: Not Found}
 
 @endpoint POST /v2/invites/bulk
-@required {org: str, invitees: [str]}
-@optional {team: str, role: str, dry_run: bool}
-@returns(202) {invitees: map{invitees: [map]}}
-@errors {400, 409}
+@desc Bulk create invites
+@required {org: str # organization name, invitees: [str] # list of invitees emails or Docker Ids}
+@optional {team: str # team name, role: str # role for invitees, dry_run: bool # Optional, run through validation but don't actually change data.}
+@returns(202) {invitees: map{invitees: [map]}} # Accepted
+@errors {400: Bad Request, 409: Conflict}
 
 @endgroup
 
 @group scim
 @endpoint GET /v2/scim/2.0/ServiceProviderConfig
+@desc Get service provider config
 @returns(200)
-@errors {401, 500}
+@errors {401: Unauthorized, 500: Internal Error}
 
 @endpoint GET /v2/scim/2.0/ResourceTypes
+@desc List resource types
 @returns(200)
-@errors {401, 500}
+@errors {401: Unauthorized, 500: Internal Error}
 
 @endpoint GET /v2/scim/2.0/ResourceTypes/{name}
+@desc Get a resource type
 @required {name: str}
 @returns(200)
-@errors {401, 404, 500}
+@errors {401: Unauthorized, 404: Not Found, 500: Internal Error}
 
 @endpoint GET /v2/scim/2.0/Schemas
+@desc List schemas
 @returns(200)
-@errors {401, 500}
+@errors {401: Unauthorized, 500: Internal Error}
 
 @endpoint GET /v2/scim/2.0/Schemas/{id}
+@desc Get a schema
 @required {id: str}
 @returns(200)
-@errors {401, 404, 500}
+@errors {401: Unauthorized, 404: Not Found, 500: Internal Error}
 
 @endpoint GET /v2/scim/2.0/Users
-@optional {startIndex: int, count: int, filter: str, attributes: str, sortOrder: str(ascending/descending), sortBy: str}
+@desc List users
+@optional {startIndex: int, count: int, filter: str, attributes: str # Comma delimited list of attributes to limit to in the response., sortOrder: str(ascending/descending), sortBy: str # User attribute to sort by.}
 @returns(200)
-@errors {400, 401, 403, 404, 500}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal Error}
 
 @endpoint POST /v2/scim/2.0/Users
+@desc Create user
 @returns(201)
-@errors {400, 401, 403, 404, 409, 500}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 500: Internal Error}
 
 @endpoint GET /v2/scim/2.0/Users/{id}
+@desc Get a user
 @returns(200)
-@errors {400, 401, 403, 404, 500}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 500: Internal Error}
 
 @endpoint PUT /v2/scim/2.0/Users/{id}
+@desc Update a user
 @returns(200)
-@errors {400, 401, 403, 404, 409, 500}
+@errors {400: Bad Request, 401: Unauthorized, 403: Forbidden, 404: Not Found, 409: Conflict, 500: Internal Error}
 
 @endgroup
 

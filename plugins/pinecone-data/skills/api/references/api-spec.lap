@@ -1,0 +1,143 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Pinecone Data Plane API
+@base https://{index_host}
+@version 2025-10
+@auth ApiKey Api-Key in header
+@common_fields {X-Pinecone-Api-Version: str=2025-10 # Required date-based version header}
+@endpoints 18
+@toc bulk(4), describe_index_stats(1), query(1), vectors(6), namespaces(4), records(2)
+
+@group bulk
+@endpoint GET /bulk/imports
+@desc List imports
+@optional {limit: int(int32)=100 # Max number of operations to return per page., paginationToken: str # Pagination token to continue a previous listing operation.}
+@returns(200) {data: [map], pagination: map{next: str}} # A list of import operations
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endpoint POST /bulk/imports
+@desc Start import
+@required {uri: str # The URI of the bucket (or container) and import directory containing the namespaces and Parquet files you want to import. For example, `s3://BUCKET_NAME/IMPORT_DIR` for Amazon S3, `gs://BUCKET_NAME/IMPORT_DIR` for Google Cloud Storage, or `https://STORAGE_ACCOUNT.blob.core.windows.net/CONTAINER_NAME/IMPORT_DIR` for Azure Blob Storage. For more information, see [Import records](https://docs.pinecone.io/guides/index-data/import-data#prepare-your-data).}
+@optional {integrationId: str # The id of the [storage integration](https://docs.pinecone.io/guides/operations/integrations/manage-storage-integrations) that should be used to access the data., errorMode: map{onError: str} # Indicates how to respond to errors during the import process.}
+@returns(200) {id: str} # Successful import operation
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endpoint GET /bulk/imports/{id}
+@desc Describe an import
+@required {id: str # Unique identifier for the import operation.}
+@returns(200) {id: str, uri: str, status: str, createdAt: str(date-time), finishedAt: str(date-time), percentComplete: num(float), recordsImported: int(int64), error: str} # Details of the import operation.
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endpoint DELETE /bulk/imports/{id}
+@desc Cancel an import
+@required {id: str # Unique identifier for the import operation.}
+@returns(200) Operation cancelled successfully
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endgroup
+
+@group describe_index_stats
+@endpoint POST /describe_index_stats
+@desc Get index stats
+@optional {filter: map # If this parameter is present, the operation only returns statistics for vectors that satisfy the filter. See [Understanding metadata](https://docs.pinecone.io/guides/index-data/indexing-overview#metadata).  Serverless indexes do not support filtering `describe_index_stats` by metadata.}
+@returns(200) {namespaces: map, dimension: int(int64), indexFullness: num(float), totalVectorCount: int(int64), metric: str, vectorType: str, memory_fullness: num(float), storage_fullness: num(float)} # A successful response.
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endgroup
+
+@group query
+@endpoint POST /query
+@desc Search with a vector
+@required {topK: int(int64) # The number of results to return for each query.}
+@optional {namespace: str # The namespace to query., filter: map # The filter to apply. You can use vector metadata to limit your search. See [Understanding metadata](https://docs.pinecone.io/guides/index-data/indexing-overview#metadata)., includeValues: bool=False # Indicates whether vector values are included in the response. For on-demand indexes, setting this to `true` may increase latency, especially with higher `topK` values, because vector values are retrieved from object storage. Unless you need vector values, set this to `false` for better performance., includeMetadata: bool=False # Indicates whether metadata is included in the response as well as the ids., queries: [map{values!: [num(float)], sparseValues: map{indices!: [int(int64)], values!: [num(float)]}, topK: int(int64), namespace: str, filter: map}] # DEPRECATED. Use `vector` or `id` instead., vector: [num(float)] # The query vector. This should be the same length as the dimension of the index being queried. Each `query` request can contain only one of the parameters `id` or `vector`., sparseVector: map{indices!: [int(int64)], values!: [num(float)]} # Vector sparse data. Represented as a list of indices and a list of  corresponded values, which must be with the same length., id: str # The unique ID of the vector to be used as a query vector. Each request  can contain either the `vector` or `id` parameter., scanFactor: num(float) # An optimization parameter for IVF dense indexes in dedicated read node indexes. It adjusts how much of the index is scanned to find vector candidates. Range: 0.5 – 4 (default). Keep the default (4.0) for the best search results. If query latency is too high, try lowering this value incrementally (minimum 0.5) to speed up the search at the cost of slightly lower accuracy. This parameter is only supported for dedicated (DRN) dense indexes., maxCandidates: int(int64) # An optimization parameter that controls the maximum number of candidate dense vectors to rerank. Reranking computes exact distances to improve recall but increases query latency. Range: top_k – 100000. Keep the default for a balance of recall and latency. Increase this value if recall is too low, or decrease it to reduce latency at the cost of accuracy. This parameter is only supported for dedicated (DRN) dense indexes.}
+@returns(200) {results: [map], matches: [map], namespace: str, usage: map{readUnits: int(int64)}} # A successful response.
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endgroup
+
+@group vectors
+@endpoint POST /vectors/delete
+@desc Delete vectors
+@optional {ids: [str] # Vectors to delete., deleteAll: bool=False # This indicates that all vectors in the index namespace should be deleted., namespace: str # The namespace to delete vectors from, if applicable., filter: map # If specified, the metadata filter here will be used to select the vectors to delete. This is mutually exclusive with specifying ids to delete in the ids param or using delete_all=True. See [Delete data](https://docs.pinecone.io/guides/manage-data/delete-data#delete-records-by-metadata).}
+@returns(200) A successful response.
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endpoint GET /vectors/fetch
+@desc Fetch vectors
+@required {ids: [str] # The vector IDs to fetch. Does not accept values containing spaces.}
+@optional {namespace: str # The namespace to fetch vectors from. If not provided, the default namespace is used.}
+@returns(200) {vectors: map, namespace: str, usage: map{readUnits: int(int64)}} # A successful response.
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endpoint POST /vectors/fetch_by_metadata
+@desc Fetch vectors by metadata
+@optional {namespace: str # The namespace to fetch vectors from., filter: map # Metadata filter expression to select vectors. See [Understanding metadata](https://docs.pinecone.io/guides/index-data/indexing-overview#metadata)., limit: int(int64)=100 # Max number of vectors to return., paginationToken: str # Pagination token to continue a previous listing operation.}
+@returns(200) {vectors: map, namespace: str, usage: map{readUnits: int(int64)}, pagination: map{next: str}} # A successful response.
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endpoint GET /vectors/list
+@desc List vector IDs
+@optional {prefix: str # The vector IDs to fetch. Does not accept values containing spaces., limit: int(int64)=100 # Max number of IDs to return per page., paginationToken: str # Pagination token to continue a previous listing operation., namespace: str # The namespace to list vectors from. If not provided, the default namespace is used.}
+@returns(200) {vectors: [map], pagination: map{next: str}, namespace: str, usage: map{readUnits: int(int64)}} # A successful response.
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endpoint POST /vectors/update
+@desc Update a vector
+@optional {id: str # Vector's unique id., values: [num(float)] # Vector data., sparseValues: map{indices!: [int(int64)], values!: [num(float)]} # Vector sparse data. Represented as a list of indices and a list of  corresponded values, which must be with the same length., setMetadata: map # Metadata to set for the vector., namespace: str # The namespace containing the vector to update., filter: map # A metadata filter expression. When updating metadata across records in a namespace,  the update is applied to all records that match the filter.  See [Understanding metadata](https://docs.pinecone.io/guides/index-data/indexing-overview#metadata)., dryRun: bool=False # If `true`, return the number of records that match the `filter`, but do not execute the update.  Default is `false`.}
+@returns(200) {matchedRecords: int(int32)} # A successful response.
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endpoint POST /vectors/upsert
+@desc Upsert vectors
+@required {vectors: [map{id!: str, values: [num(float)], sparseValues: map{indices!: [int(int64)], values!: [num(float)]}, metadata: map}] # An array containing the vectors to upsert. Recommended batch limit is up to 1000 vectors.}
+@optional {namespace: str # The namespace where you upsert vectors.}
+@returns(200) {upsertedCount: int(int64)} # A successful response.
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endgroup
+
+@group namespaces
+@endpoint GET /namespaces
+@desc List namespaces
+@optional {limit: int(int32) # Max number namespaces to return per page., paginationToken: str # Pagination token to continue a previous listing operation., prefix: str # Prefix of the namespaces to list. Acts as a filter to return only namespaces that start with this prefix.}
+@returns(200) {namespaces: [map], pagination: map{next: str}, total_count: int(int32)} # A successful response
+@errors {4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endpoint POST /namespaces
+@desc Create a namespace
+@required {name: str # The name of the namespace.}
+@optional {schema: map{fields!: map} # Schema for the behavior of Pinecone's internal metadata index. By default, all metadata is indexed; when `schema` is present, only fields which are present in the `fields` object with a `filterable: true` are indexed. Note that `filterable: false` is not currently supported.}
+@returns(200) {name: str, record_count: int(int64), schema: map{fields: map}, indexed_fields: map{fields: [str]}} # A successful response.
+@errors {400: Bad request. The request body included invalid request parameters., 409: Namespace of the given name already exists on the index., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endpoint GET /namespaces/{namespace}
+@desc Describe a namespace
+@required {namespace: str # The namespace to describe.}
+@returns(200) {name: str, record_count: int(int64), schema: map{fields: map}, indexed_fields: map{fields: [str]}} # A description of a namespace.
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endpoint DELETE /namespaces/{namespace}
+@desc Delete a namespace
+@required {namespace: str # The namespace to delete.}
+@returns(200) A successful response.
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endgroup
+
+@group records
+@endpoint POST /records/namespaces/{namespace}/upsert
+@desc Upsert text
+@required {namespace: str # The namespace to upsert records into.}
+@returns(201) A successful response.
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endpoint POST /records/namespaces/{namespace}/search
+@desc Search with text
+@required {namespace: str # The namespace to search., query: map{top_k!: int(int32), filter: map, inputs: map, vector: map{values: [num(float)], sparse_values: [num(float)], sparse_indices: [int(int32)]}, id: str, match_terms: map{strategy: str, terms: [str]}} # .}
+@optional {fields: [str] # The fields to return in the search results. If not specified, the response will include all fields., rerank: map{model!: str, rank_fields!: [str], top_n: int(int32), parameters: map, query: str} # Parameters for reranking the initial search results.}
+@returns(200) {result: map{hits: [map]}, usage: map{read_units: int(int32), embed_total_tokens: int(int32), rerank_units: int(int32)}} # A successful search namespace response.
+@errors {400: Bad request. The request body included invalid request parameters., 4XX: An unexpected error response., 5XX: An unexpected error response.}
+
+@endgroup
+
+@end

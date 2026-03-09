@@ -304,90 +304,248 @@ https://peertube2.cpy.re
 | POST | /api/v1/video-channels/{channelHandle}/collaborators/{collaboratorId}/reject | Reject a collaboration invitation |
 | DELETE | /api/v1/video-channels/{channelHandle}/collaborators/{collaboratorId} | Remove a channel collaborator |
 
-## Enhanced Skill Content
-## Question Mapping
+## Common Questions
 
-- "How do I search for videos?" -> GET /api/v1/search/videos
-- "What videos has a specific user uploaded?" -> GET /api/v1/accounts/{name}/videos
-- "How do I upload a video?" -> POST /api/v1/videos/upload
-- "How do I get an OAuth token?" -> POST /api/v1/users/token (after GET /api/v1/oauth-clients/local)
-- "What are the server stats like active users and video count?" -> GET /api/v1/server/stats
-- "How do I subscribe to a channel?" -> POST /api/v1/users/me/subscriptions
-- "How do I report an abusive video or comment?" -> POST /api/v1/abuses
-- "How do I create a live stream?" -> POST /api/v1/videos/live
-- "What plugins are installed on the instance?" -> GET /api/v1/plugins
-- "How do I block a remote server?" -> POST /api/v1/server/blocklist/servers
-- "How do I manage video captions?" -> GET /api/v1/videos/{id}/captions then PUT /api/v1/videos/{id}/captions/{captionLanguage}
-- "What is my video quota usage?" -> GET /api/v1/users/me/video-quota-used
-- "How do I register a new user?" -> POST /api/v1/users/register
-- "How do I get the RSS feed for a channel?" -> GET /feeds/videos.{format}
-- "How do I check viewer retention on my video?" -> GET /api/v1/videos/{id}/stats/retention
-
-## Response Tips
-
-- **List endpoints** (videos, accounts, channels, playlists, comments, jobs, runners, abuses, registrations): All return `{total, data}`. Use `start` and `count` (default 15) for pagination. Always check `total` to know if more pages exist.
-- **Mutation endpoints** (create, update, delete): Most return 204 with no body. POST creation endpoints typically return the new resource ID nested one level deep (e.g., `{video: {id, uuid, shortUUID}}`).
-- **Config endpoints**: GET /api/v1/config returns a deeply nested object. Navigate through `instance`, `signup`, `transcoding`, `import` sub-objects. GET /api/v1/config/custom is the admin-editable superset.
-- **Stats endpoints**: Video stats (overall, retention, timeseries, user-agent) return different shapes. `overall` gives aggregates; `retention` and `timeseries` return `{data: [map]}` arrays for charting.
-- **Feed endpoints**: Return XML/RSS/Atom/JSON based on the `{format}` path parameter, not JSON API objects. Content-Type varies accordingly.
-- **Error responses**: 400 = bad input, 403 = missing auth or insufficient role, 404 = resource not found, 409 = conflict/duplicate, 413 = file too large, 429 = rate limited, 503 = service unavailable (plugin registry down).
-
-## Anomaly Flags
-
-- **429 on resumable upload PUT**: Rate limit hit during upload. Surface immediately -- the user may need to wait before retrying the chunk.
-- **308 on resumable upload**: Not an error. This is the expected "send next chunk" response. Do not treat as a failure.
-- **503 from /plugins/available**: The plugin registry is unreachable. Warn the user that plugin search is temporarily unavailable.
-- **413 on any upload endpoint**: File exceeds server limit. Surface the instance's configured max sizes from GET /api/v1/config (`video.file.size.max`, `avatar.file.size.max`).
-- **Video quota approaching**: After uploads, proactively check GET /api/v1/users/me/video-quota-used and compare against the quota from GET /api/v1/users/me. Alert if usage exceeds 90%.
-- **Job queue backlog**: If GET /api/v1/jobs/waiting returns a high `total`, warn that transcoding or federation may be delayed.
-- **Registration requires approval**: If GET /api/v1/config shows `signup.allowed: false`, user registration needs POST /api/v1/users/registrations/request instead of POST /api/v1/users/register. Flag this distinction.
-- **Two-factor OTP required**: 401 on POST /users/token when `x-peertube-otp` header is missing. Prompt the user for their OTP code.
-- **Redundancy conflicts (409)**: Attempting to add redundancy for a video that already has it. Surface the existing redundancy instead of retrying.
-
-## Playbook
-
-### 1. Authenticate and get current user info
-
-1. GET /api/v1/oauth-clients/local to retrieve `client_id` and `client_secret`
-2. POST /api/v1/users/token with username, password, client_id, client_secret to get `access_token` and `refresh_token`
-3. Use `Authorization: Bearer {access_token}` on all subsequent requests
-4. GET /api/v1/users/me to verify identity and check quotas
-5. When the access token expires, POST /api/v1/users/token with the refresh_token grant type
-
-### 2. Upload a video with captions
-
-1. POST /api/v1/videos/upload with the video file and metadata (name, channel, privacy, etc.) -- returns `{video: {id, uuid}}`
-2. Wait for transcoding: poll GET /api/v1/videos/{id} until the video state indicates it is published
-3. PUT /api/v1/videos/{id}/captions/{captionLanguage} with the subtitle file to attach captions
-4. Optionally POST /api/v1/videos/{id}/captions/generate to auto-generate captions via transcription
-5. PUT /api/v1/videos/{id}/chapters to add chapter markers with titles and timecodes
-
-### 3. Set up a live stream
-
-1. POST /api/v1/videos/live with channel ID, name, and privacy settings -- returns `{video: {id, uuid}}`
-2. GET /api/v1/videos/live/{id} to retrieve the `rtmpUrl`, `rtmpsUrl`, and `streamKey`
-3. Configure your streaming software (OBS, etc.) with the RTMP URL and stream key
-4. Optionally PUT /api/v1/videos/live/{id} to enable `saveReplay`, set `latencyMode`, or configure `permanentLive`
-5. After the stream ends, GET /api/v1/videos/{id}/live-session to check for errors and find the replay video ID
-
-### 4. Moderate content (abuse reports and blocklists)
-
-1. GET /api/v1/abuses with optional `state`, `filter`, and `search` params to review pending reports
-2. PUT /api/v1/abuses/{abuseId} with `state: 2` (accepted) or `state: 3` (rejected) and a `moderationComment`
-3. If the video should be hidden: POST /api/v1/videos/{id}/blacklist to block it from public view
-4. To block a repeat offender's instance: POST /api/v1/server/blocklist/servers with the `host`
-5. To block a specific account: POST /api/v1/server/blocklist/accounts with the `accountName`
-6. Review messages on a report: GET /api/v1/abuses/{abuseId}/messages, and reply with POST /api/v1/abuses/{abuseId}/messages
-
-### 5. Set up remote runners for transcoding
-
-1. POST /api/v1/runners/registration-tokens/generate to create a token
-2. GET /api/v1/runners/registration-tokens to retrieve the generated token
-3. On the runner machine: POST /api/v1/runners/register with the `registrationToken` and a `name` -- returns `runnerToken`
-4. The runner polls POST /api/v1/runners/jobs/request with its `runnerToken` to pick up transcoding jobs
-5. For each job: POST /api/v1/runners/jobs/{jobUUID}/accept, send progress updates via POST .../update, then POST .../success or .../error
-6. Monitor all runner jobs from the admin side: GET /api/v1/runners/jobs with `stateOneOf` and `sort` filters
-
+Match user requests to endpoints in references/api-spec.lap. Key patterns:
+- "Get web-video details?" -> GET /static/web-videos/{filename}
+- "Get private details?" -> GET /static/web-videos/private/{filename}
+- "Get hl details?" -> GET /static/streaming-playlists/hls/{filename}
+- "Get private details?" -> GET /static/streaming-playlists/hls/private/{filename}
+- "Get generate details?" -> GET /download/videos/generate/{videoId}
+- "Get video-comments.{format} details?" -> GET /feeds/video-comments.{format}
+- "Get videos.{format} details?" -> GET /feeds/videos.{format}
+- "Get subscriptions.{format} details?" -> GET /feeds/subscriptions.{format}
+- "List all videos.xml?" -> GET /feeds/podcast/videos.xml
+- "Get account details?" -> GET /api/v1/accounts/{name}
+- "Search videos?" -> GET /api/v1/accounts/{name}/videos
+- "Search followers?" -> GET /api/v1/accounts/{name}/followers
+- "List all accounts?" -> GET /api/v1/accounts
+- "List all config?" -> GET /api/v1/config
+- "List all about?" -> GET /api/v1/config/about
+- "List all custom?" -> GET /api/v1/config/custom
+- "Create a pick?" -> POST /api/v1/config/instance-banner/pick
+- "Create a pick?" -> POST /api/v1/config/instance-avatar/pick
+- "Create a pick?" -> POST /api/v1/config/instance-logo/{logoType}/pick
+- "Delete a instance-logo?" -> DELETE /api/v1/config/instance-logo/{logoType}
+- "List all instance?" -> GET /api/v1/custom-pages/homepage/instance
+- "Create a pause?" -> POST /api/v1/jobs/pause
+- "Create a resume?" -> POST /api/v1/jobs/resume
+- "Get job details?" -> GET /api/v1/jobs/{state}
+- "List all followers?" -> GET /api/v1/server/followers
+- "Delete a follower?" -> DELETE /api/v1/server/followers/{handle}
+- "Create a reject?" -> POST /api/v1/server/followers/{handle}/reject
+- "Create a accept?" -> POST /api/v1/server/followers/{handle}/accept
+- "List all following?" -> GET /api/v1/server/following
+- "Create a following?" -> POST /api/v1/server/following
+- "Delete a following?" -> DELETE /api/v1/server/following/{hostOrHandle}
+- "Create a user?" -> POST /api/v1/users
+- "Search users?" -> GET /api/v1/users
+- "Delete a user?" -> DELETE /api/v1/users/{id}
+- "Get user details?" -> GET /api/v1/users/{id}
+- "Update a user?" -> PUT /api/v1/users/{id}
+- "List all local?" -> GET /api/v1/oauth-clients/local
+- "Create a token?" -> POST /api/v1/users/token
+- "Create a revoke-token?" -> POST /api/v1/users/revoke-token
+- "List all token-sessions?" -> GET /api/v1/users/{id}/token-sessions
+- "List all revoke?" -> GET /api/v1/users/{id}/token-sessions/{tokenSessionId}/revoke
+- "Create a ask-send-verify-email?" -> POST /api/v1/users/ask-send-verify-email
+- "Create a ask-send-verify-email?" -> POST /api/v1/users/registrations/ask-send-verify-email
+- "Create a verify-email?" -> POST /api/v1/users/{id}/verify-email
+- "Create a verify-email?" -> POST /api/v1/users/registrations/{registrationId}/verify-email
+- "Create a ask-reset-password?" -> POST /api/v1/users/ask-reset-password
+- "Create a reset-password?" -> POST /api/v1/users/{id}/reset-password
+- "Create a request?" -> POST /api/v1/users/{id}/two-factor/request
+- "Create a confirm-request?" -> POST /api/v1/users/{id}/two-factor/confirm-request
+- "Create a disable?" -> POST /api/v1/users/{id}/two-factor/disable
+- "Create a import-resumable?" -> POST /api/v1/users/{userId}/imports/import-resumable
+- "List all latest?" -> GET /api/v1/users/{userId}/imports/latest
+- "Create a request?" -> POST /api/v1/users/{userId}/exports/request
+- "List all exports?" -> GET /api/v1/users/{userId}/exports
+- "Delete a export?" -> DELETE /api/v1/users/{userId}/exports/{id}
+- "List all me?" -> GET /api/v1/users/me
+- "Search comments?" -> GET /api/v1/users/me/videos/comments
+- "Search imports?" -> GET /api/v1/users/me/videos/imports
+- "List all video-quota-used?" -> GET /api/v1/users/me/video-quota-used
+- "List all rating?" -> GET /api/v1/users/me/videos/{videoId}/rating
+- "Search videos?" -> GET /api/v1/users/me/videos
+- "List all subscriptions?" -> GET /api/v1/users/me/subscriptions
+- "Create a subscription?" -> POST /api/v1/users/me/subscriptions
+- "List all exist?" -> GET /api/v1/users/me/subscriptions/exist
+- "Search videos?" -> GET /api/v1/users/me/subscriptions/videos
+- "Get subscription details?" -> GET /api/v1/users/me/subscriptions/{subscriptionHandle}
+- "Delete a subscription?" -> DELETE /api/v1/users/me/subscriptions/{subscriptionHandle}
+- "List all notifications?" -> GET /api/v1/users/me/notifications
+- "Create a read?" -> POST /api/v1/users/me/notifications/read
+- "Create a read-all?" -> POST /api/v1/users/me/notifications/read-all
+- "Create a read?" -> POST /api/v1/users/me/new-feature-info/read
+- "Search videos?" -> GET /api/v1/users/me/history/videos
+- "Delete a video?" -> DELETE /api/v1/users/me/history/videos/{videoId}
+- "Create a remove?" -> POST /api/v1/users/me/history/videos/remove
+- "Create a pick?" -> POST /api/v1/users/me/avatar/pick
+- "Create a register?" -> POST /api/v1/users/register
+- "Create a request?" -> POST /api/v1/users/registrations/request
+- "Create a accept?" -> POST /api/v1/users/registrations/{registrationId}/accept
+- "Create a reject?" -> POST /api/v1/users/registrations/{registrationId}/reject
+- "Delete a registration?" -> DELETE /api/v1/users/registrations/{registrationId}
+- "Search registrations?" -> GET /api/v1/users/registrations
+- "List all ownership?" -> GET /api/v1/videos/ownership
+- "Create a accept?" -> POST /api/v1/videos/ownership/{id}/accept
+- "Create a refuse?" -> POST /api/v1/videos/ownership/{id}/refuse
+- "Create a give-ownership?" -> POST /api/v1/videos/{id}/give-ownership
+- "Create a token?" -> POST /api/v1/videos/{id}/token
+- "Create a edit?" -> POST /api/v1/videos/{id}/studio/edit
+- "Search videos?" -> GET /api/v1/videos
+- "List all categories?" -> GET /api/v1/videos/categories
+- "List all licences?" -> GET /api/v1/videos/licences
+- "List all languages?" -> GET /api/v1/videos/languages
+- "List all privacies?" -> GET /api/v1/videos/privacies
+- "Update a video?" -> PUT /api/v1/videos/{id}
+- "Get video details?" -> GET /api/v1/videos/{id}
+- "Delete a video?" -> DELETE /api/v1/videos/{id}
+- "List all description?" -> GET /api/v1/videos/{id}/description
+- "Create a view?" -> POST /api/v1/videos/{id}/views
+- "List all overall?" -> GET /api/v1/videos/{id}/stats/overall
+- "List all user-agent?" -> GET /api/v1/videos/{id}/stats/user-agent
+- "List all retention?" -> GET /api/v1/videos/{id}/stats/retention
+- "Get timesery details?" -> GET /api/v1/videos/{id}/stats/timeseries/{metric}
+- "Create a upload?" -> POST /api/v1/videos/upload
+- "Create a upload-resumable?" -> POST /api/v1/videos/upload-resumable
+- "Create a import?" -> POST /api/v1/videos/imports
+- "Create a cancel?" -> POST /api/v1/videos/imports/{id}/cancel
+- "Create a retry?" -> POST /api/v1/videos/imports/{id}/retry
+- "Delete a import?" -> DELETE /api/v1/videos/imports/{id}
+- "Create a live?" -> POST /api/v1/videos/live
+- "Get live details?" -> GET /api/v1/videos/live/{id}
+- "Update a live?" -> PUT /api/v1/videos/live/{id}
+- "List all sessions?" -> GET /api/v1/videos/live/{id}/sessions
+- "List all live-session?" -> GET /api/v1/videos/{id}/live-session
+- "List all source?" -> GET /api/v1/videos/{id}/source
+- "Create a replace-resumable?" -> POST /api/v1/videos/{id}/source/replace-resumable
+- "List all abuses?" -> GET /api/v1/users/me/abuses
+- "Search abuses?" -> GET /api/v1/abuses
+- "Create a abuse?" -> POST /api/v1/abuses
+- "Update a abuse?" -> PUT /api/v1/abuses/{abuseId}
+- "Delete a abuse?" -> DELETE /api/v1/abuses/{abuseId}
+- "List all messages?" -> GET /api/v1/abuses/{abuseId}/messages
+- "Create a message?" -> POST /api/v1/abuses/{abuseId}/messages
+- "Delete a message?" -> DELETE /api/v1/abuses/{abuseId}/messages/{abuseMessageId}
+- "Create a blacklist?" -> POST /api/v1/videos/{id}/blacklist
+- "Search blacklist?" -> GET /api/v1/videos/blacklist
+- "List all storyboards?" -> GET /api/v1/videos/{id}/storyboards
+- "List all captions?" -> GET /api/v1/videos/{id}/captions
+- "Create a generate?" -> POST /api/v1/videos/{id}/captions/generate
+- "Update a caption?" -> PUT /api/v1/videos/{id}/captions/{captionLanguage}
+- "Delete a caption?" -> DELETE /api/v1/videos/{id}/captions/{captionLanguage}
+- "List all chapters?" -> GET /api/v1/videos/{id}/chapters
+- "List all embed-privacy?" -> GET /api/v1/videos/{id}/embed-privacy
+- "List all allowed?" -> GET /api/v1/videos/{id}/embed-privacy/allowed
+- "List all passwords?" -> GET /api/v1/videos/{id}/passwords
+- "Create a password?" -> POST /api/v1/videos/{id}/passwords
+- "Delete a password?" -> DELETE /api/v1/videos/{id}/passwords/{videoPasswordId}
+- "List all video-channels?" -> GET /api/v1/video-channels
+- "Create a video-channel?" -> POST /api/v1/video-channels
+- "Get video-channel details?" -> GET /api/v1/video-channels/{channelHandle}
+- "Update a video-channel?" -> PUT /api/v1/video-channels/{channelHandle}
+- "Delete a video-channel?" -> DELETE /api/v1/video-channels/{channelHandle}
+- "Search videos?" -> GET /api/v1/video-channels/{channelHandle}/videos
+- "List all activities?" -> GET /api/v1/video-channels/{channelHandle}/activities
+- "List all video-playlists?" -> GET /api/v1/video-channels/{channelHandle}/video-playlists
+- "Create a reorder?" -> POST /api/v1/video-channels/{channelHandle}/video-playlists/reorder
+- "Search followers?" -> GET /api/v1/video-channels/{channelHandle}/followers
+- "Create a pick?" -> POST /api/v1/video-channels/{channelHandle}/avatar/pick
+- "Create a pick?" -> POST /api/v1/video-channels/{channelHandle}/banner/pick
+- "Create a import-video?" -> POST /api/v1/video-channels/{channelHandle}/import-videos
+- "Create a video-channel-sync?" -> POST /api/v1/video-channel-syncs
+- "Delete a video-channel-sync?" -> DELETE /api/v1/video-channel-syncs/{channelSyncId}
+- "Create a sync?" -> POST /api/v1/video-channel-syncs/{channelSyncId}/sync
+- "Get video details?" -> GET /api/v1/player-settings/videos/{id}
+- "Update a video?" -> PUT /api/v1/player-settings/videos/{id}
+- "Get video-channel details?" -> GET /api/v1/player-settings/video-channels/{channelHandle}
+- "Update a video-channel?" -> PUT /api/v1/player-settings/video-channels/{channelHandle}
+- "List all privacies?" -> GET /api/v1/video-playlists/privacies
+- "List all video-playlists?" -> GET /api/v1/video-playlists
+- "Create a video-playlist?" -> POST /api/v1/video-playlists
+- "Get video-playlist details?" -> GET /api/v1/video-playlists/{playlistId}
+- "Update a video-playlist?" -> PUT /api/v1/video-playlists/{playlistId}
+- "Delete a video-playlist?" -> DELETE /api/v1/video-playlists/{playlistId}
+- "List all videos?" -> GET /api/v1/video-playlists/{playlistId}/videos
+- "Create a video?" -> POST /api/v1/video-playlists/{playlistId}/videos
+- "Create a reorder?" -> POST /api/v1/video-playlists/{playlistId}/videos/reorder
+- "Update a video?" -> PUT /api/v1/video-playlists/{playlistId}/videos/{playlistElementId}
+- "Delete a video?" -> DELETE /api/v1/video-playlists/{playlistId}/videos/{playlistElementId}
+- "List all videos-exist?" -> GET /api/v1/users/me/video-playlists/videos-exist
+- "Search video-playlists?" -> GET /api/v1/accounts/{name}/video-playlists
+- "Search video-channels?" -> GET /api/v1/accounts/{name}/video-channels
+- "List all video-channel-syncs?" -> GET /api/v1/accounts/{name}/video-channel-syncs
+- "List all ratings?" -> GET /api/v1/accounts/{name}/ratings
+- "List all comment-threads?" -> GET /api/v1/videos/{id}/comment-threads
+- "Create a comment-thread?" -> POST /api/v1/videos/{id}/comment-threads
+- "Get comment-thread details?" -> GET /api/v1/videos/{id}/comment-threads/{threadId}
+- "Search comments?" -> GET /api/v1/videos/comments
+- "Delete a comment?" -> DELETE /api/v1/videos/{id}/comments/{commentId}
+- "Create a approve?" -> POST /api/v1/videos/{id}/comments/{commentId}/approve
+- "Create a transcoding?" -> POST /api/v1/videos/{id}/transcoding
+- "Search videos?" -> GET /api/v1/search/videos
+- "Search video-channels?" -> GET /api/v1/search/video-channels
+- "Search video-playlists?" -> GET /api/v1/search/video-playlists
+- "List all status?" -> GET /api/v1/blocklist/status
+- "List all accounts?" -> GET /api/v1/server/blocklist/accounts
+- "Create a account?" -> POST /api/v1/server/blocklist/accounts
+- "Delete a account?" -> DELETE /api/v1/server/blocklist/accounts/{accountName}
+- "List all servers?" -> GET /api/v1/server/blocklist/servers
+- "Create a server?" -> POST /api/v1/server/blocklist/servers
+- "Delete a server?" -> DELETE /api/v1/server/blocklist/servers/{host}
+- "Update a redundancy?" -> PUT /api/v1/server/redundancy/{host}
+- "List all videos?" -> GET /api/v1/server/redundancy/videos
+- "Create a video?" -> POST /api/v1/server/redundancy/videos
+- "Delete a video?" -> DELETE /api/v1/server/redundancy/videos/{redundancyId}
+- "List all stats?" -> GET /api/v1/server/stats
+- "Create a client?" -> POST /api/v1/server/logs/client
+- "List all logs?" -> GET /api/v1/server/logs
+- "List all audit-logs?" -> GET /api/v1/server/audit-logs
+- "List all plugins?" -> GET /api/v1/plugins
+- "Search available?" -> GET /api/v1/plugins/available
+- "Create a install?" -> POST /api/v1/plugins/install
+- "Create a update?" -> POST /api/v1/plugins/update
+- "Create a uninstall?" -> POST /api/v1/plugins/uninstall
+- "Get plugin details?" -> GET /api/v1/plugins/{npmName}
+- "List all public-settings?" -> GET /api/v1/plugins/{npmName}/public-settings
+- "List all registered-settings?" -> GET /api/v1/plugins/{npmName}/registered-settings
+- "Create a playback?" -> POST /api/v1/metrics/playback
+- "Create a generate?" -> POST /api/v1/runners/registration-tokens/generate
+- "Delete a registration-token?" -> DELETE /api/v1/runners/registration-tokens/{registrationTokenId}
+- "List all registration-tokens?" -> GET /api/v1/runners/registration-tokens
+- "Create a register?" -> POST /api/v1/runners/register
+- "Create a unregister?" -> POST /api/v1/runners/unregister
+- "Delete a runner?" -> DELETE /api/v1/runners/{runnerId}
+- "List all runners?" -> GET /api/v1/runners
+- "Create a request?" -> POST /api/v1/runners/jobs/request
+- "Create a accept?" -> POST /api/v1/runners/jobs/{jobUUID}/accept
+- "Create a abort?" -> POST /api/v1/runners/jobs/{jobUUID}/abort
+- "Create a update?" -> POST /api/v1/runners/jobs/{jobUUID}/update
+- "Create a error?" -> POST /api/v1/runners/jobs/{jobUUID}/error
+- "Create a success?" -> POST /api/v1/runners/jobs/{jobUUID}/success
+- "List all cancel?" -> GET /api/v1/runners/jobs/{jobUUID}/cancel
+- "Delete a job?" -> DELETE /api/v1/runners/jobs/{jobUUID}
+- "Search jobs?" -> GET /api/v1/runners/jobs
+- "List all comments?" -> GET /api/v1/automatic-tags/policies/accounts/{accountName}/comments
+- "List all available?" -> GET /api/v1/automatic-tags/accounts/{accountName}/available
+- "List all available?" -> GET /api/v1/automatic-tags/server/available
+- "List all lists?" -> GET /api/v1/watched-words/accounts/{accountName}/lists
+- "Create a list?" -> POST /api/v1/watched-words/accounts/{accountName}/lists
+- "Update a list?" -> PUT /api/v1/watched-words/accounts/{accountName}/lists/{listId}
+- "Delete a list?" -> DELETE /api/v1/watched-words/accounts/{accountName}/lists/{listId}
+- "List all lists?" -> GET /api/v1/watched-words/server/lists
+- "Create a list?" -> POST /api/v1/watched-words/server/lists
+- "Update a list?" -> PUT /api/v1/watched-words/server/lists/{listId}
+- "Delete a list?" -> DELETE /api/v1/watched-words/server/lists/{listId}
+- "Create a update-language?" -> POST /api/v1/client-config/update-language
+- "List all collaborators?" -> GET /api/v1/video-channels/{channelHandle}/collaborators
+- "Create a invite?" -> POST /api/v1/video-channels/{channelHandle}/collaborators/invite
+- "Create a accept?" -> POST /api/v1/video-channels/{channelHandle}/collaborators/{collaboratorId}/accept
+- "Create a reject?" -> POST /api/v1/video-channels/{channelHandle}/collaborators/{collaboratorId}/reject
+- "Delete a collaborator?" -> DELETE /api/v1/video-channels/{channelHandle}/collaborators/{collaboratorId}
+- "How to authenticate?" -> See Auth section
 
 ## Response Tips
 - Check response schemas in references/api-spec.lap for field details
