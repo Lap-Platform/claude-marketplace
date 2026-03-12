@@ -1,0 +1,250 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Deepgram API Specification
+@base https://api.deepgram.com
+@version 1.0.0
+@auth ApiKey Authorization in header | Bearer bearer
+@endpoints 39
+@hint download_for_search
+@toc agent(1), auth(1), listen(1), models(2), projects(32), read(1), speak(1)
+
+@group agent
+@endpoint GET /v1/agent/settings/think/models
+@desc List Agent Think Models
+@returns(200) {models: [any]} # List of available think models
+@errors {400: Invalid Request}
+
+@endgroup
+
+@group auth
+@endpoint POST /v1/auth/grant
+@desc Token-based Authentication
+@optional {ttl_seconds: num # Time to live in seconds for the token. Defaults to 30 seconds.}
+@returns(200) {access_token: str, expires_in: num} # Grant response
+@errors {400: Invalid Request}
+
+@endgroup
+
+@group listen
+@endpoint POST /v1/listen
+@desc Transcribe and analyze pre-recorded audio and video
+@required {url: str(uri)}
+@optional {callback: str # URL to which we'll make the callback request, callback_method: any(POST/PUT)=POST # HTTP method by which the callback request will be made, extra: any # Arbitrary key-value pairs that are attached to the API response for usage in downstream processing, sentiment: bool=false # Recognizes the sentiment throughout a transcript or text, summarize: any # Summarize content. For Listen API, supports string version option. For Read API, accepts boolean only., tag: any # Label your requests for the purpose of identification during usage reporting, topics: bool=false # Detect topics throughout a transcript or text, custom_topic: any # Custom topics you want the model to detect within your input audio or text if present Submit up to `100`., custom_topic_mode: str(extended/strict)=extended # Sets how the model will interpret strings submitted to the `custom_topic` param. When `strict`, the model will only return topics submitted using the `custom_topic` param. When `extended`, the model will return its own detected topics in addition to those submitted using the `custom_topic` param, intents: bool=false # Recognizes speaker intent throughout a transcript or text, custom_intent: any # Custom intents you want the model to detect within your input audio if present, custom_intent_mode: str(extended/strict)=extended # Sets how the model will interpret intents submitted to the `custom_intent` param. When `strict`, the model will only return intents submitted using the `custom_intent` param. When `extended`, the model will return its own detected intents in the `custom_intent` param., detect_entities: bool=false # Identifies and extracts key entities from content in submitted audio, detect_language: any # Identifies the dominant language spoken in submitted audio, diarize: bool=false # Recognize speaker changes. Each word in the transcript will be assigned a speaker number starting at 0, dictation: bool=false # Dictation mode for controlling formatting with dictated speech, encoding: str(linear16/flac/mulaw/amr-nb/amr-wb/opus/speex/g729) # Specify the expected encoding of your submitted audio, filler_words: bool=false # Filler Words can help transcribe interruptions in your audio, like "uh" and "um", keyterm: [str] # Key term prompting can boost or suppress specialized terminology and brands. Only compatible with Nova-3, keywords: any # Keywords can boost or suppress specialized terminology and brands, language: str=en # The [BCP-47 language tag](https://tools.ietf.org/html/bcp47) that hints at the primary spoken language. Depending on the Model and API endpoint you choose only certain languages are available, measurements: bool=false # Spoken measurements will be converted to their corresponding abbreviations, model: any=base-general # AI model used to process submitted audio, multichannel: bool=false # Transcribe each audio channel independently, numerals: bool=false # Numerals converts numbers from written format to numerical format, paragraphs: bool=false # Splits audio into paragraphs to improve transcript readability, profanity_filter: bool=false # Profanity Filter looks for recognized profanity and converts it to the nearest recognized non-profane word or removes it from the transcript completely, punctuate: bool=false # Add punctuation and capitalization to the transcript, redact: any=false # Redaction removes sensitive information from your transcripts, replace: any # Search for terms or phrases in submitted audio and replaces them, search: any # Search for terms or phrases in submitted audio, smart_format: bool=false # Apply formatting to transcript output. When set to true, additional formatting will be applied to transcripts to improve readability, utterances: bool=false # Segments speech into meaningful semantic units, utt_split: num=0.8 # Seconds to wait before detecting a pause between words in submitted audio, version: any=latest # Version of an AI model to use, mip_opt_out: bool=false # Opts out requests from the Deepgram Model Improvement Program. Refer to our Docs for pricing impacts before setting this to true. https://dpgr.am/deepgram-mip}
+@returns(200) Returns either transcription results, or a request_id when using a callback.
+@errors {400: Invalid Request}
+
+@endgroup
+
+@group models
+@endpoint GET /v1/models
+@desc List Models
+@optional {include_outdated: bool # returns non-latest versions of models}
+@returns(200) {stt: [map], tts: [map]} # A list of models
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/models/{model_id}
+@desc Get a specific Model
+@returns(200) A model object that can be either STT or TTS
+@errors {400: Invalid Request}
+
+@endgroup
+
+@group projects
+@endpoint GET /v1/projects
+@desc List Projects
+@returns(200) {projects: [map]} # A list of projects
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}
+@desc Get a Project
+@optional {limit: num=10 # Number of results to return per page. Default 10. Range [1,1000], page: num # Navigate and return the results to retrieve specific portions of information of the response}
+@returns(200) {project_id: str, mip_opt_out: bool, name: str} # A project
+@errors {400: Invalid Request}
+
+@endpoint PATCH /v1/projects/{project_id}
+@desc Update a Project
+@optional {name: str # The name of the project}
+@returns(200) {message: str} # A project
+@errors {400: Invalid Request}
+
+@endpoint DELETE /v1/projects/{project_id}
+@desc Delete a Project
+@returns(200) {message: str} # A project
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/balances
+@desc Get Project Balances
+@returns(200) {balances: [map]} # A list of outstanding balances
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/balances/{balance_id}
+@desc Get a Project Balance
+@returns(200) {balance_id: str, amount: num, units: str, purchase_order_id: str} # A specific balance
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/billing/breakdown
+@desc Get Project Billing Breakdown
+@optional {start: str(date) # Start date of the requested date range. Format accepted is YYYY-MM-DD, end: str(date) # End date of the requested date range. Format accepted is YYYY-MM-DD, accessor: str # Filter for requests where a specific accessor was used, deployment: str(hosted/beta/self-hosted) # Filter for requests where a specific deployment was used, tag: str # Filter for requests where a specific tag was used, line_item: str # Filter requests by line item (e.g. streaming::nova-3), grouping: [str] # Group billing breakdown by one or more dimensions (accessor, deployment, line_item, tags)}
+@returns(200) {start: str(date), end: str(date), resolution: map{units: str, amount: num}, results: [map]} # Billing breakdown response
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/billing/fields
+@desc List Project Billing Fields
+@optional {start: str(date) # Start date of the requested date range. Format accepted is YYYY-MM-DD, end: str(date) # End date of the requested date range. Format accepted is YYYY-MM-DD}
+@returns(200) {accessors: [str(uuid)], deployments: [str], tags: [str], line_items: map} # A list of billing fields for a specific project
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/invites
+@desc List Project Invites
+@returns(200) {invites: [map]} # A list of invites for a specific project
+@errors {400: Invalid Request}
+
+@endpoint POST /v1/projects/{project_id}/invites
+@desc Create a Project Invite
+@required {email: str # The email address of the invitee, scope: str # The scope of the invitee}
+@returns(200) {message: str} # The invite was successfully generated
+@errors {400: Invalid Request}
+
+@endpoint DELETE /v1/projects/{project_id}/invites/{email}
+@desc Delete a Project Invite
+@returns(200) {message: str} # The invite was successfully deleted
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/keys
+@desc List Project Keys
+@optional {status: str(active/expired) # Only return keys with a specific status}
+@returns(200) {api_keys: [map]} # A list of API keys
+@errors {400: Invalid Request}
+
+@endpoint POST /v1/projects/{project_id}/keys
+@desc Create a Project Key
+@required {comment: str, scopes: [str]}
+@optional {tags: [str], expiration_date: str(date-time), time_to_live_in_seconds: num}
+@returns(200) {api_key_id: str, key: str, comment: str, scopes: [str], tags: [str], expiration_date: str(date-time)} # API key created successfully
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/keys/{key_id}
+@desc Get a Project Key
+@returns(200) {item: map{member: map{member_id: str, email: str, first_name: str, last_name: str, api_key: map{api_key_id: str, comment: str, scopes: [str], tags: [str], expiration_date: str(date-time), created: str(date-time)}}}} # A specific API key
+@errors {400: Invalid Request}
+
+@endpoint DELETE /v1/projects/{project_id}/keys/{key_id}
+@desc Delete a Project Key
+@returns(200) {message: str} # API key deleted
+@errors {400: Invalid Request}
+
+@endpoint DELETE /v1/projects/{project_id}/leave
+@desc Leave a Project
+@returns(200) {message: str} # Successfully removed account from project
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/members
+@desc List Project Members
+@returns(200) {members: [map]} # A list of members for a given project
+@errors {400: Invalid Request}
+
+@endpoint DELETE /v1/projects/{project_id}/members/{member_id}
+@desc Delete a Project Member
+@returns(200) {message: str} # Delete the specific member from the project
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/members/{member_id}/scopes
+@desc List Project Member Scopes
+@returns(200) {scopes: [str]} # A list of scopes for a specific member
+@errors {400: Invalid Request}
+
+@endpoint PUT /v1/projects/{project_id}/members/{member_id}/scopes
+@desc Update Project Member Scopes
+@required {scope: str # A scope to update}
+@returns(200) {message: str} # Updated the scopes for a specific member
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/models
+@desc List Project Models
+@optional {include_outdated: bool # returns non-latest versions of models}
+@returns(200) {stt: [map], tts: [map]} # A list of models
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/models/{model_id}
+@desc Get a Project Model
+@returns(200) A model object that can be either STT or TTS
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/purchases
+@desc List Project Purchases
+@optional {limit: num=10 # Number of results to return per page. Default 10. Range [1,1000]}
+@returns(200) {orders: [map]} # A list of purchases for a specific project
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/requests
+@desc List Project Requests
+@optional {start: str(date-time) # Start date of the requested date range. Formats accepted are YYYY-MM-DD, YYYY-MM-DDTHH:MM:SS, or YYYY-MM-DDTHH:MM:SS+HH:MM, end: str(date-time) # End date of the requested date range. Formats accepted are YYYY-MM-DD, YYYY-MM-DDTHH:MM:SS, or YYYY-MM-DDTHH:MM:SS+HH:MM, limit: num=10 # Number of results to return per page. Default 10. Range [1,1000], page: num # Navigate and return the results to retrieve specific portions of information of the response, accessor: str # Filter for requests where a specific accessor was used, request_id: str # Filter for a specific request id, deployment: str(hosted/beta/self-hosted) # Filter for requests where a specific deployment was used, endpoint: str(listen/read/speak/agent) # Filter for requests where a specific endpoint was used, method: str(sync/async/streaming) # Filter for requests where a specific method was used, status: str(succeeded/failed) # Filter for requests that succeeded (status code < 300) or failed (status code >=400)}
+@returns(200) {page: num, limit: num, requests: [map]} # A list of requests for a specific project
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/requests/{request_id}
+@desc Get a Project Request
+@returns(200) {request: map{request_id: str, project_uuid: str, created: str(date-time), path: str, api_key_id: str, response: map, code: num, deployment: str, callback: str}} # A specific request for a specific project
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/self-hosted/distribution/credentials
+@desc List Project Self-Hosted Distribution Credentials
+@returns(200) {distribution_credentials: [map]} # A list of distribution credentials for a specific project
+@errors {400: Invalid Request}
+
+@endpoint POST /v1/projects/{project_id}/self-hosted/distribution/credentials
+@desc Create a Project Self-Hosted Distribution Credential
+@optional {scopes: [str]=self-hosted:products # List of permission scopes for the credentials, provider: str=quay # The provider of the distribution service, comment: str # Optional comment about the credentials}
+@returns(200) {member: map{member_id: str(uuid), email: str(email)}, distribution_credentials: map{distribution_credentials_id: str(uuid), provider: str, comment: str, scopes: [str], created: str(date-time)}} # Single distribution credential
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/self-hosted/distribution/credentials/{distribution_credentials_id}
+@desc Get a Project Self-Hosted Distribution Credential
+@returns(200) {member: map{member_id: str(uuid), email: str(email)}, distribution_credentials: map{distribution_credentials_id: str(uuid), provider: str, comment: str, scopes: [str], created: str(date-time)}} # Single distribution credential
+@errors {400: Invalid Request}
+
+@endpoint DELETE /v1/projects/{project_id}/self-hosted/distribution/credentials/{distribution_credentials_id}
+@desc Delete a Project Self-Hosted Distribution Credential
+@returns(200) {member: map{member_id: str(uuid), email: str(email)}, distribution_credentials: map{distribution_credentials_id: str(uuid), provider: str, comment: str, scopes: [str], created: str(date-time)}} # Single distribution credential
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/usage
+@desc Get Project Usage
+@optional {start: str(date) # Start date of the requested date range. Format accepted is YYYY-MM-DD, end: str(date) # End date of the requested date range. Format accepted is YYYY-MM-DD, accessor: str # Filter for requests where a specific accessor was used, alternatives: bool # Filter for requests where alternatives were used, callback_method: bool # Filter for requests where callback method was used, callback: bool # Filter for requests where callback was used, channels: bool # Filter for requests where channels were used, custom_intent_mode: bool # Filter for requests where custom intent mode was used, custom_intent: bool # Filter for requests where custom intent was used, custom_topic_mode: bool # Filter for requests where custom topic mode was used, custom_topic: bool # Filter for requests where custom topic was used, deployment: str(hosted/beta/self-hosted) # Filter for requests where a specific deployment was used, detect_entities: bool # Filter for requests where detect entities was used, detect_language: bool # Filter for requests where detect language was used, diarize: bool # Filter for requests where diarize was used, dictation: bool # Filter for requests where dictation was used, encoding: bool # Filter for requests where encoding was used, endpoint: str(listen/read/speak/agent) # Filter for requests where a specific endpoint was used, extra: bool # Filter for requests where extra was used, filler_words: bool # Filter for requests where filler words was used, intents: bool # Filter for requests where intents was used, keyterm: bool # Filter for requests where keyterm was used, keywords: bool # Filter for requests where keywords was used, language: bool # Filter for requests where language was used, measurements: bool # Filter for requests where measurements were used, method: str(sync/async/streaming) # Filter for requests where a specific method was used, model: str # Filter for requests where a specific model uuid was used, multichannel: bool # Filter for requests where multichannel was used, numerals: bool # Filter for requests where numerals were used, paragraphs: bool # Filter for requests where paragraphs were used, profanity_filter: bool # Filter for requests where profanity filter was used, punctuate: bool # Filter for requests where punctuate was used, redact: bool # Filter for requests where redact was used, replace: bool # Filter for requests where replace was used, sample_rate: bool # Filter for requests where sample rate was used, search: bool # Filter for requests where search was used, sentiment: bool # Filter for requests where sentiment was used, smart_format: bool # Filter for requests where smart format was used, summarize: bool # Filter for requests where summarize was used, tag: str # Filter for requests where a specific tag was used, topics: bool # Filter for requests where topics was used, utt_split: bool # Filter for requests where utt split was used, utterances: bool # Filter for requests where utterances was used, version: bool # Filter for requests where version was used}
+@returns(200) {start: str(date), end: str(date), resolution: map{units: str, amount: num}} # A specific request for a specific project
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/usage/breakdown
+@desc Get Project Usage Breakdown
+@optional {start: str(date) # Start date of the requested date range. Format accepted is YYYY-MM-DD, end: str(date) # End date of the requested date range. Format accepted is YYYY-MM-DD, grouping: str(accessor/endpoint/feature_set/models/method/tags/deployment) # Common usage grouping parameters, accessor: str # Filter for requests where a specific accessor was used, alternatives: bool # Filter for requests where alternatives were used, callback_method: bool # Filter for requests where callback method was used, callback: bool # Filter for requests where callback was used, channels: bool # Filter for requests where channels were used, custom_intent_mode: bool # Filter for requests where custom intent mode was used, custom_intent: bool # Filter for requests where custom intent was used, custom_topic_mode: bool # Filter for requests where custom topic mode was used, custom_topic: bool # Filter for requests where custom topic was used, deployment: str(hosted/beta/self-hosted) # Filter for requests where a specific deployment was used, detect_entities: bool # Filter for requests where detect entities was used, detect_language: bool # Filter for requests where detect language was used, diarize: bool # Filter for requests where diarize was used, dictation: bool # Filter for requests where dictation was used, encoding: bool # Filter for requests where encoding was used, endpoint: str(listen/read/speak/agent) # Filter for requests where a specific endpoint was used, extra: bool # Filter for requests where extra was used, filler_words: bool # Filter for requests where filler words was used, intents: bool # Filter for requests where intents was used, keyterm: bool # Filter for requests where keyterm was used, keywords: bool # Filter for requests where keywords was used, language: bool # Filter for requests where language was used, measurements: bool # Filter for requests where measurements were used, method: str(sync/async/streaming) # Filter for requests where a specific method was used, model: str # Filter for requests where a specific model uuid was used, multichannel: bool # Filter for requests where multichannel was used, numerals: bool # Filter for requests where numerals were used, paragraphs: bool # Filter for requests where paragraphs were used, profanity_filter: bool # Filter for requests where profanity filter was used, punctuate: bool # Filter for requests where punctuate was used, redact: bool # Filter for requests where redact was used, replace: bool # Filter for requests where replace was used, sample_rate: bool # Filter for requests where sample rate was used, search: bool # Filter for requests where search was used, sentiment: bool # Filter for requests where sentiment was used, smart_format: bool # Filter for requests where smart format was used, summarize: bool # Filter for requests where summarize was used, tag: str # Filter for requests where a specific tag was used, topics: bool # Filter for requests where topics was used, utt_split: bool # Filter for requests where utt split was used, utterances: bool # Filter for requests where utterances was used, version: bool # Filter for requests where version was used}
+@returns(200) {start: str(date), end: str(date), resolution: map{units: str, amount: num}, results: [map]} # Usage breakdown response
+@errors {400: Invalid Request}
+
+@endpoint GET /v1/projects/{project_id}/usage/fields
+@desc List Project Usage Fields
+@optional {start: str(date) # Start date of the requested date range. Format accepted is YYYY-MM-DD, end: str(date) # End date of the requested date range. Format accepted is YYYY-MM-DD}
+@returns(200) {tags: [str], models: [map], processing_methods: [str], features: [str]} # A list of fields for a specific project
+@errors {400: Invalid Request}
+
+@endgroup
+
+@group read
+@endpoint POST /v1/read
+@desc Analyze text content
+@optional {callback: str # URL to which we'll make the callback request, callback_method: any(POST/PUT)=POST # HTTP method by which the callback request will be made, sentiment: bool=false # Recognizes the sentiment throughout a transcript or text, summarize: any # Summarize content. For Listen API, supports string version option. For Read API, accepts boolean only., tag: any # Label your requests for the purpose of identification during usage reporting, topics: bool=false # Detect topics throughout a transcript or text, custom_topic: any # Custom topics you want the model to detect within your input audio or text if present Submit up to `100`., custom_topic_mode: str(extended/strict)=extended # Sets how the model will interpret strings submitted to the `custom_topic` param. When `strict`, the model will only return topics submitted using the `custom_topic` param. When `extended`, the model will return its own detected topics in addition to those submitted using the `custom_topic` param, intents: bool=false # Recognizes speaker intent throughout a transcript or text, custom_intent: any # Custom intents you want the model to detect within your input audio if present, custom_intent_mode: str(extended/strict)=extended # Sets how the model will interpret intents submitted to the `custom_intent` param. When `strict`, the model will only return intents submitted using the `custom_intent` param. When `extended`, the model will return its own detected intents in the `custom_intent` param., language: str=en # The [BCP-47 language tag](https://tools.ietf.org/html/bcp47) that hints at the primary spoken language. Depending on the Model and API endpoint you choose only certain languages are available}
+@returns(200) {metadata: map{metadata: map{request_id: str(uuid), created: str(date-time), language: str, summary_info: map{model_uuid: str(uuid), input_tokens: num, output_tokens: num}, sentiment_info: map{model_uuid: str(uuid), input_tokens: num, output_tokens: num}, topics_info: map{model_uuid: str(uuid), input_tokens: num, output_tokens: num}, intents_info: map{model_uuid: str(uuid), input_tokens: num, output_tokens: num}}}, results: map{summary: map{results: map{summary: map}}, topics: map{results: map{topics: map}}, intents: map{results: map{intents: map}}, sentiments: map{segments: [map], average: map{sentiment: str, sentiment_score: num}}}} # Successful text analysis
+@errors {400: Invalid Request}
+
+@endgroup
+
+@group speak
+@endpoint POST /v1/speak
+@desc Text to Speech transformation
+@required {text: str # The text content to be converted to speech}
+@optional {callback: str # URL to which we'll make the callback request, callback_method: any(POST/PUT)=POST # HTTP method by which the callback request will be made, mip_opt_out: bool=false # Opts out requests from the Deepgram Model Improvement Program. Refer to our Docs for pricing impacts before setting this to true. https://dpgr.am/deepgram-mip, tag: any # Label your requests for the purpose of identification during usage reporting, bit_rate: any=48000 # The bitrate of the audio in bits per second. Choose from predefined ranges or specific values based on the encoding type., container: any=wav # Container specifies the file format wrapper for the output audio. The available options depend on the encoding type., encoding: any=mp3 # Encoding allows you to specify the expected encoding of your audio output, model: str(aura-asteria-en/aura-luna-en/aura-stella-en/aura-athena-en/aura-hera-en/aura-orion-en/aura-arcas-en/aura-perseus-en/aura-angus-en/aura-orpheus-en/aura-helios-en/aura-zeus-en/aura-2-amalthea-en/aura-2-andromeda-en/aura-2-apollo-en/aura-2-arcas-en/aura-2-aries-en/aura-2-asteria-en/aura-2-athena-en/aura-2-atlas-en/aura-2-aurora-en/aura-2-callista-en/aura-2-cordelia-en/aura-2-cora-en/aura-2-delia-en/aura-2-draco-en/aura-2-electra-en/aura-2-harmonia-en/aura-2-helena-en/aura-2-hera-en/aura-2-hermes-en/aura-2-hyperion-en/aura-2-iris-en/aura-2-janus-en/aura-2-juno-en/aura-2-jupiter-en/aura-2-luna-en/aura-2-mars-en/aura-2-minerva-en/aura-2-neptune-en/aura-2-odysseus-en/aura-2-ophelia-en/aura-2-orion-en/aura-2-orpheus-en/aura-2-pandora-en/aura-2-phoebe-en/aura-2-pluto-en/aura-2-saturn-en/aura-2-selene-en/aura-2-thalia-en/aura-2-theia-en/aura-2-vesta-en/aura-2-zeus-en/aura-2-sirio-es/aura-2-nestor-es/aura-2-carina-es/aura-2-celeste-es/aura-2-alvaro-es/aura-2-diana-es/aura-2-aquila-es/aura-2-selena-es/aura-2-estrella-es/aura-2-javier-es)=aura-asteria-en # AI model used to process submitted text, sample_rate: any=24000 # Sample Rate specifies the sample rate for the output audio. Based on the encoding, different sample rates are supported. For some encodings, the sample rate is not configurable}
+@returns(200) Successful text-to-speech transformation
+@errors {400: Invalid Request}
+
+@endgroup
+
+@end

@@ -1,0 +1,289 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Turso Platform API
+@base https://api.turso.tech
+@version 0.1.0
+@auth Bearer bearer
+@endpoints 46
+@hint download_for_search
+@toc organizations(41), locations(1), auth(4)
+
+@group organizations
+@endpoint GET /v1/organizations/{organizationSlug}/databases
+@desc List Databases
+@required {organizationSlug: str # The slug of the organization or user account.}
+@optional {group: str # Filter databases by group name., schema: str # The schema database name that can be used to get databases that belong to that parent schema., parent: str # Filter database branches by using their parent database ID.}
+@returns(200) {databases: [map]} # Successful response
+
+@endpoint POST /v1/organizations/{organizationSlug}/databases
+@desc Create Database
+@required {organizationSlug: str # The slug of the organization or user account., name: str # The name of the new database. Must contain only lowercase letters, numbers, dashes. No longer than 64 characters., group: str # The name of the group where the database should be created. **The group must already exist.**}
+@optional {seed: map{type: str, name: str, timestamp: str}, size_limit: str # The maximum size of the database in bytes. Values with units are also accepted, e.g. 1mb, 256mb, 1gb., remote_encryption: map{encryption_key: str, encryption_cipher: str} # Encryption configuration for the database. Can be used when creating a new encrypted database, creating a encrypted database from upload (`seed.type = "database_upload"`), or forking from an encrypted database (required when the source database is encrypted).}
+@returns(200) {database: map{DbId: str, Hostname: str, Name: str}} # Successful response
+@errors {400: Bad Request, 409: Conflict}
+
+@endpoint GET /v1/organizations/{organizationSlug}/databases/{databaseName}
+@desc Retrieve Database
+@required {organizationSlug: str # The slug of the organization or user account., databaseName: str # The name of the database.}
+@returns(200) {database: map{Name: str, DbId: str, Hostname: str, block_reads: bool, block_writes: bool, regions: [str], primaryRegion: str, group: str, delete_protection: bool, parent: map?{id: str, name: str, branched_at: str(date-time)}}} # Successful response
+@errors {404: Database not found}
+
+@endpoint DELETE /v1/organizations/{organizationSlug}/databases/{databaseName}
+@desc Delete Database
+@required {organizationSlug: str # The slug of the organization or user account., databaseName: str # The name of the database.}
+@returns(200) {database: str} # Successful response
+@errors {404: Database not found}
+
+@endpoint GET /v1/organizations/{organizationSlug}/databases/{databaseName}/configuration
+@desc Retrieve Database Configuration
+@required {organizationSlug: str # The slug of the organization or user account., databaseName: str # The name of the database.}
+@returns(200) {size_limit: str, allow_attach: bool, block_reads: bool, block_writes: bool, delete_protection: bool} # Successful response
+
+@endpoint PATCH /v1/organizations/{organizationSlug}/databases/{databaseName}/configuration
+@desc Update Database Configuration
+@required {organizationSlug: str # The slug of the organization or user account., databaseName: str # The name of the database.}
+@optional {size_limit: str # The maximum size of the database in bytes. Values with units are also accepted, e.g. 1mb, 256mb, 1gb., allow_attach: bool # Allow or disallow attaching databases to the current database., block_reads: bool # Block all database reads., block_writes: bool # Block all database writes., delete_protection: bool # Prevent the database from being deleted.}
+@returns(200) {size_limit: str, allow_attach: bool, block_reads: bool, block_writes: bool, delete_protection: bool} # Successful response
+
+@endpoint GET /v1/organizations/{organizationSlug}/databases/{databaseName}/instances
+@desc List Database Instances
+@required {organizationSlug: str # The slug of the organization or user account., databaseName: str # The name of the database.}
+@returns(200) {instances: [map]} # Successful response
+
+@endpoint GET /v1/organizations/{organizationSlug}/databases/{databaseName}/instances/{instanceName}
+@desc Retrieve Database Instance
+@required {organizationSlug: str # The slug of the organization or user account., databaseName: str # The name of the database., instanceName: str # The name of the instance (location code).}
+@returns(200) {instance: map{uuid: str, name: str, type: str, region: str, hostname: str}} # Successful response
+
+@endpoint POST /v1/organizations/{organizationSlug}/databases/{databaseName}/auth/tokens
+@desc Generate Database Auth Token
+@required {organizationSlug: str # The slug of the organization or user account., databaseName: str # The name of the database.}
+@optional {expiration: str=never # Expiration time for the token (e.g., 2w1d30m)., authorization: str(full-access/read-only)=full-access # Authorization level for the token (full-access or read-only)., permissions: map{read_attach: map} # The permissions for the token.}
+@returns(200) {jwt: str} # Successful response
+@errors {400: Bad Request, 404: Database not found}
+
+@endpoint GET /v1/organizations/{organizationSlug}/databases/{databaseName}/usage
+@desc Retrieve Database Usage
+@required {organizationSlug: str # The slug of the organization or user account., databaseName: str # The name of the database.}
+@optional {from: str(date-time) # The datetime to retrieve usage **from** in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format. Defaults to the current calendar month if not provided. Example: `2023-01-01T00:00:00Z`, to: str(date-time) # The datetime to retrieve usage **to** in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) format. Defaults to the current calendar month if not provided. Example: `2023-02-01T00:00:00Z`}
+@returns(200) {database: map{uuid: str, instances: [map], total: map{rows_read: int, rows_written: int, storage_bytes: int, bytes_synced: int}}} # Successful response
+@errors {400: Bad Request, 404: Database not found}
+
+@endpoint GET /v1/organizations/{organizationSlug}/databases/{databaseName}/stats
+@desc Retrieve Database Stats
+@required {organizationSlug: str # The slug of the organization or user account., databaseName: str # The name of the database.}
+@returns(200) {top_queries: [map]?} # Successful response
+@errors {404: Database not found}
+
+@endpoint POST /v1/organizations/{organizationSlug}/databases/{databaseName}/auth/rotate
+@desc Invalidate All Database Auth Tokens
+@required {organizationSlug: str # The slug of the organization or user account., databaseName: str # The name of the database.}
+@returns(200) Successful response (No Content)
+@errors {404: Database not found}
+
+@endpoint GET /v1/organizations/{organizationSlug}/groups
+@desc List Groups
+@required {organizationSlug: str # The slug of the organization or user account.}
+@returns(200) {groups: [any]} # Successful response
+
+@endpoint POST /v1/organizations/{organizationSlug}/groups
+@desc Create Group
+@required {organizationSlug: str # The slug of the organization or user account., name: str # The name of the new group., location: str # The location key for the new group.}
+@optional {extensions: any # The extensions to enable for new databases created in this group. Users looking to enable vector extensions should instead use the native [libSQL vector datatype](/features/ai-and-embeddings).}
+@returns(200) {group: any} # Successful response
+@errors {409: Conflict}
+
+@endpoint GET /v1/organizations/{organizationSlug}/groups/{groupName}
+@desc Retrieve Group
+@required {organizationSlug: str # The slug of the organization or user account., groupName: str # The name of the group.}
+@returns(200) {group: any} # Successful response
+@errors {404: Group not found}
+
+@endpoint DELETE /v1/organizations/{organizationSlug}/groups/{groupName}
+@desc Delete Group
+@required {organizationSlug: str # The slug of the organization or user account., groupName: str # The name of the group.}
+@returns(200) {group: any} # Successful response
+@errors {404: Group not found}
+
+@endpoint GET /v1/organizations/{organizationSlug}/groups/{groupName}/configuration
+@desc Retrieve Group Configuration
+@required {organizationSlug: str # The slug of the organization or user account., groupName: str # The name of the group.}
+@returns(200) {delete_protection: bool} # Successful response
+
+@endpoint PATCH /v1/organizations/{organizationSlug}/groups/{groupName}/configuration
+@desc Update Group Configuration
+@required {organizationSlug: str # The slug of the organization or user account., groupName: str # The name of the group.}
+@optional {delete_protection: bool # Prevent the group from being deleted.}
+@returns(200) {delete_protection: bool} # Successful response
+
+@endpoint POST /v1/organizations/{organizationSlug}/groups/{groupName}/transfer
+@desc Transfer Group
+@required {organizationSlug: str # The slug of the organization or user account., groupName: str # The name of the group.}
+@optional {organization: str # The slug of the organization to transfer the group to.}
+@returns(200) Successful response
+@errors {404: Group not found}
+
+@endpoint POST /v1/organizations/{organizationSlug}/groups/{groupName}/unarchive
+@desc Unarchive Group
+@required {organizationSlug: str # The slug of the organization or user account., groupName: str # The name of the group.}
+@returns(200) {group: any} # Successful response
+@errors {404: Group not found}
+
+@endpoint POST /v1/organizations/{organizationSlug}/groups/{groupName}/locations/{location}
+@desc Add Location to Group
+@required {organizationSlug: str # The slug of the organization or user account., groupName: str # The name of the group., location: str # The location code to add to the group.}
+@returns(200) {group: any} # Successful response
+@errors {400: Bad Request, 404: Group not found}
+
+@endpoint DELETE /v1/organizations/{organizationSlug}/groups/{groupName}/locations/{location}
+@desc Remove Location from Group
+@required {organizationSlug: str # The slug of the organization or user account., groupName: str # The name of the group., location: str # The location code to remove from the group.}
+@returns(200) {group: any} # Successful response
+@errors {400: Bad Request, 404: Group not found}
+
+@endpoint POST /v1/organizations/{organizationSlug}/groups/{groupName}/update
+@desc Update Databases in a Group
+@required {organizationSlug: str # The slug of the organization or user account., groupName: str # The name of the group.}
+@returns(200) Successful response (No Content)
+@errors {404: Group not found}
+
+@endpoint POST /v1/organizations/{organizationSlug}/groups/{groupName}/auth/tokens
+@desc Create Group Auth Token
+@required {organizationSlug: str # The slug of the organization or user account., groupName: str # The name of the group.}
+@optional {expiration: str=never # Expiration time for the token (e.g., 2w1d30m)., authorization: str(full-access/read-only)=full-access # Authorization level for the token (full-access or read-only)., permissions: map{read_attach: map} # The permissions for the token.}
+@returns(200) {jwt: str} # Successful response
+@errors {400: Bad Request, 404: Group not found}
+
+@endpoint POST /v1/organizations/{organizationSlug}/groups/{groupName}/auth/rotate
+@desc Invalidate All Group Auth Tokens
+@required {organizationSlug: str # The slug of the organization or user account., groupName: str # The name of the group.}
+@returns(200) Successful response (No Content)
+@errors {404: Group not found}
+
+@endgroup
+
+@group locations
+@endpoint GET /v1/locations
+@desc List Locations
+@returns(200) {locations: map} # Successful response
+
+@endgroup
+
+@group organizations
+@endpoint GET /v1/organizations
+@desc List Organizations
+@returns(200) Successful response
+
+@endpoint GET /v1/organizations/{organizationSlug}
+@desc Retrieve Organization
+@required {organizationSlug: str # The slug of the organization or user account.}
+@returns(200) {organization: map{name: str, slug: str, type: str, overages: bool, blocked_reads: bool, blocked_writes: bool, plan_id: str, plan_timeline: str, platform: str}} # Successful response
+@errors {404: Organization not found}
+
+@endpoint PATCH /v1/organizations/{organizationSlug}
+@desc Update Organization
+@required {organizationSlug: str # The slug of the organization or user account.}
+@optional {overages: bool # Enable or disable overages for the organization.}
+@returns(200) {organization: map{name: str, slug: str, type: str, overages: bool, blocked_reads: bool, blocked_writes: bool, plan_id: str, plan_timeline: str, platform: str}} # Successful response
+
+@endpoint GET /v1/organizations/{organizationSlug}/plans
+@desc List Plans
+@required {organizationSlug: str # The slug of the organization or user account.}
+@returns(200) {plans: [map]} # Successful response
+
+@endpoint GET /v1/organizations/{organizationSlug}/invoices
+@desc List Invoices
+@required {organizationSlug: str # The slug of the organization or user account.}
+@optional {type: str(all/upcoming/issued) # The type of invoice to retrieve.}
+@returns(200) {invoices: [map]} # Successful response
+
+@endpoint GET /v1/organizations/{organizationSlug}/subscription
+@desc Current Subscription
+@required {organizationSlug: str # The slug of the organization or user account.}
+@returns(200) {subscription: map{name: str, overages: bool, plan: str, timeline: str}} # Successful response
+
+@endpoint GET /v1/organizations/{organizationSlug}/usage
+@desc Organization Usage
+@required {organizationSlug: str # The slug of the organization or user account.}
+@returns(200) {organization: map{uuid: str, usage: map{rows_read: int, rows_written: int, databases: int, locations: int, storage_bytes: int, groups: int, bytes_synced: int}, databases: [map]}} # Successful response
+
+@endpoint GET /v1/organizations/{organizationSlug}/members
+@desc List Members
+@required {organizationSlug: str # The slug of the organization or user account.}
+@returns(200) {members: [map]} # Successful response
+
+@endpoint POST /v1/organizations/{organizationSlug}/members
+@desc Add Member
+@required {organizationSlug: str # The slug of the organization or user account.}
+@optional {username: str # The username of an existing Turso user., role: str(admin/member/viewer)=member # The role given to the user.}
+@returns(200) {member: str, role: str} # Successful response
+@errors {404: Member not found, 409: Conflict}
+
+@endpoint GET /v1/organizations/{organizationSlug}/members/{username}
+@desc Retrieve Member
+@required {organizationSlug: str # The slug of the organization or user account., username: str # The username of a Turso user or organization member.}
+@returns(200) {member: map{username: str, role: str, email: str}} # Successful response
+@errors {404: Member not found}
+
+@endpoint PATCH /v1/organizations/{organizationSlug}/members/{username}
+@desc Update Member Role
+@required {organizationSlug: str # The slug of the organization or user account., username: str # The username of a Turso user or organization member., role: str(admin/member/viewer) # The new role to assign to the member.}
+@returns(200) {member: map{username: str, email: str, role: str}} # Successful response
+@errors {400: Bad Request, 403: Forbidden, 404: Not Found}
+
+@endpoint DELETE /v1/organizations/{organizationSlug}/members/{username}
+@desc Remove Member
+@required {organizationSlug: str # The slug of the organization or user account., username: str # The username of a Turso user or organization member.}
+@returns(200) {member: str} # Successful response
+@errors {404: Member not found}
+
+@endpoint GET /v1/organizations/{organizationSlug}/invites
+@desc List Invites
+@required {organizationSlug: str # The slug of the organization or user account.}
+@returns(200) {invites: [map]} # Successful response
+
+@endpoint POST /v1/organizations/{organizationSlug}/invites
+@desc Invite Organization Member
+@required {organizationSlug: str # The slug of the organization or user account., email: str # The email of the user you want to invite.}
+@optional {role: str(admin/member/viewer)=member # The role given to the user.}
+@returns(200) {invited: map{ID: int, CreatedAt: str, UpdatedAt: str, DeletedAt: str, Role: str, Email: str, OrganizationID: int, Token: str, Organization: map{name: str, slug: str, type: str, overages: bool, blocked_reads: bool, blocked_writes: bool, plan_id: str, plan_timeline: str, platform: str}, Accepted: bool}} # Successful response
+
+@endpoint DELETE /v1/organizations/{organizationSlug}/invites/{email}
+@desc Delete Invite
+@required {organizationSlug: str # The slug of the organization or user account., email: str}
+@returns(200) Successful response (No Content)
+@errors {404: Invite not found}
+
+@endgroup
+
+@group auth
+@endpoint GET /v1/auth/validate
+@desc Validate API Token
+@returns(200) {exp: int} # Successful response
+
+@endpoint GET /v1/auth/api-tokens
+@desc List API Tokens
+@returns(200) {tokens: [map]} # Successful response
+
+@endpoint POST /v1/auth/api-tokens/{tokenName}
+@desc Create API Token
+@required {tokenName: str # The name of the api token.}
+@returns(200) {name: str, id: str, token: str} # Successful response
+
+@endpoint DELETE /v1/auth/api-tokens/{tokenName}
+@desc Revoke API Token
+@required {tokenName: str # The name of the api token.}
+@returns(200) {token: str} # Successful response
+
+@endgroup
+
+@group organizations
+@endpoint GET /v1/organizations/{organizationSlug}/audit-logs
+@desc List Audit Logs
+@required {organizationSlug: str # The slug of the organization or user account.}
+@optional {page_size: int # The limit of items to return per page. Defaults to 100., page: int # The page number to return. Defaults to 1.}
+@returns(200) {audit_logs: [map], pagination: map{page: int, page_size: int, total_pages: int, total_rows: int}} # Successful response
+
+@endgroup
+
+@end

@@ -1,12 +1,12 @@
 ---
 name: the-jira-cloud-platform-rest-api
-description: "The Jira Cloud platform REST API skill. Use when working with The Jira Cloud platform REST for rest. Covers 617 endpoints."
+description: "The Jira Cloud platform REST API skill. Use when working with The Jira Cloud platform REST for rest. Covers 619 endpoints."
 version: 1.0.0
 generator: lapsh
 ---
 
 # The Jira Cloud platform REST API
-API version: 1001.0.0-SNAPSHOT-edac94e3f522fa4c9e667d33b17f99eed00f7d56
+API version: 1001.0.0-SNAPSHOT-2e55eec067fba5cfeec4fef1856e5d704bf42094
 
 ## Auth
 OAuth2 | Bearer basic
@@ -21,7 +21,7 @@ https://your-domain.atlassian.net
 
 ## Endpoints
 
-617 endpoints across 1 groups. See references/api-spec.lap for full details.
+619 endpoints across 1 groups. See references/api-spec.lap for full details.
 
 ### rest
 | Method | Path | Description |
@@ -187,6 +187,7 @@ https://your-domain.atlassian.net
 | POST | /rest/api/3/filter/{id}/permission | Add share permission |
 | DELETE | /rest/api/3/filter/{id}/permission/{permissionId} | Delete share permission |
 | GET | /rest/api/3/filter/{id}/permission/{permissionId} | Get share permission |
+| POST | /rest/api/3/forge/panel/action/bulk/async | Bulk pin or unpin issue panel to projects |
 | DELETE | /rest/api/3/group | Remove group |
 | GET | /rest/api/3/group | Get group |
 | POST | /rest/api/3/group | Create group |
@@ -408,6 +409,7 @@ https://your-domain.atlassian.net
 | DELETE | /rest/api/3/project/{projectIdOrKey}/avatar/{id} | Delete project avatar |
 | POST | /rest/api/3/project/{projectIdOrKey}/avatar2 | Load project avatar |
 | GET | /rest/api/3/project/{projectIdOrKey}/avatars | Get all project avatars |
+| GET | /rest/api/3/project/{projectIdOrKey}/classification-config | Get the classification configuration for a project |
 | DELETE | /rest/api/3/project/{projectIdOrKey}/classification-level/default | Remove the default data classification level from a project |
 | GET | /rest/api/3/project/{projectIdOrKey}/classification-level/default | Get the default data classification level of a project |
 | PUT | /rest/api/3/project/{projectIdOrKey}/classification-level/default | Update the default data classification level of a project |
@@ -779,6 +781,7 @@ Match user requests to endpoints in references/api-spec.lap. Key patterns:
 - "Create a permission?" -> POST /rest/api/3/filter/{id}/permission
 - "Delete a permission?" -> DELETE /rest/api/3/filter/{id}/permission/{permissionId}
 - "Get permission details?" -> GET /rest/api/3/filter/{id}/permission/{permissionId}
+- "Create a async?" -> POST /rest/api/3/forge/panel/action/bulk/async
 - "List all group?" -> GET /rest/api/3/group
 - "Create a group?" -> POST /rest/api/3/group
 - "List all bulk?" -> GET /rest/api/3/group/bulk
@@ -969,6 +972,7 @@ Match user requests to endpoints in references/api-spec.lap. Key patterns:
 - "Delete a avatar?" -> DELETE /rest/api/3/project/{projectIdOrKey}/avatar/{id}
 - "Create a avatar2?" -> POST /rest/api/3/project/{projectIdOrKey}/avatar2
 - "List all avatars?" -> GET /rest/api/3/project/{projectIdOrKey}/avatars
+- "List all classification-config?" -> GET /rest/api/3/project/{projectIdOrKey}/classification-config
 - "List all default?" -> GET /rest/api/3/project/{projectIdOrKey}/classification-level/default
 - "Search component?" -> GET /rest/api/3/project/{projectIdOrKey}/component
 - "List all components?" -> GET /rest/api/3/project/{projectIdOrKey}/components

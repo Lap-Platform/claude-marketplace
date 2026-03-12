@@ -1,0 +1,610 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Mailchimp Transactional API
+@base https://mandrillapp.com/api/1.3
+@version 1.3.3
+@endpoints 102
+@hint download_for_search
+@toc allowlists(3), exports(6), ips(13), metadata(4), rejects(3), senders(8), subaccounts(7), tags(5), templates(8), urls(7), users(4), webhooks(5), whitelists(3), inbound(9), mctemplates(4), messages(13)
+
+@group allowlists
+@endpoint POST /allowlists/add
+@desc Add email to allowlist
+@returns(200) {email: str(email), added: bool} # Email successfully added to allowlist
+@errors {401: Invalid API key, 422: Validation error, 500: Internal server error}
+
+@endpoint POST /allowlists/list
+@desc List allowlist entries
+@returns(200) List of allowlist entries
+@errors {401: Invalid API key, 500: Internal server error}
+
+@endpoint POST /allowlists/delete
+@desc Remove email from allowlist
+@returns(200) {email: str(email), deleted: bool} # Email successfully removed from allowlist
+@errors {401: Invalid API key, 422: Validation error, 500: Internal server error}
+
+@endgroup
+
+@group exports
+@endpoint POST /exports/info
+@desc Get export job information
+@returns(200) {id: str, created_at: str, type: str, finished_at: str, state: str, result_url: str} # Export job information
+@errors {401: Invalid API key, 404: Unknown export job}
+
+@endpoint POST /exports/list
+@desc List export jobs
+@required {key: str # A valid Mandrill API key}
+@returns(200) List of export jobs
+@errors {401: Invalid API key}
+
+@endpoint POST /exports/rejects
+@desc Export rejection blacklist
+@returns(200) {id: str, created_at: str, type: str, finished_at: str, state: str, result_url: str} # Information about the rejects export job that was started
+@errors {401: Invalid API key}
+
+@endpoint POST /exports/whitelist
+@desc Export rejection allowlist (legacy)
+@returns(200) {id: str, created_at: str, type: str, finished_at: str, state: str, result_url: str} # Information about the allowlist export job that was started
+@errors {401: Invalid API key}
+
+@endpoint POST /exports/allowlist
+@desc Export rejection allowlist
+@returns(200) {id: str, created_at: str, type: str, finished_at: str, state: str, result_url: str} # Information about the allowlist export job that was started
+@errors {401: Invalid API key}
+
+@endpoint POST /exports/activity
+@desc Export activity history
+@required {key: map{key!: str} # API key field included in request bodies.}
+@optional {notify_email: str(email) # Optional email address to notify when the export job has finished, date_from: str # Start date as a UTC string in YYYY-MM-DD HH:MM:SS format, date_to: str # End date as a UTC string in YYYY-MM-DD HH:MM:SS format, tags: [str] # Array of tag names to narrow the export to; will match messages that contain ANY of the tags, senders: [str(email)] # Array of sender email addresses to narrow the export to, states: [str] # Array of message states to narrow the export to; messages with ANY of the states will be included, api_keys: [str] # Array of API keys to narrow the export to; messages sent with ANY of the keys will be included}
+@returns(200) {id: str, created_at: str, type: str, finished_at: str, state: str, result_url: str} # Information about the activity export job that was started
+@errors {401: Invalid API key}
+
+@endgroup
+
+@group ips
+@endpoint POST /ips/list
+@desc List dedicated IPs
+@required {key: str # A valid Mandrill API key}
+@returns(200) An array of dedicated IP information
+@errors {401: Invalid API key}
+
+@endpoint POST /ips/info
+@desc Get dedicated IP information
+@returns(200) {ip: str(ipv4), created_at: str, pool: str, domain: str, custom_dns: map{enabled: bool, valid: bool, error: any}, warmup: map{warming_up: bool, start_at: str, end_at: str}} # Information about the dedicated IP
+@errors {401: Invalid API key}
+
+@endpoint POST /ips/provision
+@desc Request dedicated IP provisioning
+@returns(200) {requested_at: str} # A description of the provisioning request that was created
+@errors {401: Invalid API key, 402: Payment required, 404: Unknown pool, 500: Server error (IP provision limit, no sending history, poor reputation)}
+
+@endpoint POST /ips/start-warmup
+@desc Start IP warmup process
+@returns(200) {ip: str(ipv4), created_at: str, pool: str, domain: str, custom_dns: map{enabled: bool, valid: bool, error: any}, warmup: map{warming_up: bool, start_at: str, end_at: str}} # Information about the dedicated IP
+@errors {401: Invalid API key, 404: Unknown IP}
+
+@endpoint POST /ips/cancel-warmup
+@desc Cancel IP warmup process
+@returns(200) {ip: str(ipv4), created_at: str, pool: str, domain: str, custom_dns: map{enabled: bool, valid: bool, error: any}, warmup: map{warming_up: bool, start_at: str, end_at: str}} # Information about the dedicated IP
+@errors {401: Invalid API key, 404: Unknown IP}
+
+@endpoint POST /ips/set-pool
+@desc Move IP to different pool
+@returns(200) {ip: str(ipv4), created_at: str, pool: str, domain: str, custom_dns: map{enabled: bool, valid: bool, error: any}, warmup: map{warming_up: bool, start_at: str, end_at: str}} # Information about the updated state of the dedicated IP
+@errors {400: Invalid empty default pool, 401: Invalid API key, 404: Unknown IP or pool}
+
+@endpoint POST /ips/delete
+@desc Delete dedicated IP
+@returns(200) {ip: str, deleted: bool} # A description of the IP that was removed from your account
+@errors {401: Invalid API key}
+
+@endpoint POST /ips/list-pools
+@desc List dedicated IP pools
+@required {key: str # A valid Mandrill API key}
+@returns(200) The dedicated IP pools for your account, up to a maximum of 1,000
+@errors {401: Invalid API key}
+
+@endpoint POST /ips/pool-info
+@desc Get pool information
+@returns(200) {name: str, created_at: str, ips: [map]} # Information about the dedicated IP pool
+@errors {401: Invalid API key, 404: Unknown pool}
+
+@endpoint POST /ips/create-pool
+@desc Create dedicated IP pool
+@returns(200) {name: str, created_at: str, ips: [map]} # Information about the dedicated IP pool
+@errors {401: Invalid API key}
+
+@endpoint POST /ips/delete-pool
+@desc Delete dedicated IP pool
+@returns(200) {pool: str, deleted: bool} # Information about the deleted pool
+@errors {400: Cannot delete default pool or non-empty pool, 401: Invalid API key, 404: Unknown pool}
+
+@endpoint POST /ips/check-custom-dns
+@desc Test custom DNS configuration
+@returns(200) {valid: bool, error: str} # Validation results for the domain
+@errors {401: Invalid API key, 404: Unknown IP}
+
+@endpoint POST /ips/set-custom-dns
+@desc Configure custom DNS for IP
+@returns(200) {ip: str(ipv4), created_at: str, pool: str, domain: str, custom_dns: map{enabled: bool, valid: bool, error: any}, warmup: map{warming_up: bool, start_at: str, end_at: str}} # Information about the updated state of the dedicated IP
+@errors {400: Invalid custom DNS, 401: Invalid API key, 404: Unknown IP}
+
+@endgroup
+
+@group metadata
+@endpoint POST /metadata/list
+@desc List custom metadata fields
+@required {key: str # A valid Mandrill API key}
+@returns(200) List of custom metadata fields
+@errors {401: Invalid API key, 500: Server error}
+
+@endpoint POST /metadata/add
+@desc Add custom metadata field
+@returns(200) {name: str, state: str, view_template: str} # Custom metadata field created successfully
+@errors {401: Invalid API key, 422: Metadata field limit exceeded, 500: Server error}
+
+@endpoint POST /metadata/update
+@desc Update custom metadata field
+@returns(200) {name: str, state: str, view_template: str} # Custom metadata field updated successfully
+@errors {401: Invalid API key, 404: Unknown metadata field, 500: Server error}
+
+@endpoint POST /metadata/delete
+@desc Delete custom metadata field
+@returns(200) {name: str, state: str, view_template: str} # Custom metadata field deleted successfully
+@errors {401: Invalid API key, 404: Unknown metadata field, 500: Server error}
+
+@endgroup
+
+@group rejects
+@endpoint POST /rejects/add
+@desc Add email to rejection blacklist
+@returns(200) {email: str(email), added: bool} # Email successfully added to rejection blacklist
+@errors {401: Invalid API key, 404: Unknown subaccount, 422: Validation error, 500: Internal server error}
+
+@endpoint POST /rejects/list
+@desc List rejection blacklist entries
+@returns(200) List of rejection blacklist entries
+@errors {401: Invalid API key, 404: Unknown subaccount, 429: Request limit exceeded, 500: Internal server error}
+
+@endpoint POST /rejects/delete
+@desc Delete email from rejection blacklist
+@returns(200) {email: str(email), deleted: bool, subaccount: str} # Email successfully deleted from rejection blacklist
+@errors {401: Invalid API key, 404: Email not found in rejection list or unknown subaccount, 422: Validation error, 500: Internal server error}
+
+@endgroup
+
+@group senders
+@endpoint POST /senders/list
+@desc List senders used by this account
+@required {key: str # A valid Mandrill API key}
+@returns(200) List of senders
+@errors {401: Invalid API key}
+
+@endpoint POST /senders/domains
+@desc List sender domains
+@required {key: str # A valid Mandrill API key}
+@returns(200) List of sender domains
+@errors {401: Invalid API key}
+
+@endpoint POST /senders/add-domain
+@desc Add a sender domain
+@returns(200) {domain: str(hostname), created_at: str(date-time), last_tested_at: str(date-time), spf: map{valid: bool, valid_after: str(date-time), error: str}, dkim: map{valid: bool, valid_after: str(date-time), error: str}, dkim2: map{valid: bool, valid_after: str(date-time), error: str}, dmarc: map{valid: bool, error: str}, verified_at: str(date-time), valid_signing: bool, verify_txt_key: str} # Sender domain information
+@errors {401: Invalid API key}
+
+@endpoint POST /senders/check-domain
+@desc Check domain SPF and DKIM
+@returns(200) {domain: str(hostname), created_at: str(date-time), last_tested_at: str(date-time), spf: map{valid: bool, valid_after: str(date-time), error: str}, dkim: map{valid: bool, valid_after: str(date-time), error: str}, dkim2: map{valid: bool, valid_after: str(date-time), error: str}, dmarc: map{valid: bool, error: str}, verified_at: str(date-time), valid_signing: bool, verify_txt_key: str} # Sender domain information
+@errors {401: Invalid API key}
+
+@endpoint POST /senders/verify-domain
+@desc Verify a sender domain by email
+@returns(200) {status: str, domain: str(hostname), email: str(email)} # Verification send result
+@errors {401: Invalid API key}
+
+@endpoint POST /senders/info
+@desc Get detailed information for a sender
+@returns(200) Sender details
+@errors {401: Invalid API key, 404: Unknown sender}
+
+@endpoint POST /senders/time-series
+@desc Get hourly stats for a sender
+@returns(200) Hourly stats rows
+@errors {401: Invalid API key, 404: Unknown sender}
+
+@endgroup
+
+@group subaccounts
+@endpoint POST /subaccounts/list
+@desc List subaccounts
+@required {key: str # A valid API key}
+@optional {q: str # Optional prefix to filter subaccounts by ID and name}
+@returns(200) List of subaccounts for the account
+@errors {401: Invalid API key, 500: Server error}
+
+@endpoint POST /subaccounts/add
+@desc Add a new subaccount
+@required {key: str # A valid API key, id: str # Unique identifier for the subaccount to be used in sending calls}
+@optional {name: any # Optional display name to further identify the subaccount, notes: any # Optional extra text to associate with the subaccount, custom_quota: any # Optional manual hourly quota for the subaccount. If not specified, Mandrill will manage this based on reputation}
+@returns(200) {id: str, name: str, created_at: str, first_sent_at: str, status: str, reputation: int, sent_weekly: int, sent_monthly: int, sent_total: int, custom_quota: int} # Information about the newly created subaccount
+@errors {401: Invalid API key, 422: Validation error, 500: Server error}
+
+@endpoint POST /subaccounts/info
+@desc Get subaccount information
+@required {key: str # A valid API key, id: str # Unique identifier of the subaccount to query}
+@returns(200) Detailed information about the subaccount
+@errors {401: Invalid API key, 404: Unknown subaccount, 500: Server error}
+
+@endpoint POST /subaccounts/update
+@desc Update an existing subaccount
+@required {key: str # A valid API key, id: str # Unique identifier of the subaccount to update}
+@optional {name: any # Optional display name to further identify the subaccount, notes: any # Optional extra text to associate with the subaccount, custom_quota: any # Optional manual hourly quota for the subaccount. If not specified, Mandrill will manage this based on reputation}
+@returns(200) {id: str, name: str, created_at: str, first_sent_at: str, status: str, reputation: int, sent_weekly: int, sent_monthly: int, sent_total: int, custom_quota: int} # Information about the updated subaccount
+@errors {401: Invalid API key, 404: Unknown subaccount, 500: Server error}
+
+@endpoint POST /subaccounts/delete
+@desc Delete a subaccount
+@required {key: str # A valid API key, id: str # Unique identifier of the subaccount to delete}
+@returns(200) {id: str, name: str, created_at: str, first_sent_at: str, status: str, reputation: int, sent_weekly: int, sent_monthly: int, sent_total: int, custom_quota: int} # Information about the deleted subaccount
+@errors {401: Invalid API key, 404: Unknown subaccount, 500: Server error}
+
+@endpoint POST /subaccounts/pause
+@desc Pause a subaccount
+@required {key: str # A valid API key, id: str # Unique identifier of the subaccount to pause}
+@returns(200) {id: str, name: str, created_at: str, first_sent_at: str, status: str, reputation: int, sent_weekly: int, sent_monthly: int, sent_total: int, custom_quota: int} # Information about the paused subaccount
+@errors {401: Invalid API key, 404: Unknown subaccount, 500: Server error}
+
+@endpoint POST /subaccounts/resume
+@desc Resume a paused subaccount
+@required {key: str # A valid API key, id: str # Unique identifier of the subaccount to resume}
+@returns(200) {id: str, name: str, created_at: str, first_sent_at: str, status: str, reputation: int, sent_weekly: int, sent_monthly: int, sent_total: int, custom_quota: int} # Information about the resumed subaccount
+@errors {401: Invalid API key, 404: Unknown subaccount, 500: Server error}
+
+@endgroup
+
+@group tags
+@endpoint POST /tags/list
+@desc List all user-defined tags
+@required {key: str # A valid Mandrill API key}
+@returns(200) A list of user-defined tags with their statistics
+@errors {401: Invalid API key}
+
+@endpoint POST /tags/delete
+@desc Delete a tag permanently
+@returns(200) {tag: str, sent: int, hard_bounces: int, soft_bounces: int, rejects: int, complaints: int, unsubs: int, opens: int, clicks: int, unique_opens: int, unique_clicks: int, reputation: int} # The tag that was deleted
+@errors {400: Invalid tag name, 401: Invalid API key}
+
+@endpoint POST /tags/info
+@desc Get detailed information about a tag
+@returns(200) {tag: str, sent: int, hard_bounces: int, soft_bounces: int, rejects: int, complaints: int, unsubs: int, opens: int, clicks: int, unique_opens: int, unique_clicks: int, reputation: int, stats: map{today: map{sent: int, hard_bounces: int, soft_bounces: int, rejects: int, complaints: int, unsubs: int, opens: int, unique_opens: int, clicks: int, unique_clicks: int}, last_7_days: map{sent: int, hard_bounces: int, soft_bounces: int, rejects: int, complaints: int, unsubs: int, opens: int, unique_opens: int, clicks: int, unique_clicks: int}, last_30_days: map{sent: int, hard_bounces: int, soft_bounces: int, rejects: int, complaints: int, unsubs: int, opens: int, unique_opens: int, clicks: int, unique_clicks: int}, last_60_days: map{sent: int, hard_bounces: int, soft_bounces: int, rejects: int, complaints: int, unsubs: int, opens: int, unique_opens: int, clicks: int, unique_clicks: int}, last_90_days: map{sent: int, hard_bounces: int, soft_bounces: int, rejects: int, complaints: int, unsubs: int, opens: int, unique_opens: int, clicks: int, unique_clicks: int}}} # The detailed information on the tag
+@errors {400: Invalid tag name, 401: Invalid API key}
+
+@endpoint POST /tags/time-series
+@desc Get time series data for a specific tag
+@returns(200) The array of history information
+@errors {400: Invalid tag name, 401: Invalid API key}
+
+@endpoint POST /tags/all-time-series
+@desc Get time series data for all tags
+@required {key: str # A valid Mandrill API key}
+@returns(200) The array of history information for all tags
+@errors {401: Invalid API key}
+
+@endgroup
+
+@group templates
+@endpoint POST /templates/add
+@desc Add a new template
+@returns(200) {slug: str, name: str, labels: [str], code: str, subject: str, from_email: str, from_name: str, text: str, publish_name: str, publish_code: str, publish_subject: str, publish_from_email: str, publish_from_name: str, publish_text: str, published_at: str, created_at: str(date-time), updated_at: str(date-time), draft_updated_at: str(date-time), is_broken_template: bool} # Template successfully created
+@errors {400: Invalid template data, 401: Invalid API key, 500: Server error}
+
+@endpoint POST /templates/info
+@desc Get template information
+@returns(200) {slug: str, name: str, labels: [str], code: str, subject: str, from_email: str, from_name: str, text: str, publish_name: str, publish_code: str, publish_subject: str, publish_from_email: str, publish_from_name: str, publish_text: str, published_at: str, created_at: str(date-time), updated_at: str(date-time), draft_updated_at: str(date-time), is_broken_template: bool} # Template information retrieved successfully
+@errors {401: Invalid API key, 404: Template not found, 500: Server error}
+
+@endpoint POST /templates/update
+@desc Update an existing template
+@returns(200) {slug: str, name: str, labels: [str], code: str, subject: str, from_email: str, from_name: str, text: str, publish_name: str, publish_code: str, publish_subject: str, publish_from_email: str, publish_from_name: str, publish_text: str, published_at: str, created_at: str(date-time), updated_at: str(date-time), draft_updated_at: str(date-time), is_broken_template: bool} # Template successfully updated
+@errors {401: Invalid API key, 404: Template not found, 500: Server error}
+
+@endpoint POST /templates/publish
+@desc Publish a template
+@returns(200) {slug: str, name: str, labels: [str], code: str, subject: str, from_email: str, from_name: str, text: str, publish_name: str, publish_code: str, publish_subject: str, publish_from_email: str, publish_from_name: str, publish_text: str, published_at: str, created_at: str(date-time), updated_at: str(date-time), draft_updated_at: str(date-time), is_broken_template: bool} # Template successfully published
+@errors {401: Invalid API key, 404: Template not found, 500: Server error}
+
+@endpoint POST /templates/delete
+@desc Delete a template
+@returns(200) {slug: str, name: str, labels: [str], code: str, subject: str, from_email: str, from_name: str, text: str, publish_name: str, publish_code: str, publish_subject: str, publish_from_email: str, publish_from_name: str, publish_text: str, published_at: str, created_at: str(date-time), updated_at: str(date-time), draft_updated_at: str(date-time), is_broken_template: bool} # Template successfully deleted
+@errors {401: Invalid API key, 404: Template not found, 500: Server error}
+
+@endpoint POST /templates/list
+@desc List all templates
+@returns(200) List of templates retrieved successfully
+@errors {401: Invalid API key, 500: Server error}
+
+@endpoint POST /templates/time-series
+@desc Get template time series data
+@returns(200) Template time series data retrieved successfully
+@errors {401: Invalid API key, 404: Template not found, 500: Server error}
+
+@endpoint POST /templates/render
+@desc Render a template
+@returns(200) {html: str} # Template rendered successfully
+@errors {401: Invalid API key, 404: Template not found, 500: Server error}
+
+@endgroup
+
+@group urls
+@endpoint POST /urls/list
+@desc Get most clicked URLs (DEPRECATED)
+@required {key: str # A valid Mandrill API key}
+@errors {401: Invalid API key, 410: Endpoint deprecated - URL tracking reports no longer supported, 503: Service unavailable}
+
+@endpoint POST /urls/search
+@desc Search clicked URLs (DEPRECATED)
+@required {key: str # A valid Mandrill API key}
+@errors {410: Endpoint deprecated - URL tracking reports no longer supported}
+
+@endpoint POST /urls/time-series
+@desc Get URL time series (DEPRECATED)
+@required {key: str # A valid Mandrill API key}
+@errors {401: Invalid API key, 410: Endpoint deprecated - URL tracking reports no longer supported, 503: Service unavailable}
+
+@endpoint POST /urls/tracking-domains
+@desc Get tracking domains
+@required {key: str # A valid Mandrill API key}
+@returns(200) List of tracking domains and their status
+@errors {401: Invalid API key}
+
+@endpoint POST /urls/add-tracking-domain
+@desc Add tracking domain
+@required {key: str # A valid API key, domain: str(hostname) # A domain name to add for tracking}
+@returns(200) {domain: str(hostname), created_at: str, last_tested_at: str, cname: map{valid: bool, valid_after: str, error: any}, valid_tracking: bool} # Information about the tracking domain
+@errors {400: Invalid tracking domain, 401: Invalid API key}
+
+@endpoint POST /urls/check-tracking-domain
+@desc Check tracking domain
+@required {key: str # A valid API key, domain: str(hostname) # An existing tracking domain name}
+@returns(200) {domain: str(hostname), created_at: str, last_tested_at: str, cname: map{valid: bool, valid_after: str, error: any}, valid_tracking: bool} # Information about the tracking domain with updated CNAME status
+@errors {401: Invalid API key, 404: Unknown tracking domain}
+
+@endgroup
+
+@group users
+@endpoint POST /users/info
+@desc Return the information about the API-connected user
+@required {key: str # A valid Mandrill API key}
+@returns(200) {username: str, created_at: str, public_id: str, reputation: int, hourly_quota: int, backlog: int, stats: map{today: map{sent: int, hard_bounces: int, soft_bounces: int, rejects: int, complaints: int, unsubs: int, opens: int, unique_opens: int, clicks: int, unique_clicks: int}, last_7_days: map{sent: int, hard_bounces: int, soft_bounces: int, rejects: int, complaints: int, unsubs: int, opens: int, unique_opens: int, clicks: int, unique_clicks: int}, last_30_days: map{sent: int, hard_bounces: int, soft_bounces: int, rejects: int, complaints: int, unsubs: int, opens: int, unique_opens: int, clicks: int, unique_clicks: int}, last_60_days: map{sent: int, hard_bounces: int, soft_bounces: int, rejects: int, complaints: int, unsubs: int, opens: int, unique_opens: int, clicks: int, unique_clicks: int}, last_90_days: map{sent: int, hard_bounces: int, soft_bounces: int, rejects: int, complaints: int, unsubs: int, opens: int, unique_opens: int, clicks: int, unique_clicks: int}, all_time: map{sent: int, hard_bounces: int, soft_bounces: int, rejects: int, complaints: int, unsubs: int, opens: int, unique_opens: int, clicks: int, unique_clicks: int}}} # User account information and aggregate sending statistics
+@errors {401: Invalid API key}
+
+@endpoint POST /users/ping
+@desc Validate an API key and respond to a ping
+@required {key: str # A valid Mandrill API key}
+@returns(200) The string 'PONG!'
+@errors {401: Invalid API key}
+
+@endpoint POST /users/ping2
+@desc Validate an API key and respond to a ping (strict JSON parser version)
+@required {key: str # A valid Mandrill API key}
+@returns(200) Static JSON payload with PING: PONG!
+@errors {401: Invalid API key}
+
+@endpoint POST /users/senders
+@desc Return the senders that have tried to use this account
+@required {key: str # A valid Mandrill API key}
+@returns(200) Array of sender information with aggregate statistics
+@errors {401: Invalid API key}
+
+@endgroup
+
+@group webhooks
+@endpoint POST /webhooks/list
+@desc Get the list of all webhooks
+@required {key: str # A valid Mandrill API key}
+@returns(200) Array of webhook configurations
+@errors {401: Invalid API key}
+
+@endpoint POST /webhooks/add
+@desc Add a new webhook
+@returns(200) {id: int, url: str(uri), auth_key: str?, description: str?, events: [str], created_at: str, last_sent_at: str?, batches_sent: int, events_sent: int, last_error: str?} # The created webhook configuration
+@errors {401: Invalid API key}
+
+@endpoint POST /webhooks/info
+@desc Get webhook information
+@returns(200) {id: int, url: str(uri), auth_key: str?, description: str?, events: [str], created_at: str, last_sent_at: str?, batches_sent: int, events_sent: int, last_error: str?} # Webhook information
+@errors {401: Invalid API key, 404: Unknown webhook}
+
+@endpoint POST /webhooks/update
+@desc Update an existing webhook
+@returns(200) {id: int, url: str(uri), auth_key: str?, description: str?, events: [str], created_at: str, last_sent_at: str?, batches_sent: int, events_sent: int, last_error: str?} # Updated webhook configuration
+@errors {401: Invalid API key, 404: Unknown webhook}
+
+@endpoint POST /webhooks/delete
+@desc Delete an existing webhook
+@returns(200) {id: int, url: str(uri), auth_key: str?, description: str?, events: [str], created_at: str, last_sent_at: str?, batches_sent: int, events_sent: int, last_error: str?} # Deleted webhook configuration
+@errors {401: Invalid API key, 404: Unknown webhook}
+
+@endgroup
+
+@group whitelists
+@endpoint POST /whitelists/add
+@desc Add email to whitelist
+@returns(200) {email: str(email), added: bool} # Email successfully added to whitelist
+@errors {401: Invalid API key, 422: Validation error, 500: Internal server error}
+
+@endpoint POST /whitelists/list
+@desc List whitelist entries
+@returns(200) List of whitelist entries
+@errors {401: Invalid API key, 500: Internal server error}
+
+@endpoint POST /whitelists/delete
+@desc Remove email from whitelist
+@returns(200) {email: str(email), deleted: bool} # Email successfully removed from whitelist
+@errors {401: Invalid API key, 422: Validation error, 500: Internal server error}
+
+@endgroup
+
+@group inbound
+@endpoint POST /inbound/domains
+@desc List inbound domains
+@required {key: str # A valid Mandrill API key}
+@returns(200) The inbound domains associated with the account
+@errors {401: Invalid API key}
+
+@endpoint POST /inbound/add-domain
+@desc Add inbound domain
+@returns(200) {domain: str, created_at: str, valid_mx: bool} # Information about the domain
+@errors {401: Invalid API key}
+
+@endpoint POST /inbound/check-domain
+@desc Check domain settings
+@returns(200) {domain: str, created_at: str, valid_mx: bool} # Information about the inbound domain
+@errors {401: Invalid API key, 404: Unknown inbound domain}
+
+@endpoint POST /inbound/delete-domain
+@desc Delete inbound domain
+@returns(200) {domain: str, created_at: str, valid_mx: bool} # Information about the deleted domain
+@errors {401: Invalid API key, 404: Unknown inbound domain}
+
+@endpoint POST /inbound/routes
+@desc List routes
+@returns(200) The routes associated with the domain or phone
+@errors {401: Invalid API key, 404: Unknown inbound domain or SMS program}
+
+@endpoint POST /inbound/add-route
+@desc Add route
+@returns(200) {id: str, pattern: str, url: str(uri)} # The added route information
+@errors {401: Invalid API key, 404: Unknown inbound domain or SMS program}
+
+@endpoint POST /inbound/update-route
+@desc Update mailbox route
+@returns(200) {id: str, pattern: str, url: str(uri)} # The updated mailbox route information
+@errors {401: Invalid API key, 404: Unknown inbound route}
+
+@endpoint POST /inbound/delete-route
+@desc Delete mailbox route
+@returns(200) {id: str, pattern: str, url: str(uri)} # The deleted mailbox route information
+@errors {401: Invalid API key, 404: Unknown inbound route}
+
+@endpoint POST /inbound/send-raw
+@desc Send mime document
+@returns(200) Processing results for each recipient or null if no recipients processed
+@errors {401: Invalid API key, 404: Unknown inbound domain}
+
+@endgroup
+
+@group mctemplates
+@endpoint POST /mctemplates/info
+@desc Get Mailchimp Transactional template information
+@required {key: str # Valid API key, mc_template_id: int # Mailchimp template ID}
+@returns(200) {mc_template_id: int, mc_template_name: str, labels: [str], code: str, subject: str, from_email: str, from_name: str, text: str, publish_code: str, publish_text: str, published_at: str(date-time), created_at: str(date-time), updated_at: str(date-time), draft_updated_at: str(date-time), is_broken_template: bool} # Template information retrieved successfully
+@errors {401: Invalid API key, 404: Template not found}
+
+@endpoint POST /mctemplates/list
+@desc List Mailchimp Transactional templates
+@required {key: str # Valid API key}
+@optional {search_query: str # Optional search query to filter templates}
+@returns(200) List of templates retrieved successfully
+@errors {401: Invalid API key}
+
+@endpoint POST /mctemplates/render
+@desc Render a Mailchimp Transactional template
+@required {key: str # Valid API key, mc_template_id: int # Mailchimp template ID}
+@optional {mc_template_version: str(published/draft)=published # Template version - "published" or "draft". Note: requesting "published" when the template has not been published will return a 404 error., merge_vars: [map{name: str, content: str}] # Merge variables to inject into template}
+@returns(200) {html: str} # Template rendered successfully
+@errors {400:MC_Exception_ValidationError: Invalid mc_template_version parameter, 401:Invalid_Key: Invalid API key, 404:Unknown_Template: Template not found}
+
+@endpoint POST /mctemplates/time-series
+@desc Get Mailchimp Transactional template time series
+@required {key: str # Valid API key, mc_template_id: int # Mailchimp template ID}
+@returns(200) Time series data retrieved successfully (may be empty array if template never used)
+@errors {401: Invalid API key, 404: Template not found}
+
+@endgroup
+
+@group messages
+@endpoint POST /messages/send
+@desc Send a new transactional message through the Transactional API.
+@returns(200) an array of objects for each recipient containing the key "email" with the email address, and details of the message status for that recipient
+@errors {401:Invalid_Key: Invalid API key, 402:MC_Exception_PaymentRequired: Payment required, 404:Unknown_Subaccount: Subaccount not found}
+
+@endpoint POST /messages/send-template
+@desc Send a new transactional message using a template
+@returns(200) Per-recipient send results
+@errors {401:Invalid_Key: Invalid API key, 402:MC_Exception_PaymentRequired: Payment required, 404: Error 404}
+
+@endpoint POST /messages/send-mc-template
+@desc Send a new transactional message using a Mailchimp Transactional template
+@returns(200) Per-recipient send results
+@errors {400:MC_Exception_ValidationError: Validation error, 401:Invalid_Key: Invalid API key, 402:MC_Exception_PaymentRequired: Payment required, 404: Error 404}
+
+@endpoint POST /messages/search
+@desc Search recently sent messages
+@returns(200) Messages matching the search query (can include both email and SMS messages)
+@errors {401:Invalid_Key: Invalid API key, 503: Service unavailable}
+
+@endpoint POST /messages/search-time-series
+@desc Get time series data for message search
+@returns(200) Hourly stats for matching messages
+@errors {401:Invalid_Key: Invalid API key, 503: Service unavailable}
+
+@endpoint POST /messages/info
+@desc Get information about a single sent message
+@returns(200) Information about the message (email or SMS)
+@errors {401:Invalid_Key: Invalid API key, 404:Unknown_Message: Message not found}
+
+@endpoint POST /messages/content
+@desc Get the full content of a sent message
+@returns(200) The content of the message (email or SMS)
+@errors {401:Invalid_Key: Invalid API key, 404:Unknown_Message: Message not found}
+
+@endpoint POST /messages/parse
+@desc Parse a MIME message
+@returns(200) {headers: map, text: str, text_flowed: bool, attachments: [map], from_email: str(email), from_name: str, html: str, to: [map], subject: str} # The parsed message content
+@errors {401:Invalid_Key: Invalid API key, 422: Validation error}
+
+@endpoint POST /messages/send-raw
+@desc Send a raw MIME message through Mandrill
+@returns(200) Per-recipient send results
+@errors {401:Invalid_Key: Invalid API key, 402:MC_Exception_PaymentRequired: Payment required, 404:Unknown_Subaccount: Subaccount not found}
+
+@endpoint POST /messages/list-scheduled
+@desc Get scheduled emails
+@returns(200) A list of up to 1000 scheduled emails
+@errors {401:Invalid_Key: Invalid API key}
+
+@endpoint POST /messages/cancel-scheduled
+@desc Cancel a scheduled email
+@returns(200) {_id: str, created_at: str, send_at: str, from_email: str(email), to: str(email), subject: str} # Information about the scheduled email that was cancelled
+@errors {401:Invalid_Key: Invalid API key, 404:Unknown_Message: Message not found}
+
+@endpoint POST /messages/reschedule
+@desc Reschedule a scheduled email
+@returns(200) {_id: str, created_at: str, send_at: str, from_email: str(email), to: str(email), subject: str} # Information about the scheduled email that was rescheduled
+@errors {401:Invalid_Key: Invalid API key, 404:Unknown_Message: Message not found}
+
+@endpoint POST /messages/send-sms
+@desc Send SMS message
+@returns(200) SMS sending results
+@errors {400:Unknown_Subaccount: Unknown subaccount, 401:Invalid_Key: Invalid API key}
+
+@endgroup
+
+@group senders
+@endpoint POST /senders/delete-domain
+@desc Delete a sender domain
+@returns(200) {domain: str(hostname), created_at: str(date-time), last_tested_at: str(date-time), spf: map{valid: bool, valid_after: str(date-time), error: str}, dkim: map{valid: bool, valid_after: str(date-time), error: str}, dkim2: map{valid: bool, valid_after: str(date-time), error: str}, dmarc: map{valid: bool, error: str}, verified_at: str(date-time), valid_signing: bool, verify_txt_key: str} # Information about the deleted sender domain
+@errors {401: Invalid API key, 403: Cannot delete verified domain - please login to confirm deletion, 404: Unknown domain}
+
+@endgroup
+
+@group urls
+@endpoint POST /urls/delete-tracking-domain
+@desc Delete a tracking domain
+@required {key: str # A valid API key, domain: str(hostname) # An existing tracking domain name}
+@returns(200) {domain: str(hostname), created_at: str, last_tested_at: str, cname: map{valid: bool, valid_after: str, error: any}, valid_tracking: bool} # Information about the deleted tracking domain
+@errors {401: Invalid API key, 403: Cannot delete verified tracking domain - please login to confirm deletion, 404: Unknown tracking domain}
+
+@endgroup
+
+@end

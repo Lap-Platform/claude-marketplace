@@ -1,0 +1,80 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Contacts
+@base https://api.hubapi.com
+@version v3
+@auth OAuth2 | ApiKey private-app-legacy in header | ApiKey private-app in header
+@endpoints 13
+@toc crm(13)
+
+@endpoint GET /crm/v3/objects/contacts
+@desc Retrieve contacts
+@optional {after: str # The paging cursor token of the last successfully read resource will be returned as the `paging.next.after` JSON property of a paged response containing more results., archived: bool=false # Whether to return only results that have been archived., associations: [str] # A comma separated list of object types to retrieve associated IDs for. If any of the specified associations do not exist, they will be ignored., limit: int(int32)=10 # The maximum number of results to display per page., properties: [str] # A comma separated list of the properties to be returned in the response. If any of the specified properties are not present on the requested object(s), they will be ignored., propertiesWithHistory: [str] # A comma separated list of the properties to be returned along with their history of previous values. If any of the specified properties are not present on the requested object(s), they will be ignored. Usage of this parameter will reduce the maximum number of objects that can be read by a single request.}
+@returns(200) {paging: map{next: map{after: str, link: str}}, results: [map]} # successful operation
+
+@endpoint POST /crm/v3/objects/contacts
+@desc Create a contact
+@required {associations: [map{to!: map, types!: [map]}], properties: map # Key-value pairs for setting properties for the new object.}
+@returns(201) {archived: bool, archivedAt: str(date-time), createdAt: str(date-time), id: str, objectWriteTraceId: str, properties: map, propertiesWithHistory: map, updatedAt: str(date-time), url: str} # successful operation
+
+@endpoint POST /crm/v3/objects/contacts/batch/archive
+@desc Archive a batch of contacts
+@required {inputs: [map{id!: str}]}
+@returns(204) No content
+
+@endpoint POST /crm/v3/objects/contacts/batch/create
+@desc Create a batch of contacts
+@required {inputs: [map{associations!: [map], objectWriteTraceId: str, properties!: map}]}
+@returns(200) {completedAt: str(date-time), errors: [map], links: map, numErrors: int(int32), requestedAt: str(date-time), results: [map], startedAt: str(date-time), status: str} # successful operation
+
+@endpoint POST /crm/v3/objects/contacts/batch/read
+@desc Retrieve a batch of contacts
+@required {inputs: [map{id!: str}], properties: [str] # Key-value pairs for setting properties for the new object., propertiesWithHistory: [str] # Key-value pairs for setting properties for the new object and their histories.}
+@optional {archived: bool=false # Whether to return only results that have been archived., idProperty: str # When using a custom unique value property to retrieve records, the name of the property. Do not include this parameter if retrieving by record ID.}
+@returns(200) {completedAt: str(date-time), errors: [map], links: map, numErrors: int(int32), requestedAt: str(date-time), results: [map], startedAt: str(date-time), status: str} # successful operation
+
+@endpoint POST /crm/v3/objects/contacts/batch/update
+@desc Update a batch of contacts
+@required {inputs: [map{id!: str, idProperty: str, objectWriteTraceId: str, properties!: map}]}
+@returns(200) {completedAt: str(date-time), errors: [map], links: map, numErrors: int(int32), requestedAt: str(date-time), results: [map], startedAt: str(date-time), status: str} # successful operation
+
+@endpoint POST /crm/v3/objects/contacts/batch/upsert
+@desc Create or update a batch of contacts
+@required {inputs: [map{id!: str, idProperty: str, objectWriteTraceId: str, properties!: map}]}
+@returns(200) {completedAt: str(date-time), errors: [map], links: map, numErrors: int(int32), requestedAt: str(date-time), results: [map], startedAt: str(date-time), status: str} # successful operation
+
+@endpoint POST /crm/v3/objects/contacts/gdpr-delete
+@desc Permanently delete a contact (GDPR-compliant)
+@required {objectId: str # The ID of the contact to permanently delete.}
+@optional {idProperty: str # The name of a property whose values are unique for this object. An alternative to identifying a contact by ID.}
+@returns(204) No content
+
+@endpoint POST /crm/v3/objects/contacts/merge
+@desc Merge two contacts
+@required {objectIdToMerge: str # The object ID of the record that the merge will not set as the current value after the merge., primaryObjectId: str # The object ID of the record that the merge will generally set as the current value after the merge.}
+@returns(200) {archived: bool, archivedAt: str(date-time), createdAt: str(date-time), id: str, objectWriteTraceId: str, properties: map, propertiesWithHistory: map, updatedAt: str(date-time), url: str} # successful operation
+
+@endpoint POST /crm/v3/objects/contacts/search
+@desc Search for contacts
+@required {after: str # A paging cursor token for retrieving subsequent pages., filterGroups: [map{filters!: [map]}] # Up to 6 groups of filters defining additional query criteria., limit: int(int32) # The maximum results to return, up to 200 objects., properties: [str] # A list of property names to include in the response., sorts: [str] # Specifies sorting order based on object properties.}
+@optional {query: str # The search query string, up to 3000 characters.}
+@returns(200) {paging: map{next: map{after: str, link: str}, prev: map{before: str, link: str}}, results: [map], total: int(int32)} # successful operation
+
+@endpoint GET /crm/v3/objects/contacts/{contactId}
+@desc Retrieve a contact
+@required {contactId: str}
+@optional {archived: bool=false # Whether to return only results that have been archived., associations: [str] # A comma separated list of object types to retrieve associated IDs for. If any of the specified associations do not exist, they will be ignored., idProperty: str # The name of a property whose values are unique for this object type, properties: [str] # A comma separated list of the properties to be returned in the response. If any of the specified properties are not present on the requested object(s), they will be ignored., propertiesWithHistory: [str] # A comma separated list of the properties to be returned along with their history of previous values. If any of the specified properties are not present on the requested object(s), they will be ignored.}
+@returns(200) {archived: bool, archivedAt: str(date-time), associations: map, createdAt: str(date-time), id: str, objectWriteTraceId: str, properties: map, propertiesWithHistory: map, updatedAt: str(date-time), url: str} # successful operation
+
+@endpoint DELETE /crm/v3/objects/contacts/{contactId}
+@desc Archive a contact
+@required {contactId: str}
+@returns(204) No content
+
+@endpoint PATCH /crm/v3/objects/contacts/{contactId}
+@desc Update a contact
+@required {contactId: str, properties: map # Key value pairs representing the properties of the object.}
+@optional {idProperty: str # The name of a property whose values are unique for this object type}
+@returns(200) {archived: bool, archivedAt: str(date-time), createdAt: str(date-time), id: str, objectWriteTraceId: str, properties: map, propertiesWithHistory: map, updatedAt: str(date-time), url: str} # successful operation
+
+@end

@@ -1,0 +1,83 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Properties
+@base https://api.hubapi.com
+@version v3
+@auth OAuth2 | ApiKey private-app-legacy in header | ApiKey private-app in header
+@common_fields {objectType: str # The type of object for which properties are being retrieved.}
+@endpoints 13
+@toc crm(13)
+
+@endpoint GET /crm/v3/properties/{objectType}
+@desc Read all properties
+@optional {archived: bool=false # Whether to return only results that have been archived., dataSensitivity: str(highly_sensitive/non_sensitive/sensitive)=non_sensitive # Filter properties based on their sensitivity level. Accepted values are: highly_sensitive, non_sensitive, sensitive., locale: str # Specify the locale to retrieve properties in a particular language., properties: str # A comma-separated list of specific properties to retrieve.}
+@returns(200) {results: [map]} # successful operation
+
+@endpoint POST /crm/v3/properties/{objectType}
+@desc Create a property
+@required {fieldType: str(booleancheckbox/calculation_equation/checkbox/date/file/html/number/phonenumber/radio/select/text/textarea) # Controls how the property appears in HubSpot., groupName: str # The name of the property group the property belongs to., label: str # A human-readable label that will be shown in HubSpot., name: str # The name of the property to read or modify., type: str(bool/date/datetime/enumeration/number/phone_number/string) # The data type of the property.}
+@optional {calculationFormula: str # Represents a formula that is used to compute a calculated property., dataSensitivity: str(highly_sensitive/non_sensitive/sensitive) # Indicates the sensitivity level of the property, with options: highly_sensitive, non_sensitive, or sensitive., description: str # A description of the property that will be shown as help text in HubSpot., displayOrder: int(int32) # Property groups are displayed in order starting with the lowest positive integer value. Values of -1 will cause the property group to be displayed after any positive values., externalOptions: bool # Applicable only for 'enumeration' type properties.  Should be set to true in conjunction with a 'referencedObjectType' of 'OWNER'.  Otherwise false., formField: bool # Whether or not the property can be used in a HubSpot form., hasUniqueValue: bool # Whether or not the property's value must be unique. Once set, this can't be changed., hidden: bool # If true, the property won't be visible and can't be used in HubSpot., options: [map{description: str, displayOrder: int(int32), hidden!: bool, label!: str, value!: str}] # A list of valid options for the property. This field is required for enumerated properties., referencedObjectType: str # Should be set to 'OWNER' when 'externalOptions' is true, which causes the property to dynamically pull option values from the current HubSpot users.}
+@returns(201) {archived: bool, archivedAt: str(date-time), calculated: bool, calculationFormula: str, createdAt: str(date-time), createdUserId: str, dataSensitivity: str, dateDisplayHint: str, description: str, displayOrder: int(int32), externalOptions: bool, fieldType: str, formField: bool, groupName: str, hasUniqueValue: bool, hidden: bool, hubspotDefined: bool, label: str, modificationMetadata: map{archivable: bool, readOnlyDefinition: bool, readOnlyOptions: bool, readOnlyValue: bool}, name: str, options: [map], referencedObjectType: str, sensitiveDataCategories: [str], showCurrencySymbol: bool, type: str, updatedAt: str(date-time), updatedUserId: str} # successful operation
+
+@endpoint POST /crm/v3/properties/{objectType}/batch/archive
+@desc Archive a batch of properties
+@required {inputs: [map{name!: str}]}
+@returns(204) No content
+
+@endpoint POST /crm/v3/properties/{objectType}/batch/create
+@desc Create a batch of properties
+@required {inputs: [map{calculationFormula: str, dataSensitivity: str, description: str, displayOrder: int(int32), externalOptions: bool, fieldType!: str, formField: bool, groupName!: str, hasUniqueValue: bool, hidden: bool, label!: str, name!: str, options: [map], referencedObjectType: str, type!: str}]}
+@returns(200) {completedAt: str(date-time), errors: [map], links: map, numErrors: int(int32), requestedAt: str(date-time), results: [map], startedAt: str(date-time), status: str} # successful operation
+
+@endpoint POST /crm/v3/properties/{objectType}/batch/read
+@desc Read a batch of properties
+@required {archived: bool # Specifies whether the property is archived., dataSensitivity: str(highly_sensitive/non_sensitive/sensitive) # Indicates the sensitivity level of the data, such as 'non_sensitive', 'sensitive', or 'highly_sensitive'., inputs: [map{name!: str}]}
+@optional {locale: str # Specifies the language locale for the property values.}
+@returns(200) {completedAt: str(date-time), errors: [map], links: map, numErrors: int(int32), requestedAt: str(date-time), results: [map], startedAt: str(date-time), status: str} # successful operation
+
+@endpoint GET /crm/v3/properties/{objectType}/groups
+@desc Read all property groups
+@optional {locale: str # Specifies the language locale for the property group names and descriptions.}
+@returns(200) {results: [map]} # successful operation
+
+@endpoint POST /crm/v3/properties/{objectType}/groups
+@desc Create a property group
+@required {label: str # A human-readable label that will be shown in HubSpot., name: str # The name of the property to read or modify.}
+@optional {displayOrder: int(int32) # Property groups are displayed in order starting with the lowest positive integer value. Values of -1 will cause the property group to be displayed after any positive values.}
+@returns(201) {archived: bool, displayOrder: int(int32), label: str, name: str} # successful operation
+
+@endpoint GET /crm/v3/properties/{objectType}/groups/{groupName}
+@desc Read a property group
+@required {groupName: str # The name of the property group to be read.}
+@optional {locale: str # The language locale for the response content.}
+@returns(200) {archived: bool, displayOrder: int(int32), label: str, name: str} # successful operation
+
+@endpoint DELETE /crm/v3/properties/{objectType}/groups/{groupName}
+@desc Archive a property group
+@required {groupName: str # The name of the property group to be archived.}
+@returns(204) No content
+
+@endpoint PATCH /crm/v3/properties/{objectType}/groups/{groupName}
+@desc Update a property group
+@required {groupName: str # The name of the property group to be updated.}
+@optional {displayOrder: int(int32) # Property groups are displayed in order starting with the lowest positive integer value. Values of -1 will cause the property group to be displayed after any positive values., label: str # A human-readable label that will be shown in HubSpot.}
+@returns(200) {archived: bool, displayOrder: int(int32), label: str, name: str} # successful operation
+
+@endpoint GET /crm/v3/properties/{objectType}/{propertyName}
+@desc Read a property
+@required {propertyName: str # The name of the property to retrieve.}
+@optional {archived: bool=false # Whether to return only results that have been archived., dataSensitivity: str(highly_sensitive/non_sensitive/sensitive)=non_sensitive # Specifies the sensitivity level of the data, with options: highly_sensitive, non_sensitive, sensitive., locale: str # A query parameter to specify the locale for the response., properties: str # A query parameter to specify which properties to include in the response.}
+@returns(200) {archived: bool, archivedAt: str(date-time), calculated: bool, calculationFormula: str, createdAt: str(date-time), createdUserId: str, dataSensitivity: str, dateDisplayHint: str, description: str, displayOrder: int(int32), externalOptions: bool, fieldType: str, formField: bool, groupName: str, hasUniqueValue: bool, hidden: bool, hubspotDefined: bool, label: str, modificationMetadata: map{archivable: bool, readOnlyDefinition: bool, readOnlyOptions: bool, readOnlyValue: bool}, name: str, options: [map], referencedObjectType: str, sensitiveDataCategories: [str], showCurrencySymbol: bool, type: str, updatedAt: str(date-time), updatedUserId: str} # successful operation
+
+@endpoint DELETE /crm/v3/properties/{objectType}/{propertyName}
+@desc Archive a property
+@required {propertyName: str # The name of the property to delete.}
+@returns(204) No content
+
+@endpoint PATCH /crm/v3/properties/{objectType}/{propertyName}
+@desc Update a property
+@required {propertyName: str # The name of the property to update.}
+@optional {calculationFormula: str # Represents a formula that is used to compute a calculated property., description: str # A description of the property that will be shown as help text in HubSpot., displayOrder: int(int32) # Property groups are displayed in order starting with the lowest positive integer value. Values of -1 will cause the property group to be displayed after any positive values., fieldType: str(booleancheckbox/calculation_equation/checkbox/date/file/html/number/phonenumber/radio/select/text/textarea) # Controls how the property appears in HubSpot., formField: bool # Whether or not the property can be used in a HubSpot form., groupName: str # The name of the property group the property belongs to., hidden: bool # If true, the property won't be visible and can't be used in HubSpot., label: str # A human-readable label that will be shown in HubSpot., options: [map{description: str, displayOrder: int(int32), hidden!: bool, label!: str, value!: str}] # A list of valid options for the property. This field is required for enumerated properties., type: str(bool/date/datetime/enumeration/number/phone_number/string) # The data type of the property.}
+@returns(200) {archived: bool, archivedAt: str(date-time), calculated: bool, calculationFormula: str, createdAt: str(date-time), createdUserId: str, dataSensitivity: str, dateDisplayHint: str, description: str, displayOrder: int(int32), externalOptions: bool, fieldType: str, formField: bool, groupName: str, hasUniqueValue: bool, hidden: bool, hubspotDefined: bool, label: str, modificationMetadata: map{archivable: bool, readOnlyDefinition: bool, readOnlyOptions: bool, readOnlyValue: bool}, name: str, options: [map], referencedObjectType: str, sensitiveDataCategories: [str], showCurrencySymbol: bool, type: str, updatedAt: str(date-time), updatedUserId: str} # successful operation
+
+@end

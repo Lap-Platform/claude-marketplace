@@ -1,0 +1,99 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Conversations Inbox & Messages
+@base https://api.hubapi.com
+@version v3
+@auth OAuth2 | ApiKey private-app in header
+@endpoints 16
+@toc conversations(16)
+
+@endpoint POST /conversations/v3/conversations/actors/batch/read
+@desc Get a group of actors
+@required {inputs: [str]}
+@optional {property: str}
+@returns(200) {completedAt: str(date-time), errors: [map], links: map, numErrors: int(int32), requestedAt: str(date-time), results: [any], startedAt: str(date-time), status: str} # successful operation
+
+@endpoint GET /conversations/v3/conversations/actors/{actorId}
+@desc Get a single actor
+@required {actorId: str}
+@optional {property: str}
+@returns(200) successful operation
+
+@endpoint GET /conversations/v3/conversations/channel-accounts
+@desc Get channel accounts
+@optional {after: str # The paging cursor token of the last successfully read resource will be returned as the `paging.next.after` JSON property of a paged response containing more results., archived: bool # Whether to return only results that have been archived., channelId: [int(int32)], defaultPageLength: int(int32), inboxId: [int(int32)], limit: int(int32) # The maximum number of results to display per page., sort: [str]}
+@returns(200) {paging: map{next: map{after: str, link: str}}, results: [map], total: int(int32)} # successful operation
+
+@endpoint GET /conversations/v3/conversations/channel-accounts/{channelAccountId}
+@desc Get a single channel account
+@required {channelAccountId: int(int64)}
+@optional {archived: bool=false # Whether to return only results that have been archived.}
+@returns(200) {active: bool, archived: bool, archivedAt: str(date-time), authorized: bool, channelId: str, createdAt: str(date-time), deliveryIdentifier: map{type: str, value: str}, id: str, inboxId: str, name: str} # successful operation
+
+@endpoint GET /conversations/v3/conversations/channels
+@desc Get channels
+@optional {after: str # The paging cursor token of the last successfully read resource will be returned as the `paging.next.after` JSON property of a paged response containing more results., defaultPageLength: int(int32), limit: int(int32) # The maximum number of results to display per page., sort: [str]}
+@returns(200) {paging: map{next: map{after: str, link: str}}, results: [map], total: int(int32)} # successful operation
+
+@endpoint GET /conversations/v3/conversations/channels/{channelId}
+@desc Get a single channel
+@required {channelId: int(int32)}
+@returns(200) {id: str, name: str} # successful operation
+
+@endpoint GET /conversations/v3/conversations/inboxes
+@desc Get conversations inboxes
+@optional {after: str # The paging cursor token of the last successfully read resource will be returned as the `paging.next.after` JSON property of a paged response containing more results., archived: bool # Whether to return only results that have been archived., defaultPageLength: int(int32), limit: int(int32) # The maximum number of results to display per page., sort: [str]}
+@returns(200) {paging: map{next: map{after: str, link: str}}, results: [map], total: int(int32)} # successful operation
+
+@endpoint GET /conversations/v3/conversations/inboxes/{inboxId}
+@desc Get a single conversations inbox
+@required {inboxId: int(int32)}
+@optional {archived: bool=false # Whether to return only results that have been archived.}
+@returns(200) {archived: bool, archivedAt: str(date-time), createdAt: str(date-time), id: str, name: str, type: str, updatedAt: str(date-time)} # successful operation
+
+@endpoint GET /conversations/v3/conversations/threads
+@desc Get threads
+@optional {after: str # The paging cursor token of the last successfully read resource will be returned as the `paging.next.after` JSON property of a paged response containing more results., archived: bool # Whether to return only results that have been archived., associatedContactId: int(int64), associatedTicketId: int(int64), association: [str], inboxId: [int(int32)], latestMessageTimestampAfter: str(date-time), limit: int(int32) # The maximum number of results to display per page., property: str, sort: [str], threadStatus: str(CLOSED/OPEN)}
+@returns(200) {paging: map{next: map{after: str, link: str}}, results: [map]} # successful operation
+
+@endpoint GET /conversations/v3/conversations/threads/{threadId}
+@desc Get a single thread
+@required {threadId: int(int64)}
+@optional {archived: bool # Whether to return only results that have been archived., association: [str], property: str}
+@returns(200) {archived: bool, assignedTo: str, associatedContactId: str, closedAt: str(date-time), createdAt: str(date-time), id: str, inboxId: str, latestMessageReceivedTimestamp: str(date-time), latestMessageSentTimestamp: str(date-time), latestMessageTimestamp: str(date-time), originalChannelAccountId: str, originalChannelId: str, spam: bool, status: str, threadAssociations: map{associatedTicketId: str}} # successful operation
+
+@endpoint DELETE /conversations/v3/conversations/threads/{threadId}
+@desc Archives a thread
+@required {threadId: int(int64)}
+@returns(204) No content
+
+@endpoint PATCH /conversations/v3/conversations/threads/{threadId}
+@desc Update a thread
+@required {threadId: int(int64)}
+@optional {archived: bool # Whether to return only results that have been archived., archived: bool # Whether this thread is archived. Set to false to restore the thread., status: str(CLOSED/OPEN) # The thread's status: `OPEN` or `CLOSED`.}
+@returns(200) {archived: bool, assignedTo: str, associatedContactId: str, closedAt: str(date-time), createdAt: str(date-time), id: str, inboxId: str, latestMessageReceivedTimestamp: str(date-time), latestMessageSentTimestamp: str(date-time), latestMessageTimestamp: str(date-time), originalChannelAccountId: str, originalChannelId: str, spam: bool, status: str, threadAssociations: map{associatedTicketId: str}} # successful operation
+
+@endpoint GET /conversations/v3/conversations/threads/{threadId}/messages
+@desc Get message history for a thread
+@required {threadId: int(int64)}
+@optional {after: str # The paging cursor token of the last successfully read resource will be returned as the `paging.next.after` JSON property of a paged response containing more results., archived: bool # Whether to return only results that have been archived., limit: int(int32) # The maximum number of results to display per page., property: str, sort: [str]}
+@returns(200) {paging: map{next: map{after: str, link: str}}, results: [any]} # successful operation
+
+@endpoint POST /conversations/v3/conversations/threads/{threadId}/messages
+@desc Send a message to a thread
+@required {threadId: int(int64)}
+@returns(201) successful operation
+
+@endpoint GET /conversations/v3/conversations/threads/{threadId}/messages/{messageId}
+@desc Get a single message
+@required {messageId: str, threadId: int(int64)}
+@optional {property: str}
+@returns(200) successful operation
+
+@endpoint GET /conversations/v3/conversations/threads/{threadId}/messages/{messageId}/original-content
+@desc Get the original content of a single message
+@required {messageId: str, threadId: int(int64)}
+@optional {property: str}
+@returns(200) {richText: str, text: str} # successful operation
+
+@end

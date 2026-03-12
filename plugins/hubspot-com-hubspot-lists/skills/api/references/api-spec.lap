@@ -1,0 +1,165 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api CRM Lists
+@base https://api.hubapi.com
+@version v3
+@auth OAuth2 | ApiKey private-app in header
+@endpoints 29
+@hint download_for_search
+@toc crm(29)
+
+@endpoint GET /crm/v3/lists/
+@desc Fetch Multiple Lists
+@optional {includeFilters: bool=false # A flag indicating whether or not the response object list definitions should include a filter branch definition. By default, object list definitions will not have their filter branch definitions included in the response., listIds: [str] # The **ILS IDs** of the lists to fetch.}
+@returns(200) {lists: [map]} # Successful response, for a request with `includeFilters` set to `true`.
+
+@endpoint POST /crm/v3/lists/
+@desc Create List
+@required {name: str # The name of the list, which must be globally unique across all public lists in the portal., objectTypeId: str # The object type ID of the type of objects that the list will store., processingType: str # The processing type of the list. One of: `SNAPSHOT`, `MANUAL`, or `DYNAMIC`.}
+@optional {customProperties: map # The list of custom properties to tie to the list. Custom property name is the key, the value is the value., filterBranch: any # Filter branch object containing filtering criteria for the list, listFolderId: int(int32) # The ID of the folder that the list should be created in. If left blank, then the list will be created in the root of the list folder structure., listPermissions: map{teamsWithEditAccess!: [int(int32)], usersWithEditAccess!: [int(int32)]}, membershipSettings: map{includeUnassigned: bool, membershipTeamId: int(int32)}}
+@returns(200) {list: map{createdAt: str(date-time), createdById: str, deletedAt: str(date-time), filterBranch: any, filtersUpdatedAt: str(date-time), listId: str, listPermissions: map{teamsWithEditAccess: [int(int32)], usersWithEditAccess: [int(int32)]}, listVersion: int(int32), membershipSettings: map{includeUnassigned: bool, membershipTeamId: int(int32)}, name: str, objectTypeId: str, processingStatus: str, processingType: str, size: int(int64), updatedAt: str(date-time), updatedById: str}} # successful operation
+
+@endpoint GET /crm/v3/lists/folders
+@desc Retrieves a folder.
+@optional {folderId: str=0 # The Id of the folder to retrieve.}
+@returns(200) {folder: map{childLists: [int(int32)], childNodes: [map], createdAt: str(date-time), id: str, name: str, parentFolderId: str, updatedAt: str(date-time), updatedContentsAt: str(date-time), userId: int(int32)}} # successful operation
+
+@endpoint POST /crm/v3/lists/folders
+@desc Creates a folder
+@required {name: str # The name of the folder to be created.}
+@optional {parentFolderId: str # The folder this should be created in, if not specified will be created in the root folder 0.}
+@returns(200) {folder: map{childLists: [int(int32)], childNodes: [map], createdAt: str(date-time), id: str, name: str, parentFolderId: str, updatedAt: str(date-time), updatedContentsAt: str(date-time), userId: int(int32)}} # successful operation
+
+@endpoint PUT /crm/v3/lists/folders/move-list
+@desc Moves a list to a given folder
+@required {listId: str # The Id of the list to move., newFolderId: str # The Id of folder to move the list to, the root folder is Id 0.}
+@returns(204) No content
+
+@endpoint DELETE /crm/v3/lists/folders/{folderId}
+@desc Deletes a folder
+@required {folderId: str # The ID of the folder to delete}
+@returns(204) No content
+
+@endpoint PUT /crm/v3/lists/folders/{folderId}/move/{newParentFolderId}
+@desc Moves a folder
+@required {folderId: str # The ID of the folder to move, newParentFolderId: str # The ID for the target parent folder.}
+@returns(200) {folder: map{childLists: [int(int32)], childNodes: [map], createdAt: str(date-time), id: str, name: str, parentFolderId: str, updatedAt: str(date-time), updatedContentsAt: str(date-time), userId: int(int32)}} # successful operation
+
+@endpoint PUT /crm/v3/lists/folders/{folderId}/rename
+@desc Rename a folder
+@required {folderId: str # The ID of the folder to rename}
+@optional {newFolderName: str # The new name of the folder.}
+@returns(200) {folder: map{childLists: [int(int32)], childNodes: [map], createdAt: str(date-time), id: str, name: str, parentFolderId: str, updatedAt: str(date-time), updatedContentsAt: str(date-time), userId: int(int32)}} # successful operation
+
+@endpoint GET /crm/v3/lists/idmapping
+@desc Translate Legacy List Id to Modern List Id
+@optional {legacyListId: str # The legacy list id from lists v1 API.}
+@returns(200) {legacyListId: str, listId: str} # successful operation
+
+@endpoint POST /crm/v3/lists/idmapping
+@desc Translate Legacy List Id to Modern List Id in Batch
+@returns(200) {legacyListIdsToIdsMapping: [map], missingLegacyListIds: [str]} # successful operation
+
+@endpoint GET /crm/v3/lists/object-type-id/{objectTypeId}/name/{listName}
+@desc Fetch List by Name
+@required {listName: str # The name of the list to fetch. This is **not** case sensitive., objectTypeId: str # The object type ID of the object types stored by the list to fetch. For example, `0-1` for a `CONTACT` list.}
+@optional {includeFilters: bool=false # A flag indicating whether or not the response object list definition should include a filter branch definition. By default, object list definitions will not have their filter branch definitions included in the response.}
+@returns(200) {list: map{createdAt: str(date-time), createdById: str, deletedAt: str(date-time), filterBranch: any, filtersUpdatedAt: str(date-time), listId: str, listPermissions: map{teamsWithEditAccess: [int(int32)], usersWithEditAccess: [int(int32)]}, listVersion: int(int32), membershipSettings: map{includeUnassigned: bool, membershipTeamId: int(int32)}, name: str, objectTypeId: str, processingStatus: str, processingType: str, size: int(int64), updatedAt: str(date-time), updatedById: str}} # Successful response, for a request with `includeFilters` set to `false`.
+
+@endpoint POST /crm/v3/lists/records/memberships/batch/read
+@required {inputs: [map{objectTypeId!: str, recordId!: str}]}
+@returns(200) {completedAt: str(date-time), links: map, requestedAt: str(date-time), results: [map], startedAt: str(date-time), status: str} # successful operation
+@returns(207) {completedAt: str(date-time), errors: [map], links: map, numErrors: int(int32), requestedAt: str(date-time), results: [map], startedAt: str(date-time), status: str} # multiple statuses
+
+@endpoint GET /crm/v3/lists/records/{objectTypeId}/{recordId}/memberships
+@desc Get lists record is member of
+@required {objectTypeId: str # Object type id of the record, recordId: str # Id of the record}
+@returns(200) {results: [map], total: int(int64)} # Successful response
+
+@endpoint POST /crm/v3/lists/search
+@desc Search Lists
+@required {additionalProperties: [str] # The property names of any additional list properties to include in the response. Properties that do not exist or that are empty for a particular list are not included in the response.  By default, all requests will fetch the following properties for each list: `hs_list_size`, `hs_last_record_added_at`, `hs_last_record_removed_at`, `hs_folder_name`, and `hs_list_reference_count`., offset: int(int32) # Value used to paginate through lists. The `offset` provided in the response can be used in the next request to fetch the next page of results. Defaults to `0` if no offset is provided.}
+@optional {count: int(int32) # The number of lists to include in the response. Defaults to `20` if no value is provided. The max `count` is `500`., listIds: [str] # The `listIds` that will be used to filter results by `listId`. If values are provided, then the response will only include results that have a `listId` in this array.  If no value is provided, or if an empty list is provided, then the results will not be filtered by `listId`., objectTypeId: str, processingTypes: [str] # List processing types to be included in search results. If not specified, all lists with all processing types will be included., query: str # The `query` that will be used to search for lists by list name. If no `query` is provided, then the results will include all lists., sort: str # Sort field and order}
+@returns(200) {hasMore: bool, lists: [map], offset: int(int32), total: int(int32)} # Successful response
+
+@endpoint GET /crm/v3/lists/{listId}
+@desc Fetch List by ID
+@required {listId: str # The **ILS ID** of the list to fetch.}
+@optional {includeFilters: bool=false # A flag indicating whether or not the response object list definition should include a filter branch definition. By default, object list definitions will not have their filter branch definitions included in the response.}
+@returns(200) {list: map{createdAt: str(date-time), createdById: str, deletedAt: str(date-time), filterBranch: any, filtersUpdatedAt: str(date-time), listId: str, listPermissions: map{teamsWithEditAccess: [int(int32)], usersWithEditAccess: [int(int32)]}, listVersion: int(int32), membershipSettings: map{includeUnassigned: bool, membershipTeamId: int(int32)}, name: str, objectTypeId: str, processingStatus: str, processingType: str, size: int(int64), updatedAt: str(date-time), updatedById: str}} # Successful response, for a request with `includeFilters` set to `true`.
+
+@endpoint DELETE /crm/v3/lists/{listId}
+@desc Delete a List
+@required {listId: str # The **ILS ID** of the list to delete.}
+@returns(204) No content
+
+@endpoint GET /crm/v3/lists/{listId}/memberships
+@desc Fetch List Memberships Ordered by ID
+@required {listId: str # The **ILS ID** of the list.}
+@optional {after: str # The paging offset token for the page that comes `after` the previously requested records.  If provided, then the records in the response will be the records following the offset, sorted in *ascending* order. Takes precedence over the `before` offset., before: str # The paging offset token for the page that comes `before` the previously requested records.  If provided, then the records in the response will be the records preceding the offset, sorted in *descending* order., limit: int(int32)=100 # The number of records to return in the response. The maximum `limit` is 250.}
+@returns(200) {paging: map{next: map{after: str, link: str}, prev: map{before: str, link: str}}, results: [map], total: int(int64)} # Successful response
+
+@endpoint DELETE /crm/v3/lists/{listId}/memberships
+@desc Delete All Records from a List
+@required {listId: str # The **ILS ID** of the `MANUAL` or `SNAPSHOT` list.}
+@returns(204) Operation successful
+
+@endpoint PUT /crm/v3/lists/{listId}/memberships/add
+@desc Add Records to a List
+@required {listId: str # The **ILS ID** of the `MANUAL` or `SNAPSHOT` list.}
+@returns(200) {recordIdsMissing: [str], recordIdsRemoved: [str], recordsIdsAdded: [str]} # Successful response
+
+@endpoint PUT /crm/v3/lists/{listId}/memberships/add-and-remove
+@desc Add and/or Remove Records from a List
+@required {listId: str # The **ILS ID** of the `MANUAL` or `SNAPSHOT` list., recordIdsToAdd: [str], recordIdsToRemove: [str]}
+@returns(200) {recordIdsMissing: [str], recordIdsRemoved: [str], recordsIdsAdded: [str]} # Successful response
+
+@endpoint PUT /crm/v3/lists/{listId}/memberships/add-from/{sourceListId}
+@desc Add All Records from a Source List to a Destination List
+@required {listId: str # The **ILS ID** of the `MANUAL` or `SNAPSHOT` *destination list*, which the *source list* records are added to., sourceListId: str # The **ILS ID** of the *source list* to grab the records from, which are then added to the *destination list*.}
+@returns(204) Operation successful
+
+@endpoint GET /crm/v3/lists/{listId}/memberships/join-order
+@desc Fetch List Memberships Ordered by Added to List Date
+@required {listId: str # The **ILS ID** of the list.}
+@optional {after: str # The paging offset token for the page that comes `after` the previously requested records.  If provided, then the records in the response will be the records following the offset, sorted in *ascending* order. Takes precedence over the `before` offset., before: str # The paging offset token for the page that comes `before` the previously requested records.  If provided, then the records in the response will be the records preceding the offset, sorted in *descending* order., limit: int(int32)=100 # The number of records to return in the response. The maximum `limit` is 250.}
+@returns(200) {paging: map{next: map{after: str, link: str}, prev: map{before: str, link: str}}, results: [map], total: int(int64)} # successful operation
+
+@endpoint PUT /crm/v3/lists/{listId}/memberships/remove
+@desc Remove Records from a List
+@required {listId: str # The **ILS ID** of the `MANUAL` or `SNAPSHOT` list.}
+@returns(200) {recordIdsMissing: [str], recordIdsRemoved: [str], recordsIdsAdded: [str]} # Successful response
+
+@endpoint PUT /crm/v3/lists/{listId}/restore
+@desc Restore a List
+@required {listId: str # The **ILS ID** of the list to restore.}
+@returns(204) No content
+
+@endpoint GET /crm/v3/lists/{listId}/schedule-conversion
+@desc Retrieve the conversion details for a list
+@required {listId: str # The ID of the list to schedule the conversion for.}
+@returns(200) {convertedAt: str(date-time), listId: str, requestedConversionTime: any} # successful operation
+
+@endpoint PUT /crm/v3/lists/{listId}/schedule-conversion
+@desc Schedule or update the conversion of a list to static
+@required {listId: str # The ID of the list to schedule the conversion for.}
+@returns(200) {convertedAt: str(date-time), listId: str, requestedConversionTime: any} # successful operation
+
+@endpoint DELETE /crm/v3/lists/{listId}/schedule-conversion
+@desc Cancel the conversion of a list
+@required {listId: str # The ID of the list that you want to cancel the conversion for.}
+@returns(204) No content
+
+@endpoint PUT /crm/v3/lists/{listId}/update-list-filters
+@desc Update List Filter Definition
+@required {listId: str # The **ILS ID** of the list to update., filterBranch: any # Updated filtering criteria for the list}
+@optional {enrollObjectsInWorkflows: bool=false # A flag indicating whether or not the memberships added to the list as a result of the filter change should be enrolled in workflows that are relevant to this list.}
+@returns(200) {updatedList: map{createdAt: str(date-time), createdById: str, deletedAt: str(date-time), filterBranch: any, filtersUpdatedAt: str(date-time), listId: str, listPermissions: map{teamsWithEditAccess: [int(int32)], usersWithEditAccess: [int(int32)]}, listVersion: int(int32), membershipSettings: map{includeUnassigned: bool, membershipTeamId: int(int32)}, name: str, objectTypeId: str, processingStatus: str, processingType: str, size: int(int64), updatedAt: str(date-time), updatedById: str}} # Successful response
+
+@endpoint PUT /crm/v3/lists/{listId}/update-list-name
+@desc Update List Name
+@required {listId: str # The **ILS ID** of the list to update.}
+@optional {includeFilters: bool=false # A flag indicating whether or not the response object list definition should include a filter branch definition. By default, object list definitions will not have their filter branch definitions included in the response., listName: str # The name to update the list to.}
+@returns(200) {updatedList: map{createdAt: str(date-time), createdById: str, deletedAt: str(date-time), filterBranch: any, filtersUpdatedAt: str(date-time), listId: str, listPermissions: map{teamsWithEditAccess: [int(int32)], usersWithEditAccess: [int(int32)]}, listVersion: int(int32), membershipSettings: map{includeUnassigned: bool, membershipTeamId: int(int32)}, name: str, objectTypeId: str, processingStatus: str, processingType: str, size: int(int64), updatedAt: str(date-time), updatedById: str}} # Successful response, for a request with `includeFilters` set to `false`.
+
+@end

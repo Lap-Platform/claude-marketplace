@@ -1,0 +1,394 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Sunshine Conversations API
+@base https://{subdomain}.zendesk.com/sc
+@version 17.8.0
+@auth Bearer bearer | Bearer basic
+@endpoints 68
+@hint download_for_search
+@toc apps(64), tokenInfo(1), oauth(3)
+
+@group apps
+@endpoint POST /v2/apps
+@desc Create App
+@required {displayName: any # The friendly name of the app.}
+@optional {settings: map{conversationRetentionSeconds: int, maskCreditCardNumbers: bool, useAnimalNames: bool, echoPostback: bool, ignoreAutoConversationStart: bool, multiConvoEnabled: bool, appLocalizationEnabled: bool, endSessionEnabled: bool, disableConversationReopen: bool} # Customizable app settings., metadata: map # Flat object containing custom properties. Strings, numbers and booleans  are the only supported format that can be passed to metadata. The metadata is limited to 4KB in size.}
+@returns(201) {app: any} # Created
+@errors {400: Bad request, 402: Payment required}
+
+@endpoint GET /v2/apps
+@desc List Apps
+@optional {page: map # Contains parameters for applying cursor pagination., filter: map # Contains parameters for filtering the results.}
+@returns(200) {apps: [map], meta: map{hasMore: bool, afterCursor: str, beforeCursor: str}, links: map{prev: str, next: str}} # Ok
+@errors {400: Bad request, 403: Forbidden}
+
+@endpoint GET /v2/apps/{appId}
+@desc Get App
+@returns(200) {app: any} # Ok
+@errors {404: Not found}
+
+@endpoint PATCH /v2/apps/{appId}
+@desc Update App
+@optional {displayName: any # The friendly name of the app., settings: map{conversationRetentionSeconds: int, maskCreditCardNumbers: bool, useAnimalNames: bool, echoPostback: bool, ignoreAutoConversationStart: bool, multiConvoEnabled: bool, appLocalizationEnabled: bool, endSessionEnabled: bool, disableConversationReopen: bool} # Customizable app settings., metadata: map # Flat object containing custom properties. Strings, numbers and booleans  are the only supported format that can be passed to metadata. The metadata is limited to 4KB in size.}
+@returns(200) {app: any} # Ok
+@errors {400: Bad request, 404: Not found}
+
+@endpoint DELETE /v2/apps/{appId}
+@desc Delete App
+@returns(200) Ok
+@errors {404: Not found}
+
+@endpoint POST /v2/apps/{appId}/keys
+@desc Create App Key
+@required {displayName: any # The name of the API key.}
+@returns(201) {key: any} # Created
+
+@endpoint GET /v2/apps/{appId}/keys
+@desc List App Keys
+@returns(200) {keys: [map]} # Ok
+
+@endpoint GET /v2/apps/{appId}/keys/{keyId}
+@desc Get App Key
+@returns(200) {key: any} # Ok
+@errors {404: Not found}
+
+@endpoint DELETE /v2/apps/{appId}/keys/{keyId}
+@desc Delete App Key
+@returns(200) Ok
+@errors {404: Not found}
+
+@endpoint POST /v2/apps/{appId}/attachments
+@desc Upload Attachment
+@returns(201) {attachment: any} # Created
+@errors {400: Bad request}
+
+@endpoint POST /v2/apps/{appId}/attachments/remove
+@desc Delete Attachment
+@required {mediaUrl: str # The media URL used for a file or image message.}
+@returns(200) Ok
+@errors {400: Bad request, 404: Not found}
+
+@endpoint POST /v2/apps/{appId}/conversations
+@desc Create Conversation
+@required {type: str(personal/sdkGroup) # The type of the conversation.}
+@optional {participants: [any] # The users participating in the conversation. For `personal` conversations, this field is required with a length of exactly 1. For `sdkGroup` conversations, must have a length less than or equal to 10. Can be omitted to have a conversation with no participants if the type is `sdkGroup`., displayName: any # A friendly name for the conversation, may be displayed to the business or the user., description: str # A short text describing the conversation., iconUrl: str(uri) # A custom conversation icon url. The image must be in either JPG, PNG, or GIF format, metadata: map # Flat object containing custom properties. Strings, numbers and booleans  are the only supported format that can be passed to metadata. The metadata is limited to 4KB in size.}
+@returns(201) {conversation: any} # Created
+@errors {404: Not found}
+
+@endpoint GET /v2/apps/{appId}/conversations
+@desc List Conversations
+@required {filter: map # Contains parameters for filtering the results.}
+@optional {page: map # Contains parameters for applying cursor pagination.}
+@returns(200) {conversations: [any], meta: map{hasMore: bool, afterCursor: str, beforeCursor: str}, links: map{prev: str, next: str}} # Ok
+@errors {400: Bad request, 404: Not found}
+
+@endpoint GET /v2/apps/{appId}/conversations/{conversationId}
+@desc Get Conversation
+@returns(200) {conversation: any} # Ok
+@errors {404: Not found}
+
+@endpoint PATCH /v2/apps/{appId}/conversations/{conversationId}
+@desc Update Conversation
+@optional {displayName: any # A friendly name for the conversation, may be displayed to the business or the user., description: str # A short text describing the conversation., iconUrl: str(uri) # A custom conversation icon url. The image must be in either JPG, PNG, or GIF format, metadata: map # Flat object containing custom properties. Strings, numbers and booleans  are the only supported format that can be passed to metadata. The metadata is limited to 4KB in size.}
+@returns(200) {conversation: any} # Ok
+@errors {404: Not found}
+
+@endpoint DELETE /v2/apps/{appId}/conversations/{conversationId}
+@desc Delete Conversation
+@returns(200) Ok
+@errors {400: Bad request, 404: Not found}
+
+@endpoint POST /v2/apps/{appId}/conversations/{conversationId}/join
+@desc Join Conversation
+@returns(201) {participant: map{id: str, userId: str, unreadCount: int, clientAssociations: [map], userExternalId: str?, lastRead: str?}} # Created
+@errors {400: Bad request, 404: Not found}
+@example_request {"userId":"67a11490f0305f4a391e9f8a","subscribeSDKClient":true}
+
+@endpoint GET /v2/apps/{appId}/conversations/{conversationId}/participants
+@desc List Participants
+@optional {page: map # Contains parameters for applying cursor pagination.}
+@returns(200) {participants: [map], meta: map{hasMore: bool, afterCursor: str, beforeCursor: str}, links: map{prev: str, next: str}} # Ok
+@errors {400: Bad request, 404: Not found}
+
+@endpoint POST /v2/apps/{appId}/conversations/{conversationId}/leave
+@desc Leave Conversation
+@returns(200) Ok
+@errors {404: Not found}
+@example_request {"userId":"67a11490f0305f4a391e9f8a"}
+
+@endpoint POST /v2/apps/{appId}/conversations/{conversationId}/messages
+@desc Post Message
+@required {author: any # The author of the message., content: any # The content of the message.}
+@optional {destination: any # The destination of the message, in the case of [channel targeting](https://developer.zendesk.com/documentation/conversations/messaging-platform/programmable-conversations/sending-messages/#targeting-a-specific-channel) or sending [silent messages](https://developer.zendesk.com/documentation/conversations/messaging-platform/programmable-conversations/sending-messages/#silent-messages). Only applicable if the author role is `business` and the conversation is of type `personal`., metadata: map # Flat object containing custom properties. Strings, numbers and booleans  are the only supported format that can be passed to metadata. The metadata is limited to 4KB in size., override: any # A raw payload containing a message that is sent directly to a channel. See [message overrides](https://developer.zendesk.com/documentation/conversations/messaging-platform/programmable-conversations/message-overrides/) for more information., schema: str # When `schema` is set to `"whatsapp"`, the `content` key is expected to conform to the [native WhatsApp schema](https://developers.facebook.com/docs/whatsapp/api/messages/message-templates) for sending message templates. For more details, consult the documentation for [sending message templates on WhatsApp](https://developer.zendesk.com/documentation/conversations/messaging-platform/programmable-conversations/message-overrides/#template-messages).}
+@returns(201) {messages: [map]} # Created
+@errors {423: Message limit reached <aside class="notice"><strong>Note:</strong> To learn more about the conversation message limit, consult the section in the introduction linked <a href="#section/Introduction/Conversation-Size-Limits">here</a>.</aside>}
+@example_request {"author":{"type":"business"},"content":{"type":"text","text":"Hello!"}}
+
+@endpoint GET /v2/apps/{appId}/conversations/{conversationId}/messages
+@desc List Messages
+@optional {page: map # Contains parameters for applying cursor pagination.}
+@returns(200) {messages: [map], meta: map{hasMore: bool, afterCursor: str, beforeCursor: str}, links: map{prev: str, next: str}} # Ok
+@errors {404: Not found}
+
+@endpoint DELETE /v2/apps/{appId}/conversations/{conversationId}/messages
+@desc Delete All Messages
+@returns(200) Ok
+@errors {404: Not found}
+
+@endpoint DELETE /v2/apps/{appId}/conversations/{conversationId}/messages/{messageId}
+@desc Delete Message
+@returns(200) Ok
+@errors {404: Not found}
+
+@endpoint POST /v2/apps/{appId}/conversations/{conversationId}/activity
+@desc Post Activity
+@returns(200) Ok
+@example_request {"author":{"type":"user","userId":"5963c0d619a30a2e00de36b8"},"type":"conversation:read"}
+
+@endpoint POST /v2/apps/{appId}/conversations/{conversationId}/acceptControl
+@desc Accept Control
+@optional {metadata: any # Flat object containing custom properties. Strings, numbers and booleans are the only supported format that can be passed to metadata. The metadata is limited to 4KB in size. The metadata object will be included in the `switchboard:acceptControl` and `switchboard:acceptControl:failure` webhooks.}
+@returns(200) Ok
+@errors {403: Forbidden, 404: Not found}
+
+@endpoint POST /v2/apps/{appId}/conversations/{conversationId}/offerControl
+@desc Offer Control
+@required {switchboardIntegration: str # The id or the name of the switchboard integration that will become pending. Also supports the `next` keyword to offer control to the next switchboard integration designated in the switchboard hierarchy configuration. This cannot match the active switchboard integration.}
+@optional {metadata: any # Flat object containing custom properties. Strings, numbers and booleans are the only supported format that can be passed to metadata. The metadata is limited to 4KB in size. The metadata object will be included in the `switchboard:offerControl` and `switchboard:offerControl:failure` webhooks.}
+@returns(200) Ok
+@errors {404: Not found}
+
+@endpoint POST /v2/apps/{appId}/conversations/{conversationId}/passControl
+@desc Pass Control
+@required {switchboardIntegration: str # The id or the name of the switchboard integration that will become active. May also use the `next` keyword to transfer control to the next switchboard integration designated in the switchboard hierarchy configuration}
+@optional {metadata: any # Flat object containing custom properties. Strings, numbers and booleans are the only supported format that can be passed to metadata. The metadata is limited to 4KB in size. The metadata object will be included in the `switchboard:passControl` webhook.}
+@returns(200) Ok
+@errors {404: Not found}
+
+@endpoint POST /v2/apps/{appId}/conversations/{conversationId}/releaseControl
+@desc Release Control
+@optional {metadata: any # Flat object containing custom properties. Strings, numbers and booleans are the only supported format that can be passed to metadata. The metadata is limited to 4KB in size. The metadata object will be included in the `switchboard:releaseControl` webhook.}
+@returns(200) Ok
+@errors {403: Forbidden, 404: Not found}
+
+@endpoint POST /v2/apps/{appId}/conversations/{conversationId}/download
+@desc Download Message Ref
+@returns(200) Ok
+@example_request {"userId":"6e416caac6a5e9544e3fb6d7","apple":{"interactiveDataRef":{"url":"https://p61-content.icloud.com/M58C0A1A2EB62B6E899B4F28996E8DA229E1914295299C39944B2F2CA7482AE50.C01USN00","bid":"com.apple.messages.MSMessageExtensionBalloonPlugin:0000000000:com.apple.icloud.apps.messages.business.extension","key":"00c0d1827fdc858fe7b42421de1fb289c2ee0a9463d787ce4f118506f970bd6e38","signature":"81a619c81da5a01c6139219a5d20e17430c631e1eb","owner":"M58C0A2A1EB62B4E859B4F28996E8DA229E1914295299C39944B2F2CA7482AE50.C01USN00"}}}
+
+@endpoint POST /v2/apps/{appId}/conversations/{conversationId}/conversionEvents
+@desc Post Conversion Events
+@returns(200) {conversionEvents: map{datasetId: str, eventsReceived: int}} # Ok
+@example_request {"instagram":{"payload":{"data":[{"action_source":"business_messaging","event_name":"TestEvent","event_time":1752161233,"messaging_channel":"instagram"}]}}}
+
+@endpoint POST /v2/apps/{appId}/integrations
+@desc Create Integration
+@required {type: str}
+@optional {id: str # The unique ID of the integration., status: str(inactive/active/error) # The status of the integration., displayName: str # A human-friendly name used to identify the integration.}
+@returns(201) Created
+@errors {400: Bad request}
+
+@endpoint GET /v2/apps/{appId}/integrations
+@desc List Integrations
+@optional {page: map # Contains parameters for applying cursor pagination., filter: map # Contains parameters for filtering the results.}
+@returns(200) {integrations: [map], meta: map{hasMore: bool, afterCursor: str, beforeCursor: str}, links: map{prev: str, next: str}} # Ok
+@errors {400: Bad request}
+
+@endpoint GET /v2/apps/{appId}/integrations/{integrationId}
+@desc Get Integration
+@returns(200) Ok
+@errors {404: Not found}
+
+@endpoint PATCH /v2/apps/{appId}/integrations/{integrationId}
+@desc Update Integration
+@returns(200) Ok
+@errors {404: Not found}
+@example_request {"displayName":"My Test Integration"}
+
+@endpoint DELETE /v2/apps/{appId}/integrations/{integrationId}
+@desc Delete Integration
+@returns(200) Ok
+@errors {400: Bad request, 404: Not found}
+
+@endpoint POST /v2/apps/{appId}/integrations/{integrationId}/keys
+@desc Create Integration Key
+@required {displayName: str # The name of the API key.}
+@returns(201) {key: map{id: str, displayName: any, secret: str}} # Created
+
+@endpoint GET /v2/apps/{appId}/integrations/{integrationId}/keys
+@desc List Integration Keys
+@returns(200) {keys: [map]} # Ok
+@errors {400: Bad request}
+
+@endpoint GET /v2/apps/{appId}/integrations/{integrationId}/keys/{keyId}
+@desc Get Integration Key
+@returns(200) {key: map{id: str, displayName: any, secret: str}} # Ok
+
+@endpoint DELETE /v2/apps/{appId}/integrations/{integrationId}/keys/{keyId}
+@desc Delete Integration Key
+@returns(200) Ok
+
+@endpoint POST /v2/apps/{appId}/integrations/{integrationId}/webhooks
+@desc Create Webhook
+@returns(201) {webhook: any} # Created
+@errors {400: Bad request, 403: Forbidden, 404: Not found}
+
+@endpoint GET /v2/apps/{appId}/integrations/{integrationId}/webhooks
+@desc List Webhooks
+@returns(200) {webhooks: [map]} # Ok
+@errors {403: Forbidden, 404: Not found}
+
+@endpoint GET /v2/apps/{appId}/integrations/{integrationId}/webhooks/{webhookId}
+@desc Get Webhook
+@returns(200) {webhook: any} # Ok
+@errors {404: Not found}
+
+@endpoint PATCH /v2/apps/{appId}/integrations/{integrationId}/webhooks/{webhookId}
+@desc Update Webhook
+@optional {target: str # URL to be called when the webhook is triggered., triggers: [str] # An array of triggers the integration is subscribed to. This property is case sensitive. [More details](https://developer.zendesk.com/api-reference/conversations/#section/Webhook-Triggers)., includeFullUser: bool=false # A boolean specifying whether webhook payloads should include the complete user schema for events involving a specific user., includeFullSource: bool=false # A boolean specifying whether webhook payloads should include the client and device object (when applicable).}
+@returns(200) {webhook: any} # Ok
+@errors {400: Bad request, 404: Not found}
+
+@endpoint DELETE /v2/apps/{appId}/integrations/{integrationId}/webhooks/{webhookId}
+@desc Delete Webhook
+@returns(200) Ok
+@errors {404: Not found}
+
+@endpoint POST /v2/apps/{appId}/switchboards
+@desc Create Switchboard
+@returns(201) {switchboard: any} # Created
+@errors {400: Bad request, 404: Not found}
+
+@endpoint GET /v2/apps/{appId}/switchboards
+@desc List Switchboards
+@returns(200) {switchboards: [map]} # Ok
+@errors {404: Not found}
+
+@endpoint PATCH /v2/apps/{appId}/switchboards/{switchboardId}
+@desc Update Switchboard
+@optional {enabled: bool # Whether the switchboard is enabled. Allows creating the switchboard in a disabled state so that messages don't get lost or misrouted during switchboard configuration. When a switchboard is disabled, integrations linked to the switchboard will receive all events., defaultSwitchboardIntegrationId: str # The id of the switchboard integration that will be given control when a new conversation begins. It will also be used for conversations that existed before the switchboard was enabled. In some cases, the `defaultResponderId` of a specific integration will take precedence over this field. For more information, refer to the <a href="https://developer.zendesk.com/documentation/conversations/messaging-platform/programmable-conversations/switchboard/#default-integration-assignment">Switchboard guide</a>.}
+@returns(200) {switchboard: any} # Ok
+@errors {404: Not found}
+
+@endpoint DELETE /v2/apps/{appId}/switchboards/{switchboardId}
+@desc Delete Switchboard
+@returns(200) Ok
+@errors {404: Not found}
+
+@endpoint POST /v2/apps/{appId}/switchboards/{switchboardId}/switchboardIntegrations
+@desc Create Switchboard Integration
+@required {name: str # Identifier for use in control transfer protocols. Restricted to alphanumeric characters, `-` and `_`.}
+@optional {integrationId: any # The id of the integration to link to the switchboard integration. Must be used when linking a custom integration. One of `integrationId` or `integrationType` must be provided., integrationType: any # The type of the integration to link to the switchboard integration. Must be used when linking an OAuth integration. One of `integrationId` or `integrationType` must be provided., deliverStandbyEvents: any=true, nextSwitchboardIntegrationId: str # The switchboard integration id to which control of a conversation is passed / offered by default., messageHistoryCount: int # Number of messages to include in the message history context.}
+@returns(201) {switchboardIntegration: any} # Created
+@errors {400: Bad request, 404: Not found}
+@example_request {"name":"bot","integrationType":"zd:agentWorkspace","deliverStandbyEvents":true,"nextSwitchboardIntegrationId":"5ef21b86e933b7355c11c606","messageHistoryCount":5}
+
+@endpoint GET /v2/apps/{appId}/switchboards/{switchboardId}/switchboardIntegrations
+@desc List Switchboard Integrations
+@returns(200) {switchboardIntegrations: [map]} # Ok
+@errors {404: Not found}
+
+@endpoint PATCH /v2/apps/{appId}/switchboards/{switchboardId}/switchboardIntegrations/{switchboardIntegrationId}
+@desc Update Switchboard Integration
+@optional {name: str # Identifier for use in control transfer protocols. Restricted to alphanumeric characters, `-` and `_`., integrationId: any # The id of the integration to link to the switchboard integration. Must be used when linking a custom integration. Can't provide both `integrationId` and `integrationType`., integrationType: any # The type of the integration to link to the switchboard integration. Must be used when linking an OAuth integration. Can't provide both `integrationId` and `integrationType`., deliverStandbyEvents: bool # Setting to determine if webhooks should be sent when the switchboard integration is not in control of a conversation (standby status), nextSwitchboardIntegrationId: str # The switchboard integration id to which control of a conversation is passed / offered by default., messageHistoryCount: int # Number of messages to include in the message history context.}
+@returns(200) {switchboardIntegration: any} # Ok
+@errors {404: Not found}
+@example_request {"deliverStandbyEvents":true,"nextSwitchboardIntegrationId":"5ef21b86e933b7355c11c606","messageHistoryCount":5}
+
+@endpoint DELETE /v2/apps/{appId}/switchboards/{switchboardId}/switchboardIntegrations/{switchboardIntegrationId}
+@desc Delete Switchboard Integration
+@returns(200) Ok
+@errors {404: Not found}
+
+@endpoint POST /v2/apps/{appId}/users
+@desc Create User
+@required {externalId: str # A unique identifier for the user. The `externalId` can be used to link a user to the same conversation [across multiple devices](https://developer.zendesk.com/documentation/conversations/messaging-platform/users/authenticating-users/).}
+@optional {signedUpAt: str # The date at which the user signed up. Must be ISO 8601 time format `YYYY-MM-DDThh:mm:ss.sssZ`., toBeRetained: bool # Flag indicating whether a user should be retained after they have passed their inactive expiry. See [creating deletion schedules for bot-only conversations](https://support.zendesk.com/hc/en-us/articles/8499219792154) for more information., profile: map{givenName: str, surname: str, email: str(email), avatarUrl: str(uri), locale: str} # Object hosting user profile information., metadata: map # Flat object containing custom properties. Strings, numbers and booleans  are the only supported format that can be passed to metadata. The metadata is limited to 4KB in size.}
+@returns(201) {user: any} # Created
+@errors {409: Conflict}
+
+@endpoint GET /v2/apps/{appId}/users
+@desc List Users
+@required {filter: map # Contains parameters for filtering the results.}
+@returns(200) {users: [any]} # OK
+
+@endpoint GET /v2/apps/{appId}/users/{userIdOrExternalId}
+@desc Get User
+@returns(200) {user: any} # Ok
+@errors {404: Not found}
+
+@endpoint PATCH /v2/apps/{appId}/users/{userIdOrExternalId}
+@desc Update User
+@optional {signedUpAt: any, toBeRetained: any, profile: any, metadata: map # Flat object containing custom properties. Strings, numbers and booleans  are the only supported format that can be passed to metadata. The metadata is limited to 4KB in size.}
+@returns(200) {user: any} # Ok
+@errors {404: Not found}
+
+@endpoint DELETE /v2/apps/{appId}/users/{userIdOrExternalId}
+@desc Delete User
+@returns(200) Ok
+@errors {404: Not found}
+
+@endpoint POST /v2/apps/{appId}/users/{userIdOrExternalId}/clients
+@desc Create Client
+@required {matchCriteria: any # The set of criteria used to determine the user's identity on a third-party channel., confirmation: map{type!: str, message: any} # The confirmation options of the link request., target: map{conversationId!: str} # The target conversation to attach the client to.}
+@returns(201) {client: map{id: str, type: str, status: str, integrationId: str?, externalId: str?, lastSeen: str?, linkedAt: str?, displayName: str?, avatarUrl: str(uri)?, info: map?, raw: map?}} # Created
+@example_request {"matchCriteria":{"type":"whatsapp","integrationId":"582dedf230e788746891281a","primary":true,"phoneNumber":"+1 212-555-2368"},"confirmation":{"type":"immediate"},"target":{"conversationId":"029c31f25a21b47effd7be90"}}
+
+@endpoint GET /v2/apps/{appId}/users/{userIdOrExternalId}/clients
+@desc List Clients
+@optional {page: map # Contains parameters for applying cursor pagination.}
+@returns(200) {clients: [map], meta: map{hasMore: bool, afterCursor: str, beforeCursor: str}, links: map{prev: str, next: str}} # Ok
+@errors {400: Bad request}
+
+@endpoint DELETE /v2/apps/{appId}/users/{userIdOrExternalId}/clients/{clientId}
+@desc Remove Client
+@returns(200) Ok
+@errors {400: Bad request, 404: Not found}
+
+@endpoint GET /v2/apps/{appId}/users/{userIdOrExternalId}/devices
+@desc List Devices
+@returns(200) {devices: [map]} # Ok
+
+@endpoint GET /v2/apps/{appId}/users/{userIdOrExternalId}/devices/{deviceId}
+@desc Get Device
+@returns(200) {device: any} # Ok
+@errors {404: Not found}
+
+@endpoint DELETE /v2/apps/{appId}/users/{userIdOrExternalId}/personalinformation
+@desc Delete User Personal Information
+@returns(200) {user: any} # Ok
+@errors {404: Not found}
+
+@endpoint POST /v2/apps/{appId}/users/{zendeskId}/sync
+@desc Synchronize User
+@optional {survivingZendeskId: str # Only used for synchronizing messaging users when their Support user counterparts have been merged. The user.id of the surviving Support user is specified here.}
+@returns(200) {user: any} # Ok
+
+@endgroup
+
+@group tokenInfo
+@endpoint GET /v2/tokenInfo
+@desc Get Token Info
+@returns(200) {app: any} # Ok
+
+@endgroup
+
+@group oauth
+@endpoint GET /oauth/authorize
+@desc Authorize
+@required {client_id: str # Your integration’s unique identifier, response_type: str # For now the only acceptable value is code.}
+@optional {state: str # You may pass in any arbitrary string value here which will be returned to you along with the code via browser redirect., redirect_uri: str # You may pass in a redirect_uri to determine which URI the response is redirected to. This URI must be contained in the list configured by your integration. If this option is not passed, the first URI present in the list will be used.}
+@errors {302: Found}
+
+@endpoint POST /oauth/token
+@desc Get Token
+@required {code: str # The authorization code received via the OAuth flow, grant_type: str # Must be set to the string `authorization_code`, client_id: str # Your OAuth client ID, provisioned during the partner application process, client_secret: str # Your OAuth client secret, provisioned during the partner application process}
+@returns(200) {access_token: str, token_type: str} # Ok
+
+@endpoint DELETE /oauth/authorization
+@desc Revoke Access
+@returns(200) Ok
+
+@endgroup
+
+@end

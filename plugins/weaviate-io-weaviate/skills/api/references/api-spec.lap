@@ -1,0 +1,693 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Weaviate REST API
+@version 1.37.0-dev
+@auth OAuth2
+@endpoints 101
+@hint download_for_search
+@toc root(1), .well-known(3), replication(10), users(8), authz(18), objects(19), batch(3), graphql(2), meta(1), schema(15), aliases(5), backups(7), export(3), cluster(1), nodes(2), tasks(1), classifications(2)
+
+@group root
+@endpoint GET /
+@desc List available endpoints
+@returns(200) Weaviate is alive and ready.
+
+@endgroup
+
+@group .well-known
+@endpoint GET /.well-known/live
+@desc Check application liveness
+@returns(200) The application is alive and responding to HTTP requests.
+
+@endpoint GET /.well-known/ready
+@desc Check application readiness
+@returns(200) The application is ready to serve traffic.
+@errors {503: The application is not ready to serve traffic. Traffic should be directed to other available replicas if applicable.}
+
+@endpoint GET /.well-known/openid-configuration
+@desc Get OIDC configuration
+@returns(200) OIDC configuration details returned successfully.
+@errors {404: OIDC provider is not configured for this Weaviate instance., 500: An internal server error occurred while retrieving OIDC configuration. Check the ErrorResponse for details.}
+
+@endgroup
+
+@group replication
+@endpoint POST /replication/replicate
+@desc Initiate a replica movement
+@required {body: map}
+@returns(200) Replication operation registered successfully. ID of the operation is returned.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error., 501: Replica movement operations are disabled.}
+
+@endpoint DELETE /replication/replicate
+@desc Delete all replication operations
+@returns(204) Replication operation registered successfully
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error., 501: Replica movement operations are disabled.}
+
+@endpoint POST /replication/replicate/force-delete
+@desc Force delete replication operations
+@optional {body: map}
+@returns(200) Replication operations force deleted successfully.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint GET /replication/replicate/{id}
+@desc Retrieve a replication operation
+@required {id: any # The ID of the replication operation to get details for.}
+@optional {includeHistory: any # Whether to include the history of the replication operation.}
+@returns(200) The details of the replication operation.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden., 404: Shard replica operation not found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error., 501: Replica movement operations are disabled.}
+
+@endpoint DELETE /replication/replicate/{id}
+@desc Delete a replication operation
+@required {id: any # The ID of the replication operation to delete.}
+@returns(204) Successfully deleted.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden., 404: Shard replica operation not found., 409: The operation is not in a deletable state, e.g. it is a MOVE op in the DEHYDRATING state., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error., 501: Replica movement operations are disabled.}
+
+@endpoint GET /replication/replicate/list
+@desc List replication operations
+@optional {targetNode: any # The name of the target node to get details for., collection: any # The name of the collection to get details for., shard: any # The shard to get details for., includeHistory: any # Whether to include the history of the replication operation.}
+@returns(200) The details of the replication operations.
+@errors {400: Bad request., 401: Unauthorized or invalid credentials., 403: Forbidden, 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error., 501: Replica movement operations are disabled.}
+
+@endpoint POST /replication/replicate/{id}/cancel
+@desc Cancel a replication operation
+@required {id: any # The ID of the replication operation to cancel.}
+@returns(204) Successfully cancelled.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Shard replica operation not found., 409: The operation is not in a cancellable state, e.g. it is READY or is a MOVE op in the DEHYDRATING state., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error., 501: Replica movement operations are disabled.}
+
+@endpoint GET /replication/sharding-state
+@desc Get sharding state
+@optional {collection: any # The collection name to get the sharding state for., shard: any # The shard to get the sharding state for.}
+@returns(200) Successfully retrieved sharding state.
+@errors {400: Bad request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Collection or shard not found., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error., 501: Replica movement operations are disabled.}
+
+@endpoint GET /replication/scale
+@desc Get replication scale plan
+@required {collection: any # The collection name to get the scaling plan for., replicationFactor: any # The desired replication factor to scale to. Must be a positive integer greater than zero.}
+@returns(200) Replication scale plan showing node additions and removals per shard.
+@errors {400: Bad request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Collection not found., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error., 501: Replica movement operations are disabled.}
+
+@endpoint POST /replication/scale
+@desc Apply replication scaling plan
+@required {body: map # The replication scaling plan specifying the collection and its shard-level replica adjustments.}
+@returns(200) List of replication shard copy operation IDs initiated for the scale operation
+@errors {400: Bad request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Collection not found., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error., 501: Replica movement operations are disabled.}
+
+@endgroup
+
+@group users
+@endpoint GET /users/own-info
+@desc Get current user info
+@returns(200) Info about the user.
+@errors {401: Unauthorized or invalid credentials., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error., 501: Replica movement operations are disabled.}
+
+@endpoint GET /users/db
+@desc List all users
+@optional {includeLastUsedTime: any # Whether to include the last time the users were utilized.}
+@returns(200) Info about the users.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint GET /users/db/{user_id}
+@desc Get user info
+@required {user_id: any # The name of the user.}
+@optional {includeLastUsedTime: any # Whether to include the last used time of the given user}
+@returns(200) Info about the user.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: User not found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint POST /users/db/{user_id}
+@desc Create a new user
+@required {user_id: any # The name of the user.}
+@optional {body: map}
+@returns(201) User created successfully and API key returned.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: User not found., 409: A user with the specified name already exists., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint DELETE /users/db/{user_id}
+@desc Delete a user
+@required {user_id: any # The name of the user.}
+@returns(204) Successfully deleted.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: User not found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint POST /users/db/{user_id}/rotate-key
+@desc Rotate API key of a user
+@required {user_id: any # The name of the user.}
+@returns(200) API key successfully updated.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: User not found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint POST /users/db/{user_id}/activate
+@desc Activate a user
+@required {user_id: any # The name of the user.}
+@returns(200) User successfully activated.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: User not found., 409: User already activated., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint POST /users/db/{user_id}/deactivate
+@desc Deactivate a user
+@required {user_id: any # The name of the user.}
+@optional {body: map}
+@returns(200) User successfully deactivated.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: User not found., 409: User already deactivated., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endgroup
+
+@group authz
+@endpoint GET /authz/roles
+@desc Get all roles
+@returns(200) Successful response.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint POST /authz/roles
+@desc Create new role
+@required {body: map}
+@returns(201) Role created successfully.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 409: Role already exists., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint POST /authz/roles/{id}/add-permissions
+@desc Add permissions to a role
+@required {id: any # The name (ID) of the role being modified., body: map}
+@returns(200) Permissions added successfully.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: No role found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint POST /authz/roles/{id}/remove-permissions
+@desc Remove permissions from a role
+@required {id: any # The name of the role being modified., body: map}
+@returns(200) Permissions removed successfully.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: No role found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint GET /authz/roles/{id}
+@desc Get a role
+@required {id: any # The name of the role.}
+@returns(200) Successful response.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: No role found., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint DELETE /authz/roles/{id}
+@desc Delete a role
+@required {id: any # The name of the role.}
+@returns(204) Successfully deleted.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint POST /authz/roles/{id}/has-permission
+@desc Check whether a role possesses a permission
+@required {id: any # The name of the role., body: map # The permissions to be checked.}
+@returns(200) Permission check was successful.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint GET /authz/roles/{id}/users
+@desc Get users assigned to a role
+@required {id: any # The name of the role.}
+@returns(200) Users assigned to this role.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: No role found., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint GET /authz/roles/{id}/user-assignments
+@desc Get users assigned to a role
+@required {id: any # The name (ID) of the role.}
+@returns(200) Users assigned to this role.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: No role found., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint GET /authz/roles/{id}/group-assignments
+@desc Get groups that have a specific role assigned
+@required {id: any # The unique name of the role.}
+@returns(200) Successfully retrieved the list of groups that have the role assigned.
+@errors {400: Bad request, 401: Unauthorized or invalid credentials., 403: Forbidden, 404: The specified role was not found., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint GET /authz/users/{id}/roles
+@desc Get roles assigned to a user
+@required {id: any # The name of the user.}
+@returns(200) Roles assigned to the user.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: No roles found for specified user., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint GET /authz/users/{id}/roles/{userType}
+@desc Get roles assigned to a user
+@required {id: any # The name of the user., userType: any # The type of the user.}
+@optional {includeFullRoles: any # Whether to include detailed role information like its assigned permissions.}
+@returns(200) Roles assigned to the user.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: No roles found for specified user., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint POST /authz/users/{id}/assign
+@desc Assign a role to a user
+@required {id: any # The name of the user., body: map}
+@returns(200) Role assigned successfully.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Specified role or user not found., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint POST /authz/users/{id}/revoke
+@desc Revoke a role from a user
+@required {id: any # The name of the user., body: map}
+@returns(200) Roles revoked successfully.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Specified role or user not found., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint POST /authz/groups/{id}/assign
+@desc Assign a role to a group
+@required {id: any # The name of the group., body: map}
+@returns(200) Roles assigned successfully.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Role or group not found., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint POST /authz/groups/{id}/revoke
+@desc Revoke a role from a group
+@required {id: any # The name of the group., body: map}
+@returns(200) Roles revoked successfully.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Role or group not found., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint GET /authz/groups/{id}/roles/{groupType}
+@desc Get roles assigned to a specific group
+@required {id: any # The unique name of the group., groupType: any # The type of the group.}
+@optional {includeFullRoles: any # If true, the response will include the full role definitions with all associated permissions. If false, only role names are returned.}
+@returns(200) A list of roles assigned to the specified group.
+@errors {400: Bad request, 401: Unauthorized or invalid credentials., 403: Forbidden, 404: The specified group was not found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint GET /authz/groups/{groupType}
+@desc List all groups of a specific type
+@required {groupType: any # The type of group to retrieve.}
+@returns(200) A list of group names for the specified type.
+@errors {400: Bad request, 401: Unauthorized or invalid credentials., 403: Forbidden, 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endgroup
+
+@group objects
+@endpoint GET /objects
+@desc List objects
+@optional {after: any # A threshold UUID of the objects to retrieve after, using an UUID-based ordering. This object is not part of the set. <br/><br/>Must be used with collection name (`class`), typically in conjunction with `limit`. <br/><br/>Note `after` cannot be used with `offset` or `sort`. <br/><br/>For a null value similar to offset=0, set an empty string in the request, i.e. `after=` or `after`., offset: any # The starting index of the result window. Note `offset` will retrieve `offset+limit` results and return `limit` results from the object with index `offset` onwards. Limited by the value of `QUERY_MAXIMUM_RESULTS`. <br/><br/>Should be used in conjunction with `limit`. <br/><br/>Cannot be used with `after`., limit: any # The maximum number of items to be returned per page. The default is 25 unless set otherwise as an environment variable., include: any # Include additional information, such as classification information. Allowed values include: `classification`, `vector` and `interpretation`., sort: any # Name(s) of the property to sort by - e.g. `city`, or `country,city`., order: any # Order parameter to tell how to order (asc or desc) data within given field. Should be used in conjunction with `sort` parameter. If providing multiple `sort` values, provide multiple `order` values in corresponding order, e.g.: `sort=author_name,title&order=desc,asc`., class: any # The collection from which to query objects.  <br/><br/>Note that if the collection name (`class`) is not provided, the response will not include any objects., tenant: any # Specifies the tenant in a request targeting a multi-tenant collection (class).}
+@returns(200) Successful response containing the list of objects. If the collection name (`class`) is not provided, the response will not include any objects.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Successful query result but no matching objects were found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request. Ensure the specified collection exists., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint POST /objects
+@desc Create an object
+@required {body: map # The object to be created.}
+@optional {consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful.}
+@returns(200) Object created successfully.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request. Ensure the collection exists and the object properties are valid., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint DELETE /objects/{id}
+@desc Delete an object
+@required {id: any # Unique UUID of the object to be deleted.}
+@optional {consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful., tenant: any # Specifies the tenant in a request targeting a multi-tenant collection (class).}
+@returns(204) Object deleted successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Object not found., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint GET /objects/{id}
+@desc Get an object
+@required {id: any # Unique UUID of the object to be retrieved.}
+@optional {include: any # Include additional information, such as classification information. Allowed values include: `classification`, `vector` and `interpretation`.}
+@returns(200) Successful response containing the object.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Object not found., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint PATCH /objects/{id}
+@desc Patch an object
+@required {id: any # Unique UUID of the object to be patched.}
+@optional {body: map # RFC 7396-style JSON merge patch object containing the fields to update., consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful.}
+@returns(204) Object patched successfully.
+@errors {400: Malformed patch request body., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Object not found., 422: The patch object is valid JSON but is unprocessable for other reasons (e.g., invalid schema)., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint PUT /objects/{id}
+@desc Update an object
+@required {id: any # Unique UUID of the object to be replaced., body: map # The object definition to replace the existing object with.}
+@optional {consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful.}
+@returns(200) Object replaced successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Object not found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request. Ensure the collection exists and the object properties are valid., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint HEAD /objects/{id}
+@desc Check if an object exists
+@required {id: any # Unique UUID of the object to check.}
+@returns(204) Object exists.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Object does not exist., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint GET /objects/{className}/{id}
+@desc Get an object
+@required {className: any # Name of the collection (class) the object belongs to., id: any # Unique UUID of the object to be retrieved.}
+@optional {include: any # Include additional information, such as classification information. Allowed values include: `classification`, `vector` and `interpretation`., consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful., node_name: any # The target node which should fulfill the request., tenant: any # Specifies the tenant in a request targeting a multi-tenant collection (class).}
+@returns(200) Successful response containing the object.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Object not found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint DELETE /objects/{className}/{id}
+@desc Delete an object
+@required {className: any # Name of the collection (class) the object belongs to., id: any # Unique UUID of the object to be deleted.}
+@optional {consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful., tenant: any # Specifies the tenant in a request targeting a multi-tenant collection (class).}
+@returns(204) Object deleted successfully.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Object not found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint PUT /objects/{className}/{id}
+@desc Replace an object
+@required {className: any # Name of the collection (class) the object belongs to., id: any # Unique UUID of the object to be replaced., body: map # The object definition to replace the existing object with.}
+@optional {consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful.}
+@returns(200) Object replaced successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Object not found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request. Ensure the collection exists and the object properties are valid., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint PATCH /objects/{className}/{id}
+@desc Patch an object
+@required {className: any # Name of the collection (class) the object belongs to., id: any # Unique UUID of the object to be patched.}
+@optional {body: map # RFC 7396-style JSON merge patch object containing the fields to update., consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful.}
+@returns(204) Object patched successfully.
+@errors {400: Malformed patch request body., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Object not found., 422: The patch object is valid JSON but is unprocessable for other reasons (e.g., invalid schema)., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint HEAD /objects/{className}/{id}
+@desc Check if an object exists
+@required {className: any # Name of the collection (class) the object belongs to., id: any # Unique UUID of the object to check.}
+@optional {consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful., tenant: any # Specifies the tenant in a request targeting a multi-tenant collection (class).}
+@returns(204) Object exists.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Object does not exist., 422: Invalid data provided. Please check the values in your request (e.g., invalid UUID format)., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint POST /objects/{id}/references/{propertyName}
+@desc Add an object reference
+@required {id: any # Unique UUID of the source object., propertyName: any # Unique name of the reference property of the source object., body: any # The reference to add.}
+@optional {tenant: any # Specifies the tenant in a request targeting a multi-tenant collection (class).}
+@returns(200) Reference added successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request. Ensure the property exists and is a reference type., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint PUT /objects/{id}/references/{propertyName}
+@desc Replace object references
+@required {id: any # Unique UUID of the source object., propertyName: any # Unique name of the reference property of the source object., body: [any] # The new list of references.}
+@optional {tenant: any # Specifies the tenant in a request targeting a multi-tenant collection (class).}
+@returns(200) References replaced successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request. Ensure the property exists and is a reference type., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint DELETE /objects/{id}/references/{propertyName}
+@desc Delete an object reference
+@required {id: any # Unique UUID of the source object., propertyName: any # Unique name of the reference property of the source object., body: any # The reference to remove.}
+@optional {tenant: any # Specifies the tenant in a request targeting a multi-tenant collection (class).}
+@returns(204) Reference deleted successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Object or reference not found., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint POST /objects/{className}/{id}/references/{propertyName}
+@desc Add an object reference
+@required {className: any # Name of the collection (class) the source object belongs to., id: any # Unique UUID of the source object., propertyName: any # Unique name of the reference property of the source object., body: any # The reference to add.}
+@optional {consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful., tenant: any # Specifies the tenant in a request targeting a multi-tenant collection (class).}
+@returns(200) Reference added successfully.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Source object not found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request. Ensure the property exists and is a reference type., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint PUT /objects/{className}/{id}/references/{propertyName}
+@desc Replace object references
+@required {className: any # Name of the collection (class) the source object belongs to., id: any # Unique UUID of the source object., propertyName: any # Unique name of the reference property of the source object., body: [any] # The new list of references.}
+@optional {consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful., tenant: any # Specifies the tenant in a request targeting a multi-tenant collection (class).}
+@returns(200) References replaced successfully.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Source object not found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request. Ensure the property exists and is a reference type., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint DELETE /objects/{className}/{id}/references/{propertyName}
+@desc Delete an object reference
+@required {className: any # Name of the collection (class) the source object belongs to., id: any # Unique UUID of the source object., propertyName: any # Unique name of the reference property of the source object., body: any # The reference to remove.}
+@optional {consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful., tenant: any # Specifies the tenant in a request targeting a multi-tenant collection (class).}
+@returns(204) Reference deleted successfully.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 404: Object or reference not found., 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request. Ensure the property exists and is a reference type., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint POST /objects/validate
+@desc Validate an object
+@required {body: map # The object definition to validate.}
+@returns(200) Object is valid according to the schema.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Request body is well-formed but the object is invalid according to the schema., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endgroup
+
+@group batch
+@endpoint POST /batch/objects
+@desc Create objects in batch
+@required {body: map # The request body containing the objects to be created.}
+@optional {consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful.}
+@returns(200) Request processed successfully. Individual object statuses are provided in the response body.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request. Ensure the collection exists and the object properties are valid., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint DELETE /batch/objects
+@desc Delete objects in batch
+@required {body: map # The request body containing the match filter and output configuration.}
+@optional {consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful., tenant: any # Specifies the tenant in a request targeting a multi-tenant collection (class).}
+@returns(200) Request processed successfully. See response body for matching objects and deletion results.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid data provided. Please check the values in your request (e.g., invalid filter)., 500: An error occurred while trying to fulfill the request. Check the ErrorResponse for details.}
+
+@endpoint POST /batch/references
+@desc Create cross-references in bulk
+@required {body: [any] # A list of references to be batched. The ideal size depends on the used database connector. Please see the documentation of the used connector for help.}
+@optional {consistency_level: any # Determines how many replicas must acknowledge a request before it is considered successful.}
+@returns(200) Request Successful. Warning: A successful request does not guarantee that every batched reference was successfully created. Inspect the response body to see which references succeeded and which failed.
+@errors {400: Malformed request., 401: Unauthorized or invalid credentials., 403: Forbidden, 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request. Ensure the collection exists and the object properties are valid., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endgroup
+
+@group graphql
+@endpoint POST /graphql
+@desc Perform a GraphQL query
+@required {body: map # The GraphQL query to execute, including the query string and optional variables.}
+@returns(200) Query executed successfully. The response body contains the query result.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An internal server error occurred during query execution. Check the ErrorResponse for details.}
+
+@endpoint POST /graphql/batch
+@desc Perform batched GraphQL queries
+@required {body: [map] # An array containing multiple GraphQL query objects to execute in batch.}
+@returns(200) Batch request processed successfully. The response body contains an array of results corresponding to the input queries.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: The request syntax is correct, but the server couldn't process it due to semantic issues. Please check the values in your request., 500: An internal server error occurred during batch query execution. Check the ErrorResponse for details.}
+
+@endgroup
+
+@group meta
+@endpoint GET /meta
+@desc Get instance metadata
+@returns(200) Successfully retrieved meta information.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 500: An internal server error occurred while retrieving meta information. Check the ErrorResponse for details.}
+
+@endgroup
+
+@group schema
+@endpoint GET /schema
+@desc Get all collection definitions
+@optional {consistency: any # If true, the request is proxied to the cluster leader to ensure strong schema consistency. Default is true.}
+@returns(200) Successfully retrieved the database schema.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 500: An error occurred while retrieving the schema. Check the ErrorResponse for details.}
+
+@endpoint POST /schema
+@desc Create a new collection
+@required {objectClass: map # The definition of the collection (class) to create.}
+@returns(200) Collection created successfully and its definition returned.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid collection definition provided. Check the definition structure and properties., 500: An error occurred during collection creation. Check the ErrorResponse for details.}
+
+@endpoint GET /schema/{className}
+@desc Get a single collection
+@required {className: any # The name of the collection (class) to retrieve.}
+@optional {consistency: any # If true, the request is proxied to the cluster leader to ensure strong schema consistency. Default is true.}
+@returns(200) Successfully retrieved the collection definition.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Collection not found., 500: An error occurred while retrieving the collection definition. Check the ErrorResponse for details.}
+
+@endpoint DELETE /schema/{className}
+@desc Delete a collection (and all associated data)
+@required {className: any # The name of the collection (class) to delete.}
+@returns(200) Collection deleted successfully.
+@errors {400: Could not delete the collection. See the error response for details., 401: Unauthorized or invalid credentials., 403: Forbidden, 500: An error occurred during collection deletion. Check the ErrorResponse for details.}
+
+@endpoint PUT /schema/{className}
+@desc Update collection definition
+@required {className: any # The name of the collection (class) to update., objectClass: map # The updated collection definition containing the settings to modify.}
+@returns(200) Collection settings updated successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Collection not found., 422: Invalid update attempt., 500: An error occurred while updating the collection. Check the ErrorResponse for details.}
+
+@endpoint POST /schema/{className}/properties
+@desc Add a property to a collection
+@required {className: any # The name of the collection (class) to add the property to., body: map # The definition of the property to add.}
+@returns(200) Property added successfully and its definition returned.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid property definition provided., 500: An error occurred while adding the property. Check the ErrorResponse for details.}
+
+@endpoint DELETE /schema/{className}/properties/{propertyName}/index/{indexName}
+@desc Delete a property's inverted index
+@required {className: any # The name of the collection (class) containing the property., propertyName: any # The name of the property whose inverted index should be deleted., indexName: any # The name of the inverted index to delete from the property.}
+@returns(200) Index deleted successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid index, property or collection provided., 500: An error occurred while deleting the index. Check the ErrorResponse for details.}
+
+@endpoint GET /schema/{className}/shards
+@desc Get the shards status of a collection
+@required {className: any # The name of the collection (class) whose shards to query.}
+@optional {tenant: any # The name of the tenant for which to retrieve shard statuses (only applicable for multi-tenant collections).}
+@returns(200) Shard statuses retrieved successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Collection not found., 500: An error occurred while retrieving shard statuses. Check the ErrorResponse for details.}
+
+@endpoint PUT /schema/{className}/shards/{shardName}
+@desc Update a shard status
+@required {className: any # The name of the collection (class) containing the shard., shardName: any # The name of the shard to update., body: any # The shard status object containing the desired new status.}
+@returns(200) Shard status updated successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Collection or shard not found., 422: Invalid update attempt, 500: An error occurred while updating the shard status. Check the ErrorResponse for details.}
+
+@endpoint POST /schema/{className}/tenants
+@desc Create a new tenant
+@required {className: any # The name of the multi-tenant enabled collection (class)., body: [map] # An array of tenant objects to create.}
+@returns(200) Tenants created successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid request., 500: An error occurred while creating tenants. Check the ErrorResponse for details.}
+
+@endpoint PUT /schema/{className}/tenants
+@desc Update a tenant
+@required {className: any # The name of the collection (class) containing the tenants., body: [map] # An array of tenant objects specifying the tenants to update and their desired new status.}
+@returns(200) Tenant statuses updated successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid update request., 500: An error occurred while updating tenants. Check the ErrorResponse for details.}
+
+@endpoint DELETE /schema/{className}/tenants
+@desc Delete tenants
+@required {className: any # The name of the collection (class) from which to delete tenants., tenants: [str] # An array of tenant names to delete.}
+@returns(200) Tenants deleted successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid request., 500: An error occurred while deleting tenants. Check the ErrorResponse for details.}
+
+@endpoint GET /schema/{className}/tenants
+@desc Get the list of tenants
+@required {className: any # The name of the collection (class) whose tenants to list.}
+@optional {consistency: any # If true, the request is proxied to the cluster leader to ensure strong schema consistency. Default is true.}
+@returns(200) Successfully retrieved tenants.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid request., 500: An error occurred while listing tenants. Check the ErrorResponse for details.}
+
+@endpoint HEAD /schema/{className}/tenants/{tenantName}
+@desc Check if a tenant exists
+@required {className: any # The name of the collection (class) to check within., tenantName: any # The name of the tenant to check for.}
+@optional {consistency: any # If true, the request is proxied to the cluster leader to ensure strong schema consistency. Default is true.}
+@returns(200) The tenant exists in the specified collection.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Tenant or collection not found., 422: Invalid request., 500: An error occurred during the check. Check the ErrorResponse for details.}
+
+@endpoint GET /schema/{className}/tenants/{tenantName}
+@desc Get a specific tenant
+@required {className: any # The name of the collection (class) containing the tenant., tenantName: any # The name of the tenant to retrieve.}
+@optional {consistency: any # If true, the request is proxied to the cluster leader to ensure strong schema consistency. Default is true.}
+@returns(200) Successfully retrieved tenant details.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Tenant or collection not found., 422: Invalid request., 500: An error occurred while retrieving the tenant. Check the ErrorResponse for details.}
+
+@endgroup
+
+@group aliases
+@endpoint GET /aliases
+@desc List aliases
+@optional {class: any # Optional filter to retrieve aliases for a specific collection (class) only. If not provided, returns all aliases.}
+@returns(200) Successfully retrieved the list of aliases
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid collection (class) parameter provided, 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint POST /aliases
+@desc Create a new alias
+@required {body: map}
+@returns(200) Successfully created a new alias for the specified collection (class)
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid create alias request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint GET /aliases/{aliasName}
+@desc Get an alias
+@required {aliasName: any}
+@returns(200) Successfully retrieved the alias details.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Not Found - Alias does not exist, 422: Invalid alias name provided., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint PUT /aliases/{aliasName}
+@desc Update an alias
+@required {aliasName: any, body: map}
+@returns(200) Successfully updated the alias to point to the new collection (class).
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Not Found - Alias does not exist, 422: Invalid update alias request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endpoint DELETE /aliases/{aliasName}
+@desc Delete an alias
+@required {aliasName: any}
+@returns(204) Successfully deleted the alias.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Not Found - Alias does not exist, 422: Invalid delete alias request., 500: An error has occurred while trying to fulfill the request. Most likely the ErrorResponse will contain more information about the error.}
+
+@endgroup
+
+@group backups
+@endpoint POST /backups/{backend}
+@desc Create a backup
+@required {backend: any # Specifies the backend storage system where the backup will be stored (e.g., `filesystem`, `gcs`, `s3`, `azure`)., body: any # Details of the backup request, including the backup ID and collections to include or exclude.}
+@returns(200) Backup creation process initiated successfully. Check the status endpoint for progress.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid backup creation request. Check the request body and backend configuration., 500: An internal server error occurred during backup initiation. Check the ErrorResponse for details.}
+
+@endpoint GET /backups/{backend}
+@desc List all created backups
+@required {backend: any # Specifies the backend storage system to list backups from (e.g., `filesystem`, `gcs`, `s3`, `azure`).}
+@optional {order: any # Order of returned list of backups based on creation time. (asc or desc)}
+@returns(200) Successfully retrieved the list of backups in progress.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid request to list backups., 500: An internal server error occurred while listing backups. Check the ErrorResponse for details.}
+
+@endpoint GET /backups/{backend}/{id}
+@desc Get backup creation status
+@required {backend: any # Specifies the backend storage system where the backup resides (e.g., `filesystem`, `gcs`, `s3`, `azure`)., id: any # The unique identifier of the backup. Must be URL-safe and compatible with filesystem paths (only lowercase, numbers, underscore, minus characters allowed).}
+@optional {bucket: any # Optional: Specifies the bucket, container, or volume name if required by the backend., path: any # Optional: Specifies the path within the bucket/container/volume if the backup is not at the root.}
+@returns(200) Successfully retrieved the status of the backup creation process.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Backup not found on the specified backend with the given ID., 422: Invalid request to check backup creation status., 500: An internal server error occurred while checking backup status. Check the ErrorResponse for details.}
+
+@endpoint DELETE /backups/{backend}/{id}
+@desc Cancel a backup
+@required {backend: any # Specifies the backend storage system where the backup resides (e.g., `filesystem`, `gcs`, `s3`, `azure`)., id: any # The unique identifier of the backup to cancel. Must be URL-safe and compatible with filesystem paths (only lowercase, numbers, underscore, minus characters allowed).}
+@optional {bucket: any # Optional: Specifies the bucket, container, or volume name if required by the backend., path: any # Optional: Specifies the path within the bucket/container/volume if the backup is not at the root.}
+@returns(204) Backup canceled successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid backup cancellation request., 500: An internal server error occurred during backup cancellation. Check the ErrorResponse for details.}
+
+@endpoint POST /backups/{backend}/{id}/restore
+@desc Restore from a backup
+@required {backend: any # Specifies the backend storage system where the backup resides (e.g., `filesystem`, `gcs`, `s3`, `azure`)., id: any # The unique identifier of the backup to restore from. Must be URL-safe and compatible with filesystem paths (only lowercase, numbers, underscore, minus characters allowed)., body: any # Details of the restore request, including collections to include or exclude and node mapping if necessary.}
+@returns(200) Backup restoration process initiated successfully. Check the status endpoint for progress.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Backup not found on the specified backend with the given ID., 422: Invalid backup restoration request. Check requirements and request body., 500: An internal server error occurred during restore initiation. Check the ErrorResponse for details.}
+
+@endpoint GET /backups/{backend}/{id}/restore
+@desc Get backup restoration status
+@required {backend: any # Specifies the backend storage system where the backup resides (e.g., `filesystem`, `gcs`, `s3`, `azure`)., id: any # The unique identifier of the backup being restored. Must be URL-safe and compatible with filesystem paths (only lowercase, numbers, underscore, minus characters allowed).}
+@optional {bucket: any # Optional: Specifies the bucket, container, or volume name if required by the backend., path: any # Optional: Specifies the path within the bucket.}
+@returns(200) Successfully retrieved the status of the backup restoration process.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Backup not found on the specified backend with the given ID., 500: An internal server error occurred while checking restore status. Check the ErrorResponse for details.}
+
+@endpoint DELETE /backups/{backend}/{id}/restore
+@desc Cancel a backup restoration
+@required {backend: any # Specifies the backend storage system where the backup resides (e.g., `filesystem`, `gcs`, `s3`, `azure`)., id: any # The unique identifier of the backup restoration to cancel. Must be URL-safe and compatible with filesystem paths (only lowercase, numbers, underscore, minus characters allowed).}
+@optional {bucket: any # Optional: Specifies the bucket, container, or volume name if required by the backend., path: any # Optional: Specifies the path within the bucket/container/volume if the backup is not at the root.}
+@returns(204) Backup restoration cancelled successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid backup restoration cancellation request., 500: An internal server error occurred during backup restoration cancellation. Check the ErrorResponse for details.}
+
+@endgroup
+
+@group export
+@endpoint POST /export/{backend}
+@desc Start a new export
+@required {backend: any # The backend storage system to use for the export (e.g., `filesystem`, `gcs`, `s3`, `azure`)., body: map}
+@returns(200) Successfully started export operation
+@errors {401: Unauthorized or invalid credentials, 403: Forbidden - insufficient permissions, 422: Invalid export request, 500: Internal server error occurred while starting export}
+
+@endpoint GET /export/{backend}/{id}
+@desc Get export status
+@required {backend: any # The backend storage system where the export is stored., id: any # The unique identifier of the export.}
+@optional {bucket: any # Optional bucket name where the export is stored. If not specified, uses the backend's default bucket., path: any # Optional path prefix within the bucket. If not specified, uses the backend's default path.}
+@returns(200) Successfully retrieved export status
+@errors {401: Unauthorized or invalid credentials, 403: Forbidden - insufficient permissions, 404: Export not found, 500: Internal server error occurred while retrieving export status}
+
+@endpoint DELETE /export/{backend}/{id}
+@desc Cancel an export
+@required {backend: any # The backend storage system where the export is stored., id: any # The unique identifier of the export to cancel.}
+@optional {bucket: any # Optional bucket name where the export is stored., path: any # Optional path prefix within the bucket.}
+@returns(204) Export cancelled successfully.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden - insufficient permissions, 404: Export not found, 409: Export has already finished and cannot be cancelled, 500: Internal server error occurred while cancelling export}
+
+@endgroup
+
+@group cluster
+@endpoint GET /cluster/statistics
+@desc Get cluster statistics
+@returns(200) Successfully retrieved Raft cluster statistics.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 422: Invalid request for cluster statistics., 500: An internal server error occurred while retrieving cluster statistics. Check the ErrorResponse for details.}
+
+@endgroup
+
+@group nodes
+@endpoint GET /nodes
+@desc Get node status
+@optional {output: any # Controls the verbosity of the output, possible values are: `minimal`, `verbose`. Defaults to `minimal`.}
+@returns(200) Successfully retrieved the status for all nodes.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Not Found., 422: Invalid request for node status., 500: An internal server error occurred while retrieving node status. Check the ErrorResponse for details.}
+
+@endpoint GET /nodes/{className}
+@desc Get node status by collection
+@required {className: any # The name of the collection (class) for which to retrieve node status.}
+@optional {shardName: any, output: any # Controls the verbosity of the output, possible values are: `minimal`, `verbose`. Defaults to `minimal`.}
+@returns(200) Successfully retrieved the status for nodes relevant to the specified collection.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Not Found., 422: Invalid request for node status., 500: An internal server error occurred while retrieving node status for the collection. Check the ErrorResponse for details.}
+
+@endgroup
+
+@group tasks
+@endpoint GET /tasks
+@desc Lists all distributed tasks in the cluster
+@returns(200) Distributed tasks successfully returned.
+@errors {403: Unauthorized or invalid credentials., 500: An internal server error occurred while retrieving distributed tasks. Check the ErrorResponse for details.}
+
+@endgroup
+
+@group classifications
+@endpoint POST /classifications/
+@desc Start a classification
+@required {params: map # Configuration parameters for the classification task, including type, target properties, and training data references.}
+@returns(201) Classification task successfully initiated. The response body contains the classification details including its ID.
+@errors {400: Invalid request body or parameters., 401: Unauthorized or invalid credentials., 403: Forbidden, 500: An internal server error occurred while starting the classification task. Check the ErrorResponse for details.}
+
+@endpoint GET /classifications/{id}
+@desc Get classification status
+@required {id: any # The unique identifier (UUID) of the classification task.}
+@returns(200) Successfully retrieved the classification details.
+@errors {401: Unauthorized or invalid credentials., 403: Forbidden, 404: Classification with the given ID not found., 500: An internal server error occurred while retrieving the classification status. Check the ErrorResponse for details.}
+
+@endgroup
+
+@end

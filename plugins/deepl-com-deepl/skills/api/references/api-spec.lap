@@ -1,0 +1,226 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api DeepL API Documentation
+@base https://api.deepl.com
+@version 3.9.0
+@auth ApiKey Authorization in header
+@endpoints 30
+@hint download_for_search
+@toc translate(1), document(3), glossary-language-pairs(1), glossaries(13), write(1), usage(1), languages(1), admin(6), style_rules(1), voice(2)
+
+@group translate
+@endpoint POST /v2/translate
+@desc Request Translation
+@required {text: [str] # Text to be translated. Only UTF-8-encoded plain text is supported. The parameter may be specified multiple times and translations are returned in the same order as they are requested. Each of the parameter values may contain multiple sentences., target_lang: str(ACE/AF/AN/AR/AS/AY/AZ/BA/BE/BG/BHO/BN/BR/BS/CA/CEB/CKB/CS/CY/DA/DE/EL/EN/EN-GB/EN-US/EO/ES/ES-419/ET/EU/FA/FI/FR/GA/GL/GN/GOM/GU/HA/HE/HI/HR/HT/HU/HY/ID/IG/IS/IT/JA/JV/KA/KK/KMR/KO/KY/LA/LB/LMO/LN/LT/LV/MAI/MG/MI/MK/ML/MN/MR/MS/MT/MY/NB/NE/NL/OC/OM/PA/PAG/PAM/PL/PRS/PS/PT/PT-BR/PT-PT/QU/RO/RU/SA/SCN/SK/SL/SQ/SR/ST/SU/SV/SW/TA/TE/TG/TH/TK/TL/TN/TR/TS/TT/UK/UR/UZ/VI/WO/XH/YI/YUE/ZH/ZH-HANS/ZH-HANT/ZU) # The language into which the text should be translated.  **Note:** Some languages only work with `model_type` set to `quality_optimized`. See [supported languages](https://developers.deepl.com/docs/getting-started/supported-languages) for more details.}
+@optional {source_lang: str(ACE/AF/AN/AR/AS/AY/AZ/BA/BE/BG/BHO/BN/BR/BS/CA/CEB/CKB/CS/CY/DA/DE/EL/EN/EO/ES/ET/EU/FA/FI/FR/GA/GL/GN/GOM/GU/HA/HE/HI/HR/HT/HU/HY/ID/IG/IS/IT/JA/JV/KA/KK/KMR/KO/KY/LA/LB/LMO/LN/LT/LV/MAI/MG/MI/MK/ML/MN/MR/MS/MT/MY/NB/NE/NL/OC/OM/PA/PAG/PAM/PL/PRS/PS/PT/QU/RO/RU/SA/SCN/SK/SL/SQ/SR/ST/SU/SV/SW/TA/TE/TG/TH/TK/TL/TN/TR/TS/TT/UK/UR/UZ/VI/WO/XH/YI/YUE/ZH/ZU) # Language of the text to be translated. If this parameter is omitted, the API will attempt to detect the language of the text and translate it.  **Note:** Some languages only work with `model_type` set to `quality_optimized`. See [supported languages](https://developers.deepl.com/docs/getting-started/supported-languages) for more details., context: str # The `context` parameter makes it possible to include additional context that can influence a translation but is not translated itself.  This additional context can potentially improve translation quality when translating short, low-context source texts such  as product names on an e-commerce website, article headlines on a news website, or UI elements.   For example...   - When translating a product name, you might pass the product description as context.    - When translating a news article headline, you might pass the first few sentences or a summary of the article as context.   For best results, we recommend sending a few complete sentences of context in the same language as the source text.  There is no size limit for the `context` parameter itself, but the request body size limit of 128 KiB still applies to  all text translation requests.    If you send a request with multiple `text` parameters, the `context` parameter will be applied to each one.    Characters included in the `context` parameter will not be counted toward billing (i.e. there is no additional  cost for using the `context` parameter, and only characters sent in the text parameter(s) will be counted toward  billing for text translation even when the `context` parameter is included in a request)., show_billed_characters: bool # When true, the response will include the billed_characters parameter, giving the  number of characters from the request that will be counted by DeepL for billing purposes.  Note: for requests sent as URL-encoded forms, boolean values should be specified as "1" or "0"., split_sentences: str(0/1/nonewlines)=1 # Sets whether the translation engine should first split the input into sentences. For text translations where  `tag_handling` is not set to `html`, the default value is `1`, meaning the engine splits on punctuation and on newlines.  For text translations where `tag_handling=html`, the default value is `nonewlines`, meaning the engine splits on punctuation only, ignoring newlines.    The use of `nonewlines` as the default value for text translations where `tag_handling=html` is new behavior that was implemented in November 2022,  when HTML handling was moved out of beta.   Possible values are:    * `0` - no splitting at all, whole input is treated as one sentence  * `1` (default when `tag_handling` is not set to `html`) - splits on punctuation and on newlines  * `nonewlines` (default when `tag_handling=html`) - splits on punctuation only, ignoring newlines  For applications that send one sentence per text parameter, we recommend setting `split_sentences` to `0`, in order to prevent the engine from splitting the sentence unintentionally.   Please note that newlines will split sentences when `split_sentences=1`. We recommend cleaning files so they don't contain breaking sentences or setting the parameter `split_sentences` to `nonewlines`., preserve_formatting: bool=false # Sets whether the translation engine should respect the original formatting, even if it would usually correct some aspects.  The formatting aspects affected by this setting include:  * Punctuation at the beginning and end of the sentence  * Upper/lower case at the beginning of the sentence  Note: for requests sent as URL-encoded forms, boolean values should be specified as "1" or "0"., formality: str(default/more/less/prefer_more/prefer_less)=default # Sets whether the translated text should lean towards formal or informal language. This feature currently only works for target languages `DE` (German), `FR` (French), `IT` (Italian), `ES` (Spanish), `ES-419` (Latin American Spanish), `NL` (Dutch), `PL` (Polish), `PT-BR` and `PT-PT` (Portuguese), `JA` (Japanese), and `RU` (Russian). Learn more about the plain/polite feature for Japanese [here](https://support.deepl.com/hc/en-us/articles/6306700061852-About-the-plain-polite-feature-in-Japanese). Setting this parameter with a target language that does not support formality will fail, unless one of the `prefer_...` options are used. Possible options are:   * `default` (default)   * `more` - for a more formal language   * `less` - for a more informal language   * `prefer_more` - for a more formal language if available, otherwise fallback to default formality   * `prefer_less` - for a more informal language if available, otherwise fallback to default formality, model_type: str(quality_optimized/prefer_quality_optimized/latency_optimized) # Specifies which DeepL model should be used for translation.  Possible values are: * `latency_optimized` (default) - uses lower latency “classic” translation models, which support all language pairs;   default value * `quality_optimized` - uses higher latency, improved quality “next-gen” translation models, which support only a   subset of language pairs; if a language pair that is not supported by next-gen models is included in the   request, it will fail. Consider using prefer_quality_optimized instead. * `prefer_quality_optimized` - prioritizes use of higher latency, improved quality “next-gen” translation models,   which support only a subset of DeepL languages; if a request includes a language pair not supported by   next-gen models, the request will fall back to latency_optimized classic models., glossary_id: any, custom_instructions: [str] # Specify a list of instructions to customize the translation behavior. Up to 10 custom instructions can be specified, each with a maximum of 300 characters.  **Important:**  The target language must be `de`, `en`, `es`, `fr`, `it`, `ja`, `ko`, `zh` or any variants of these languages.  **Note:** Any request with the `custom_instructions` parameter enabled will default to use the `quality_optimized` model type. Requests combining `custom_instructions` and `model_type: latency_optimized` will be rejected., enable_beta_languages: bool=false # Enables 81 additional beta languages. See the full list at https://developers.deepl.com/docs/getting-started/supported-languages#beta-languages. **Note:** Any request with the `enable_beta_languages` parameter enabled will use `quality_optimized` models. Requests combining `enable_beta_languages: true` and `model_type: latency_optimized` will be rejected. Beta languages do not support formality or glossaries., tag_handling: str(xml/html) # Sets which kind of tags should be handled. Options currently available:  * `xml`: Enable XML tag handling; see [XML Handling](https://www.deepl.com/docs-api/xml).  * `html`: Enable HTML tag handling; see [HTML Handling](https://www.deepl.com/docs-api/html)., outline_detection: bool=true # The automatic detection of the XML structure won't yield best results in all XML files. You can disable this automatic mechanism altogether by setting the `outline_detection` parameter to `false` and selecting the tags that should be considered structure tags. This will split sentences using the `splitting_tags` parameter.   In the example below, we achieve the same results as the automatic engine by disabling automatic detection with `outline_detection=0` and setting the parameters manually to `tag_handling=xml`, `split_sentences=nonewlines`,  and `splitting_tags=par,title`.  * Example request:    ```    <document>      <meta>        <title>A document's title</title>      </meta>      <content>        <par>This is the first sentence. Followed by a second one.</par>        <par>This is the third sentence.</par>      </content>    </document>    ```  * Example response:    ```    <document>      <meta>        <title>Der Titel eines Dokuments</title>      </meta>      <content>        <par>Das ist der erste Satz. Gefolgt von einem zweiten.</par>        <par>Dies ist der dritte Satz.</par>      </content>    </document>    ``` While this approach is slightly more complicated, it allows for greater control over the structure of the translation output.  Note: for requests sent as URL-encoded forms, boolean values should be specified as "1" or "0"., non_splitting_tags: any # List of XML tags which never split sentences.   For some XML files, finding tags with textual content and splitting sentences using those tags won't yield the best results. The following example shows the engine splitting sentences on `par` tags and proceeding to translate the parts separately, resulting in an incorrect translation:  * Example request: ``` <par>The firm said it had been </par><par> conducting an internal investigation.</par> ```  * Example response: ``` <par>Die Firma sagte, es sei eine gute Idee gewesen.</par><par> Durchführung einer internen Untersuchung.</par> ```   As this can lead to bad translations, this type of structure should either be avoided, or the `non_splitting_tags` parameter should be set. The following example shows the same call, with the parameter set to `par`:  * Example request: ``` <par>The firm said it had been </par><par> conducting an internal investigation.</par> ```  * Example response: ``` <par>Die Firma sagte, dass sie</par><par> eine interne Untersuchung durchgeführt</par><par> habe</par><par>.</par> ```   This time, the sentence is translated as a whole. The XML tags are now considered markup and copied into the translated sentence. As the translation of the words "had been" has moved to another position in the German sentence, the two par tags are duplicated (which is expected here)., splitting_tags: any # List of XML tags which always cause splits.   See the example in the `outline_detection` parameter's description., ignore_tags: any # List of XML tags that indicate text not to be translated.   Use this parameter to ensure that elements in the original text are not altered in the translation (e.g., trademarks, product names) and insert tags into your original text. In the following example, the `ignore_tags` parameter is set to `keep`:  * Example request:    ```    Please open the page <keep>Settings</keep> to configure your system.    ```  * Example response:    ```    Bitte öffnen Sie die Seite <keep>Settings</keep> um Ihr System zu konfigurieren.    ```}
+@returns(200) {translations: [map]} # The translate function returns a JSON representation of the translations in the order the text parameters have been specified.
+@errors {400: Bad request. Please check error message and your parameters., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 404: The requested resource could not be found., 413: The request size exceeds the limit., 414: The request URL is too long. You can avoid this error by using a POST request instead of a GET request, and sending the parameters in the HTTP body., 429: Too many requests. Please wait and resend your request., 456: Quota exceeded. The character limit has been reached., 500: Internal error., 504: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endgroup
+
+@group document
+@endpoint POST /v2/document
+@desc Upload and Translate a Document
+@returns(200) {document_id: str, document_key: str} # The document function returns a JSON object containing the ID and encryption key assigned to the uploaded document. Once received by the server, uploaded documents are immediately encrypted using a uniquely generated encryption key. This key is not persistently stored on the server. Therefore, it must be stored by the client and sent back to the server with every subsequent request that refers to this particular document.
+@errors {400: Bad request. Please check error message and your parameters., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 404: The requested resource could not be found., 413: The request size exceeds the limit., 429: Too many requests. Please wait and resend your request., 456: Quota exceeded. The character limit has been reached., 500: Internal error., 504: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endpoint POST /v2/document/{document_id}
+@desc Check Document Status
+@required {document_id: str # The document ID that was sent to the client when the document was uploaded to the API., document_key: str # The document encryption key that was sent to the client when the document was uploaded to the API.}
+@returns(200) {document_id: str, status: str, seconds_remaining: int, billed_characters: int, error_message: str} # The document status request returns a JSON object containing the document ID that was used in the request as well as string indicating the current status of the translation process. While the translation is running, the estimated number of seconds remaining until the process is done is also included in the response.
+@errors {400: Bad request. Please check error message and your parameters., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 404: The requested resource could not be found., 413: The request size exceeds the limit., 429: Too many requests. Please wait and resend your request., 456: Quota exceeded. The character limit has been reached., 500: Internal error., 504: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endpoint POST /v2/document/{document_id}/result
+@desc Download Translated Document
+@required {document_id: str # The document ID that was sent to the client when the document was uploaded to the API., document_key: str # The document encryption key that was sent to the client when the document was uploaded to the API.}
+@returns(200) The document is provided as a download. There is no other data included in the response besides the document data. The content type used in the response corresponds to the document type.
+@errors {400: Bad request. Please check error message and your parameters., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 404: Trying to download a document using a non-existing document ID or the wrong document key will result in a 404 error. As stated above, documents can only be downloaded once before they are deleted from the server and their document ID is invalidated., 413: The request size exceeds the limit., 429: Too many requests. Please wait and resend your request., 456: Quota exceeded. The character limit has been reached., 500: Internal error., 503: A 503 result will be returned if the user tries to download a translated document that is currently being processed and is not yet ready for download. Please make sure to check that the document status is 'done' before trying to send a download request., 504: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endgroup
+
+@group glossary-language-pairs
+@endpoint GET /v2/glossary-language-pairs
+@desc List Language Pairs Supported by Glossaries
+@returns(200) {supported_languages: [map]} # A JSON object containing the language pairs in its `supported_languages` property.
+@errors {401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 429: Too many requests. Please wait and resend your request., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endgroup
+
+@group glossaries
+@endpoint POST /v3/glossaries
+@desc Create a Glossary
+@required {name: str # Name to be associated with the glossary., dictionaries: [map{source_lang: str, target_lang: str, entries: str, entries_format: str}] # Dictionaries to populate the glossary with.}
+@returns(201) {glossary_id: str, name: str, dictionaries: [map], creation_time: str(date-time)} # The function for creating a glossary returns a JSON object containing the ID of the newly created glossary and a boolean flag that indicates if the created glossary can already be used in translate requests.
+@errors {400: Bad request. Please check error message and your parameters., 401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 413: The request size exceeds the limit., 429: Too many requests. Please wait and resend your request., 456: Quota exceeded. The glossary creation limit has been reached., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+@example_request {"name":"My Glossary","dictionaries":[{"source_lang":"en","target_lang":"de","entries":"Hello\tGuten Tag","entries_format":"tsv"},{"source_lang":"de","target_lang":"en","entries":"Guten Tag\tHello","entries_format":"tsv"}]}
+
+@endpoint GET /v3/glossaries
+@desc List all Glossaries
+@returns(200) {glossaries: [map]} # JSON object containing a the glossaries.
+@errors {401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 429: Too many requests. Please wait and resend your request., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endpoint GET /v3/glossaries/{glossary_id}
+@desc Retrieve Glossary Details
+@required {glossary_id: str # A unique ID assigned to the glossary.}
+@returns(200) {glossary_id: str, name: str, dictionaries: [map], creation_time: str(date-time)} # JSON object containing the glossary meta-information.
+@errors {401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Forbidden. The access to the requested resource is denied, because of insufficient access rights., 404: The requested resource could not be found., 429: Too many requests. Please wait and resend your request., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endpoint PATCH /v3/glossaries/{glossary_id}
+@desc Edit glossary details
+@required {glossary_id: str # A unique ID assigned to the glossary.}
+@optional {name: str # A unique ID assigned to a glossary., dictionaries: [map{source_lang: str, target_lang: str, entries: str, entries_format: str}] # Dictionaries to edit the glossary with. Currently only supports 0 or 1 dictionaries in the array.}
+@returns(200) {glossary_id: str, name: str, dictionaries: [map], creation_time: str(date-time)} # JSON object containing the glossary meta-information.
+@errors {400: Bad request. Please check error message and your parameters., 401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Forbidden. The access to the requested resource is denied, because of insufficient access rights., 404: The requested resource could not be found., 413: The request size exceeds the limit., 429: Too many requests. Please wait and resend your request., 456: Quota exceeded. The glossary creation limit has been reached., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+@example_request {"name":"My Glossary","dictionaries":[{"source_lang":"en","target_lang":"de","entries":"Hello\tGuten Tag","entries_format":"tsv"}]}
+
+@endpoint DELETE /v3/glossaries/{glossary_id}
+@desc Delete a Glossary
+@required {glossary_id: str # A unique ID assigned to the glossary.}
+@returns(204) Returns no content upon success.
+@errors {400: Bad request. Please check error message and your parameters., 401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Forbidden. The access to the requested resource is denied, because of insufficient access rights., 404: The requested resource could not be found., 429: Too many requests. Please wait and resend your request., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endpoint GET /v3/glossaries/{glossary_id}/entries
+@desc Retrieve Glossary Entries
+@required {glossary_id: str # A unique ID assigned to the glossary., source_lang: str, target_lang: str}
+@returns(200) {source_lang: str, target_lang: str, entries: str, entries_format: str} # The entries in tsv, wrapped in a JSON object.
+@errors {400: Bad request. Please check error message and your parameters., 401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Forbidden. The access to the requested resource is denied, because of insufficient access rights., 404: The requested resource could not be found., 429: Too many requests. Please wait and resend your request., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endpoint DELETE /v3/glossaries/{glossary_id}/dictionaries
+@desc Deletes the dictionary associated with the given language pair with the given glossary ID.
+@required {glossary_id: str # A unique ID assigned to the glossary., source_lang: str, target_lang: str}
+@returns(204) Returns no content upon success.
+@errors {400: Bad request. Please check error message and your parameters., 401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Forbidden. The access to the requested resource is denied, because of insufficient access rights., 404: The requested resource could not be found., 429: Too many requests. Please wait and resend your request., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endpoint PUT /v3/glossaries/{glossary_id}/dictionaries
+@desc Replaces or creates a dictionary in the glossary with the specified entries.
+@required {glossary_id: str # A unique ID assigned to the glossary.}
+@optional {source_lang: str(ar/bg/cs/da/de/el/en/es/et/fi/fr/he/hu/id/it/ja/ko/lt/lv/nb/nl/pl/pt/ro/ru/sk/sl/sv/th/tr/uk/vi/zh) # The language in which the source texts in the glossary are specified., target_lang: str(ar/bg/cs/da/de/el/en/es/et/fi/fr/he/hu/id/it/ja/ko/lt/lv/nb/nl/pl/pt/ro/ru/sk/sl/sv/th/tr/uk/vi/zh) # The language in which the target texts in the glossary are specified., entries: str # The entries of the glossary. The entries have to be specified in the format provided by the `entries_format` parameter., entries_format: str(tsv/csv)=tsv # The format in which the glossary entries are provided. Formats currently available: - `tsv` (default) - tab-separated values - `csv` - comma-separated values  See [Supported Glossary Formats](https://www.deepl.com/docs-api/glossaries/formats) for details about each format.}
+@returns(200) {source_lang: str, target_lang: str, entry_count: int} # JSON object containing the dictionary meta-information.
+@errors {400: Bad request. Please check error message and your parameters., 401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Forbidden. The access to the requested resource is denied, because of insufficient access rights., 404: The requested resource could not be found., 413: The request size exceeds the limit., 429: Too many requests. Please wait and resend your request., 456: Quota exceeded. The glossary creation limit has been reached., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endpoint POST /v2/glossaries
+@desc Create a Glossary
+@required {name: str # Name to be associated with the glossary., source_lang: str(ar/bg/cs/da/de/el/en/es/et/fi/fr/he/hu/id/it/ja/ko/lt/lv/nb/nl/pl/pt/ro/ru/sk/sl/sv/th/tr/uk/vi/zh) # The language in which the source texts in the glossary are specified., target_lang: str(ar/bg/cs/da/de/el/en/es/et/fi/fr/he/hu/id/it/ja/ko/lt/lv/nb/nl/pl/pt/ro/ru/sk/sl/sv/th/tr/uk/vi/zh) # The language in which the target texts in the glossary are specified., entries: str # The entries of the glossary. The entries have to be specified in the format provided by the `entries_format` parameter., entries_format: str(tsv/csv)=tsv # The format in which the glossary entries are provided. Formats currently available: - `tsv` (default) - tab-separated values - `csv` - comma-separated values  See [Supported Glossary Formats](https://www.deepl.com/docs-api/glossaries/formats) for details about each format.}
+@returns(201) {glossary_id: str, name: str, ready: bool, source_lang: str, target_lang: str, creation_time: str(date-time), entry_count: int} # The function for creating a glossary returns a JSON object containing the ID of the newly created glossary and a boolean flag that indicates if the created glossary can already be used in translate requests.
+@errors {400: Bad request. Please check error message and your parameters., 401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 413: The request size exceeds the limit., 429: Too many requests. Please wait and resend your request., 456: Quota exceeded. The glossary creation limit has been reached., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+@example_request {"name":"My Glossary","source_lang":"en","target_lang":"de","entries":"Hello\tGuten Tag","entries_format":"tsv"}
+
+@endpoint GET /v2/glossaries
+@desc List all Glossaries
+@returns(200) {glossaries: [map]} # JSON object containing a the glossaries.
+@errors {401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 429: Too many requests. Please wait and resend your request., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endpoint GET /v2/glossaries/{glossary_id}
+@desc Retrieve Glossary Details
+@required {glossary_id: str # A unique ID assigned to the glossary.}
+@returns(200) {glossary_id: str, name: str, ready: bool, source_lang: str, target_lang: str, creation_time: str(date-time), entry_count: int} # JSON object containing the glossary meta-information.
+@errors {400: Bad request. Please check error message and your parameters., 401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Forbidden. The access to the requested resource is denied, because of insufficient access rights., 404: The requested resource could not be found., 429: Too many requests. Please wait and resend your request., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endpoint DELETE /v2/glossaries/{glossary_id}
+@desc Delete a Glossary
+@required {glossary_id: str # A unique ID assigned to the glossary.}
+@returns(204) Returns no content upon success.
+@errors {400: Bad request. Please check error message and your parameters., 401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Forbidden. The access to the requested resource is denied, because of insufficient access rights., 404: The requested resource could not be found., 429: Too many requests. Please wait and resend your request., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endpoint GET /v2/glossaries/{glossary_id}/entries
+@desc Retrieve Glossary Entries
+@required {glossary_id: str # A unique ID assigned to the glossary.}
+@optional {Accept: str=text/tab-separated-values # The requested format of the returned glossary entries. Currently, supports only `text/tab-separated-values`.}
+@returns(200) The entries in the requested format.
+@errors {400: Bad request. Please check error message and your parameters., 401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Forbidden. The access to the requested resource is denied, because of insufficient access rights., 404: The requested resource could not be found., 415: The requested entries format specified in the `Accept` header is not supported., 429: Too many requests. Please wait and resend your request., 500: Internal error., 503: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endgroup
+
+@group write
+@endpoint POST /v2/write/rephrase
+@desc Request text improvement
+@required {text: [str] # Text to be improved. Only UTF-8-encoded plain text is supported. Improvements are returned in the same order as they are requested.}
+@optional {target_lang: str(de/en/en-GB/en-US/fr/it/pt/pt-BR/pt-PT) # The language for the text improvement. Options currently available:  * `de` - German  * `en` - English (unspecified variant, defaults to `en-US`)  * `en-GB` - English (British)  * `en-US` - English (American)  * `es` - Spanish  * `fr` - French  * `it` - Italian  * `pt` - Portuguese (unspecified variant, defaults to `pt-PT`)  * `pt-BR` - Portuguese (Brazilian)  * `pt-PT` - Portuguese (all Portuguese variants excluding Brazilian Portuguese), writing_style: str(academic/business/casual/default/simple/prefer_academic/prefer_business/prefer_casual/prefer_simple) # Specify a style to rephrase your text in a way that fits your audience and goals. The `prefer_` prefix allows falling back to the default style if the language does not yet support styles., tone: str(confident/default/diplomatic/enthusiastic/friendly/prefer_confident/prefer_diplomatic/prefer_enthusiastic/prefer_friendly) # Specify the desired tone for your text. The `prefer_` prefix allows falling back to the default tone if the language does not yet support tones.}
+@returns(200) {improvements: [map]} # Successful text improvement.
+
+@endgroup
+
+@group usage
+@endpoint GET /v2/usage
+@desc Check Usage and Limits
+@returns(200) {character_count: int(int64), character_limit: int(int64), products: [map], api_key_character_count: int, api_key_character_limit: int, speech_to_text_milliseconds_count: int, speech_to_text_milliseconds_limit: int, start_time: str(date-time), end_time: str(date-time)} # The account's usage and limits.
+@errors {400: Bad request. Please check error message and your parameters., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 404: The requested resource could not be found., 413: The request size exceeds the limit., 429: Too many requests. Please wait and resend your request., 456: Quota exceeded. The character limit has been reached., 500: Internal error., 504: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endgroup
+
+@group languages
+@endpoint GET /v2/languages
+@desc Retrieve Supported Languages
+@optional {type: str(source/target)=source # Sets whether source or target languages should be listed. Possible options are:  * `source` (default): For languages that can be used in the `source_lang` parameter of [translate](https://www.deepl.com/docs-api/translate-text/translate-text) requests.  * `target`: For languages that can be used in the `target_lang` parameter of [translate](https://www.deepl.com/docs-api/translate-text/translate-text) requests.}
+@returns(200) JSON array where each item represents a supported language.
+@errors {400: Bad request. Please check error message and your parameters., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 404: The requested resource could not be found., 413: The request size exceeds the limit., 429: Too many requests. Please wait and resend your request., 456: Quota exceeded. The character limit has been reached., 500: Internal error., 504: Resource currently unavailable. Try again later., 529: Too many requests. Please wait and resend your request.}
+
+@endgroup
+
+@group admin
+@endpoint POST /v2/admin/developer-keys
+@desc Create a developer key as an admin
+@optional {label: str # API key label. The default value is `DeepL API Key`.}
+@returns(200) {key_id: str, label: str, creation_time: str, deactivated_time: str, is_deactivated: bool, usage_limits: map{characters: num, speech_to_text_milliseconds: num}} # The create function returns a JSON representation of the created API key.
+@errors {400: Bad request. Please check error message and your parameters., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 404: The requested resource could not be found., 500: Internal error.}
+
+@endpoint GET /v2/admin/developer-keys
+@desc Get all developer keys as an admin
+@returns(200) The get function returns a JSON representation of all developer API keys in the organization.
+@errors {400: Bad request. Please check error message and your parameters., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 404: The requested resource could not be found., 500: Internal error.}
+
+@endpoint PUT /v2/admin/developer-keys/deactivate
+@desc Deactivate a developer key as an admin
+@required {key_id: str # API key ID. Consists of two valid GUIDs separated by a colon.}
+@returns(200) {key_id: str, label: str, creation_time: str, deactivated_time: str, is_deactivated: bool, usage_limits: map{characters: num, speech_to_text_milliseconds: num}} # The deactivate function returns a JSON representation of the deactivated API key.
+@errors {400: Bad request. Please check error message and your parameters., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 404: The requested resource could not be found., 500: Internal error.}
+
+@endpoint PUT /v2/admin/developer-keys/label
+@desc Rename a developer key as an admin
+@required {key_id: str # API key ID. Consists of two valid GUIDs separated by a colon., label: str # API key label.}
+@returns(200) {key_id: str, label: str, creation_time: str, deactivated_time: str, is_deactivated: bool, usage_limits: map{characters: num, speech_to_text_milliseconds: num}} # The set label function returns a JSON representation of the renamed API key.
+@errors {400: Bad request. Please check error message and your parameters., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 404: The requested resource could not be found., 500: Internal error.}
+
+@endpoint PUT /v2/admin/developer-keys/limits
+@desc Set developer key usage limits as an admin
+@required {key_id: str # API key ID. Consists of two valid GUIDs separated by a colon.}
+@optional {characters: num # Restricts the number of total characters (across text translation, document translation, and text improvement) that can be consumed by an API key in a one-month usage period. Setting the limit to `0` means the API key will not be able to consume characters. Setting the limit to `null` disables the limit, effectively allowing unlimited usage., speech_to_text_milliseconds: num # Restricts the number of milliseconds of speech-to-text that can be consumed by an API key in a one-month usage period. Setting the limit to `0` means the API key will not be able to consume speech-to-text milliseconds. Setting the limit to `null` disables the limit, effectively allowing unlimited usage.}
+@returns(200) {key_id: str, label: str, creation_time: str, deactivated_time: str, is_deactivated: bool, usage_limits: map{characters: num, speech_to_text_milliseconds: num}} # The set usage limits function returns a JSON representation of the modified API key.
+@errors {400: Bad request. Please check error message and your parameters., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 404: The requested resource could not be found., 500: Internal error.}
+
+@endpoint GET /v2/admin/analytics
+@desc Get usage statistics as an admin
+@required {start_date: str(date) # Start date for the usage report (ISO 8601 date format)., end_date: str(date) # End date for the usage report (ISO 8601 date format).}
+@optional {group_by: str(key/key_and_day) # Optional parameter to group usage statistics. Possible values:  * `key` - Group by API key  * `key_and_day` - Group by API key and usage date}
+@returns(200) {usage_report: map{total_usage: map{total_characters: int, text_translation_characters: int, document_translation_characters: int, text_improvement_characters: int, speech_to_text_milliseconds: int}, start_date: str(date-time), end_date: str(date-time), group_by: str, key_usages: [map], key_and_day_usages: [map]}} # The usage statistics for the specified date range.
+@errors {400: Bad request. Please check error message and your parameters., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 404: The requested resource could not be found., 500: Internal error.}
+
+@endgroup
+
+@group style_rules
+@endpoint GET /v3/style_rules
+@desc Retrieve style rule lists
+@optional {page: int=0 # The index of the first page to return. Use with `page_size` to get the next page of rule lists, page_size: int=10 # The maximum number of style rule lists to return., detailed: bool=false # Determines if the rule list's `configured_rules` and `custom_instructions` should be included in the response body.}
+@returns(200) {style_rules: [map]}
+@errors {401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 429: Too many requests. Please wait and resend your request., 500: Internal error., 503: Resource currently unavailable. Try again later.}
+
+@endgroup
+
+@group voice
+@endpoint POST /v3/voice/realtime
+@desc Get Streaming URL
+@required {source_media_content_type: str(audio/auto/audio/flac/audio/mpeg/audio/ogg/audio/webm/audio/x-matroska/audio/ogg; codecs=flac/audio/ogg; codecs=opus/audio/pcm; encoding=s16le; rate=8000/audio/pcm; encoding=s16le; rate=16000/audio/pcm; encoding=s16le; rate=44100/audio/pcm; encoding=s16le; rate=48000/audio/webm; codecs=opus/audio/x-matroska; codecs=aac/audio/x-matroska; codecs=flac/audio/x-matroska; codecs=mp3/audio/x-matroska; codecs=opus) # The audio format for streaming. Specifies container, codec, and encoding parameters. Supported formats include PCM (recommended), OPUS (recommended for low bandwidth), FLAC, MP3, and AAC. PCM formats require explicit sample rate. Mono audio only.}
+@optional {source_language: str(zh/nl/en/fr/de/id/it/ja/ko/pl/pt/ro/ru/es/sv/tr/uk) # Source language of the audio stream. Must be one of the supported Voice API source languages. Language identifier must comply with IETF BCP 47 language tags., source_language_mode: str(auto/fixed)=auto # Controls how the source_language value is used. - `auto`: Treats source language as a hint; server can override - `fixed`: Treats source language as mandatory; server must use this language, target_languages: [str] # List of target languages for translation. The stream will emit translations for each language. Maximum 5 target languages per stream. Language identifiers must comply with IETF BCP 47., glossary_id: str # A unique ID assigned to a glossary., formality: str(default/formal/more/informal/less)=default # Sets whether the translated text should lean towards formal or informal language. Possible options are:   * `default` - use the default formality for the target language   * `formal`/`more` - for a more formal language   * `informal`/`less` - for a more informal language}
+@returns(200) {streaming_url: str, token: str, session_id: str} # Successfully obtained streaming URL and token
+@errors {400: Bad request. Please check error message and your parameters., 401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 429: Too many requests. Please wait and resend your request., 456: Quota exceeded. The character limit has been reached., 500: Internal error., 503: Resource currently unavailable. Try again later.}
+@example_request {"source_media_content_type":"audio/ogg; codecs=opus","source_language":"en","source_language_mode":"auto","target_languages":["de","fr","es"]}
+
+@endpoint GET /v3/voice/realtime
+@desc Request Reconnection
+@required {token: str # The latest ephemeral token obtained for the stream.}
+@returns(200) {streaming_url: str, token: str, session_id: str} # Successfully obtained streaming URL and reconnection token.
+@errors {400: Bad request. Please check error message and your parameters., 401: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 403: Authorization failed. Please supply a valid `DeepL-Auth-Key` via the `Authorization` header., 429: Too many requests. Please wait and resend your request., 456: Quota exceeded. The character limit has been reached., 500: Internal error., 503: Resource currently unavailable. Try again later.}
+
+@endgroup
+
+@end

@@ -1,0 +1,542 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api langfuse
+@auth Bearer basic
+@endpoints 86
+@hint download_for_search
+@toc api(86)
+
+@endpoint GET /api/public/annotation-queues
+@desc Get all annotation queues
+@optional {page: int # page number, starts at 1, limit: int # limit of items per page}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/annotation-queues
+@desc Create an annotation queue
+@required {name: str, scoreConfigIds: [str]}
+@optional {description: str}
+@returns(200) {id: str, name: str, description: str?, scoreConfigIds: [str], createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/annotation-queues/{queueId}
+@desc Get an annotation queue by ID
+@required {queueId: str # The unique identifier of the annotation queue}
+@returns(200) {id: str, name: str, description: str?, scoreConfigIds: [str], createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/annotation-queues/{queueId}/items
+@desc Get items for a specific annotation queue
+@required {queueId: str # The unique identifier of the annotation queue}
+@optional {status: str # Filter by status, page: int # page number, starts at 1, limit: int # limit of items per page}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/annotation-queues/{queueId}/items
+@desc Add an item to an annotation queue
+@required {queueId: str # The unique identifier of the annotation queue, objectId: str, objectType: str(TRACE/OBSERVATION/SESSION)}
+@optional {status: str(PENDING/COMPLETED)}
+@returns(200) {id: str, queueId: str, objectId: str, objectType: str, status: str, completedAt: str(date-time)?, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/annotation-queues/{queueId}/items/{itemId}
+@desc Get a specific item from an annotation queue
+@required {queueId: str # The unique identifier of the annotation queue, itemId: str # The unique identifier of the annotation queue item}
+@returns(200) {id: str, queueId: str, objectId: str, objectType: str, status: str, completedAt: str(date-time)?, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint PATCH /api/public/annotation-queues/{queueId}/items/{itemId}
+@desc Update an annotation queue item
+@required {queueId: str # The unique identifier of the annotation queue, itemId: str # The unique identifier of the annotation queue item}
+@optional {status: str(PENDING/COMPLETED)}
+@returns(200) {id: str, queueId: str, objectId: str, objectType: str, status: str, completedAt: str(date-time)?, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/annotation-queues/{queueId}/items/{itemId}
+@desc Remove an item from an annotation queue
+@required {queueId: str # The unique identifier of the annotation queue, itemId: str # The unique identifier of the annotation queue item}
+@returns(200) {success: bool, message: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/annotation-queues/{queueId}/assignments
+@desc Create an assignment for a user to an annotation queue
+@required {queueId: str # The unique identifier of the annotation queue, userId: str}
+@returns(200) {userId: str, queueId: str, projectId: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/annotation-queues/{queueId}/assignments
+@desc Delete an assignment for a user to an annotation queue
+@required {queueId: str # The unique identifier of the annotation queue, userId: str}
+@returns(200) {success: bool}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/integrations/blob-storage
+@desc Get all blob storage integrations for the organization (requires organization-scoped API key)
+@returns(200) {data: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint PUT /api/public/integrations/blob-storage
+@desc Create or update a blob storage integration for a specific project (requires organization-scoped API key). The configuration is validated by performing a test upload to the bucket.
+@required {projectId: str # ID of the project in which to configure the blob storage integration, type: str(S3/S3_COMPATIBLE/AZURE_BLOB_STORAGE), bucketName: str # Name of the storage bucket, region: str # Storage region, exportFrequency: str(hourly/daily/weekly), enabled: bool # Whether the integration is active, forcePathStyle: bool # Use path-style URLs for S3 requests, fileType: str(JSON/CSV/JSONL), exportMode: str(FULL_HISTORY/FROM_TODAY/FROM_CUSTOM_DATE)}
+@optional {endpoint: str # Custom endpoint URL (required for S3_COMPATIBLE type), accessKeyId: str # Access key ID for authentication, secretAccessKey: str # Secret access key for authentication (will be encrypted when stored), prefix: str # Path prefix for exported files (must end with forward slash if provided), exportStartDate: str(date-time) # Custom start date for exports (required when exportMode is FROM_CUSTOM_DATE)}
+@returns(200) {id: str, projectId: str, type: str, bucketName: str, endpoint: str?, region: str, accessKeyId: str?, prefix: str, exportFrequency: str, enabled: bool, forcePathStyle: bool, fileType: str, exportMode: str, exportStartDate: str(date-time)?, nextSyncAt: str(date-time)?, lastSyncAt: str(date-time)?, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/integrations/blob-storage/{id}
+@desc Delete a blob storage integration by ID (requires organization-scoped API key)
+@required {id: str}
+@returns(200) {message: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/comments
+@desc Create a comment. Comments may be attached to different object types (trace, observation, session, prompt).
+@required {projectId: str # The id of the project to attach the comment to., objectType: str # The type of the object to attach the comment to (trace, observation, session, prompt)., objectId: str # The id of the object to attach the comment to. If this does not reference a valid existing object, an error will be thrown., content: str # The content of the comment. May include markdown. Currently limited to 5000 characters.}
+@optional {authorUserId: str # The id of the user who created the comment.}
+@returns(200) {id: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/comments
+@desc Get all comments
+@optional {page: int # Page number, starts at 1., limit: int # Limit of items per page. If you encounter api issues due to too large page sizes, try to reduce the limit, objectType: str # Filter comments by object type (trace, observation, session, prompt)., objectId: str # Filter comments by object id. If objectType is not provided, an error will be thrown., authorUserId: str # Filter comments by author user id.}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/comments/{commentId}
+@desc Get a comment by id
+@required {commentId: str # The unique langfuse identifier of a comment}
+@returns(200) {id: str, projectId: str, createdAt: str(date-time), updatedAt: str(date-time), objectType: str, objectId: str, content: str, authorUserId: str?}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/dataset-items
+@desc Create a dataset item
+@required {datasetName: str}
+@optional {input: any, expectedOutput: any, metadata: any, sourceTraceId: str, sourceObservationId: str, id: str # Dataset items are upserted on their id. Id needs to be unique (project-level) and cannot be reused across datasets., status: str(ACTIVE/ARCHIVED)}
+@returns(200) {id: str, status: str, input: any, expectedOutput: any, metadata: any, sourceTraceId: str?, sourceObservationId: str?, datasetId: str, datasetName: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/dataset-items
+@desc Get dataset items. Optionally specify a version to get the items as they existed at that point in time.
+@optional {datasetName: str, sourceTraceId: str, sourceObservationId: str, version: str(date-time) # ISO 8601 timestamp (RFC 3339, Section 5.6) in UTC (e.g., "2026-01-21T14:35:42Z"). If provided, returns state of dataset at this timestamp. If not provided, returns the latest version. Requires datasetName to be specified., page: int # page number, starts at 1, limit: int # limit of items per page}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/dataset-items/{id}
+@desc Get a dataset item
+@required {id: str}
+@returns(200) {id: str, status: str, input: any, expectedOutput: any, metadata: any, sourceTraceId: str?, sourceObservationId: str?, datasetId: str, datasetName: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/dataset-items/{id}
+@desc Delete a dataset item and all its run items. This action is irreversible.
+@required {id: str}
+@returns(200) {message: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/dataset-run-items
+@desc Create a dataset run item
+@required {runName: str, datasetItemId: str}
+@optional {runDescription: str # Description of the run. If run exists, description will be updated., metadata: any # Metadata of the dataset run, updates run if run already exists, observationId: str, traceId: str # traceId should always be provided. For compatibility with older SDK versions it can also be inferred from the provided observationId., datasetVersion: str(date-time) # ISO 8601 timestamp (RFC 3339, Section 5.6) in UTC (e.g., "2026-01-21T14:35:42Z"). Specifies the dataset version to use for this experiment run.  If provided, the experiment will use dataset items as they existed at or before this timestamp. If not provided, uses the latest version of dataset items.}
+@returns(200) {id: str, datasetRunId: str, datasetRunName: str, datasetItemId: str, traceId: str, observationId: str?, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/dataset-run-items
+@desc List dataset run items
+@required {datasetId: str, runName: str}
+@optional {page: int # page number, starts at 1, limit: int # limit of items per page}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/v2/datasets
+@desc Get all datasets
+@optional {page: int # page number, starts at 1, limit: int # limit of items per page}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/v2/datasets
+@desc Create a dataset
+@required {name: str}
+@optional {description: str, metadata: any, inputSchema: any # JSON Schema for validating dataset item inputs. When set, all new and existing dataset items will be validated against this schema., expectedOutputSchema: any # JSON Schema for validating dataset item expected outputs. When set, all new and existing dataset items will be validated against this schema.}
+@returns(200) {id: str, name: str, description: str?, metadata: any, inputSchema: any?, expectedOutputSchema: any?, projectId: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/v2/datasets/{datasetName}
+@desc Get a dataset
+@required {datasetName: str}
+@returns(200) {id: str, name: str, description: str?, metadata: any, inputSchema: any?, expectedOutputSchema: any?, projectId: str, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/datasets/{datasetName}/runs/{runName}
+@desc Get a dataset run and its items
+@required {datasetName: str, runName: str}
+@returns(200) {datasetRunItems: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/datasets/{datasetName}/runs/{runName}
+@desc Delete a dataset run and all its run items. This action is irreversible.
+@required {datasetName: str, runName: str}
+@returns(200) {message: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/datasets/{datasetName}/runs
+@desc Get dataset runs
+@required {datasetName: str}
+@optional {page: int # page number, starts at 1, limit: int # limit of items per page}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/health
+@desc Check health of API and database
+@returns(200) {version: str, status: str}
+@errors {400, 401, 403, 404, 405, 503}
+
+@endpoint POST /api/public/ingestion
+@desc **Legacy endpoint for batch ingestion for Langfuse Observability.**
+@required {batch: [any] # Batch of tracing events to be ingested. Discriminated by attribute `type`.}
+@optional {metadata: any # Optional. Metadata field used by the Langfuse SDKs for debugging.}
+@returns(207) {successes: [map], errors: [map]}
+@errors {400, 401, 403, 404, 405}
+@example_request {"batch":[{"id":"abcdef-1234-5678-90ab","timestamp":"2022-01-01T00:00:00.000Z","type":"trace-create","body":{"id":"abcdef-1234-5678-90ab","timestamp":"2022-01-01T00:00:00.000Z","environment":"production","name":"My Trace","userId":"1234-5678-90ab-cdef","input":"My input","output":"My output","sessionId":"1234-5678-90ab-cdef","release":"1.0.0","version":"1.0.0","metadata":"My metadata","tags":["tag1","tag2"],"public":true}}]}
+
+@endpoint GET /api/public/metrics
+@desc Get metrics from the Langfuse project using a query object.
+@required {query: str # JSON string containing the query parameters with the following structure: ```json {   "view": string,           // Required. One of "traces", "observations", "scores-numeric", "scores-categorical"   "dimensions": [           // Optional. Default: []     {       "field": string       // Field to group by, e.g. "name", "userId", "sessionId"     }   ],   "metrics": [              // Required. At least one metric must be provided     {       "measure": string,    // What to measure, e.g. "count", "latency", "value"       "aggregation": string // How to aggregate, e.g. "count", "sum", "avg", "p95", "histogram"     }   ],   "filters": [              // Optional. Default: []     {       "column": string,     // Column to filter on       "operator": string,   // Operator, e.g. "=", ">", "<", "contains"       "value": any,         // Value to compare against       "type": string,       // Data type, e.g. "string", "number", "stringObject"       "key": string         // Required only when filtering on metadata     }   ],   "timeDimension": {        // Optional. Default: null. If provided, results will be grouped by time     "granularity": string   // One of "minute", "hour", "day", "week", "month", "auto"   },   "fromTimestamp": string,  // Required. ISO datetime string for start of time range   "toTimestamp": string,    // Required. ISO datetime string for end of time range   "orderBy": [              // Optional. Default: null     {       "field": string,      // Field to order by       "direction": string   // "asc" or "desc"     }   ],   "config": {               // Optional. Query-specific configuration     "bins": number,         // Optional. Number of bins for histogram (1-100), default: 10     "row_limit": number     // Optional. Row limit for results (1-1000)   } } ```}
+@returns(200) {data: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/observations/{observationId}
+@desc Get a observation
+@required {observationId: str # The unique langfuse identifier of an observation, can be an event, span or generation}
+@returns(200) {promptName: str?, promptVersion: int?, modelId: str?, inputPrice: num(double)?, outputPrice: num(double)?, totalPrice: num(double)?, calculatedInputCost: num(double)?, calculatedOutputCost: num(double)?, calculatedTotalCost: num(double)?, latency: num(double)?, timeToFirstToken: num(double)?}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/observations
+@desc Get a list of observations.
+@optional {page: int # Page number, starts at 1., limit: int # Limit of items per page. If you encounter api issues due to too large page sizes, try to reduce the limit., name: str, userId: str, type: str, traceId: str, level: str # Optional filter for observations with a specific level (e.g. "DEBUG", "DEFAULT", "WARNING", "ERROR")., parentObservationId: str, environment: [str] # Optional filter for observations where the environment is one of the provided values., fromStartTime: str(date-time) # Retrieve only observations with a start_time on or after this datetime (ISO 8601)., toStartTime: str(date-time) # Retrieve only observations with a start_time before this datetime (ISO 8601)., version: str # Optional filter to only include observations with a certain version., filter: str # JSON string containing an array of filter conditions. When provided, this takes precedence over query parameter filters (userId, name, type, level, environment, fromStartTime, ...).  ## Filter Structure Each filter condition has the following structure: ```json [   {     "type": string,           // Required. One of: "datetime", "string", "number", "stringOptions", "categoryOptions", "arrayOptions", "stringObject", "numberObject", "boolean", "null"     "column": string,         // Required. Column to filter on (see available columns below)     "operator": string,       // Required. Operator based on type:                               // - datetime: ">", "<", ">=", "<="                               // - string: "=", "contains", "does not contain", "starts with", "ends with"                               // - stringOptions: "any of", "none of"                               // - categoryOptions: "any of", "none of"                               // - arrayOptions: "any of", "none of", "all of"                               // - number: "=", ">", "<", ">=", "<="                               // - stringObject: "=", "contains", "does not contain", "starts with", "ends with"                               // - numberObject: "=", ">", "<", ">=", "<="                               // - boolean: "=", "<>"                               // - null: "is null", "is not null"     "value": any,             // Required (except for null type). Value to compare against. Type depends on filter type     "key": string             // Required only for stringObject, numberObject, and categoryOptions types when filtering on nested fields like metadata   } ] ```  ## Available Columns  ### Core Observation Fields - `id` (string) - Observation ID - `type` (string) - Observation type (SPAN, GENERATION, EVENT) - `name` (string) - Observation name - `traceId` (string) - Associated trace ID - `startTime` (datetime) - Observation start time - `endTime` (datetime) - Observation end time - `environment` (string) - Environment tag - `level` (string) - Log level (DEBUG, DEFAULT, WARNING, ERROR) - `statusMessage` (string) - Status message - `version` (string) - Version tag  ### Performance Metrics - `latency` (number) - Latency in seconds (calculated: end_time - start_time) - `timeToFirstToken` (number) - Time to first token in seconds - `tokensPerSecond` (number) - Output tokens per second  ### Token Usage - `inputTokens` (number) - Number of input tokens - `outputTokens` (number) - Number of output tokens - `totalTokens` (number) - Total tokens (alias: `tokens`)  ### Cost Metrics - `inputCost` (number) - Input cost in USD - `outputCost` (number) - Output cost in USD - `totalCost` (number) - Total cost in USD  ### Model Information - `model` (string) - Provided model name - `promptName` (string) - Associated prompt name - `promptVersion` (number) - Associated prompt version  ### Structured Data - `metadata` (stringObject/numberObject/categoryOptions) - Metadata key-value pairs. Use `key` parameter to filter on specific metadata keys.  ### Associated Trace Fields (requires join with traces table) - `userId` (string) - User ID from associated trace - `traceName` (string) - Name from associated trace - `traceEnvironment` (string) - Environment from associated trace - `traceTags` (arrayOptions) - Tags from associated trace  ## Filter Examples ```json [   {     "type": "string",     "column": "type",     "operator": "=",     "value": "GENERATION"   },   {     "type": "number",     "column": "latency",     "operator": ">=",     "value": 2.5   },   {     "type": "stringObject",     "column": "metadata",     "key": "environment",     "operator": "=",     "value": "production"   } ] ```}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/scores
+@desc Create a score (supports both trace and session scores)
+@required {name: str, value: any # The value of the score. Must be passed as string for categorical scores, and numeric for boolean and numeric scores}
+@optional {id: str, traceId: str, sessionId: str, observationId: str, datasetRunId: str, comment: str, metadata: map, environment: str # The environment of the score. Can be any lowercase alphanumeric string with hyphens and underscores that does not start with 'langfuse'., queueId: str # The annotation queue referenced by the score. Indicates if score was initially created while processing annotation queue., dataType: str(NUMERIC/BOOLEAN/CATEGORICAL/CORRECTION), configId: str # Reference a score config on a score. The unique langfuse identifier of a score config. When passing this field, the dataType and stringValue fields are automatically populated.}
+@returns(200) {id: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/scores/{scoreId}
+@desc Delete a score (supports both trace and session scores)
+@required {scoreId: str # The unique langfuse identifier of a score}
+@returns(204)
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/llm-connections
+@desc Get all LLM connections in a project
+@optional {page: int # page number, starts at 1, limit: int # limit of items per page}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint PUT /api/public/llm-connections
+@desc Create or update an LLM connection. The connection is upserted on provider.
+@required {provider: str # Provider name (e.g., 'openai', 'my-gateway'). Must be unique in project, used for upserting., adapter: str(anthropic/openai/azure/bedrock/google-vertex-ai/google-ai-studio), secretKey: str # Secret key for the LLM API.}
+@optional {baseURL: str # Custom base URL for the LLM API, customModels: [str] # List of custom model names, withDefaultModels: bool # Whether to include default models. Default is true., extraHeaders: map # Extra headers to send with requests, config: map # Adapter-specific configuration. Validation rules: - **Bedrock**: Required. Must be `{"region": "<aws-region>"}` (e.g., `{"region":"us-east-1"}`) - **VertexAI**: Optional. If provided, must be `{"location": "<gcp-location>"}` (e.g., `{"location":"us-central1"}`) - **Other adapters**: Not supported. Omit this field or set to null.}
+@returns(200) {id: str, provider: str, adapter: str, displaySecretKey: str, baseURL: str?, customModels: [str], withDefaultModels: bool, extraHeaderKeys: [str], config: map?, createdAt: str(date-time), updatedAt: str(date-time)}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/media/{mediaId}
+@desc Get a media record
+@required {mediaId: str # The unique langfuse identifier of a media record}
+@returns(200) {mediaId: str, contentType: str, contentLength: int, uploadedAt: str(date-time), url: str, urlExpiry: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint PATCH /api/public/media/{mediaId}
+@desc Patch a media record
+@required {mediaId: str # The unique langfuse identifier of a media record, uploadedAt: str(date-time) # The date and time when the media record was uploaded, uploadHttpStatus: int # The HTTP status code of the upload}
+@optional {uploadHttpError: str # The HTTP error message of the upload, uploadTimeMs: int # The time in milliseconds it took to upload the media record}
+@returns(204)
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/media
+@desc Get a presigned upload URL for a media record
+@required {traceId: str # The trace ID associated with the media record, contentType: str(image/png/image/jpeg/image/jpg/image/webp/image/gif/image/svg+xml/image/tiff/image/bmp/image/avif/image/heic/audio/mpeg/audio/mp3/audio/wav/audio/ogg/audio/oga/audio/aac/audio/mp4/audio/flac/audio/opus/audio/webm/video/mp4/video/webm/video/ogg/video/mpeg/video/quicktime/video/x-msvideo/video/x-matroska/text/plain/text/html/text/css/text/csv/text/markdown/text/x-python/application/javascript/text/x-typescript/application/x-yaml/application/pdf/application/msword/application/vnd.ms-excel/application/vnd.openxmlformats-officedocument.spreadsheetml.sheet/application/zip/application/json/application/xml/application/octet-stream/application/vnd.openxmlformats-officedocument.wordprocessingml.document/application/vnd.openxmlformats-officedocument.presentationml.presentation/application/rtf/application/x-ndjson/application/vnd.apache.parquet/application/gzip/application/x-tar/application/x-7z-compressed) # The MIME type of the media record, contentLength: int # The size of the media record in bytes, sha256Hash: str # The SHA-256 hash of the media record, field: str # The trace / observation field the media record is associated with. This can be one of `input`, `output`, `metadata`}
+@optional {observationId: str # The observation ID associated with the media record. If the media record is associated directly with a trace, this will be null.}
+@returns(200) {uploadUrl: str?, mediaId: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/v2/metrics
+@desc Get metrics from the Langfuse project using a query object. V2 endpoint with optimized performance.
+@required {query: str # JSON string containing the query parameters with the following structure: ```json {   "view": string,           // Required. One of "observations", "scores-numeric", "scores-categorical"   "dimensions": [           // Optional. Default: []     {       "field": string       // Field to group by (see available dimensions above)     }   ],   "metrics": [              // Required. At least one metric must be provided     {       "measure": string,    // What to measure (see available measures above)       "aggregation": string // How to aggregate: "sum", "avg", "count", "max", "min", "p50", "p75", "p90", "p95", "p99", "histogram"     }   ],   "filters": [              // Optional. Default: []     {       "column": string,     // Column to filter on (any dimension field)       "operator": string,   // Operator based on type:                             // - datetime: ">", "<", ">=", "<="                             // - string: "=", "contains", "does not contain", "starts with", "ends with"                             // - stringOptions: "any of", "none of"                             // - arrayOptions: "any of", "none of", "all of"                             // - number: "=", ">", "<", ">=", "<="                             // - stringObject/numberObject: same as string/number with required "key"                             // - boolean: "=", "<>"                             // - null: "is null", "is not null"       "value": any,         // Value to compare against       "type": string,       // Data type: "datetime", "string", "number", "stringOptions", "categoryOptions", "arrayOptions", "stringObject", "numberObject", "boolean", "null"       "key": string         // Required only for stringObject/numberObject types (e.g., metadata filtering)     }   ],   "timeDimension": {        // Optional. Default: null. If provided, results will be grouped by time     "granularity": string   // One of "auto", "minute", "hour", "day", "week", "month"   },   "fromTimestamp": string,  // Required. ISO datetime string for start of time range   "toTimestamp": string,    // Required. ISO datetime string for end of time range (must be after fromTimestamp)   "orderBy": [              // Optional. Default: null     {       "field": string,      // Field to order by (dimension or metric alias)       "direction": string   // "asc" or "desc"     }   ],   "config": {               // Optional. Query-specific configuration     "bins": number,         // Optional. Number of bins for histogram aggregation (1-100), default: 10     "row_limit": number     // Optional. Maximum number of rows to return (1-1000), default: 100   } } ```}
+@returns(200) {data: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/models
+@desc Create a model
+@required {modelName: str # Name of the model definition. If multiple with the same name exist, they are applied in the following order: (1) custom over built-in, (2) newest according to startTime where model.startTime<observation.startTime, matchPattern: str # Regex pattern which matches this model definition to generation.model. Useful in case of fine-tuned models. If you want to exact match, use `(?i)^modelname$`}
+@optional {startDate: str(date-time) # Apply only to generations which are newer than this ISO date., unit: str(CHARACTERS/TOKENS/MILLISECONDS/SECONDS/IMAGES/REQUESTS) # Unit of usage in Langfuse, inputPrice: num(double) # Deprecated. Use 'pricingTiers' instead. Price (USD) per input unit. Creates a default tier if pricingTiers not provided., outputPrice: num(double) # Deprecated. Use 'pricingTiers' instead. Price (USD) per output unit. Creates a default tier if pricingTiers not provided., totalPrice: num(double) # Deprecated. Use 'pricingTiers' instead. Price (USD) per total units. Cannot be set if input or output price is set. Creates a default tier if pricingTiers not provided., pricingTiers: [map{name!: str, isDefault!: bool, priority!: int, conditions!: [map], prices!: map}] # Optional. Array of pricing tiers for this model.  Use pricing tiers for all models - both those with threshold-based pricing variations and those with simple flat pricing:  - For models with standard flat pricing: Create a single default tier with your prices   (e.g., one tier with isDefault=true, priority=0, conditions=[], and your standard prices)  - For models with threshold-based pricing: Create a default tier plus additional conditional tiers   (e.g., default tier for standard usage + high-volume tier for usage above certain thresholds)  Requirements: - Cannot be provided with flat prices (inputPrice/outputPrice/totalPrice) - use one approach or the other - Must include exactly one default tier with isDefault=true, priority=0, and conditions=[] - All tier names and priorities must be unique within the model - Each tier must define at least one price  If omitted, you must provide flat prices instead (inputPrice/outputPrice/totalPrice), which will automatically create a single default tier named "Standard"., tokenizerId: str # Optional. Tokenizer to be applied to observations which match to this model. See docs for more details., tokenizerConfig: any # Optional. Configuration for the selected tokenizer. Needs to be JSON. See docs for more details.}
+@returns(200) {id: str, modelName: str, matchPattern: str, startDate: str(date-time)?, unit: str, inputPrice: num(double)?, outputPrice: num(double)?, totalPrice: num(double)?, tokenizerId: str?, tokenizerConfig: any, isLangfuseManaged: bool, createdAt: str(date-time), prices: map, pricingTiers: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/models
+@desc Get all models
+@optional {page: int # page number, starts at 1, limit: int # limit of items per page}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/models/{id}
+@desc Get a model
+@required {id: str}
+@returns(200) {id: str, modelName: str, matchPattern: str, startDate: str(date-time)?, unit: str, inputPrice: num(double)?, outputPrice: num(double)?, totalPrice: num(double)?, tokenizerId: str?, tokenizerConfig: any, isLangfuseManaged: bool, createdAt: str(date-time), prices: map, pricingTiers: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/models/{id}
+@desc Delete a model. Cannot delete models managed by Langfuse. You can create your own definition with the same modelName to override the definition though.
+@required {id: str}
+@returns(204)
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/v2/observations
+@desc Get a list of observations with cursor-based pagination and flexible field selection.
+@optional {fields: str # Comma-separated list of field groups to include in the response. Available groups: core, basic, time, io, metadata, model, usage, prompt, metrics. If not specified, `core` and `basic` field groups are returned. Example: "basic,usage,model", expandMetadata: str # Comma-separated list of metadata keys to return non-truncated. By default, metadata values over 200 characters are truncated. Use this parameter to retrieve full values for specific keys. Example: "key1,key2", limit: int # Number of items to return per page. Maximum 1000, default 50., cursor: str # Base64-encoded cursor for pagination. Use the cursor from the previous response to get the next page., parseIoAsJson: bool # **Deprecated.** Setting this to `true` will return a 400 error. Input/output fields are always returned as raw strings. Remove this parameter or set it to `false`., name: str, userId: str, type: str # Filter by observation type (e.g., "GENERATION", "SPAN", "EVENT", "AGENT", "TOOL", "CHAIN", "RETRIEVER", "EVALUATOR", "EMBEDDING", "GUARDRAIL"), traceId: str, level: str # Optional filter for observations with a specific level (e.g. "DEBUG", "DEFAULT", "WARNING", "ERROR")., parentObservationId: str, environment: [str] # Optional filter for observations where the environment is one of the provided values., fromStartTime: str(date-time) # Retrieve only observations with a start_time on or after this datetime (ISO 8601)., toStartTime: str(date-time) # Retrieve only observations with a start_time before this datetime (ISO 8601)., version: str # Optional filter to only include observations with a certain version., filter: str # JSON string containing an array of filter conditions. When provided, this takes precedence over query parameter filters (userId, name, type, level, environment, fromStartTime, ...).  ## Filter Structure Each filter condition has the following structure: ```json [   {     "type": string,           // Required. One of: "datetime", "string", "number", "stringOptions", "categoryOptions", "arrayOptions", "stringObject", "numberObject", "boolean", "null"     "column": string,         // Required. Column to filter on (see available columns below)     "operator": string,       // Required. Operator based on type:                               // - datetime: ">", "<", ">=", "<="                               // - string: "=", "contains", "does not contain", "starts with", "ends with"                               // - stringOptions: "any of", "none of"                               // - categoryOptions: "any of", "none of"                               // - arrayOptions: "any of", "none of", "all of"                               // - number: "=", ">", "<", ">=", "<="                               // - stringObject: "=", "contains", "does not contain", "starts with", "ends with"                               // - numberObject: "=", ">", "<", ">=", "<="                               // - boolean: "=", "<>"                               // - null: "is null", "is not null"     "value": any,             // Required (except for null type). Value to compare against. Type depends on filter type     "key": string             // Required only for stringObject, numberObject, and categoryOptions types when filtering on nested fields like metadata   } ] ```  ## Available Columns  ### Core Observation Fields - `id` (string) - Observation ID - `type` (string) - Observation type (SPAN, GENERATION, EVENT) - `name` (string) - Observation name - `traceId` (string) - Associated trace ID - `startTime` (datetime) - Observation start time - `endTime` (datetime) - Observation end time - `environment` (string) - Environment tag - `level` (string) - Log level (DEBUG, DEFAULT, WARNING, ERROR) - `statusMessage` (string) - Status message - `version` (string) - Version tag - `userId` (string) - User ID - `sessionId` (string) - Session ID  ### Trace-Related Fields - `traceName` (string) - Name of the parent trace - `traceTags` (arrayOptions) - Tags from the parent trace - `tags` (arrayOptions) - Alias for traceTags  ### Performance Metrics - `latency` (number) - Latency in seconds (calculated: end_time - start_time) - `timeToFirstToken` (number) - Time to first token in seconds - `tokensPerSecond` (number) - Output tokens per second  ### Token Usage - `inputTokens` (number) - Number of input tokens - `outputTokens` (number) - Number of output tokens - `totalTokens` (number) - Total tokens (alias: `tokens`)  ### Cost Metrics - `inputCost` (number) - Input cost in USD - `outputCost` (number) - Output cost in USD - `totalCost` (number) - Total cost in USD  ### Model Information - `model` (string) - Provided model name (alias: `providedModelName`) - `promptName` (string) - Associated prompt name - `promptVersion` (number) - Associated prompt version  ### Structured Data - `metadata` (stringObject/numberObject/categoryOptions) - Metadata key-value pairs. Use `key` parameter to filter on specific metadata keys.  ## Filter Examples ```json [   {     "type": "string",     "column": "type",     "operator": "=",     "value": "GENERATION"   },   {     "type": "number",     "column": "latency",     "operator": ">=",     "value": 2.5   },   {     "type": "stringObject",     "column": "metadata",     "key": "environment",     "operator": "=",     "value": "production"   } ] ```}
+@returns(200) {data: [map], meta: map{cursor: str?}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/otel/v1/traces
+@desc **OpenTelemetry Traces Ingestion Endpoint**
+@required {resourceSpans: [map{resource: map, scopeSpans: [map]}] # Array of resource spans containing trace data as defined in the OTLP specification}
+@returns(200)
+@errors {400, 401, 403, 404, 405}
+@example_request {"resourceSpans":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"my-service"}},{"key":"service.version","value":{"stringValue":"1.0.0"}}]},"scopeSpans":[{"scope":{"name":"langfuse-sdk","version":"2.60.3"},"spans":[{"traceId":"0123456789abcdef0123456789abcdef","spanId":"0123456789abcdef","name":"my-operation","kind":1,"startTimeUnixNano":"1747872000000000000","endTimeUnixNano":"1747872001000000000","attributes":[{"key":"langfuse.observation.type","value":{"stringValue":"generation"}}],"status":{}}]}]}]}
+
+@endpoint GET /api/public/organizations/memberships
+@desc Get all memberships for the organization associated with the API key (requires organization-scoped API key)
+@returns(200) {memberships: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint PUT /api/public/organizations/memberships
+@desc Create or update a membership for the organization associated with the API key (requires organization-scoped API key)
+@required {userId: str, role: str(OWNER/ADMIN/MEMBER/VIEWER)}
+@returns(200) {userId: str, role: str, email: str, name: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/organizations/memberships
+@desc Delete a membership from the organization associated with the API key (requires organization-scoped API key)
+@required {userId: str}
+@returns(200) {message: str, userId: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/projects/{projectId}/memberships
+@desc Get all memberships for a specific project (requires organization-scoped API key)
+@required {projectId: str}
+@returns(200) {memberships: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint PUT /api/public/projects/{projectId}/memberships
+@desc Create or update a membership for a specific project (requires organization-scoped API key). The user must already be a member of the organization.
+@required {projectId: str, userId: str, role: str(OWNER/ADMIN/MEMBER/VIEWER)}
+@returns(200) {userId: str, role: str, email: str, name: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/projects/{projectId}/memberships
+@desc Delete a membership from a specific project (requires organization-scoped API key). The user must be a member of the organization.
+@required {projectId: str, userId: str}
+@returns(200) {message: str, userId: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/organizations/projects
+@desc Get all projects for the organization associated with the API key (requires organization-scoped API key)
+@returns(200) {projects: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/organizations/apiKeys
+@desc Get all API keys for the organization associated with the API key (requires organization-scoped API key)
+@returns(200) {apiKeys: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/projects
+@desc Get Project associated with API key (requires project-scoped API key). You can use GET /api/public/organizations/projects to get all projects with an organization-scoped key.
+@returns(200) {data: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/projects
+@desc Create a new project (requires organization-scoped API key)
+@required {name: str, retention: int # Number of days to retain data. Must be 0 or at least 3 days. Requires data-retention entitlement for non-zero values. Optional.}
+@optional {metadata: map # Optional metadata for the project}
+@returns(200) {id: str, name: str, organization: map{id: str, name: str}, metadata: map, retentionDays: int?}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint PUT /api/public/projects/{projectId}
+@desc Update a project by ID (requires organization-scoped API key).
+@required {projectId: str, name: str}
+@optional {metadata: map # Optional metadata for the project, retention: int # Number of days to retain data. Must be 0 or at least 3 days. Requires data-retention entitlement for non-zero values. Optional. Will retain existing retention setting if omitted.}
+@returns(200) {id: str, name: str, organization: map{id: str, name: str}, metadata: map, retentionDays: int?}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/projects/{projectId}
+@desc Delete a project by ID (requires organization-scoped API key). Project deletion is processed asynchronously.
+@required {projectId: str}
+@returns(202) {success: bool, message: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/projects/{projectId}/apiKeys
+@desc Get all API keys for a project (requires organization-scoped API key)
+@required {projectId: str}
+@returns(200) {apiKeys: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/projects/{projectId}/apiKeys
+@desc Create a new API key for a project (requires organization-scoped API key)
+@required {projectId: str}
+@optional {note: str # Optional note for the API key, publicKey: str # Optional predefined public key. Must start with 'pk-lf-'. If provided, secretKey must also be provided., secretKey: str # Optional predefined secret key. Must start with 'sk-lf-'. If provided, publicKey must also be provided.}
+@returns(200) {id: str, createdAt: str(date-time), publicKey: str, secretKey: str, displaySecretKey: str, note: str?}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/projects/{projectId}/apiKeys/{apiKeyId}
+@desc Delete an API key for a project (requires organization-scoped API key)
+@required {projectId: str, apiKeyId: str}
+@returns(200) {success: bool}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint PATCH /api/public/v2/prompts/{name}/versions/{version}
+@desc Update labels for a specific prompt version
+@required {name: str # The name of the prompt. If the prompt is in a folder (e.g., "folder/subfolder/prompt-name"),  the folder path must be URL encoded., version: int # Version of the prompt to update, newLabels: [str] # New labels for the prompt version. Labels are unique across versions. The "latest" label is reserved and managed by Langfuse.}
+@returns(200)
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/v2/prompts/{promptName}
+@desc Get a prompt
+@required {promptName: str # The name of the prompt. If the prompt is in a folder (e.g., "folder/subfolder/prompt-name"),  the folder path must be URL encoded.}
+@optional {version: int # Version of the prompt to be retrieved., label: str # Label of the prompt to be retrieved. Defaults to "production" if no label or version is set.}
+@returns(200)
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/v2/prompts/{promptName}
+@desc Delete prompt versions. If neither version nor label is specified, all versions of the prompt are deleted.
+@required {promptName: str # The name of the prompt}
+@optional {label: str # Optional label to filter deletion. If specified, deletes all prompt versions that have this label., version: int # Optional version to filter deletion. If specified, deletes only this specific version of the prompt.}
+@returns(204)
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/v2/prompts
+@desc Get a list of prompt names with versions and labels
+@optional {name: str, label: str, tag: str, page: int # page number, starts at 1, limit: int # limit of items per page, fromUpdatedAt: str(date-time) # Optional filter to only include prompt versions created/updated on or after a certain datetime (ISO 8601), toUpdatedAt: str(date-time) # Optional filter to only include prompt versions created/updated before a certain datetime (ISO 8601)}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/v2/prompts
+@desc Create a new version for the prompt with the given `name`
+@returns(200)
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/scim/ServiceProviderConfig
+@desc Get SCIM Service Provider Configuration (requires organization-scoped API key)
+@returns(200) {schemas: [str], documentationUri: str, patch: map{supported: bool}, bulk: map{supported: bool, maxOperations: int, maxPayloadSize: int}, filter: map{supported: bool, maxResults: int}, changePassword: map{supported: bool}, sort: map{supported: bool}, etag: map{supported: bool}, authenticationSchemes: [map], meta: map{resourceType: str, location: str}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/scim/ResourceTypes
+@desc Get SCIM Resource Types (requires organization-scoped API key)
+@returns(200) {schemas: [str], totalResults: int, Resources: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/scim/Schemas
+@desc Get SCIM Schemas (requires organization-scoped API key)
+@returns(200) {schemas: [str], totalResults: int, Resources: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/scim/Users
+@desc List users in the organization (requires organization-scoped API key)
+@optional {filter: str # Filter expression (e.g. userName eq "value"), startIndex: int # 1-based index of the first result to return (default 1), count: int # Maximum number of results to return (default 100)}
+@returns(200) {schemas: [str], totalResults: int, startIndex: int, itemsPerPage: int, Resources: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/scim/Users
+@desc Create a new user in the organization (requires organization-scoped API key)
+@required {userName: str # User's email address (required), name: map{formatted: str}}
+@optional {emails: [map{primary!: bool, value!: str, type!: str}] # User's email addresses, active: bool # Whether the user is active, password: str # Initial password for the user}
+@returns(200) {schemas: [str], id: str, userName: str, name: map{formatted: str?}, emails: [map], meta: map{resourceType: str, created: str?, lastModified: str?}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/scim/Users/{userId}
+@desc Get a specific user by ID (requires organization-scoped API key)
+@required {userId: str}
+@returns(200) {schemas: [str], id: str, userName: str, name: map{formatted: str?}, emails: [map], meta: map{resourceType: str, created: str?, lastModified: str?}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/scim/Users/{userId}
+@desc Remove a user from the organization (requires organization-scoped API key). Note that this only removes the user from the organization but does not delete the user entity itself.
+@required {userId: str}
+@returns(200)
+@errors {400, 401, 403, 404, 405}
+
+@endpoint POST /api/public/score-configs
+@desc Create a score configuration (config). Score configs are used to define the structure of scores
+@required {name: str, dataType: str(NUMERIC/BOOLEAN/CATEGORICAL)}
+@optional {categories: [map{value!: num(double), label!: str}] # Configure custom categories for categorical scores. Pass a list of objects with `label` and `value` properties. Categories are autogenerated for boolean configs and cannot be passed, minValue: num(double) # Configure a minimum value for numerical scores. If not set, the minimum value defaults to -∞, maxValue: num(double) # Configure a maximum value for numerical scores. If not set, the maximum value defaults to +∞, description: str # Description is shown across the Langfuse UI and can be used to e.g. explain the config categories in detail, why a numeric range was set, or provide additional context on config name or usage}
+@returns(200) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time), projectId: str, dataType: str, isArchived: bool, minValue: num(double)?, maxValue: num(double)?, categories: [map]?, description: str?}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/score-configs
+@desc Get all score configs
+@optional {page: int # Page number, starts at 1., limit: int # Limit of items per page. If you encounter api issues due to too large page sizes, try to reduce the limit}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/score-configs/{configId}
+@desc Get a score config
+@required {configId: str # The unique langfuse identifier of a score config}
+@returns(200) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time), projectId: str, dataType: str, isArchived: bool, minValue: num(double)?, maxValue: num(double)?, categories: [map]?, description: str?}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint PATCH /api/public/score-configs/{configId}
+@desc Update a score config
+@required {configId: str # The unique langfuse identifier of a score config}
+@optional {isArchived: bool # The status of the score config showing if it is archived or not, name: str # The name of the score config, categories: [map{value!: num(double), label!: str}] # Configure custom categories for categorical scores. Pass a list of objects with `label` and `value` properties. Categories are autogenerated for boolean configs and cannot be passed, minValue: num(double) # Configure a minimum value for numerical scores. If not set, the minimum value defaults to -∞, maxValue: num(double) # Configure a maximum value for numerical scores. If not set, the maximum value defaults to +∞, description: str # Description is shown across the Langfuse UI and can be used to e.g. explain the config categories in detail, why a numeric range was set, or provide additional context on config name or usage}
+@returns(200) {id: str, name: str, createdAt: str(date-time), updatedAt: str(date-time), projectId: str, dataType: str, isArchived: bool, minValue: num(double)?, maxValue: num(double)?, categories: [map]?, description: str?}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/v2/scores
+@desc Get a list of scores (supports both trace and session scores)
+@optional {page: int # Page number, starts at 1., limit: int # Limit of items per page. If you encounter api issues due to too large page sizes, try to reduce the limit., userId: str # Retrieve only scores with this userId associated to the trace., name: str # Retrieve only scores with this name., fromTimestamp: str(date-time) # Optional filter to only include scores created on or after a certain datetime (ISO 8601), toTimestamp: str(date-time) # Optional filter to only include scores created before a certain datetime (ISO 8601), environment: [str] # Optional filter for scores where the environment is one of the provided values., source: str # Retrieve only scores from a specific source., operator: str # Retrieve only scores with <operator> value., value: num(double) # Retrieve only scores with <operator> value., scoreIds: str # Comma-separated list of score IDs to limit the results to., configId: str # Retrieve only scores with a specific configId., sessionId: str # Retrieve only scores with a specific sessionId., datasetRunId: str # Retrieve only scores with a specific datasetRunId., traceId: str # Retrieve only scores with a specific traceId., observationId: str # Comma-separated list of observation IDs to filter scores by., queueId: str # Retrieve only scores with a specific annotation queueId., dataType: str # Retrieve only scores with a specific dataType., traceTags: [str] # Only scores linked to traces that include all of these tags will be returned., fields: str # Comma-separated list of field groups to include in the response. Available field groups: 'score' (core score fields), 'trace' (trace properties: userId, tags, environment, sessionId). If not specified, both 'score' and 'trace' are returned by default. Example: 'score' to exclude trace data, 'score,trace' to include both. Note: When filtering by trace properties (using userId or traceTags parameters), the 'trace' field group must be included, otherwise a 400 error will be returned., filter: str # A JSON stringified array of filter objects. Each object requires type, column, operator, and value. Supports filtering by score metadata using the stringObject type. Example: [{"type":"stringObject","column":"metadata","key":"user_id","operator":"=","value":"abc123"}]. Supported types: stringObject (metadata key-value filtering), string, number, datetime, stringOptions, arrayOptions. Supported operators for stringObject: =, contains, does not contain, starts with, ends with.}
+@returns(200) {data: [any], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/v2/scores/{scoreId}
+@desc Get a score (supports both trace and session scores)
+@required {scoreId: str # The unique langfuse identifier of a score}
+@returns(200)
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/sessions
+@desc Get sessions
+@optional {page: int # Page number, starts at 1, limit: int # Limit of items per page. If you encounter api issues due to too large page sizes, try to reduce the limit., fromTimestamp: str(date-time) # Optional filter to only include sessions created on or after a certain datetime (ISO 8601), toTimestamp: str(date-time) # Optional filter to only include sessions created before a certain datetime (ISO 8601), environment: [str] # Optional filter for sessions where the environment is one of the provided values.}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/sessions/{sessionId}
+@desc Get a session. Please note that `traces` on this endpoint are not paginated, if you plan to fetch large sessions, consider `GET /api/public/traces?sessionId=<sessionId>`
+@required {sessionId: str # The unique id of a session}
+@returns(200) {traces: [map]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/traces/{traceId}
+@desc Get a specific trace
+@required {traceId: str # The unique langfuse identifier of a trace}
+@returns(200) {htmlPath: str, latency: num(double)?, totalCost: num(double)?, observations: [map], scores: [any]}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/traces/{traceId}
+@desc Delete a specific trace
+@required {traceId: str # The unique langfuse identifier of the trace to delete}
+@returns(200) {message: str}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint GET /api/public/traces
+@desc Get list of traces
+@optional {page: int # Page number, starts at 1, limit: int # Limit of items per page. If you encounter api issues due to too large page sizes, try to reduce the limit., userId: str, name: str, sessionId: str, fromTimestamp: str(date-time) # Optional filter to only include traces with a trace.timestamp on or after a certain datetime (ISO 8601), toTimestamp: str(date-time) # Optional filter to only include traces with a trace.timestamp before a certain datetime (ISO 8601), orderBy: str # Format of the string [field].[asc/desc]. Fields: id, timestamp, name, userId, release, version, public, bookmarked, sessionId. Example: timestamp.asc, tags: [str] # Only traces that include all of these tags will be returned., version: str # Optional filter to only include traces with a certain version., release: str # Optional filter to only include traces with a certain release., environment: [str] # Optional filter for traces where the environment is one of the provided values., fields: str # Comma-separated list of fields to include in the response. Available field groups: 'core' (always included), 'io' (input, output, metadata), 'scores', 'observations', 'metrics'. If not specified, all fields are returned. Example: 'core,scores,metrics'. Note: Excluded 'observations' or 'scores' fields return empty arrays; excluded 'metrics' returns -1 for 'totalCost' and 'latency'., filter: str # JSON string containing an array of filter conditions. When provided, this takes precedence over query parameter filters (userId, name, sessionId, tags, version, release, environment, fromTimestamp, toTimestamp).  ## Filter Structure Each filter condition has the following structure: ```json [   {     "type": string,           // Required. One of: "datetime", "string", "number", "stringOptions", "categoryOptions", "arrayOptions", "stringObject", "numberObject", "boolean", "null"     "column": string,         // Required. Column to filter on (see available columns below)     "operator": string,       // Required. Operator based on type:                               // - datetime: ">", "<", ">=", "<="                               // - string: "=", "contains", "does not contain", "starts with", "ends with"                               // - stringOptions: "any of", "none of"                               // - categoryOptions: "any of", "none of"                               // - arrayOptions: "any of", "none of", "all of"                               // - number: "=", ">", "<", ">=", "<="                               // - stringObject: "=", "contains", "does not contain", "starts with", "ends with"                               // - numberObject: "=", ">", "<", ">=", "<="                               // - boolean: "=", "<>"                               // - null: "is null", "is not null"     "value": any,             // Required (except for null type). Value to compare against. Type depends on filter type     "key": string             // Required only for stringObject, numberObject, and categoryOptions types when filtering on nested fields like metadata   } ] ```  ## Available Columns  ### Core Trace Fields - `id` (string) - Trace ID - `name` (string) - Trace name - `timestamp` (datetime) - Trace timestamp - `userId` (string) - User ID - `sessionId` (string) - Session ID - `environment` (string) - Environment tag - `version` (string) - Version tag - `release` (string) - Release tag - `tags` (arrayOptions) - Array of tags - `bookmarked` (boolean) - Bookmark status  ### Structured Data - `metadata` (stringObject/numberObject/categoryOptions) - Metadata key-value pairs. Use `key` parameter to filter on specific metadata keys.  ### Aggregated Metrics (from observations) These metrics are aggregated from all observations within the trace: - `latency` (number) - Latency in seconds (time from first observation start to last observation end) - `inputTokens` (number) - Total input tokens across all observations - `outputTokens` (number) - Total output tokens across all observations - `totalTokens` (number) - Total tokens (alias: `tokens`) - `inputCost` (number) - Total input cost in USD - `outputCost` (number) - Total output cost in USD - `totalCost` (number) - Total cost in USD  ### Observation Level Aggregations These fields aggregate observation levels within the trace: - `level` (string) - Highest severity level (ERROR > WARNING > DEFAULT > DEBUG) - `warningCount` (number) - Count of WARNING level observations - `errorCount` (number) - Count of ERROR level observations - `defaultCount` (number) - Count of DEFAULT level observations - `debugCount` (number) - Count of DEBUG level observations  ### Scores (requires join with scores table) - `scores_avg` (number) - Average of numeric scores (alias: `scores`) - `score_categories` (categoryOptions) - Categorical score values  ## Filter Examples ```json [   {     "type": "datetime",     "column": "timestamp",     "operator": ">=",     "value": "2024-01-01T00:00:00Z"   },   {     "type": "string",     "column": "userId",     "operator": "=",     "value": "user-123"   },   {     "type": "number",     "column": "totalCost",     "operator": ">=",     "value": 0.01   },   {     "type": "arrayOptions",     "column": "tags",     "operator": "all of",     "value": ["production", "critical"]   },   {     "type": "stringObject",     "column": "metadata",     "key": "customer_tier",     "operator": "=",     "value": "enterprise"   } ] ```  ## Performance Notes - Filtering on `userId`, `sessionId`, or `metadata` may enable skip indexes for better query performance - Score filters require a join with the scores table and may impact query performance}
+@returns(200) {data: [map], meta: map{page: int, limit: int, totalItems: int, totalPages: int}}
+@errors {400, 401, 403, 404, 405}
+
+@endpoint DELETE /api/public/traces
+@desc Delete multiple traces
+@required {traceIds: [str] # List of trace IDs to delete}
+@returns(200) {message: str}
+@errors {400, 401, 403, 404, 405}
+
+@end

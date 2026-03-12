@@ -1,0 +1,2345 @@
+@lap v0.3
+# Machine-readable API spec. Each @endpoint block is one API call.
+@api Binance Public Spot API
+@base https://api.binance.com
+@version 1.0
+@auth ApiKey X-MBX-APIKEY in header
+@endpoints 340
+@hint download_for_search
+@toc api(41), sapi(299)
+
+@group api
+@endpoint GET /api/v3/ping
+@desc Test Connectivity
+@returns(200) OK
+
+@endpoint GET /api/v3/time
+@desc Check Server Time
+@returns(200) {serverTime: int(int64)} # Binance server UTC timestamp
+
+@endpoint GET /api/v3/exchangeInfo
+@desc Exchange Information
+@optional {symbol: str # Trading symbol, e.g. BNBUSDT, symbols: str, permissions: str}
+@returns(200) {timezone: str, serverTime: int(int64), rateLimits: [map], exchangeFilters: [map], symbols: [map]} # Current exchange trading rules and symbol information
+@errors {400: Bad Request}
+
+@endpoint GET /api/v3/depth
+@desc Order Book
+@required {symbol: str # Trading symbol, e.g. BNBUSDT}
+@optional {limit: int(int32)=100 # If limit > 5000, then the response will truncate to 5000}
+@returns(200) {lastUpdateId: int(int64), bids: [[str]], asks: [[str]]} # Order book
+@errors {400: Bad Request}
+
+@endpoint GET /api/v3/trades
+@desc Recent Trades List
+@required {symbol: str # Trading symbol, e.g. BNBUSDT}
+@optional {limit: int(int32) # Default 500; max 1000.}
+@returns(200) Trade list
+@errors {400: Bad Request}
+
+@endpoint GET /api/v3/historicalTrades
+@desc Old Trade Lookup
+@required {symbol: str # Trading symbol, e.g. BNBUSDT}
+@optional {limit: int(int32) # Default 500; max 1000., fromId: int(int64) # Trade id to fetch from. Default gets most recent trades.}
+@returns(200) Trade list
+
+@endpoint GET /api/v3/aggTrades
+@desc Compressed/Aggregate Trades List
+@required {symbol: str # Trading symbol, e.g. BNBUSDT}
+@optional {fromId: int(int64) # Trade id to fetch from. Default gets most recent trades., startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # Default 500; max 1000.}
+@returns(200) Trade list
+@errors {400: Bad Request}
+
+@endpoint GET /api/v3/klines
+@desc Kline/Candlestick Data
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, interval: str(1s/1m/3m/5m/15m/30m/1h/2h/4h/6h/8h/12h/1d/3d/1w/1M) # kline intervals}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, timeZone: str # Default: 0 (UTC), limit: int(int32) # Default 500; max 1000.}
+@returns(200) Kline data
+@errors {400: Bad Request}
+
+@endpoint GET /api/v3/uiKlines
+@desc UIKlines
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, interval: str(1s/1m/3m/5m/15m/30m/1h/2h/4h/6h/8h/12h/1d/3d/1w/1M) # kline intervals}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, timeZone: str # Default: 0 (UTC), limit: int(int32) # Default 500; max 1000.}
+@returns(200) UIKline data
+@errors {400: Bad Request}
+
+@endpoint GET /api/v3/avgPrice
+@desc Current Average Price
+@required {symbol: str # Trading symbol, e.g. BNBUSDT}
+@returns(200) {mins: int(int64), price: str, closeTime: int(int64)} # Average price
+@errors {400: Bad Request}
+
+@endpoint GET /api/v3/ticker/24hr
+@desc 24hr Ticker Price Change Statistics
+@optional {symbol: str # Trading symbol, e.g. BNBUSDT, symbols: str, type: str(FULL/MINI) # Supported values: FULL or MINI. If none provided, the default is FULL}
+@returns(200) 24hr ticker
+@errors {400: Bad Request}
+
+@endpoint GET /api/v3/ticker/tradingDay
+@desc Trading Day Ticker
+@optional {symbol: str # Trading symbol, e.g. BNBUSDT, symbols: str, timeZone: str # Default: 0 (UTC), type: str(FULL/MINI) # Supported values: FULL or MINI. If none provided, the default is FULL}
+@returns(200) Trading day ticker
+@errors {400: Bad Request}
+
+@endpoint GET /api/v3/ticker/price
+@desc Symbol Price Ticker
+@optional {symbol: str # Trading symbol, e.g. BNBUSDT, symbols: str}
+@returns(200) Price ticker
+@errors {400: Bad Request}
+
+@endpoint GET /api/v3/ticker/bookTicker
+@desc Symbol Order Book Ticker
+@optional {symbol: str # Trading symbol, e.g. BNBUSDT, symbols: str}
+@returns(200) Order book ticker
+@errors {400: Bad Request}
+
+@endpoint GET /api/v3/ticker
+@desc Rolling window price change statistics
+@optional {symbol: str # Trading symbol, e.g. BNBUSDT, symbols: str, windowSize: str # Defaults to 1d if no parameter provided. Supported windowSize values: 1m,2m....59m for minutes 1h, 2h....23h - for hours 1d...7d - for days.  Units cannot be combined (e.g. 1d2h is not allowed), type: str # Supported values: FULL or MINI. If none provided, the default is FULL}
+@returns(200) {symbol: str, priceChange: str, priceChangePercent: str, weightedAvgPrice: str, openPrice: str, highPrice: str, lowPrice: str, lastPrice: str, volume: str, quoteVolume: str, openTime: int(int64), closeTime: int(int64), firstId: int(int64), lastId: int(int64), count: int(int64)} # Rolling price ticker
+@errors {400: Bad Request}
+
+@endpoint POST /api/v3/order/test
+@desc Test New Order (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, side: str(SELL/BUY), type: str(LIMIT/MARKET/STOP_LOSS/STOP_LOSS_LIMIT/TAKE_PROFIT/TAKE_PROFIT_LIMIT/LIMIT_MAKER) # Order type, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {timeInForce: str(GTC/IOC/FOK) # Order time in force, quantity: num(double) # Order quantity, quoteOrderQty: num(double) # Quote quantity, price: num(double) # Order price, newClientOrderId: str # Used to uniquely identify this cancel. Automatically generated by default, strategyId: int(int64), strategyType: int(int64) # The value cannot be less than 1000000., stopPrice: num(double) # Used with STOP_LOSS, STOP_LOSS_LIMIT, TAKE_PROFIT, and TAKE_PROFIT_LIMIT orders., trailingDelta: num(double) # Used with STOP_LOSS, STOP_LOSS_LIMIT, TAKE_PROFIT, and TAKE_PROFIT_LIMIT orders., icebergQty: num(double) # Used with LIMIT, STOP_LOSS_LIMIT, and TAKE_PROFIT_LIMIT to create an iceberg order., newOrderRespType: str(ACK/RESULT/FULL) # Set the response JSON. MARKET and LIMIT order types default to FULL, all other orders default to ACK., recvWindow: int(int64) # The value cannot be greater than 60000, computeCommissionRates: bool # Default: false}
+@returns(200) OK
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /api/v3/order
+@desc Query Order (USER_DATA)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # Order id, origClientOrderId: str # Order id from client, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {symbol: str, orderId: int(int64), orderListId: int(int64), clientOrderId: str, price: str, origQty: str, executedQty: str, cummulativeQuoteQty: str, status: str, timeInForce: str, type: str, side: str, stopPrice: str, icebergQty: str, time: int(int64), updateTime: int(int64), isWorking: bool, workingTime: int(int64), origQuoteOrderQty: str, selfTradePreventionMode: str, preventedMatchId: int, preventedQuantity: str} # Order details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /api/v3/order
+@desc New Order (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, side: str(SELL/BUY), type: str(LIMIT/MARKET/STOP_LOSS/STOP_LOSS_LIMIT/TAKE_PROFIT/TAKE_PROFIT_LIMIT/LIMIT_MAKER) # Order type, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {timeInForce: str(GTC/IOC/FOK) # Order time in force, quantity: num(double) # Order quantity, quoteOrderQty: num(double) # Quote quantity, price: num(double) # Order price, newClientOrderId: str # Used to uniquely identify this cancel. Automatically generated by default, strategyId: int(int64), strategyType: int(int64) # The value cannot be less than 1000000., stopPrice: num(double) # Used with STOP_LOSS, STOP_LOSS_LIMIT, TAKE_PROFIT, and TAKE_PROFIT_LIMIT orders., trailingDelta: num(double) # Used with STOP_LOSS, STOP_LOSS_LIMIT, TAKE_PROFIT, and TAKE_PROFIT_LIMIT orders., icebergQty: num(double) # Used with LIMIT, STOP_LOSS_LIMIT, and TAKE_PROFIT_LIMIT to create an iceberg order., newOrderRespType: str(ACK/RESULT/FULL) # Set the response JSON. MARKET and LIMIT order types default to FULL, all other orders default to ACK., selfTradePreventionMode: str(EXPIRE_TAKER/EXPIRE_MAKER/EXPIRE_BOTH/NONE) # The allowed enums is dependent on what is configured on the symbol. The possible supported values are EXPIRE_TAKER, EXPIRE_MAKER, EXPIRE_BOTH, NONE., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Order result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint DELETE /api/v3/order
+@desc Cancel Order (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # Order id, origClientOrderId: str # Order id from client, newClientOrderId: str # Used to uniquely identify this cancel. Automatically generated by default, cancelRestrictions: str(ONLY_NEW/ONLY_PARTIALLY_FILLED), recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {symbol: str, origClientOrderId: str, orderId: int(int64), orderListId: int(int64), clientOrderId: str, transactTime: int(int64), price: str, origQty: str, executedQty: str, cummulativeQuoteQty: str, status: str, timeInForce: str, type: str, side: str, selfTradePreventionMode: str} # Cancelled order
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /api/v3/order/cancelReplace
+@desc Cancel an Existing Order and Send a New Order (Trade)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, side: str(SELL/BUY), type: str(LIMIT/MARKET/STOP_LOSS/STOP_LOSS_LIMIT/TAKE_PROFIT/TAKE_PROFIT_LIMIT/LIMIT_MAKER) # Order type, cancelReplaceMode: str # - `STOP_ON_FAILURE` If the cancel request fails, the new order placement will not be attempted. - `ALLOW_FAILURES` If new order placement will be attempted even if cancel request fails., timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {cancelRestrictions: str(ONLY_NEW/ONLY_PARTIALLY_FILLED), timeInForce: str(GTC/IOC/FOK) # Order time in force, quantity: num(double) # Order quantity, quoteOrderQty: num(double) # Quote quantity, price: num(double) # Order price, cancelNewClientOrderId: str # Used to uniquely identify this cancel. Automatically generated by default, cancelOrigClientOrderId: str # Either the cancelOrigClientOrderId or cancelOrderId must be provided. If both are provided, cancelOrderId takes precedence., cancelOrderId: int(int64) # Either the cancelOrigClientOrderId or cancelOrderId must be provided. If both are provided, cancelOrderId takes precedence., newClientOrderId: str # Used to uniquely identify this cancel. Automatically generated by default, strategyId: int(int64), strategyType: int(int64) # The value cannot be less than 1000000., stopPrice: num(double) # Used with STOP_LOSS, STOP_LOSS_LIMIT, TAKE_PROFIT, and TAKE_PROFIT_LIMIT orders., trailingDelta: num(double) # Used with STOP_LOSS, STOP_LOSS_LIMIT, TAKE_PROFIT, and TAKE_PROFIT_LIMIT orders., icebergQty: num(double) # Used with LIMIT, STOP_LOSS_LIMIT, and TAKE_PROFIT_LIMIT to create an iceberg order., newOrderRespType: str(ACK/RESULT/FULL) # Set the response JSON. MARKET and LIMIT order types default to FULL, all other orders default to ACK., selfTradePreventionMode: str(EXPIRE_TAKER/EXPIRE_MAKER/EXPIRE_BOTH/NONE) # The allowed enums is dependent on what is configured on the symbol. The possible supported values are EXPIRE_TAKER, EXPIRE_MAKER, EXPIRE_BOTH, NONE., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {cancelResult: str, newOrderResult: str, cancelResponse: map{symbol: str, origClientOrderId: str, orderId: int(int64), orderListId: int(int64), clientOrderId: str, price: str, origQty: str, executedQty: str, cummulativeQuoteQty: str, status: str, timeInForce: str, type: str, side: str, selfTradePreventionMode: str, transactTime: int(int64)}, newOrderResponse: map{symbol: str, orderId: int(int64), orderListId: int(int64), clientOrderId: str, transactTime: int(int64), price: str, origQty: str, executedQty: str, cummulativeQuoteQty: str, status: str, timeInForce: str, type: str, side: str, workingTime: int(int64), fills: [str], selfTradePreventionMode: str}} # Operation details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /api/v3/openOrders
+@desc Current Open Orders (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {symbol: str # Trading symbol, e.g. BNBUSDT, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Current open orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint DELETE /api/v3/openOrders
+@desc Cancel all Open Orders on a Symbol (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Cancelled orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /api/v3/allOrders
+@desc All Orders (USER_DATA)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # Order id, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Current open orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /api/v3/orderList/oco
+@desc New Order list - OCO (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, side: str(SELL/BUY), quantity: num(double), aboveType: str # Supported values : `STOP_LOSS_LIMIT`, `STOP_LOSS`, `LIMIT_MAKER`, belowType: str # Supported values : `STOP_LOSS_LIMIT`, `STOP_LOSS`, `LIMIT_MAKER`, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {listClientOrderId: str # Arbitrary unique ID among open order lists. Automatically generated if not sent. A new order list with the same `listClientOrderId` is accepted only when the previous one is filled or completely expired. `listClientOrderId` is distinct from the `aboveClientOrderId` and the `belowCLientOrderId`., aboveClientOrderId: str # Arbitrary unique ID among open orders for the above order. Automatically generated if not sent, aboveIcebergQty: num(double) # Note that this can only be used if `aboveTimeInForce` is `GTC`., abovePrice: num(double), aboveStopPrice: num(double) # Can be used if `aboveType` is `STOP_LOSS` or `STOP_LOSS_LIMIT`. Either `aboveStopPrice` or `aboveTrailingDelta` or both, must be specified., aboveTrailingDelta: num(double), aboveTimeInForce: str(GTC/IOC/FOK) # Required if the `aboveType` is `STOP_LOSS_LIMIT`., aboveStrategyId: num(double) # Arbitrary numeric value identifying the above order within an order strategy., aboveStrategyType: int(int64) # Arbitrary numeric value identifying the above order strategy. Values smaller than 1000000 are reserved and cannot be used., belowClientOrderId: str # Arbitrary unique ID among open orders for the below order. Automatically generated if not sent, belowIcebergQty: num(double) # Note that this can only be used if `belowTimeInForce` is `GTC`., belowPrice: num(double) # Can be used if `belowType` is `STOP_LOSS_LIMIT` or `LIMIT_MAKER` to specify the limit price., belowStopPrice: num(double) # Can be used if `belowType` is `STOP_LOSS` or `STOP_LOSS_LIMIT`. Either `belowStopPrice` or `belowTrailingDelta` or both, must be specified., belowTrailingDelta: num(double), belowTimeInForce: str(GTC/IOC/FOK) # Required if the `belowType` is `STOP_LOSS_LIMIT`., belowStrategyId: num(double) # Arbitrary numeric value identifying the below order within an order strategy., belowStrategyType: int(int64) # Arbitrary numeric value identifying the below order strategy. Values smaller than 1000000 are reserved and cannot be used., newOrderRespType: str(ACK/RESULT/FULL) # Set the response JSON. MARKET and LIMIT order types default to FULL, all other orders default to ACK., selfTradePreventionMode: str(EXPIRE_TAKER/EXPIRE_MAKER/EXPIRE_BOTH/NONE) # The allowed enums is dependent on what is configured on the symbol. The possible supported values are EXPIRE_TAKER, EXPIRE_MAKER, EXPIRE_BOTH, NONE., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {orderListId: int(int64), contingencyType: str, listStatusType: str, listOrderStatus: str, listClientOrderId: str, transactionTime: int(int64), symbol: str, orders: [map], orderReports: [map]} # New OCO details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /api/v3/orderList/oto
+@desc New Order List - OTO (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, workingType: str(LIMIT/LIMIT_MAKER) # Supported values: LIMIT,LIMIT_MAKER, workingSide: str(BUY/SELL) # BUY,SELL, workingPrice: num(double), workingQuantity: num(double) # Sets the quantity for the working order., workingIcebergQty: num(double) # This can only be used if workingTimeInForce is GTC., pendingType: str(LIMIT/MARKET/STOP_LOSS/STOP_LOSS_LIMIT/TAKE_PROFIT/TAKE_PROFIT_LIMIT/LIMIT_MAKER) # Supported values: Order Types Note that MARKET orders using quoteOrderQty are not supported., pendingSide: str(BUY/SELL) # BUY,SELL, pendingQuantity: num(double) # Sets the quantity for the pending order., timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {listClientOrderId: str # Arbitrary unique ID among open order lists. Automatically generated if not sent. A new order list with the same `listClientOrderId` is accepted only when the previous one is filled or completely expired. `listClientOrderId` is distinct from the `workingClientOrderId` and the `pendingClientOrderId`., newOrderRespType: str(ACK/RESULT/FULL) # Set the response JSON., selfTradePreventionMode: str(EXPIRE_TAKER/EXPIRE_MAKER/EXPIRE_BOTH/NONE) # The allowed enums is dependent on what is configured on the symbol. The possible supported values are EXPIRE_TAKER, EXPIRE_MAKER, EXPIRE_BOTH, NONE., workingClientOrderId: str # Arbitrary unique ID among open orders for the working order. Automatically generated if not sent., workingTimeInForce: str(GTC/IOC/FOK) # GTC, IOC, FOK, workingStrategyId: num(double) # Arbitrary numeric value identifying the working order within an order strategy., workingStrategyType: int(int64) # Arbitrary numeric value identifying the working order strategy. Values smaller than 1000000 are reserved and cannot be used., pendingClientOrderId: str # Arbitrary unique ID among open orders for the pending order. Automatically generated if not sent., pendingPrice: num(double), pendingStopPrice: num(double), pendingTrailingDelta: num(double), pendingIcebergQty: num(double) # This can only be used if pendingTimeInForce is GTC., pendingTimeInForce: str(GTC/IOC/FOK) # GTC, IOC, FOK, pendingStrategyId: num(double) # Arbitrary numeric value identifying the pending order within an order strategy., pendingStrategyType: int(int64) # Arbitrary numeric value identifying the pending order strategy. Values smaller than 1000000 are reserved and cannot be used.}
+@returns(200) {orderListId: int(int64), contingencyType: str, listStatusType: str, listOrderStatus: str, listClientOrderId: str, transactionTime: int(int64), symbol: str, orders: [map], orderReports: [map]} # New OTO details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /api/v3/orderList/otoco
+@desc New Order List - OTOCO (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, workingType: str(LIMIT/LIMIT_MAKER) # Supported values: LIMIT,LIMIT_MAKER, workingSide: str(BUY/SELL) # BUY,SELL, workingPrice: num(double), workingQuantity: num(double) # Sets the quantity for the working order., workingIcebergQty: num(double) # This can only be used if workingTimeInForce is GTC., pendingSide: str(BUY/SELL) # BUY,SELL, pendingQuantity: num(double) # Sets the quantity for the pending order., pendingAboveType: str(LIMIT_MAKER/STOP_LOSS/STOP_LOSS_LIMIT) # Supported values: LIMIT_MAKER, STOP_LOSS, and STOP_LOSS_LIMIT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {listClientOrderId: str # Arbitrary unique ID among open order lists. Automatically generated if not sent. A new order list with the same `listClientOrderId` is accepted only when the previous one is filled or completely expired. `listClientOrderId` is distinct from the `workingClientOrderId` and the `pendingClientOrderId`., newOrderRespType: str(ACK/RESULT/FULL) # Set the response JSON., selfTradePreventionMode: str(EXPIRE_TAKER/EXPIRE_MAKER/EXPIRE_BOTH/NONE) # The allowed enums is dependent on what is configured on the symbol. The possible supported values are EXPIRE_TAKER, EXPIRE_MAKER, EXPIRE_BOTH, NONE., workingClientOrderId: str # Arbitrary unique ID among open orders for the working order. Automatically generated if not sent., workingTimeInForce: str(GTC/IOC/FOK) # GTC, IOC, FOK, workingStrategyId: num(double) # Arbitrary numeric value identifying the working order within an order strategy., workingStrategyType: int(int64) # Arbitrary numeric value identifying the working order strategy. Values smaller than 1000000 are reserved and cannot be used., pendingAboveClientOrderId: str # Arbitrary unique ID among open orders for the pending above order. Automatically generated if not sent., pendingAbovePrice: num(double), pendingAboveStopPrice: num(double), pendingAboveTrailingDelta: num(double), pendingAboveIcebergQty: num(double) # This can only be used if pendingAboveTimeInForce is GTC., pendingAboveTimeInForce: str(GTC/IOC/FOK), pendingAboveStrategyId: num(double) # Arbitrary numeric value identifying the pending above order within an order strategy., pendingAboveStrategyType: int(int64) # Arbitrary numeric value identifying the pending above order strategy. Values smaller than 1000000 are reserved and cannot be used., pendingBelowType: str(LIMIT_MAKER/STOP_LOSS/STOP_LOSS_LIMIT) # Supported values: LIMIT_MAKER, STOP_LOSS, and STOP_LOSS_LIMIT, pendingBelowClientOrderId: str # Arbitrary unique ID among open orders for the pending below order. Automatically generated if not sent., pendingBelowPrice: num(double), pendingBelowStopPrice: num(double), pendingBelowTrailingDelta: num(double), pendingBelowIcebergQty: num(double) # This can only be used if pendingBelowTimeInForce is GTC., pendingBelowTimeInForce: str(GTC/IOC/FOK), pendingBelowStrategyId: num(double) # Arbitrary numeric value identifying the pending below order within an order strategy., pendingBelowStrategyType: int(int64) # Arbitrary numeric value identifying the pending below order strategy. Values smaller than 1000000 are reserved and cannot be used., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {orderListId: int(int64), contingencyType: str, listStatusType: str, listOrderStatus: str, listClientOrderId: str, transactionTime: int(int64), symbol: str, orders: [map], orderReports: [map]} # New OTOCO details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /api/v3/orderList
+@desc Query OCO (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderListId: int(int64) # Order list id, origClientOrderId: str # Order id from client, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {orderListId: int(int64), contingencyType: str, listStatusType: str, listOrderStatus: str, listClientOrderId: str, transactionTime: int(int64), symbol: str, orders: [map]} # OCO details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint DELETE /api/v3/orderList
+@desc Cancel OCO (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderListId: int(int64) # Order list id, listClientOrderId: str # A unique Id for the entire orderList, newClientOrderId: str # Used to uniquely identify this cancel. Automatically generated by default, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {orderListId: int(int64), contingencyType: str, listStatusType: str, listOrderStatus: str, listClientOrderId: str, transactionTime: int(int64), symbol: str, orders: [map], orderReports: [map]} # Report on deleted OCO
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /api/v3/allOrderList
+@desc Query all OCO (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {fromId: int(int64) # Trade id to fetch from. Default gets most recent trades., startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) List of OCO orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /api/v3/openOrderList
+@desc Query Open OCO (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) List of OCO orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /api/v3/sor/order
+@desc New order using SOR (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, side: str(SELL/BUY), type: str(LIMIT/MARKET/STOP_LOSS/STOP_LOSS_LIMIT/TAKE_PROFIT/TAKE_PROFIT_LIMIT/LIMIT_MAKER) # Order type, quantity: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {timeInForce: str(GTC/IOC/FOK) # Order time in force, price: num(double), newClientOrderId: str # Used to uniquely identify this cancel. Automatically generated by default, strategyId: int(int64), strategyType: int(int64) # The value cannot be less than 1000000., icebergQty: num(double) # Used with LIMIT, STOP_LOSS_LIMIT, and TAKE_PROFIT_LIMIT to create an iceberg order., newOrderRespType: str(ACK/RESULT/FULL) # Set the response JSON. MARKET and LIMIT order types default to FULL, all other orders default to ACK., selfTradePreventionMode: str(EXPIRE_TAKER/EXPIRE_MAKER/EXPIRE_BOTH/NONE) # The allowed enums is dependent on what is configured on the symbol. The possible supported values are EXPIRE_TAKER, EXPIRE_MAKER, EXPIRE_BOTH, NONE., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {symbol: str, orderId: int(int64), orderListId: int(int64), clientOrderId: str, transactTime: int(int64), price: str, origQty: str, executedQty: str, cummulativeQuoteQty: str, status: str, timeInForce: str, type: str, side: str, workingTime: int(int64), fills: [map], workingFloor: str, selfTradePreventionMode: str, usedSor: bool} # New order details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /api/v3/sor/order/test
+@desc Test new order using SOR (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, side: str(SELL/BUY), type: str(LIMIT/MARKET/STOP_LOSS/STOP_LOSS_LIMIT/TAKE_PROFIT/TAKE_PROFIT_LIMIT/LIMIT_MAKER) # Order type, quantity: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {timeInForce: str(GTC/IOC/FOK) # Order time in force, price: num(double), newClientOrderId: str # Used to uniquely identify this cancel. Automatically generated by default, strategyId: int(int64), strategyType: int(int64) # The value cannot be less than 1000000., icebergQty: num(double) # Used with LIMIT, STOP_LOSS_LIMIT, and TAKE_PROFIT_LIMIT to create an iceberg order., newOrderRespType: str(ACK/RESULT/FULL) # Set the response JSON. MARKET and LIMIT order types default to FULL, all other orders default to ACK., selfTradePreventionMode: str(EXPIRE_TAKER/EXPIRE_MAKER/EXPIRE_BOTH/NONE) # The allowed enums is dependent on what is configured on the symbol. The possible supported values are EXPIRE_TAKER, EXPIRE_MAKER, EXPIRE_BOTH, NONE., computeCommissionRates: bool # Default: false, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Test new order
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /api/v3/account
+@desc Account Information (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {makerCommission: int(int64), takerCommission: int(int64), buyerCommission: int(int64), sellerCommission: int(int64), commissionRates: map{maker: str, taker: str, buyer: str, seller: str}, canTrade: bool, canWithdraw: bool, canDeposit: bool, brokered: bool, requireSelfTradePrevention: bool, preventSor: bool, updateTime: int(int64), accountType: str, balances: [map], permissions: [str], uid: int(int64)} # Account details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /api/v3/myTrades
+@desc Account Trade List (USER_DATA)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # This can only be used in combination with symbol., startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, fromId: int(int64) # Trade id to fetch from. Default gets most recent trades., limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) List of trades
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /api/v3/rateLimit/order
+@desc Query Current Order Count Usage (TRADE)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Order rate limits
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /api/v3/myPreventedMatches
+@desc Query Prevented Matches
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {preventedMatchId: int(int64), orderId: int(int64) # Order id, fromPreventedMatchId: int(int64), limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Order list that were expired due to STP
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /api/v3/myAllocations
+@desc Query Allocations (USER_DATA)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, fromAllocationId: int(int64), limit: int(int32) # Default 500; max 1000., orderId: int(int64) # Order id, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Allocations resulting from SOR order placement
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /api/v3/account/commission
+@desc Query Commission Rates (USER_DATA)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@returns(200) {symbol: str, standardCommission: map{maker: str, taker: str, buyer: str, seller: str}, taxCommission: map{maker: str, taker: str, buyer: str, seller: str}, discount: map{enabledForAccount: bool, enabledForSymbol: bool, discountAsset: str, discount: str}} # Current account commission rates.
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endgroup
+
+@group sapi
+@endpoint POST /sapi/v1/margin/borrow-repay
+@desc Margin account borrow/repay(MARGIN)
+@required {asset: str, isIsolated: str # TRUE for isolated margin, FALSE for crossed margin, symbol: str # Trading symbol, e.g. BNBUSDT, amount: num(double), type: str # BORROW or REPAY, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {tranId: int(int64)} # Margin account borrow/repay
+@errors {400: Bad Request}
+
+@endpoint GET /sapi/v1/margin/borrow-repay
+@desc Query borrow/repay records in Margin account(USER_DATA)
+@required {asset: str, type: str # BORROW or REPAY, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isolatedSymbol: str # Isolated symbol, txId: int(int64) # tranId in POST /sapi/v1/margin/loan, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Margin account borrow/repay
+@errors {400: Bad Request}
+
+@endpoint GET /sapi/v1/margin/transfer
+@desc Get Cross Margin Transfer History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, type: str(ROLL_IN/ROLL_OUT), startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, isolatedSymbol: str # Isolated symbol, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Margin account transfer history, response in descending order
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/allAssets
+@desc Get All Margin Assets (MARKET_DATA)
+@required {asset: str}
+@returns(200) Assets details
+@errors {400: Bad Request}
+
+@endpoint GET /sapi/v1/margin/allPairs
+@desc Get All Cross Margin Pairs (MARKET_DATA)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT}
+@returns(200) Margin pairs
+@errors {400: Bad Request}
+
+@endpoint GET /sapi/v1/margin/priceIndex
+@desc Query Margin PriceIndex (MARKET_DATA)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT}
+@returns(200) {calcTime: int(int64), price: str, symbol: str} # Price index
+@errors {400: Bad Request}
+
+@endpoint GET /sapi/v1/margin/order
+@desc Query Margin Account's Order (USER_DATA)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, orderId: int(int64) # Order id, origClientOrderId: str # Order id from client, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {clientOrderId: str, cummulativeQuoteQty: str, executedQty: str, icebergQty: str, isWorking: bool, orderId: int(int64), origQty: str, price: str, side: str, status: str, stopPrice: str, symbol: str, isIsolated: bool, time: int(int64), timeInForce: str, type: str, updateTime: int(int64), selfTradePreventionMode: str} # Interest History, response in descending order
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/margin/order
+@desc Margin Account New Order (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, side: str(SELL/BUY), type: str(LIMIT/MARKET/STOP_LOSS/STOP_LOSS_LIMIT/TAKE_PROFIT/TAKE_PROFIT_LIMIT/LIMIT_MAKER) # Order type, quantity: num(double), autoRepayAtCancel: bool, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, quoteOrderQty: num(double) # Quote quantity, price: num(double) # Order price, stopPrice: num(double) # Used with STOP_LOSS, STOP_LOSS_LIMIT, TAKE_PROFIT, and TAKE_PROFIT_LIMIT orders., newClientOrderId: str # Used to uniquely identify this cancel. Automatically generated by default, icebergQty: num(double) # Used with LIMIT, STOP_LOSS_LIMIT, and TAKE_PROFIT_LIMIT to create an iceberg order., newOrderRespType: str(ACK/RESULT/FULL) # Set the response JSON., sideEffectType: str(NO_SIDE_EFFECT/MARGIN_BUY/AUTO_REPAY) # Default `NO_SIDE_EFFECT`, timeInForce: str(GTC/IOC/FOK) # Order time in force, selfTradePreventionMode: str(EXPIRE_TAKER/EXPIRE_MAKER/EXPIRE_BOTH/NONE) # The allowed enums is dependent on what is configured on the symbol. The possible supported values are EXPIRE_TAKER, EXPIRE_MAKER, EXPIRE_BOTH, NONE., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Margin order info
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint DELETE /sapi/v1/margin/order
+@desc Margin Account Cancel Order (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, orderId: int(int64) # Order id, origClientOrderId: str # Order id from client, newClientOrderId: str # Used to uniquely identify this cancel. Automatically generated by default, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {symbol: str, orderId: int(int64), origClientOrderId: str, clientOrderId: str, price: str, origQty: str, executedQty: str, cummulativeQuoteQty: str, status: str, timeInForce: str, type: str, side: str} # Cancelled margin order details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/interestHistory
+@desc Get Interest History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, isolatedSymbol: str # Isolated symbol, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, archived: str # Default: false. Set to true for archived data from 6 months ago, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Interest History, response in descending order
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/forceLiquidationRec
+@desc Get Force Liquidation Record (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, isolatedSymbol: str # Isolated symbol, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Force Liquidation History, response in descending order
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/account
+@desc Query Cross Margin Account Details (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {created: bool, borrowEnabled: bool, marginLevel: str, collateralMarginLevel: str, totalAssetOfBtc: str, totalLiabilityOfBtc: str, totalNetAssetOfBtc: str, TotalCollateralValueInUSDT: str, tradeEnabled: bool, transferInEnabled: bool, transferOutEnabled: bool, accountType: str, userAssets: [map]} # Margin account details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/openOrders
+@desc Query Margin Account's Open Orders (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {symbol: str # Trading symbol, e.g. BNBUSDT, isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Margin open orders list
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint DELETE /sapi/v1/margin/openOrders
+@desc Margin Account Cancel all Open Orders on a Symbol (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Cancelled margin orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/allOrders
+@desc Query Margin Account's All Orders (USER_DATA)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, orderId: int(int64) # Order id, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Margin order list
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/margin/order/oco
+@desc Margin Account New OCO (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, side: str(SELL/BUY), quantity: num(double), price: num(double) # Order price, stopPrice: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, listClientOrderId: str # A unique Id for the entire orderList, limitClientOrderId: str # A unique Id for the limit order, limitIcebergQty: num(double), stopClientOrderId: str # A unique Id for the stop loss/stop loss limit leg, stopLimitPrice: num(double) # If provided, stopLimitTimeInForce is required., stopIcebergQty: num(double), stopLimitTimeInForce: str(GTC/FOK/IOC), newOrderRespType: str(ACK/RESULT/FULL) # Set the response JSON., sideEffectType: str(NO_SIDE_EFFECT/MARGIN_BUY/AUTO_REPAY) # Default `NO_SIDE_EFFECT`, selfTradePreventionMode: str(EXPIRE_TAKER/EXPIRE_MAKER/EXPIRE_BOTH/NONE) # The allowed enums is dependent on what is configured on the symbol. The possible supported values are EXPIRE_TAKER, EXPIRE_MAKER, EXPIRE_BOTH, NONE., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {orderListId: int(int64), contingencyType: str, listStatusType: str, listOrderStatus: str, listClientOrderId: str, transactionTime: int(int64), symbol: str, marginBuyBorrowAmount: str, marginBuyBorrowAsset: str, isIsolated: bool, orders: [map], orderReports: [map]} # New Margin OCO details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/orderList
+@desc Query Margin Account's OCO (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, symbol: str # Mandatory for isolated margin, not supported for cross margin, orderListId: int(int64) # Order list id, origClientOrderId: str # Order id from client, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {orderListId: int(int64), contingencyType: str, listStatusType: str, listOrderStatus: str, listClientOrderId: str, transactionTime: int(int64), symbol: str, isIsolated: bool, orders: [map]} # Margin OCO details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint DELETE /sapi/v1/margin/orderList
+@desc Margin Account Cancel OCO (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, orderListId: int(int64) # Order list id, listClientOrderId: str # A unique Id for the entire orderList, newClientOrderId: str # Used to uniquely identify this cancel. Automatically generated by default, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {orderListId: int(int64), contingencyType: str, listStatusType: str, listOrderStatus: str, listClientOrderId: str, transactionTime: int(int64), symbol: str, isIsolated: bool, orders: [map], orderReports: [map]} # Margin OCO details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/allOrderList
+@desc Query Margin Account's all OCO (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, symbol: str # Mandatory for isolated margin, not supported for cross margin, fromId: str # If supplied, neither `startTime` or `endTime` can be provided, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # Default Value: 500; Max Value: 1000, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) List of Margin OCO orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/openOrderList
+@desc Query Margin Account's Open OCO (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, symbol: str # Mandatory for isolated margin, not supported for cross margin, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) List of Open Margin OCO orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/myTrades
+@desc Query Margin Account's Trade List (USER_DATA)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, fromId: int(int64) # Trade id to fetch from. Default gets most recent trades., limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) List of margin trades
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/maxBorrowable
+@desc Query Max Borrow (USER_DATA)
+@required {asset: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isolatedSymbol: str # Isolated symbol, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {amount: str, borrowLimit: str} # Details on max borrow amount
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/maxTransferable
+@desc Query Max Transfer-Out Amount (USER_DATA)
+@required {asset: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isolatedSymbol: str # Isolated symbol, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {amount: str, borrowLimit: str} # Details on max transferable amount
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/tradeCoeff
+@desc Get Summary of Margin account (USER_DATA)
+@required {email: str # Email Address, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {normalBar: str, marginCallBar: str, forceLiquidationBar: str} # Summary of Margin Account
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/isolated/account
+@desc Query Isolated Margin Account Info (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {symbols: str # Max 5 symbols can be sent; separated by ',', recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {assets: [map], totalAssetOfBtc: str, totalLiabilityOfBtc: str, totalNetAssetOfBtc: str} # Isolated Margin Account Info when "symbols" is not sent
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint DELETE /sapi/v1/margin/isolated/account
+@desc Disable Isolated Margin Account (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {success: bool, symbol: str} # Isolated Margin Account status
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/margin/isolated/account
+@desc Enable Isolated Margin Account (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {success: bool, symbol: str} # Isolated Margin Account status
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/isolated/accountLimit
+@desc Query Enabled Isolated Margin Account Limit (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {enabledAccount: int(int64), maxAccount: int(int64)} # Number of enabled Isolated Margin Account and its limit
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/isolated/allPairs
+@desc Get All Isolated Margin Symbol(USER_DATA)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) All Isolated Margin Symbols
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/bnbBurn
+@desc Toggle BNB Burn On Spot Trade And Margin Interest (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {spotBNBBurn: str(true/false) # Determines whether to use BNB to pay for trading fees on SPOT, interestBNBBurn: str(true/false) # Determines whether to use BNB to pay for margin loan's interest, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {spotBNBBurn: bool, interestBNBBurn: bool} # Status on BNB to pay for trading fees
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/bnbBurn
+@desc Get BNB Burn Status(USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {spotBNBBurn: bool, interestBNBBurn: bool} # Status on BNB to pay for trading fees
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/interestRateHistory
+@desc Margin Interest Rate History (USER_DATA)
+@required {asset: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {vipLevel: int(int32) # Defaults to user's vip level, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Margin Interest Rate History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/crossMarginData
+@desc Query Cross Margin Fee Data (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {vipLevel: int(int32) # Defaults to user's vip level, coin: str # Coin name, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Cross Margin Fee Data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/isolatedMarginData
+@desc Query Isolated Margin Fee Data (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {vipLevel: int(int32) # Defaults to user's vip level, symbol: str # Trading symbol, e.g. BNBUSDT, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Isolated Margin Fee Data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/isolatedMarginTier
+@desc Query Isolated Margin Tier Data (USER_DATA)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {tier: str # All margin tier data will be returned if tier is omitted, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Isolated Margin Tier Data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/rateLimit/order
+@desc Query Current Margin Order Count Usage (TRADE)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, symbol: str # isolated symbol, mandatory for isolated margin, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Usage.
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/crossMarginCollateralRatio
+@desc Cross margin collateral ratio (MARKET_DATA)
+@returns(200) Margin collateral ratio
+@errors {400: Bad Request}
+
+@endpoint GET /sapi/v1/margin/exchange-small-liability
+@desc Get Small Liability Exchange Coin List (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) coin list
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/exchange-small-liability-history
+@desc Get Small Liability Exchange History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int, rows: [map]} # coin list
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/next-hourly-interest-rate
+@desc Get a future hourly interest rate (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {assets: str # List of assets, separated by commas, up to 20, isIsolated: str(TRUE/FALSE) # for isolated margin or not, "TRUE", "FALSE", recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) hourly interest
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/capital-flow
+@desc Get cross or isolated margin capital flow(USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, symbol: str # Required when querying isolated data, type: str(TRANSFER/BORROW/REPAY/BUY_INCOME/BUY_EXPENSE/SELL_INCOME/SELL_EXPENSE/TRADING_COMMISSION/BUY_LIQUIDATION/SELL_LIQUIDATION/REPAY_LIQUIDATION/OTHER_LIQUIDATION/LIQUIDATION_FEE/SMALL_BALANCE_CONVERT/COMMISSION_RETURN/SMALL_CONVERT), startTime: int(int64) # Only supports querying the data of the last 90 days, endTime: int(int64) # UTC timestamp in ms, fromId: int(int64) # If fromId is set, the data with id > fromId will be returned. Otherwise the latest data will be returned, limit: int(int64) # The number of data items returned each time is limited. Default 500; Max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Margin capital flow
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/delist-schedule
+@desc Get tokens or symbols delist schedule for cross margin and isolated margin (MARKET_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) tokens or symbols delist schedule
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/available-inventory
+@desc Query Margin Available Inventory (USER_DATA)
+@required {type: str(MARGIN/ISOLATED), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@returns(200) {assets: map{MATIC: str, STPT: str, TVK: str, SHIB: str}, updateTime: int(int64)} # Margin available Inventory
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/margin/manual-liquidation
+@desc Margin manual liquidation(MARGIN)
+@required {type: str(MARGIN/ISOLATED), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {symbol: str}
+@returns(200) Margin manual liquidation
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/margin/order/oto
+@desc Margin Account New OTO (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, workingType: str(LIMIT/LIMIT_MAKER) # Supported values: LIMIT,LIMIT_MAKER, workingSide: str(BUY/SELL) # BUY,SELL, workingPrice: num(double), workingQuantity: num(double) # Sets the quantity for the working order., workingIcebergQty: num(double) # This can only be used if workingTimeInForce is GTC., pendingType: str(LIMIT/MARKET/STOP_LOSS/STOP_LOSS_LIMIT/TAKE_PROFIT/TAKE_PROFIT_LIMIT/LIMIT_MAKER) # Supported values: Order Types Note that MARKET orders using quoteOrderQty are not supported., pendingSide: str(BUY/SELL) # BUY,SELL, pendingQuantity: num(double) # Sets the quantity for the pending order., timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, listClientOrderId: str # Arbitrary unique ID among open order lists. Automatically generated if not sent. A new order list with the same `listClientOrderId` is accepted only when the previous one is filled or completely expired. `listClientOrderId` is distinct from the `workingClientOrderId` and the `pendingClientOrderId`., newOrderRespType: str(ACK/RESULT/FULL) # Set the response JSON., sideEffectType: str(NO_SIDE_EFFECT/MARGIN_BUY) # Default `NO_SIDE_EFFECT`, selfTradePreventionMode: str(EXPIRE_TAKER/EXPIRE_MAKER/EXPIRE_BOTH/NONE) # The allowed enums is dependent on what is configured on the symbol. The possible supported values are EXPIRE_TAKER, EXPIRE_MAKER, EXPIRE_BOTH, NONE., autoRepayAtCancel: bool # Only when MARGIN_BUY order takes effect, true means that the debt generated by the order needs to be repay after the order is cancelled. The default is true, workingClientOrderId: str # Arbitrary unique ID among open orders for the working order. Automatically generated if not sent., workingTimeInForce: str(GTC/IOC/FOK) # GTC, IOC, FOK, pendingClientOrderId: str # Arbitrary unique ID among open orders for the pending order. Automatically generated if not sent., pendingPrice: num(double), pendingStopPrice: num(double), pendingTrailingDelta: num(double), pendingIcebergQty: num(double) # This can only be used if pendingTimeInForce is GTC., pendingTimeInForce: str(GTC/IOC/FOK) # GTC, IOC, FOK}
+@returns(200) {orderListId: int(int64), contingencyType: str, listStatusType: str, listOrderStatus: str, listClientOrderId: str, transactionTime: int(int64), symbol: str, isIsolated: bool, orders: [map], orderReports: [map]} # OTO order
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/margin/order/otoco
+@desc Margin Account New OTOCO (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, workingType: str(LIMIT/LIMIT_MAKER) # Supported values: LIMIT,LIMIT_MAKER, workingSide: str(BUY/SELL) # BUY,SELL, workingPrice: num(double), workingQuantity: num(double) # Sets the quantity for the working order., workingIcebergQty: num(double) # This can only be used if workingTimeInForce is GTC., pendingSide: str(BUY/SELL) # BUY,SELL, pendingQuantity: num(double) # Sets the quantity for the pending order., pendingAboveType: str(LIMIT_MAKER/STOP_LOSS/STOP_LOSS_LIMIT) # Supported values: LIMIT_MAKER, STOP_LOSS, and STOP_LOSS_LIMIT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {isIsolated: str(TRUE/FALSE) # * `TRUE` - For isolated margin * `FALSE` - Default, not for isolated margin, sideEffectType: str(NO_SIDE_EFFECT/MARGIN_BUY) # Default `NO_SIDE_EFFECT`, autoRepayAtCancel: bool # Only when MARGIN_BUY order takes effect, true means that the debt generated by the order needs to be repay after the order is cancelled. The default is true, listClientOrderId: str # Arbitrary unique ID among open order lists. Automatically generated if not sent. A new order list with the same `listClientOrderId` is accepted only when the previous one is filled or completely expired. `listClientOrderId` is distinct from the `workingClientOrderId` and the `pendingClientOrderId`., newOrderRespType: str(ACK/RESULT/FULL) # Set the response JSON., selfTradePreventionMode: str(EXPIRE_TAKER/EXPIRE_MAKER/EXPIRE_BOTH/NONE) # The allowed enums is dependent on what is configured on the symbol. The possible supported values are EXPIRE_TAKER, EXPIRE_MAKER, EXPIRE_BOTH, NONE., workingClientOrderId: str # Arbitrary unique ID among open orders for the working order. Automatically generated if not sent., workingTimeInForce: str(GTC/IOC/FOK) # GTC, IOC, FOK, pendingAboveClientOrderId: str # Arbitrary unique ID among open orders for the pending above order. Automatically generated if not sent., pendingAbovePrice: num(double), pendingAboveStopPrice: num(double), pendingAboveTrailingDelta: num(double), pendingAboveIcebergQty: num(double) # This can only be used if pendingAboveTimeInForce is GTC., pendingAboveTimeInForce: str(GTC/IOC/FOK), pendingBelowType: str(LIMIT_MAKER/STOP_LOSS/STOP_LOSS_LIMIT) # Supported values: LIMIT_MAKER, STOP_LOSS, and STOP_LOSS_LIMIT, pendingBelowClientOrderId: str # Arbitrary unique ID among open orders for the pending below order. Automatically generated if not sent., pendingBelowPrice: num(double), pendingBelowStopPrice: num(double), pendingBelowTrailingDelta: num(double), pendingBelowIcebergQty: num(double) # This can only be used if pendingBelowTimeInForce is GTC., pendingBelowTimeInForce: str(GTC/IOC/FOK)}
+@returns(200) {orderListId: int(int64), contingencyType: str, listStatusType: str, listOrderStatus: str, listClientOrderId: str, transactionTime: int(int64), symbol: str, isIsolated: bool, orders: [map], orderReports: [map]} # OTOCO order
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/margin/max-leverage
+@desc Adjust cross margin max leverage (USER_DATA)
+@required {maxLeverage: int # Can only adjust 3 or 5, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {success: bool} # Adjust result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/margin/leverageBracket
+@desc Query Liability Coin Leverage Bracket in Cross Margin Pro Mode (MARKET_DATA)
+@returns(200) Leverage info
+@errors {400: Bad Request}
+
+@endpoint GET /sapi/v1/system/status
+@desc System Status (System)
+@returns(200) {status: int(int32), msg: str} # OK
+
+@endpoint GET /sapi/v1/capital/config/getall
+@desc All Coins' Information (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) All coins details information
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/accountSnapshot
+@desc Daily Account Snapshot (USER_DATA)
+@required {type: str(SPOT/MARGIN/FUTURES), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32)=7, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Account Snapshot
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/account/disableFastWithdrawSwitch
+@desc Disable Fast Withdraw Switch (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) OK
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/account/enableFastWithdrawSwitch
+@desc Enable Fast Withdraw Switch (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) OK
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/capital/withdraw/apply
+@desc Withdraw (USER_DATA)
+@required {coin: str # Coin name, address: str, amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {withdrawOrderId: str # Client id for withdraw, network: str, addressTag: str # Secondary address identifier for coins like XRP,XMR etc., transactionFeeFlag: bool=false # When making internal transfer - `true` ->  returning the fee to the destination account; - `false` -> returning the fee back to the departure account., name: str, walletType: int(int32) # The wallet type for withdraw，0-Spot wallet, 1- Funding wallet. Default is Spot wallet, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {id: str} # Transafer Id
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/capital/deposit/hisrec
+@desc Deposit History(supporting network) (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {coin: str # Coin name, status: int(int32) # * `0` - pending * `6` - credited but cannot withdraw * `1` - success, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, offset: int(int32), limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) List of deposits
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/capital/withdraw/history
+@desc Withdraw History (supporting network) (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {coin: str # Coin name, withdrawOrderId: str, status: int(int32) # * `0` - Email Sent * `1` - Cancelled * `2` - Awaiting Approval * `3` - Rejected * `4` - Processing * `5` - Failure * `6` - Completed, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, offset: int(int32), limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) List of withdraw history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/capital/deposit/address
+@desc Deposit Address (supporting network) (USER_DATA)
+@required {coin: str # Coin name, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {network: str, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {address: str, coin: str, tag: str, url: str} # Deposit address info
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/account/status
+@desc Account Status (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {data: str} # OK
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/account/apiTradingStatus
+@desc Account API Trading Status (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {data: map{isLocked: bool, plannedRecoverTime: int(int64), triggerCondition: map{GCR: int(int64), IFER: int(int64), UFR: int(int64)}, indicators: map{BTCUSDT: [map]}, updateTime: int(int64)}} # Account API trading status
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/asset/dribblet
+@desc DustLog(USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {accountType: str(SPOT/MARGIN) # SPOT or MARGIN, default SPOT, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int64), userAssetDribblets: [map]} # Dust log records
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/asset/dust-btc
+@desc Get Assets That Can Be Converted Into BNB (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {accountType: str(SPOT/MARGIN) # SPOT or MARGIN, default SPOT, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {details: [map], totalTransferBtc: str, totalTransferBNB: str, dribbletPercentage: str} # Account assets available to be converted to BNB
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/asset/dust
+@desc Dust Transfer (USER_DATA)
+@required {asset: [str] # The asset being converted. For example, asset=BTC&asset=USDT, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {accountType: str(SPOT/MARGIN) # SPOT or MARGIN, default SPOT, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {totalServiceCharge: str, totalTransfered: str, transferResult: [map]} # Dust log records
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/asset/assetDividend
+@desc Asset Dividend Record (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32)=20, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Records of asset devidend
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/asset/assetDetail
+@desc Asset Detail (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {CTR: map{minWithdrawAmount: str, depositStatus: bool, withdrawFee: int(int64), withdrawStatus: bool, depositTip: str}} # Asset detail
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/asset/tradeFee
+@desc Trade Fee (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {symbol: str # Trading symbol, e.g. BNBUSDT, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Trade fee info per symbol
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/asset/transfer
+@desc Query User Universal Transfer History (USER_DATA)
+@required {type: str(MAIN_C2C/MAIN_UMFUTURE/MAIN_CMFUTURE/MAIN_MARGIN/MAIN_MINING/C2C_MAIN/C2C_UMFUTURE/C2C_MINING/C2C_MARGIN/UMFUTURE_MAIN/UMFUTURE_C2C/UMFUTURE_MARGIN/CMFUTURE_MAIN/CMFUTURE_MARGIN/MARGIN_MAIN/MARGIN_UMFUTURE/MARGIN_CMFUTURE/MARGIN_MINING/MARGIN_C2C/MINING_MAIN/MINING_UMFUTURE/MINING_C2C/MINING_MARGIN/MAIN_PAY/PAY_MAIN/ISOLATEDMARGIN_MARGIN/MARGIN_ISOLATEDMARGIN/ISOLATEDMARGIN_ISOLATEDMARGIN) # Universal transfer type, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, fromSymbol: str # Must be sent when type are ISOLATEDMARGIN_MARGIN and ISOLATEDMARGIN_ISOLATEDMARGIN, toSymbol: str # Must be sent when type are MARGIN_ISOLATEDMARGIN and ISOLATEDMARGIN_ISOLATEDMARGIN, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int32), rows: [map]} # Universal transfer history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/asset/transfer
+@desc User Universal Transfer (USER_DATA)
+@required {type: str(MAIN_C2C/MAIN_UMFUTURE/MAIN_CMFUTURE/MAIN_MARGIN/MAIN_MINING/C2C_MAIN/C2C_UMFUTURE/C2C_MINING/C2C_MARGIN/UMFUTURE_MAIN/UMFUTURE_C2C/UMFUTURE_MARGIN/CMFUTURE_MAIN/CMFUTURE_MARGIN/MARGIN_MAIN/MARGIN_UMFUTURE/MARGIN_CMFUTURE/MARGIN_MINING/MARGIN_C2C/MINING_MAIN/MINING_UMFUTURE/MINING_C2C/MINING_MARGIN/MAIN_PAY/PAY_MAIN/ISOLATEDMARGIN_MARGIN/MARGIN_ISOLATEDMARGIN/ISOLATEDMARGIN_ISOLATEDMARGIN) # Universal transfer type, asset: str, amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {fromSymbol: str # Must be sent when type are ISOLATEDMARGIN_MARGIN and ISOLATEDMARGIN_ISOLATEDMARGIN, toSymbol: str # Must be sent when type are MARGIN_ISOLATEDMARGIN and ISOLATEDMARGIN_ISOLATEDMARGIN, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {tranId: int(int64)} # Transfer id
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/asset/get-funding-asset
+@desc Funding Wallet (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, needBtcValuation: str(true/false), recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Funding asset detail
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v3/asset/getUserAsset
+@desc User Asset (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, needBtcValuation: str(true/false), recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) User assets
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/asset/convert-transfer
+@desc Convert Transfer (USER_DATA)
+@required {clientTranId: str # The unique flag, the min length is 20, asset: str, amount: num(double), targetAsset: str # Target asset you want to convert, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {tranId: int(int64), status: str} # Conversion Information
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/asset/convert-transfer/queryByPage
+@desc Query Convert Transfer (USER_DATA)
+@required {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {tranId: int(int64) # The transaction id, asset: str # If it is blank, we will match deducted asset and target asset., accountType: str(MAIN/CARD) # MAIN: main account. CARD: funding account. If it is blank, we will query spot and card wallet, otherwise, we just query the corresponding wallet, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int32), rows: [map]} # Query Convert Transfer
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/asset/ledger-transfer/cloud-mining/queryByPage
+@desc Get Cloud-Mining payment and refund history (USER_DATA)
+@required {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {tranId: int(int64) # The transaction id, clientTranId: str # The unique flag, asset: str # If it is blank, we will query all assets, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int32), rows: [map]} # Cloud Mining Payment and Refund History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/account/apiRestrictions
+@desc Get API Key Permission (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {ipRestrict: bool, createTime: int(int64), enableInternalTransfer: bool, enableFutures: bool, enablePortfolioMarginTrading: bool, enableVanillaOptions: bool, permitsUniversalTransfer: bool, enableReading: bool, enableSpotAndMarginTrading: bool, enableWithdrawals: bool, enableMargin: bool, tradingAuthorityExpirationTime: int(int64)} # API Key permissions
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/capital/contract/convertible-coins
+@desc Query auto-converting stable coins (USER_DATA)
+@returns(200) {convertEnabled: bool, coins: [str], exchangeRates: map{USDC: str, TUSD: str, USDP: str}} # User's auto-conversion settings i
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/capital/contract/convertible-coins
+@desc Switch on/off BUSD and stable coins conversion (USER_DATA) (USER_DATA)
+@required {coin: str # Must be USDC, USDP or TUSD, enable: bool # true: turn on the auto-conversion. false: turn off the auto-conversion}
+@returns(200) OK
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/sub-account/virtualSubAccount
+@desc Create a Virtual Sub-account(For Master Account)
+@required {subAccountString: str # Please input a string. We will create a virtual email using that string for you to register, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {email: str} # Return the created virtual email
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/list
+@desc Query Sub-account List (For Master Account)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {email: str # Sub-account email, isFreeze: str(true/false), page: int(int32) # Default 1, limit: int(int32) # Default 1; max 200, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {subAccounts: [map]} # List of sub-accounts
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/sub/transfer/history
+@desc Sub-account Spot Asset Transfer History (For Master Account)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {fromEmail: str # Sub-account email, toEmail: str # Sub-account email, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, page: int(int32) # Default 1, limit: int(int32) # Default 1, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Sub-account Spot Asset Transfer History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/futures/internalTransfer
+@desc Sub-account Futures Asset Transfer History (For Master Account)
+@required {email: str # Sub-account email, futuresType: int(int32) # 1:USDT-margined Futures, 2: Coin-margined Futures, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, page: int(int32) # Default 1, limit: int(int32) # Default value: 50, Max value: 500, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {success: bool, futuresType: int(int32), transfers: [map]} # Sub-account Futures Asset Transfer History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/sub-account/futures/internalTransfer
+@desc Sub-account Futures Asset Transfer (For Master Account)
+@required {fromEmail: str # Sender email, toEmail: str # Recipient email, futuresType: int(int32) # 1:USDT-margined Futures, 2: Coin-margined Futures, asset: str, amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {success: bool, txnId: str} # Futures Asset Transfer Info
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v3/sub-account/assets
+@desc Sub-account Assets (For Master Account)
+@required {email: str # Sub-account email, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {balances: [map]} # List of assets balances
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/spotSummary
+@desc Sub-account Spot Assets Summary (For Master Account)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {email: str # Sub-account email, page: int(int32) # Default 1, size: int(int32) # Default:10 Max:20, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {totalCount: int(int64), masterAccountTotalAsset: str, spotSubUserAssetBtcVoList: [map]} # Summary of Sub-account Spot Assets
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/capital/deposit/subAddress
+@desc Sub-account Spot Assets Summary (For Master Account)
+@required {email: str # Sub-account email, coin: str # Coin name, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {network: str, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {address: str, coin: str, tag: str, url: str} # Deposit address info
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/capital/deposit/subHisrec
+@desc Sub-account Deposit History (For Master Account)
+@required {email: str # Sub-account email, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {coin: str # Coin name, status: int(int32) # 0(0:pending,6: credited but cannot withdraw, 1:success), startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int64), offset: int(int32), recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Sub-account deposit history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/capital/deposit/credit-apply
+@desc One click arrival deposit apply (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {depositId: int(int64) # Deposit record Id, priority use, txId: str # Deposit txId, used when depositId is not specified, subAccountId: int(int64), subUserId: int(int64), recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: str, message: str, data: bool, success: bool} # deposit result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/asset/wallet/balance
+@desc Query User Wallet Balance (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) wallet balance
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/asset/custody/transfer-history
+@desc Query User Delegation History(For Master Account) (USER_DATA)
+@required {email: str, startTime: int(int64), endTime: int(int64), asset: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {type: str, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int, rows: [map]} # Delegation History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/capital/deposit/address/list
+@desc Fetch deposit address list with network (USER_DATA)
+@required {coin: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {network: str, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Coin address
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/spot/delist-schedule
+@desc Get symbols delist schedule for spot (MARKET_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Symbols delist schedule
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/capital/withdraw/address/list
+@desc Fetch withdraw address list (USER_DATA)
+@returns(200) Withdraw address list
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/account/info
+@desc Account info (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {vipLevel: int(int32), isMarginEnabled: bool, isFutureEnabled: bool} # Account info detail
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/status
+@desc Sub-account's Status on Margin/Futures (For Master Account)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {email: str # Sub-account email, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Status on Margin/Futures
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/sub-account/margin/enable
+@desc Enable Margin for Sub-account (For Master Account)
+@required {email: str # Sub-account email, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {email: str, isMarginEnabled: bool} # Margin status
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/margin/account
+@desc Detail on Sub-account's Margin Account (For Master Account)
+@required {email: str # Sub-account email, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {email: str, marginLevel: str, totalAssetOfBtc: str, totalLiabilityOfBtc: str, totalNetAssetOfBtc: str, marginTradeCoeffVo: map{forceLiquidationBar: str, marginCallBar: str, normalBar: str}, marginUserAssetVoList: [map]} # Margin sub-account details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/margin/accountSummary
+@desc Summary of Sub-account's Margin Account (For Master Account)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {totalAssetOfBtc: str, totalLiabilityOfBtc: str, totalNetAssetOfBtc: str, subAccountList: [map]} # Margin sub-account details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/sub-account/futures/enable
+@desc Enable Futures for Sub-account (For Master Account)
+@required {email: str # Sub-account email, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {email: str, isFuturesEnabled: bool} # Futures status
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/futures/account
+@desc Detail on Sub-account's Futures Account (For Master Account)
+@required {email: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {email: str, asset: str, assets: [map], canDeposit: bool, canTrade: bool, canWithdraw: bool, feeTier: int(int64), maxWithdrawAmount: str, totalInitialMargin: str, totalMaintenanceMargin: str, totalMarginBalance: str, totalOpenOrderInitialMargin: str, totalPositionInitialMargin: str, totalUnrealizedProfit: str, totalWalletBalance: str, updateTime: int(int64)} # Futures account details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/futures/accountSummary
+@desc Summary of Sub-account's Futures Account (For Master Account)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {totalInitialMargin: str, totalMaintenanceMargin: str, totalMarginBalance: str, totalOpenOrderInitialMargin: str, totalPositionInitialMargin: str, totalUnrealizedProfit: str, totalWalletBalance: str, asset: str, subAccountList: [map]} # Futures account summary
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/futures/positionRisk
+@desc Futures Position-Risk of Sub-account (For Master Account)
+@required {email: str # Sub-account email, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Futures account summary
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/sub-account/futures/transfer
+@desc Transfer for Sub-account (For Master Account)
+@required {email: str # Sub-account email, asset: str, amount: num(double), type: int(int32) # * `1` - transfer from subaccount's spot account to its USDT-margined futures account * `2` - transfer from subaccount's USDT-margined futures account to its spot account * `3` - transfer from subaccount's spot account to its COIN-margined futures account * `4` - transfer from subaccount's COIN-margined futures account to its spot account, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {txnId: str} # Transfer id
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/sub-account/margin/transfer
+@desc Margin Transfer for Sub-account (For Master Account)
+@required {email: str # Sub-account email, asset: str, amount: num(double), type: int(int32) # * `1` - transfer from subaccount's spot account to margin account * `2` - transfer from subaccount's margin account to its spot account, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {txnId: str} # Transfer id
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/sub-account/transfer/subToSub
+@desc Transfer to Sub-account of Same Master (For Sub-account)
+@required {toEmail: str # Recipient email, asset: str, amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {txnId: str} # Transfer id
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/sub-account/transfer/subToMaster
+@desc Transfer to Master (For Sub-account)
+@required {asset: str, amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {txnId: str} # Transfer id
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/transfer/subUserHistory
+@desc Sub-account Transfer History (For Sub-account)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, type: int(int32) # * `1` - transfer in * `2` - transfer out, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Transfer id
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/universalTransfer
+@desc Universal Transfer History (For Master Account)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {fromEmail: str # Sub-account email, toEmail: str # Sub-account email, clientTranId: str, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, page: int(int32) # Default 1, limit: int(int32) # Default 500, Max 500, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Transfer History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/sub-account/universalTransfer
+@desc Universal Transfer (For Master Account)
+@required {fromAccountType: str(SPOT/USDT_FUTURE/COIN_FUTURE/MARGIN/ISOLATED_MARGIN), toAccountType: str(SPOT/USDT_FUTURE/COIN_FUTURE/MARGIN/ISOLATED_MARGIN), asset: str, amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {fromEmail: str # Sub-account email, toEmail: str # Sub-account email, clientTranId: str, symbol: str # Only supported under ISOLATED_MARGIN type, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {tranId: int(int64), clientTranId: str} # Transfer id
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v2/sub-account/futures/account
+@desc Detail on Sub-account's Futures Account V2 (For Master Account)
+@required {email: str # Sub-account email, futuresType: int(int32) # * `1` - USDT Margined Futures * `2` - COIN Margined Futures, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) USDT or COIN Margined Futures Details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v2/sub-account/futures/accountSummary
+@desc Summary of Sub-account's Futures Account V2 (For Master Account)
+@required {futuresType: int(int32) # * `1` - USDT Margined Futures * `2` - COIN Margined Futures, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {page: int(int32) # Default 1, limit: int(int32) # Default 10, Max 20, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) USDT or COIN Margined Futures Summary
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v2/sub-account/futures/positionRisk
+@desc Futures Position-Risk of Sub-account V2 (For Master Account)
+@required {email: str # Sub-account email, futuresType: int(int32) # * `1` - USDT Margined Futures * `2` - COIN Margined Futures, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) USDT or COIN Margined Futures Position Risk
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/sub-account/blvt/enable
+@desc Enable Leverage Token for Sub-account (For Master Account)
+@required {email: str # Sub-account email, enableBlvt: bool # Only true for now, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {email: str, enableBlvt: bool} # BLVT status
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/managed-subaccount/deposit
+@desc Deposit assets into the managed sub-account(For Investor Master Account)
+@required {toEmail: str # Recipient email, asset: str, amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {tranId: int(int64)} # Transfer id
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/managed-subaccount/asset
+@desc Managed sub-account asset details(For Investor Master Account)
+@required {email: str # Sub-account email, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) List of asset details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/managed-subaccount/withdraw
+@desc Withdrawl assets from the managed sub-account(For Investor Master Account)
+@required {fromEmail: str # Sender email, asset: str, amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {transferDate: int(int64) # Withdrawals is automatically occur on the transfer date(UTC0). If a date is not selected, the withdrawal occurs right now, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {tranId: int(int64)} # Transfer id
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/managed-subaccount/accountSnapshot
+@desc Managed sub-account snapshot (For Investor Master Account)
+@required {email: str # Sub-account email, type: str # "SPOT", "MARGIN"(cross), "FUTURES"(UM), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # min 7, max 30, default 7, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: int(int32), msg: str, snapshotVos: [map]} # Sub-account spot snapshot
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/managed-subaccount/queryTransLogForInvestor
+@desc Query Managed Sub Account Transfer Log (For Investor Master Account)
+@required {email: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, page: int(int32) # Default 1, limit: int(int32) # Default 500; max 1000., transfers: str # Transfer Direction (FROM/TO), transferFunctionAccountType: str # Transfer function account type (SPOT/MARGIN/ISOLATED_MARGIN/USDT_FUTURE/COIN_FUTURE), recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {count: int(int32), managerSubTransferHistoryVos: [map]} # Managed sub account transfer logs (for invest account)
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/managed-subaccount/queryTransLogForTradeParent
+@desc Query Managed Sub Account Transfer Log (For Trading Team Master Account)
+@required {email: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, page: int(int32) # Default 1, limit: int(int32) # Default 500; max 1000., transfers: str # Transfer Direction (FROM/TO), transferFunctionAccountType: str # Transfer function account type (SPOT/MARGIN/ISOLATED_MARGIN/USDT_FUTURE/COIN_FUTURE), recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {count: int(int32), managerSubTransferHistoryVos: [map]} # Managed sub account transfer logs (for trading team)
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/managed-subaccount/fetch-future-asset
+@desc Query Managed Sub-account Futures Asset Details (For Investor Master Account)
+@required {email: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: int(int32), message: str, snapshotVos: [map]} # Sub account futures assset details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/managed-subaccount/marginAsset
+@desc Query Managed Sub-account Margin Asset Details (For Investor Master Account)
+@required {email: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {marginLevel: str, totalAssetOfBtc: str, totalLiabilityOfBtc: str, totalNetAssetOfBtc: str, userAssets: [map]} # Sub account margin assset details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/managed-subaccount/info
+@desc Query Managed Sub-account List (For Investor)
+@required {email: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {page: int(int32) # Default 1, limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int, managerSubUserInfoVoList: [map]} # Managed sub account list
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/managed-subaccount/deposit/address
+@desc Get Managed Sub-account Deposit Address (For Investor Master Account)
+@required {email: str, coin: str # Coin name, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {network: str, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {coin: str, address: str, tag: str, url: str} # Managed sub deposit address
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/managed-subaccount/query-trans-log
+@desc Query Managed Sub Account Transfer Log (For Trading Team Sub Account)(USER_DATA)
+@required {transfers: str(FROM/TO) # Transfer Direction, transferFunctionAccountType: str(SPOT/MARGIN/ISOLATED_MARGIN/USDT_FUTURE/COIN_FUTURE) # Transfer function account type, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, page: int(int32) # Default 1, limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {count: int, managerSubTransferHistoryVos: [map]} # Managed sub deposit address
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/subAccountApi/ipRestriction
+@desc Get IP Restriction for a Sub-account API Key (For Master Account)
+@required {email: str # Sub-account email, subAccountApiKey: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {ipRestrict: str, ipList: [str], updateTime: int(int64), apiKey: str} # IP Restriction information
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint DELETE /sapi/v1/sub-account/subAccountApi/ipRestriction/ipList
+@desc Delete IP List for a Sub-account API Key (For Master Account)
+@required {email: str # Sub-account email, subAccountApiKey: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {ipAddress: str # Can be added in batches, separated by commas, thirdPartyName: str # third party IP list name, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {ipRestrict: str, ipList: [str], updateTime: int(int64), apiKey: str} # Delete IP information
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/sub-account/transaction-statistics
+@desc Query Sub-account Transaction Statistics (For Master Account)
+@required {email: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {recent30BtcTotal: str, recent30BtcFuturesTotal: str, recent30BtcMarginTotal: str, recent30BusdTotal: str, recent30BusdFuturesTotal: str, recent30BusdMarginTotal: str, tradeInfoVos: [map]} # Sub account transaction statistics
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/sub-account/eoptions/enable
+@desc Enable Options for Sub-account (For Master Account)(USER_DATA)
+@required {email: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {email: str, isEOptionsEnabled: bool} # Sub account EOptions status
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v2/sub-account/subAccountApi/ipRestriction
+@desc Update IP Restriction for Sub-Account API key (For Master Account)
+@required {email: str # Sub-account email, subAccountApiKey: str, status: str # IP Restriction status. 1 = IP Unrestricted. 2 = Restrict access to trusted IPs only. 3 = Restrict access to users' trusted third party IPs only, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {thirdPartyName: str # third party IP list name, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {status: str, ipList: [str], updateTime: int(int64), apiKey: str} # Update IP Restriction
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v4/sub-account/assets
+@desc Query Sub-account Assets (For Master Account)
+@required {email: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {balances: [map]} # Sub account balances
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endgroup
+
+@group api
+@endpoint POST /api/v3/userDataStream
+@desc Create a ListenKey (USER_STREAM)
+@returns(200) {listenKey: str} # Listen key
+
+@endpoint PUT /api/v3/userDataStream
+@desc Ping/Keep-alive a ListenKey (USER_STREAM)
+@optional {listenKey: str # User websocket listen key}
+@returns(200) OK
+@errors {400: Bad Request}
+
+@endpoint DELETE /api/v3/userDataStream
+@desc Close a ListenKey (USER_STREAM)
+@optional {listenKey: str # User websocket listen key}
+@returns(200) OK
+@errors {400: Bad Request}
+
+@endgroup
+
+@group sapi
+@endpoint POST /sapi/v1/userDataStream
+@desc Create a ListenKey (USER_STREAM)
+@returns(200) {listenKey: str} # Margin listen key
+
+@endpoint PUT /sapi/v1/userDataStream
+@desc Ping/Keep-alive a ListenKey (USER_STREAM)
+@optional {listenKey: str # User websocket listen key}
+@returns(200) OK
+@errors {400: Bad Request}
+
+@endpoint DELETE /sapi/v1/userDataStream
+@desc Close a ListenKey (USER_STREAM)
+@optional {listenKey: str # User websocket listen key}
+@returns(200) OK
+@errors {400: Bad Request}
+
+@endpoint POST /sapi/v1/userDataStream/isolated
+@desc Generate a Listen Key (USER_STREAM)
+@returns(200) {listenKey: str} # Isolated margin listen key
+
+@endpoint PUT /sapi/v1/userDataStream/isolated
+@desc Ping/Keep-alive a Listen Key (USER_STREAM)
+@optional {listenKey: str # User websocket listen key}
+@returns(200) OK
+@errors {400: Bad Request}
+
+@endpoint DELETE /sapi/v1/userDataStream/isolated
+@desc Close a ListenKey (USER_STREAM)
+@optional {listenKey: str # User websocket listen key}
+@returns(200) OK
+@errors {400: Bad Request}
+
+@endpoint GET /sapi/v1/fiat/orders
+@desc Fiat Deposit/Withdraw History (USER_DATA)
+@required {transactionType: int(int32) # * `0` - deposit * `1` - withdraw, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {beginTime: int(int64), endTime: int(int64) # UTC timestamp in ms, page: int(int32) # Default 1, rows: int(int32) # Default 100, max 500, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: str, message: str, data: [map], total: int(int32), success: bool} # History of deposit/withdraw orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/fiat/payments
+@desc Fiat Payments History (USER_DATA)
+@required {transactionType: int(int32) # * `0` - deposit * `1` - withdraw, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {beginTime: int(int64), endTime: int(int64) # UTC timestamp in ms, page: int(int32) # Default 1, rows: int(int32) # Default 100, max 500, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: str, message: str, data: [map], total: int(int32), success: bool} # History of fiat payments
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/project/list
+@desc Get Fixed/Activity Project List(USER_DATA)
+@required {type: str(ACTIVITY/CUSTOMIZED_FIXED), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, status: str(ALL/SUBSCRIBABLE/UNSUBSCRIBABLE) # Default `ALL`, isSortAsc: bool # default "true", sortBy: str(START_TIME/LOT_SIZE/INTEREST_RATE/DURATION) # Default `START_TIME`, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) List of fixed projects
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/lending/customizedFixed/purchase
+@desc Purchase Fixed/Activity Project (USER_DATA)
+@required {projectId: str, lot: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {purchaseId: str} # Generated Purchase Id
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/project/position/list
+@desc Get Fixed/Activity Project Position (USER_DATA)
+@required {asset: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {projectId: str, status: str(ALL/SUBSCRIBABLE/UNSUBSCRIBABLE) # Default `ALL`, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) List of fixed project positions
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/lending/positionChanged
+@desc Change Fixed/Activity Position to Daily Position (USER_DATA)
+@required {projectId: str, lot: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {positionId: str, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {dailyPurchaseId: int(int64), success: bool, time: int(int64)} # Purchase information
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/mining/pub/algoList
+@desc Acquiring Algorithm (MARKET_DATA)
+@returns(200) {code: int(int64), msg: str, data: [map]} # Algorithm information
+@errors {400: Bad Request}
+
+@endpoint GET /sapi/v1/mining/pub/coinList
+@desc Acquiring CoinName (MARKET_DATA)
+@returns(200) {code: int(int64), msg: str, data: [map]} # Coin information
+@errors {400: Bad Request}
+
+@endpoint GET /sapi/v1/mining/worker/detail
+@desc Request for Detail Miner List (USER_DATA)
+@required {algo: str # Algorithm(sha256), userName: str # Mining Account, workerName: str # Miner’s name, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: int(int64), msg: str, data: [map]} # List of workers' hashrates'
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/mining/worker/list
+@desc Request for Miner List (USER_DATA)
+@required {algo: str # Algorithm(sha256), userName: str # Mining Account, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {pageIndex: int(int32) # Page number, default is first page, start form 1, sort: int(int32) # sort sequence(default=0)0 positive sequence, 1 negative sequence, sortColumn: int(int32) # Sort by( default 1): 1: miner name, 2: real-time computing power, 3: daily average computing power, 4: real-time rejection rate, 5: last submission time, workerStatus: int(int32) # miners status(default=0)0 all, 1 valid, 2 invalid, 3 failure, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: int(int64), msg: str, data: map{workerDatas: [map], totalNum: int(int64), pageSize: int(int64)}} # List of workers
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/mining/payment/list
+@desc Earnings List (USER_DATA)
+@required {algo: str # Algorithm(sha256), userName: str # Mining Account, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {coin: str # Coin name, startDate: str # Search date, millisecond timestamp, while empty query all, endDate: str # Search date, millisecond timestamp, while empty query all, pageIndex: int(int32) # Page number, default is first page, start form 1, pageSize: str # Number of pages, minimum 10, maximum 200, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: int(int64), msg: str, data: map{accountProfits: [map], totalNum: int(int64), pageSize: int(int64)}} # List of earnings
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/mining/payment/other
+@desc Extra Bonus List (USER_DATA)
+@required {algo: str # Algorithm(sha256), userName: str # Mining Account, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {coin: str # Coin name, startDate: str # Search date, millisecond timestamp, while empty query all, endDate: str # Search date, millisecond timestamp, while empty query all, pageIndex: int(int32) # Page number, default is first page, start form 1, pageSize: str # Number of pages, minimum 10, maximum 200, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: int(int64), msg: str, data: map{otherProfits: [map], totalNum: int(int64), pageSize: int(int64)}} # List of extra bonuses
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/mining/hash-transfer/config/details/list
+@desc Hashrate Resale List (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {pageIndex: int(int32) # Page number, default is first page, start form 1, pageSize: str # Number of pages, minimum 10, maximum 200, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: int(int64), msg: str, data: map{configDetails: [map], totalNum: int(int64), pageSize: int(int64)}} # List of hashrate resales
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/mining/hash-transfer/profit/details
+@desc Hashrate Resale Details (USER_DATA)
+@required {configId: str # Mining ID, userName: str # Mining Account, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {pageIndex: int(int32) # Page number, default is first page, start form 1, pageSize: str # Number of pages, minimum 10, maximum 200, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: int(int64), msg: str, data: map{profitTransferDetails: [map], totalNum: int(int64), pageSize: int(int64)}} # List of hashrate resale details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/mining/hash-transfer/config
+@desc Hashrate Resale Request (USER_DATA)
+@required {userName: str # Mining Account, algo: str # Algorithm(sha256), toPoolUser: str # Mining Account, hashRate: str # Resale hashrate h/s must be transferred (BTC is greater than 500000000000 ETH is greater than 500000), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startDate: str # Search date, millisecond timestamp, while empty query all, endDate: str # Search date, millisecond timestamp, while empty query all, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: int(int64), msg: str, data: int(int64)} # Mining Account Id
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/mining/hash-transfer/config/cancel
+@desc Cancel Hashrate Resale configuration (USER_DATA)
+@required {configId: str # Mining ID, userName: str # Mining Account, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: int(int64), msg: str, data: bool} # Success flag
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/mining/statistics/user/status
+@desc Statistic List (USER_DATA)
+@required {algo: str # Algorithm(sha256), userName: str # Mining Account, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: int(int64), msg: str, data: map{fifteenMinHashRate: str, dayHashRate: str, validNum: int(int64), invalidNum: int(int64), profitToday: map{BTC: str, BSV: str, BCH: str}, profitYesterday: map{BTC: str, BSV: str, BCH: str}, userName: str, unit: str, algo: str}} # Mining account statistics
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/mining/statistics/user/list
+@desc Account List (USER_DATA)
+@required {algo: str # Algorithm(sha256), userName: str # Mining Account, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: int(int64), msg: str, data: [map]} # List of mining accounts
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/mining/payment/uid
+@desc Mining Account Earning (USER_DATA)
+@required {algo: str # Algorithm(sha256), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startDate: str # Search date, millisecond timestamp, while empty query all, endDate: str # Search date, millisecond timestamp, while empty query all, pageIndex: int(int32) # Page number, default is first page, start form 1, pageSize: str # Number of pages, minimum 10, maximum 200, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: int(int32), msg: str, data: map{accountProfits: [map], totalNum: int(int32), pageSize: int(int32)}} # Mining account earnings
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/futures/transfer
+@desc New Future Account Transfer (USER_DATA)
+@required {asset: str, amount: num(double), type: int(int64) # 1: transfer from spot account to USDT-Ⓜ futures account. 2: transfer from USDT-Ⓜ futures account to spot account. 3: transfer from spot account to COIN-Ⓜ futures account. 4: transfer from COIN-Ⓜ futures account to spot account., timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {tranId: int(int64)} # Futures Transfer
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/futures/transfer
+@desc Get Future Account Transaction History List (USER_DATA)
+@required {asset: str, startTime: int(int64) # UTC timestamp in ms, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Futures Transfer Query
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/futures/histDataLink
+@desc Get Future TickLevel Orderbook Historical Data Download Link (USER_DATA)
+@required {symbol: str, dataType: str(T_DEPTH/S_DEPTH), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {data: [map]} # data link
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/algo/futures/newOrderVp
+@desc Volume Participation(VP) New Order (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, side: str(SELL/BUY), quantity: num(double) # Quantity of base asset; The notional (quantity * mark price(base asset)) must be more than the equivalent of 10,000 USDT and less than the equivalent of 1,000,000 USDT, urgency: str(LOW/MEDIUM/HIGH) # Represent the relative speed of the current execution; ENUM: LOW, MEDIUM, HIGH, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {positionSide: str(BOTH/LONG/SHORT) # Default BOTH for One-way Mode ; LONG or SHORT for Hedge Mode. It must be sent in Hedge Mode., clientAlgoId: str # A unique id among Algo orders (length should be 32 characters)， If it is not sent, we will give default value, reduceOnly: bool # 'true' or 'false'. Default 'false'; Cannot be sent in Hedge Mode; Cannot be sent when you open a position, limitPrice: num(double) # Limit price of the order; If it is not sent, will place order by market price by default, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {clientAlgoId: str, success: bool, code: int(int64), msg: str} # Volume Participation(VP) Order
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/algo/futures/newOrderTwap
+@desc Time-Weighted Average Price(Twap) New Order (TRADE)
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, side: str(SELL/BUY), quantity: num(double) # Quantity of base asset; The notional (quantity * mark price(base asset)) must be more than the equivalent of 10,000 USDT and less than the equivalent of 1,000,000 USDT, duration: int(int64) # Duration for TWAP orders in seconds. [300, 86400];Less than 5min => defaults to 5 min; Greater than 24h => defaults to 24h, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {positionSide: str(BOTH/LONG/SHORT) # Default BOTH for One-way Mode ; LONG or SHORT for Hedge Mode. It must be sent in Hedge Mode., clientAlgoId: str # A unique id among Algo orders (length should be 32 characters)， If it is not sent, we will give default value, reduceOnly: bool # 'true' or 'false'. Default 'false'; Cannot be sent in Hedge Mode; Cannot be sent when you open a position, limitPrice: num(double) # Limit price of the order; If it is not sent, will place order by market price by default, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {clientAlgoId: str, success: bool, code: int(int64), msg: str} # Time-Weighted Average Price(Twap) New Order
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint DELETE /sapi/v1/algo/futures/order
+@desc Cancel Algo Order(TRADE)
+@required {algoId: int(int64) # Eg. 14511, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {algoId: int(int64), success: bool, code: int(int64), msg: str} # Cancelled order
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/algo/futures/openOrders
+@desc Query Current Algo Open Orders (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int32), orders: [map]} # Open Algo Orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/algo/futures/historicalOrders
+@desc Query Historical Algo Orders (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {symbol: str # Trading symbol, e.g. BNBUSDT, side: str(SELL/BUY), startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, page: int(int32) # Default 1, pageSize: str # MIN 1, MAX 100; Default 100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int32), orders: [map]} # Historical Algo Orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/algo/futures/subOrders
+@desc Query Sub Orders (USER_DATA)
+@required {algoId: int(int64), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {page: int(int32) # Default 1, pageSize: str # MIN 1, MAX 100; Default 100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int32), executedQty: str, executedAmt: str, subOrders: [map]} # Sub orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/algo/spot/newOrderTwap
+@desc Time-Weighted Average Price (Twap) New Order
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, side: str(SELL/BUY), quantity: num(double), duration: int(int32), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {clientAlgoId: str, limitPrice: num(float), recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {clientAlgoId: str, success: bool, code: int, msg: str} # twap order response
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint DELETE /sapi/v1/algo/spot/order
+@desc Cancel Algo Order
+@required {algoId: int(int64), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {algoId: int(int64), success: bool, code: int, msg: str} # Cancelled twap order response
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/algo/spot/openOrders
+@desc Query Current Algo Open Orders
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int64), orders: [map]} # twap open orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/algo/spot/historicalOrders
+@desc Query Historical Algo Orders
+@required {symbol: str # Trading symbol, e.g. BNBUSDT, side: str(SELL/BUY), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, page: int(int32) # Default 1, pageSize: str # MIN 1, MAX 100; Default 100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int64), orders: [map]} # twap historical orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/algo/spot/subOrders
+@desc Query Sub Orders
+@required {algoId: int(int64), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {page: int(int32) # Default 1, pageSize: str # MIN 1, MAX 100; Default 100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int64), executedQty: str, executedAmt: str, subOrders: [map]} # twap sub orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/portfolio/account
+@desc Portfolio Margin Account (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {uniMMR: str, accountEquity: str, actualEquity: str, accountMaintMargin: str, accountStatus: str, accountType: str} # Portfolio account.
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/portfolio/collateralRate
+@desc Portfolio Margin Collateral Rate (MARKET_DATA)
+@returns(200) Portfolio Margin Collateral Rate.
+@errors {400: Bad Request}
+
+@endpoint GET /sapi/v2/portfolio/collateralRate
+@desc Portfolio Margin Pro Tiered Collateral Rate(USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Portfolio Margin Collateral Rate.
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/portfolio/pmLoan
+@desc Portfolio Margin Bankruptcy Loan Amount (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {asset: str, amount: str} # Portfolio Margin Bankruptcy Loan Amount.
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/portfolio/repay
+@desc Portfolio Margin Bankruptcy Loan Repay (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {from: str, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {tranId: int(int64)} # Transaction.
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/portfolio/interest-history
+@desc Query Classic Portfolio Margin Negative Balance Interest History (USER_DATA)
+@required {asset: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Balance interest history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/portfolio/asset-index-price
+@desc Query Portfolio Margin Asset Index Price (MARKET_DATA)
+@optional {asset: str}
+@returns(200) asset price index
+@errors {400: Bad Request}
+
+@endpoint POST /sapi/v1/portfolio/auto-collection
+@desc Fund Auto-collection (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {msg: str} # Result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/portfolio/bnb-transfer
+@desc BNB Transfer (USER_DATA)
+@required {transferSide: str(TO_UM/FROM_UM), amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {tranId: int(int64)} # Result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/portfolio/repay-futures-switch
+@desc Change Auto-repay-futures Status (USER_DATA)
+@required {autoRepay: bool, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {msg: str} # Result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/portfolio/repay-futures-switch
+@desc Get Auto-repay-futures Status (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {autoRepay: bool} # Result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/portfolio/repay-futures-negative-balance
+@desc Repay futures Negative Balance (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {msg: str} # Result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/portfolio/margin-asset-leverage
+@desc Get Portfolio Margin Asset Leverage (USER_DATA)
+@returns(200) Classic Portfolio Margin Collateral Rate
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/portfolio/asset-collection
+@desc Fund Collection by Asset (USER_DATA)
+@required {asset: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {msg: str} # Result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/blvt/tokenInfo
+@desc BLVT Info (MARKET_DATA)
+@optional {tokenName: str # BTCDOWN, BTCUP}
+@returns(200) List of token information
+@errors {400: Bad Request}
+
+@endpoint POST /sapi/v1/blvt/subscribe
+@desc Subscribe BLVT (USER_DATA)
+@required {tokenName: str # BTCDOWN, BTCUP, cost: num(double) # Spot balance, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {id: int(int64), status: str, tokenName: str, amount: str, cost: str, timestamp: int(int64)} # Subscription Info
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/blvt/subscribe/record
+@desc Query Subscription Record (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {tokenName: str # BTCDOWN, BTCUP, id: int(int64), startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {id: int(int64), tokenName: str, amount: str, nav: str, fee: str, totalCharge: str, timestamp: int(int64)} # List of subscription record
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/blvt/redeem
+@desc Redeem BLVT (USER_DATA)
+@required {tokenName: str # BTCDOWN, BTCUP, amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {id: int(int64), status: str, tokenName: str, redeemAmount: str, amount: str, timestamp: int(int64)} # Redemption record
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/blvt/redeem/record
+@desc Redemption Record (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {tokenName: str # BTCDOWN, BTCUP, id: int(int64), startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # default 1000, max 1000, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) List of redemption record
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/blvt/userLimit
+@desc BLVT User Limit Info (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {tokenName: str # BTCDOWN, BTCUP, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) List of token limits
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/c2c/orderMatch/listUserOrderHistory
+@desc Get C2C Trade History (USER_DATA)
+@required {tradeType: str(BUY/SELL), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTimestamp: int(int64) # UTC timestamp in ms, endTimestamp: int(int64) # UTC timestamp in ms, page: int(int32) # Default 1, rows: int(int32) # default 100, max 100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: str, message: str, data: [map], total: int(int32), success: bool} # Trades history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/vip/ongoing/orders
+@desc Get VIP Loan Ongoing Orders (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # Order id, collateralAccountId: int(int64), loanCoin: str # Coin loaned, collateralCoin: str # Coin used as collateral, current: int(int32) # Current querying page. Start from 1. Default:1, limit: int(int32) # Default 10; max 100., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Ongoing VIP Loan Orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/loan/vip/repay
+@desc VIP Loan Repay (TRADE)
+@required {amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # Order id, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {loanCoin: str, repayAmount: str, remainingPrincipal: str, remainingInterest: str, collateralCoin: str, currentLTV: str, repayStatus: str} # VIP Loan Repayment
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/vip/repay/history
+@desc Get VIP Loan Repayment History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # Order id, loanCoin: str # Coin loaned, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, limit: int(int32) # Default 10; max 100., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # VIP Loan Repayment History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/vip/collateral/account
+@desc Check Locked Value of VIP Collateral Account (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # Order id, collateralAccountId: int(int64), recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # VIP Locked Value
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/loan/vip/borrow
+@desc VIP Loan Borrow
+@required {loanAccountId: int(int64), loanAmount: num(float), collateralAccountId: str, collateralCoin: str, isFlexibleRate: str(TRUE/FALSE), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {loanCoin: str # Coin loaned, loanTerm: int, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {loanAccountId: str, requestId: str, loanCoin: str, isFlexibleRate: str, loanAmount: str, collateralAccountId: str, collateralCoin: str, loanTerm: str} # Collateral Assets Data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/vip/loanable/data
+@desc Get Loanable Assets Data
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {loanCoin: str # Coin loaned, vipLevel: int(int32) # Defaults to user's vip level, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int, rows: [map]} # Loanable Assets Data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/vip/collateral/data
+@desc Get Collateral Asset Data (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {collateralCoin: str # Coin used as collateral, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Collateral Asset Data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/vip/request/data
+@desc Query Application Status (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {current: int(int32) # Current querying page. Start from 1. Default:1, limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int, rows: [map]} # Application Status
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/vip/request/interestRate
+@desc Get Borrow Interest Rate (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {loanCoin: str # Max 10 assets, Multiple split by ",", recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Borrow interest rate
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/loan/vip/renew
+@desc VIP Loan Renew
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # Order id, loanTerm: int, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {loanAccountId: str, loanCoin: str, loanAmount: str, collateralAccountId: str, collateralCoin: str, loanTerm: str} # Loan renew result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/income
+@desc Get Crypto Loans Income History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, type: str(borrowIn/collateralSpent/repayAmount/collateralReturn/addCollateral/removeCollateral/collateralReturnAfterLiquidation) # All types will be returned by default.   * `borrowIn`   * `collateralSpent`   * `repayAmount`   * `collateralReturn` - Collateral return after repayment   * `addCollateral`   * `removeCollateral`   * `collateralReturnAfterLiquidation`, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # default 20, max 100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Loan History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/loan/borrow
+@desc Crypto Loan Borrow (TRADE)
+@required {loanCoin: str # Coin loaned, collateralCoin: str # Coin used as collateral, loanTerm: int(int32) # 7/14/30/90/180 days, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {loanAmount: num(float) # Loan amount, collateralAmount: num(float), recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {loanCoin: str, loanAmount: str, collateralCoin: str, collateralAmount: str, hourlyInterestRate: str, orderId: str} # Borrow Information
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/borrow/history
+@desc Get Crypto Loans Borrow History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # orderId in POST /sapi/v1/loan/borrow, loanCoin: str # Coin loaned, collateralCoin: str # Coin used as collateral, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, limit: int(int64) # default 10, max 100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Borrow History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/ongoing/orders
+@desc Get Loan Ongoing Orders (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # orderId in POST /sapi/v1/loan/borrow, loanCoin: str # Coin loaned, collateralCoin: str # Coin used as collateral, current: int(int32) # Current querying page. Start from 1; default:1, max:1000, limit: int(int64) # default 10, max 100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Ongoing Orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/loan/repay
+@desc Crypto Loan Repay (TRADE)
+@required {orderId: int(int64) # Order ID, amount: num(double) # Repayment Amount, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {type: int(int32) # Default: 1. 1 for 'repay with borrowed coin'; 2 for 'repay with collateral'., collateralReturn: bool # Default: TRUE. TRUE: Return extra collateral to spot account; FALSE: Keep extra collateral in the order., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Repayment Information
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/repay/history
+@desc Get Loan Repayment History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # Order ID, loanCoin: str # Coin loaned, collateralCoin: str # Coin used as collateral, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, limit: int(int64) # default 10, max 100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Loan Repayment History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/loan/adjust/ltv
+@desc Crypto Loan Adjust LTV (TRADE)
+@required {orderId: int(int64) # Order ID, amount: num(double) # Amount, direction: str(ADDITIONAL/REDUCED) # 'ADDITIONAL', 'REDUCED', timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {loanCoin: str, collateralCoin: str, direction: str, amount: str, currentLTV: str} # LTV Adjust
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/ltv/adjustment/history
+@desc Get Loan LTV Adjustment History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # Order ID, loanCoin: str # Coin loaned, collateralCoin: str # Coin used as collateral, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, limit: int(int64) # default 10, max 100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # LTV Adjustment History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/loanable/data
+@desc Get Loanable Assets Data (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {loanCoin: str # Coin loaned, vipLevel: int(int32) # Defaults to user's vip level, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Loanable Assets Data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/collateral/data
+@desc Get Collateral Assets Data (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {collateralCoin: str # Coin used as collateral, vipLevel: int(int32) # Defaults to user's vip level, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Collateral Assets Data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/loan/repay/collateral/rate
+@desc Check Collateral Repay Rate (USER_DATA)
+@required {loanCoin: str # Coin loaned, collateralCoin: str # Coin used as collateral, repayAmount: num(float) # repay amount of loanCoin, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {loanCoin: str, collateralCoin: str, repayAmount: str, rate: str} # Collateral Assets Data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/loan/customize/margin_call
+@desc Crypto Loan Customize Margin Call (TRADE)
+@required {marginCall: num(float), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: int(int64) # Mandatory when collateralCoin is empty. Send either orderId or collateralCoin, if both parameters are sent, take orderId only., collateralCoin: str # Coin used as collateral, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Collateral Assets Data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v2/loan/flexible/borrow
+@desc Borrow - Flexible Loan Borrow (TRADE)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {loanCoin: str # Coin loaned, loanAmount: num(float) # Loan amount, collateralCoin: str # Coin used as collateral, collateralAmount: num(float), recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {loanCoin: str, loanAmount: str, collateralCoin: str, collateralAmount: str, status: str} # Collateral Assets Data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v2/loan/flexible/ongoing/orders
+@desc Borrow - Get Flexible Loan Ongoing Orders (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {loanCoin: str # Coin loaned, collateralCoin: str # Coin used as collateral, current: int(int32) # Current querying page. Start from 1. Default:1, limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int32), rows: [map]} # Collateral Assets Data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v2/loan/flexible/borrow/history
+@desc Borrow - Get Flexible Loan Borrow History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {loanCoin: str # Coin loaned, collateralCoin: str # Coin used as collateral, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int, rows: [map]} # Loan borrow histroy
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v2/loan/flexible/repay
+@desc Repay - Flexible Loan Repay (TRADE)
+@required {repayAmount: num(float) # repay amount of loanCoin, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {loanCoin: str # Coin loaned, collateralCoin: str # Coin used as collateral, collateralReturn: bool # Default: TRUE. TRUE: Return extra collateral to earn account; FALSE: Keep extra collateral in the order, and lower LTV., fullRepayment: bool # Default: FALSE. TRUE: Full repayment; FALSE: Partial repayment, based on loanAmount, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {loanCoin: str, collateralCoin: str, remainingDebt: str, remainingCollateral: str, fullRepayment: bool, currentLTV: str, repayStatus: str} # Loan repay
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v2/loan/flexible/repay/history
+@desc Repay - Get Flexible Loan Repayment History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {loanCoin: str # Coin loaned, collateralCoin: str # Coin used as collateral, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Loan repay history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v2/loan/flexible/adjust/ltv
+@desc Adjust LTV - Flexible Loan Adjust LTV (TRADE)
+@required {adjustmentAmount: num(float), direction: str(ADDITIONAL/REDUCED), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {loanCoin: str # Coin loaned, collateralCoin: str # Coin used as collateral, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {loanCoin: str, collateralCoin: str, direction: str, adjustmentAmount: str, currentLTV: str} # adjust LTV result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v2/loan/flexible/ltv/adjustment/history
+@desc Adjust LTV - Get Flexible Loan LTV Adjustment History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {loanCoin: str # Coin loaned, collateralCoin: str # Coin used as collateral, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, limit: int(int32) # Default 500; max 1000., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # LTV adjustment history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v2/loan/flexible/loanable/data
+@desc Get Flexible Loan Assets Data (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {loanCoin: str # Coin loaned, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Loan asset data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v2/loan/flexible/collateral/data
+@desc Get Flexible Loan Collateral Assets Data (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {collateralCoin: str # Coin used as collateral, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int32)} # Loan asset data
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/pay/transactions
+@desc Get Pay Trade History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # default 100, max 100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: str, message: str, data: [map], success: bool} # Pay History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/convert/exchangeInfo
+@desc List All Convert Pairs
+@optional {fromAsset: str # User spends coin, toAsset: str # User receives coin}
+@returns(200) List Convert Pairs
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/convert/assetInfo
+@desc Query order quantity precision per asset (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Asset Precision Information
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/convert/getQuote
+@desc Send quote request (USER_DATA)
+@required {fromAsset: str, toAsset: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {fromAmount: num(float) # When specified, it is the amount you will be debited after the conversion, toAmount: num(float) # When specified, it is the amount you will be debited after the conversion, validTime: str # 10s, 30s, 1m, 2m, default 10s, walletType: str # SPOT or FUNDING. Default is SPOT, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {quoteId: str, ratio: str, inverseRatio: str, validTimestamp: int(int64), toAmount: str, fromAmount: str} # Quote Request
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/convert/acceptQuote
+@desc Accept Quote (TRADE)
+@required {quoteId: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {orderId: str, createTime: int(int64), orderStatus: str} # Accept Quote
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/convert/orderStatus
+@desc Order status (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {orderId: str, quoteId: str, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {orderId: int(int64), orderStatus: str, fromAsset: str, fromAmount: str, toAsset: str, toAmount: str, ratio: str, inverseRatio: str, createTime: int(int64)} # Order Status
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/convert/limit/placeOrder
+@desc Place limit order (USER_DATA)
+@required {baseAsset: str, quoteAsset: str, limitPrice: num(double) # Symbol limit price (from baseAsset to quoteAsset), side: str(SELL/BUY), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {baseAmount: num(double) # Base asset amount. (One of baseAmount or quoteAmount is required), quoteAmount: num(double) # Quote asset amount. (One of baseAmount or quoteAmount is required), walletType: str(SPOT/FUNDING/SPOT_FUNDING) # SPOT or FUNDING or SPOT_FUNDING. It is to use which type of assets. Default is SPOT., expiredType: str(1_D/3_D/7_D/30_D) # 1_D, 3_D, 7_D, 30_D (D means day), recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {orderId: int(int64), status: str}
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/convert/limit/cancelOrder
+@desc Cancel limit order (USER_DATA)
+@required {orderId: int(int64), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {orderId: int(int64), status: str} # Cancel Order
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/convert/limit/queryOpenOrders
+@desc Query limit open orders (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {list: [map]} # All existing limit orders
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/convert/tradeFlow
+@desc Get Convert Trade History (USER_DATA)
+@required {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {limit: int(int32) # default 100, max 1000, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {list: [map], startTime: int(int64), endTime: int(int64), limit: int(int32), moreData: bool} # Convert Trade History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/rebate/taxQuery
+@desc Get Spot Rebate History Records (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, page: int(int32) # default 1, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {status: str, type: str, code: str, data: map{page: int(int32), totalRecords: int(int32), totalPageNum: int(int32), data: [map]}} # Rebate History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/nft/history/transactions
+@desc Get NFT Transaction History (USER_DATA)
+@required {orderType: int(int32) # 0: purchase order, 1: sell order, 2: royalty income, 3: primary market order, 4: mint fee, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # Default 50, Max 50, page: int(int32) # Default 1, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int32), list: [map]} # NFT Transaction History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/nft/history/deposit
+@desc Get NFT Deposit History(USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # Default 50, Max 50, page: int(int32) # Default 1, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int32), list: [map]} # NFT Deposit History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/nft/history/withdraw
+@desc Get NFT Withdraw History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, limit: int(int32) # Default 50, Max 50, page: int(int32) # Default 1, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int32), list: [map]} # NFT Withdraw History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/nft/user/getAsset
+@desc Get NFT Asset (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {limit: int(int32) # Default 50, Max 50, page: int(int32) # Default 1, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int32), list: [map]} # Asset Information
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/giftcard/createCode
+@desc Create a Binance Code (USER_DATA)
+@required {token: str # The coin type contained in the Binance Code, amount: num(double) # The amount of the coin, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: str, message: str, data: map{referenceNo: str, code: str, expiredTime: int(int64)}, success: bool} # Code creation
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/giftcard/redeemCode
+@desc Redeem a Binance Code (USER_DATA)
+@required {code: str # Binance Code, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {externalUid: str # Each external unique ID represents a unique user on the partner platform. The function helps you to identify the redemption behavior of different users, such as redemption frequency and amount. It also helps risk and limit control of a single account, such as daily limit on redemption volume, frequency, and incorrect number of entries. This will also prevent a single user account reach the partner's daily redemption limits. We strongly recommend you to use this feature and transfer us the User ID of your users if you have different users redeeming Binance codes on your platform. To protect user data privacy, you may choose to transfer the user id in any desired format (max. 400 characters)., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: str, message: str, data: map{token: str, amount: str, referenceNo: str, identityNo: str}, success: bool} # Redeemed Information
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/giftcard/verify
+@desc Verify a Binance Code (USER_DATA)
+@required {referenceNo: str # reference number, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: str, message: str, data: map{valid: bool, token: str, amount: str}, success: bool} # Code Verification
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/giftcard/cryptography/rsa-public-key
+@desc Fetch RSA Public Key (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: str, message: str, data: str, success: bool} # RSA Public Key.
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/giftcard/buyCode
+@desc Buy a Binance Code (TRADE)
+@required {baseToken: str # The token you want to pay, example BUSD, faceToken: str # The token you want to buy, example BNB. If faceToken = baseToken, it's the same as createCode endpoint., baseTokenAmount: num(double) # The base token asset quantity, example  1.002, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: str, message: str, data: map{referenceNo: str, code: str, expiredTime: int(int64)}, success: bool} # Code creation
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/giftcard/buyCode/token-limit
+@desc Fetch Token Limit (USER_DATA)
+@required {baseToken: str # The token you want to pay, example BUSD, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: str, message: str, data: map{coin: str, fromMin: str, fromMax: str}, success: bool} # Token limit
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/auto-invest/target-asset/list
+@desc Get target asset list (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {targetAsset: str, size: int(int32) # Default:10 Max:100, current: int(int32) # Current querying page. Start from 1. Default:1, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {targetAssets: str, autoInvestAssetList: [map]} # Target asset list
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/auto-invest/target-asset/roi/list
+@desc Get target asset ROI data (USER_DATA)
+@required {targetAsset: str, hisRoiType: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Target asset list
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/auto-invest/all/asset
+@desc Query all source asset and target asset (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {targetAssets: [str], sourceAssets: [str]} # Target asset
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/auto-invest/source-asset/list
+@desc Query source asset list (USER_DATA)
+@required {usageType: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {targetAsset: str, indexId: int(int64), flexibleAllowedToUse: bool, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {feeRate: str, sourceAssets: [map]} # Asset list
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/lending/auto-invest/plan/add
+@desc Investment plan creation (USER_DATA)
+@required {sourceType: str(MAIN_SITE/TR), planType: str(SINGLE/PORTFOLIO/INDEX), subscriptionAmount: num(float), subscriptionCycle: str(H1/H4/H8/H12/WEEKLY/DAILY/MONTHLY/BI_WEEKLY), subscriptionStartTime: int, sourceAsset: str, details: [map], timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {requestId: str, IndexId: int(int64), subscriptionStartDay: int, subscriptionStartWeekday: str(MON/TUE/WED/THU/FRI/SAT/SUN), flexibleAllowedToUse: bool, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {planId: int, nextExecutionDateTime: int(int64)} # Plan result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/lending/auto-invest/plan/edit
+@desc Investment plan adjustment
+@required {planId: int, subscriptionAmount: num(float), subscriptionCycle: str(H1/H4/H8/H12/WEEKLY/DAILY/MONTHLY/BI_WEEKLY), subscriptionStartTime: int, sourceAsset: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {subscriptionStartDay: int, subscriptionStartWeekday: str(MON/TUE/WED/THU/FRI/SAT/SUN), flexibleAllowedToUse: bool, details: [map], recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {planId: int, nextExecutionDateTime: int(int64)} # Plan result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/lending/auto-invest/plan/edit-status
+@desc Change Plan Status
+@required {planId: int, status: str(ONGOING/PAUSED/REMOVED), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {planId: int, nextExecutionDateTime: int(int64), status: str} # Plan result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/auto-invest/plan/list
+@desc Get list of plans
+@required {planType: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {planValueInUSD: str, planValueInBTC: str, pnlInUSD: str, roi: str, plan: [map]} # Plan result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/auto-invest/plan/id
+@desc Query holding details of the plan
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {planId: int(int64), requestId: str, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {planValueInUSD: str, planValueInBTC: str, pnlInUSD: str, roi: str, plan: [map]} # Plan result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/auto-invest/history/list
+@desc Query subscription transaction history
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {planId: int(int64), startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, targetAsset: num(int64), planType: str(SINGLE/PORTFOLIO/INDEX/ALL), size: int(int32) # Default:10 Max:100, current: int(int32) # Current querying page. Start from 1. Default:1, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Plan result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/auto-invest/index/info
+@desc Query Index Details(USER_DATA)
+@required {indexId: int(int64), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {indexId: int(int64), indexName: str, status: str, assetAllocation: [map]} # Index result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/auto-invest/index/user-summary
+@desc Query Index Linked Plan Position Details(USER_DATA)
+@required {indexId: int(int64), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {indexId: int(int64), totalInvestedInUSD: str, currentInvestedInUSD: str, pnlInUSD: str, roi: str, assetAllocation: [map], details: [map]} # Position Details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/lending/auto-invest/one-off
+@desc One Time Transaction(TRADE)
+@required {sourceType: str, subscriptionAmount: num(float), sourceAsset: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {requestId: str, flexibleAllowedToUse: bool, planId: int(int64), indexId: int(int64), details: [map], recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {transactionId: int(int64), waitSecond: int(int32)} # transaction result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/auto-invest/one-off/status
+@desc Query One-Time Transaction Status (USER_DATA)
+@required {transactionId: int(int64), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {requestId: str, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {transactionId: int(int64), status: str} # transaction result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/lending/auto-invest/redeem
+@desc Index Linked Plan Redemption (TRADE)
+@required {indexId: int(int64) # PORTFOLIO plan's Id, redemptionPercentage: int # user redeem percentage,10/20/100., timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {requestId: str # sourceType + unique, transactionId and requestId cannot be empty at the same time, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {redemptionId: int(int64)} # Redemption result
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/auto-invest/redeem/history
+@desc Index Linked Plan Redemption History (USER_DATA)
+@required {requestId: int(int64), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, asset: str, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Redemption history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/lending/auto-invest/rebalance/history
+@desc Index Linked Plan Rebalance Details (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Rebalance Details
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v2/eth-staking/eth/stake
+@desc Subscribe ETH Staking V2(TRADE)
+@required {amount: num(double) # Amount in ETH, limit 4 decimals, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {success: bool, wbethAmount: str, conversionRatio: str} # Subscribed WBETH
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/eth-staking/eth/redeem
+@desc Redeem ETH (TRADE)
+@required {amount: num(double) # Amount in BETH, limit 8 decimals, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str # WBETH or BETH, default to BETH, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {success: bool, arrivalTime: int(int64), ethAmount: str, conversionRatio: str} # Returned ETH
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/eth-staking/eth/history/stakingHistory
+@desc Get ETH staking history (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # ETH staking history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/eth-staking/eth/history/redemptionHistory
+@desc Get ETH redemption history (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # ETH redemption history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/eth-staking/eth/history/rewardsHistory
+@desc Get BETH rewards distribution history(USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # BETH rewards distribution history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/eth-staking/eth/quota
+@desc Get current ETH staking quota (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {leftStakingPersonalQuota: str, leftRedemptionPersonalQuota: str} # Eth staking quota
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/eth-staking/eth/history/rateHistory
+@desc Get WBETH Rate History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # WBETH Rate History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v2/eth-staking/account
+@desc ETH Staking account V2(USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {holdingInETH: str, holdings: map{wbethAmount: str, bethAmount: str}, thirtyDaysProfitInETH: str, profit: map{amountFromWBETH: str, amountFromBETH: str}} # ETH Staking account
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/eth-staking/wbeth/wrap
+@desc Wrap BETH(TRADE)
+@required {amount: num(double) # Amount in BETH, limit 4 decimals, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {success: bool, wbethAmount: str, exchangeRate: str} # Wrap BETH
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/eth-staking/wbeth/history/wrapHistory
+@desc Get WBETH wrap history (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # WBETH wrap history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/eth-staking/wbeth/history/unwrapHistory
+@desc Get WBETH unwrap history (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # WBETH unwrap history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/eth-staking/eth/history/wbethRewardsHistory
+@desc Get WBETH rewards history(USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {estRewardsInETH: str, rows: [map], total: int(int64)} # WBETH rewards history
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/copyTrading/futures/userStatus
+@desc Get Futures Lead Trader Status(TRADE)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: str, message: str, data: map{isLeadTrader: bool, time: int(int64)}, success: bool} # Futures Lead Trader Status
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/copyTrading/futures/leadSymbol
+@desc Get Futures Lead Trading Symbol Whitelist(USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {code: str, message: str, data: map{symbol: str, baseAsset: str, quoteAsset: str}} # Futures Lead Trading Symbol Whitelist
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/flexible/list
+@desc Get Simple Earn Flexible Product List (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # Simple Earn Flexible Product List
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/locked/list
+@desc Get Simple Earn Locked Product List (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # Simple Earn Locked Product List
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/simple-earn/flexible/subscribe
+@desc Subscribe Flexible Product (TRADE)
+@required {productId: str, amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {autoSubscribe: bool # true or false, default true., sourceAccount: str # SPOT,FUND,ALL, default SPOT, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {purchaseId: int(int64), success: bool} # Flexible Product Subscription Response
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/simple-earn/locked/subscribe
+@desc Subscribe Locked Product (TRADE)
+@required {projectId: str, amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {autoSubscribe: bool # true or false, default true., sourceAccount: str # SPOT,FUND,ALL, default SPOT, redeemTo: str(SPOT/FLEXIBLE) # SPOT,FLEXIBLE, default FLEXIBLE, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {purchaseId: int(int64), positionId: str, success: bool} # Locked Product Subscription Response
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/simple-earn/flexible/redeem
+@desc Redeem Flexible Product (TRADE)
+@required {productId: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {redeemAll: bool # true or false, default to false, amount: num(double) # if redeemAll is false, amount is mandatory, destAccount: str # SPOT,FUND,ALL, default SPOT, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {redeemId: int(int64), success: bool} # Redeem Flexible Product
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/simple-earn/locked/redeem
+@desc Redeem Locked Product (TRADE)
+@required {positionId: str # 1234, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {redeemId: int(int64), success: bool} # Redeem Locked Product
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/flexible/position
+@desc Get Flexible Product Position (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, productId: str, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # Flexible Product Position
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/locked/position
+@desc Get Locked Product Position (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {asset: str, positionId: str, projectId: str, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # Locked Product Position
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/account
+@desc Simple Account (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {totalAmountInBTC: str, totalAmountInUSDT: str, totalFlexibleAmountInBTC: str, totalFlexibleAmountInUSDT: str, totalLockedInBTC: str, totalLockedInUSDT: str} # Account Information
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/flexible/history/subscriptionRecord
+@desc Get Flexible Subscription Record (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {productId: str, purchaseId: str, asset: str, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # Flexible Product Position
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/locked/history/subscriptionRecord
+@desc Get Locked Subscription Record (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {purchaseId: str, asset: str, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # Locked Subscription Record
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/flexible/history/redemptionRecord
+@desc Get Flexible Redemption Record (USER_DATA)
+@optional {productId: str, redeemId: str, asset: str, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100}
+@returns(200) {rows: [map], total: int(int64)} # Flexible Redemption Record
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/locked/history/redemptionRecord
+@desc Get Locked Redemption Record (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {positionId: str, redeemId: str, asset: str, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # Locked Redemption Record
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/flexible/history/rewardsRecord
+@desc Get Flexible Rewards History (USER_DATA)
+@required {type: str # "BONUS", "REALTIME", "REWARDS"}
+@optional {productId: str, asset: str, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms}
+@returns(200) {rows: [map], total: int(int64)} # Flexible Rewards History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/locked/history/rewardsRecord
+@desc Get Locked Rewards History (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {positionId: str, asset: str, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # Locked Rewards History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/simple-earn/flexible/setAutoSubscribe
+@desc Set Flexible Auto Subscribe (USER_DATA)
+@required {productId: str, autoSubscribe: bool # true or false, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {success: bool} # Flexible Product Subscription Response
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/simple-earn/locked/setAutoSubscribe
+@desc Set Locked Auto Subscribe (USER_DATA)
+@required {positionId: str, autoSubscribe: bool # true or false, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {success: bool} # Locked Auto Subscribe
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/flexible/personalLeftQuota
+@desc Get Flexible Personal Left Quota (USER_DATA)
+@required {productId: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {leftPersonalQuota: str} # Flexible Personal Left Quota
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/locked/personalLeftQuota
+@desc Get Locked Personal Left Quota (USER_DATA)
+@required {projectId: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {leftPersonalQuota: str} # Locked Personal Left Quota
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/flexible/subscriptionPreview
+@desc Get Flexible Subscription Preview (USER_DATA)
+@required {productId: str, amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {totalAmount: str, rewardAsset: str, airDropAsset: str, estDailyBonusRewards: str, estDailyRealTimeRewards: str, estDailyAirdropRewards: str} # Flexible Subscription Preview
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/locked/subscriptionPreview
+@desc Get Locked Subscription Preview (USER_DATA)
+@required {projectId: str, amount: num(double), timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {autoSubscribe: bool # true or false, default true., recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) Locked Product Subscription Response
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/locked/setRedeemOption
+@desc Set Locked Product Redeem Option(USER_DATA)
+@required {positionId: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {redeemTo: str(SPOT/FLEXIBLE) # SPOT,FLEXIBLE, default FLEXIBLE, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {success: bool} # Locked Product Redeem Option
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/flexible/history/rateHistory
+@desc Get Rate History (USER_DATA)
+@required {productId: str, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # Rate History
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/simple-earn/flexible/history/collateralRecord
+@desc Get Collateral Record (USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {productId: str, startTime: int(int64) # UTC timestamp in ms, endTime: int(int64) # UTC timestamp in ms, current: int(int32) # Current querying page. Start from 1. Default:1, size: int(int32) # Default:10 Max:100, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {rows: [map], total: int(int64)} # Collateral Record
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/dci/product/list
+@desc Get Dual Investment product list(USER_DATA)
+@required {optionType: str(CALL/PUT) # Input CALL or PUT, exercisedCoin: str # Target exercised asset, e.g.: if you subscribe to a high sell product (call option), you should input:   - optionType: CALL,   - exercisedCoin: USDT,   - investCoin: BNB;  if you subscribe to a low buy product (put option), you should input:   - optionType: PUT,   - exercisedCoin: BNB,   - investCoin: USDT;, investCoin: str # Asset used for subscribing, e.g.: if you subscribe to a high sell product (call option), you should input:   - optionType: CALL,   - exercisedCoin: USDT,   - investCoin: BNB;  if you subscribe to a low buy product (put option), you should input:   - optionType: PUT,   - exercisedCoin: BNB,   - investCoin: USDT;, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {pageSize: str # MIN 1, MAX 100; Default 100, pageIndex: int(int32) # Page number, default is first page, start form 1, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int64), list: [map]} # Dual Investment product list
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/dci/product/subscribe
+@desc Subscribe Dual Investment products(USER_DATA)
+@required {id: str # get id from /sapi/v1/dci/product/list, orderId: str # get orderId from /sapi/v1/dci/product/list, depositAmount: num(double), autoCompoundPlan: str(NONE/STANDARD/ADVANCE) # NONE: switch off the plan, STANDARD: standard plan, ADVANCED: advanced plan;, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {positionId: int(int64), investCoin: str, exercisedCoin: str, subscriptionAmount: str, duration: int(int32), autoCompoundPlan: str, strikePrice: str, settleDate: int(int64), purchaseStatus: str, apr: str, orderId: int(int64), purchaseTime: int(int64), optionType": str} # Dual Investment product subscription response
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/dci/product/positions
+@desc Get Dual Investment positions(USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {status: str(PENDING/PURCHASE_SUCCESS/SETTLED/PURCHASE_FAIL/REFUNDING/REFUND_SUCCESS/SETTLING) # - PENDING: Products are purchasing, will give results later; - PURCHASE_SUCCESS: purchase successfully; - SETTLED: Products are finish settling; - PURCHASE_FAIL: fail to purchase; - REFUNDING: refund ongoing; - REFUND_SUCCESS: refund to spot account successfully; - SETTLING: Products are settling. If don't fill this field, will response all the position status., pageSize: str # MIN 1, MAX 100; Default 100, pageIndex: int(int32) # Page number, default is first page, start form 1, recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {total: int(int64), list: [map]} # Dual Investment product list
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint GET /sapi/v1/dci/product/accounts
+@desc Check Dual Investment accounts(USER_DATA)
+@required {timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {totalAmountInBTC: str, totalAmountInUSDT: str} # Dual Investment accounts
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endpoint POST /sapi/v1/dci/product/auto_compound/edit-status
+@desc Change Auto-Compound status(USER_DATA)
+@required {positionId: int(int64) # Get positionId from /sapi/v1/dci/product/positions, autoCompoundPlan: str(NONE/STANDARD/ADVANCE) # NONE: switch off the plan, STANDARD: standard plan, ADVANCED: advanced plan;, timestamp: int(int64) # UTC timestamp in ms, signature: str # Signature}
+@optional {recvWindow: int(int64) # The value cannot be greater than 60000}
+@returns(200) {positionId: str, autoCompoundPlan: str} # Change Auto-Compound status response
+@errors {400: Bad Request, 401: Unauthorized Request}
+
+@endgroup
+
+@end
